@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BottomTabBar } from '../../app/layout/BottomTabBar';
 import { SiteHeader } from '../../app/layout/SiteHeader';
 import { Link, navigate } from '../../app/router';
@@ -28,6 +28,8 @@ import { MapSafetyNotice } from './MapSafetyNotice';
 import { MapSearchBar } from './MapSearchBar';
 import { SpotDetailPanel } from './SpotDetailPanel';
 import { SpotListRow } from './SpotListRow';
+import { useMapMoving } from './useMapMoving';
+import { useRegionName } from './useRegionName';
 import { useSpotsInView } from './useSpotsInView';
 import type { SpotsInView } from './useSpotsInView';
 
@@ -85,6 +87,12 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
     filters,
     session.me?.memberId ?? null,
   );
+
+  const regionName = useRegionName(map);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  // 검색 칸에 입력하던 중에 지도를 건드려도 쓰던 검색어가 사라지지 않게, 오버레이 안에 포커스가 있으면 숨기지 않는다.
+  const keepOverlay = useCallback(() => overlayRef.current?.contains(document.activeElement) ?? false, []);
+  const mapMoving = useMapMoving(map, keepOverlay);
 
   // 제보 화면을 벗어나면 이전 제보의 완료 상태를 버린다. 그래야 다시 들어왔을 때 지도를 눌러 위치를 찍을 수 있다.
   if (!reporting && submitted) setSubmitted(false);
@@ -224,7 +232,11 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
           onSnapChange={setSnap}
           label={sheetLabel}
           header={
-            contentOpen ? undefined : basecampMode ? <BasecampListHeader result={basecamps} /> : <ListHeader area={area} />
+            contentOpen ? undefined : basecampMode ? (
+              <BasecampListHeader result={basecamps} regionName={regionName} />
+            ) : (
+              <ListHeader area={area} regionName={regionName} />
+            )
           }
         >
           {opening && openSpotId !== undefined ? (
@@ -283,7 +295,14 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
             </div>
           )}
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 px-4 pt-3">
+          {/* 지도를 끌거나 확대·축소하는 동안에는 지도를 가리지 않게 위로 살짝 밀며 감추고, 멈추면 다시 보여 준다. */}
+          <div
+            ref={overlayRef}
+            inert={mapMoving.hidden}
+            className={`pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 px-4 pt-3 transition duration-200 motion-reduce:translate-y-0 motion-reduce:transition-none ${
+              mapMoving.hidden ? '-translate-y-3 opacity-0' : ''
+            }`}
+          >
             <h1 className="sr-only">피치맵 지도</h1>
             <div className="flex items-start justify-between gap-2">
               {/* 데스크톱은 위의 머리글이 서비스 이름과 메뉴를 보여 주므로, 지도 위에는 모바일에서만 이름을 띄운다. */}
@@ -312,7 +331,7 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
                 )}
               </div>
             </div>
-            {map && <MapSearchBar onSelect={moveToRegion} />}
+            {map && <MapSearchBar onSelect={moveToRegion} mapMoving={mapMoving.moving} />}
             <MapSafetyNotice />
           </div>
         </div>
@@ -329,20 +348,23 @@ function totalCount(area: SpotsInView): number {
   return area.clusters.reduce((sum, cluster) => sum + cluster.count, 0);
 }
 
-function ListHeader({ area }: { area: SpotsInView }) {
+// 지역 이름을 아직 모르거나 바다처럼 행정구역이 없는 곳에서는 "이 지역"으로 적는다.
+const UNKNOWN_REGION = '이 지역';
+
+function ListHeader({ area, regionName }: { area: SpotsInView; regionName: string | null }) {
   const counted = area.status === 'ready' || area.markers.length > 0 || area.clusters.length > 0;
   return (
-    <h2 className="font-serif text-lg text-ink">
-      이 지역 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
+    <h2 className="truncate font-serif text-lg text-ink">
+      {regionName ?? UNKNOWN_REGION} 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
     </h2>
   );
 }
 
-function BasecampListHeader({ result }: { result: BasecampsInView }) {
+function BasecampListHeader({ result, regionName }: { result: BasecampsInView; regionName: string | null }) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
-    <h2 className="font-serif text-lg text-ink">
-      이 지역 베이스캠프
+    <h2 className="truncate font-serif text-lg text-ink">
+      {regionName ?? UNKNOWN_REGION} 베이스캠프
       {counted && (
         <span className="tabular-nums">
           {' '}

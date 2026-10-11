@@ -17,12 +17,21 @@ type SearchState =
 type MapSearchBarProps = {
   // 고른 지역으로 지도를 옮긴다. 옮긴 뒤 영역 조회는 지도 idle 구독이 맡는다.
   onSelect: (candidate: RegionCandidate) => void;
+  // 지도가 움직이기 시작하면 떠 있던 후보 목록과 안내 문구를 닫는다.
+  mapMoving: boolean;
 };
 
-export function MapSearchBar({ onSelect }: MapSearchBarProps) {
+export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
   const [query, setQuery] = useState('');
   const [inputError, setInputError] = useState<string | undefined>();
   const [state, setState] = useState<SearchState>({ status: 'idle' });
+  const [wasMoving, setWasMoving] = useState(mapMoving);
+
+  // 렌더 중에 이전 값과 비교해서 닫으므로, 화면이 한 번 그려진 뒤 다시 그리는 일이 없다. 검색 중인 요청은 그대로 둔다.
+  if (mapMoving !== wasMoving) {
+    setWasMoving(mapMoving);
+    if (mapMoving && state.status !== 'idle' && state.status !== 'loading') setState({ status: 'idle' });
+  }
   // 앞선 검색이 늦게 끝나도 마지막 검색 결과만 보여 주려고 요청마다 번호를 붙인다.
   const requestRef = useRef(0);
 

@@ -33,6 +33,7 @@ export interface ClusterData {
 export interface MapView {
   getBounds(): Bounds;
   getLevel(): number;
+  getCenter(): LatLng;
   // level을 넘기고 지금 확대 수준과 다르면 확대·축소를 애니메이션으로 보여준다.
   setCenter(position: LatLng, level?: number): void;
   // 지금 그려진 마커와 묶음을 모두 지우고 새로 그린다.
@@ -41,6 +42,8 @@ export interface MapView {
   setSelected(id: number | null): void;
   // 지도 이동·확대가 멈출 때마다 부른다. 반환한 함수를 부르면 구독을 끊는다.
   onIdle(listener: () => void): () => void;
+  // 사용자가 지도를 끌기 시작하거나 확대·축소가 시작될 때 부른다. 멈추면 onIdle이 온다.
+  onMoveStart(listener: () => void): () => void;
   onMarkerClick(listener: (id: number) => void): () => void;
   onClusterClick(listener: (cluster: ClusterData) => void): () => void;
   // 지도의 빈 곳을 눌렀을 때 그 위치를 알려 준다. 마커와 묶음을 누른 클릭은 오지 않는다.
