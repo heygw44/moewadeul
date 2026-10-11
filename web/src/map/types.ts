@@ -24,7 +24,7 @@ export interface SpotMarkerData {
   count?: number;
 }
 
-// 서버가 묶어서 보낸 장소 묶음이다. 클라이언트에서 다시 묶지 않는다.
+// 서버가 묶어서 보낸 장소 묶음이다. 지도 래퍼는 화면에서 겹치는 묶음만 합쳐서 그린다.
 export interface ClusterData {
   position: LatLng;
   count: number;

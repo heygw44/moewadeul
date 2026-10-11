@@ -14,6 +14,17 @@ declare namespace kakao.maps {
     getNorthEast(): LatLng;
   }
 
+  // 지도 컨테이너 왼쪽 위를 원점으로 한 픽셀 좌표다.
+  class Point {
+    constructor(x: number, y: number);
+    x: number;
+    y: number;
+  }
+
+  class MapProjection {
+    containerPointFromCoords(latlng: LatLng): Point;
+  }
+
   // SDK 안에서는 숫자 상수다. 값은 kakao.maps.MapTypeId에서 이름으로 꺼내 쓴다.
   type MapTypeId = number;
 
@@ -41,6 +52,7 @@ declare namespace kakao.maps {
     setLevel(level: number, options?: SetLevelOptions): void;
     getLevel(): number;
     getBounds(): LatLngBounds;
+    getProjection(): MapProjection;
     relayout(): void;
     addOverlayMapTypeId(mapTypeId: MapTypeId): void;
     removeOverlayMapTypeId(mapTypeId: MapTypeId): void;
