@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.program.infra.ProgramQueryMapper">
+<mapper namespace="com.moewadeul.program.infra.ProgramQueryMapper">
 
     <!-- 남은 자리는 정원에서 정원을 차지하는 신청(결제 대기, 확정)의 수를 뺀 값이다. 신청이 정원보다 많아도 응답이 음수가 되지 않게 0에서 멈춘다. -->
     <sql id="remainingSeats">
@@ -14,7 +14,7 @@
 
     <!-- 단계는 저장하지 않고 신청 시작·마감 시각과 now를 비교해서 가른다. 시작 시각이 같으면 ID 순서로 정렬해서, 페이지를 넘겨도 같은 행사가
          두 번 나오거나 빠지지 않게 한다. (start_at, id) 인덱스를 그대로 따라 읽는다. -->
-    <select id="selectList" resultType="com.pitchmap.program.infra.ProgramListRow">
+    <select id="selectList" resultType="com.moewadeul.program.infra.ProgramListRow">
         SELECT p.id AS program_id,
                p.title AS title,
                p.location_text AS location_text,
@@ -44,7 +44,7 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="selectDetail" resultType="com.pitchmap.program.infra.ProgramDetailRow">
+    <select id="selectDetail" resultType="com.moewadeul.program.infra.ProgramDetailRow">
         SELECT p.id AS program_id,
                p.title AS title,
                p.description AS description,
@@ -64,7 +64,7 @@
         WHERE p.id = #{programId}
     </select>
 
-    <select id="selectLatestApplication" resultType="com.pitchmap.program.infra.MyApplicationRow">
+    <select id="selectLatestApplication" resultType="com.moewadeul.program.infra.MyApplicationRow">
         SELECT a.id AS application_id,
                a.status AS status,
                a.payment_due_at AS payment_due_at
@@ -76,7 +76,7 @@
     </select>
 
     <!-- 신청 ID는 신청한 순서대로 커지므로 ID 순서가 곧 신청 순서다. 회원 테이블에서는 닉네임만 읽는다. -->
-    <select id="selectApplicants" resultType="com.pitchmap.program.infra.ProgramApplicantRow">
+    <select id="selectApplicants" resultType="com.moewadeul.program.infra.ProgramApplicantRow">
         SELECT a.id AS application_id,
                a.member_id AS member_id,
                m.nickname AS nickname,
@@ -98,7 +98,7 @@
     </select>
 
     <!-- 신청 ID는 신청한 순서대로 커지므로 ID 내림차순이 곧 최근 신청부터다. 행사 정보는 신청 시점이 아니라 지금 값을 조인한다. -->
-    <select id="selectMyApplications" resultType="com.pitchmap.program.infra.MyProgramApplicationRow">
+    <select id="selectMyApplications" resultType="com.moewadeul.program.infra.MyProgramApplicationRow">
         SELECT a.id AS application_id,
                a.status AS status,
                a.payment_due_at AS payment_due_at,

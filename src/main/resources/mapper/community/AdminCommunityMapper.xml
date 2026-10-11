@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.community.infra.AdminCommunityMapper">
+<mapper namespace="com.moewadeul.community.infra.AdminCommunityMapper">
 
     <!-- community 모듈이 member 테이블을 SQL로 직접 읽는 이유: 관리자 화면에는 작성자의 닉네임이 함께 필요하다.
          자바 코드로 member 모듈을 부르면 community가 그 모듈에 기대게 되지만, SQL은 테이블 이름에만 기대므로 모듈 경계를 지킨다.
@@ -10,7 +10,7 @@
          정렬은 금전 요구·사기 신고가 있는 글이 먼저이고, 같은 묶음에서는 상태가 바뀐 시각이 이른 글, 즉 오래 기다린 글이 먼저다.
          시각이 같아도 페이지 경계에서 순서가 흔들리지 않도록 id를 보조 정렬 키로 쓴다.
          숨긴 글도 관리자가 판단할 수 있도록 본문 전체를 읽는다. -->
-    <select id="selectPosts" resultType="com.pitchmap.community.infra.AdminCommunityPostRow">
+    <select id="selectPosts" resultType="com.moewadeul.community.infra.AdminCommunityPostRow">
         SELECT p.id AS post_id,
                p.title AS title,
                p.content AS content,
@@ -47,7 +47,7 @@
     </select>
 
     <!-- 댓글도 글과 같은 방식으로 읽는다. 작성자가 지운 댓글은 content가 NULL이다. -->
-    <select id="selectComments" resultType="com.pitchmap.community.infra.AdminCommunityCommentRow">
+    <select id="selectComments" resultType="com.moewadeul.community.infra.AdminCommunityCommentRow">
         SELECT c.id AS comment_id,
                c.post_id AS post_id,
                c.content AS content,
@@ -85,7 +85,7 @@
 
     <!-- 대상마다 검토 전 신고를 최신순으로 번호 매겨 5번째까지만 남긴다. 신고 시각이 같아도 순서가 고정되도록 id를 보조 정렬 키로 쓴다.
          신고자(reporter_id)는 읽지 않는다. -->
-    <select id="selectRecentReports" resultType="com.pitchmap.community.infra.AdminCommunityRecentReportRow">
+    <select id="selectRecentReports" resultType="com.moewadeul.community.infra.AdminCommunityRecentReportRow">
         SELECT ranked.target_id AS target_id,
                ranked.reason AS reason,
                ranked.content AS content,

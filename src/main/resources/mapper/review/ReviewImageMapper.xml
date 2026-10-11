@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.review.infra.ReviewImageMapper">
+<mapper namespace="com.moewadeul.review.infra.ReviewImageMapper">
 
     <!-- 후기 안 순서(display_order)는 후기에 붙은 이미지에만 있고, 후기마다 0부터 겹치지 않게 채운다. -->
-    <select id="selectByReviewIds" resultType="com.pitchmap.review.infra.ReviewImageRow">
+    <select id="selectByReviewIds" resultType="com.moewadeul.review.infra.ReviewImageRow">
         SELECT id AS image_id, review_id, object_key
         FROM review_image
         WHERE review_id IN
@@ -11,7 +11,7 @@
         ORDER BY review_id, display_order
     </select>
 
-    <select id="selectUnattachedCreatedBefore" resultType="com.pitchmap.review.infra.ReviewImageRow">
+    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.review.infra.ReviewImageRow">
         SELECT id AS image_id, review_id, object_key
         FROM review_image
         WHERE review_id IS NULL

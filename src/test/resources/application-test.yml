@@ -5,7 +5,7 @@ logging:
   level:
     org.testcontainers: INFO
     com.github.dockerjava: WARN
-pitchmap:
+moewadeul:
   identity:
     # 테스트에서만 쓰는 가짜 키다. 길이 하한(32바이트)을 넘기려고 길게 적었다.
     ci-hmac-key: "test-only-ci-hmac-key-not-a-real-secret-0123456789"

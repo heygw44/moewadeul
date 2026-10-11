@@ -6,7 +6,7 @@ plugins {
     id("com.diffplug.spotless") version "8.10.3"
 }
 
-group = "com.pitchmap"
+group = "com.moewadeul"
 version = "0.0.1-SNAPSHOT"
 
 java {
