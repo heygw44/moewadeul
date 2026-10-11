@@ -1,7 +1,8 @@
 package com.pitchmap.community.application;
 
 import com.pitchmap.common.error.InvalidFieldException;
-import com.pitchmap.community.application.CommunityImageStorage.PresignedUpload;
+import com.pitchmap.common.storage.ImageStorage;
+import com.pitchmap.common.storage.ImageStorage.PresignedUpload;
 import com.pitchmap.community.domain.CommunityImage;
 import com.pitchmap.community.domain.CommunityImageRepository;
 import java.time.Clock;
@@ -21,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CommunityImageUploadService {
 
     private final CommunityImageRepository communityImageRepository;
-    private final CommunityImageStorage communityImageStorage;
+    private final ImageStorage imageStorage;
     private final Clock clock;
 
     /**
@@ -39,7 +40,7 @@ public class CommunityImageUploadService {
         String key = "community/" + memberId + "/" + UUID.randomUUID() + "." + extension;
         CommunityImage image = communityImageRepository.saveAndFlush(
                 CommunityImage.issue(memberId, key, contentType, sizeBytes, clock.instant()));
-        PresignedUpload upload = communityImageStorage.presignUpload(key, contentType, sizeBytes);
+        PresignedUpload upload = imageStorage.presignUpload(key, contentType, sizeBytes);
         return new CommunityImageUpload(image.getId(), upload.url(), upload.headers(), upload.expiresAt());
     }
 }

@@ -1,9 +1,9 @@
-package com.pitchmap.community.infra;
+package com.pitchmap.common.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import com.pitchmap.community.application.CommunityImageStorage.PresignedUpload;
+import com.pitchmap.common.storage.ImageStorage.PresignedUpload;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -17,13 +17,13 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
-class S3CommunityImageStorageTest {
+class S3ImageStorageTest {
 
     private static final String BUCKET = "pitchmap-upload-test";
     private static final String KEY = "community/7/3f0c1c7e-0000-4000-8000-000000000001.jpg";
 
     private S3Presigner presigner;
-    private S3CommunityImageStorage storage;
+    private S3ImageStorage storage;
 
     @BeforeEach
     void setUp() {
@@ -33,7 +33,7 @@ class S3CommunityImageStorageTest {
                 .credentialsProvider(
                         StaticCredentialsProvider.create(AwsBasicCredentials.create("test-access", "test-secret")))
                 .build();
-        CommunityImageProperties properties = new CommunityImageProperties(
+        ImageStorageProperties properties = new ImageStorageProperties(
                 "s3",
                 BUCKET,
                 "ap-northeast-2",
@@ -41,7 +41,7 @@ class S3CommunityImageStorageTest {
                 Duration.ofHours(1),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(5));
-        storage = new S3CommunityImageStorage(properties, mock(S3Client.class), presigner);
+        storage = new S3ImageStorage(properties, mock(S3Client.class), presigner);
     }
 
     @AfterEach

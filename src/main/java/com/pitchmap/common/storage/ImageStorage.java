@@ -1,14 +1,14 @@
-package com.pitchmap.community.application;
+package com.pitchmap.common.storage;
 
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * 커뮤니티 이미지를 담는 객체 저장소. 서버는 파일을 직접 받지 않고, 회원이 저장소에 바로 올리고 읽을 수 있는 사전 서명 URL만 발급한다.
+ * 커뮤니티 글과 장소 후기의 이미지를 담는 객체 저장소. 객체 키는 이미지를 쓰는 모듈이 만들고, 이 저장소는 키를 그대로 쓴다. 서버는 파일을 직접 받지 않고, 회원이 저장소에 바로 올리고 읽을 수 있는 사전 서명 URL만 발급한다.
  * 구현체는 운영에서 S3를 쓰고, 로컬 개발에서는 파일을 저장하지 않는 가짜를 쓴다.
  */
-public interface CommunityImageStorage {
+public interface ImageStorage {
 
     /**
      * 호출하면 key 위치에 contentType과 sizeBytes인 파일 하나를 올릴 수 있는 URL을 발급한다. 형식과 크기는 서명에 들어가므로 다르게 올리면 저장소가

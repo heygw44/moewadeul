@@ -1,6 +1,5 @@
-package com.pitchmap.community.infra;
+package com.pitchmap.common.storage;
 
-import com.pitchmap.community.application.CommunityImageStorage;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -20,39 +19,39 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 /**
- * S3 버킷에 커뮤니티 이미지를 두는 저장소. 자격 증명은 SDK의 기본 방식으로 찾는다. 운영 서버에서는 인스턴스 역할이다.
+ * S3 버킷에 커뮤니티 글과 장소 후기의 이미지를 두는 저장소. 자격 증명은 SDK의 기본 방식으로 찾는다. 운영 서버에서는 인스턴스 역할이다.
  *
  * <p>사전 서명 URL은 서버 안에서 계산하므로 S3를 부르지 않는다. 객체 크기 확인과 삭제만 S3를 부르며, SDK는 기본으로 제한 시간이 없어서
  * 호출마다 제한 시간을 걸고 재시도는 한 번만 한다. 로그에는 키나 URL을 남기지 않는다. 키에 회원 ID가 들어 있고, URL에는 서명이 들어 있기 때문이다.
  */
 @Component
 @ConditionalOnProperty(
-        prefix = "pitchmap.community.image",
+        prefix = "pitchmap.image-storage",
         name = "storage",
-        havingValue = CommunityImageProperties.STORAGE_S3)
-public class S3CommunityImageStorage implements CommunityImageStorage, DisposableBean {
+        havingValue = ImageStorageProperties.STORAGE_S3)
+public class S3ImageStorage implements ImageStorage, DisposableBean {
 
     private static final int MAX_ATTEMPTS = 2;
     private static final String CONTENT_TYPE = "Content-Type";
     private static final String CONTENT_LENGTH = "Content-Length";
 
-    private final CommunityImageProperties properties;
+    private final ImageStorageProperties properties;
     private final S3Client s3Client;
     private final S3Presigner presigner;
 
     @Autowired
-    public S3CommunityImageStorage(CommunityImageProperties properties) {
+    public S3ImageStorage(ImageStorageProperties properties) {
         this(properties, buildClient(properties), buildPresigner(properties));
     }
 
     // 테스트가 고정 자격 증명으로 만든 서명기를 넣을 수 있게 열어 둔다.
-    S3CommunityImageStorage(CommunityImageProperties properties, S3Client s3Client, S3Presigner presigner) {
+    S3ImageStorage(ImageStorageProperties properties, S3Client s3Client, S3Presigner presigner) {
         this.properties = properties;
         this.s3Client = s3Client;
         this.presigner = presigner;
     }
 
-    private static S3Client buildClient(CommunityImageProperties properties) {
+    private static S3Client buildClient(ImageStorageProperties properties) {
         return S3Client.builder()
                 .region(Region.of(properties.region()))
                 .overrideConfiguration(override -> override.apiCallTimeout(properties.apiCallTimeout())
@@ -61,7 +60,7 @@ public class S3CommunityImageStorage implements CommunityImageStorage, Disposabl
                 .build();
     }
 
-    private static S3Presigner buildPresigner(CommunityImageProperties properties) {
+    private static S3Presigner buildPresigner(ImageStorageProperties properties) {
         return S3Presigner.builder().region(Region.of(properties.region())).build();
     }
 

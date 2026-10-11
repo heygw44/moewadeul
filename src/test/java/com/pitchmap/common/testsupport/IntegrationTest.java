@@ -1,7 +1,6 @@
 package com.pitchmap.common.testsupport;
 
 import com.pitchmap.common.mail.TestMailSenderConfig;
-import com.pitchmap.community.infra.TestCommunityImageStorageConfig;
 import com.pitchmap.notification.application.RecordingOutboxEventHandler;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -28,7 +27,7 @@ import org.springframework.test.context.ActiveProfiles;
     MySqlTestContainerConfig.class,
     TestClockConfig.class,
     TestMailSenderConfig.class,
-    TestCommunityImageStorageConfig.class,
+    TestImageStorageConfig.class,
     RecordingOutboxEventHandler.Config.class,
     WireMockTestConfig.class
 })
@@ -36,7 +35,7 @@ import org.springframework.test.context.ActiveProfiles;
     DatabaseCleanupExtension.class,
     ClockResetExtension.class,
     WireMockResetExtension.class,
-    CommunityImageStorageResetExtension.class
+    ImageStorageResetExtension.class
 })
 public @interface IntegrationTest {
 

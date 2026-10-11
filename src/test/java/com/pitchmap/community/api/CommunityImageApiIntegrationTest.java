@@ -6,7 +6,7 @@ import static com.pitchmap.community.api.CommunityApiFixture.postIdOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.pitchmap.common.testsupport.IntegrationTest;
-import com.pitchmap.community.infra.TestCommunityImageStorage;
+import com.pitchmap.common.testsupport.TestImageStorage;
 import com.pitchmap.member.application.EmailVerificationService;
 import com.pitchmap.member.domain.Member;
 import com.pitchmap.member.infra.MemberJpaRepository;
@@ -50,7 +50,7 @@ class CommunityImageApiIntegrationTest {
     private JdbcTemplate jdbc;
 
     @Autowired
-    private TestCommunityImageStorage storage;
+    private TestImageStorage storage;
 
     private CommunityApiFixture fixture;
     private Member author;

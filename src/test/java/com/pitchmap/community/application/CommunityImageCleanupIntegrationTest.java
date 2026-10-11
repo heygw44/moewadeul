@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.pitchmap.common.testsupport.IntegrationTest;
 import com.pitchmap.common.testsupport.MutableClock;
-import com.pitchmap.community.infra.TestCommunityImageStorage;
+import com.pitchmap.common.testsupport.TestImageStorage;
 import com.pitchmap.member.infra.MemberJpaRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -37,7 +37,7 @@ class CommunityImageCleanupIntegrationTest {
     private MemberJpaRepository memberRepository;
 
     @Autowired
-    private TestCommunityImageStorage storage;
+    private TestImageStorage storage;
 
     @Autowired
     private JdbcTemplate jdbc;

@@ -1,6 +1,6 @@
-package com.pitchmap.community.infra;
+package com.pitchmap.common.testsupport;
 
-import com.pitchmap.community.application.CommunityImageStorage;
+import com.pitchmap.common.storage.ImageStorage;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +15,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <p>정리 작업 스레드와 테스트 스레드가 함께 쓸 수 있도록 스레드 안전하게 만든다. 통합 테스트는 Spring 컨텍스트를 공유하므로,
  * {@link #reset()}을 테스트가 끝날 때마다 불러 이전 테스트의 상태를 지운다.
  */
-public class TestCommunityImageStorage implements CommunityImageStorage {
+public class TestImageStorage implements ImageStorage {
 
     public static final String DELETE_FAILURE_MESSAGE = "simulated storage delete failure";
 

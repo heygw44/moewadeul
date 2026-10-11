@@ -1,4 +1,4 @@
-package com.pitchmap.community.infra;
+package com.pitchmap.common.storage;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
- * 커뮤니티 이미지 저장소 설정.
+ * 커뮤니티 글과 장소 후기가 함께 쓰는 이미지 저장소 설정.
  *
  * @param storage 저장소 종류. {@code fake}는 로컬 개발용으로 파일을 저장하지 않고, {@code s3}는 실제 S3 버킷을 쓴다.
  * @param bucket S3 버킷 이름. 비밀값이 아니다. storage가 s3이면 비어 있을 수 없다.
@@ -16,8 +16,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param apiCallAttemptTimeout S3 API 호출 한 번(재시도 한 번)을 기다리는 시간
  * @param apiCallTimeout 재시도를 포함해 S3 API 호출 하나가 끝나기를 기다리는 시간
  */
-@ConfigurationProperties("pitchmap.community.image")
-public record CommunityImageProperties(
+@ConfigurationProperties("pitchmap.image-storage")
+public record ImageStorageProperties(
         @DefaultValue("fake") String storage,
         String bucket,
         @DefaultValue("ap-northeast-2") String region,
@@ -29,9 +29,9 @@ public record CommunityImageProperties(
     public static final String STORAGE_FAKE = "fake";
     public static final String STORAGE_S3 = "s3";
 
-    private static final String PREFIX = "pitchmap.community.image.";
+    private static final String PREFIX = "pitchmap.image-storage.";
 
-    public CommunityImageProperties {
+    public ImageStorageProperties {
         bucket = Objects.requireNonNullElse(bucket, "");
         if (!STORAGE_FAKE.equals(storage) && !STORAGE_S3.equals(storage)) {
             throw new IllegalArgumentException(PREFIX + "storage must be fake or s3");

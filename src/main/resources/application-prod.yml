@@ -15,7 +15,6 @@ logging:
       console: ecs
 
 pitchmap:
-  community:
-    image:
-      # 운영은 실제 S3 버킷을 쓴다. 자격 증명은 서버의 인스턴스 역할에서 받으므로 키를 설정에 두지 않는다.
-      storage: s3
+  image-storage:
+    # 운영은 실제 S3 버킷을 쓴다. 자격 증명은 서버의 인스턴스 역할에서 받으므로 키를 설정에 두지 않는다.
+    storage: s3
