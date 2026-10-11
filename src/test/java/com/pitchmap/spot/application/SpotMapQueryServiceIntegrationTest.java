@@ -368,25 +368,66 @@ class SpotMapQueryServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-03] 묶음은 칸 안 장소의 평균 좌표와 수를 남쪽 행부터 주고, 북쪽·동쪽 경계선 위의 장소는 마지막 칸에 넣는다")
-    void clustersByGridCellInRowOrderWithEdgeSpotsInLastCell() {
-        // given: 칸 하나는 0.05도 폭이다. 남서 칸에는 두 좌표를 섞어 넣고, 동쪽 경계선과 북쪽 경계선 위에도 장소를 둔다.
+    @DisplayName("[F-03] 묶음은 화면 칸에 들어간 장소의 평균 좌표와 수를 남쪽 행부터, 같은 행에서는 서쪽 칸부터 준다")
+    void clustersByViewCellInRowOrderWithAverageOfAssignedSpots() {
+        // given: 화면 칸은 0.05도 폭이고, 서버는 그 절반 이하인 0.02도 격자로 센다.
+        // 남서 화면 칸에는 서로 다른 격자 칸 두 곳에 나눠 넣고, 동쪽 끝 화면 칸과 북쪽 끝 화면 칸에도 장소를 둔다.
         List<Coordinate> coordinates = new ArrayList<>();
-        coordinates.addAll(Collections.nCopies(100, new Coordinate(36.01, 127.01)));
-        coordinates.addAll(Collections.nCopies(100, new Coordinate(36.03, 127.03)));
-        coordinates.addAll(Collections.nCopies(200, new Coordinate(36.02, 128.0)));
-        coordinates.addAll(Collections.nCopies(101, new Coordinate(37.0, 127.02)));
+        coordinates.addAll(Collections.nCopies(100, new Coordinate(36.011, 127.011)));
+        coordinates.addAll(Collections.nCopies(100, new Coordinate(36.031, 127.031)));
+        coordinates.addAll(Collections.nCopies(200, new Coordinate(36.025, 127.991)));
+        coordinates.addAll(Collections.nCopies(101, new Coordinate(36.991, 127.025)));
         insertCampsites(coordinates);
 
         // when
         SpotAreaResult result = spotMapQueryService.findInArea(BULK_AREA.query());
 
-        // then: 칸 번호를 열부터 정렬하면 북쪽 경계 묶음이 동쪽 경계 묶음보다 먼저 나온다.
+        // then: 칸 번호를 행부터 정렬하므로, 같은 남쪽 행의 동쪽 끝 묶음이 북쪽 끝 묶음보다 먼저 나온다.
         assertThat(result.markers()).isEmpty();
         assertThat(result.clusters()).hasSize(3);
-        assertCluster(result.clusters().get(0), new Coordinate(36.02, 127.02), 200);
-        assertCluster(result.clusters().get(1), new Coordinate(36.02, 128.0), 200);
-        assertCluster(result.clusters().get(2), new Coordinate(37.0, 127.02), 101);
+        assertCluster(result.clusters().get(0), new Coordinate(36.021, 127.021), 200);
+        assertCluster(result.clusters().get(1), new Coordinate(36.025, 127.991), 200);
+        assertCluster(result.clusters().get(2), new Coordinate(36.991, 127.025), 101);
+    }
+
+    @Test
+    @DisplayName("[F-03] 묶음은 격자 칸 중심으로 세서, 가장자리 격자 칸의 장소는 영역 밖이어도 들어오고 영역 안이어도 빠질 수 있다")
+    void clustersCountGridCellsByCenterAtAreaEdges() {
+        // given: 영역 경계가 0.02도 격자선에서 0.005도 비켜 있다.
+        // 남쪽 바깥 장소(36.001)의 격자 칸 [36.00, 36.02)는 중심 36.01이 영역 안이라 묶음에 들어간다.
+        // 북쪽 안쪽 장소(37.004)의 격자 칸 [37.00, 37.02)는 중심 37.01이 영역 밖이라 묶음에서 빠진다.
+        // 남쪽 바깥 장소는 경도 127.905에 두어, 다른 장소가 없는 화면 칸에 혼자 들어가게 한다.
+        Area shifted = new Area(36.005, 127.005, 37.005, 128.005);
+        int insideCount = SpotMapQueryService.MAX_ITEMS + 1;
+        insertCampsites(spreadInBulkArea(insideCount));
+        insertSpot("CAMPSITE", "남쪽 바깥 야영장", new Coordinate(36.001, 127.905));
+        insertSpot("CAMPSITE", "북쪽 안쪽 야영장", new Coordinate(37.004, 127.905));
+
+        // when
+        SpotAreaResult result = spotMapQueryService.findInArea(shifted.query());
+
+        // then
+        assertThat(result.markers()).isEmpty();
+        assertThat(result.clusters().stream().mapToLong(SpotCluster::count).sum())
+                .isEqualTo(insideCount + 1);
+        assertThat(result.clusters())
+                .anySatisfy(cluster -> assertThat(cluster.lat()).isLessThan(shifted.swLat()));
+    }
+
+    @Test
+    @DisplayName("[F-03] 영역 안 장소가 500개를 넘는지는 격자와 상관없이 정확히 판단한다")
+    void decidesMarkersOrClustersByExactCountInArea() {
+        // given: 영역 안 500곳에 더해, 격자 칸 중심으로는 묶음에 들어가는 영역 밖 장소를 하나 둔다.
+        Area shifted = new Area(36.005, 127.005, 37.005, 128.005);
+        insertCampsites(spreadInBulkArea(SpotMapQueryService.MAX_ITEMS));
+        insertSpot("CAMPSITE", "남쪽 바깥 야영장", new Coordinate(36.001, 127.905));
+
+        // when
+        SpotAreaResult result = spotMapQueryService.findInArea(shifted.query());
+
+        // then
+        assertThat(result.clusters()).isEmpty();
+        assertThat(result.markers()).hasSize(SpotMapQueryService.MAX_ITEMS);
     }
 
     private static void assertCluster(SpotCluster cluster, Coordinate expectedCenter, long expectedCount) {

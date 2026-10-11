@@ -83,8 +83,10 @@ main() {
 
     log "덤프 시작: $db_name"
     # 비밀번호는 명령 인자가 아니라 MYSQL_PWD 환경 변수로 넘겨 프로세스 목록에 남지 않게 한다.
+    # mysqldump는 트리거를 기본으로 담지만 프로시저는 --routines를 줘야 담는다. 지도 묶음 집계 트리거가 프로시저를 부르므로,
+    # 프로시저 없이 복구하면 장소를 쓸 때마다 트리거가 실패한다.
     MYSQL_PWD="$db_password" docker exec -e MYSQL_PWD "$container" \
-        mysqldump -u"$db_user" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF \
+        mysqldump -u"$db_user" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --routines \
         --ignore-table="$db_name.SPRING_SESSION" --ignore-table="$db_name.SPRING_SESSION_ATTRIBUTES" \
         "$db_name" | gzip -9 > "$DUMP_FILE"
 

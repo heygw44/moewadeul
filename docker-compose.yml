@@ -15,6 +15,8 @@ services:
       - --collation-server=utf8mb4_0900_ai_ci
       # 우리는 DB 시간을 UTC로 둔다.
       - --default-time-zone=+00:00
+      # binlog가 켜진 MySQL은 SUPER 권한이 없는 계정의 트리거 생성을 거부한다. 마이그레이션이 지도 묶음 집계용 트리거를 만들어서 켠다.
+      - --log-bin-trust-function-creators=1
     ports:
       # 로컬 전용이라 우리는 포트를 외부 인터페이스에 열지 않는다.
       - "127.0.0.1:${DB_PORT:-3306}:3306"

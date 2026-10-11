@@ -61,6 +61,9 @@ services:
       - --collation-server=utf8mb4_0900_ai_ci
       # 로컬과 같게 DB 시간을 UTC로 둔다.
       - --default-time-zone=+00:00
+      # binlog가 켜진 MySQL은 SUPER 권한이 없는 앱 계정의 트리거 생성을 거부한다. 마이그레이션이 지도 묶음 집계용 트리거를 만들어서 켠다.
+      # binlog 형식은 ROW라서 트리거가 바꾼 행이 그대로 기록된다.
+      - --log-bin-trust-function-creators=1
     # 포트를 열지 않는다. 앱은 Compose 내부 네트워크로만 접속한다.
     volumes:
       - mysql-data:/var/lib/mysql

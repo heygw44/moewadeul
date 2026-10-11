@@ -10,9 +10,11 @@ import org.testcontainers.mysql.MySQLContainer;
 @TestConfiguration(proxyBeanMethods = false)
 public class MySqlTestContainerConfig {
 
+    // 운영 MySQL과 같은 시작 옵션을 준다. binlog가 켜진 MySQL은 SUPER 권한이 없는 계정의 트리거 생성을 거부하는데,
+    // 마이그레이션이 지도 묶음 집계용 트리거를 만들기 때문이다.
     @Bean
     @ServiceConnection
     MySQLContainer mysql() {
-        return new MySQLContainer("mysql:8.4");
+        return new MySQLContainer("mysql:8.4").withCommand("--log-bin-trust-function-creators=1");
     }
 }
