@@ -74,6 +74,8 @@ declare namespace kakao.maps {
     function removeListener(target: Map, type: 'idle', handler: () => void): void;
     function addListener(target: Map, type: 'click', handler: (event: MouseEvent) => void): void;
     function removeListener(target: Map, type: 'click', handler: (event: MouseEvent) => void): void;
+    function addListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
+    function removeListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
   }
 
   // 스크립트 주소에 autoload=false를 붙여 불러왔을 때, SDK 나머지 파일을 받은 뒤 callback을 부른다.
@@ -104,6 +106,11 @@ declare namespace kakao.maps {
       address: RegionAddress | null;
     }
 
+    // 좌표가 속한 행정구역이다. H는 행정동, B는 법정동 기준이다.
+    interface RegionCodeResult extends RegionAddress {
+      region_type: 'H' | 'B';
+    }
+
     interface PlaceResult {
       place_name: string;
       address_name: string;
@@ -126,6 +133,7 @@ declare namespace kakao.maps {
         callback: (result: AddressResult[], status: Status) => void,
         options?: AddressSearchOptions,
       ): void;
+      coord2RegionCode(lng: number, lat: number, callback: (result: RegionCodeResult[], status: Status) => void): void;
     }
 
     class Places {

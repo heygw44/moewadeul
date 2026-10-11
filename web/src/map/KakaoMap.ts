@@ -25,6 +25,7 @@ export async function createMapView(
   const map = new kakao.maps.Map(container, { center: toKakaoLatLng(initial.center), level: initial.level });
 
   const idleListeners = new Set<() => void>();
+  const moveStartListeners = new Set<() => void>();
   const markerListeners = new Set<(id: number) => void>();
   const clusterListeners = new Set<(cluster: ClusterData) => void>();
   const mapClickListeners = new Set<(position: LatLng) => void>();
@@ -34,6 +35,12 @@ export async function createMapView(
     for (const listener of [...idleListeners]) listener();
   };
   kakao.maps.event.addListener(map, 'idle', handleIdle);
+
+  const handleMoveStart = () => {
+    for (const listener of [...moveStartListeners]) listener();
+  };
+  kakao.maps.event.addListener(map, 'dragstart', handleMoveStart);
+  kakao.maps.event.addListener(map, 'zoom_start', handleMoveStart);
 
   // 핀과 묶음은 clickable 오버레이라서 그 위를 누른 클릭은 지도 이벤트로 오지 않는다.
   const handleMapClick = (event: kakao.maps.MouseEvent) => {
@@ -80,6 +87,11 @@ export async function createMapView(
 
     getLevel() {
       return map.getLevel();
+    },
+
+    getCenter(): LatLng {
+      const center = map.getCenter();
+      return { lat: center.getLat(), lng: center.getLng() };
     },
 
     setCenter(position: LatLng, level?: number) {
@@ -147,6 +159,10 @@ export async function createMapView(
       return subscribe(idleListeners, listener);
     },
 
+    onMoveStart(listener: () => void) {
+      return subscribe(moveStartListeners, listener);
+    },
+
     onMarkerClick(listener: (id: number) => void) {
       return subscribe(markerListeners, listener);
     },
@@ -201,10 +217,13 @@ export async function createMapView(
       destroyed = true;
       kakao.maps.event.removeListener(map, 'idle', handleIdle);
       kakao.maps.event.removeListener(map, 'click', handleMapClick);
+      kakao.maps.event.removeListener(map, 'dragstart', handleMoveStart);
+      kakao.maps.event.removeListener(map, 'zoom_start', handleMoveStart);
       clearOverlays();
       draftOverlay?.setMap(null);
       draftOverlay = null;
       idleListeners.clear();
+      moveStartListeners.clear();
       markerListeners.clear();
       clusterListeners.clear();
       mapClickListeners.clear();
