@@ -79,3 +79,81 @@ COMPOSE_FILE=/opt/pitchmap/docker-compose.prod.yml ENV_FILE=/opt/pitchmap/.env l
 
 기상청 격자 번호는 위경도를 선형 근사한 값이다. 검증 중에는 날씨 API를 부르지 않아서 정확한 격자가 필요 없다.
 
+## 2. k6 스크립트
+
+k6는 앱과 다른 머신에서 돌린다. 같은 머신에서 돌리면 k6가 CPU를 나눠 써서 앱의 응답 시간이 실제보다 나쁘게 나오기 때문이다. 로컬에서 작은 규모로 돌리는 것은 스크립트가 도는지 확인하는 용도이고, 그 수치로 기준을 판정하지 않는다.
+
+| 파일 | 하는 일 |
+|---|---|
+| `map-area.js` | 지도 영역 조회. 가상 사용자(VU) 300명이 각자 화면 영역을 하나 골라 조회하고 1~3초 쉬기를 반복한다 |
+| `program-open.js` | 행사 오픈 순간 신청. 준비 단계에서 회원을 모두 로그인시키고 행사를 만든 뒤, 신청이 열리는 순간 모든 회원이 한 번씩 신청한다 |
+| `lib/auth.js` | CSRF 토큰 받기, 로그인, 인증 헤더 만들기 |
+| `lib/regions.js` | 시·도 중심 좌표와 가중치. `seed/seed.sql`과 같은 값이다 |
+
+### 실행
+
+```bash
+# 로컬, 작은 규모 (1절의 로컬 예시로 장소 2만 건과 신청 회원 200명을 넣은 상태)
+k6 run -e VUS=10 -e DURATION=30s load-test/map-area.js
+k6 run -e APPLICANTS=200 -e CAPACITY=20 -e OPEN_DELAY=5 load-test/program-open.js
+k6 run -e APPLICANTS=200 -e CAPACITY=20 -e OPEN_DELAY=5 -e OVERNIGHT=false load-test/program-open.js
+
+# 검증 환경, 기준 조건 (결과는 gitignore된 load-test/results/에 남긴다)
+k6 run -e BASE_URL=http://앱-서버-사설-IP --summary-trend-stats "avg,med,p(95),p(99),max" \
+  --summary-export=load-test/results/map-area-1.json load-test/map-area.js
+k6 run -e BASE_URL=http://앱-서버-사설-IP --summary-trend-stats "avg,med,p(95),p(99),max" \
+  --summary-export=load-test/results/program-open-1.json load-test/program-open.js
+```
+
+| 환경 변수 | 기본값 | 스크립트 | 뜻 |
+|---|---|---|---|
+| `BASE_URL` | `http://localhost:8080` | 둘 다 | 앱 주소 |
+| `LOADTEST_PASSWORD` | 검증용 가짜 비밀번호 | 둘 다 | 검증 회원 비밀번호. 1절 데이터를 썼다면 바꾸지 않는다 |
+| `VUS` | 300 | `map-area.js` | 동시 사용자 수 |
+| `DURATION` | `10m` | `map-area.js` | 측정 시간 |
+| `APPLICANTS` | 2000 | `program-open.js` | 신청 회원 수. 1절의 `MEMBER_COUNT`보다 많으면 로그인에 실패한다 |
+| `CAPACITY` | 200 | `program-open.js` | 행사 정원 |
+| `OVERNIGHT` | `true` | `program-open.js` | 숙박 행사 여부. 숙박 행사는 서버가 신청마다 신뢰 단계를 계산한다 |
+| `OPEN_DELAY` | 20 | `program-open.js` | 준비가 끝난 뒤 신청이 열리기까지 기다릴 초 |
+
+### 지도 영역 조회 (`map-area.js`)
+
+- 판정: `spots-area` 요청의 p95가 200ms 미만이고 실패율이 1% 미만이면 통과다. 스크립트는 응답마다 200인지, 마커와 묶음이 합쳐 500개 이하인지도 확인한다.
+- 화면 영역: 카카오맵 확대 수준을 아래 비율로 섞는다. 사람이 전국 지도는 잠깐 보고 시·군이나 동네 단위로 들어가서 오래 본다고 가정했다. 13레벨이 아니면 화면 중심을 1절의 시·도 가중치와 정규분포로 고른다.
+
+| 확대 수준 | 비율 | 화면 크기(경도 × 위도) | 뜻 |
+|---|---|---|---|
+| 13 | 10% | 7° × 5.6° (중심 고정: 36.3, 127.8) | 전국 |
+| 10 | 30% | 0.875° × 0.7° | 시·도 |
+| 8 | 40% | 0.22° × 0.175° | 시·군 |
+| 5 | 20% | 0.027° × 0.022° | 동네 |
+
+- 요약에는 확대 수준별 응답 시간(`level:13` 등)이 따로 나온다. 이 줄의 조건(`max>=0`)은 요약에 보이게 하려는 것이라 늘 통과한다.
+
+### 행사 오픈 순간 신청 (`program-open.js`)
+
+1. 준비 단계에서 관리자로 로그인하고, 신청 회원 `APPLICANTS`명을 50명씩 묶어 로그인시킨다.
+2. 관리자 API로 행사를 새로 만든다. 신청 시작은 서버 시각 기준 `OPEN_DELAY`초 뒤, 결제 기한은 30분이다. 측정 중에 결제 만료 작업이 자리를 돌려주면 성공 수가 정원을 넘을 수 있어서 기한을 넉넉히 잡았다.
+3. 모든 VU가 신청 시작 1초 뒤부터 0~500ms 사이에 흩어져 한 번씩 신청한다. 1초는 서버 시각을 초 단위 `Date` 헤더로만 알 수 있어서 둔 여유다. 신청마다 새 `Idempotency-Key`를 쓴다.
+4. 판정: 201이 정확히 `CAPACITY`건이고, `PROGRAM_SOLD_OUT`이 아닌 그 밖의 응답이 0건이면 통과다. 매진 응답은 409라서 k6의 `http_req_failed`에는 실패로 잡히지만 판정에는 쓰지 않는다.
+5. 끝나면 스크립트가 DB 대조 쿼리를 출력한다. 검증 서버의 MySQL에서 돌려 결과가 정원과 같은지 확인한다.
+
+회마다 새 행사를 만들므로 같은 데이터로 여러 번 돌려도 된다.
+
+## 3. 검증 환경 실행 절차
+
+운영 서버와 운영 DB에서는 돌리지 않는다. 같은 리전에 임시 EC2 두 대를 만들고, 측정이 끝나면 바로 지운다.
+
+1. **인스턴스**
+   - 앱 서버: 운영과 같은 사양(t4g.small, arm64, EBS gp3 20GB)에 운영과 같은 compose 파일(`deploy/docker-compose.prod.yml`)로 앱·MySQL·Caddy를 띄운다.
+   - k6 서버: 같은 리전, 같은 VPC에 한 대. 가상 사용자 2,000명을 띄울 메모리가 있는 사양을 고른다.
+   - 보안 그룹: k6 서버에서 앱 서버 80 포트로 가는 연결만 연다. 접속은 SSM Session Manager로 한다.
+2. **앱 서버 설정**
+   - 운영 Parameter Store 값과 운영 데이터를 복사하지 않는다. DB 비밀번호 같은 값은 이 환경에서만 쓸 임시 값을 새로 만든다.
+   - `SITE_ADDRESS=:80`으로 두어 Caddy가 인증서 없이 http로 받게 한다.
+   - 메일·공공데이터 키는 가짜 값이라 관련 스케줄 작업은 실패한다. 측정 중에 이 작업이 도는지 로그로 확인하고 측정 조건에 적는다.
+   - Grafana Alloy로 커넥션 풀·JVM 지표를 볼지 정한다. 보지 않으면 alloy 서비스를 빼고 띄운다.
+3. **데이터**: 앱이 뜨고 마이그레이션이 끝나면 1절의 검증 서버 예시로 장소 100만 건과 신청 회원 2,000명을 넣는다.
+4. **측정**: 시나리오마다 워밍업 1회 뒤 3회 측정하고 중앙값을 쓴다. 지도 조회와 행사 신청은 따로 돌린다.
+5. **측정 조건 기록**: 데이터 규모, 인스턴스 사양(앱·k6), 커넥션 풀 크기(지금은 Hikari 기본값 10), 동시 사용자 수, 측정 시간, 측정 중 돈 스케줄 작업.
+6. **정리**: EC2 두 대와 볼륨을 지우고, 남은 자원이 없는지 콘솔과 AWS Budgets로 확인한다.
