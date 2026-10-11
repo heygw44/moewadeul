@@ -37,8 +37,6 @@ public class SecurityConfig {
         "/api/community/posts",
         "/api/community/posts/*",
         "/api/community/posts/*/comments",
-        "/api/community/posts/*/reports",
-        "/api/community/comments/*/reports",
     };
 
     private static final String[] PUBLIC_POST_PATTERNS = {
