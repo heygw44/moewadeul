@@ -16,10 +16,13 @@ import type { MapLoadErrorReason } from '../../map/kakaoLoader';
 import type { RegionCandidate } from '../../map/regionSearch';
 import type { LatLng, MapView } from '../../map/types';
 import { BasecampDetailPanel } from '../basecamp/BasecampDetailPanel';
+import { BasecampFilterDialog } from '../basecamp/BasecampFilterDialog';
 import { BasecampListPanel } from '../basecamp/BasecampListPanel';
 import { BasecampOpenPanel } from '../basecamp/BasecampOpenPanel';
 import { useBasecampsInView } from '../basecamp/useBasecampsInView';
-import type { BasecampFilters, BasecampsInView } from '../basecamp/useBasecampsInView';
+import { NO_BASECAMP_FILTERS, basecampFilterChips } from '../basecamp/basecampFilters';
+import type { BasecampFilters } from '../basecamp/basecampFilters';
+import type { BasecampsInView } from '../basecamp/useBasecampsInView';
 import { withNext } from '../member/nextPath';
 import { NotificationBellLink } from '../notification/NotificationLink';
 import { useSession } from '../member/session';
@@ -61,8 +64,6 @@ type MapPageProps = {
   mode?: 'browse' | 'report' | 'basecamps' | 'basecampOpen';
 };
 
-const NO_FILTERS: BasecampFilters = { fromDate: '', toDate: '', hasVacancy: false };
-
 export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: MapPageProps) {
   const reporting = mode === 'report';
   const basecampMode = mode === 'basecamps';
@@ -79,20 +80,23 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   const [snapOpen, setSnapOpen] = useState(contentOpen);
   const [draft, setDraft] = useState<LatLng | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [filters, setFilters] = useState<BasecampFilters>(NO_FILTERS);
+  const [filters, setFilters] = useState<BasecampFilters>(NO_BASECAMP_FILTERS);
   const [spotFilters, setSpotFilters] = useState<SpotFilters>(NO_SPOT_FILTERS);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   // 지도에서 장소 마커를 눌러 고른 장소다. 베이스캠프 목록을 그 장소로 거른다.
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
-  const rangeInvalid = filters.fromDate !== '' && filters.toDate !== '' && filters.fromDate > filters.toDate;
   // 장소 조건은 지도를 둘러보는 화면에서만 쓴다. 박지를 제보하거나 베이스캠프를 여는 중에는 근처 장소를 빠짐없이 보여 준다.
   const browsing = mode === 'browse';
   const spotFilterChipList = browsing ? spotFilterChips(spotFilters, setSpotFilters) : [];
+  const basecampFilterChipList = basecampMode ? basecampFilterChips(filters, setFilters) : [];
+  // 조건 버튼과 칩 줄은 장소를 둘러볼 때와 베이스캠프를 찾을 때만 보이고, 화면마다 자기 조건을 보여 준다.
+  const filterChipList = basecampMode ? basecampFilterChipList : spotFilterChipList;
+  const resetFilters = basecampMode ? () => setFilters(NO_BASECAMP_FILTERS) : () => setSpotFilters(NO_SPOT_FILTERS);
   // 베이스캠프를 찾는 동안에는 지도의 마커를 베이스캠프가 맡고, 장소 조회는 쉰다.
   const area = useSpotsInView(map, !basecampMode, browsing ? spotFilters : NO_SPOT_FILTERS);
   const basecamps = useBasecampsInView(
     map,
-    basecampMode && session.status !== 'loading' && !rangeInvalid,
+    basecampMode && session.status !== 'loading',
     filters,
     session.me?.memberId ?? null,
   );
@@ -242,7 +246,11 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
           label={sheetLabel}
           header={
             contentOpen ? undefined : basecampMode ? (
-              <BasecampListHeader result={basecamps} regionName={regionName} />
+              <BasecampListHeader
+                result={basecamps}
+                regionName={regionName}
+                filterCount={basecampFilterChipList.length}
+              />
             ) : (
               <ListHeader area={area} regionName={regionName} filterCount={spotFilterChipList.length} />
             )
@@ -255,8 +263,8 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
           ) : basecampMode ? (
             <BasecampListPanel
               result={basecamps}
-              filters={filters}
-              onFiltersChange={setFilters}
+              filtered={basecampFilterChipList.length > 0}
+              onResetFilters={() => setFilters(NO_BASECAMP_FILTERS)}
               spotFilterId={spotFilterId}
               onClearSpotFilter={() => setSpotFilterId(null)}
               waitingForMap={map === null && mapFailure === null}
@@ -348,22 +356,26 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
             {map && (
               <div className="flex w-full items-start gap-2 lg:max-w-md">
                 <MapSearchBar onSelect={moveToRegion} mapMoving={mapMoving.moving} />
-                {browsing && (
-                  <FilterButton count={spotFilterChipList.length} onClick={() => setFilterDialogOpen(true)} />
+                {(browsing || basecampMode) && (
+                  <FilterButton count={filterChipList.length} onClick={() => setFilterDialogOpen(true)} />
                 )}
               </div>
             )}
-            {browsing && (
-              <ActiveFilterChips
-                chips={spotFilterChipList}
-                onReset={() => setSpotFilters(NO_SPOT_FILTERS)}
-                className="lg:max-w-md"
-              />
-            )}
+            <ActiveFilterChips chips={filterChipList} onReset={resetFilters} className="lg:max-w-md" />
             <MapSafetyNotice />
           </div>
         </div>
       </div>
+      {filterDialogOpen && basecampMode && (
+        <BasecampFilterDialog
+          initial={filters}
+          onApply={(next) => {
+            setFilters(next);
+            setFilterDialogOpen(false);
+          }}
+          onClose={() => setFilterDialogOpen(false)}
+        />
+      )}
       {filterDialogOpen && browsing && (
         <SpotFilterDialog
           initial={spotFilters}
@@ -433,7 +445,15 @@ function FilterButton({ count, onClick }: { count: number; onClick: () => void }
   );
 }
 
-function BasecampListHeader({ result, regionName }: { result: BasecampsInView; regionName: string | null }) {
+function BasecampListHeader({
+  result,
+  regionName,
+  filterCount,
+}: {
+  result: BasecampsInView;
+  regionName: string | null;
+  filterCount: number;
+}) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
     <h2 className="truncate font-serif text-lg text-ink">
@@ -445,6 +465,7 @@ function BasecampListHeader({ result, regionName }: { result: BasecampsInView; r
           {result.hasNext ? '개 이상' : '개'}
         </span>
       )}
+      {filterCount > 0 && <FilterCountNote count={filterCount} />}
     </h2>
   );
 }

@@ -1,18 +1,23 @@
 package com.pitchmap.basecamp.api;
 
 import com.pitchmap.basecamp.application.BasecampSearchQuery;
+import com.pitchmap.basecamp.application.BasecampSpotType;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.springframework.format.annotation.DateTimeFormat;
 
 // 화면이 쿼리 파라미터로 보내는 베이스캠프 검색 조건이다. 지역은 영역(swLat, swLng, neLat, neLng) 네 개나 반경(lat, lng, radiusKm) 세 개 중
 // 한 묶음만 모두 보내야 한다. 두 묶음 모두 값이 비어 있을 수 있어서 개별 값에는 @NotNull을 걸지 않고, 묶음 단위로 @AssertTrue가 검사한다.
 // 반경의 상한(50km)은 장소 검색과 달리 전용 오류 코드 없이 입력 형식 오류(INVALID_INPUT)로 알린다.
+// types와 nights는 쉼표로 구분한 문자열(CAMPSITE,BAKJI)과 같은 이름을 여러 번 쓴 형태를 모두 받는다. 박 수는 베이스캠프를 열 때와 같은
+// 1~3박이고, 최소 신뢰 단계 상한은 합류 조건에 둘 수 있는 단계인 1~2다.
 public record BasecampSearchRequest(
         @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 합니다.")
         @DecimalMax(value = "90", message = "위도는 90 이하여야 합니다.")
@@ -45,6 +50,18 @@ public record BasecampSearchRequest(
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
         Boolean hasVacancy,
+        Set<@NotNull(message = "장소 유형에 빈 값이 있습니다.") BasecampSpotType> types,
+
+        Set<
+                        @NotNull(message = "박 수에 빈 값이 있습니다.") @Min(value = 1, message = "박 수는 1 이상이어야 합니다.")
+                        @Max(value = 3, message = "박 수는 3 이하여야 합니다.") Integer>
+                nights,
+
+        @Min(value = 1, message = "최소 신뢰 단계 상한은 1 이상이어야 합니다.") @Max(value = 2, message = "최소 신뢰 단계 상한은 2 이하여야 합니다.")
+        Integer maxTrustLevel,
+
+        Boolean noAgeLimit,
+        Boolean noSameGenderOnly,
 
         @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
 
@@ -84,6 +101,11 @@ public record BasecampSearchRequest(
                 fromDate,
                 toDate,
                 Boolean.TRUE.equals(hasVacancy),
+                types == null ? Set.of() : types,
+                nights == null ? Set.of() : nights,
+                maxTrustLevel,
+                Boolean.TRUE.equals(noAgeLimit),
+                Boolean.TRUE.equals(noSameGenderOnly),
                 page == null ? DEFAULT_PAGE : page,
                 size == null ? DEFAULT_SIZE : size);
     }

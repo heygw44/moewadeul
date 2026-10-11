@@ -460,6 +460,14 @@ export interface BasecampSearchQuery {
   fromDate?: string;
   toDate?: string;
   hasVacancy?: boolean;
+  // 비우면 서버가 모든 유형을 준다.
+  types?: SpotType[];
+  // 박 수(1~3). 비우면 모든 박 수
+  nights?: number[];
+  // 합류 조건의 최소 신뢰 단계가 이 값 이하인 것만 받는다.
+  maxTrustLevel?: number;
+  noAgeLimit?: boolean;
+  noSameGenderOnly?: boolean;
   // 0부터 시작한다.
   page?: number;
   size?: number;

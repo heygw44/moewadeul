@@ -34,6 +34,7 @@ import com.pitchmap.basecamp.application.BasecampSearchItem;
 import com.pitchmap.basecamp.application.BasecampSearchPage;
 import com.pitchmap.basecamp.application.BasecampSearchQuery;
 import com.pitchmap.basecamp.application.BasecampSearchService;
+import com.pitchmap.basecamp.application.BasecampSpotType;
 import com.pitchmap.basecamp.application.BasecampStatusResult;
 import com.pitchmap.basecamp.application.BasecampTransitionService;
 import com.pitchmap.basecamp.application.JoinConditionSummary;
@@ -56,6 +57,7 @@ import com.pitchmap.common.security.SecurityConfig;
 import com.pitchmap.common.trace.TraceIdFilter;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -319,7 +321,7 @@ class BasecampControllerTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("invalidSearchParameters")
-    @DisplayName("[F-12] 검색 파라미터가 어긋나면 400 INVALID_INPUT을 응답하고 서비스를 부르지 않는다")
+    @DisplayName("[F-12][F-31] 검색 파라미터가 어긋나면 400 INVALID_INPUT을 응답하고 서비스를 부르지 않는다")
     void searchRejectsInvalidParameters(String description, String query) {
         // when
         MvcTestResult result = mvc.get().uri(BASECAMPS + "?" + query).exchange();
@@ -348,7 +350,12 @@ class BasecampControllerTest {
                 Arguments.of("날짜 형식 오류", radius + "&fromDate=20261020"),
                 Arguments.of("페이지 크기 51", radius + "&size=51"),
                 Arguments.of("페이지 크기 0", radius + "&size=0"),
-                Arguments.of("페이지 번호 음수", radius + "&page=-1"));
+                Arguments.of("페이지 번호 음수", radius + "&page=-1"),
+                Arguments.of("박 수 0", radius + "&nights=0"),
+                Arguments.of("박 수 4", radius + "&nights=1,4"),
+                Arguments.of("최소 신뢰 단계 상한 0", radius + "&maxTrustLevel=0"),
+                Arguments.of("최소 신뢰 단계 상한 3", radius + "&maxTrustLevel=3"),
+                Arguments.of("모르는 장소 유형", radius + "&types=CAMPSITE,PARK"));
     }
 
     @Test
@@ -373,6 +380,11 @@ class BasecampControllerTest {
                         LocalDate.of(2026, 10, 20),
                         LocalDate.of(2026, 10, 25),
                         true,
+                        Set.of(),
+                        Set.of(),
+                        null,
+                        false,
+                        false,
                         0,
                         20));
     }
@@ -395,7 +407,49 @@ class BasecampControllerTest {
         verify(basecampSearchService).search(eq(MEMBER_ID), captor.capture());
         assertThat(captor.getValue())
                 .isEqualTo(new BasecampSearchQuery(
-                        new BasecampSearchQuery.Area(37.0, 127.0, 38.0, 128.0), null, null, false, 1, 50));
+                        new BasecampSearchQuery.Area(37.0, 127.0, 38.0, 128.0),
+                        null,
+                        null,
+                        false,
+                        Set.of(),
+                        Set.of(),
+                        null,
+                        false,
+                        false,
+                        1,
+                        50));
+    }
+
+    @Test
+    @DisplayName("[F-31] 상세 조건(장소 유형, 박 수, 최소 신뢰 단계 상한, 연령 제한 없음, 동성만 아님)을 받아서 서비스에 넘긴다")
+    void searchPassesDetailConditions() {
+        // given
+        when(basecampSearchService.search(any(), any())).thenReturn(new BasecampSearchPage(List.of(), 0, 20, false));
+
+        // when
+        MvcTestResult result = mvc.get()
+                .uri(BASECAMPS
+                        + "?lat=37.25&lng=127.25&radiusKm=10&types=BAKJI,FOREST&nights=1&nights=2"
+                        + "&maxTrustLevel=1&noAgeLimit=true&noSameGenderOnly=true")
+                .exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        ArgumentCaptor<BasecampSearchQuery> captor = ArgumentCaptor.forClass(BasecampSearchQuery.class);
+        verify(basecampSearchService).search(eq(null), captor.capture());
+        assertThat(captor.getValue())
+                .isEqualTo(new BasecampSearchQuery(
+                        new BasecampSearchQuery.Radius(37.25, 127.25, 10.0),
+                        null,
+                        null,
+                        false,
+                        Set.of(BasecampSpotType.BAKJI, BasecampSpotType.FOREST),
+                        Set.of(1, 2),
+                        1,
+                        true,
+                        true,
+                        0,
+                        20));
     }
 
     @Test
