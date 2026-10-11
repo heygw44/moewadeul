@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.spot.infra.SpotAreaMapper">
+<mapper namespace="com.moewadeul.spot.infra.SpotAreaMapper">
 
     <!-- 이 조각은 필터가 쓰는 상세 테이블만 조인한다. 시설 필터를 켜면 bakji_detail b를, 휴장 제외를 켜면 public_spot_detail d를 붙인다.
          필터를 켜지 않은 요청에 상세 테이블을 붙이면, MySQL이 영역 안 장소마다 두 테이블을 한 번씩 더 찾는다. 넓은 영역에서는 그 수가 수십만 번이다. -->
@@ -70,7 +70,7 @@
          빠르지만, 좁은 영역에서는 영역 밖 장소까지 테이블 전체를 훑는다(장소 100만 건, 동네 크기 영역에서 240ms). 힌트를 걸어도 MySQL은 비용을
          비교해서, 넓은 영역에는 여전히 기본 키 순서를, 좁은 영역에는 위도·경도 인덱스를 고른다.
          휴장 표시에 쓰는 운영 상태와 휴장 기간은 마커로 고른 행에만 붙인다. 그래서 바깥 조회에서 public_spot_detail을 한 번 더 조인한다. -->
-    <select id="selectMarkers" resultType="com.pitchmap.spot.infra.SpotMarkerRow">
+    <select id="selectMarkers" resultType="com.moewadeul.spot.infra.SpotMarkerRow">
         SELECT /*+ SET_VAR(optimizer_switch = 'prefer_ordering_index=off') */
                m.spot_id AS spot_id,
                m.type AS type,
@@ -162,7 +162,7 @@
          휴장 제외를 켜면 오늘 휴장인 장소를 같은 격자 칸에 음수로 더해서 뺀다. 그래서 휴장 장소의 칸 번호도 V33 프로시저와 같은 식으로 계산한다.
          화면 칸 번호는 격자 칸 중심이 남서 꼭짓점에서 떨어진 거리를 화면 칸 폭으로 나눈 몫이다. 북쪽·동쪽 경계선 위의 중심은 몫이 칸 수와 같아지므로
          LEAST로 마지막 칸에 넣는다. 결과는 남쪽 행부터, 같은 행에서는 서쪽 칸부터 나온다. -->
-    <select id="selectClusters" resultType="com.pitchmap.spot.infra.SpotClusterRow">
+    <select id="selectClusters" resultType="com.moewadeul.spot.infra.SpotClusterRow">
         SELECT SUM(v.lat_sum) / SUM(v.spot_count) AS lat,
                SUM(v.lng_sum) / SUM(v.spot_count) AS lng,
                SUM(v.spot_count) AS spot_count

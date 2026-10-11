@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.trust.infra.ReportContentCleanupMapper">
+<mapper namespace="com.moewadeul.trust.infra.ReportContentCleanupMapper">
 
     <!-- updated_at은 상태가 바뀐 시각이라서 내용을 지울 때 바꾸지 않는다. -->
     <update id="clearHandledReportContent">

@@ -47,7 +47,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(rate(http_server_requests_seconds_count{job=\"pitchmap-app\",uri!~\"/actuator.*\"}[5m]))",
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"moewadeul-app\",uri!~\"/actuator.*\"}[5m]))",
           "legendFormat": "전체",
           "range": true
         },
@@ -57,7 +57,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"pitchmap-app\",uri!~\"/actuator.*\"}[5m]))",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"moewadeul-app\",uri!~\"/actuator.*\"}[5m]))",
           "legendFormat": "{{status}}",
           "range": true
         }
@@ -104,7 +104,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "(sum(rate(http_server_requests_seconds_count{job=\"pitchmap-app\",uri!~\"/actuator.*\",status=~\"5..\"}[5m])) or vector(0)) / clamp_min(sum(rate(http_server_requests_seconds_count{job=\"pitchmap-app\",uri!~\"/actuator.*\"}[5m])), 1e-9)",
+          "expr": "(sum(rate(http_server_requests_seconds_count{job=\"moewadeul-app\",uri!~\"/actuator.*\",status=~\"5..\"}[5m])) or vector(0)) / clamp_min(sum(rate(http_server_requests_seconds_count{job=\"moewadeul-app\",uri!~\"/actuator.*\"}[5m])), 1e-9)",
           "legendFormat": "오류율",
           "range": true
         }
@@ -165,7 +165,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"pitchmap-app\",uri!~\"/actuator.*\"}[5m])))",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"moewadeul-app\",uri!~\"/actuator.*\"}[5m])))",
           "legendFormat": "p50",
           "range": true
         },
@@ -175,7 +175,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"pitchmap-app\",uri!~\"/actuator.*\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"moewadeul-app\",uri!~\"/actuator.*\"}[5m])))",
           "legendFormat": "p95",
           "range": true
         },
@@ -185,7 +185,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"pitchmap-app\",uri!~\"/actuator.*\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"moewadeul-app\",uri!~\"/actuator.*\"}[5m])))",
           "legendFormat": "p99",
           "range": true
         }
@@ -233,7 +233,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{job=\"pitchmap-app\",uri!~\"/actuator.*\"}[1h])))",
+          "expr": "histogram_quantile(0.95, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{job=\"moewadeul-app\",uri!~\"/actuator.*\"}[1h])))",
           "legendFormat": "p95",
           "range": false,
           "instant": true,
@@ -245,7 +245,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"pitchmap-app\",uri!~\"/actuator.*\"}[1h]))",
+          "expr": "sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"moewadeul-app\",uri!~\"/actuator.*\"}[1h]))",
           "legendFormat": "rps",
           "range": false,
           "instant": true,
@@ -309,7 +309,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(hikaricp_connections_active{job=\"pitchmap-app\"})",
+          "expr": "sum(hikaricp_connections_active{job=\"moewadeul-app\"})",
           "legendFormat": "사용 중",
           "range": true
         },
@@ -319,7 +319,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(hikaricp_connections_idle{job=\"pitchmap-app\"})",
+          "expr": "sum(hikaricp_connections_idle{job=\"moewadeul-app\"})",
           "legendFormat": "유휴",
           "range": true
         },
@@ -329,7 +329,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(hikaricp_connections_pending{job=\"pitchmap-app\"})",
+          "expr": "sum(hikaricp_connections_pending{job=\"moewadeul-app\"})",
           "legendFormat": "대기",
           "range": true
         },
@@ -339,7 +339,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "max(hikaricp_connections_max{job=\"pitchmap-app\"})",
+          "expr": "max(hikaricp_connections_max{job=\"moewadeul-app\"})",
           "legendFormat": "최대",
           "range": true
         }
@@ -385,7 +385,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "max(hikaricp_connections_acquire_seconds_max{job=\"pitchmap-app\"})",
+          "expr": "max(hikaricp_connections_acquire_seconds_max{job=\"moewadeul-app\"})",
           "legendFormat": "최대",
           "range": true
         },
@@ -395,7 +395,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(rate(hikaricp_connections_acquire_seconds_sum{job=\"pitchmap-app\"}[5m])) / clamp_min(sum(rate(hikaricp_connections_acquire_seconds_count{job=\"pitchmap-app\"}[5m])), 1e-9)",
+          "expr": "sum(rate(hikaricp_connections_acquire_seconds_sum{job=\"moewadeul-app\"}[5m])) / clamp_min(sum(rate(hikaricp_connections_acquire_seconds_count{job=\"moewadeul-app\"}[5m])), 1e-9)",
           "legendFormat": "평균",
           "range": true
         }
@@ -558,7 +558,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(jvm_memory_used_bytes{job=\"pitchmap-app\",area=\"heap\"})",
+          "expr": "sum(jvm_memory_used_bytes{job=\"moewadeul-app\",area=\"heap\"})",
           "legendFormat": "사용",
           "range": true
         },
@@ -568,7 +568,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(jvm_memory_max_bytes{job=\"pitchmap-app\",area=\"heap\"})",
+          "expr": "sum(jvm_memory_max_bytes{job=\"moewadeul-app\",area=\"heap\"})",
           "legendFormat": "최대",
           "range": true
         }
@@ -615,7 +615,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "jvm_threads_live_threads{job=\"pitchmap-app\"}",
+          "expr": "jvm_threads_live_threads{job=\"moewadeul-app\"}",
           "legendFormat": "살아 있는 스레드",
           "range": true
         }
@@ -661,7 +661,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum by (gc) (rate(jvm_gc_pause_seconds_sum{job=\"pitchmap-app\"}[5m])) * 60",
+          "expr": "sum by (gc) (rate(jvm_gc_pause_seconds_sum{job=\"moewadeul-app\"}[5m])) * 60",
           "legendFormat": "{{gc}}",
           "range": true
         }
@@ -721,7 +721,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum by (api) (increase(pitchmap_external_api_requests_seconds_count{job=\"pitchmap-app\"}[24h])) / on (api) (label_replace(vector(1000), \"api\", \"gocamping\", \"\", \"\") or label_replace(vector(10000), \"api\", \"kma\", \"\", \"\") or label_replace(vector(10000), \"api\", \"kasi\", \"\", \"\"))",
+          "expr": "sum by (api) (increase(moewadeul_external_api_requests_seconds_count{job=\"moewadeul-app\"}[24h])) / on (api) (label_replace(vector(1000), \"api\", \"gocamping\", \"\", \"\") or label_replace(vector(10000), \"api\", \"kma\", \"\", \"\") or label_replace(vector(10000), \"api\", \"kasi\", \"\", \"\"))",
           "legendFormat": "{{api}}",
           "range": true
         }
@@ -777,7 +777,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum by (api) (rate(pitchmap_external_api_requests_seconds_count{job=\"pitchmap-app\",outcome=\"failure\"}[5m])) * 60",
+          "expr": "sum by (api) (rate(moewadeul_external_api_requests_seconds_count{job=\"moewadeul-app\",outcome=\"failure\"}[5m])) * 60",
           "legendFormat": "{{api}} 실패",
           "range": true
         },
@@ -787,7 +787,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum by (api) (rate(pitchmap_external_api_fallbacks_total{job=\"pitchmap-app\"}[5m])) * 60",
+          "expr": "sum by (api) (rate(moewadeul_external_api_fallbacks_total{job=\"moewadeul-app\"}[5m])) * 60",
           "legendFormat": "{{api}} 값 없이 응답",
           "range": true
         }
@@ -833,7 +833,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, api) (rate(pitchmap_external_api_requests_seconds_bucket{job=\"pitchmap-app\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, api) (rate(moewadeul_external_api_requests_seconds_bucket{job=\"moewadeul-app\"}[5m])))",
           "legendFormat": "{{api}}",
           "range": true
         }
@@ -893,7 +893,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "pitchmap_outbox_events{job=\"pitchmap-app\",status=\"pending\"}",
+          "expr": "moewadeul_outbox_events{job=\"moewadeul-app\",status=\"pending\"}",
           "legendFormat": "미발행",
           "range": true
         },
@@ -903,7 +903,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "pitchmap_outbox_events{job=\"pitchmap-app\",status=\"failed\"}",
+          "expr": "moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}",
           "legendFormat": "실패(재시도 한도 초과)",
           "range": true
         }
@@ -949,7 +949,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "pitchmap_outbox_oldest_pending_age_seconds{job=\"pitchmap-app\"}",
+          "expr": "moewadeul_outbox_oldest_pending_age_seconds{job=\"moewadeul-app\"}",
           "legendFormat": "나이",
           "range": true
         }
@@ -1010,7 +1010,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum by (job) (increase(pitchmap_scheduled_job_failures_total{job=\"pitchmap-app\"}[24h]))",
+          "expr": "sum by (job) (increase(moewadeul_scheduled_job_failures_total{job=\"moewadeul-app\"}[24h]))",
           "legendFormat": "{{job}}",
           "range": true
         }
@@ -1077,7 +1077,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(increase(pitchmap_member_signups_total{job=\"pitchmap-app\"}[1d]))",
+          "expr": "sum(increase(moewadeul_member_signups_total{job=\"moewadeul-app\"}[1d]))",
           "legendFormat": "가입",
           "range": true
         },
@@ -1087,7 +1087,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(increase(pitchmap_member_email_verifications_total{job=\"pitchmap-app\"}[1d]))",
+          "expr": "sum(increase(moewadeul_member_email_verifications_total{job=\"moewadeul-app\"}[1d]))",
           "legendFormat": "인증 완료",
           "range": true
         }
@@ -1134,7 +1134,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum(increase(pitchmap_member_email_verifications_total{job=\"pitchmap-app\"}[7d])) / clamp_min(sum(increase(pitchmap_member_signups_total{job=\"pitchmap-app\"}[7d])), 1)",
+          "expr": "sum(increase(moewadeul_member_email_verifications_total{job=\"moewadeul-app\"}[7d])) / clamp_min(sum(increase(moewadeul_member_signups_total{job=\"moewadeul-app\"}[7d])), 1)",
           "legendFormat": "",
           "range": true
         }
@@ -1187,7 +1187,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "1 - avg(rate(node_cpu_seconds_total{instance=\"pitchmap-prod\",job=\"integrations/unix\",mode=\"idle\"}[5m]))",
+          "expr": "1 - avg(rate(node_cpu_seconds_total{instance=\"moewadeul-prod\",job=\"integrations/unix\",mode=\"idle\"}[5m]))",
           "legendFormat": "CPU",
           "range": true
         }
@@ -1234,7 +1234,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "1 - node_memory_MemAvailable_bytes{instance=\"pitchmap-prod\",job=\"integrations/unix\"} / node_memory_MemTotal_bytes{instance=\"pitchmap-prod\",job=\"integrations/unix\"}",
+          "expr": "1 - node_memory_MemAvailable_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"} / node_memory_MemTotal_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"}",
           "legendFormat": "메모리",
           "range": true
         },
@@ -1244,7 +1244,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "1 - node_memory_SwapFree_bytes{instance=\"pitchmap-prod\",job=\"integrations/unix\"} / clamp_min(node_memory_SwapTotal_bytes{instance=\"pitchmap-prod\",job=\"integrations/unix\"}, 1)",
+          "expr": "1 - node_memory_SwapFree_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"} / clamp_min(node_memory_SwapTotal_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"}, 1)",
           "legendFormat": "스왑",
           "range": true
         }
@@ -1305,7 +1305,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "1 - node_filesystem_avail_bytes{instance=\"pitchmap-prod\",job=\"integrations/unix\",mountpoint=\"/\"} / node_filesystem_size_bytes{instance=\"pitchmap-prod\",job=\"integrations/unix\",mountpoint=\"/\"}",
+          "expr": "1 - node_filesystem_avail_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\",mountpoint=\"/\"} / node_filesystem_size_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\",mountpoint=\"/\"}",
           "legendFormat": "/",
           "range": true
         }
@@ -1366,7 +1366,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "node_load1{instance=\"pitchmap-prod\",job=\"integrations/unix\"}",
+          "expr": "node_load1{instance=\"moewadeul-prod\",job=\"integrations/unix\"}",
           "legendFormat": "1분",
           "range": true
         },
@@ -1376,7 +1376,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "node_load5{instance=\"pitchmap-prod\",job=\"integrations/unix\"}",
+          "expr": "node_load5{instance=\"moewadeul-prod\",job=\"integrations/unix\"}",
           "legendFormat": "5분",
           "range": true
         }
@@ -1435,7 +1435,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "time() - max(pitchmap_backup_last_success_timestamp_seconds{instance=\"pitchmap-prod\",job=\"integrations/unix\"})",
+          "expr": "time() - max(moewadeul_backup_last_success_timestamp_seconds{instance=\"moewadeul-prod\",job=\"integrations/unix\"})",
           "legendFormat": "",
           "range": true
         }
@@ -1490,7 +1490,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "max(pitchmap_backup_last_size_bytes{instance=\"pitchmap-prod\",job=\"integrations/unix\"})",
+          "expr": "max(moewadeul_backup_last_size_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"})",
           "legendFormat": "",
           "range": true
         }
@@ -1531,7 +1531,7 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "max(pitchmap_backup_last_duration_seconds{instance=\"pitchmap-prod\",job=\"integrations/unix\"})",
+          "expr": "max(moewadeul_backup_last_duration_seconds{instance=\"moewadeul-prod\",job=\"integrations/unix\"})",
           "legendFormat": "",
           "range": true
         }
@@ -1585,7 +1585,7 @@
             "type": "loki",
             "uid": "__LOKI_UID__"
           },
-          "expr": "{instance=\"pitchmap-prod\", service=\"app\"} | json | log_level=~\"ERROR|WARN\""
+          "expr": "{instance=\"moewadeul-prod\", service=\"app\"} | json | log_level=~\"ERROR|WARN\""
         }
       ],
       "fieldConfig": {

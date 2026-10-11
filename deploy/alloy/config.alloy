@@ -16,7 +16,7 @@ prometheus.remote_write "grafana_cloud" {
 
 	// 모든 지표에 서버 이름을 붙여서, 나중에 서버가 늘어도 대시보드에서 구분할 수 있게 한다.
 	external_labels = {
-		instance = "pitchmap-prod",
+		instance = "moewadeul-prod",
 	}
 }
 
@@ -24,7 +24,7 @@ prometheus.remote_write "grafana_cloud" {
 
 // 앱은 Compose 내부망에서 app:8080으로 닿는다. Caddy는 /actuator를 넘기지 않으므로 밖에서는 이 주소를 읽을 수 없다.
 prometheus.scrape "app" {
-	job_name        = "pitchmap-app"
+	job_name        = "moewadeul-app"
 	targets         = [{"__address__" = "app:8080"}]
 	metrics_path    = "/actuator/prometheus"
 	scrape_interval = "60s"
@@ -52,7 +52,7 @@ discovery.relabel "mysql" {
 
 	rule {
 		target_label = "instance"
-		replacement  = "pitchmap-prod"
+		replacement  = "moewadeul-prod"
 	}
 }
 
@@ -94,7 +94,7 @@ discovery.relabel "host" {
 
 	rule {
 		target_label = "instance"
-		replacement  = "pitchmap-prod"
+		replacement  = "moewadeul-prod"
 	}
 }
 
@@ -125,7 +125,7 @@ discovery.relabel "containers" {
 loki.source.docker "containers" {
 	host       = "unix:///var/run/docker.sock"
 	targets    = discovery.relabel.containers.output
-	labels     = {"instance" = "pitchmap-prod"}
+	labels     = {"instance" = "moewadeul-prod"}
 	forward_to = [loki.write.grafana_cloud.receiver]
 }
 

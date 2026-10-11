@@ -48,15 +48,15 @@ write_metrics() {
     mkdir -p "$METRICS_DIR"
     tmp="$(mktemp "$METRICS_DIR/.backup.prom.XXXXXX")"
     cat > "$tmp" <<EOF
-# HELP pitchmap_backup_last_success_timestamp_seconds 마지막으로 성공한 DB 백업의 완료 시각(유닉스 초)
-# TYPE pitchmap_backup_last_success_timestamp_seconds gauge
-pitchmap_backup_last_success_timestamp_seconds $finished
-# HELP pitchmap_backup_last_size_bytes 마지막으로 성공한 DB 백업 파일(압축)의 크기
-# TYPE pitchmap_backup_last_size_bytes gauge
-pitchmap_backup_last_size_bytes $size
-# HELP pitchmap_backup_last_duration_seconds 마지막으로 성공한 DB 백업에 걸린 시간
-# TYPE pitchmap_backup_last_duration_seconds gauge
-pitchmap_backup_last_duration_seconds $duration
+# HELP moewadeul_backup_last_success_timestamp_seconds 마지막으로 성공한 DB 백업의 완료 시각(유닉스 초)
+# TYPE moewadeul_backup_last_success_timestamp_seconds gauge
+moewadeul_backup_last_success_timestamp_seconds $finished
+# HELP moewadeul_backup_last_size_bytes 마지막으로 성공한 DB 백업 파일(압축)의 크기
+# TYPE moewadeul_backup_last_size_bytes gauge
+moewadeul_backup_last_size_bytes $size
+# HELP moewadeul_backup_last_duration_seconds 마지막으로 성공한 DB 백업에 걸린 시간
+# TYPE moewadeul_backup_last_duration_seconds gauge
+moewadeul_backup_last_duration_seconds $duration
 EOF
     chmod 644 "$tmp"
     mv "$tmp" "$METRICS_FILE"

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.basecamp.infra.MyBasecampMapper">
+<mapper namespace="com.moewadeul.basecamp.infra.MyBasecampMapper">
 
     <!-- 현재 인원은 상태가 ACTIVE인 멤버 행의 수이고 캠프 리더도 센다. 베이스캠프 검색 매퍼와 같은 식이다. -->
     <sql id="headcount">
@@ -10,7 +10,7 @@
     <!-- 요청자와 지금 관계가 있는 베이스캠프를 UNION ALL로 모은다. 탈퇴·강퇴된 멤버 행과 대기 중이 아닌 신청 행은 지금 관계가 아니라서 뺀다.
          멤버 행은 (베이스캠프, 회원)마다 하나이고, 대기 중인 신청은 멤버가 아닌 회원에게만 있으므로 한 베이스캠프가 두 번 나오지 않는다.
          출발일이 같으면 ID 순서로 정렬해서, 페이지를 넘겨도 같은 베이스캠프가 두 번 나오거나 빠지지 않게 한다. -->
-    <select id="selectMine" resultType="com.pitchmap.basecamp.infra.MyBasecampRow">
+    <select id="selectMine" resultType="com.moewadeul.basecamp.infra.MyBasecampRow">
         SELECT b.id AS basecamp_id,
                b.title AS title,
                s.id AS spot_id,

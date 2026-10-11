@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Icon } from '../../components/icons';
 import { readStored, writeStored } from '../../lib/storage';
 
-const SEEN_KEY = 'pitchmap.mapSafetyNoticeSeen';
+const SEEN_KEY = 'moewadeul.mapSafetyNoticeSeen';
 
 // 지도를 처음 연 사람에게 한 번 보여 주는 일반 안내다. 장소마다 붙는 공원 경계 경고(ParkWarningNotice)는 판단 근거라서
 // 닫을 수 없게 두고, 이 안내만 "확인했어요"로 닫을 수 있다. 저장소를 못 쓰는 브라우저에서는 이번 방문 동안만 닫힌다.

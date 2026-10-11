@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.spot.infra.SpotDetailMapper">
+<mapper namespace="com.moewadeul.spot.infra.SpotDetailMapper">
 
     <!-- 장소 한 곳에 상세 테이블을 LEFT JOIN으로 붙인다. 장소 유형에 따라 public_spot_detail과 bakji_detail 중 하나만 행이 있어서,
          없는 쪽의 열은 NULL로 나온다. 제보한 회원은 bakji_detail이 있을 때만 붙는다.
@@ -8,7 +8,7 @@
          서브쿼리가 더 단순하다. 박지가 아니면 확인 행이 없으므로 0이 나온다.
          공원 경계는 spot.protected_area_id가 있을 때만 붙고, 없으면 area_* 열은 NULL이다. 날씨 조회에 쓰려고 기상청 격자(weather_nx, weather_ny)도 함께 읽는다.
          SRID 4326 점에서 ST_Latitude는 위도를, ST_Longitude는 경도를 꺼낸다. 그래서 좌표 순서를 직접 다루지 않는다. -->
-    <select id="selectActiveDetail" resultType="com.pitchmap.spot.infra.SpotDetailRow">
+    <select id="selectActiveDetail" resultType="com.moewadeul.spot.infra.SpotDetailRow">
         SELECT s.id AS spot_id,
                s.type AS type,
                s.name AS name,
@@ -47,7 +47,7 @@
     </select>
 
     <!-- 후기가 없으면 집계 함수가 행 하나를 돌려주고 COUNT는 0, AVG는 NULL이다. 평균은 소수 첫째 자리에서 반올림한다. -->
-    <select id="selectRating" resultType="com.pitchmap.spot.infra.SpotRatingRow">
+    <select id="selectRating" resultType="com.moewadeul.spot.infra.SpotRatingRow">
         SELECT COUNT(*) AS count,
                ROUND(AVG(r.rating), 1) AS average
         FROM spot_review r
@@ -55,7 +55,7 @@
     </select>
 
     <!-- 작성 시각이 같은 후기가 있어도 어느 것이 최근인지 정해지도록 id를 보조 정렬 키로 쓴다. 작성자 닉네임은 조회할 때의 회원 값이다. -->
-    <select id="selectRecentReviews" resultType="com.pitchmap.spot.infra.SpotRecentReviewRow">
+    <select id="selectRecentReviews" resultType="com.moewadeul.spot.infra.SpotRecentReviewRow">
         SELECT r.id AS review_id,
                r.member_id AS author_id,
                m.nickname AS author_nickname,
@@ -71,7 +71,7 @@
     </select>
 
     <!-- 후기 이미지는 review 모듈의 테이블이지만, spot 모듈이 review 모듈에 기댈 수 없어서 최근 후기처럼 SQL로 직접 읽는다. -->
-    <select id="selectReviewImages" resultType="com.pitchmap.spot.infra.SpotReviewImageRow">
+    <select id="selectReviewImages" resultType="com.moewadeul.spot.infra.SpotReviewImageRow">
         SELECT id AS image_id, review_id, object_key
         FROM review_image
         WHERE review_id IN
@@ -85,7 +85,7 @@
     </sql>
 
     <!-- 종료일이 오늘 이전이면 남은 밤이 없으므로 SQL에서 미리 거른다. 종료일 당일은 밤으로 세지 않아서 end_date가 오늘이어도 제외한다. -->
-    <select id="selectConfirmedStays" resultType="com.pitchmap.spot.infra.SpotConfirmedStayRow">
+    <select id="selectConfirmedStays" resultType="com.moewadeul.spot.infra.SpotConfirmedStayRow">
         SELECT b.start_date AS start_date,
                b.end_date AS end_date,
                <include refid="headcount"/> AS headcount
@@ -97,7 +97,7 @@
 
     <!-- 개인 일정은 한 건이 한 사람이라 인원을 1로 읽는다. 탈퇴한 회원은 그 장소에 가지 않으므로 그 회원의 일정은 세지 않는다.
          일정을 등록한 회원이 누구인지는 읽지 않는다. 다른 사람에게는 인원 숫자로만 드러나야 하기 때문이다. -->
-    <select id="selectSoloTrips" resultType="com.pitchmap.spot.infra.SpotConfirmedStayRow">
+    <select id="selectSoloTrips" resultType="com.moewadeul.spot.infra.SpotConfirmedStayRow">
         SELECT t.start_date AS start_date,
                t.end_date AS end_date,
                1 AS headcount
@@ -110,7 +110,7 @@
 
     <!-- 결제를 마친(CONFIRMED) 신청만 참가자로 센다. 결제 대기 신청은 기한이 지나면 만료되므로 예상 인원에 넣지 않는다.
          당일 행사는 밤을 보내지 않으므로 숙박 행사만 읽는다. 종료 시각이 오늘 0시(한국 시각) 이전인 행사는 남은 밤이 없어서 SQL에서 미리 거른다. -->
-    <select id="selectConfirmedPrograms" resultType="com.pitchmap.spot.infra.SpotConfirmedProgramRow">
+    <select id="selectConfirmedPrograms" resultType="com.moewadeul.spot.infra.SpotConfirmedProgramRow">
         SELECT p.start_at AS start_at,
                p.end_at AS end_at,
                (SELECT COUNT(*)
@@ -125,7 +125,7 @@
     </select>
 
     <!-- 출발일이 같으면 ID 순서로 정렬해서 목록 순서가 조회할 때마다 바뀌지 않게 한다. -->
-    <select id="selectRecruitingBasecamps" resultType="com.pitchmap.spot.infra.SpotRecruitingBasecampRow">
+    <select id="selectRecruitingBasecamps" resultType="com.moewadeul.spot.infra.SpotRecruitingBasecampRow">
         SELECT b.id AS basecamp_id,
                b.title AS title,
                b.start_date AS start_date,

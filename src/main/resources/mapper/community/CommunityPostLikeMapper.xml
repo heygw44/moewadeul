@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.community.infra.CommunityPostLikeMapper">
+<mapper namespace="com.moewadeul.community.infra.CommunityPostLikeMapper">
 
     <!-- 같은 회원이 같은 글에 동시에 두 번 눌러도 행은 하나만 남아야 하고, 예외가 나면 안 된다.
          기본 키가 겹칠 때 ON DUPLICATE KEY UPDATE는 그 행에 배타적 레코드 잠금만 잡고 값은 그대로 둔다.

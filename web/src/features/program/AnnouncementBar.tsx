@@ -5,7 +5,7 @@ import { readStored, writeStored } from '../../lib/storage';
 import { useOpenProgramAnnouncement } from './useOpenProgramAnnouncement';
 
 // 닫은 행사의 ID만 기억한다. 다른 행사가 신청을 받기 시작하면 띠가 다시 보인다.
-const DISMISSED_KEY = 'pitchmap.dismissedProgramId';
+const DISMISSED_KEY = 'moewadeul.dismissedProgramId';
 
 // 화면 맨 위의 얇은 띠로, 지금 신청을 받는 공식 행사 하나를 알린다. 신청 중인 행사가 없으면 아무것도 그리지 않는다.
 export function AnnouncementBar() {
