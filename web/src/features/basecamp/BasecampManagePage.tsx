@@ -79,7 +79,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const [done, setDone] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = '베이스캠프 관리 · 피치맵';
+    document.title = '베이스캠프 관리 · 뫼와들';
   }, []);
 
   // 관리 화면은 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.

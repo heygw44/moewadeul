@@ -48,15 +48,15 @@ write_metrics() {
     mkdir -p "$METRICS_DIR"
     tmp="$(mktemp "$METRICS_DIR/.backup.prom.XXXXXX")"
     cat > "$tmp" <<EOF
-# HELP pitchmap_backup_last_success_timestamp_seconds 마지막으로 성공한 DB 백업의 완료 시각(유닉스 초)
-# TYPE pitchmap_backup_last_success_timestamp_seconds gauge
-pitchmap_backup_last_success_timestamp_seconds $finished
-# HELP pitchmap_backup_last_size_bytes 마지막으로 성공한 DB 백업 파일(압축)의 크기
-# TYPE pitchmap_backup_last_size_bytes gauge
-pitchmap_backup_last_size_bytes $size
-# HELP pitchmap_backup_last_duration_seconds 마지막으로 성공한 DB 백업에 걸린 시간
-# TYPE pitchmap_backup_last_duration_seconds gauge
-pitchmap_backup_last_duration_seconds $duration
+# HELP moewadeul_backup_last_success_timestamp_seconds 마지막으로 성공한 DB 백업의 완료 시각(유닉스 초)
+# TYPE moewadeul_backup_last_success_timestamp_seconds gauge
+moewadeul_backup_last_success_timestamp_seconds $finished
+# HELP moewadeul_backup_last_size_bytes 마지막으로 성공한 DB 백업 파일(압축)의 크기
+# TYPE moewadeul_backup_last_size_bytes gauge
+moewadeul_backup_last_size_bytes $size
+# HELP moewadeul_backup_last_duration_seconds 마지막으로 성공한 DB 백업에 걸린 시간
+# TYPE moewadeul_backup_last_duration_seconds gauge
+moewadeul_backup_last_duration_seconds $duration
 EOF
     chmod 644 "$tmp"
     mv "$tmp" "$METRICS_FILE"
@@ -83,8 +83,10 @@ main() {
 
     log "덤프 시작: $db_name"
     # 비밀번호는 명령 인자가 아니라 MYSQL_PWD 환경 변수로 넘겨 프로세스 목록에 남지 않게 한다.
+    # mysqldump는 트리거를 기본으로 담지만 프로시저는 --routines를 줘야 담는다. 지도 묶음 집계 트리거가 프로시저를 부르므로,
+    # 프로시저 없이 복구하면 장소를 쓸 때마다 트리거가 실패한다.
     MYSQL_PWD="$db_password" docker exec -e MYSQL_PWD "$container" \
-        mysqldump -u"$db_user" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF \
+        mysqldump -u"$db_user" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --routines \
         --ignore-table="$db_name.SPRING_SESSION" --ignore-table="$db_name.SPRING_SESSION_ATTRIBUTES" \
         "$db_name" | gzip -9 > "$DUMP_FILE"
 

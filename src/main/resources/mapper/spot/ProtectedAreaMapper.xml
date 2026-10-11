@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.spot.infra.ProtectedAreaMapper">
+<mapper namespace="com.moewadeul.spot.infra.ProtectedAreaMapper">
 
-    <select id="selectKeysBySource" resultType="com.pitchmap.spot.infra.ProtectedAreaKeyRow">
+    <select id="selectKeysBySource" resultType="com.moewadeul.spot.infra.ProtectedAreaKeyRow">
         SELECT id AS id,
                area_type AS area_type,
                name AS name

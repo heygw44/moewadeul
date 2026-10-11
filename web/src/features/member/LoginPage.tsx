@@ -42,7 +42,7 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    document.title = '로그인 · 피치맵';
+    document.title = '로그인 · 뫼와들';
   }, []);
 
   // 이미 로그인한 회원이 이 주소로 들어오면 갈 곳으로 바로 보낸다.

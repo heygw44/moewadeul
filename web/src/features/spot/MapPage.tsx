@@ -208,10 +208,10 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   // 상세 화면에서는 장소 이름을 불러온 뒤 상세 패널이 제목을 바꾼다.
   useEffect(() => {
     if (spotId !== undefined || basecampId !== undefined) return;
-    if (reporting) document.title = '박지 제보 · 피치맵';
-    else if (opening) document.title = '베이스캠프 열기 · 피치맵';
-    else if (basecampMode) document.title = '베이스캠프 · 피치맵';
-    else document.title = '지도 · 피치맵';
+    if (reporting) document.title = '박지 제보 · 뫼와들';
+    else if (opening) document.title = '베이스캠프 열기 · 뫼와들';
+    else if (basecampMode) document.title = '베이스캠프 · 뫼와들';
+    else document.title = '지도 · 뫼와들';
   }, [spotId, basecampId, reporting, opening, basecampMode]);
 
   let sheetLabel = '장소 목록';
@@ -325,11 +325,11 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
               mapMoving.hidden ? '-translate-y-3 opacity-0' : ''
             }`}
           >
-            <h1 className="sr-only">피치맵 지도</h1>
+            <h1 className="sr-only">뫼와들 지도</h1>
             <div className="flex items-start justify-between gap-2">
               {/* 데스크톱은 위의 머리글이 서비스 이름과 메뉴를 보여 주므로, 지도 위에는 모바일에서만 이름을 띄운다. */}
               <Link to="/" className={`${CHIP_CLASS} font-serif text-lg font-semibold text-forest-deep lg:invisible`}>
-                피치맵
+                뫼와들
               </Link>
               <div className="flex flex-wrap justify-end gap-2">
                 <NotificationBellLink className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-contour bg-card px-3 text-ink hover:bg-paper-deep lg:hidden" />

@@ -79,7 +79,7 @@ fetch() {
   echo "저장: ${out#"$ROOT"/}"
 }
 
-GOCAMPING=(-d MobileOS=ETC -d MobileApp=pitchmap -d _type=json)
+GOCAMPING=(-d MobileOS=ETC -d MobileApp=moewadeul -d _type=json)
 
 fetch "$FIXTURES/publicdata/gocamping/based-list.json" json \
   "$BASE/B551011/GoCamping/basedList" "${GOCAMPING[@]}" -d numOfRows=3 -d pageNo=1

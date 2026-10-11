@@ -50,7 +50,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   const loadedTitle = current !== null && 'post' in current ? current.post.title : null;
 
   useEffect(() => {
-    document.title = loadedTitle ? `${loadedTitle} · 피치맵` : '커뮤니티 · 피치맵';
+    document.title = loadedTitle ? `${loadedTitle} · 뫼와들` : '커뮤니티 · 뫼와들';
   }, [loadedTitle]);
 
   const reload = () => setAttempt((value) => value + 1);

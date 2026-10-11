@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.community.infra.CommunityCommentMapper">
+<mapper namespace="com.moewadeul.community.infra.CommunityCommentMapper">
 
     <!-- 작성자 닉네임은 조회할 때의 회원 값이다. 탈퇴한 회원은 member 행의 닉네임이 익명 값으로 바뀌어 있어서 그대로 내보낸다.
          댓글 ID는 순서대로 커지므로 ID 오름차순이 곧 오래된 순이다. 그래서 작성 시각 정렬 없이 기본 키 순서로 읽는다. -->
@@ -16,7 +16,7 @@
     </sql>
 
     <!-- 페이지는 최상위 댓글 단위로 센다. ACTIVE가 아닌 최상위 댓글은 보이는 답글이 있을 때만 읽어서, 자리만 남길 댓글만 페이지에 든다. -->
-    <select id="selectTopLevel" resultType="com.pitchmap.community.infra.CommunityCommentRow">
+    <select id="selectTopLevel" resultType="com.moewadeul.community.infra.CommunityCommentRow">
         SELECT
         <include refid="commentColumns"/>
         FROM community_comment c
@@ -32,7 +32,7 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="selectActiveReplies" resultType="com.pitchmap.community.infra.CommunityCommentRow">
+    <select id="selectActiveReplies" resultType="com.moewadeul.community.infra.CommunityCommentRow">
         SELECT
         <include refid="commentColumns"/>
         FROM community_comment c
@@ -43,7 +43,7 @@
         ORDER BY c.id ASC
     </select>
 
-    <select id="selectById" resultType="com.pitchmap.community.infra.CommunityCommentRow">
+    <select id="selectById" resultType="com.moewadeul.community.infra.CommunityCommentRow">
         SELECT
         <include refid="commentColumns"/>
         FROM community_comment c

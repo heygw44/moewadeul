@@ -36,7 +36,7 @@ COMPOSE_FILE=/opt/pitchmap/docker-compose.prod.yml ENV_FILE=/opt/pitchmap/.env l
 
 스크립트는 DB 비밀번호를 받지 않는다. MySQL 컨테이너 안의 `MYSQL_ROOT_PASSWORD`로 접속하므로 비밀번호가 인자나 셸 기록에 남지 않는다.
 
-소요 시간: 로컬(Apple Silicon 맥, Docker의 MySQL 8.4)에서 장소 100만 건과 신청 회원 2,000명을 넣는 데 123초 걸렸다.
+소요 시간: 로컬(Apple Silicon 맥, Docker의 MySQL 8.4)에서 장소 100만 건과 신청 회원 2,000명을 넣는 데 1,291초(약 21분) 걸렸다. 장소를 넣을 때마다 MySQL 트리거가 지도 묶음 집계 표 두 개를 8단계씩 고치기 때문이다. 트리거가 생기기 전에는 123초였다.
 
 ### 생성 규칙
 

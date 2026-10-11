@@ -76,9 +76,9 @@ export function BasecampDetailPanel({ basecampId, onBack }: BasecampDetailPanelP
 
   useEffect(() => {
     if (loadedTitle === null) return;
-    document.title = `${loadedTitle} · 피치맵`;
+    document.title = `${loadedTitle} · 뫼와들`;
     return () => {
-      document.title = '피치맵';
+      document.title = '뫼와들';
     };
   }, [loadedTitle]);
 

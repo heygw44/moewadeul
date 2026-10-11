@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pitchmap.program.infra.ProgramApplicationMapper">
+<mapper namespace="com.moewadeul.program.infra.ProgramApplicationMapper">
 
     <!-- 남은 자리 확인과 신청 INSERT를 한 문장으로 처리한다. 확인과 INSERT를 따로 하면 그 사이에 다른 신청이 끼어들 수 있다.
          서브쿼리가 같은 테이블의 행을 읽으며 공유 잠금을 거는데, 호출하는 서비스가 먼저 행사 행을 쓰기 잠금으로 잡아서
