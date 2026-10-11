@@ -68,6 +68,7 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.POST, "/api/spots/1/reviews"),
             new Endpoint(HttpMethod.PATCH, "/api/reviews/1"),
             new Endpoint(HttpMethod.DELETE, "/api/reviews/1"),
+            new Endpoint(HttpMethod.POST, "/api/reviews/images"),
             new Endpoint(HttpMethod.POST, "/api/basecamps"),
             new Endpoint(HttpMethod.PATCH, "/api/basecamps/1"),
             new Endpoint(HttpMethod.POST, "/api/basecamps/1/close"),

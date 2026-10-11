@@ -4,6 +4,7 @@ import com.pitchmap.review.infra.SpotReviewMapper;
 import com.pitchmap.review.infra.SpotReviewRow;
 import com.pitchmap.spot.application.ActiveSpotChecker;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,12 +16,13 @@ public class SpotReviewQueryService {
 
     private final ActiveSpotChecker activeSpotChecker;
     private final SpotReviewMapper spotReviewMapper;
+    private final ReviewImageReader reviewImageReader;
 
     /**
      * 호출하면 spotId인 장소의 후기를 작성 시각이 늦은 순서로 한 페이지 돌려준다. 작성 시각이 같으면 후기 ID가 큰 것이 먼저 나온다.
      *
      * <p>장소가 없거나 ACTIVE가 아니면 NOT_FOUND로 거부한다. 서비스는 다음 페이지가 있는지 알려고 한 행을 더 읽고, 그 행은 결과에서 뺀다.
-     * 그래서 전체 개수를 세는 쿼리를 따로 보내지 않는다.
+     * 그래서 전체 개수를 세는 쿼리를 따로 보내지 않는다. 한 페이지의 이미지는 쿼리 한 번으로 읽는다.
      */
     @Transactional(readOnly = true)
     public SpotReviewPage list(long spotId, int page, int size) {
@@ -28,8 +30,12 @@ public class SpotReviewQueryService {
         long offset = (long) page * size;
         List<SpotReviewRow> rows = spotReviewMapper.selectBySpot(spotId, offset, size + 1);
         boolean hasNext = rows.size() > size;
-        List<SpotReviewItem> content =
-                rows.stream().limit(size).map(SpotReviewItem::from).toList();
+        List<SpotReviewRow> pageRows = rows.stream().limit(size).toList();
+        Map<Long, List<SpotReviewImage>> images = reviewImageReader.readByReviewIds(
+                pageRows.stream().map(SpotReviewRow::reviewId).toList());
+        List<SpotReviewItem> content = pageRows.stream()
+                .map(row -> SpotReviewItem.from(row, images.getOrDefault(row.reviewId(), List.of())))
+                .toList();
         return new SpotReviewPage(content, page, size, hasNext);
     }
 }

@@ -519,7 +519,14 @@ class SpotControllerTest {
     void detailShowsRatingAndRecentReviews() {
         // given
         SpotRecentReview review = new SpotRecentReview(
-                9L, 31L, "새벽능선", LocalDate.of(2026, 10, 4), 5, "별이 좋았다", Instant.parse("2026-10-05T03:00:00Z"));
+                9L,
+                31L,
+                "새벽능선",
+                LocalDate.of(2026, 10, 4),
+                5,
+                "별이 좋았다",
+                List.of(new SpotRecentReview.Image(5L, "https://view.test.invalid/review/31/a.jpg")),
+                Instant.parse("2026-10-05T03:00:00Z"));
         when(spotDetailQueryService.findDetail(106L))
                 .thenReturn(new SpotDetail(
                         106L,
@@ -558,6 +565,8 @@ class SpotControllerTest {
                         5,
                         "content",
                         "별이 좋았다",
+                        "images",
+                        List.of(Map.of("imageId", 5, "url", "https://view.test.invalid/review/31/a.jpg")),
                         "createdAt",
                         "2026-10-05T03:00:00Z"));
     }

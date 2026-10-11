@@ -320,6 +320,8 @@ export interface SpotReview {
   visitedDate: string;
   rating: number;
   content: string;
+  // 후기 안 순서의 이미지. url은 서버가 발급한 사전 서명 조회 URL이다. 없으면 빈 배열이다.
+  images: { imageId: number; url: string }[];
   createdAt: string;
 }
 
@@ -327,11 +329,15 @@ export interface SpotReviewCreateRequest {
   visitedDate: string;
   rating: number;
   content: string;
+  // 붙일 이미지 ID. 최대 3개이고 배열 순서가 후기 안 순서다.
+  imageIds?: number[];
 }
 
 export interface SpotReviewUpdateRequest {
   rating: number;
   content: string;
+  // 보내면 이미지 목록을 통째로 바꾸고, 보내지 않으면 그대로 둔다.
+  imageIds?: number[];
 }
 
 // 내 정보 수정. 보내지 않은 필드는 서버가 그대로 두고, 자기 신고 값에 null을 보내면 지운다.
@@ -944,15 +950,19 @@ export interface CommunityReportRequest {
   content?: string;
 }
 
-export interface CommunityImageUploadRequest {
+// 커뮤니티 글과 장소 후기가 같은 모양으로 이미지 업로드 URL을 받는다.
+export interface ImageUploadRequest {
   contentType: string;
   sizeBytes: number;
 }
 
-export interface CommunityImageUpload {
+export interface ImageUpload {
   imageId: number;
   uploadUrl: string;
   method: 'PUT';
   headers: Record<string, string>;
   expiresAt: string;
 }
+
+export type CommunityImageUploadRequest = ImageUploadRequest;
+export type CommunityImageUpload = ImageUpload;

@@ -2,6 +2,7 @@ package com.pitchmap.spot.application;
 
 import com.pitchmap.common.error.BusinessException;
 import com.pitchmap.common.error.CommonErrorCode;
+import com.pitchmap.common.storage.ImageStorage;
 import com.pitchmap.spot.domain.SpotType;
 import com.pitchmap.spot.infra.SpotConfirmedProgramRow;
 import com.pitchmap.spot.infra.SpotConfirmedStayRow;
@@ -10,11 +11,13 @@ import com.pitchmap.spot.infra.SpotDetailRow;
 import com.pitchmap.spot.infra.SpotRatingRow;
 import com.pitchmap.spot.infra.SpotRecentReviewRow;
 import com.pitchmap.spot.infra.SpotRecruitingBasecampRow;
+import com.pitchmap.spot.infra.SpotReviewImageRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -41,6 +44,7 @@ class SpotDetailReader {
     private static final TypeReference<Map<String, String>> FACILITIES_TYPE = new TypeReference<>() {};
 
     private final SpotDetailMapper spotDetailMapper;
+    private final ImageStorage imageStorage;
     private final JsonMapper jsonMapper;
     private final Clock clock;
 
@@ -70,9 +74,7 @@ class SpotDetailReader {
                 toBakjiDetail(row),
                 toPublicDetail(row, today),
                 toRating(spotDetailMapper.selectRating(spotId)),
-                spotDetailMapper.selectRecentReviews(spotId, RECENT_REVIEW_COUNT).stream()
-                        .map(SpotDetailReader::toRecentReview)
-                        .toList(),
+                readRecentReviews(spotId),
                 toExpectedPeople(readStays(spotId, today), today),
                 spotDetailMapper.selectRecruitingBasecamps(spotId).stream()
                         .map(SpotDetailReader::toRecruitingBasecamp)
@@ -126,7 +128,24 @@ class SpotDetailReader {
         return new SpotRating(row.average(), row.count());
     }
 
-    private static SpotRecentReview toRecentReview(SpotRecentReviewRow row) {
+    // 최근 후기의 이미지는 쿼리 한 번으로 읽고, 조회 URL은 서버 안에서 서명을 계산해 붙인다. 저장소는 부르지 않는다.
+    private List<SpotRecentReview> readRecentReviews(long spotId) {
+        List<SpotRecentReviewRow> rows = spotDetailMapper.selectRecentReviews(spotId, RECENT_REVIEW_COUNT);
+        Map<Long, List<SpotRecentReview.Image>> images = new HashMap<>();
+        if (!rows.isEmpty()) {
+            List<Long> reviewIds =
+                    rows.stream().map(SpotRecentReviewRow::reviewId).toList();
+            for (SpotReviewImageRow image : spotDetailMapper.selectReviewImages(reviewIds)) {
+                images.computeIfAbsent(image.reviewId(), id -> new ArrayList<>())
+                        .add(new SpotRecentReview.Image(image.imageId(), imageStorage.presignView(image.objectKey())));
+            }
+        }
+        return rows.stream()
+                .map(row -> toRecentReview(row, images.getOrDefault(row.reviewId(), List.of())))
+                .toList();
+    }
+
+    private static SpotRecentReview toRecentReview(SpotRecentReviewRow row, List<SpotRecentReview.Image> images) {
         return new SpotRecentReview(
                 row.reviewId(),
                 row.authorId(),
@@ -134,6 +153,7 @@ class SpotDetailReader {
                 row.visitedDate(),
                 row.rating(),
                 row.content(),
+                List.copyOf(images),
                 row.createdAt());
     }
 

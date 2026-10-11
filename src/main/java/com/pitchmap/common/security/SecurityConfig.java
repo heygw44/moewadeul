@@ -56,6 +56,7 @@ public class SecurityConfig {
         "/api/bakjis/*/confirmations",
         "/api/bakjis/*/reports",
         "/api/spots/*/reviews",
+        "/api/reviews/images",
         "/api/community/posts",
         "/api/community/images",
         "/api/community/posts/*/comments",
