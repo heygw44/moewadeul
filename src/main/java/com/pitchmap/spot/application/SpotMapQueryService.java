@@ -20,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
  * 주고, 넘으면 마커를 비우고 영역을 가로세로 {@value #GRID_SIZE}칸씩 나눈 칸별 묶음으로 준다. 칸은 많아야 {@value #GRID_SIZE}×
  * {@value #GRID_SIZE}개라서 묶음도 상한을 넘지 않는다.
  *
- * <p>공공데이터 장소의 휴장 여부는 조회한 날의 한국 날짜로 계산한다. 서버는 휴장 중인 장소도 숨기지 않고 표시만 한다.
+ * <p>공공데이터 장소의 휴장 여부는 조회한 날의 한국 날짜로 계산한다. 서버는 기본으로 휴장 중인 장소도 숨기지 않고 표시만
+ * 하고, 호출하는 쪽이 휴장 제외를 고를 때만 뺀다.
  */
 @Service
 @RequiredArgsConstructor
@@ -43,13 +44,13 @@ public class SpotMapQueryService {
      */
     @Transactional(readOnly = true)
     public SpotAreaResult findInArea(SpotAreaQuery query) {
-        SpotAreaCondition condition = toCondition(query);
+        LocalDate today = LocalDate.now(clock.withZone(KOREA));
+        SpotAreaCondition condition = toCondition(query, today);
         // 상한보다 한 건 더 읽으면, 개수를 따로 세지 않고도 상한을 넘는지 알 수 있다.
         List<SpotMarkerRow> rows = spotAreaMapper.selectMarkers(condition, MAX_ITEMS + 1);
         if (rows.size() > MAX_ITEMS) {
             return new SpotAreaResult(List.of(), findClusters(query, condition));
         }
-        LocalDate today = LocalDate.now(clock.withZone(KOREA));
         List<SpotMarker> markers =
                 rows.stream().map(row -> toMarker(row, today)).toList();
         return new SpotAreaResult(markers, List.of());
@@ -65,7 +66,7 @@ public class SpotMapQueryService {
                 .toList();
     }
 
-    private static SpotAreaCondition toCondition(SpotAreaQuery query) {
+    private static SpotAreaCondition toCondition(SpotAreaQuery query, LocalDate today) {
         return new SpotAreaCondition(
                 query.swLat(),
                 query.swLng(),
@@ -74,7 +75,9 @@ public class SpotMapQueryService {
                 query.types(),
                 query.hasWater(),
                 query.hasToilet(),
-                query.excludeWarning());
+                query.excludeWarning(),
+                query.hideClosed(),
+                today);
     }
 
     private static SpotMarker toMarker(SpotMarkerRow row, LocalDate today) {

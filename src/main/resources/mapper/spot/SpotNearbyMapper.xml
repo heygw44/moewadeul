@@ -12,6 +12,10 @@
          x를 경도, y를 위도로 읽는다. 그래서 중심점과 사각형의 각 꼭짓점에 경도를 먼저 넘긴다. 반대로 SRID 4326 WKT 문자열은 위도, 경도
          순서라서 이 방식과 섞어 쓰지 않는다.
          매퍼는 시설 조건을 박지에만 건다. 야영장과 자연휴양림은 bakji_detail 행이 없지만, 유형이 BAKJI가 아니면 시설과 상관없이 조건을 통과한다.
+         휴장 제외 조건은 SpotClosure와 같은 규칙이다. 휴장 기간이 하나라도 있으면 오늘이 그 기간 안(양 끝 포함)일 때만 휴장이고, 비어 있는 쪽
+         끝은 제한이 없다고 본다. 기간이 둘 다 없으면 운영 상태가 임시 휴장이나 폐업일 때 휴장이다. 박지는 휴장 정보가 없어서 항상 남긴다.
+         public_spot_detail 행이 없거나 운영 상태가 비어 있는 공공 장소는 휴장이 아니다. 하지만 NOT 안의 식이 NULL이 되면 MySQL이 그 행을
+         빼므로, 운영 상태에 IS NOT NULL을 먼저 걸어 식이 항상 참이나 거짓이 되게 한다. 개발자가 한쪽 규칙을 바꾸면 다른 쪽도 함께 고쳐야 한다.
          거리가 같은 장소는 ID 순서로 정렬해서, 페이지를 넘겨도 같은 장소가 두 번 나오거나 빠지지 않게 한다. -->
     <select id="selectNearby" resultType="com.pitchmap.spot.infra.SpotNearbyRow">
         SELECT s.id AS spot_id,
@@ -55,6 +59,17 @@
         </if>
         <if test="nearby.excludeWarning">
           AND s.park_warning = FALSE
+        </if>
+        <if test="nearby.hideClosed">
+          AND NOT (
+                s.type &lt;&gt; 'BAKJI'
+                AND (
+                    ((d.closed_from IS NOT NULL OR d.closed_until IS NOT NULL)
+                        AND (d.closed_from IS NULL OR d.closed_from &lt;= #{nearby.today})
+                        AND (d.closed_until IS NULL OR d.closed_until &gt;= #{nearby.today}))
+                    OR (d.closed_from IS NULL AND d.closed_until IS NULL
+                        AND d.operating_status IS NOT NULL
+                        AND d.operating_status IN ('TEMPORARILY_CLOSED', 'PERMANENTLY_CLOSED'))))
         </if>
         ORDER BY distance_meters, s.id
         LIMIT #{limit} OFFSET #{offset}

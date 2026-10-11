@@ -25,7 +25,8 @@ export type IconName =
   | 'arrowUp'
   | 'eye'
   | 'eyeOff'
-  | 'menu';
+  | 'menu'
+  | 'sliders';
 
 export const ICON_PATHS: Record<IconName, string> = {
   tent:
@@ -49,6 +50,13 @@ export const ICON_PATHS: Record<IconName, string> = {
   closed: '<circle cx="12" cy="12" r="9"/>' + '<path d="m5.6 5.6 12.8 12.8"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   search: '<circle cx="11" cy="11" r="6.5"/>' + '<path d="m20 20-4.4-4.4"/>',
+  sliders:
+    '<path d="M4 7h9"/>' +
+    '<path d="M17 7h3"/>' +
+    '<circle cx="15" cy="7" r="2"/>' +
+    '<path d="M4 17h3"/>' +
+    '<path d="M11 17h9"/>' +
+    '<circle cx="9" cy="17" r="2"/>',
   terrain:
     '<path d="M2 20 9 7l4.5 8.3"/>' +
     '<path d="m11 20 5.5-9L22 20"/>' +

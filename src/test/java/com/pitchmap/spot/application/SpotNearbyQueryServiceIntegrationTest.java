@@ -228,6 +228,28 @@ class SpotNearbyQueryServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-31] 반경 검색도 휴장 제외를 켜면 휴장 중인 장소를 빼고, 박지와 운영 중인 장소는 남긴다")
+    void hideClosedExcludesClosedSpotsFromNearby() {
+        // given: 한국은 2026-11-01 0시 30분이다.
+        clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
+        long reporterId = insertMember();
+        long closedId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", NORTH_2_KM);
+        insertPublicDetail(
+                closedId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));
+        long closedStatusId = insertSpot("FOREST", "휴장 상태 휴양림", NORTH_2_KM);
+        insertPublicDetail(closedStatusId, "FOREST", "TEMPORARILY_CLOSED", null, null);
+        long operatingId = insertSpot("FOREST", "운영 중 휴양림", NORTH_2_KM);
+        insertPublicDetail(operatingId, "FOREST", "OPERATING", null, null);
+        long bakjiId = insertBakji(reporterId, true, true);
+
+        // when
+        SpotNearbyPage result = spotNearbyQueryService.findNearby(hidingClosed(CENTER, RADIUS_KM));
+
+        // then
+        assertThat(result.content()).extracting(SpotNearbyItem::spotId).containsExactly(operatingId, bakjiId);
+    }
+
+    @Test
     @DisplayName("[F-04] 페이지 크기 2로 장소 3곳을 나누면 첫 페이지에 가까운 두 곳, 다음 페이지에 먼 한 곳이 나오고, 거리가 같으면 ID 순서다")
     void pagesByDistanceThenId() {
         // given: 먼 장소를 먼저 넣어 ID가 가장 작게 하고, 가까운 두 장소는 같은 자리에 둔다.
@@ -280,6 +302,10 @@ class SpotNearbyQueryServiceIntegrationTest {
         return query(center, radiusKm, Set.of(), false, false, false, 0, 20);
     }
 
+    private static SpotNearbyQuery hidingClosed(Coordinate center, double radiusKm) {
+        return new SpotNearbyQuery(center.lat(), center.lng(), radiusKm, Set.of(), false, false, false, true, 0, 20);
+    }
+
     private static SpotNearbyQuery query(
             Coordinate center,
             double radiusKm,
@@ -290,7 +316,7 @@ class SpotNearbyQueryServiceIntegrationTest {
             int page,
             int size) {
         return new SpotNearbyQuery(
-                center.lat(), center.lng(), radiusKm, types, hasWater, hasToilet, excludeWarning, page, size);
+                center.lat(), center.lng(), radiusKm, types, hasWater, hasToilet, excludeWarning, false, page, size);
     }
 
     private long insertSpot(String type, String name, Coordinate at) {

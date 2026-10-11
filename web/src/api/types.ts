@@ -122,6 +122,8 @@ export interface SpotAreaQuery {
   hasWater?: boolean;
   hasToilet?: boolean;
   excludeWarning?: boolean;
+  // true면 서버가 오늘 휴장인 야영장·휴양림을 뺀다. 박지는 빼지 않는다.
+  hideClosed?: boolean;
 }
 
 export type SignalLevel = 'NONE' | 'WEAK' | 'GOOD';

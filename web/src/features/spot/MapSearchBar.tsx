@@ -90,7 +90,7 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
       noValidate
       onSubmit={handleSubmit}
       onKeyDown={handleKeyDown}
-      className="pointer-events-auto relative w-full lg:max-w-md"
+      className="pointer-events-auto relative min-w-0 flex-1"
     >
       <TextField
         label="지역 검색"

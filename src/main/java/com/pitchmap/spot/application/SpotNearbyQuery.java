@@ -12,7 +12,8 @@ import java.util.Set;
  * 조건으로 바꾸는 순간 큰 반경은 서비스까지 가지 않는다.
  *
  * <p>필터는 지도 영역 조회와 같다. types가 비어 있으면 모든 유형을 찾고, hasWater와 hasToilet은 박지에만 적용한다. excludeWarning이
- * {@code true}면 공원 경계 경고가 붙은 장소를 뺀다.
+ * {@code true}면 공원 경계 경고가 붙은 장소를 뺀다. hideClosed가
+ * {@code true}면 조회한 날 휴장인 야영장과 자연휴양림을 뺀다.
  */
 public record SpotNearbyQuery(
         double lat,
@@ -22,6 +23,7 @@ public record SpotNearbyQuery(
         boolean hasWater,
         boolean hasToilet,
         boolean excludeWarning,
+        boolean hideClosed,
         int page,
         int size) {
 
