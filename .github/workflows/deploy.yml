@@ -183,12 +183,12 @@ jobs:
           params="$(jq -n --arg raw "$raw" --arg tag "$TAG" '{
             commands: [
               "set -eu",
-              "mkdir -p /opt/pitchmap/data /opt/pitchmap/alloy /opt/pitchmap/backup /opt/pitchmap/metrics",
-              "cd /opt/pitchmap",
+              "mkdir -p /opt/moewadeul/data /opt/moewadeul/alloy /opt/moewadeul/backup /opt/moewadeul/metrics",
+              "cd /opt/moewadeul",
               "curl -fsSL --retry 3 -o deploy.sh.new \($raw)/deploy.sh",
               "curl -fsSL --retry 3 -o docker-compose.prod.yml.new \($raw)/docker-compose.prod.yml",
               "curl -fsSL --retry 3 -o alloy/config.alloy.new \($raw)/alloy/config.alloy",
-              "for f in backup.sh restore-drill.sh pitchmap-backup.service pitchmap-backup.timer; do curl -fsSL --retry 3 -o backup/$f.new \($raw)/backup/$f; mv backup/$f.new backup/$f; done",
+              "for f in backup.sh restore-drill.sh moewadeul-backup.service moewadeul-backup.timer; do curl -fsSL --retry 3 -o backup/$f.new \($raw)/backup/$f; mv backup/$f.new backup/$f; done",
               "chmod 700 backup/backup.sh backup/restore-drill.sh",
               "mv deploy.sh.new deploy.sh && chmod 700 deploy.sh",
               "mv docker-compose.prod.yml.new docker-compose.prod.yml",

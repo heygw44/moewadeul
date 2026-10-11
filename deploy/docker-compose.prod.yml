@@ -1,8 +1,8 @@
-# 운영 서버(/opt/pitchmap)에서 deploy.sh가 쓰는 Compose 파일이다. 로컬 개발용은 저장소 루트의 docker-compose.yml이다.
-# 값은 deploy.sh가 Parameter Store와 server.env를 합쳐 만든 /opt/pitchmap/.env에서 온다.
+# 운영 서버(/opt/moewadeul)에서 deploy.sh가 쓰는 Compose 파일이다. 로컬 개발용은 저장소 루트의 docker-compose.yml이다.
+# 값은 deploy.sh가 Parameter Store와 server.env를 합쳐 만든 /opt/moewadeul/.env에서 온다.
 # 서비스마다 필요한 변수만 environment에 나열한다. 그래서 앱 컨테이너에는 DB root 비밀번호가 들어가지 않는다.
 # 메모리가 2GB인 서버라 서비스마다 한도를 둔다. 지표로 부족이 확인되면 이 값을 조정한다.
-name: pitchmap
+name: moewadeul
 
 services:
   caddy:
@@ -41,7 +41,7 @@ services:
       PUBLICDATA_FOREST_FILE: ${PUBLICDATA_FOREST_FILE:-}
       PUBLICDATA_PARK_BOUNDARY_FILE: ${PUBLICDATA_PARK_BOUNDARY_FILE:-}
     volumes:
-      # 공공데이터 파일(휴양림 CSV, 공원 경계 TSV)은 저장소에 없어서 서버의 /opt/pitchmap/data에 둔다.
+      # 공공데이터 파일(휴양림 CSV, 공원 경계 TSV)은 저장소에 없어서 서버의 /opt/moewadeul/data에 둔다.
       - ./data:/data:ro
     depends_on:
       mysql:

@@ -8,12 +8,12 @@
 set -euo pipefail
 export PATH="$PATH:/snap/bin"
 
-readonly DEPLOY_DIR=/opt/pitchmap
+readonly DEPLOY_DIR=/opt/moewadeul
 # 환경 파일 경로는 기본값이 운영 값이다. 서버 밖에서 시험할 때만 환경 변수로 바꾼다.
-readonly ENV_FILE="${PITCHMAP_ENV_FILE:-$DEPLOY_DIR/.env}"
+readonly ENV_FILE="${MOEWADEUL_ENV_FILE:-$DEPLOY_DIR/.env}"
 readonly REGION=ap-northeast-2
 readonly S3_PREFIX=mysql
-readonly DRILL_CONTAINER=pitchmap-restore-drill
+readonly DRILL_CONTAINER=moewadeul-restore-drill
 readonly DRILL_DB=restore_drill
 readonly MYSQL_IMAGE=mysql:8.4
 readonly CHECK_TABLES=(flyway_schema_history member spot public_spot_detail bakji_detail protected_area spot_review identity_verification outbox_event)
@@ -59,7 +59,7 @@ main() {
 
     trap cleanup EXIT
     cleanup
-    DUMP_FILE="$(mktemp /var/tmp/pitchmap-restore.XXXXXX)"
+    DUMP_FILE="$(mktemp /var/tmp/moewadeul-restore.XXXXXX)"
     # 임시 컨테이너에서만 쓰는 일회용 root 비밀번호다. 운영 비밀번호와 관계없다.
     root_password="$(openssl rand -hex 16)"
     export MYSQL_PWD="$root_password"

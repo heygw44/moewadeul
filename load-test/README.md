@@ -18,12 +18,12 @@
 ```bash
 # 로컬: 개발용 DB와 섞이지 않게 빈 데이터베이스를 따로 만든다
 docker compose exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -e \
-  "CREATE DATABASE pitchmap_loadtest; GRANT ALL ON pitchmap_loadtest.* TO \"$MYSQL_USER\"@\"%\";"'
-DB_NAME=pitchmap_loadtest ./gradlew bootRun          # 마이그레이션이 끝나면 그대로 둬도 되고 꺼도 된다
-SPOT_COUNT=20000 MEMBER_COUNT=200 SEED_DB=pitchmap_loadtest load-test/seed/seed.sh
+  "CREATE DATABASE moewadeul_loadtest; GRANT ALL ON moewadeul_loadtest.* TO \"$MYSQL_USER\"@\"%\";"'
+DB_NAME=moewadeul_loadtest ./gradlew bootRun          # 마이그레이션이 끝나면 그대로 둬도 되고 꺼도 된다
+SPOT_COUNT=20000 MEMBER_COUNT=200 SEED_DB=moewadeul_loadtest load-test/seed/seed.sh
 
 # 검증 서버: 운영 compose 파일로 띄운 MySQL에 기본값(장소 100만, 신청 회원 2,000)으로 넣는다
-COMPOSE_FILE=/opt/pitchmap/docker-compose.prod.yml ENV_FILE=/opt/pitchmap/.env load-test/seed/seed.sh
+COMPOSE_FILE=/opt/moewadeul/docker-compose.prod.yml ENV_FILE=/opt/moewadeul/.env load-test/seed/seed.sh
 ```
 
 | 환경 변수 | 기본값 | 뜻 |
