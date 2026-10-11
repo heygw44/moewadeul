@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,10 @@ class SpotMapQueryServiceIntegrationTest {
 
     // 장소를 많이 넣을 때 쓰는 영역이다. 칸 하나는 위도·경도 0.05도 폭이다.
     private static final Area BULK_AREA = new Area(36.0, 127.0, 37.0, 128.0);
+
+    // 물 필터와 휴장 제외를 함께 켠 조회다. 매퍼는 두 필터가 쓰는 상세 테이블을 모두 조인해야 한다.
+    private static final Function<Area, SpotAreaQuery> BULK_FILTER_QUERY = area -> new SpotAreaQuery(
+            area.swLat(), area.swLng(), area.neLat(), area.neLng(), Set.of(), true, false, false, true);
 
     @Autowired
     private SpotMapQueryService spotMapQueryService;
@@ -274,6 +279,57 @@ class SpotMapQueryServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-03][F-31] 시설 필터와 휴장 제외를 함께 켜면 마커에는 두 조건을 모두 통과한 장소만 나온다")
+    void facilityFilterAndHideClosedTogetherKeepOnlyMarkersPassingBoth() {
+        // given
+        long reporterId = insertMember();
+        long openCampsiteId = insertSpot("CAMPSITE", "운영 중 야영장", SEORAK);
+        long closedCampsiteId = insertSpot("CAMPSITE", "휴장 야영장", SEORAK);
+        insertPublicDetail(closedCampsiteId, "GOCAMPING", "TEMPORARILY_CLOSED", null, null);
+        long waterBakjiId = insertBakji(reporterId, true, false);
+        insertBakji(reporterId, false, false);
+
+        // when
+        SpotAreaResult result = spotMapQueryService.findInArea(BULK_FILTER_QUERY.apply(SEORAK_AREA));
+
+        // then
+        assertThat(result.markers()).extracting(SpotMarker::spotId).containsExactly(openCampsiteId, waterBakjiId);
+    }
+
+    @Test
+    @DisplayName("[F-03][F-31] 묶음 개수에도 시설 필터와 휴장 제외를 각각, 또 함께 적용한다")
+    void clusterCountsApplyFacilityFilterAndHideClosedSeparatelyAndTogether() {
+        // given: 운영 중인 야영장만으로 500개를 넘기고, 물이 있는 박지 4곳, 없는 박지 3곳, 휴장 야영장 2곳을 더한다.
+        clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
+        int openCount = SpotMapQueryService.MAX_ITEMS + 1;
+        insertCampsites(spreadInBulkArea(openCount));
+        long reporterId = insertMember();
+        Coordinate inBulkArea = new Coordinate(36.5, 127.5);
+        for (int i = 0; i < 4; i++) {
+            insertBakji(reporterId, true, false, inBulkArea);
+        }
+        for (int i = 0; i < 3; i++) {
+            insertBakji(reporterId, false, false, inBulkArea);
+        }
+        for (int i = 0; i < 2; i++) {
+            long closedId = insertSpot("CAMPSITE", "휴장 야영장 " + i, inBulkArea);
+            insertPublicDetail(closedId, "GOCAMPING", "TEMPORARILY_CLOSED", null, null);
+        }
+
+        // when
+        long all = clusterCount(BULK_AREA.query());
+        long water = clusterCount(BULK_AREA.query(Set.of(), true, false, false));
+        long open = clusterCount(BULK_AREA.hidingClosed());
+        long waterAndOpen = clusterCount(BULK_FILTER_QUERY.apply(BULK_AREA));
+
+        // then: 시설 필터는 박지에만 걸리고, 휴장 제외는 공공 장소에만 걸린다.
+        assertThat(all).isEqualTo(openCount + 4 + 3 + 2);
+        assertThat(water).isEqualTo(openCount + 4 + 2);
+        assertThat(open).isEqualTo(openCount + 4 + 3);
+        assertThat(waterAndOpen).isEqualTo(openCount + 4);
+    }
+
+    @Test
     @DisplayName("[F-03] 영역 안 장소가 500개면 모두 마커로 주고 묶음은 비운다")
     void returnsAllMarkersWhenSpotCountIsAtLimit() {
         // given
@@ -373,8 +429,18 @@ class SpotMapQueryServiceIntegrationTest {
         return findSpotId(name);
     }
 
+    private long clusterCount(SpotAreaQuery query) {
+        SpotAreaResult result = spotMapQueryService.findInArea(query);
+        assertThat(result.markers()).isEmpty();
+        return result.clusters().stream().mapToLong(SpotCluster::count).sum();
+    }
+
     private long insertBakji(long reporterId, boolean hasWater, boolean hasToilet) {
-        long spotId = insertSpot("BAKJI", TestSequence.unique("박지"), SEORAK);
+        return insertBakji(reporterId, hasWater, hasToilet, SEORAK);
+    }
+
+    private long insertBakji(long reporterId, boolean hasWater, boolean hasToilet, Coordinate at) {
+        long spotId = insertSpot("BAKJI", TestSequence.unique("박지"), at);
         jdbcTemplate.update(
                 "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
                         + " VALUES (?, ?, ?, ?, NOW(6), NOW(6))",

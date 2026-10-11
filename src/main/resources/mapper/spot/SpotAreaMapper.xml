@@ -2,34 +2,30 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.pitchmap.spot.infra.SpotAreaMapper">
 
-    <!-- 이 조각은 영역 조건을 두 번 건다.
-         MBRIntersects 조건은 MySQL이 spot.location의 공간 인덱스로 후보를 좁히게 하려고 둔다. 하지만 SRID 4326 다각형의 변은 위도선이 아니라
-         지구 위의 최단 경로(측지선)라서, 개발자는 이 다각형만으로 화면 사각형과 정확히 같은 영역을 만들 수 없다. 그래서 MySQL은 다각형의
-         최소 경계 사각형(MBR)으로 후보를 넓게 고르고, 그 뒤 ST_Latitude와 ST_Longitude의 BETWEEN 조건으로 경계선을 포함한 정확한 사각형만 남긴다.
-         MySQL은 MBRContains에서 경계선 위의 점을 포함으로 보지 않는다. 그래서 MBRContains를 쓰면 경계선 위의 장소가 후보에서 빠지므로,
-         경계선 위의 점도 참으로 보는 MBRIntersects를 쓴다. 점 하나와 사각형이면 두 조건의 차이는 경계선뿐이다.
-         좌표 순서: POINT(x, y)는 SRID가 없는 점을 만들고, ST_SRID가 다각형에 SRID 4326을 붙인다. MySQL은 SRID 4326 도형의 내부 저장 형식에서
-         x를 경도, y를 위도로 읽는다. 그래서 각 꼭짓점에 경도를 먼저 넘긴다. 반대로 SRID 4326 WKT 문자열은 위도, 경도 순서라서 이 방식과 섞어 쓰지 않는다.
+    <!-- 이 조각은 필터가 쓰는 상세 테이블만 조인한다. 시설 필터를 켜면 bakji_detail b를, 휴장 제외를 켜면 public_spot_detail d를 붙인다.
+         필터를 켜지 않은 요청에 상세 테이블을 붙이면, MySQL이 영역 안 장소마다 두 테이블을 한 번씩 더 찾는다. 넓은 영역에서는 그 수가 수십만 번이다. -->
+    <sql id="filterJoins">
+        <if test="area.hasWater or area.hasToilet">
+        LEFT JOIN bakji_detail b ON b.spot_id = s.id
+        </if>
+        <if test="area.hideClosed">
+        LEFT JOIN public_spot_detail d ON d.spot_id = s.id
+        </if>
+    </sql>
+
+    <!-- 영역 조건은 위도·경도 생성 컬럼(latitude, longitude)의 BETWEEN이다. BETWEEN은 양 끝을 포함하므로 경계선 위의 장소도 영역에 들어간다.
+         MySQL은 이 조건으로 (status, latitude, longitude, ...) 인덱스의 범위를 읽는다. 공간 인덱스와 ST_Latitude를 쓰지 않는 이유는, 영역 안 장소가
+         수십만 건이면 행마다 공간 함수를 계산하는 시간이 조회 시간의 대부분을 차지하기 때문이다.
          매퍼는 시설 조건을 박지에만 건다. 야영장과 자연휴양림은 bakji_detail 행이 없지만, 유형이 BAKJI가 아니면 시설과 상관없이 조건을 통과한다.
          휴장 제외 조건은 SpotClosure와 같은 규칙이다. 휴장 기간이 하나라도 있으면 오늘이 그 기간 안(양 끝 포함)일 때만 휴장이고, 비어 있는 쪽
          끝은 제한이 없다고 본다. 기간이 둘 다 없으면 운영 상태가 임시 휴장이나 폐업일 때 휴장이다. 박지는 휴장 정보가 없어서 항상 남긴다.
          public_spot_detail 행이 없거나 운영 상태가 비어 있는 공공 장소는 휴장이 아니다. 하지만 NOT 안의 식이 NULL이 되면 MySQL이 그 행을
          빼므로, 운영 상태에 IS NOT NULL을 먼저 걸어 식이 항상 참이나 거짓이 되게 한다. 개발자가 한쪽 규칙을 바꾸면 다른 쪽도 함께 고쳐야 한다.
-         이 조각을 쓰는 조회는 spot s, public_spot_detail d, bakji_detail b를 모두 조인해야 한다. -->
+         이 조각을 쓰는 조회는 spot을 s로 읽고, 바로 뒤에 filterJoins 조각을 넣어야 한다. -->
     <sql id="spotInAreaCondition">
         WHERE s.status = 'ACTIVE'
-          AND MBRIntersects(
-                  ST_SRID(
-                      POLYGON(LINESTRING(
-                          POINT(#{area.swLng}, #{area.swLat}),
-                          POINT(#{area.neLng}, #{area.swLat}),
-                          POINT(#{area.neLng}, #{area.neLat}),
-                          POINT(#{area.swLng}, #{area.neLat}),
-                          POINT(#{area.swLng}, #{area.swLat}))),
-                      4326),
-                  s.location)
-          AND ST_Latitude(s.location) BETWEEN #{area.swLat} AND #{area.neLat}
-          AND ST_Longitude(s.location) BETWEEN #{area.swLng} AND #{area.neLng}
+          AND s.latitude BETWEEN #{area.swLat} AND #{area.neLat}
+          AND s.longitude BETWEEN #{area.swLng} AND #{area.neLng}
         <if test="!area.types.isEmpty()">
           AND s.type IN
             <foreach collection="area.types" item="type" open="(" separator="," close=")">
@@ -58,22 +54,36 @@
         </if>
     </sql>
 
+    <!-- 힌트는 MySQL이 ORDER BY s.id LIMIT를 맞추려고 기본 키 순서로 훑는 계획을 우선하지 않게 한다. 그 계획은 장소가 빽빽한 넓은 영역에서는
+         빠르지만, 좁은 영역에서는 영역 밖 장소까지 테이블 전체를 훑는다(장소 100만 건, 동네 크기 영역에서 240ms). 힌트를 걸어도 MySQL은 비용을
+         비교해서, 넓은 영역에는 여전히 기본 키 순서를, 좁은 영역에는 위도·경도 인덱스를 고른다.
+         휴장 표시에 쓰는 운영 상태와 휴장 기간은 마커로 고른 행에만 붙인다. 그래서 바깥 조회에서 public_spot_detail을 한 번 더 조인한다. -->
     <select id="selectMarkers" resultType="com.pitchmap.spot.infra.SpotMarkerRow">
-        SELECT s.id AS spot_id,
-               s.type AS type,
-               s.name AS name,
-               ST_Latitude(s.location) AS lat,
-               ST_Longitude(s.location) AS lng,
-               s.park_warning AS park_warning,
-               d.operating_status AS operating_status,
-               d.closed_from AS closed_from,
-               d.closed_until AS closed_until
-        FROM spot s
-        LEFT JOIN public_spot_detail d ON d.spot_id = s.id
-        LEFT JOIN bakji_detail b ON b.spot_id = s.id
-        <include refid="spotInAreaCondition"/>
-        ORDER BY s.id
-        LIMIT #{limit}
+        SELECT /*+ SET_VAR(optimizer_switch = 'prefer_ordering_index=off') */
+               m.spot_id AS spot_id,
+               m.type AS type,
+               m.name AS name,
+               m.lat AS lat,
+               m.lng AS lng,
+               m.park_warning AS park_warning,
+               pd.operating_status AS operating_status,
+               pd.closed_from AS closed_from,
+               pd.closed_until AS closed_until
+        FROM (
+            SELECT s.id AS spot_id,
+                   s.type AS type,
+                   s.name AS name,
+                   s.latitude AS lat,
+                   s.longitude AS lng,
+                   s.park_warning AS park_warning
+            FROM spot s
+            <include refid="filterJoins"/>
+            <include refid="spotInAreaCondition"/>
+            ORDER BY s.id
+            LIMIT #{limit}
+        ) m
+        LEFT JOIN public_spot_detail pd ON pd.spot_id = m.spot_id
+        ORDER BY m.spot_id
     </select>
 
     <!-- 칸 번호는 남서 꼭짓점에서 떨어진 거리를 칸 폭으로 나눈 몫이다. 북쪽이나 동쪽 경계선 위의 장소는 몫이 칸 수와 같아지므로,
@@ -83,15 +93,12 @@
                AVG(c.lng) AS lng,
                COUNT(*) AS spot_count
         FROM (
-            SELECT ST_Latitude(s.location) AS lat,
-                   ST_Longitude(s.location) AS lng,
-                   LEAST(FLOOR((ST_Latitude(s.location) - #{area.swLat}) / #{grid.cellLat}), #{grid.lastCellIndex})
-                       AS cell_row,
-                   LEAST(FLOOR((ST_Longitude(s.location) - #{area.swLng}) / #{grid.cellLng}), #{grid.lastCellIndex})
-                       AS cell_column
+            SELECT s.latitude AS lat,
+                   s.longitude AS lng,
+                   LEAST(FLOOR((s.latitude - #{area.swLat}) / #{grid.cellLat}), #{grid.lastCellIndex}) AS cell_row,
+                   LEAST(FLOOR((s.longitude - #{area.swLng}) / #{grid.cellLng}), #{grid.lastCellIndex}) AS cell_column
             FROM spot s
-            LEFT JOIN public_spot_detail d ON d.spot_id = s.id
-            LEFT JOIN bakji_detail b ON b.spot_id = s.id
+            <include refid="filterJoins"/>
             <include refid="spotInAreaCondition"/>
         ) c
         GROUP BY c.cell_row, c.cell_column
