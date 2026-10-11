@@ -42,7 +42,8 @@ public record SpotAreaRequest(
         Set<@NotNull(message = "장소 유형에 빈 값이 있습니다.") SpotType> types,
         Boolean hasWater,
         Boolean hasToilet,
-        Boolean excludeWarning) {
+        Boolean excludeWarning,
+        Boolean hideClosed) {
 
     // 위도나 경도가 빠졌으면 @NotNull이 따로 오류를 내므로, 여기서는 둘 다 있을 때만 순서를 본다.
     @AssertTrue(message = "남서쪽 위도는 북동쪽 위도보다 작아야 합니다.")
@@ -64,6 +65,7 @@ public record SpotAreaRequest(
                 types == null ? Set.of() : types,
                 Boolean.TRUE.equals(hasWater),
                 Boolean.TRUE.equals(hasToilet),
-                Boolean.TRUE.equals(excludeWarning));
+                Boolean.TRUE.equals(excludeWarning),
+                Boolean.TRUE.equals(hideClosed));
     }
 }

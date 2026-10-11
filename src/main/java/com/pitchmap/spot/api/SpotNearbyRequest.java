@@ -30,6 +30,7 @@ public record SpotNearbyRequest(
         Boolean hasWater,
         Boolean hasToilet,
         Boolean excludeWarning,
+        Boolean hideClosed,
 
         @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
 
@@ -48,6 +49,7 @@ public record SpotNearbyRequest(
                 Boolean.TRUE.equals(hasWater),
                 Boolean.TRUE.equals(hasToilet),
                 Boolean.TRUE.equals(excludeWarning),
+                Boolean.TRUE.equals(hideClosed),
                 page == null ? DEFAULT_PAGE : page,
                 size == null ? DEFAULT_SIZE : size);
     }

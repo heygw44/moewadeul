@@ -1,6 +1,7 @@
 package com.pitchmap.spot.infra;
 
 import com.pitchmap.spot.domain.SpotType;
+import java.time.LocalDate;
 import java.util.Set;
 
 /**
@@ -12,6 +13,8 @@ import java.util.Set;
  *
  * <p>types가 비어 있으면 매퍼는 유형으로 거르지 않는다. hasWater와 hasToilet은 박지에만 적용하고, excludeWarning이 {@code true}면 매퍼가 공원
  * 경계 경고가 붙은 장소를 뺀다.
+ *
+ * <p>hideClosed가 {@code true}면 매퍼가 today(한국 날짜)에 휴장인 공공 장소를 뺀다. 휴장 판정 규칙은 {@code SpotClosure}와 같다.
  */
 public record SpotNearbyCondition(
         double centerLat,
@@ -24,7 +27,9 @@ public record SpotNearbyCondition(
         Set<SpotType> types,
         boolean hasWater,
         boolean hasToilet,
-        boolean excludeWarning) {
+        boolean excludeWarning,
+        boolean hideClosed,
+        LocalDate today) {
 
     public SpotNearbyCondition {
         types = Set.copyOf(types);
