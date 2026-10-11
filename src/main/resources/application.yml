@@ -93,6 +93,11 @@ springdoc:
 logging:
   pattern:
     correlation: "[%X{traceId:-}] "
+  level:
+    # Hibernate는 SQL 오류를 받으면 DB 오류 메시지를 WARN으로 남긴다. MySQL은 유니크 제약을 어긴 값을 그 메시지에 그대로 담으므로,
+    # 이 로그를 켜 두면 이메일이나 CI 해시 원값이 로그에 찍힌다. 그래서 이 로거는 ERROR부터만 남긴다.
+    # 서비스는 제약 위반을 중복 오류 코드로 바꿔 응답하고, 예상하지 못한 예외는 공통 예외 처리기가 로그로 남긴다.
+    org.hibernate.orm.jdbc.error: ERROR
 
 pitchmap:
   identity:

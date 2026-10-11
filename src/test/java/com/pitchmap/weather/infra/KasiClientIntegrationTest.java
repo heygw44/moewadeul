@@ -12,12 +12,15 @@ import static org.awaitility.Awaitility.await;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import com.pitchmap.common.testsupport.IntegrationTest;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -286,11 +289,26 @@ class KasiClientIntegrationTest {
                 .orElseThrow(() -> new AssertionError(name + " 쿼리가 없다"));
     }
 
-    // 키가 메시지에 남으면 로그와 오류 추적 도구로 비밀값이 새어 나간다. 그래서 원인 예외까지 모두 확인한다.
+    @Test
+    @DisplayName("[F-09][NFR-07] 서버가 연결을 끊으면 스택 트레이스 전체에 인증키가 없는 예외를 던진다")
+    void connectionResetLeavesNoServiceKeyInStackTrace() {
+        // given
+        stub(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER));
+
+        // when
+        KasiApiException thrown = catchThrowableOfType(KasiApiException.class, () -> client.getRiseSet(DATE, LAT, LNG));
+
+        // then
+        assertThat(thrown).hasMessageContaining("I/O 오류");
+        assertNoServiceKey(thrown);
+    }
+
+    // 키가 예외에 남으면 로그와 오류 추적 도구로 비밀값이 새어 나간다. 서버는 이 예외를 스택 트레이스째 로그에 남기므로,
+    // 메시지만이 아니라 로그에 찍히는 스택 트레이스 전체(원인 예외와 억제된 예외 포함)에 키가 없는지 확인한다.
     private static void assertNoServiceKey(Throwable thrown) {
-        for (Throwable current = thrown; current != null; current = current.getCause()) {
-            assertThat(String.valueOf(current.getMessage())).doesNotContain(SERVICE_KEY, ENCODED_SERVICE_KEY);
-        }
+        StringWriter stackTrace = new StringWriter();
+        thrown.printStackTrace(new PrintWriter(stackTrace));
+        assertThat(stackTrace.toString()).doesNotContain(SERVICE_KEY, ENCODED_SERVICE_KEY);
     }
 
     private static String readFixture(String fileName) {

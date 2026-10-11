@@ -49,73 +49,16 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // 이메일 인증을 마친 회원만 부를 수 있는 엔드포인트다. 인증 회원, 본인확인, 캠프 리더 권한이 필요한 것이 모두 여기에 든다.
-    static Stream<Arguments> verifiedOnlyEndpoints() {
-        return Stream.of(
-                Arguments.of(HttpMethod.PATCH, "/api/me"),
-                Arguments.of(HttpMethod.POST, "/api/me/identity-verification"),
-                Arguments.of(HttpMethod.POST, "/api/bakjis"),
-                Arguments.of(HttpMethod.PATCH, "/api/bakjis/1"),
-                Arguments.of(HttpMethod.DELETE, "/api/bakjis/1"),
-                Arguments.of(HttpMethod.POST, "/api/bakjis/1/confirmations"),
-                Arguments.of(HttpMethod.POST, "/api/bakjis/1/reports"),
-                Arguments.of(HttpMethod.POST, "/api/spots/1/reviews"),
-                Arguments.of(HttpMethod.PATCH, "/api/reviews/1"),
-                Arguments.of(HttpMethod.DELETE, "/api/reviews/1"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps"),
-                Arguments.of(HttpMethod.PATCH, "/api/basecamps/1"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps/1/close"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps/1/reopen"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps/1/confirm"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps/1/cancel"),
-                Arguments.of(HttpMethod.PUT, "/api/basecamps/1/contact"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps/1/applications"),
-                Arguments.of(HttpMethod.DELETE, "/api/basecamps/1/applications/me"),
-                Arguments.of(HttpMethod.GET, "/api/basecamps/1/applications"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps/1/applications/2/approve"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps/1/applications/2/reject"),
-                Arguments.of(HttpMethod.DELETE, "/api/basecamps/1/members/me"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps/1/members/2/kick"),
-                Arguments.of(HttpMethod.GET, "/api/me/companion-reviews/pending"),
-                Arguments.of(HttpMethod.POST, "/api/basecamps/1/companion-reviews"),
-                Arguments.of(HttpMethod.GET, "/api/members/1/companion-reviews"),
-                Arguments.of(HttpMethod.POST, "/api/member-reports"),
-                Arguments.of(HttpMethod.POST, "/api/programs/1/applications"),
-                Arguments.of(HttpMethod.POST, "/api/program-applications/1/pay"),
-                Arguments.of(HttpMethod.POST, "/api/program-applications/1/cancel"),
-                Arguments.of(HttpMethod.POST, "/api/programs/1/vacancy-alerts"),
-                Arguments.of(HttpMethod.DELETE, "/api/programs/1/vacancy-alerts"));
-    }
-
-    // 권한이 로그인인 행(이메일 인증 API 제외)이다. 인증을 마치지 않은 회원도 쓸 수 있어야 한다.
-    static Stream<Arguments> loginLevelEndpoints() {
-        return Stream.of(
-                Arguments.of(HttpMethod.GET, "/api/me"),
-                Arguments.of(HttpMethod.DELETE, "/api/me"),
-                Arguments.of(HttpMethod.GET, "/api/me/trust"),
-                Arguments.of(HttpMethod.GET, "/api/me/basecamps"),
-                Arguments.of(HttpMethod.GET, "/api/me/companion-reviews/received"),
-                Arguments.of(HttpMethod.GET, "/api/me/program-applications"),
-                Arguments.of(HttpMethod.GET, "/api/me/notifications"),
-                Arguments.of(HttpMethod.GET, "/api/me/notifications/unread-count"),
-                Arguments.of(HttpMethod.POST, "/api/me/notifications/1/read"),
-                Arguments.of(HttpMethod.POST, "/api/me/notifications/read-all"),
-                Arguments.of(HttpMethod.GET, "/api/me/notification-settings"),
-                Arguments.of(HttpMethod.PUT, "/api/me/notification-settings"),
-                Arguments.of(HttpMethod.POST, "/api/auth/logout"));
-    }
-
-    // 공개 읽기 행 가운데 이메일 인증이 필요한 경로와 앞부분이 같은 것들이다.
+    // 공개 읽기 행이다. 이메일 인증이 필요한 경로와 앞부분이 같은 것(예: /api/basecamps/1과 /api/basecamps/1/applications)도 있어서
+    // 인증을 마치지 않은 회원으로도 확인한다.
     static Stream<Arguments> publicReadEndpoints() {
-        return Stream.of(
-                Arguments.of(HttpMethod.GET, "/api/basecamps"),
-                Arguments.of(HttpMethod.GET, "/api/basecamps/1"),
-                Arguments.of(HttpMethod.GET, "/api/spots/1/reviews"),
-                Arguments.of(HttpMethod.GET, "/api/members/1/profile"));
+        return AuthorizationMatrix.PUBLIC.stream()
+                .filter(endpoint -> endpoint.method() == HttpMethod.GET)
+                .map(endpoint -> Arguments.of(endpoint.method(), endpoint.path()));
     }
 
     @ParameterizedTest(name = "{0} {1}")
-    @MethodSource("verifiedOnlyEndpoints")
+    @MethodSource("com.pitchmap.common.security.AuthorizationMatrix#verifiedOnlyEndpoints")
     @DisplayName("[F-01][TR-03] 이메일 인증을 마치지 않은 회원이 인증 회원 이상의 경로를 부르면 403 MEMBER_NOT_VERIFIED로 응답한다")
     void unverifiedMemberIsRejectedOnVerifiedOnlyEndpoints(HttpMethod method, String path) {
         Cookie session = loginAsProbe(MEMBER_ID, USER_ROLE, false);
@@ -131,7 +74,7 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
     }
 
     @ParameterizedTest(name = "{0} {1}")
-    @MethodSource("verifiedOnlyEndpoints")
+    @MethodSource("com.pitchmap.common.security.AuthorizationMatrix#verifiedOnlyEndpoints")
     @DisplayName("[F-01][TR-03] 이메일 인증을 마친 회원은 인증 회원 이상의 경로에서 인증·권한 오류 없이 컨트롤러까지 간다")
     void verifiedMemberPassesVerifiedOnlyEndpoints(HttpMethod method, String path) {
         Cookie session = loginAsProbe(MEMBER_ID, USER_ROLE, true);
@@ -147,7 +90,7 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
     }
 
     @ParameterizedTest(name = "{0} {1}")
-    @MethodSource("verifiedOnlyEndpoints")
+    @MethodSource("com.pitchmap.common.security.AuthorizationMatrix#verifiedOnlyEndpoints")
     @DisplayName("[F-01][TR-03] 로그인하지 않고 인증 회원 이상의 경로를 부르면 403이 아니라 401 AUTHENTICATION_REQUIRED로 응답한다")
     void anonymousIsUnauthorizedOnVerifiedOnlyEndpoints(HttpMethod method, String path) {
         MvcTestResult result = call(method, path, null);
@@ -157,7 +100,7 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
     }
 
     @ParameterizedTest(name = "{0} {1}")
-    @MethodSource("loginLevelEndpoints")
+    @MethodSource("com.pitchmap.common.security.AuthorizationMatrix#loginLevelEndpoints")
     @DisplayName("[F-01][TR-03] 이메일 인증을 마치지 않은 회원도 로그인만 필요한 경로는 인증·권한 오류 없이 쓸 수 있다")
     void unverifiedMemberPassesLoginLevelEndpoints(HttpMethod method, String path) {
         Cookie session = loginAsProbe(MEMBER_ID, USER_ROLE, false);
@@ -165,6 +108,16 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
         MvcTestResult result = call(method, path, session);
 
         assertThat(result.getResponse().getStatus()).isNotIn(401, 403);
+    }
+
+    @ParameterizedTest(name = "{0} {1}")
+    @MethodSource("com.pitchmap.common.security.AuthorizationMatrix#allLoginLevelEndpoints")
+    @DisplayName("[F-01][NFR-07] 로그인하지 않고 로그인이 필요한 경로를 부르면 401 AUTHENTICATION_REQUIRED로 응답한다")
+    void anonymousIsUnauthorizedOnLoginLevelEndpoints(HttpMethod method, String path) {
+        MvcTestResult result = call(method, path, null);
+
+        assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("AUTHENTICATION_REQUIRED");
     }
 
     @ParameterizedTest(name = "{0} {1}")
