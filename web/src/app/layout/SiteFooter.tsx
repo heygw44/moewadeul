@@ -83,7 +83,7 @@ export function SiteFooter() {
           <p className="flex items-center gap-3">
             <span>© 2026 뫼와들</span>
             <a
-              href="https://github.com/heygw44/pitchmap"
+              href="https://github.com/heygw44/moewadeul"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex min-h-11 items-center underline underline-offset-2 hover:text-ink md:min-h-0"

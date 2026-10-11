@@ -3,7 +3,7 @@
 # 같은 uid로 덮어쓰므로 여러 번 실행해도 결과가 같다.
 #
 # 필요한 환경 변수
-#   GRAFANA_URL       스택 주소. 예: https://pitchmap.grafana.net
+#   GRAFANA_URL       스택 주소. 예: https://<스택 이름>.grafana.net
 #   GRAFANA_SA_TOKEN  Grafana 서비스 계정 토큰(Editor 이상). 저장소나 셸 기록에 남기지 않는다
 #   ALERT_EMAIL       알림을 받을 이메일 주소
 # 선택: PROM_UID, LOKI_UID  데이터 소스 uid. 비우면 이름이 -prom, -logs로 끝나는 Grafana Cloud 기본 데이터 소스를 찾는다
@@ -13,11 +13,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
-readonly FOLDER_UID=pitchmap
+readonly FOLDER_UID=moewadeul
 readonly FOLDER_TITLE="뫼와들"
-readonly CONTACT_POINT_UID=pitchmap-email
-readonly CONTACT_POINT_NAME=pitchmap-email
-readonly RULE_GROUP=pitchmap
+readonly CONTACT_POINT_UID=moewadeul-email
+readonly CONTACT_POINT_NAME=moewadeul-email
+readonly RULE_GROUP=moewadeul
 
 : "${GRAFANA_URL:?GRAFANA_URL이 필요하다}"
 : "${GRAFANA_SA_TOKEN:?GRAFANA_SA_TOKEN이 필요하다}"
@@ -87,7 +87,7 @@ fi
 # 2. 대시보드
 dashboard="$(jq --arg prom "$PROM_UID" --arg loki "$LOKI_UID" \
     'walk(if . == "__PROM_UID__" then $prom elif . == "__LOKI_UID__" then $loki else . end)' \
-    "$SCRIPT_DIR/dashboard-pitchmap.json")"
+    "$SCRIPT_DIR/dashboard-moewadeul.json")"
 require_ok "$(api POST /api/dashboards/db \
     "$(jq -n --argjson dashboard "$dashboard" --arg folder "$FOLDER_UID" '{dashboard: $dashboard, folderUid: $folder, overwrite: true}')")" \
     "대시보드 올리기"

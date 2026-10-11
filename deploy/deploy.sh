@@ -19,8 +19,8 @@ readonly SERVER_ENV_FILE="$DEPLOY_DIR/server.env"
 readonly LAST_TAG_FILE="$DEPLOY_DIR/last-successful-tag"
 readonly REGION=ap-northeast-2
 readonly PARAM_PREFIX=/pitchmap/prod
-readonly APP_REPO=ghcr.io/heygw44/pitchmap-app
-readonly CADDY_REPO=ghcr.io/heygw44/pitchmap-caddy
+readonly APP_REPO=ghcr.io/heygw44/moewadeul-app
+readonly CADDY_REPO=ghcr.io/heygw44/moewadeul-caddy
 readonly HEALTH_URL=http://127.0.0.1:8080/actuator/health
 # 앱은 시작할 때 Flyway 마이그레이션을 실행하므로, 처음 배포하거나 마이그레이션이 많으면 시간이 걸린다.
 readonly HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-240}"
