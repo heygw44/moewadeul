@@ -16,9 +16,8 @@ import { TextField } from '../../components/TextField';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatRelativeKst } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
-import { LINK_BUTTON_CLASS, parseSpotId, SECONDARY_LINK_CLASS, UNVERIFIED_WRITE_REASON } from './communityLabels';
+import { LINK_BUTTON_CLASS, parseSpotId, UNVERIFIED_WRITE_REASON } from './communityLabels';
 
 // 주소의 page는 사람이 읽는 1부터 시작하는 번호다. 서버에는 1을 빼서 보낸다.
 type ListTab = 'all' | 'popular';
@@ -368,23 +367,13 @@ function CommunityAside() {
   );
 }
 
-// 비회원에게는 로그인 링크를, 이메일 미인증 회원에게는 막힌 이유를 보여 준다. 쓰기 권한은 서버가 다시 확인한다.
+// 비회원에게는 글쓰기 버튼을 두지 않는다. 로그인과 회원가입은 머리글에서 한다.
+// 이메일 미인증 회원에게는 막힌 이유를 보여 준다. 쓰기 권한은 서버가 다시 확인한다.
 function WriteAction({ spotId }: { spotId: number | null }) {
   const session = useSession();
-  const { pathname, search } = useLocation();
   const target = spotId === null ? '/community/new' : `/community/new?spotId=${spotId}`;
 
-  if (session.status === 'loading') return null;
-  if (session.status === 'anonymous' || session.me === null) {
-    return (
-      <Link
-        to={withNext('/login', pathname + search)}
-        className={SECONDARY_LINK_CLASS}
-      >
-        로그인하고 글쓰기
-      </Link>
-    );
-  }
+  if (session.status === 'loading' || session.status === 'anonymous' || session.me === null) return null;
   if (session.me.status === 'UNVERIFIED') {
     return (
       <Button variant="secondary" disabled disabledReason={UNVERIFIED_WRITE_REASON}>

@@ -71,12 +71,20 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
               <AccountChip />
             </div>
             {!mobileAccount && !signedIn && session.status !== 'loading' && (
-              <Link
-                to={withNext('/login', pathname + search)}
-                className="inline-flex min-h-11 items-center px-2 font-semibold text-forest lg:hidden"
-              >
-                로그인
-              </Link>
+              <div className="inline-flex items-center lg:hidden">
+                <Link
+                  to={withNext('/login', pathname + search)}
+                  className="inline-flex min-h-11 items-center px-2 font-semibold text-forest"
+                >
+                  로그인
+                </Link>
+                <Link
+                  to={withNext('/signup', pathname + search)}
+                  className="inline-flex min-h-11 items-center px-2 font-semibold text-ink"
+                >
+                  회원가입
+                </Link>
+              </div>
             )}
           </div>
         )}
