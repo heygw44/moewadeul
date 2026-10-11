@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.pitchmap.common.testsupport.IntegrationTest;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +58,23 @@ class SpotSchemaIntegrationTest {
         // then
         assertThat(spotIndexType).isEqualTo("SPATIAL");
         assertThat(boundaryIndexType).isEqualTo("SPATIAL");
+    }
+
+    @Test
+    @DisplayName("[F-03] 장소를 저장하거나 좌표를 바꾸면 MySQL이 위도·경도 컬럼을 좌표와 같은 값으로 채운다")
+    void latitudeAndLongitudeColumnsFollowLocation() {
+        // given: 서울시청은 위도 37.5665, 경도 126.978이다. 위도와 경도가 뒤바뀌어 채워지면 두 값이 서로 바뀐다.
+        long spotId = insertSpot("CAMPSITE", "좌표 확인 야영장");
+
+        // when
+        Map<String, Object> saved = latitudeAndLongitudeOf(spotId);
+        jdbcTemplate.update(
+                "UPDATE spot SET location = ST_GeomFromText('POINT(35.1796 129.0756)', 4326) WHERE id = ?", spotId);
+        Map<String, Object> moved = latitudeAndLongitudeOf(spotId);
+
+        // then
+        assertThat(saved).containsEntry("latitude", 37.5665).containsEntry("longitude", 126.978);
+        assertThat(moved).containsEntry("latitude", 35.1796).containsEntry("longitude", 129.0756);
     }
 
     @Test
@@ -151,6 +169,10 @@ class SpotSchemaIntegrationTest {
 
         // when & then
         assertThatThrownBy(() -> insertBakjiConfirmation(spotId, memberId)).isInstanceOf(DuplicateKeyException.class);
+    }
+
+    private Map<String, Object> latitudeAndLongitudeOf(long spotId) {
+        return jdbcTemplate.queryForMap("SELECT latitude, longitude FROM spot WHERE id = ?", spotId);
     }
 
     private String indexTypeOf(String table, String column) {

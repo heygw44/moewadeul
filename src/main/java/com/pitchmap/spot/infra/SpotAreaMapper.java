@@ -4,8 +4,8 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-// 지도 영역 조회는 공간 인덱스를 타는 영역 조건에 유형, 시설, 경고 필터를 요청마다 골라 붙이고, 장소가 많으면 격자 칸별로 묶어 센다.
-// JPA로는 공간 함수와 동적 조건, 집계를 한 문장에 담기 어렵다. 그래서 이 매퍼가 SQL로 직접 쓴다.
+// 지도 영역 조회는 위도·경도 범위 조건에 유형, 시설, 경고 필터를 요청마다 골라 붙이고, 장소가 많으면 격자 칸별로 묶어 센다.
+// JPA로는 동적 조건과 필터별 조인, 인덱스 힌트, 집계를 한 문장에 담기 어렵다. 그래서 이 매퍼가 SQL로 직접 쓴다.
 // 결과는 조회 전용 record로만 받고, 엔티티는 만들지 않는다.
 @Mapper
 public interface SpotAreaMapper {
