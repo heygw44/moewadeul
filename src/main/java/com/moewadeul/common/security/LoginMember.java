@@ -15,6 +15,10 @@ import org.springframework.security.core.AuthenticatedPrincipal;
  *
  * <p>직렬화 형식을 바꿀 때는 {@code serialVersionUID}를 올리지 않는다. 이미 저장된 세션이 있으면 올리는 순간 역직렬화가 실패해서
  * 로그인한 모든 회원이 풀린다. 구성요소를 더하면 예전 세션에서는 기본값(false)으로 읽히고, 이는 인증 권한을 주지 않는 쪽이라 안전하다.
+ *
+ * <p>직렬화 데이터에는 이 클래스의 전체 이름이 들어간다. 그래서 클래스 이름이나 패키지를 바꾸면, 서버는 예전 세션을 읽을 때
+ * {@code ClassNotFoundException}을 던지고 그 세션 쿠키로 들어온 요청은 모두 500이 된다. 이름을 바꿀 때는 저장된 세션을 비우는
+ * 마이그레이션을 함께 넣는다.
  */
 public record LoginMember(long memberId, String role, boolean emailVerified)
         implements AuthenticatedPrincipal, Serializable {
