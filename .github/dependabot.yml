@@ -17,6 +17,11 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+    # typescript-eslint가 지원하는 TypeScript 메이저 버전보다 먼저 올리면 npm ci가 peer 의존성 충돌로 실패한다(#262).
+    # 그래서 TypeScript 메이저 버전 올림은 typescript-eslint의 지원을 확인한 뒤 사람이 직접 한다.
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       npm:
         applies-to: version-updates
