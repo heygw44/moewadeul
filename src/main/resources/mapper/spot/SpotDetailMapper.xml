@@ -95,6 +95,19 @@
           AND b.end_date &gt; #{today}
     </select>
 
+    <!-- 개인 일정은 한 건이 한 사람이라 인원을 1로 읽는다. 탈퇴한 회원은 그 장소에 가지 않으므로 그 회원의 일정은 세지 않는다.
+         일정을 등록한 회원이 누구인지는 읽지 않는다. 다른 사람에게는 인원 숫자로만 드러나야 하기 때문이다. -->
+    <select id="selectSoloTrips" resultType="com.pitchmap.spot.infra.SpotConfirmedStayRow">
+        SELECT t.start_date AS start_date,
+               t.end_date AS end_date,
+               1 AS headcount
+        FROM solo_trip t
+        JOIN member m ON m.id = t.member_id
+        WHERE t.spot_id = #{spotId}
+          AND t.end_date &gt; #{today}
+          AND m.status &lt;&gt; 'WITHDRAWN'
+    </select>
+
     <!-- 결제를 마친(CONFIRMED) 신청만 참가자로 센다. 결제 대기 신청은 기한이 지나면 만료되므로 예상 인원에 넣지 않는다.
          당일 행사는 밤을 보내지 않으므로 숙박 행사만 읽는다. 종료 시각이 오늘 0시(한국 시각) 이전인 행사는 남은 밤이 없어서 SQL에서 미리 거른다. -->
     <select id="selectConfirmedPrograms" resultType="com.pitchmap.spot.infra.SpotConfirmedProgramRow">

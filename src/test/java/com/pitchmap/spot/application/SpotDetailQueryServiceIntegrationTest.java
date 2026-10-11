@@ -460,6 +460,46 @@ class SpotDetailQueryServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-23][ST-05] 개인 일정은 밤마다 1명으로 예상 인원에 더하고, 같은 밤의 확정 베이스캠프 인원과 합산한다")
+    void addsSoloTripsToExpectedPeople() {
+        // given: 개인 일정은 11-07, 11-08 두 밤이고, 확정 베이스캠프 2명은 11-08 한 밤이다.
+        clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
+        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        insertSoloTrip(insertMember(TestSequence.nickname()), spotId, "2026-11-07", "2026-11-09");
+        insertBasecampMembers(insertBasecamp(spotId, "CONFIRMED", "2026-11-08", "2026-11-09"), "ACTIVE", 2);
+
+        // when
+        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+
+        // then
+        assertThat(detail.expectedPeople())
+                .containsExactly(
+                        new SpotExpectedPeople(LocalDate.parse("2026-11-07"), 1),
+                        new SpotExpectedPeople(LocalDate.parse("2026-11-08"), 3));
+    }
+
+    @Test
+    @DisplayName("[F-23][ST-05] 탈퇴한 회원의 개인 일정, 다른 장소의 일정, 이미 끝난 일정은 예상 인원에 세지 않는다")
+    void excludesWithdrawnOtherSpotAndFinishedSoloTrips() {
+        // given: 한국 날짜 2026-11-08
+        clock.setInstant(Instant.parse("2026-11-08T03:00:00Z"));
+        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long otherSpotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long withdrawnId = insertMember(TestSequence.nickname());
+        jdbcTemplate.update("UPDATE member SET status = 'WITHDRAWN' WHERE id = ?", withdrawnId);
+        insertSoloTrip(withdrawnId, spotId, "2026-11-09", "2026-11-10");
+        insertSoloTrip(insertMember(TestSequence.nickname()), otherSpotId, "2026-11-09", "2026-11-10");
+        insertSoloTrip(insertMember(TestSequence.nickname()), spotId, "2026-11-06", "2026-11-08");
+        insertSoloTrip(insertMember(TestSequence.nickname()), spotId, "2026-11-07", "2026-11-09");
+
+        // when
+        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+
+        // then
+        assertThat(detail.expectedPeople()).containsExactly(new SpotExpectedPeople(LocalDate.parse("2026-11-08"), 1));
+    }
+
+    @Test
     @DisplayName("[F-05] 예상 인원의 오늘은 UTC가 아니라 한국 날짜로 정한다")
     void decidesTodayByKoreanDate() {
         // given: 한국은 2026-11-08 0시 30분이고 UTC로는 아직 2026-11-07이다.
@@ -737,6 +777,16 @@ class SpotDetailQueryServiceIntegrationTest {
                     insertMember(TestSequence.nickname()),
                     status);
         }
+    }
+
+    private void insertSoloTrip(long memberId, long spotId, String startDate, String endDate) {
+        jdbcTemplate.update(
+                "INSERT INTO solo_trip (member_id, spot_id, start_date, end_date, created_at)"
+                        + " VALUES (?, ?, ?, ?, NOW(6))",
+                memberId,
+                spotId,
+                startDate,
+                endDate);
     }
 
     // 신청이 열려 있던 행사를 장소에 연결해 저장한다. 시작·종료 시각은 UTC다.

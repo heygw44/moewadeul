@@ -77,6 +77,7 @@ public class SecurityConfig {
         "/api/programs/*/vacancy-alerts",
         "/api/program-applications/*/pay",
         "/api/program-applications/*/cancel",
+        "/api/solo-trips",
     };
 
     private static final String[] VERIFIED_PUT_PATTERNS = {
@@ -101,6 +102,7 @@ public class SecurityConfig {
         "/api/basecamps/*/applications/me",
         "/api/basecamps/*/members/me",
         "/api/programs/*/vacancy-alerts",
+        "/api/solo-trips/*",
     };
 
     private static final AuthorizationManager<RequestAuthorizationContext> EMAIL_VERIFIED =

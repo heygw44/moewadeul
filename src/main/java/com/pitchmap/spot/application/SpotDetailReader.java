@@ -83,10 +83,11 @@ class SpotDetailReader {
         return new Read(detail, row.weatherNx(), row.weatherNy());
     }
 
-    // 확정 베이스캠프와, 이 장소에 연결된 숙박 공식 행사의 확정 참가자를 같은 모양의 야영 기간으로 모은다.
+    // 확정 베이스캠프, 이 장소에 연결된 숙박 공식 행사의 확정 참가자, 혼자 가는 개인 일정을 같은 모양의 야영 기간으로 모은다.
     // 행사는 시작·종료를 UTC 시각으로 저장하므로, 각 시각의 한국 날짜를 출발일과 종료일로 본다.
     private List<SpotConfirmedStayRow> readStays(long spotId, LocalDate today) {
         List<SpotConfirmedStayRow> stays = new ArrayList<>(spotDetailMapper.selectConfirmedStays(spotId, today));
+        stays.addAll(spotDetailMapper.selectSoloTrips(spotId, today));
         Instant startOfToday = today.atStartOfDay(KOREA).toInstant();
         for (SpotConfirmedProgramRow program : spotDetailMapper.selectConfirmedPrograms(spotId, startOfToday)) {
             stays.add(new SpotConfirmedStayRow(
