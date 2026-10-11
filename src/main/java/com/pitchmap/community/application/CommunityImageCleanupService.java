@@ -1,5 +1,6 @@
 package com.pitchmap.community.application;
 
+import com.pitchmap.common.storage.ImageStorage;
 import com.pitchmap.community.infra.CommunityImageMapper;
 import com.pitchmap.community.infra.CommunityImageRow;
 import java.time.Clock;
@@ -29,7 +30,7 @@ public class CommunityImageCleanupService {
     static final int BATCH_SIZE = 100;
 
     private final CommunityImageMapper communityImageMapper;
-    private final CommunityImageStorage communityImageStorage;
+    private final ImageStorage imageStorage;
     private final Clock clock;
 
     /**
@@ -65,7 +66,7 @@ public class CommunityImageCleanupService {
     // 키와 URL에는 회원 ID와 서명이 들어 있어서 로그에 남기지 않고 이미지 ID만 남긴다.
     private boolean deleteObject(CommunityImageRow row) {
         try {
-            communityImageStorage.delete(row.objectKey());
+            imageStorage.delete(row.objectKey());
             return true;
         } catch (RuntimeException e) {
             log.warn(

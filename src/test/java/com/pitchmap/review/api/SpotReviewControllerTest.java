@@ -55,7 +55,7 @@ class SpotReviewControllerTest {
     private static final String VALID_BODY = "{\"visitedDate\":\"2026-10-04\",\"rating\":4,\"content\":\"물이 가까웠다\"}";
     private static final String VALID_UPDATE_BODY = "{\"rating\":5,\"content\":\"다시 가고 싶다\"}";
     private static final SpotReviewItem ITEM = new SpotReviewItem(
-            9L, 31L, "새벽능선", LocalDate.of(2026, 10, 4), 5, "별이 좋았다", Instant.parse("2026-10-05T03:00:00Z"));
+            9L, 31L, "새벽능선", LocalDate.of(2026, 10, 4), 5, "별이 좋았다", List.of(), Instant.parse("2026-10-05T03:00:00Z"));
 
     @Autowired
     private MockMvcTester mvc;
@@ -85,6 +85,7 @@ class SpotReviewControllerTest {
                     "visitedDate": "2026-10-04",
                     "rating": 5,
                     "content": "별이 좋았다",
+                    "images": [],
                     "createdAt": "2026-10-05T03:00:00Z"
                   }],
                   "page": 0, "size": 20, "hasNext": true

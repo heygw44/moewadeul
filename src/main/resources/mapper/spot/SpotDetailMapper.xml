@@ -70,6 +70,15 @@
         LIMIT #{limit}
     </select>
 
+    <!-- 후기 이미지는 review 모듈의 테이블이지만, spot 모듈이 review 모듈에 기댈 수 없어서 최근 후기처럼 SQL로 직접 읽는다. -->
+    <select id="selectReviewImages" resultType="com.pitchmap.spot.infra.SpotReviewImageRow">
+        SELECT id AS image_id, review_id, object_key
+        FROM review_image
+        WHERE review_id IN
+        <foreach collection="reviewIds" item="reviewId" open="(" separator="," close=")">#{reviewId}</foreach>
+        ORDER BY review_id, display_order
+    </select>
+
     <!-- 현재 인원은 상태가 ACTIVE인 멤버 행의 수이고 캠프 리더도 센다. 베이스캠프 검색과 같은 식이다. -->
     <sql id="headcount">
         (SELECT COUNT(*) FROM basecamp_member m WHERE m.basecamp_id = b.id AND m.status = 'ACTIVE')

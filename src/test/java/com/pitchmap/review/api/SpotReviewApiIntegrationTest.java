@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.pitchmap.common.testsupport.IntegrationTest;
 import com.pitchmap.common.testsupport.MutableClock;
+import com.pitchmap.common.testsupport.TestImageStorage;
 import com.pitchmap.member.application.EmailVerificationService;
 import com.pitchmap.member.domain.Member;
 import com.pitchmap.member.infra.MemberJpaRepository;
@@ -51,6 +52,9 @@ class SpotReviewApiIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private TestImageStorage storage;
 
     @Test
     @DisplayName("[F-10] 인증 회원이 CSRF 토큰과 함께 후기를 쓰면 201이고, 비로그인 사용자의 목록과 상세에 그 후기가 보인다")
@@ -173,6 +177,49 @@ class SpotReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-24][RI-01][RI-02] 인증 회원이 업로드 URL을 받아 올린 이미지를 붙여 후기를 쓰면, 후기 목록 항목의 images에 조회 URL이 담긴다")
+    void uploadAndAttachImageThroughApi() {
+        // given
+        long spotId = saveSpot();
+        Cookie session = verifiedSession(saveMember(null));
+        MvcTestResult issued = send(
+                mvc.post().uri("/api/reviews/images"), session, "{\"contentType\":\"image/png\",\"sizeBytes\":2048}");
+        int imageId = idOf(issued, "$.imageId");
+        String key = jdbc.queryForObject("SELECT object_key FROM review_image WHERE id = ?", String.class, imageId);
+        storage.markUploaded(key, 2048);
+
+        // when
+        MvcTestResult created = send(
+                mvc.post().uri("/api/spots/" + spotId + "/reviews"),
+                session,
+                "{\"visitedDate\":\"2026-10-04\",\"rating\":4,\"content\":\"좋다\",\"imageIds\":[%d]}"
+                        .formatted(imageId));
+        MvcTestResult list = mvc.get().uri("/api/spots/" + spotId + "/reviews").exchange();
+        MvcTestResult gif = send(
+                mvc.post().uri("/api/reviews/images"), session, "{\"contentType\":\"image/gif\",\"sizeBytes\":2048}");
+
+        // then
+        assertThat(issued).hasStatus(HttpStatus.CREATED);
+        assertThat(issued).bodyJson().extractingPath("$.method").isEqualTo("PUT");
+        assertThat(issued)
+                .bodyJson()
+                .extractingPath("$.headers['Content-Type']")
+                .isEqualTo("image/png");
+        assertThat(created).hasStatus(HttpStatus.CREATED);
+        assertThat(list)
+                .bodyJson()
+                .extractingPath("$.content[0].images[0].imageId")
+                .isEqualTo(imageId);
+        assertThat(list)
+                .bodyJson()
+                .extractingPath("$.content[0].images[0].url")
+                .asString()
+                .contains(key);
+        assertThat(gif).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(gif).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+    }
+
+    @Test
     @DisplayName("[F-10] 로그인하지 않으면 쓰기는 401이고, 이메일 인증 전 회원은 403 MEMBER_NOT_VERIFIED이며, 목록은 로그인 없이 읽는다")
     void authorizationLevels() {
         // given
@@ -224,6 +271,12 @@ class SpotReviewApiIntegrationTest {
             request = request.contentType(MediaType.APPLICATION_JSON).content(body);
         }
         return request.exchange();
+    }
+
+    private static int idOf(MvcTestResult result, String path) {
+        AtomicInteger id = new AtomicInteger();
+        assertThat(result).bodyJson().extractingPath(path).asNumber().satisfies(number -> id.set(number.intValue()));
+        return id.get();
     }
 
     private static int reviewIdOf(MvcTestResult created) {

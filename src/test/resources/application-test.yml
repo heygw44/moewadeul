@@ -47,10 +47,14 @@ pitchmap:
     report-content-cleanup:
       # 정리 작업을 테스트가 직접 호출한다. 그래서 정해진 시각에 도는 스케줄러는 끈다.
       enabled: false
+  image-storage:
+    # 테스트는 AWS에 접속하지 않는다. 통합 테스트는 테스트용 저장소 빈을 따로 쓴다.
+    storage: fake
+  review:
+    image-cleanup:
+      # 정리 작업을 테스트가 직접 호출한다. 그래서 정해진 시각에 도는 스케줄러는 끈다.
+      enabled: false
   community:
-    image:
-      # 테스트는 AWS에 접속하지 않는다. 통합 테스트는 테스트용 저장소 빈을 따로 쓴다.
-      storage: fake
     image-cleanup:
       # 정리 작업을 테스트가 직접 호출한다. 그래서 정해진 시각에 도는 스케줄러는 끈다.
       enabled: false

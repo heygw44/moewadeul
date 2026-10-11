@@ -1,4 +1,4 @@
-package com.pitchmap.community.infra;
+package com.pitchmap.common.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,12 +7,12 @@ import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-class CommunityImagePropertiesTest {
+class ImageStoragePropertiesTest {
 
     private static final Duration TEN_MINUTES = Duration.ofMinutes(10);
 
-    private static CommunityImageProperties properties(String storage, String bucket, Duration uploadTtl) {
-        return new CommunityImageProperties(
+    private static ImageStorageProperties properties(String storage, String bucket, Duration uploadTtl) {
+        return new ImageStorageProperties(
                 storage,
                 bucket,
                 "ap-northeast-2",
@@ -33,7 +33,7 @@ class CommunityImagePropertiesTest {
     void s3WithoutBucketFails() {
         assertThatThrownBy(() -> properties("s3", " ", TEN_MINUTES))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("pitchmap.community.image.bucket");
+                .hasMessageContaining("pitchmap.image-storage.bucket");
     }
 
     @Test
@@ -41,7 +41,7 @@ class CommunityImagePropertiesTest {
     void unknownStorageFails() {
         assertThatThrownBy(() -> properties("gcs", "bucket", TEN_MINUTES))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("pitchmap.community.image.storage");
+                .hasMessageContaining("pitchmap.image-storage.storage");
     }
 
     @Test

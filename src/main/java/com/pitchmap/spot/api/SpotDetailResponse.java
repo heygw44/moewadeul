@@ -240,7 +240,13 @@ public record SpotDetailResponse(
 
     // 후기 목록의 항목과 같은 모양이다. 작성자는 회원 ID와 닉네임만 내보낸다.
     public record RecentReview(
-            long reviewId, Author author, LocalDate visitedDate, int rating, String content, Instant createdAt) {
+            long reviewId,
+            Author author,
+            LocalDate visitedDate,
+            int rating,
+            String content,
+            List<Image> images,
+            Instant createdAt) {
 
         static RecentReview from(SpotRecentReview review) {
             return new RecentReview(
@@ -249,7 +255,12 @@ public record SpotDetailResponse(
                     review.visitedDate(),
                     review.rating(),
                     review.content(),
+                    review.images().stream()
+                            .map(image -> new Image(image.imageId(), image.url()))
+                            .toList(),
                     review.createdAt());
         }
+
+        public record Image(long imageId, String url) {}
     }
 }

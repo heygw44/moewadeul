@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.pitchmap.common.error.InvalidFieldException;
 import com.pitchmap.common.testsupport.IntegrationTest;
-import com.pitchmap.community.infra.TestCommunityImageStorage;
+import com.pitchmap.common.testsupport.TestImageStorage;
 import com.pitchmap.member.infra.MemberJpaRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +37,7 @@ class CommunityImageAttachConcurrencyIntegrationTest {
     private MemberJpaRepository memberRepository;
 
     @Autowired
-    private TestCommunityImageStorage storage;
+    private TestImageStorage storage;
 
     @Autowired
     private JdbcTemplate jdbc;

@@ -1,6 +1,5 @@
-package com.pitchmap.community.infra;
+package com.pitchmap.common.storage;
 
-import com.pitchmap.community.application.CommunityImageStorage;
 import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
@@ -16,16 +15,16 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(
-        prefix = "pitchmap.community.image",
+        prefix = "pitchmap.image-storage",
         name = "storage",
-        havingValue = CommunityImageProperties.STORAGE_FAKE,
+        havingValue = ImageStorageProperties.STORAGE_FAKE,
         matchIfMissing = true)
-public class LocalFakeCommunityImageStorage implements CommunityImageStorage {
+public class LocalFakeImageStorage implements ImageStorage {
 
     private static final String UPLOAD_URL_PREFIX = "http://localhost/local-fake-upload/";
     private static final String VIEW_URL_PREFIX = "http://localhost/local-fake-view/";
 
-    private final CommunityImageProperties properties;
+    private final ImageStorageProperties properties;
     private final Clock clock;
     private final Map<String, Long> sizes = new ConcurrentHashMap<>();
 
