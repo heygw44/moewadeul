@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import { Icon } from '../../components/icons';
 import { AccountChip } from '../../features/member/AccountChip';
 import { withNext } from '../../features/member/nextPath';
@@ -18,14 +20,28 @@ type SiteHeaderProps = {
 };
 
 const PRIMARY_KEYS = new Set(['map', 'basecamps', 'community', 'programs']);
+const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
 
-// 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 머리글이다. 모바일에서는 메뉴를 하단 탭이 맡으므로 서비스 이름만 남긴다.
+// 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 머리글이다.
+// 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 하단 탭이 없는 랜딩·404에서도 다른 화면으로 갈 수 있게 하기 위해서다.
 export function SiteHeader({ mobileAccount = false, minimal = false, fluid = false, className = '' }: SiteHeaderProps) {
   const { pathname, search } = useLocation();
   const session = useSession();
   const count = useUnreadCount();
   const signedIn = session.status === 'authenticated' && session.me !== null;
   const active = activeNavKey(pathname);
+  // 메뉴를 펼친 경로를 기억한다. 메뉴를 눌러 다른 화면으로 가면 경로가 달라지므로 메뉴가 닫힌 것으로 본다.
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const menuOpen = openedAt === pathname;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenedAt(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
 
   return (
     <header className={`sticky top-0 z-20 border-b border-contour bg-paper ${className}`}>
@@ -35,7 +51,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
         </Link>
 
         <nav aria-label="주 메뉴" className="hidden h-14 items-stretch gap-1 lg:flex">
-          {NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key)).map((item) => {
+          {PRIMARY_ITEMS.map((item) => {
             const current = active === item.key;
             return (
               <Link
@@ -67,20 +83,63 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
               </Link>
             )}
             <NotificationBellLink className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-control px-2 text-ink hover:bg-paper-deep lg:hidden" />
-            <div className={mobileAccount ? 'flex' : 'hidden lg:flex'}>
+            <div className={mobileAccount ? 'flex min-w-0' : 'hidden min-w-0 lg:flex'}>
               <AccountChip />
             </div>
             {!mobileAccount && !signedIn && session.status !== 'loading' && (
-              <Link
-                to={withNext('/login', pathname + search)}
-                className="inline-flex min-h-11 items-center px-2 font-semibold text-forest lg:hidden"
-              >
-                로그인
-              </Link>
+              <div className="inline-flex items-center lg:hidden">
+                <Link
+                  to={withNext('/login', pathname + search)}
+                  className="inline-flex min-h-11 items-center px-2 font-semibold text-forest"
+                >
+                  로그인
+                </Link>
+                <Link
+                  to={withNext('/signup', pathname + search)}
+                  className="inline-flex min-h-11 items-center px-2 font-semibold text-ink"
+                >
+                  회원가입
+                </Link>
+              </div>
             )}
+            <button
+              type="button"
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav"
+              aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
+              onClick={() => setOpenedAt(menuOpen ? null : pathname)}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep lg:hidden"
+            >
+              <Icon name={menuOpen ? 'close' : 'menu'} size={22} />
+            </button>
           </div>
         )}
       </div>
+
+      {!minimal && menuOpen && (
+        <nav id="mobile-nav" aria-label="주 메뉴" className="border-t border-contour bg-paper lg:hidden">
+          <ul className="mx-auto flex max-w-screen-xl flex-col py-1">
+            {PRIMARY_ITEMS.map((item) => {
+              const current = active === item.key;
+              return (
+                <li key={item.key}>
+                  <Link
+                    to={item.path}
+                    aria-current={current ? 'page' : undefined}
+                    className={[
+                      'flex min-h-12 items-center gap-3 border-l-2 px-4 text-base font-semibold',
+                      current ? 'border-forest text-forest-deep' : 'border-transparent text-ink-muted hover:text-ink',
+                    ].join(' ')}
+                  >
+                    <Icon name={item.icon} size={20} />
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
     </header>
   );
 }

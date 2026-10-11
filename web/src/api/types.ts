@@ -34,6 +34,7 @@ export interface ErrorBody {
 export interface SignupRequest {
   email: string;
   password: string;
+  passwordConfirm: string;
   nickname: string;
 }
 
@@ -121,6 +122,8 @@ export interface SpotAreaQuery {
   hasWater?: boolean;
   hasToilet?: boolean;
   excludeWarning?: boolean;
+  // true면 서버가 오늘 휴장인 야영장·휴양림을 뺀다. 박지는 빼지 않는다.
+  hideClosed?: boolean;
 }
 
 export type SignalLevel = 'NONE' | 'WEAK' | 'GOOD';
@@ -299,6 +302,12 @@ export interface Page<T> {
   hasNext: boolean;
 }
 
+// 번호형 페이지 목록(커뮤니티 글)은 조건에 맞는 전체 개수와 페이지 수를 더 준다.
+export interface NumberedPage<T> extends Page<T> {
+  totalElements: number;
+  totalPages: number;
+}
+
 // 장소 후기
 
 export interface SpotReviewAuthor {
@@ -313,18 +322,38 @@ export interface SpotReview {
   visitedDate: string;
   rating: number;
   content: string;
+  // 후기 안 순서의 이미지. url은 서버가 발급한 사전 서명 조회 URL이다. 없으면 빈 배열이다.
+  images: { imageId: number; url: string }[];
   createdAt: string;
+}
+
+// 07 4.5.1 개인 일정. 날짜는 한국 날짜(YYYY-MM-DD)다.
+export interface SoloTripCreateRequest {
+  spotId: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface SoloTrip {
+  soloTripId: number;
+  spot: { spotId: number; name: string; type: SpotType };
+  startDate: string;
+  endDate: string;
 }
 
 export interface SpotReviewCreateRequest {
   visitedDate: string;
   rating: number;
   content: string;
+  // 붙일 이미지 ID. 최대 3개이고 배열 순서가 후기 안 순서다.
+  imageIds?: number[];
 }
 
 export interface SpotReviewUpdateRequest {
   rating: number;
   content: string;
+  // 보내면 이미지 목록을 통째로 바꾸고, 보내지 않으면 그대로 둔다.
+  imageIds?: number[];
 }
 
 // 내 정보 수정. 보내지 않은 필드는 서버가 그대로 두고, 자기 신고 값에 null을 보내면 지운다.
@@ -431,6 +460,14 @@ export interface BasecampSearchQuery {
   fromDate?: string;
   toDate?: string;
   hasVacancy?: boolean;
+  // 비우면 서버가 모든 유형을 준다.
+  types?: SpotType[];
+  // 박 수(1~3). 비우면 모든 박 수
+  nights?: number[];
+  // 합류 조건의 최소 신뢰 단계가 이 값 이하인 것만 받는다.
+  maxTrustLevel?: number;
+  noAgeLimit?: boolean;
+  noSameGenderOnly?: boolean;
   // 0부터 시작한다.
   page?: number;
   size?: number;
@@ -847,7 +884,8 @@ export interface MyProgramApplicationItem {
 
 // 커뮤니티
 
-export type CommunityCategory = 'EXPERIENCE' | 'GEAR' | 'FREE';
+// 글 검색 대상. 댓글은 검색하지 않는다.
+export type CommunitySearchType = 'TITLE_CONTENT' | 'TITLE' | 'CONTENT' | 'AUTHOR';
 
 export type CommunityReportReason = 'SPAM' | 'ABUSE' | 'ILLEGAL_CAMPING' | 'PRIVACY' | 'MONEY_SCAM' | 'OTHER';
 
@@ -864,12 +902,13 @@ export interface CommunityPostSpot {
 
 interface CommunityPostBase {
   postId: number;
-  category: CommunityCategory;
   title: string;
   author: CommunityAuthor;
   spot?: CommunityPostSpot;
   likeCount: number;
   commentCount: number;
+  // 작성자가 아닌 사람이 상세를 연 횟수
+  viewCount: number;
   createdAt: string;
 }
 
@@ -895,7 +934,6 @@ export interface CommunityPostDetail extends CommunityPostBase {
 }
 
 export interface CommunityPostCreateRequest {
-  category: CommunityCategory;
   title: string;
   content: string;
   spotId?: number;
@@ -904,7 +942,6 @@ export interface CommunityPostCreateRequest {
 
 // 보내지 않은 필드는 그대로 두고, spotId: null은 장소 연결을 끊는다.
 export interface CommunityPostUpdateRequest {
-  category?: CommunityCategory;
   title?: string;
   content?: string;
   spotId?: number | null;
@@ -937,15 +974,19 @@ export interface CommunityReportRequest {
   content?: string;
 }
 
-export interface CommunityImageUploadRequest {
+// 커뮤니티 글과 장소 후기가 같은 모양으로 이미지 업로드 URL을 받는다.
+export interface ImageUploadRequest {
   contentType: string;
   sizeBytes: number;
 }
 
-export interface CommunityImageUpload {
+export interface ImageUpload {
   imageId: number;
   uploadUrl: string;
   method: 'PUT';
   headers: Record<string, string>;
   expiresAt: string;
 }
+
+export type CommunityImageUploadRequest = ImageUploadRequest;
+export type CommunityImageUpload = ImageUpload;

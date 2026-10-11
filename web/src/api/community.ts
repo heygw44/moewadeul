@@ -1,6 +1,5 @@
-import { ApiError, apiFetch } from './client';
+import { apiFetch } from './client';
 import type {
-  CommunityCategory,
   CommunityComment,
   CommunityCommentCreateRequest,
   CommunityImageUpload,
@@ -11,6 +10,8 @@ import type {
   CommunityPostSummary,
   CommunityPostUpdateRequest,
   CommunityReportRequest,
+  CommunitySearchType,
+  NumberedPage,
   Page,
 } from './types';
 
@@ -19,18 +20,27 @@ export const COMMUNITY_POST_PAGE_SIZE = 20;
 export const COMMUNITY_COMMENT_PAGE_SIZE = 20;
 
 export interface CommunityPostQuery {
-  category?: CommunityCategory;
   spotId?: number;
+  // true면 좋아요 5개 이상인 글만 준다.
+  popular?: boolean;
+  // keyword가 있을 때만 보낸다. 서버는 앞뒤 공백을 지운 2~50자만 받는다.
+  searchType?: CommunitySearchType;
+  keyword?: string;
 }
 
-// 최신 글부터 준다.
+// 최신 글부터 준다. page는 서버 기준이라 0부터 센다.
 export function listPosts(
   filter: CommunityPostQuery,
   page: number,
   signal?: AbortSignal,
-): Promise<Page<CommunityPostSummary>> {
-  return apiFetch<Page<CommunityPostSummary>>('/api/community/posts', {
-    query: { category: filter.category, spotId: filter.spotId, page, size: COMMUNITY_POST_PAGE_SIZE },
+): Promise<NumberedPage<CommunityPostSummary>> {
+  return apiFetch<NumberedPage<CommunityPostSummary>>('/api/community/posts', {
+    query: {
+      spotId: filter.spotId,
+      popular: filter.popular || undefined,
+      searchType: filter.keyword ? filter.searchType : undefined,
+      keyword: filter.keyword,
+      page, size: COMMUNITY_POST_PAGE_SIZE },
     signal,
   });
 }
@@ -97,23 +107,3 @@ export function requestImageUpload(req: CommunityImageUploadRequest): Promise<Co
   return apiFetch<CommunityImageUpload>('/api/community/images', { method: 'POST', body: req });
 }
 
-// 사전 서명 URL로 직접 PUT한다. 우리 서버가 아니라서 apiFetch(JSON 본문, CSRF 헤더, 세션 쿠키)를 쓰지 않는다.
-// 서명에 형식이 들어 있으므로 Content-Type은 파일의 형식과 같아야 하고, Content-Length는 브라우저가 붙인다.
-export async function putImage(upload: CommunityImageUpload, file: File, signal?: AbortSignal): Promise<void> {
-  let response: Response;
-  try {
-    response = await fetch(upload.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type },
-      body: file,
-      credentials: 'omit',
-      signal,
-    });
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error;
-    throw new ApiError(0, 'IMAGE_UPLOAD_FAILED', null);
-  }
-  if (!response.ok) {
-    throw new ApiError(response.status, 'IMAGE_UPLOAD_FAILED', null);
-  }
-}

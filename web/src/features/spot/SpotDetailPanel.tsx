@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import { fetchSpotDetail } from '../../api/spots';
-import type { BakjiDetail, MidTermForecast, PublicDetail, SpotDetail, Weather } from '../../api/types';
+import type { BakjiDetail, ExpectedPeople, MidTermForecast, PublicDetail, SpotDetail, Weather } from '../../api/types';
 import { Link } from '../../app/router';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
@@ -15,6 +15,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstTime, formatLocalDate } from '../../lib/datetime';
 import { SpotReviews } from '../review/SpotReviews';
+import { SoloTripSection } from '../trip/SoloTripSection';
 import { BakjiFeedback } from './BakjiFeedback';
 import { ParkWarningNotice } from './ParkWarningNotice';
 import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META } from './spotLabels';
@@ -144,6 +145,16 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
   const warning = detail.parkWarning;
   // 확인 버튼을 누르면 서버가 준 새 횟수로 바꿔 보여 준다. 상세를 다시 불러오지 않는다.
   const [confirmationCount, setConfirmationCount] = useState(bakji?.confirmationCount ?? 0);
+  // 개인 일정을 등록하면 예상 인원만 새로 받아 바꾼다. 상세 전체를 다시 그리면 쓰던 화면 위치를 잃기 때문이다.
+  const [expectedPeople, setExpectedPeople] = useState(detail.expectedPeople);
+
+  function refreshExpectedPeople() {
+    fetchSpotDetail(detail.spotId).then(
+      (fresh) => setExpectedPeople(fresh.expectedPeople),
+      // 다시 받지 못해도 등록은 끝났으므로, 예상 인원은 다음에 상세를 열 때 바뀐다.
+      () => undefined,
+    );
+  }
 
   return (
     <article>
@@ -180,6 +191,9 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         </BakjiSection>
       )}
       {publicDetail && <PublicSection publicDetail={publicDetail} />}
+
+      <ExpectedPeopleSection expectedPeople={expectedPeople} />
+      <SoloTripSection spotId={detail.spotId} onRegistered={refreshExpectedPeople} />
 
       <section className={SECTION_CLASS} aria-labelledby="spot-basecamp-title">
         <h3 id="spot-basecamp-title" className={SECTION_TITLE_CLASS}>
@@ -351,6 +365,27 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
             ) : (
               <p className="py-2 text-sm text-ink">홈페이지 {homepage}</p>
             ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// 서버는 오늘 이후이면서 인원이 있는 날짜만 날짜 순으로 준다. 그래서 화면은 받은 날짜를 자르지 않고 모두 보여 준다.
+function ExpectedPeopleSection({ expectedPeople }: { expectedPeople: ExpectedPeople[] }) {
+  return (
+    <section className={SECTION_CLASS} aria-labelledby="spot-expected-people-title">
+      <h3 id="spot-expected-people-title" className={SECTION_TITLE_CLASS}>
+        예상 인원
+      </h3>
+      {expectedPeople.length === 0 ? (
+        <p className="mt-2 text-sm text-ink-muted">아직 확정된 베이스캠프, 행사 참가자, 혼자 가는 일정이 없어요</p>
+      ) : (
+        <div className="mt-2 flex flex-col gap-2">
+          <p className="text-sm text-ink-muted">확정된 베이스캠프 멤버, 행사 참가자, 혼자 가는 일정을 밤마다 센 인원이에요.</p>
+          <Evidence
+            items={expectedPeople.map((day) => ({ label: formatLocalDate(day.date), value: `${day.count}명` }))}
+          />
         </div>
       )}
     </section>

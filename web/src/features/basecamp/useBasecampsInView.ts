@@ -1,20 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toUserMessage } from '../../api/errors';
 import { searchBasecamps } from '../../api/basecamps';
-import type { BasecampSearchItem } from '../../api/types';
+import type { BasecampSearchItem, SpotType } from '../../api/types';
 import type { MapView, SpotMarkerData } from '../../map/types';
+import type { BasecampFilters } from './basecampFilters';
+
+export type { BasecampFilters } from './basecampFilters';
 
 // 첫 페이지와 "더 보기"가 한 번에 받는 건수다. 서버가 허용하는 최대값이다.
 const PAGE_SIZE = 50;
 
 type SearchStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-// 빈 문자열은 "고르지 않음"이다.
-export type BasecampFilters = {
-  fromDate: string;
-  toDate: string;
-  hasVacancy: boolean;
-};
 
 export type BasecampsInView = {
   items: BasecampSearchItem[];
@@ -89,7 +85,10 @@ export function useBasecampsInView(
   const loadRef = useRef<() => void>(() => {});
   const moreRef = useRef<() => void>(() => {});
 
-  const { fromDate, toDate, hasVacancy } = filters;
+  const { fromDate, toDate, hasVacancy, maxTrustLevel, noAgeLimit, noSameGenderOnly } = filters;
+  // 목록 조건은 렌더마다 새 배열일 수 있어서, 효과가 같은 조건으로 다시 돌지 않게 글자로 바꿔 비교한다.
+  const typesKey = [...filters.types].sort().join(',');
+  const nightsKey = [...filters.nights].sort((a, b) => a - b).join(',');
 
   useEffect(() => {
     stateRef.current = state;
@@ -101,6 +100,11 @@ export function useBasecampsInView(
       fromDate: fromDate === '' ? undefined : fromDate,
       toDate: toDate === '' ? undefined : toDate,
       hasVacancy: hasVacancy ? true : undefined,
+      types: typesKey === '' ? undefined : (typesKey.split(',') as SpotType[]),
+      nights: nightsKey === '' ? undefined : nightsKey.split(',').map(Number),
+      maxTrustLevel: maxTrustLevel ?? undefined,
+      noAgeLimit: noAgeLimit || undefined,
+      noSameGenderOnly: noSameGenderOnly || undefined,
       size: PAGE_SIZE,
     };
 
@@ -190,7 +194,19 @@ export function useBasecampsInView(
       moreRef.current = () => {};
       setState(INITIAL_STATE);
     };
-  }, [map, enabled, fromDate, toDate, hasVacancy, viewerKey]);
+  }, [
+    map,
+    enabled,
+    fromDate,
+    toDate,
+    hasVacancy,
+    typesKey,
+    nightsKey,
+    maxTrustLevel,
+    noAgeLimit,
+    noSameGenderOnly,
+    viewerKey,
+  ]);
 
   const retry = useCallback(() => loadRef.current(), []);
   const loadMore = useCallback(() => moreRef.current(), []);

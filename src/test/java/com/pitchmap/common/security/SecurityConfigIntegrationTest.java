@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.ApplicationContext;
@@ -42,23 +43,6 @@ class SecurityConfigIntegrationTest {
     @Autowired
     private ApplicationContext applicationContext;
 
-    static Stream<Arguments> publicEndpoints() {
-        return Stream.of(
-                Arguments.of(HttpMethod.POST, "/api/members"),
-                Arguments.of(HttpMethod.POST, "/api/auth/login"),
-                Arguments.of(HttpMethod.POST, "/api/auth/password-reset/request"),
-                Arguments.of(HttpMethod.POST, "/api/auth/password-reset/confirm"),
-                Arguments.of(HttpMethod.GET, "/api/members/1/profile"),
-                Arguments.of(HttpMethod.GET, "/api/spots"),
-                Arguments.of(HttpMethod.GET, "/api/spots/nearby"),
-                Arguments.of(HttpMethod.GET, "/api/spots/1"),
-                Arguments.of(HttpMethod.GET, "/api/spots/1/reviews"),
-                Arguments.of(HttpMethod.GET, "/api/basecamps"),
-                Arguments.of(HttpMethod.GET, "/api/basecamps/1"),
-                Arguments.of(HttpMethod.GET, "/api/programs"),
-                Arguments.of(HttpMethod.GET, "/api/programs/1"));
-    }
-
     // 로그인해야 하는 행, 그리고 공개 경로와 경로는 같지만 HTTP 메서드가 다른 행이다.
     static Stream<Arguments> loginRequiredEndpoints() {
         return Stream.of(
@@ -75,7 +59,7 @@ class SecurityConfigIntegrationTest {
     }
 
     @ParameterizedTest(name = "{0} {1}")
-    @MethodSource("publicEndpoints")
+    @MethodSource("com.pitchmap.common.security.AuthorizationMatrix#publicEndpoints")
     @DisplayName("[ADR-002] 공개 엔드포인트는 로그인하지 않아도 인증·권한 오류 없이 컨트롤러까지 간다")
     void publicEndpointsDoNotRequireLogin(HttpMethod method, String path) {
         String csrfToken = issueCsrfToken();
@@ -125,6 +109,65 @@ class SecurityConfigIntegrationTest {
 
         assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("AUTHENTICATION_REQUIRED");
+    }
+
+    @ParameterizedTest(name = "{0} {1}")
+    @MethodSource("com.pitchmap.common.security.AuthorizationMatrix#adminEndpoints")
+    @DisplayName("[F-21][NFR-07] 로그인하지 않고 관리자 엔드포인트를 부르면 401 AUTHENTICATION_REQUIRED로 응답한다")
+    void anonymousIsUnauthorizedOnEveryAdminEndpoint(HttpMethod method, String path) {
+        String csrfToken = issueCsrfToken();
+
+        MvcTestResult result = withCsrf(mvc.method(method).uri(path), csrfToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("AUTHENTICATION_REQUIRED");
+    }
+
+    @ParameterizedTest(name = "{0} {1}")
+    @MethodSource("com.pitchmap.common.security.AuthorizationMatrix#adminEndpoints")
+    @DisplayName("[F-21][NFR-07] 일반 회원이 관리자 엔드포인트를 부르면 403 ACCESS_DENIED로 응답한다")
+    void userRoleIsDeniedOnEveryAdminEndpoint(HttpMethod method, String path) {
+        Cookie session = loginAndGetSession(7L, "USER");
+        String csrfToken = issueCsrfToken();
+
+        MvcTestResult result = withCsrf(mvc.method(method).uri(path), csrfToken)
+                .cookie(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.FORBIDDEN);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("ACCESS_DENIED");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"/api/community/posts/1/reports", "/api/community/comments/1/reports"})
+    @DisplayName("[F-29][NFR-07] 신고 경로는 쓰기만 있으므로 로그인하지 않은 GET 요청을 401로 거부한다")
+    void anonymousGetOnReportPathIsUnauthorized(String path) {
+        MvcTestResult result = mvc.get().uri(path).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("AUTHENTICATION_REQUIRED");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"/actuator/env", "/actuator/heapdump", "/actuator/configprops", "/actuator/loggers"})
+    @DisplayName("[NFR-07] 헬스 체크와 지표 수집 말고는 actuator 엔드포인트를 로그인하지 않은 요청에 열지 않는다")
+    void otherActuatorEndpointsAreNotOpen(String path) {
+        MvcTestResult result = mvc.get().uri(path).exchange();
+
+        assertThat(result.getResponse().getStatus()).isIn(401, 404);
+    }
+
+    @Test
+    @DisplayName("[NFR-07] 서버의 수집 에이전트가 읽도록 지표 엔드포인트는 로그인 없이 200으로 응답한다")
+    void prometheusEndpointIsOpenForCollector() {
+        MvcTestResult result = mvc.get().uri("/actuator/prometheus").exchange();
+
+        assertThat(result).hasStatus(HttpStatus.OK);
     }
 
     @Test

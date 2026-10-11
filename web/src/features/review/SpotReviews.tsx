@@ -2,7 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
-import { createSpotReview, deleteSpotReview, fetchSpotReviews, updateSpotReview } from '../../api/reviews';
+import {
+  createSpotReview,
+  deleteSpotReview,
+  fetchSpotReviews,
+  requestReviewImageUpload,
+  updateSpotReview,
+} from '../../api/reviews';
 import { fetchSpotDetail } from '../../api/spots';
 import type { SpotRating, SpotReview } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
@@ -10,11 +16,13 @@ import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { Dialog } from '../../components/Dialog';
+import { ImageUploadField } from '../../components/ImageUploadField';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useImageUploads } from '../../components/useImageUploads';
 import { formatKstDateTime, formatLocalDate, todayKst } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -22,6 +30,7 @@ import { useSession } from '../member/session';
 // 서버 규칙과 같은 값이다. 내용은 공백뿐일 수 없고 2,000자 이하다.
 const CONTENT_MAX = 2000;
 const MAX_RATING = 5;
+const MAX_IMAGES = 3;
 
 const RATING_OPTIONS: ReadonlyArray<ChoiceOption<string>> = [5, 4, 3, 2, 1].map((value) => ({
   value: String(value),
@@ -181,7 +190,11 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
                   initial={review}
                   onCancel={() => setEditingId(null)}
                   onSubmit={async (values) => {
-                    await updateSpotReview(review.reviewId, { rating: values.rating, content: values.content });
+                    await updateSpotReview(review.reviewId, {
+                      rating: values.rating,
+                      content: values.content,
+                      imageIds: values.imageIds,
+                    });
                     setEditingId(null);
                     await refreshAfterChange('후기를 고쳤어요.');
                   }}
@@ -290,6 +303,20 @@ function ReviewItem({
         <span className="text-ink-muted">{formatLocalDate(review.visitedDate)} 방문</span>
       </div>
       <p className="mt-2 whitespace-pre-line break-words text-base text-ink">{review.content}</p>
+      {review.images.length > 0 && (
+        <ul aria-label="후기 사진" className="mt-2 grid grid-cols-3 gap-2">
+          {review.images.map((image, index) => (
+            <li key={image.imageId}>
+              <img
+                src={image.url}
+                alt={`${review.author.nickname}님 후기 사진 ${index + 1}`}
+                loading="lazy"
+                className="aspect-square w-full rounded-control border border-contour bg-paper-deep object-cover"
+              />
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="mt-1 flex flex-wrap items-center gap-2">
         <span className="text-xs text-ink-muted tabular-nums">{formatKstDateTime(review.createdAt)}</span>
         {mine && (
@@ -307,12 +334,12 @@ function ReviewItem({
   );
 }
 
-type ReviewValues = { visitedDate: string; rating: number; content: string };
-type ReviewField = 'visitedDate' | 'rating' | 'content';
+type ReviewValues = { visitedDate: string; rating: number; content: string; imageIds: number[] };
+type ReviewField = 'visitedDate' | 'rating' | 'content' | 'imageIds';
 type ReviewFieldErrors = Partial<Record<ReviewField, string>>;
 
 function isReviewField(field: string): field is ReviewField {
-  return field === 'visitedDate' || field === 'rating' || field === 'content';
+  return field === 'visitedDate' || field === 'rating' || field === 'content' || field === 'imageIds';
 }
 
 // 작성과 수정이 함께 쓰는 입력 칸. 수정할 때는 서버 규칙대로 방문일을 바꿀 수 없어서 칸을 보여 주지 않는다.
@@ -334,6 +361,11 @@ function ReviewForm({
   const [fieldErrors, setFieldErrors] = useState<ReviewFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const uploads = useImageUploads({
+    max: MAX_IMAGES,
+    initial: initial?.images,
+    requestUpload: requestReviewImageUpload,
+  });
 
   function validate(): ReviewFieldErrors {
     const errors: ReviewFieldErrors = {};
@@ -349,7 +381,7 @@ function ReviewForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting) return;
+    if (submitting || uploads.uploading || uploads.failed) return;
     setFormError(null);
     const errors = validate();
     setFieldErrors(errors);
@@ -357,7 +389,7 @@ function ReviewForm({
 
     setSubmitting(true);
     try {
-      await onSubmit({ visitedDate, rating: Number(rating), content: content.trim() });
+      await onSubmit({ visitedDate, rating: Number(rating), content: content.trim(), imageIds: uploads.imageIds });
     } catch (error) {
       setSubmitting(false);
       handleError(error);
@@ -429,11 +461,28 @@ function ReviewForm({
         error={fieldErrors.content}
         hint="다음에 갈 사람에게 도움이 되는 내용을 적어 주세요. 흔적 남기지 않기도 함께 지켜 주세요."
       />
+      <ImageUploadField
+        uploads={uploads}
+        inputId={`review-image-input-${initial?.reviewId ?? 'new'}`}
+        error={fieldErrors.imageIds}
+        disabled={submitting}
+      />
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="secondary" onClick={onCancel} disabled={submitting}>
           취소
         </Button>
-        <Button type="submit" loading={submitting}>
+        <Button
+          type="submit"
+          loading={submitting}
+          disabled={uploads.uploading || uploads.failed}
+          disabledReason={
+            uploads.uploading
+              ? '사진을 올리는 중이에요. 끝나면 저장할 수 있어요.'
+              : uploads.failed
+                ? '올리지 못한 사진이 있어요. 다시 시도하거나 빼 주세요.'
+                : undefined
+          }
+        >
           {mode === 'create' ? '후기 남기기' : '고치기'}
         </Button>
       </div>

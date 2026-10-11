@@ -39,6 +39,7 @@ public final class ArchitectureRules {
             "program",
             "notification",
             "community",
+            "trip",
             "admin",
             COMMON);
 
@@ -53,6 +54,7 @@ public final class ArchitectureRules {
             "basecamp", Set.of("trust", "spot"),
             "program", Set.of("trust"),
             "review", Set.of("spot"),
+            "trip", Set.of("spot"),
             "spot", Set.of("weather"),
             "publicdata", Set.of("spot"),
             "trust", Set.of("member"));

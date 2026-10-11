@@ -33,6 +33,15 @@ public interface SpotDetailMapper {
      */
     List<SpotConfirmedStayRow> selectConfirmedStays(@Param("spotId") long spotId, @Param("today") LocalDate today);
 
+    /** 호출하면 reviewIds인 후기들에 붙은 이미지를 후기 ID, 후기 안 순서대로 읽는다. 호출하는 쪽은 빈 목록을 넘기지 않는다. */
+    List<SpotReviewImageRow> selectReviewImages(@Param("reviewIds") List<Long> reviewIds);
+
+    /**
+     * 호출하면 spotId인 장소의 개인 일정 중 종료일이 today보다 늦은 것의 기간을 인원 1명으로 읽는다. 탈퇴한 회원의 일정은 뺀다. 밤별로 펼쳐 합산하는
+     * 일은 호출하는 쪽이 한다.
+     */
+    List<SpotConfirmedStayRow> selectSoloTrips(@Param("spotId") long spotId, @Param("today") LocalDate today);
+
     /**
      * 호출하면 spotId인 장소에 연결된 숙박 공식 행사 중 취소되지 않았고 종료 시각이 from보다 늦은 것의 시작·종료 시각과 확정된 참가 신청 수를
      * 읽는다. 확정 신청이 없는 행사는 빼지 않고 0명으로 읽는다. 밤별로 펼쳐 합산하는 일은 호출하는 쪽이 한다.

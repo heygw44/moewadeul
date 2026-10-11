@@ -206,6 +206,74 @@ class SpotMapQueryServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-31] 휴장 제외를 켜면 휴장 판정이 참인 장소만 빠지고, 빠진 장소는 휴장 표시가 붙던 장소와 같다")
+    void hideClosedExcludesExactlySpotsMarkedClosed() {
+        // given: 한국은 2026-11-01 0시 30분이다. 기간이 시작일·종료일 하나만 있는 곳, 기간이 상태보다 앞서는 곳, 상세가 없는 곳을 섞는다.
+        clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
+        long reporterId = insertMember();
+        long closedPeriodId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", SEORAK);
+        insertPublicDetail(
+                closedPeriodId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));
+        long endedPeriodId = insertSpot("CAMPSITE", "휴장 기간 끝난 야영장", SEORAK);
+        insertPublicDetail(
+                endedPeriodId,
+                "GOCAMPING",
+                "TEMPORARILY_CLOSED",
+                LocalDate.parse("2026-01-01"),
+                LocalDate.parse("2026-10-31"));
+        long openEndedId = insertSpot("CAMPSITE", "종료일 없는 휴장 야영장", SEORAK);
+        insertPublicDetail(openEndedId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-10-01"), null);
+        long notStartedId = insertSpot("CAMPSITE", "휴장 시작 전 야영장", SEORAK);
+        insertPublicDetail(notStartedId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-02"), null);
+        long untilTodayId = insertSpot("CAMPSITE", "오늘까지 휴장 야영장", SEORAK);
+        insertPublicDetail(untilTodayId, "GOCAMPING", "OPERATING", null, LocalDate.parse("2026-11-01"));
+        long closedStatusId = insertSpot("FOREST", "휴장 상태 휴양림", SEORAK);
+        insertPublicDetail(closedStatusId, "FOREST", "PERMANENTLY_CLOSED", null, null);
+        long noStatusId = insertSpot("FOREST", "운영 상태 없는 휴양림", SEORAK);
+        insertPublicDetail(noStatusId, "FOREST", null, null, null);
+        long noDetailId = insertSpot("CAMPSITE", "상세 없는 야영장", SEORAK);
+        long bakjiId = insertBakji(reporterId, false, false);
+
+        // when
+        SpotAreaResult all = spotMapQueryService.findInArea(SEORAK_AREA.query());
+        SpotAreaResult open = spotMapQueryService.findInArea(SEORAK_AREA.hidingClosed());
+
+        // then
+        Set<Long> markedClosed = all.markers().stream()
+                .filter(SpotMarker::closedNow)
+                .map(SpotMarker::spotId)
+                .collect(Collectors.toSet());
+        assertThat(markedClosed).containsExactlyInAnyOrder(closedPeriodId, openEndedId, untilTodayId, closedStatusId);
+        assertThat(open.markers())
+                .extracting(SpotMarker::spotId)
+                .containsExactly(endedPeriodId, notStartedId, noStatusId, noDetailId, bakjiId)
+                .doesNotContainAnyElementsOf(markedClosed);
+        assertThat(open.markers()).noneMatch(SpotMarker::closedNow);
+    }
+
+    @Test
+    @DisplayName("[F-31] 휴장 제외를 켜면 묶음 개수에서도 휴장 장소를 뺀다")
+    void hideClosedAlsoAppliesToClusterCounts() {
+        // given: 운영 중인 장소만으로 500개를 넘기고, 휴장 장소를 더 넣는다.
+        clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
+        int openCount = SpotMapQueryService.MAX_ITEMS + 1;
+        insertCampsites(spreadInBulkArea(openCount));
+        for (int i = 0; i < 3; i++) {
+            long closedId = insertSpot("CAMPSITE", "휴장 야영장 " + i, new Coordinate(36.5, 127.5));
+            insertPublicDetail(closedId, "GOCAMPING", "TEMPORARILY_CLOSED", null, null);
+        }
+
+        // when
+        SpotAreaResult all = spotMapQueryService.findInArea(BULK_AREA.query());
+        SpotAreaResult open = spotMapQueryService.findInArea(BULK_AREA.hidingClosed());
+
+        // then
+        assertThat(all.clusters().stream().mapToLong(SpotCluster::count).sum()).isEqualTo(openCount + 3);
+        assertThat(open.markers()).isEmpty();
+        assertThat(open.clusters().stream().mapToLong(SpotCluster::count).sum()).isEqualTo(openCount);
+    }
+
+    @Test
     @DisplayName("[F-03] 영역 안 장소가 500개면 모두 마커로 주고 묶음은 비운다")
     void returnsAllMarkersWhenSpotCountIsAtLimit() {
         // given
@@ -375,7 +443,11 @@ class SpotMapQueryServiceIntegrationTest {
         }
 
         SpotAreaQuery query(Set<SpotType> types, boolean hasWater, boolean hasToilet, boolean excludeWarning) {
-            return new SpotAreaQuery(swLat, swLng, neLat, neLng, types, hasWater, hasToilet, excludeWarning);
+            return new SpotAreaQuery(swLat, swLng, neLat, neLng, types, hasWater, hasToilet, excludeWarning, false);
+        }
+
+        SpotAreaQuery hidingClosed() {
+            return new SpotAreaQuery(swLat, swLng, neLat, neLng, Set.of(), false, false, false, true);
         }
     }
 }

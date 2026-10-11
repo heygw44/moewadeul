@@ -1,0 +1,49 @@
+# 의존성 버전과 보안 업데이트 PR을 매주 받는다. 생태계마다 버전 업데이트를 한 PR로 묶어 PR 수를 줄이고,
+# 보안 업데이트는 묶지 않아 취약점마다 따로 검토한다.
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        applies-to: version-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /web
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        applies-to: version-updates
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories:
+      - /
+      - /deploy/caddy
+    target-branch: develop
+    schedule:
+      interval: weekly
+    # Caddy 이미지의 웹 빌드 단계는 Node LTS만 쓴다. 홀수 메이저 버전은 LTS가 되지 않으므로 메이저 버전 올림은 사람이 직접 고른다.
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+    groups:
+      docker:
+        applies-to: version-updates
+        patterns: ["*"]

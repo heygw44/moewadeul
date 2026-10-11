@@ -14,6 +14,7 @@ export function fetchSpotsInArea(query: SpotAreaQuery, signal?: AbortSignal): Pr
       hasWater: query.hasWater,
       hasToilet: query.hasToilet,
       excludeWarning: query.excludeWarning,
+      hideClosed: query.hideClosed,
     },
     signal,
   });

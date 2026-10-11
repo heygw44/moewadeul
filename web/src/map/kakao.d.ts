@@ -14,6 +14,17 @@ declare namespace kakao.maps {
     getNorthEast(): LatLng;
   }
 
+  // 지도 컨테이너 왼쪽 위를 원점으로 한 픽셀 좌표다.
+  class Point {
+    constructor(x: number, y: number);
+    x: number;
+    y: number;
+  }
+
+  class MapProjection {
+    containerPointFromCoords(latlng: LatLng): Point;
+  }
+
   // SDK 안에서는 숫자 상수다. 값은 kakao.maps.MapTypeId에서 이름으로 꺼내 쓴다.
   type MapTypeId = number;
 
@@ -41,6 +52,7 @@ declare namespace kakao.maps {
     setLevel(level: number, options?: SetLevelOptions): void;
     getLevel(): number;
     getBounds(): LatLngBounds;
+    getProjection(): MapProjection;
     relayout(): void;
     addOverlayMapTypeId(mapTypeId: MapTypeId): void;
     removeOverlayMapTypeId(mapTypeId: MapTypeId): void;
@@ -74,10 +86,76 @@ declare namespace kakao.maps {
     function removeListener(target: Map, type: 'idle', handler: () => void): void;
     function addListener(target: Map, type: 'click', handler: (event: MouseEvent) => void): void;
     function removeListener(target: Map, type: 'click', handler: (event: MouseEvent) => void): void;
+    function addListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
+    function removeListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
   }
 
   // 스크립트 주소에 autoload=false를 붙여 불러왔을 때, SDK 나머지 파일을 받은 뒤 callback을 부른다.
   function load(callback: () => void): void;
+
+  // 스크립트 주소에 libraries=services를 붙여야 들어오는 장소 검색·주소 변환 API다.
+  // 좌표는 문자열로 오고, x가 경도, y가 위도다.
+  namespace services {
+    type Status = 'OK' | 'ZERO_RESULT' | 'ERROR';
+
+    const Status: {
+      readonly OK: Status;
+      readonly ZERO_RESULT: Status;
+      readonly ERROR: Status;
+    };
+
+    interface RegionAddress {
+      region_1depth_name: string;
+      region_2depth_name: string;
+      region_3depth_name: string;
+    }
+
+    interface AddressResult {
+      address_name: string;
+      address_type: 'REGION' | 'ROAD' | 'REGION_ADDR' | 'ROAD_ADDR';
+      x: string;
+      y: string;
+      address: RegionAddress | null;
+    }
+
+    // 좌표가 속한 행정구역이다. H는 행정동, B는 법정동 기준이다.
+    interface RegionCodeResult extends RegionAddress {
+      region_type: 'H' | 'B';
+    }
+
+    interface PlaceResult {
+      place_name: string;
+      address_name: string;
+      road_address_name: string;
+      x: string;
+      y: string;
+    }
+
+    interface AddressSearchOptions {
+      size?: number;
+    }
+
+    interface KeywordSearchOptions {
+      size?: number;
+    }
+
+    class Geocoder {
+      addressSearch(
+        address: string,
+        callback: (result: AddressResult[], status: Status) => void,
+        options?: AddressSearchOptions,
+      ): void;
+      coord2RegionCode(lng: number, lat: number, callback: (result: RegionCodeResult[], status: Status) => void): void;
+    }
+
+    class Places {
+      keywordSearch(
+        keyword: string,
+        callback: (result: PlaceResult[], status: Status) => void,
+        options?: KeywordSearchOptions,
+      ): void;
+    }
+  }
 }
 
 // 스크립트를 불러오기 전에는 전역 kakao가 없으므로 window에서 있는지 먼저 확인한다.

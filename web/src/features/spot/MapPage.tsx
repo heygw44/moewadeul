@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BottomTabBar } from '../../app/layout/BottomTabBar';
 import { SiteHeader } from '../../app/layout/SiteHeader';
 import { Link, navigate } from '../../app/router';
+import { ActiveFilterChips } from '../../components/ActiveFilterChips';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/icons';
@@ -12,20 +13,30 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { createMapView } from '../../map/KakaoMap';
 import { MapLoadError } from '../../map/kakaoLoader';
 import type { MapLoadErrorReason } from '../../map/kakaoLoader';
+import type { RegionCandidate } from '../../map/regionSearch';
 import type { LatLng, MapView } from '../../map/types';
 import { BasecampDetailPanel } from '../basecamp/BasecampDetailPanel';
+import { BasecampFilterDialog } from '../basecamp/BasecampFilterDialog';
 import { BasecampListPanel } from '../basecamp/BasecampListPanel';
 import { BasecampOpenPanel } from '../basecamp/BasecampOpenPanel';
 import { useBasecampsInView } from '../basecamp/useBasecampsInView';
-import type { BasecampFilters, BasecampsInView } from '../basecamp/useBasecampsInView';
+import { NO_BASECAMP_FILTERS, basecampFilterChips } from '../basecamp/basecampFilters';
+import type { BasecampFilters } from '../basecamp/basecampFilters';
+import type { BasecampsInView } from '../basecamp/useBasecampsInView';
 import { withNext } from '../member/nextPath';
 import { NotificationBellLink } from '../notification/NotificationLink';
 import { useSession } from '../member/session';
 import { AnnouncementBar } from '../program/AnnouncementBar';
 import { BakjiReportPanel } from './BakjiReportPanel';
 import { MapSafetyNotice } from './MapSafetyNotice';
+import { MapSearchBar } from './MapSearchBar';
 import { SpotDetailPanel } from './SpotDetailPanel';
+import { SpotFilterDialog } from './SpotFilterDialog';
+import { NO_SPOT_FILTERS, spotFilterChips } from './spotFilters';
+import type { SpotFilters } from './spotFilters';
 import { SpotListRow } from './SpotListRow';
+import { useMapMoving } from './useMapMoving';
+import { useRegionName } from './useRegionName';
 import { useSpotsInView } from './useSpotsInView';
 import type { SpotsInView } from './useSpotsInView';
 
@@ -53,8 +64,6 @@ type MapPageProps = {
   mode?: 'browse' | 'report' | 'basecamps' | 'basecampOpen';
 };
 
-const NO_FILTERS: BasecampFilters = { fromDate: '', toDate: '', hasVacancy: false };
-
 export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: MapPageProps) {
   const reporting = mode === 'report';
   const basecampMode = mode === 'basecamps';
@@ -71,18 +80,32 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   const [snapOpen, setSnapOpen] = useState(contentOpen);
   const [draft, setDraft] = useState<LatLng | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [filters, setFilters] = useState<BasecampFilters>(NO_FILTERS);
+  const [filters, setFilters] = useState<BasecampFilters>(NO_BASECAMP_FILTERS);
+  const [spotFilters, setSpotFilters] = useState<SpotFilters>(NO_SPOT_FILTERS);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   // 지도에서 장소 마커를 눌러 고른 장소다. 베이스캠프 목록을 그 장소로 거른다.
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
-  const rangeInvalid = filters.fromDate !== '' && filters.toDate !== '' && filters.fromDate > filters.toDate;
+  // 장소 조건은 지도를 둘러보는 화면에서만 쓴다. 박지를 제보하거나 베이스캠프를 여는 중에는 근처 장소를 빠짐없이 보여 준다.
+  const browsing = mode === 'browse';
+  const spotFilterChipList = browsing ? spotFilterChips(spotFilters, setSpotFilters) : [];
+  const basecampFilterChipList = basecampMode ? basecampFilterChips(filters, setFilters) : [];
+  // 조건 버튼과 칩 줄은 장소를 둘러볼 때와 베이스캠프를 찾을 때만 보이고, 화면마다 자기 조건을 보여 준다.
+  const filterChipList = basecampMode ? basecampFilterChipList : spotFilterChipList;
+  const resetFilters = basecampMode ? () => setFilters(NO_BASECAMP_FILTERS) : () => setSpotFilters(NO_SPOT_FILTERS);
   // 베이스캠프를 찾는 동안에는 지도의 마커를 베이스캠프가 맡고, 장소 조회는 쉰다.
-  const area = useSpotsInView(map, !basecampMode);
+  const area = useSpotsInView(map, !basecampMode, browsing ? spotFilters : NO_SPOT_FILTERS);
   const basecamps = useBasecampsInView(
     map,
-    basecampMode && session.status !== 'loading' && !rangeInvalid,
+    basecampMode && session.status !== 'loading',
     filters,
     session.me?.memberId ?? null,
   );
+
+  const regionName = useRegionName(map);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  // 검색 칸에 입력하던 중에 지도를 건드려도 쓰던 검색어가 사라지지 않게, 오버레이 안에 포커스가 있으면 숨기지 않는다.
+  const keepOverlay = useCallback(() => overlayRef.current?.contains(document.activeElement) ?? false, []);
+  const mapMoving = useMapMoving(map, keepOverlay);
 
   // 제보 화면을 벗어나면 이전 제보의 완료 상태를 버린다. 그래야 다시 들어왔을 때 지도를 눌러 위치를 찍을 수 있다.
   if (!reporting && submitted) setSubmitted(false);
@@ -198,6 +221,14 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   else if (basecampMode) sheetLabel = '베이스캠프 목록';
   else if (spotId !== undefined) sheetLabel = '장소 상세';
 
+  // 검색한 지역으로 지도를 옮긴다. 장소·베이스캠프 상세를 보고 있었다면 그 지역 목록이 보이도록 목록으로 돌아간다.
+  // 제보나 베이스캠프 열기 중에는 쓰던 폼을 지키려고 화면을 바꾸지 않는다.
+  function moveToRegion(candidate: RegionCandidate) {
+    map?.setCenter(candidate.position, candidate.level);
+    if (basecampId !== undefined) navigate('/basecamps');
+    else if (mode === 'browse' && spotId !== undefined) navigate('/map');
+  }
+
   function retryMap() {
     setMapFailure(null);
     setMapAttempt((value) => value + 1);
@@ -214,7 +245,15 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
           onSnapChange={setSnap}
           label={sheetLabel}
           header={
-            contentOpen ? undefined : basecampMode ? <BasecampListHeader result={basecamps} /> : <ListHeader area={area} />
+            contentOpen ? undefined : basecampMode ? (
+              <BasecampListHeader
+                result={basecamps}
+                regionName={regionName}
+                filterCount={basecampFilterChipList.length}
+              />
+            ) : (
+              <ListHeader area={area} regionName={regionName} filterCount={spotFilterChipList.length} />
+            )
           }
         >
           {opening && openSpotId !== undefined ? (
@@ -224,8 +263,8 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
           ) : basecampMode ? (
             <BasecampListPanel
               result={basecamps}
-              filters={filters}
-              onFiltersChange={setFilters}
+              filtered={basecampFilterChipList.length > 0}
+              onResetFilters={() => setFilters(NO_BASECAMP_FILTERS)}
               spotFilterId={spotFilterId}
               onClearSpotFilter={() => setSpotFilterId(null)}
               waitingForMap={map === null && mapFailure === null}
@@ -242,7 +281,12 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
               }}
             />
           ) : spotId === undefined ? (
-            <SpotList area={area} waitingForMap={map === null && mapFailure === null} />
+            <SpotList
+              area={area}
+              waitingForMap={map === null && mapFailure === null}
+              filtered={spotFilterChipList.length > 0}
+              onResetFilters={() => setSpotFilters(NO_SPOT_FILTERS)}
+            />
           ) : (
             <SpotDetailPanel key={spotId} spotId={spotId} onBack={() => navigate('/map')} />
           )}
@@ -273,7 +317,14 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
             </div>
           )}
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 px-4 pt-3">
+          {/* 지도를 끌거나 확대·축소하는 동안에는 지도를 가리지 않게 위로 살짝 밀며 감추고, 멈추면 다시 보여 준다. */}
+          <div
+            ref={overlayRef}
+            inert={mapMoving.hidden}
+            className={`pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 px-4 pt-3 transition duration-200 motion-reduce:translate-y-0 motion-reduce:transition-none ${
+              mapMoving.hidden ? '-translate-y-3 opacity-0' : ''
+            }`}
+          >
             <h1 className="sr-only">피치맵 지도</h1>
             <div className="flex items-start justify-between gap-2">
               {/* 데스크톱은 위의 머리글이 서비스 이름과 메뉴를 보여 주므로, 지도 위에는 모바일에서만 이름을 띄운다. */}
@@ -302,10 +353,39 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
                 )}
               </div>
             </div>
+            {map && (
+              <div className="flex w-full items-start gap-2 lg:max-w-md">
+                <MapSearchBar onSelect={moveToRegion} mapMoving={mapMoving.moving} />
+                {(browsing || basecampMode) && (
+                  <FilterButton count={filterChipList.length} onClick={() => setFilterDialogOpen(true)} />
+                )}
+              </div>
+            )}
+            <ActiveFilterChips chips={filterChipList} onReset={resetFilters} className="lg:max-w-md" />
             <MapSafetyNotice />
           </div>
         </div>
       </div>
+      {filterDialogOpen && basecampMode && (
+        <BasecampFilterDialog
+          initial={filters}
+          onApply={(next) => {
+            setFilters(next);
+            setFilterDialogOpen(false);
+          }}
+          onClose={() => setFilterDialogOpen(false)}
+        />
+      )}
+      {filterDialogOpen && browsing && (
+        <SpotFilterDialog
+          initial={spotFilters}
+          onApply={(next) => {
+            setSpotFilters(next);
+            setFilterDialogOpen(false);
+          }}
+          onClose={() => setFilterDialogOpen(false)}
+        />
+      )}
       {/* 상세·폼이 열려 있을 때는 시트 아래 고정 버튼 자리를 지키려고 하단 탭을 숨긴다. 패널의 뒤로 가기로 목록에 돌아오면 다시 보인다. */}
       {!contentOpen && <BottomTabBar />}
     </div>
@@ -318,20 +398,66 @@ function totalCount(area: SpotsInView): number {
   return area.clusters.reduce((sum, cluster) => sum + cluster.count, 0);
 }
 
-function ListHeader({ area }: { area: SpotsInView }) {
+// 지역 이름을 아직 모르거나 바다처럼 행정구역이 없는 곳에서는 "이 지역"으로 적는다.
+const UNKNOWN_REGION = '이 지역';
+
+function ListHeader({
+  area,
+  regionName,
+  filterCount,
+}: {
+  area: SpotsInView;
+  regionName: string | null;
+  filterCount: number;
+}) {
   const counted = area.status === 'ready' || area.markers.length > 0 || area.clusters.length > 0;
   return (
-    <h2 className="font-serif text-lg text-ink">
-      이 지역 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
+    <h2 className="truncate font-serif text-lg text-ink">
+      {regionName ?? UNKNOWN_REGION} 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
+      {filterCount > 0 && <FilterCountNote count={filterCount} />}
     </h2>
   );
 }
 
-function BasecampListHeader({ result }: { result: BasecampsInView }) {
+// 목록 머리에서 조건으로 거른 결과라는 것을 알린다. 제목 글꼴이 아니라 본문 글꼴로 작게 적는다.
+function FilterCountNote({ count }: { count: number }) {
+  return <span className="ml-2 font-sans text-sm text-ink-muted tabular-nums">조건 {count}개 적용</span>;
+}
+
+// 검색 칸 오른쪽의 상세 조건 버튼이다. 켜진 조건이 있으면 개수를 함께 적고 선택 색으로 바꾼다.
+function FilterButton({ count, onClick }: { count: number; onClick: () => void }) {
+  const active = count > 0;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-haspopup="dialog"
+      aria-label={active ? `조건 ${count}개 켜짐, 조건 바꾸기` : '조건 고르기'}
+      className={
+        active
+          ? 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-forest bg-forest-soft px-3 text-base font-semibold text-forest-deep'
+          : 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-ink-subtle bg-card px-3 text-base font-semibold text-ink hover:bg-paper-deep'
+      }
+    >
+      <Icon name="sliders" size={20} />
+      조건{active && <span className="tabular-nums">{count}</span>}
+    </button>
+  );
+}
+
+function BasecampListHeader({
+  result,
+  regionName,
+  filterCount,
+}: {
+  result: BasecampsInView;
+  regionName: string | null;
+  filterCount: number;
+}) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
-    <h2 className="font-serif text-lg text-ink">
-      이 지역 베이스캠프
+    <h2 className="truncate font-serif text-lg text-ink">
+      {regionName ?? UNKNOWN_REGION} 베이스캠프
       {counted && (
         <span className="tabular-nums">
           {' '}
@@ -339,11 +465,22 @@ function BasecampListHeader({ result }: { result: BasecampsInView }) {
           {result.hasNext ? '개 이상' : '개'}
         </span>
       )}
+      {filterCount > 0 && <FilterCountNote count={filterCount} />}
     </h2>
   );
 }
 
-function SpotList({ area, waitingForMap }: { area: SpotsInView; waitingForMap: boolean }) {
+function SpotList({
+  area,
+  waitingForMap,
+  filtered,
+  onResetFilters,
+}: {
+  area: SpotsInView;
+  waitingForMap: boolean;
+  filtered: boolean;
+  onResetFilters: () => void;
+}) {
   const showSkeleton = useDelayedFlag(area.status === 'loading' || waitingForMap);
 
   if (showSkeleton) {
@@ -389,7 +526,19 @@ function SpotList({ area, waitingForMap }: { area: SpotsInView; waitingForMap: b
       )}
 
       {area.status === 'ready' && area.markers.length === 0 && area.clusters.length === 0 && (
-        <EmptyState title="이 지역에는 장소가 없어요" description="지도를 옮기거나 축소해 보세요." />
+        filtered ? (
+          <EmptyState
+            title="조건에 맞는 장소가 없어요"
+            description="조건을 줄이거나 지도를 옮겨 보세요."
+            action={
+              <Button variant="secondary" onClick={onResetFilters}>
+                조건 모두 풀기
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState title="이 지역에는 장소가 없어요" description="지도를 옮기거나 축소해 보세요." />
+        )
       )}
 
       {area.markers.length > 0 && (

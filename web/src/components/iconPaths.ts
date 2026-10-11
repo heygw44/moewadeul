@@ -12,6 +12,7 @@ export type IconName =
   | 'search'
   | 'terrain'
   | 'chevronLeft'
+  | 'chevronRight'
   | 'close'
   | 'info'
   | 'bell'
@@ -21,7 +22,11 @@ export type IconName =
   | 'chat'
   | 'heart'
   | 'image'
-  | 'arrowUp';
+  | 'arrowUp'
+  | 'eye'
+  | 'eyeOff'
+  | 'menu'
+  | 'sliders';
 
 export const ICON_PATHS: Record<IconName, string> = {
   tent:
@@ -45,13 +50,22 @@ export const ICON_PATHS: Record<IconName, string> = {
   closed: '<circle cx="12" cy="12" r="9"/>' + '<path d="m5.6 5.6 12.8 12.8"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   search: '<circle cx="11" cy="11" r="6.5"/>' + '<path d="m20 20-4.4-4.4"/>',
+  sliders:
+    '<path d="M4 7h9"/>' +
+    '<path d="M17 7h3"/>' +
+    '<circle cx="15" cy="7" r="2"/>' +
+    '<path d="M4 17h3"/>' +
+    '<path d="M11 17h9"/>' +
+    '<circle cx="9" cy="17" r="2"/>',
   terrain:
     '<path d="M2 20 9 7l4.5 8.3"/>' +
     '<path d="m11 20 5.5-9L22 20"/>' +
     '<path d="M2 20h20"/>' +
     '<path d="M5.8 13c2 1 4.4 1 6.4 0"/>',
   chevronLeft: '<path d="m15 18-6-6 6-6"/>',
+  chevronRight: '<path d="m9 18 6-6-6-6"/>',
   close: '<path d="M18 6 6 18"/>' + '<path d="m6 6 12 12"/>',
+  menu: '<path d="M4 6h16"/>' + '<path d="M4 12h16"/>' + '<path d="M4 18h16"/>',
   info: '<circle cx="12" cy="12" r="9"/>' + '<path d="M12 11v5"/>' + '<path d="M12 8h.01"/>',
   bell:
     '<path d="M6 17V11a6 6 0 0 1 12 0v6"/>' +
@@ -74,4 +88,9 @@ export const ICON_PATHS: Record<IconName, string> = {
     '<circle cx="9" cy="10" r="1.75"/>' +
     '<path d="m3.5 17 5-4.5 4 3.5 3-2.5 5 4.5"/>',
   arrowUp: '<path d="M12 19V5"/>' + '<path d="m5.5 11.5 6.5-6.5 6.5 6.5"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>' + '<circle cx="12" cy="12" r="3"/>',
+  eyeOff:
+    '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>' +
+    '<circle cx="12" cy="12" r="3"/>' +
+    '<path d="M4 4l16 16"/>',
 };

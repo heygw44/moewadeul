@@ -139,7 +139,7 @@ class SpotControllerTest {
     }
 
     @Test
-    @DisplayName("[F-03] 쉼표로 구분한 유형과 필터 값을 조회 조건으로 바꿔 서비스에 넘긴다")
+    @DisplayName("[F-03][F-31] 쉼표로 구분한 유형과 필터 값, 휴장 제외를 조회 조건으로 바꿔 서비스에 넘긴다")
     void filtersAreParsedIntoQuery() {
         // given
         whenServiceReturnsEmpty();
@@ -147,6 +147,7 @@ class SpotControllerTest {
         params.put("types", "CAMPSITE,BAKJI");
         params.put("hasWater", "true");
         params.put("excludeWarning", "true");
+        params.put("hideClosed", "true");
 
         // when
         MvcTestResult result = get(params);
@@ -155,7 +156,7 @@ class SpotControllerTest {
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(capturedQuery())
                 .isEqualTo(new SpotAreaQuery(
-                        37.0, 127.0, 38.0, 128.0, Set.of(SpotType.CAMPSITE, SpotType.BAKJI), true, false, true));
+                        37.0, 127.0, 38.0, 128.0, Set.of(SpotType.CAMPSITE, SpotType.BAKJI), true, false, true, true));
     }
 
     @Test
@@ -187,7 +188,7 @@ class SpotControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(capturedQuery())
-                .isEqualTo(new SpotAreaQuery(37.0, 127.0, 38.0, 128.0, Set.of(), false, false, false));
+                .isEqualTo(new SpotAreaQuery(37.0, 127.0, 38.0, 128.0, Set.of(), false, false, false, false));
     }
 
     @Test
@@ -328,11 +329,11 @@ class SpotControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(capturedNearbyQuery())
-                .isEqualTo(new SpotNearbyQuery(37.5, 127.0, 10.0, Set.of(), false, false, false, 0, 20));
+                .isEqualTo(new SpotNearbyQuery(37.5, 127.0, 10.0, Set.of(), false, false, false, false, 0, 20));
     }
 
     @Test
-    @DisplayName("[F-04] 쉼표로 구분한 유형, 필터 값, 페이지 번호와 크기를 조회 조건으로 바꿔 서비스에 넘긴다")
+    @DisplayName("[F-04][F-31] 쉼표로 구분한 유형, 필터 값, 휴장 제외, 페이지 번호와 크기를 조회 조건으로 바꿔 서비스에 넘긴다")
     void nearbyFiltersAndPagingAreParsedIntoQuery() {
         // given
         whenNearbyServiceReturnsEmpty();
@@ -340,6 +341,7 @@ class SpotControllerTest {
         params.put("types", "CAMPSITE,BAKJI");
         params.put("hasToilet", "true");
         params.put("excludeWarning", "true");
+        params.put("hideClosed", "true");
         params.put("page", "2");
         params.put("size", "50");
 
@@ -350,7 +352,7 @@ class SpotControllerTest {
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(capturedNearbyQuery())
                 .isEqualTo(new SpotNearbyQuery(
-                        37.5, 127.0, 10.0, Set.of(SpotType.CAMPSITE, SpotType.BAKJI), false, true, true, 2, 50));
+                        37.5, 127.0, 10.0, Set.of(SpotType.CAMPSITE, SpotType.BAKJI), false, true, true, true, 2, 50));
     }
 
     @Test
@@ -519,7 +521,14 @@ class SpotControllerTest {
     void detailShowsRatingAndRecentReviews() {
         // given
         SpotRecentReview review = new SpotRecentReview(
-                9L, 31L, "새벽능선", LocalDate.of(2026, 10, 4), 5, "별이 좋았다", Instant.parse("2026-10-05T03:00:00Z"));
+                9L,
+                31L,
+                "새벽능선",
+                LocalDate.of(2026, 10, 4),
+                5,
+                "별이 좋았다",
+                List.of(new SpotRecentReview.Image(5L, "https://view.test.invalid/review/31/a.jpg")),
+                Instant.parse("2026-10-05T03:00:00Z"));
         when(spotDetailQueryService.findDetail(106L))
                 .thenReturn(new SpotDetail(
                         106L,
@@ -558,6 +567,8 @@ class SpotControllerTest {
                         5,
                         "content",
                         "별이 좋았다",
+                        "images",
+                        List.of(Map.of("imageId", 5, "url", "https://view.test.invalid/review/31/a.jpg")),
                         "createdAt",
                         "2026-10-05T03:00:00Z"));
     }

@@ -19,6 +19,12 @@ repositories {
     mavenCentral()
 }
 
+// Spring Boot 4.1.1이 정한 Tomcat과 Jackson 버전에 알려진 취약점(Tomcat 보안 제약 우회, Jackson 서비스 거부 등)이 있다.
+// 4.1.1이 아직 최신 4.1 버전이라 Boot가 관리하는 버전 속성을 고친 버전으로 덮어쓴다. Boot가 같은 버전 이상을 관리하게 되면 이 블록을 지운다.
+extra["tomcat.version"] = "11.0.26"
+extra["jackson-bom.version"] = "3.1.7"
+extra["jackson-2-bom.version"] = "2.21.7"
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -33,7 +39,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     // AWS SDK는 Spring Boot가 버전을 관리하지 않는다. BOM으로 SDK 모듈들의 버전을 하나로 맞춘다.
-    implementation(platform("software.amazon.awssdk:bom:2.55.0"))
+    implementation(platform("software.amazon.awssdk:bom:2.55.12"))
     implementation("software.amazon.awssdk:s3")
 
     compileOnly("org.projectlombok:lombok")

@@ -2,6 +2,7 @@ package com.pitchmap.spot.application;
 
 import com.pitchmap.common.error.BusinessException;
 import com.pitchmap.common.error.CommonErrorCode;
+import com.pitchmap.common.storage.ImageStorage;
 import com.pitchmap.spot.domain.SpotType;
 import com.pitchmap.spot.infra.SpotConfirmedProgramRow;
 import com.pitchmap.spot.infra.SpotConfirmedStayRow;
@@ -10,11 +11,13 @@ import com.pitchmap.spot.infra.SpotDetailRow;
 import com.pitchmap.spot.infra.SpotRatingRow;
 import com.pitchmap.spot.infra.SpotRecentReviewRow;
 import com.pitchmap.spot.infra.SpotRecruitingBasecampRow;
+import com.pitchmap.spot.infra.SpotReviewImageRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -41,6 +44,7 @@ class SpotDetailReader {
     private static final TypeReference<Map<String, String>> FACILITIES_TYPE = new TypeReference<>() {};
 
     private final SpotDetailMapper spotDetailMapper;
+    private final ImageStorage imageStorage;
     private final JsonMapper jsonMapper;
     private final Clock clock;
 
@@ -70,9 +74,7 @@ class SpotDetailReader {
                 toBakjiDetail(row),
                 toPublicDetail(row, today),
                 toRating(spotDetailMapper.selectRating(spotId)),
-                spotDetailMapper.selectRecentReviews(spotId, RECENT_REVIEW_COUNT).stream()
-                        .map(SpotDetailReader::toRecentReview)
-                        .toList(),
+                readRecentReviews(spotId),
                 toExpectedPeople(readStays(spotId, today), today),
                 spotDetailMapper.selectRecruitingBasecamps(spotId).stream()
                         .map(SpotDetailReader::toRecruitingBasecamp)
@@ -81,10 +83,11 @@ class SpotDetailReader {
         return new Read(detail, row.weatherNx(), row.weatherNy());
     }
 
-    // 확정 베이스캠프와, 이 장소에 연결된 숙박 공식 행사의 확정 참가자를 같은 모양의 야영 기간으로 모은다.
+    // 확정 베이스캠프, 이 장소에 연결된 숙박 공식 행사의 확정 참가자, 혼자 가는 개인 일정을 같은 모양의 야영 기간으로 모은다.
     // 행사는 시작·종료를 UTC 시각으로 저장하므로, 각 시각의 한국 날짜를 출발일과 종료일로 본다.
     private List<SpotConfirmedStayRow> readStays(long spotId, LocalDate today) {
         List<SpotConfirmedStayRow> stays = new ArrayList<>(spotDetailMapper.selectConfirmedStays(spotId, today));
+        stays.addAll(spotDetailMapper.selectSoloTrips(spotId, today));
         Instant startOfToday = today.atStartOfDay(KOREA).toInstant();
         for (SpotConfirmedProgramRow program : spotDetailMapper.selectConfirmedPrograms(spotId, startOfToday)) {
             stays.add(new SpotConfirmedStayRow(
@@ -126,7 +129,24 @@ class SpotDetailReader {
         return new SpotRating(row.average(), row.count());
     }
 
-    private static SpotRecentReview toRecentReview(SpotRecentReviewRow row) {
+    // 최근 후기의 이미지는 쿼리 한 번으로 읽고, 조회 URL은 서버 안에서 서명을 계산해 붙인다. 저장소는 부르지 않는다.
+    private List<SpotRecentReview> readRecentReviews(long spotId) {
+        List<SpotRecentReviewRow> rows = spotDetailMapper.selectRecentReviews(spotId, RECENT_REVIEW_COUNT);
+        Map<Long, List<SpotRecentReview.Image>> images = new HashMap<>();
+        if (!rows.isEmpty()) {
+            List<Long> reviewIds =
+                    rows.stream().map(SpotRecentReviewRow::reviewId).toList();
+            for (SpotReviewImageRow image : spotDetailMapper.selectReviewImages(reviewIds)) {
+                images.computeIfAbsent(image.reviewId(), id -> new ArrayList<>())
+                        .add(new SpotRecentReview.Image(image.imageId(), imageStorage.presignView(image.objectKey())));
+            }
+        }
+        return rows.stream()
+                .map(row -> toRecentReview(row, images.getOrDefault(row.reviewId(), List.of())))
+                .toList();
+    }
+
+    private static SpotRecentReview toRecentReview(SpotRecentReviewRow row, List<SpotRecentReview.Image> images) {
         return new SpotRecentReview(
                 row.reviewId(),
                 row.authorId(),
@@ -134,6 +154,7 @@ class SpotDetailReader {
                 row.visitedDate(),
                 row.rating(),
                 row.content(),
+                List.copyOf(images),
                 row.createdAt());
     }
 

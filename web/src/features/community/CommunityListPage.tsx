@@ -1,98 +1,173 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { listPosts } from '../../api/community';
-import type { CommunityPostQuery } from '../../api/community';
+import { toUserMessage } from '../../api/errors';
 import { fetchSpotDetail } from '../../api/spots';
-import type { CommunityCategory, CommunityPostSummary } from '../../api/types';
+import type { CommunityPostSummary, CommunitySearchType, NumberedPage } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { AsideSection, HubLayout, ListPanel } from '../../components/HubLayout';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
+import { Pagination } from '../../components/Pagination';
+import { SelectField } from '../../components/SelectField';
 import { Skeleton } from '../../components/Skeleton';
+import { TextField } from '../../components/TextField';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatRelativeKst } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
-import { usePagedList } from '../program/usePagedList';
-import {
-  CATEGORY_META,
-  CATEGORY_ORDER,
-  isCategory,
-  LINK_BUTTON_CLASS,
-  CATEGORY_DESCRIPTIONS,
-  parseSpotId,
-  SECONDARY_LINK_CLASS,
-  UNVERIFIED_WRITE_REASON,
-} from './communityLabels';
+import { LINK_BUTTON_CLASS, parseSpotId, UNVERIFIED_WRITE_REASON } from './communityLabels';
 
-type CategoryFilter = CommunityCategory | 'ALL';
+// 주소의 page는 사람이 읽는 1부터 시작하는 번호다. 서버에는 1을 빼서 보낸다.
+type ListTab = 'all' | 'popular';
+type ListQuery = {
+  spotId: number | null;
+  tab: ListTab;
+  searchType: CommunitySearchType;
+  // 앞뒤 공백을 지운 검색어. null이면 검색하지 않는다.
+  keyword: string | null;
+  page: number;
+};
 
-const CATEGORY_FILTERS: ReadonlyArray<{ value: CategoryFilter; label: string }> = [
-  { value: 'ALL', label: '전체' },
-  ...CATEGORY_ORDER.map((value) => ({ value, label: CATEGORY_META[value].label })),
+const KEYWORD_MIN = 2;
+const KEYWORD_MAX = 50;
+
+const SEARCH_TYPES: ReadonlyArray<{ value: CommunitySearchType; label: string }> = [
+  { value: 'TITLE_CONTENT', label: '제목+내용' },
+  { value: 'TITLE', label: '제목' },
+  { value: 'CONTENT', label: '내용' },
+  { value: 'AUTHOR', label: '글쓴이' },
 ];
 
-function fetchPosts(filter: CommunityPostQuery, page: number, signal?: AbortSignal) {
-  return listPosts(filter, page, signal);
+function parseSearchType(raw: string | null): CommunitySearchType {
+  return SEARCH_TYPES.find((option) => option.value === raw)?.value ?? 'TITLE_CONTENT';
 }
 
-function listPath(category: CategoryFilter, spotId: number | null): string {
+// 주소를 손으로 고쳐 길이를 벗어난 검색어가 들어오면 검색하지 않는 것으로 본다.
+function parseKeyword(raw: string | null): string | null {
+  const keyword = raw?.trim() ?? '';
+  return keyword.length >= KEYWORD_MIN && keyword.length <= KEYWORD_MAX ? keyword : null;
+}
+
+const TABS: ReadonlyArray<{ value: ListTab; label: string }> = [
+  { value: 'all', label: '전체글' },
+  { value: 'popular', label: '인기글' },
+];
+
+function parsePage(raw: string | null): number {
+  if (raw === null || !/^\d+$/.test(raw)) return 1;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) && value >= 1 ? value : 1;
+}
+
+function parseListQuery(search: string): ListQuery {
+  const params = new URLSearchParams(search);
+  return {
+    spotId: parseSpotId(params.get('spotId')),
+    tab: params.get('tab') === 'popular' ? 'popular' : 'all',
+    searchType: parseSearchType(params.get('searchType')),
+    keyword: parseKeyword(params.get('keyword')),
+    page: parsePage(params.get('page')),
+  };
+}
+
+function listPath({ spotId, tab, searchType, keyword, page }: ListQuery): string {
   const params = new URLSearchParams();
-  if (category !== 'ALL') params.set('category', category);
+  if (tab === 'popular') params.set('tab', 'popular');
   if (spotId !== null) params.set('spotId', String(spotId));
+  if (keyword !== null) {
+    params.set('searchType', searchType);
+    params.set('keyword', keyword);
+  }
+  if (page > 1) params.set('page', String(page));
   const query = params.toString();
   return query ? `/community?${query}` : '/community';
 }
 
+type PageResult = { key: string; data: NumberedPage<CommunityPostSummary> | null; error: string | null };
+
+// 조건이나 페이지가 바뀌면 이전 요청을 취소하고 그 페이지만 새로 받는다.
+function usePostPage(query: ListQuery) {
+  const [result, setResult] = useState<PageResult | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const { spotId, tab, searchType, keyword, page } = query;
+  const key = `${spotId ?? ''}|${tab}|${searchType}|${keyword ?? ''}|${page}|${attempt}`;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const filter = {
+      spotId: spotId ?? undefined,
+      popular: tab === 'popular',
+      searchType,
+      keyword: keyword ?? undefined,
+    };
+    listPosts(filter, page - 1, controller.signal).then(
+      (data) => {
+        if (!controller.signal.aborted) setResult({ key, data, error: null });
+      },
+      (caught: unknown) => {
+        if (!controller.signal.aborted) setResult({ key, data: null, error: toUserMessage(caught) });
+      },
+    );
+    return () => controller.abort();
+  }, [key, spotId, tab, searchType, keyword, page]);
+
+  const current = result !== null && result.key === key ? result : null;
+  return { current, retry: () => setAttempt((value) => value + 1) };
+}
+
+// 넓은 화면에서 머리 줄과 행이 같은 열 너비를 쓴다.
+const ROW_COLUMNS = 'md:grid md:grid-cols-[minmax(0,1fr)_8rem_6rem_3.5rem_3.5rem] md:items-center md:gap-3';
+
 export function CommunityListPage() {
   const { search } = useLocation();
-  const rawCategory = new URLSearchParams(search).get('category');
-  const category: CategoryFilter = isCategory(rawCategory) ? rawCategory : 'ALL';
-  const spotId = parseSpotId(new URLSearchParams(search).get('spotId'));
-
-  // 필터가 바뀔 때만 새 객체를 만들어야 목록을 처음부터 다시 받는다.
-  const filter = useMemo<CommunityPostQuery>(
-    () => ({ category: category === 'ALL' ? undefined : category, spotId: spotId ?? undefined }),
-    [category, spotId],
-  );
-  const { current, loadingMore, loadMore, retry } = usePagedList(true, filter, fetchPosts);
+  const query = parseListQuery(search);
+  const { current, retry } = usePostPage(query);
   const showSkeleton = useDelayedFlag(current === null);
+  const data = current?.data ?? null;
 
   useEffect(() => {
     document.title = '커뮤니티 · 피치맵';
   }, []);
 
-  const selectCategory = (next: CategoryFilter) => navigate(listPath(next, spotId), { replace: true });
+  const goTo = (next: Partial<ListQuery>) => navigate(listPath({ ...query, ...next }));
 
   return (
     <HubLayout
       title="커뮤니티"
-      description="다녀온 백패킹 이야기와 장비를 나누는 곳이에요."
-      actions={<WriteAction spotId={spotId} />}
-      tabs={<UnderlineTabs label="분류" options={CATEGORY_FILTERS} value={category} onChange={selectCategory} />}
-      aside={<CommunityAside onSelect={selectCategory} />}
+      description="백패킹 이야기를 자유롭게 나누는 곳이에요."
+      actions={<WriteAction spotId={query.spotId} />}
+      tabs={<UnderlineTabs label="글 모아 보기" options={TABS} value={query.tab} onChange={(tab) => goTo({ tab, page: 1 })} />}
+      aside={<CommunityAside />}
     >
-      {spotId !== null && (
-        <SpotFilterLine key={spotId} spotId={spotId} onRemove={() => navigate(listPath(category, null), { replace: true })} />
+      {query.spotId !== null && (
+        <SpotFilterLine
+          key={query.spotId}
+          spotId={query.spotId}
+          onRemove={() => navigate(listPath({ ...query, spotId: null, page: 1 }), { replace: true })}
+        />
       )}
       {current?.error && (
         <div role="alert" className="flex flex-col gap-3">
           <Notice tone="danger" title="글을 불러오지 못했어요">
             <p>{current.error}</p>
           </Notice>
-          {current.items.length === 0 && (
-            <div>
-              <Button variant="secondary" onClick={retry}>
-                다시 불러오기
-              </Button>
-            </div>
-          )}
+          <div>
+            <Button variant="secondary" onClick={retry}>
+              다시 불러오기
+            </Button>
+          </div>
         </div>
       )}
-      <div aria-busy={current === null}>
-        <ListPanel header="최신순">
+      <SearchBar
+        key={`${query.searchType}|${query.keyword ?? ''}`}
+        searchType={query.searchType}
+        keyword={query.keyword}
+        onSearch={(searchType, keyword) => goTo({ searchType, keyword, page: 1 })}
+      />
+      <div aria-busy={current === null} className="flex flex-col gap-4">
+        <ListPanel header={<ListHeader />}>
           {current === null ? (
             showSkeleton ? (
               Array.from({ length: 5 }, (_, index) => (
@@ -102,73 +177,158 @@ export function CommunityListPage() {
                 </li>
               ))
             ) : null
-          ) : current.items.length === 0 ? (
-            current.error ? null : (
-              <li>
-                <CommunityEmpty category={category} spotId={spotId} onResetCategory={() => selectCategory('ALL')} />
-              </li>
-            )
-          ) : (
-            <>
-              {current.items.map((item) => (
-                <PostRow key={item.postId} item={item} />
-              ))}
-              {current.hasNext && (
-                <li className="p-2">
-                  <Button variant="ghost" fullWidth loading={loadingMore} onClick={() => void loadMore()}>
-                    더 보기
-                  </Button>
-                </li>
+          ) : data === null ? null : data.content.length === 0 ? (
+            <li>
+              {data.totalElements > 0 ? (
+                <PageOutOfRange onFirst={() => goTo({ page: 1 })} />
+              ) : query.keyword !== null ? (
+                <SearchEmpty onClear={() => goTo({ keyword: null, page: 1 })} />
+              ) : query.tab === 'popular' ? (
+                <PopularEmpty />
+              ) : (
+                <CommunityEmpty spotId={query.spotId} />
               )}
-            </>
+            </li>
+          ) : (
+            data.content.map((item) => <PostRow key={item.postId} item={item} />)
           )}
         </ListPanel>
+        {data !== null && (
+          <Pagination
+            label="글 목록 페이지"
+            page={query.page}
+            totalPages={data.totalPages}
+            onChange={(page) => goTo({ page })}
+          />
+        )}
       </div>
     </HubLayout>
   );
 }
 
-const CATEGORY_EMPTY_LINES = CATEGORY_DESCRIPTIONS;
-
-function CommunityEmpty({
-  category,
-  spotId,
-  onResetCategory,
-}: {
-  category: CategoryFilter;
-  spotId: number | null;
-  onResetCategory: () => void;
-}) {
-  const lines = category === 'ALL' ? CATEGORY_ORDER : [category];
+function ListHeader() {
   return (
-    <div className="flex flex-col items-start gap-3 p-6">
-      <Icon name="chat" size={24} className="text-ink-muted" />
-      <p className="font-serif text-lg text-ink">아직 올라온 글이 없어요</p>
-      <p className="text-sm text-ink-muted">이런 이야기로 첫 글을 남겨 보세요.</p>
-      <ul className="flex flex-col gap-1 text-sm text-ink-muted">
-        {lines.map((value) => (
-          <li key={value}>
-            {CATEGORY_META[value].label} · {CATEGORY_EMPTY_LINES[value]}
-          </li>
-        ))}
-      </ul>
-      <div className="flex flex-wrap items-center gap-3">
-        <WriteAction spotId={spotId} />
-        {category !== 'ALL' && (
-          <button
-            type="button"
-            onClick={onResetCategory}
-            className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
-          >
-            다른 분류 보기
-          </button>
-        )}
+    <div className="w-full">
+      <span className="md:hidden">최신순</span>
+      <div aria-hidden="true" className={`hidden ${ROW_COLUMNS}`}>
+        <span>제목</span>
+        <span>글쓴이</span>
+        <span>작성일</span>
+        <span className="text-right">조회</span>
+        <span className="text-right">좋아요</span>
       </div>
     </div>
   );
 }
 
-function CommunityAside({ onSelect }: { onSelect: (next: CategoryFilter) => void }) {
+function PageOutOfRange({ onFirst }: { onFirst: () => void }) {
+  return (
+    <div className="flex flex-col items-start gap-3 p-6">
+      <p className="text-base text-ink">이 페이지에는 글이 없어요.</p>
+      <Button variant="secondary" onClick={onFirst}>
+        첫 페이지로
+      </Button>
+    </div>
+  );
+}
+
+type SearchBarProps = {
+  searchType: CommunitySearchType;
+  keyword: string | null;
+  onSearch: (searchType: CommunitySearchType, keyword: string | null) => void;
+};
+
+// 주소의 검색 조건이 바뀌면 부모가 key를 바꿔 입력 상태를 새로 만든다. 길이는 서버도 다시 검사한다.
+function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
+  const [type, setType] = useState<CommunitySearchType>(searchType);
+  const [text, setText] = useState(keyword ?? '');
+  const [error, setError] = useState<string | null>(null);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmed = text.trim();
+    if (trimmed !== '' && trimmed.length < KEYWORD_MIN) {
+      setError(`검색어를 ${KEYWORD_MIN}자 이상 적어 주세요.`);
+      return;
+    }
+    setError(null);
+    onSearch(type, trimmed === '' ? null : trimmed);
+  }
+
+  return (
+    <form role="search" aria-label="글 검색" onSubmit={handleSubmit} className="flex flex-col gap-1">
+      <div className="flex items-start gap-2">
+        <SelectField
+          label="검색 대상"
+          hideLabel
+          options={SEARCH_TYPES}
+          value={type}
+          onChange={(event) => setType(parseSearchType(event.target.value))}
+          className="w-28 shrink-0 sm:w-32"
+        />
+        <TextField
+          label="검색어"
+          hideLabel
+          type="search"
+          maxLength={KEYWORD_MAX}
+          value={text}
+          invalid={error !== null}
+          aria-describedby={error ? 'community-search-error' : undefined}
+          onChange={(event) => {
+            setText(event.target.value);
+            setError(null);
+          }}
+          placeholder="2자 이상"
+          className="min-w-0 flex-1"
+        />
+        <Button type="submit" variant="secondary">
+          검색
+        </Button>
+      </div>
+      {error && (
+        <p id="community-search-error" className="flex items-start gap-1 text-sm text-danger">
+          <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </p>
+      )}
+    </form>
+  );
+}
+
+function SearchEmpty({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="flex flex-col items-start gap-3 p-6">
+      <p className="font-serif text-lg text-ink">검색 결과가 없어요</p>
+      <p className="text-sm text-ink-muted">다른 검색어나 검색 대상으로 찾아보세요.</p>
+      <Button variant="secondary" onClick={onClear}>
+        검색어 지우기
+      </Button>
+    </div>
+  );
+}
+
+function PopularEmpty() {
+  return (
+    <div className="flex flex-col items-start gap-3 p-6">
+      <Icon name="chat" size={24} className="text-ink-muted" />
+      <p className="font-serif text-lg text-ink">아직 인기글이 없어요</p>
+      <p className="text-sm text-ink-muted">좋아요 5개를 받은 글이 여기에 모여요.</p>
+    </div>
+  );
+}
+
+function CommunityEmpty({ spotId }: { spotId: number | null }) {
+  return (
+    <div className="flex flex-col items-start gap-3 p-6">
+      <Icon name="chat" size={24} className="text-ink-muted" />
+      <p className="font-serif text-lg text-ink">아직 올라온 글이 없어요</p>
+      <p className="text-sm text-ink-muted">다녀온 박지, 써 본 장비, 준비하며 궁금한 것을 첫 글로 남겨 보세요.</p>
+      <WriteAction spotId={spotId} />
+    </div>
+  );
+}
+
+function CommunityAside() {
   return (
     <>
       <AsideSection title="이용 안내">
@@ -183,22 +343,6 @@ function CommunityAside({ onSelect }: { onSelect: (next: CategoryFilter) => void
           <li>송금을 요구하면 신고해 주세요.</li>
           <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
           <li>신고가 5건 쌓이면 글이 잠시 내려가고 관리자가 검토해요.</li>
-        </ul>
-      </AsideSection>
-      <AsideSection title="분류">
-        <ul>
-          {CATEGORY_ORDER.map((value) => (
-            <li key={value}>
-              <button
-                type="button"
-                onClick={() => onSelect(value)}
-                className="flex min-h-11 w-full flex-col items-start justify-center text-left hover:text-ink"
-              >
-                <span className="text-base font-semibold text-ink">{CATEGORY_META[value].label}</span>
-                <span>{CATEGORY_DESCRIPTIONS[value]}</span>
-              </button>
-            </li>
-          ))}
         </ul>
       </AsideSection>
       <AsideSection title="둘러보기">
@@ -223,23 +367,13 @@ function CommunityAside({ onSelect }: { onSelect: (next: CategoryFilter) => void
   );
 }
 
-// 비회원에게는 로그인 링크를, 이메일 미인증 회원에게는 막힌 이유를 보여 준다. 쓰기 권한은 서버가 다시 확인한다.
+// 비회원에게는 글쓰기 버튼을 두지 않는다. 로그인과 회원가입은 머리글에서 한다.
+// 이메일 미인증 회원에게는 막힌 이유를 보여 준다. 쓰기 권한은 서버가 다시 확인한다.
 function WriteAction({ spotId }: { spotId: number | null }) {
   const session = useSession();
-  const { pathname, search } = useLocation();
   const target = spotId === null ? '/community/new' : `/community/new?spotId=${spotId}`;
 
-  if (session.status === 'loading') return null;
-  if (session.status === 'anonymous' || session.me === null) {
-    return (
-      <Link
-        to={withNext('/login', pathname + search)}
-        className={SECONDARY_LINK_CLASS}
-      >
-        로그인하고 글쓰기
-      </Link>
-    );
-  }
+  if (session.status === 'loading' || session.status === 'anonymous' || session.me === null) return null;
   if (session.me.status === 'UNVERIFIED') {
     return (
       <Button variant="secondary" disabled disabledReason={UNVERIFIED_WRITE_REASON}>
@@ -284,54 +418,48 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
   );
 }
 
+// 좁은 화면에서는 제목 한 줄과 정보 한 줄(글쓴이 · 작성일 · 조회 · 좋아요)로, 넓은 화면에서는 머리 줄과 같은 열로 보여 준다.
 function PostRow({ item }: { item: CommunityPostSummary }) {
-  const category = CATEGORY_META[item.category];
   return (
     <li>
-      <Link to={`/community/${item.postId}`} className="flex min-h-11 gap-3 px-4 py-3 hover:bg-paper-deep">
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0">
-              <Badge tone={category.tone}>{category.label}</Badge>
+      <Link
+        to={`/community/${item.postId}`}
+        className={`flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-paper-deep ${ROW_COLUMNS}`}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-base font-semibold text-ink">{item.title}</span>
+          {item.commentCount > 0 && (
+            <span className="shrink-0 font-mono text-sm tabular-nums text-forest-deep">
+              [<span className="sr-only">댓글 </span>
+              {item.commentCount}
+              <span className="sr-only">개</span>]
             </span>
-            <span className="truncate text-base font-semibold text-ink">{item.title}</span>
-            {item.commentCount > 0 && (
-              <span className="shrink-0 font-mono text-sm text-forest-deep">
-                [<span className="sr-only">댓글 </span>
-                {item.commentCount}
-                <span className="sr-only">개</span>]
-              </span>
-            )}
-            {item.imageCount > 0 && (
-              <Icon name="image" size={16} title="사진 있음" className="shrink-0 text-ink-muted" />
-            )}
+          )}
+          {item.imageCount > 0 && <Icon name="image" size={16} title="사진 있음" className="shrink-0 text-ink-muted" />}
+        </span>
+        <span className="flex flex-wrap items-center gap-x-1 text-xs text-ink-muted md:contents md:text-sm">
+          <span className="min-w-0 truncate">{item.author.nickname}</span>
+          <span aria-hidden="true" className="md:hidden">
+            ·
           </span>
-          <span className="hidden line-clamp-1 break-words text-sm text-ink-muted md:block">{item.excerpt}</span>
-          <span className="flex flex-wrap items-center gap-x-1 text-xs text-ink-muted">
-            <span>{item.author.nickname}</span>
-            <span aria-hidden="true">·</span>
-            <time dateTime={item.createdAt}>{formatRelativeKst(item.createdAt)}</time>
-            <span aria-hidden="true">·</span>
-            <span>좋아요 {item.likeCount}</span>
-            {item.spot && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="inline-flex items-center gap-1">
-                  <Icon name="map" size={14} />
-                  {item.spot.name}
-                </span>
-              </>
-            )}
+          <time dateTime={item.createdAt} className="tabular-nums">
+            {formatRelativeKst(item.createdAt)}
+          </time>
+          <span aria-hidden="true" className="md:hidden">
+            ·
+          </span>
+          <span className="tabular-nums md:text-right">
+            <span className="md:sr-only">조회 </span>
+            {item.viewCount}
+          </span>
+          <span aria-hidden="true" className="md:hidden">
+            ·
+          </span>
+          <span className="tabular-nums md:text-right">
+            <span className="md:sr-only">좋아요 </span>
+            {item.likeCount}
           </span>
         </span>
-        {item.thumbnailUrl && (
-          <img
-            src={item.thumbnailUrl}
-            alt=""
-            loading="lazy"
-            className="size-16 shrink-0 self-center rounded-control border border-contour object-cover"
-          />
-        )}
       </Link>
     </li>
   );

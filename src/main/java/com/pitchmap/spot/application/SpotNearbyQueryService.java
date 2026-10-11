@@ -14,7 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 중심 좌표에서 반경 안에 있는 ACTIVE 장소를 가까운 순서로 찾는다.
  *
- * <p>공공데이터 장소의 휴장 여부는 조회한 날의 한국 날짜로 계산한다. 서버는 휴장 중인 장소도 빼지 않고 표시만 한다.
+ * <p>공공데이터 장소의 휴장 여부는 조회한 날의 한국 날짜로 계산한다. 서버는 기본으로 휴장 중인 장소도 빼지 않고 표시만 하고,
+ * 호출하는 쪽이 휴장 제외를 고를 때만 뺀다.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,15 +34,15 @@ public class SpotNearbyQueryService {
     @Transactional(readOnly = true)
     public SpotNearbyPage findNearby(SpotNearbyQuery query) {
         long offset = (long) query.page() * query.size();
-        List<SpotNearbyRow> rows = spotNearbyMapper.selectNearby(toCondition(query), offset, query.size() + 1);
-        boolean hasNext = rows.size() > query.size();
         LocalDate today = LocalDate.now(clock.withZone(KOREA));
+        List<SpotNearbyRow> rows = spotNearbyMapper.selectNearby(toCondition(query, today), offset, query.size() + 1);
+        boolean hasNext = rows.size() > query.size();
         List<SpotNearbyItem> content =
                 rows.stream().limit(query.size()).map(row -> toItem(row, today)).toList();
         return new SpotNearbyPage(content, query.page(), query.size(), hasNext);
     }
 
-    private static SpotNearbyCondition toCondition(SpotNearbyQuery query) {
+    private static SpotNearbyCondition toCondition(SpotNearbyQuery query, LocalDate today) {
         SpotSearchBox box = SpotSearchBox.around(query.lat(), query.lng(), query.radiusKm());
         return new SpotNearbyCondition(
                 query.lat(),
@@ -54,7 +55,9 @@ public class SpotNearbyQueryService {
                 query.types(),
                 query.hasWater(),
                 query.hasToilet(),
-                query.excludeWarning());
+                query.excludeWarning(),
+                query.hideClosed(),
+                today);
     }
 
     private static SpotNearbyItem toItem(SpotNearbyRow row, LocalDate today) {

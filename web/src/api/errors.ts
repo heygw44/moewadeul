@@ -78,6 +78,11 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   // 커뮤니티
   COMMUNITY_ALREADY_REPORTED: '이미 신고한 글이나 댓글이에요.',
+  // 개인 일정
+  SOLO_TRIP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안, 일정은 1~3박으로 골라 주세요.',
+  SOLO_TRIP_LIMIT: '다가오는 개인 일정은 3개까지 등록할 수 있어요. 내 정보에서 지난 일정을 정리해 주세요.',
+  SOLO_TRIP_OVERLAP: '등록한 다른 일정과 날짜가 겹쳐요. 다른 날짜를 골라 주세요.',
+
   COMMUNITY_INVALID_STATE: '지금 상태에서는 할 수 없는 작업이에요. 화면을 새로고침해 주세요.',
   IMAGE_UPLOAD_FAILED: '이미지를 올리지 못했어요. 다시 시도해 주세요.',
 
@@ -93,7 +98,6 @@ const FIELD_LABELS: Record<string, string> = {
   password: '비밀번호',
   nickname: '닉네임',
   code: '인증 코드',
-  category: '분류',
   title: '제목',
   content: '내용',
   imageIds: '이미지',

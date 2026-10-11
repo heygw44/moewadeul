@@ -1,6 +1,7 @@
 package com.pitchmap.community.application;
 
 import com.pitchmap.common.error.InvalidFieldException;
+import com.pitchmap.common.storage.ImageStorage;
 import com.pitchmap.community.domain.CommunityImage;
 import com.pitchmap.community.domain.CommunityImageRepository;
 import java.util.HashMap;
@@ -25,7 +26,7 @@ class CommunityImageAttachmentChecker {
     static final String UNUSABLE_MESSAGE = "붙일 수 없는 이미지가 있습니다.";
 
     private final CommunityImageRepository communityImageRepository;
-    private final CommunityImageStorage communityImageStorage;
+    private final ImageStorage imageStorage;
 
     /**
      * 호출하면 imageIds를 memberId인 회원이 postId인 글(새 글이면 null)에 붙일 수 있는지 확인한다.
@@ -77,7 +78,7 @@ class CommunityImageAttachmentChecker {
     }
 
     private void requireUploaded(CommunityImage image) {
-        boolean uploaded = communityImageStorage
+        boolean uploaded = imageStorage
                 .findObjectSize(image.getObjectKey())
                 .filter(size -> size == image.getSizeBytes())
                 .isPresent();

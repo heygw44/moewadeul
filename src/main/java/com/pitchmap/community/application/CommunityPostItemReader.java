@@ -1,5 +1,6 @@
 package com.pitchmap.community.application;
 
+import com.pitchmap.common.storage.ImageStorage;
 import com.pitchmap.community.infra.CommunityImageMapper;
 import com.pitchmap.community.infra.CommunityPostMapper;
 import com.pitchmap.community.infra.CommunityPostRow;
@@ -18,11 +19,11 @@ class CommunityPostItemReader {
 
     private final CommunityPostMapper communityPostMapper;
     private final CommunityImageMapper communityImageMapper;
-    private final CommunityImageStorage communityImageStorage;
+    private final ImageStorage imageStorage;
 
     /** 호출하면 목록 항목을 만든다. 첫 이미지의 조회 URL(thumbnailUrl)과 이미지 수를 담고, images는 비운다. */
     CommunityPostItem toListItem(CommunityPostRow row) {
-        String thumbnailUrl = row.thumbnailKey() == null ? null : communityImageStorage.presignView(row.thumbnailKey());
+        String thumbnailUrl = row.thumbnailKey() == null ? null : imageStorage.presignView(row.thumbnailKey());
         return CommunityPostItem.from(row, thumbnailUrl, List.of());
     }
 
@@ -33,8 +34,7 @@ class CommunityPostItemReader {
     Optional<CommunityPostItem> findDetail(long postId, Long viewerId) {
         return communityPostMapper.selectActiveById(postId, viewerId).map(row -> {
             List<CommunityPostImage> images = communityImageMapper.selectByPostId(postId).stream()
-                    .map(image -> new CommunityPostImage(
-                            image.imageId(), communityImageStorage.presignView(image.objectKey())))
+                    .map(image -> new CommunityPostImage(image.imageId(), imageStorage.presignView(image.objectKey())))
                     .toList();
             return CommunityPostItem.from(row, null, images);
         });

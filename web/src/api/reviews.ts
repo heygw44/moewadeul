@@ -1,5 +1,12 @@
 import { apiFetch } from './client';
-import type { Page, SpotReview, SpotReviewCreateRequest, SpotReviewUpdateRequest } from './types';
+import type {
+  ImageUpload,
+  ImageUploadRequest,
+  Page,
+  SpotReview,
+  SpotReviewCreateRequest,
+  SpotReviewUpdateRequest,
+} from './types';
 
 // 서버가 받는 목록 크기 최댓값은 50이다. 장소 상세에서는 한 번에 이만큼씩 더 불러온다.
 export const SPOT_REVIEW_PAGE_SIZE = 10;
@@ -23,4 +30,9 @@ export function updateSpotReview(reviewId: number, req: SpotReviewUpdateRequest)
 
 export function deleteSpotReview(reviewId: number): Promise<void> {
   return apiFetch<void>(`/api/reviews/${reviewId}`, { method: 'DELETE' });
+}
+
+// 후기에 붙일 이미지를 올릴 사전 서명 URL을 받는다. 파일은 putImage로 저장소에 바로 올린다.
+export function requestReviewImageUpload(req: ImageUploadRequest): Promise<ImageUpload> {
+  return apiFetch<ImageUpload>('/api/reviews/images', { method: 'POST', body: req });
 }
