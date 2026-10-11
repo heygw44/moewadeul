@@ -51,7 +51,7 @@ export function MyBasecampsPage() {
   const authenticated = session.status === 'authenticated';
 
   useEffect(() => {
-    document.title = '내 베이스캠프 · 피치맵';
+    document.title = '내 베이스캠프 · 뫼와들';
   }, []);
 
   // 내 베이스캠프는 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.

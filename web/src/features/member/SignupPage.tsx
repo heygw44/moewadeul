@@ -55,7 +55,7 @@ export function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    document.title = '가입 · 피치맵';
+    document.title = '가입 · 뫼와들';
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

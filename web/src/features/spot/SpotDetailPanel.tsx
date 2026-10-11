@@ -67,9 +67,9 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
 
   useEffect(() => {
     if (loadedName === null) return;
-    document.title = `${loadedName} · 피치맵`;
+    document.title = `${loadedName} · 뫼와들`;
     return () => {
-      document.title = '피치맵';
+      document.title = '뫼와들';
     };
   }, [loadedName]);
 

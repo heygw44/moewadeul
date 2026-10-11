@@ -17,7 +17,7 @@ class NotificationMailFactoryTest {
         MailMessage mail = NotificationMailFactory.create(row, "https://pitchmap.example");
 
         assertThat(mail.to()).isEqualTo("a@example.com");
-        assertThat(mail.subject()).isEqualTo("[피치맵] 합류 승인");
+        assertThat(mail.subject()).isEqualTo("[뫼와들] 합류 승인");
         assertThat(mail.body()).isEqualTo("승인됐습니다.\n\n자세히 보기: https://pitchmap.example/basecamps/3");
     }
 

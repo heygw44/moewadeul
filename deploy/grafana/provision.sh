@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Grafana Cloud에 피치맵 대시보드, 알림 연락처, 알림 정책, 알림 규칙을 올린다. 개발자가 내 컴퓨터에서 실행한다.
+# Grafana Cloud에 뫼와들 대시보드, 알림 연락처, 알림 정책, 알림 규칙을 올린다. 개발자가 내 컴퓨터에서 실행한다.
 # 같은 uid로 덮어쓰므로 여러 번 실행해도 결과가 같다.
 #
 # 필요한 환경 변수
@@ -14,7 +14,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 readonly FOLDER_UID=pitchmap
-readonly FOLDER_TITLE="피치맵"
+readonly FOLDER_TITLE="뫼와들"
 readonly CONTACT_POINT_UID=pitchmap-email
 readonly CONTACT_POINT_NAME=pitchmap-email
 readonly RULE_GROUP=pitchmap
@@ -78,7 +78,8 @@ log "데이터 소스: prometheus=$PROM_UID loki=$LOKI_UID"
 
 # 1. 폴더
 if api_get "/api/folders/$FOLDER_UID" > /dev/null 2>&1; then
-    log "폴더 $FOLDER_TITLE 있음"
+    # 폴더가 이미 있어도 제목은 FOLDER_TITLE로 맞춘다. 서비스 이름을 바꾸면 폴더 제목도 따라 바뀌어야 하기 때문이다.
+    require_ok "$(api PUT "/api/folders/$FOLDER_UID" "$(jq -n --arg title "$FOLDER_TITLE" '{title: $title, overwrite: true}')")" "폴더 제목 맞추기"
 else
     require_ok "$(api POST /api/folders "$(jq -n --arg uid "$FOLDER_UID" --arg title "$FOLDER_TITLE" '{uid: $uid, title: $title}')")" "폴더 만들기"
 fi

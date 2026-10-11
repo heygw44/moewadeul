@@ -100,7 +100,7 @@ export function HeroPreview() {
   return (
     <PreviewFrame className="relative h-[22rem] overflow-hidden rounded-sheet border border-contour bg-paper bg-contour sm:h-[26rem]">
       <span className="absolute left-3 top-3 flex gap-2">
-        <span className={`${CHIP_CLASS} font-serif text-forest-deep`}>피치맵</span>
+        <span className={`${CHIP_CLASS} font-serif text-forest-deep`}>뫼와들</span>
       </span>
       <span className="absolute right-3 top-3 flex gap-2">
         <span className={`${CHIP_CLASS} text-ink`}>

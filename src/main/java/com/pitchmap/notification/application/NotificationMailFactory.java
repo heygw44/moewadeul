@@ -6,7 +6,7 @@ import com.pitchmap.notification.infra.NotificationMailRow;
 /** 알림 한 건을 메일 한 통으로 바꾼다. 보내거나 읽지 않고 내용만 만드는 순수한 클래스다. */
 final class NotificationMailFactory {
 
-    private static final String SUBJECT_PREFIX = "[피치맵] ";
+    private static final String SUBJECT_PREFIX = "[뫼와들] ";
     private static final String LINK_LABEL = "자세히 보기: ";
 
     private NotificationMailFactory() {}

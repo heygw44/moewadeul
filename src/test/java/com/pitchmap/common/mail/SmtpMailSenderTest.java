@@ -24,7 +24,7 @@ class SmtpMailSenderTest {
 
     private static final String FROM = "pitchmap@example.com";
     private static final String RECIPIENT = "hiker@example.com";
-    private static final String SUBJECT = "[피치맵] 이메일 인증 코드";
+    private static final String SUBJECT = "[뫼와들] 이메일 인증 코드";
     private static final String BODY = "인증 코드는 123456입니다.";
 
     private final JavaMailSender javaMailSender = mock(JavaMailSender.class);

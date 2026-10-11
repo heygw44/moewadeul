@@ -31,7 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @IntegrationTest
 class PasswordResetRequestFlowIntegrationTest {
 
-    private static final String MAIL_SUBJECT = "[피치맵] 비밀번호 재설정 안내";
+    private static final String MAIL_SUBJECT = "[뫼와들] 비밀번호 재설정 안내";
     private static final String LINK_PREFIX = "/password-reset#token=";
     private static final String CLIENT_IP = "203.0.113.7";
 

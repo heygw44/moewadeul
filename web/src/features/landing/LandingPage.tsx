@@ -32,14 +32,14 @@ const TRUST_LEVEL_MEANINGS = [
   '동행을 3번 이상 마쳤고, 함께 간 사람 80% 이상이 다시 가고 싶다고 했어요. 최근 180일 동안 제재가 없어요.',
 ];
 
-// 처음 온 사람에게 피치맵이 무엇을 하는지 보여 주고 지도로 보내는 첫 화면이다.
+// 처음 온 사람에게 뫼와들이 무엇을 하는지 보여 주고 지도로 보내는 첫 화면이다.
 // 한 화면에 주 행동은 "지도에서 박지 찾기" 하나만 두고, 아래 섹션은 차별점 세 가지를 차례로 설명한다.
 export function LandingPage() {
   const session = useSession();
   const anonymous = session.status === 'anonymous' || (session.status === 'authenticated' && session.me === null);
 
   useEffect(() => {
-    document.title = '피치맵 · 자도 되는 박지와 믿을 수 있는 동행';
+    document.title = '뫼와들 · 자도 되는 박지와 믿을 수 있는 동행';
   }, []);
 
   return (
@@ -57,7 +57,7 @@ export function LandingPage() {
               함께 가요
             </h1>
             <p className="max-w-lg text-lg leading-relaxed text-ink-muted">
-              피치맵은 백패커를 위한 박지 지도예요. 공원 경계 경고는 출처와 기준일까지, 동행은 본인확인과 서로 쓴
+              뫼와들은 백패커를 위한 박지 지도예요. 공원 경계 경고는 출처와 기준일까지, 동행은 본인확인과 서로 쓴
               후기까지 보여 드려요.
             </p>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1">
