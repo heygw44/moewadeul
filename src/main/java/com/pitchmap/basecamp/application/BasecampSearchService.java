@@ -14,6 +14,8 @@ import com.pitchmap.trust.application.TrustSummaryService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,18 +54,26 @@ public class BasecampSearchService {
     }
 
     private static BasecampSearchCondition toCondition(BasecampSearchQuery query) {
-        return switch (query.region()) {
-            case BasecampSearchQuery.Area area ->
-                new BasecampSearchCondition(
-                        new BasecampSearchCondition.Area(area.swLat(), area.swLng(), area.neLat(), area.neLng()),
-                        null,
-                        query.fromDate(),
-                        query.toDate(),
-                        query.hasVacancy());
-            case BasecampSearchQuery.Radius radius ->
-                new BasecampSearchCondition(
-                        null, toNearby(radius), query.fromDate(), query.toDate(), query.hasVacancy());
-        };
+        BasecampSearchCondition.Area area = null;
+        BasecampSearchCondition.Nearby nearby = null;
+        switch (query.region()) {
+            case BasecampSearchQuery.Area region ->
+                area = new BasecampSearchCondition.Area(region.swLat(), region.swLng(), region.neLat(), region.neLng());
+            case BasecampSearchQuery.Radius radius -> nearby = toNearby(radius);
+        }
+        Set<String> spotTypes =
+                query.spotTypes().stream().map(BasecampSpotType::name).collect(Collectors.toSet());
+        return new BasecampSearchCondition(
+                area,
+                nearby,
+                query.fromDate(),
+                query.toDate(),
+                query.hasVacancy(),
+                spotTypes,
+                query.nights(),
+                query.maxTrustLevel(),
+                query.noAgeLimit(),
+                query.noSameGenderOnly());
     }
 
     private static BasecampSearchCondition.Nearby toNearby(BasecampSearchQuery.Radius radius) {

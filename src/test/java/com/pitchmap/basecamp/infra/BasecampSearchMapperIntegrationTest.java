@@ -15,6 +15,7 @@ import com.pitchmap.spot.application.SpotSearchBox;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,12 +110,12 @@ class BasecampSearchMapperIntegrationTest {
         long d25 = insertBasecamp(leader, spotId, "RECRUITING", DAY.plusDays(5), 4);
 
         // when
-        List<BasecampSearchRow> between = mapper.selectRecruiting(
-                new BasecampSearchCondition(AREA, null, DAY.plusDays(2), DAY.plusDays(5), false), 0, 20);
+        List<BasecampSearchRow> between =
+                mapper.selectRecruiting(condition(AREA, null, DAY.plusDays(2), DAY.plusDays(5), false), 0, 20);
         List<BasecampSearchRow> fromOnly =
-                mapper.selectRecruiting(new BasecampSearchCondition(AREA, null, DAY.plusDays(1), null, false), 0, 20);
+                mapper.selectRecruiting(condition(AREA, null, DAY.plusDays(1), null, false), 0, 20);
         List<BasecampSearchRow> toOnly =
-                mapper.selectRecruiting(new BasecampSearchCondition(AREA, null, null, DAY.plusDays(2), false), 0, 20);
+                mapper.selectRecruiting(condition(AREA, null, null, DAY.plusDays(2), false), 0, 20);
 
         // then
         assertThat(between).extracting(BasecampSearchRow::basecampId).containsExactly(d22, d25);
@@ -136,16 +137,121 @@ class BasecampSearchMapperIntegrationTest {
         insertMemberRow(vacant, leaver, "MEMBER", "LEFT");
 
         // when
-        List<BasecampSearchRow> vacancyOnly =
-                mapper.selectRecruiting(new BasecampSearchCondition(AREA, null, null, null, true), 0, 20);
-        List<BasecampSearchRow> all =
-                mapper.selectRecruiting(new BasecampSearchCondition(AREA, null, null, null, false), 0, 20);
+        List<BasecampSearchRow> vacancyOnly = mapper.selectRecruiting(condition(AREA, null, null, null, true), 0, 20);
+        List<BasecampSearchRow> all = mapper.selectRecruiting(condition(AREA, null, null, null, false), 0, 20);
 
         // then
         assertThat(vacancyOnly).extracting(BasecampSearchRow::basecampId).containsExactly(vacant);
         assertThat(all)
                 .extracting(BasecampSearchRow::basecampId, BasecampSearchRow::headcount)
                 .containsExactly(tuple(full, 2), tuple(vacant, 1));
+    }
+
+    @Test
+    @DisplayName("[F-31] 장소 유형 조건은 고른 유형의 장소에서 열린 베이스캠프만 남긴다")
+    void filtersBySpotType() {
+        // given
+        Member leader = saveMember();
+        long bakji =
+                insertBasecamp(leader, insertSpot("박지", "BAKJI", new Coordinate(37.5, 127.5)), "RECRUITING", DAY, 4);
+        long forest =
+                insertBasecamp(leader, insertSpot("휴양림", "FOREST", new Coordinate(37.5, 127.5)), "RECRUITING", DAY, 4);
+        insertBasecamp(leader, insertSpot("야영장", "CAMPSITE", new Coordinate(37.5, 127.5)), "RECRUITING", DAY, 4);
+
+        // when
+        List<BasecampSearchRow> rows = mapper.selectRecruiting(
+                detailCondition(Set.of("BAKJI", "FOREST"), Set.of(), null, false, false), 0, 20);
+
+        // then
+        assertThat(rows).extracting(BasecampSearchRow::basecampId).containsExactly(bakji, forest);
+    }
+
+    @Test
+    @DisplayName("[F-31] 박 수 조건은 종료일에서 출발일을 뺀 날 수가 고른 값인 베이스캠프만 남긴다")
+    void filtersByNights() {
+        // given
+        Member leader = saveMember();
+        long spot = insertSpot("장소", new Coordinate(37.5, 127.5));
+        long oneNight = insertBasecamp(leader, spot, DAY, 1, null, null, null, false);
+        insertBasecamp(leader, spot, DAY, 2, null, null, null, false);
+        long threeNights = insertBasecamp(leader, spot, DAY, 3, null, null, null, false);
+
+        // when
+        List<BasecampSearchRow> rows =
+                mapper.selectRecruiting(detailCondition(Set.of(), Set.of(1, 3), null, false, false), 0, 20);
+
+        // then
+        assertThat(rows).extracting(BasecampSearchRow::basecampId).containsExactly(oneNight, threeNights);
+    }
+
+    @Test
+    @DisplayName("[F-31] 최소 신뢰 단계 상한은 조건이 없는 베이스캠프를 단계 1로 보고, 상한보다 높은 단계를 요구하는 베이스캠프를 뺀다")
+    void filtersByMaxTrustLevel() {
+        // given
+        Member leader = saveMember();
+        long spot = insertSpot("장소", new Coordinate(37.5, 127.5));
+        long noCondition = insertBasecamp(leader, spot, DAY, 2, null, null, null, false);
+        long levelOne = insertBasecamp(leader, spot, DAY, 2, 1, null, null, false);
+        long levelTwo = insertBasecamp(leader, spot, DAY, 2, 2, null, null, false);
+
+        // when
+        List<BasecampSearchRow> upToOne =
+                mapper.selectRecruiting(detailCondition(Set.of(), Set.of(), 1, false, false), 0, 20);
+        List<BasecampSearchRow> upToTwo =
+                mapper.selectRecruiting(detailCondition(Set.of(), Set.of(), 2, false, false), 0, 20);
+
+        // then
+        assertThat(upToOne).extracting(BasecampSearchRow::basecampId).containsExactly(noCondition, levelOne);
+        assertThat(upToTwo).extracting(BasecampSearchRow::basecampId).containsExactly(noCondition, levelOne, levelTwo);
+    }
+
+    @Test
+    @DisplayName("[F-31] 연령 제한 없음은 연령대 조건이 하나라도 있는 베이스캠프를 빼고, 동성만 아님은 동성만 받는 베이스캠프를 뺀다")
+    void filtersByAgeLimitAndSameGender() {
+        // given
+        Member leader = saveMember();
+        long spot = insertSpot("장소", new Coordinate(37.5, 127.5));
+        long open = insertBasecamp(leader, spot, DAY, 2, null, null, null, false);
+        long minAgeOnly = insertBasecamp(leader, spot, DAY, 2, null, 20, null, false);
+        long maxAgeOnly = insertBasecamp(leader, spot, DAY, 2, null, null, 40, false);
+        long sameGender = insertBasecamp(leader, spot, DAY, 2, null, null, null, true);
+
+        // when
+        List<BasecampSearchRow> noAgeLimit =
+                mapper.selectRecruiting(detailCondition(Set.of(), Set.of(), null, true, false), 0, 20);
+        List<BasecampSearchRow> noSameGender =
+                mapper.selectRecruiting(detailCondition(Set.of(), Set.of(), null, false, true), 0, 20);
+        List<BasecampSearchRow> both =
+                mapper.selectRecruiting(detailCondition(Set.of(), Set.of(), null, true, true), 0, 20);
+
+        // then
+        assertThat(noAgeLimit).extracting(BasecampSearchRow::basecampId).containsExactly(open, sameGender);
+        assertThat(noSameGender)
+                .extracting(BasecampSearchRow::basecampId)
+                .containsExactly(open, minAgeOnly, maxAgeOnly);
+        assertThat(both).extracting(BasecampSearchRow::basecampId).containsExactly(open);
+    }
+
+    @Test
+    @DisplayName("[F-31] 상세 조건을 함께 걸면 모두 만족하는 베이스캠프만 출발일 순서로 남긴다")
+    void combinesDetailConditions() {
+        // given
+        Member leader = saveMember();
+        long bakji = insertSpot("박지", "BAKJI", new Coordinate(37.5, 127.5));
+        long campsite = insertSpot("야영장", "CAMPSITE", new Coordinate(37.5, 127.5));
+        long later = insertBasecamp(leader, bakji, DAY.plusDays(3), 1, 1, null, null, false);
+        long earlier = insertBasecamp(leader, bakji, DAY, 1, null, null, null, false);
+        insertBasecamp(leader, bakji, DAY, 2, null, null, null, false);
+        insertBasecamp(leader, bakji, DAY, 1, 2, null, null, false);
+        insertBasecamp(leader, bakji, DAY, 1, null, null, null, true);
+        insertBasecamp(leader, campsite, DAY, 1, null, null, null, false);
+
+        // when
+        List<BasecampSearchRow> rows =
+                mapper.selectRecruiting(detailCondition(Set.of("BAKJI"), Set.of(1), 1, false, true), 0, 20);
+
+        // then
+        assertThat(rows).extracting(BasecampSearchRow::basecampId).containsExactly(earlier, later);
     }
 
     @Test
@@ -289,15 +395,36 @@ class BasecampSearchMapperIntegrationTest {
         assertThat(mapper.selectSpotSummary(spotId + 1000)).isNull();
     }
 
+    // 상세 조건 없이 지역·출발일·남은 자리만 거는 조건이다.
+    private static BasecampSearchCondition condition(
+            BasecampSearchCondition.Area area,
+            BasecampSearchCondition.Nearby nearby,
+            LocalDate fromDate,
+            LocalDate toDate,
+            boolean hasVacancy) {
+        return new BasecampSearchCondition(
+                area, nearby, fromDate, toDate, hasVacancy, Set.of(), Set.of(), null, false, false);
+    }
+
+    private static BasecampSearchCondition detailCondition(
+            Set<String> spotTypes,
+            Set<Integer> nights,
+            Integer maxTrustLevel,
+            boolean noAgeLimit,
+            boolean noSameGenderOnly) {
+        return new BasecampSearchCondition(
+                AREA, null, null, null, false, spotTypes, nights, maxTrustLevel, noAgeLimit, noSameGenderOnly);
+    }
+
     private static BasecampSearchCondition areaCondition(BasecampSearchCondition.Area area) {
-        return new BasecampSearchCondition(area, null, null, null, false);
+        return condition(area, null, null, null, false);
     }
 
     private static BasecampSearchCondition radiusCondition(Coordinate center, double radiusKm) {
         SpotSearchBox box = SpotSearchBox.around(center.lat(), center.lng(), radiusKm);
         BasecampSearchCondition.Nearby nearby = new BasecampSearchCondition.Nearby(
                 center.lat(), center.lng(), radiusKm * 1000, box.swLat(), box.swLng(), box.neLat(), box.neLng());
-        return new BasecampSearchCondition(null, nearby, null, null, false);
+        return condition(null, nearby, null, null, false);
     }
 
     private Member saveMember() {
@@ -305,9 +432,14 @@ class BasecampSearchMapperIntegrationTest {
     }
 
     private long insertSpot(String name, Coordinate at) {
+        return insertSpot(name, "BAKJI", at);
+    }
+
+    private long insertSpot(String name, String type, Coordinate at) {
         jdbc.update(
                 "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES ('BAKJI', ?, ST_GeomFromText(?, 4326), 60, 127, 'ACTIVE', NOW(6), NOW(6))",
+                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, 'ACTIVE', NOW(6), NOW(6))",
+                type,
                 name,
                 at.wkt());
         return jdbc.queryForObject("SELECT MAX(id) FROM spot", Long.class);
@@ -325,6 +457,35 @@ class BasecampSearchMapperIntegrationTest {
                 startDate.plusDays(2),
                 capacity,
                 status);
+        long id = jdbc.queryForObject("SELECT MAX(id) FROM basecamp", Long.class);
+        insertMemberRow(id, leader, "LEADER", "ACTIVE");
+        return id;
+    }
+
+    // 모집 중이고 정원 4명인 베이스캠프를 박 수와 합류 조건을 정해서 넣는다. 캠프 리더의 멤버 행도 함께 넣는다.
+    private long insertBasecamp(
+            Member leader,
+            long spotId,
+            LocalDate startDate,
+            int nights,
+            Integer minTrustLevel,
+            Integer ageGroupMin,
+            Integer ageGroupMax,
+            boolean sameGenderOnly) {
+        jdbc.update(
+                "INSERT INTO basecamp (leader_id, spot_id, title, description, start_date, end_date, capacity, status,"
+                        + " min_trust_level, age_group_min, age_group_max, same_gender_only, required_gender,"
+                        + " created_at, updated_at) VALUES (?, ?, '기존', '기존', ?, ?, 4, 'RECRUITING', ?, ?, ?, ?, ?,"
+                        + " '2026-10-05 03:00:00', '2026-10-05 03:00:00')",
+                leader.getId(),
+                spotId,
+                startDate,
+                startDate.plusDays(nights),
+                minTrustLevel,
+                ageGroupMin,
+                ageGroupMax,
+                sameGenderOnly,
+                sameGenderOnly ? "FEMALE" : null);
         long id = jdbc.queryForObject("SELECT MAX(id) FROM basecamp", Long.class);
         insertMemberRow(id, leader, "LEADER", "ACTIVE");
         return id;

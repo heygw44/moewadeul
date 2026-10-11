@@ -2,22 +2,20 @@ import type { BasecampSearchItem } from '../../api/types';
 import { Link } from '../../app/router';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
-import { Checkbox } from '../../components/Checkbox';
 import { EmptyState } from '../../components/EmptyState';
-import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
-import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
 import { useSession } from '../member/session';
 import { BASECAMP_STATUS_META, headcountText, joinConditionSummary, unmetReasonText } from './basecampLabels';
-import type { BasecampFilters, BasecampsInView } from './useBasecampsInView';
+import type { BasecampsInView } from './useBasecampsInView';
 
 type BasecampListPanelProps = {
   result: BasecampsInView;
-  filters: BasecampFilters;
-  onFiltersChange: (filters: BasecampFilters) => void;
+  // 조건 대화상자에서 고른 조건이 하나라도 켜져 있는지다. 결과가 없을 때 안내 문구를 고른다.
+  filtered: boolean;
+  onResetFilters: () => void;
   // 지도에서 고른 장소다. 있으면 그 장소의 베이스캠프만 보여 준다.
   spotFilterId: number | null;
   onClearSpotFilter: () => void;
@@ -26,53 +24,19 @@ type BasecampListPanelProps = {
 
 export function BasecampListPanel({
   result,
-  filters,
-  onFiltersChange,
+  filtered,
+  onResetFilters,
   spotFilterId,
   onClearSpotFilter,
   waitingForMap,
 }: BasecampListPanelProps) {
   const showSkeleton = useDelayedFlag(result.status === 'loading' || waitingForMap);
-  const rangeInvalid = filters.fromDate !== '' && filters.toDate !== '' && filters.fromDate > filters.toDate;
   const visible =
     spotFilterId === null ? result.items : result.items.filter((item) => item.spot.spotId === spotFilterId);
   const filteredSpotName = spotFilterId === null ? null : (visible[0]?.spot.name ?? null);
 
   return (
     <div className="flex flex-col">
-      <form
-        aria-label="베이스캠프 찾기 조건"
-        onSubmit={(event) => event.preventDefault()}
-        className="flex flex-col gap-2 border-b border-contour px-4 py-3"
-      >
-        <div className="grid grid-cols-2 gap-2">
-          <TextField
-            label="출발일 시작"
-            type="date"
-            value={filters.fromDate}
-            onChange={(event) => onFiltersChange({ ...filters, fromDate: event.target.value })}
-          />
-          <TextField
-            label="출발일 끝"
-            type="date"
-            value={filters.toDate}
-            min={filters.fromDate || undefined}
-            onChange={(event) => onFiltersChange({ ...filters, toDate: event.target.value })}
-          />
-        </div>
-        {rangeInvalid && (
-          <p role="alert" className="flex items-start gap-1 text-sm text-danger">
-            <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
-            <span>출발일 끝이 시작보다 빠를 수 없어요.</span>
-          </p>
-        )}
-        <Checkbox
-          label="빈자리 있는 것만"
-          checked={filters.hasVacancy}
-          onChange={(event) => onFiltersChange({ ...filters, hasVacancy: event.target.checked })}
-        />
-      </form>
-
       {spotFilterId !== null && (
         <div className="flex items-center justify-between gap-2 border-b border-contour bg-paper px-4 py-1">
           <p className="min-w-0 truncate text-sm text-ink">{filteredSpotName ?? '고른 장소'}의 베이스캠프만 보고 있어요</p>
@@ -108,11 +72,24 @@ export function BasecampListPanel({
 
           {result.status === 'ready' && visible.length === 0 && (
             <EmptyState
-              title="이 지역에는 모집 중인 베이스캠프가 없어요"
+              title={
+                filtered && spotFilterId === null
+                  ? '조건에 맞는 베이스캠프가 없어요'
+                  : '이 지역에는 모집 중인 베이스캠프가 없어요'
+              }
               description={
-                spotFilterId === null
-                  ? '지도를 옮기거나 출발일 조건을 넓혀 보세요. 장소 상세에서 직접 열 수도 있어요.'
-                  : '모두 보기를 눌러 다른 장소의 베이스캠프를 찾아보세요.'
+                spotFilterId !== null
+                  ? '모두 보기를 눌러 다른 장소의 베이스캠프를 찾아보세요.'
+                  : filtered
+                    ? '조건을 줄이거나 지도를 옮겨 보세요.'
+                    : '지도를 옮겨 보세요. 장소 상세에서 직접 열 수도 있어요.'
+              }
+              action={
+                filtered && spotFilterId === null ? (
+                  <Button variant="secondary" onClick={onResetFilters}>
+                    조건 모두 풀기
+                  </Button>
+                ) : undefined
               }
             />
           )}
