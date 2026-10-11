@@ -1,7 +1,7 @@
 # 운영용 caddy 이미지다. 프론트엔드 빌드 결과를 이미지에 넣어서, 앱과 프론트엔드를 같은 커밋 SHA 태그로 함께 배포한다.
 # 빌드 컨텍스트는 저장소 루트다(docker build -f deploy/caddy/Dockerfile .).
 
-FROM node:24-alpine AS web
+FROM node:25-alpine AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
