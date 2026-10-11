@@ -1,14 +1,14 @@
 # 로컬 개발 전용. 앱은 호스트에서 ./gradlew bootRun으로 실행하고 MySQL만 띄운다.
 # compose와 앱(local 프로필)이 같은 .env를 읽는다.
-name: pitchmap
+name: moewadeul
 
 services:
   mysql:
     image: mysql:8.4
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?.env에 DB_ROOT_PASSWORD를 채우세요}
-      MYSQL_DATABASE: ${DB_NAME:-pitchmap}
-      MYSQL_USER: ${DB_USERNAME:-pitchmap}
+      MYSQL_DATABASE: ${DB_NAME:-moewadeul}
+      MYSQL_USER: ${DB_USERNAME:-moewadeul}
       MYSQL_PASSWORD: ${DB_PASSWORD:?.env에 DB_PASSWORD를 채우세요}
     command:
       - --character-set-server=utf8mb4

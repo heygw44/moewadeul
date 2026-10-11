@@ -33,10 +33,10 @@ prometheus.scrape "app" {
 
 // ---------- MySQL ----------
 
-// 전용 계정 pitchmap_exporter는 서버 상태와 performance_schema만 읽고 앱 데이터는 읽지 못한다. 배포 스크립트가 이 계정을 만든다.
+// 전용 계정 moewadeul_exporter는 서버 상태와 performance_schema만 읽고 앱 데이터는 읽지 못한다. 배포 스크립트가 이 계정을 만든다.
 // 기본 수집기가 연결 수와 락 대기(SHOW GLOBAL STATUS의 Innodb_row_lock_*)를 읽고, 느린 쿼리는 문장 요약 수집기로 본다.
 prometheus.exporter.mysql "db" {
-	data_source_name  = "pitchmap_exporter:" + sys.env("MYSQL_EXPORTER_PASSWORD") + "@(mysql:3306)/"
+	data_source_name  = "moewadeul_exporter:" + sys.env("MYSQL_EXPORTER_PASSWORD") + "@(mysql:3306)/"
 	enable_collectors = ["perf_schema.eventsstatements"]
 
 	// 문장 요약은 SQL 형태마다 시계열이 생긴다. 무료 한도를 아끼려고 최근에 실행된 50개만 읽고, 시스템 스키마는 뺀다.

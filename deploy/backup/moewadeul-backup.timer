@@ -2,7 +2,7 @@
 # 4시대에 도는 앱의 정리 작업(4시, 4시 10분)이 끝난 뒤에 실행한다.
 # Persistent=true라서 그 시각에 서버가 꺼져 있었으면 켜진 뒤 바로 한 번 실행한다.
 [Unit]
-Description=Daily pitchmap MySQL backup
+Description=Daily moewadeul MySQL backup
 
 [Timer]
 OnCalendar=*-*-* 04:30:00 Asia/Seoul
