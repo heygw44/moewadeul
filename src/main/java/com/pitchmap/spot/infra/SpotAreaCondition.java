@@ -28,4 +28,12 @@ public record SpotAreaCondition(
     public SpotAreaCondition {
         types = Set.copyOf(types);
     }
+
+    /**
+     * 호출하면 묶음 집계의 조합별 표가 필요한 조건인지 돌려준다. 유형, 물, 화장실, 경고 필터 가운데 하나라도 켜면 {@code true}다. 휴장 제외는 날짜에 따라
+     * 바뀌어서 집계 표에 없으므로 여기에 넣지 않는다.
+     */
+    public boolean filtersCellAttributes() {
+        return !types.isEmpty() || hasWater || hasToilet || excludeWarning;
+    }
 }

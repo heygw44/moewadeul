@@ -39,14 +39,22 @@ public final class DatabaseCleaner {
         // 이 세션 변수는 커넥션 풀의 물리 연결에 남으므로, 정리가 끝나면 반드시 되돌린다.
         statement.execute("SET FOREIGN_KEY_CHECKS = 0");
         try {
-            for (String table : tables) {
-                // DELETE를 쓰고 TRUNCATE는 쓰지 않는다.
-                // TRUNCATE는 DDL(테이블 구조를 다루는 명령)이라 암묵적 커밋이 일어나고,
-                // 테이블이 많으면 테스트마다 훨씬 느려지기 때문이다.
-                statement.executeUpdate("DELETE FROM `" + table + "`");
-            }
+            // 트리거가 있는 테이블의 행을 지우면, MySQL이 다른 테이블(지도 묶음 집계 등)에 행을 다시 쓸 수 있다.
+            // 그 테이블을 이미 비운 뒤라면 행이 남으므로, 첫 번째에 지운 뒤 한 번 더 지운다.
+            // 두 번째에는 트리거를 부를 행이 남아 있지 않다.
+            deleteFrom(statement, tables);
+            deleteFrom(statement, tables);
         } finally {
             statement.execute("SET FOREIGN_KEY_CHECKS = 1");
+        }
+    }
+
+    private void deleteFrom(Statement statement, List<String> tables) throws SQLException {
+        for (String table : tables) {
+            // DELETE를 쓰고 TRUNCATE는 쓰지 않는다.
+            // TRUNCATE는 DDL(테이블 구조를 다루는 명령)이라 암묵적 커밋이 일어나고,
+            // 테이블이 많으면 테스트마다 훨씬 느려지기 때문이다.
+            statement.executeUpdate("DELETE FROM `" + table + "`");
         }
     }
 
