@@ -19,8 +19,8 @@ readonly SERVER_ENV_FILE="$DEPLOY_DIR/server.env"
 readonly LAST_TAG_FILE="$DEPLOY_DIR/last-successful-tag"
 readonly REGION=ap-northeast-2
 readonly PARAM_PREFIX=/pitchmap/prod
-readonly APP_REPO=ghcr.io/heygw44/pitchmap-app
-readonly CADDY_REPO=ghcr.io/heygw44/pitchmap-caddy
+readonly APP_REPO=ghcr.io/heygw44/moewadeul-app
+readonly CADDY_REPO=ghcr.io/heygw44/moewadeul-caddy
 readonly HEALTH_URL=http://127.0.0.1:8080/actuator/health
 # 앱은 시작할 때 Flyway 마이그레이션을 실행하므로, 처음 배포하거나 마이그레이션이 많으면 시간이 걸린다.
 readonly HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-240}"
@@ -37,6 +37,8 @@ declare -rA SECRET_PARAMS=(
 )
 readonly EXPORTER_USER=pitchmap_exporter
 readonly BACKUP_DIR="$DEPLOY_DIR/backup"
+readonly ALLOY_CONFIG_FILE="$DEPLOY_DIR/alloy/config.alloy"
+readonly ALLOY_CONTAINER_CONFIG=/etc/alloy/config.alloy
 readonly BACKUP_METRICS_FILE="$DEPLOY_DIR/metrics/backup.prom"
 readonly SYSTEMD_DIR=/etc/systemd/system
 
@@ -188,6 +190,30 @@ SQL
     fi
 }
 
+alloy_config_sum() {
+    compose exec -T alloy cat "$ALLOY_CONTAINER_CONFIG" 2> /dev/null | sha256sum | cut -d' ' -f1
+}
+
+# 배포 워크플로는 새 config.alloy를 mv로 바꿔 넣는다. 그런데 compose는 이 파일 하나만 Alloy 컨테이너에 바인드 마운트하므로,
+# 실행 중인 컨테이너는 바꾸기 전 파일을 계속 본다. 또 compose up은 서비스 정의가 바뀌지 않으면 컨테이너를 다시 만들지 않는다.
+# 그래서 컨테이너 안 설정이 서버의 파일과 다르면 Alloy를 다시 시작한다. 다시 시작하면 Docker가 파일을 새로 마운트한다.
+# 설정이 같으면 다시 시작하지 않는다. 다시 시작하는 동안은 지표와 로그 수집이 잠깐 끊기기 때문이다.
+# 실패해도 서비스는 정상이고 지표만 빠지므로, 배포를 실패로 만들지 않고 로그만 남긴다.
+sync_alloy_config() {
+    local expected actual
+    expected="$(sha256sum < "$ALLOY_CONFIG_FILE" | cut -d' ' -f1)"
+    actual="$(alloy_config_sum || true)"
+    if [[ "$actual" == "$expected" ]]; then
+        log "Alloy 설정 확인 완료"
+        return
+    fi
+    if compose restart alloy > /dev/null 2>&1 && [[ "$(alloy_config_sum || true)" == "$expected" ]]; then
+        log "Alloy 설정이 바뀌어 Alloy를 다시 시작했다"
+    else
+        log "Alloy에 새 설정을 적용하지 못했다. 서비스는 정상이고 지표·로그 수집만 옛 설정으로 돈다"
+    fi
+}
+
 # 매일 DB를 백업하는 systemd 타이머를 설치하거나 갱신한다. 파일은 배포 워크플로가 이 커밋의 deploy/backup/에서 받아 둔다.
 # 백업 결과 지표가 아직 없으면(처음 설치) 백업을 바로 한 번 실행해서, 다음 날 새벽까지 '백업 없음' 알림이 울리지 않게 한다.
 # 실패해도 서비스는 정상이므로 배포를 실패로 만들지 않고 로그만 남긴다. 백업이 멈추면 Grafana 알림이 따로 알린다.
@@ -234,6 +260,7 @@ main() {
     if start "$tag"; then
         echo "$tag" > "$LAST_TAG_FILE"
         ensure_exporter_user
+        sync_alloy_config
         install_backup_timer
         # 사흘 넘게 쓰지 않은 이미지를 지워 디스크를 확보한다. 되돌릴 이미지가 지워져도 GHCR에서 다시 받는다.
         docker image prune -af --filter "until=72h" > /dev/null
