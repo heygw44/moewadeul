@@ -50,3 +50,25 @@ jobs:
           path: build/reports/jacoco/test/
           retention-days: 14
           if-no-files-found: warn
+
+  # 운영 Caddy 이미지는 web/을 npm ci로 설치해서 빌드한다. 그래서 같은 명령을 PR에서도 돌려, 의존성 충돌이나
+  # 타입 오류가 배포 단계가 아니라 PR 단계에서 드러나게 한다(#262). 카카오 키 없이도 빌드는 끝난다.
+  web:
+    name: web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
