@@ -1,5 +1,6 @@
 import { loadKakaoMaps } from './kakaoLoader';
 import { createClusterButton, createDraftPin, createSpotPin } from './markers';
+import { mergeClusters } from './mergeClusters';
 import type { SpotPin } from './markers';
 import type { Bounds, ClusterData, LatLng, MapView, SpotMarkerData } from './types';
 
@@ -8,6 +9,11 @@ const CLUSTER_Z_INDEX = 1;
 const PIN_Z_INDEX = 2;
 const SELECTED_PIN_Z_INDEX = 3;
 const DRAFT_PIN_Z_INDEX = 4;
+
+// 묶음 원의 지름이 44px이라, 중심이 이보다 가까우면 원이 겹치거나 맞붙어 숫자를 읽기 어렵다.
+const CLUSTER_MIN_DISTANCE_PX = 48;
+// 합친 위치가 가중 평균으로 옮겨지면 이웃 묶음과 다시 가까워질 수 있어서, 더 합칠 것이 없을 때까지 몇 번 되풀이한다.
+const CLUSTER_MERGE_MAX_PASSES = 4;
 
 interface DrawnPin {
   overlay: kakao.maps.CustomOverlay;
@@ -55,6 +61,21 @@ export async function createMapView(
   let selectedId: number | null = null;
   let terrainOn = false;
   let destroyed = false;
+
+  function mergeOverlappingClusters(clusters: ClusterData[]): ClusterData[] {
+    const projection = map.getProjection();
+    let merged = clusters;
+    for (let pass = 0; pass < CLUSTER_MERGE_MAX_PASSES; pass++) {
+      const placed = merged.map((cluster) => {
+        const point = projection.containerPointFromCoords(toKakaoLatLng(cluster.position));
+        return { cluster, x: point.x, y: point.y };
+      });
+      const next = mergeClusters(placed, CLUSTER_MIN_DISTANCE_PX);
+      if (next.length === merged.length) return next;
+      merged = next;
+    }
+    return merged;
+  }
 
   function clearOverlays() {
     for (const { overlay } of pins.values()) overlay.setMap(null);
@@ -112,7 +133,7 @@ export async function createMapView(
         pins.set(marker.id, { overlay, pin });
       }
 
-      for (const cluster of clusters) {
+      for (const cluster of mergeOverlappingClusters(clusters)) {
         clusterOverlays.push(
           new kakao.maps.CustomOverlay({
             map,
