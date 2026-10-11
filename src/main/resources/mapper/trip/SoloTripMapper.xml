@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pitchmap.trip.infra.SoloTripMapper">
+
+    <!-- 장소 상태로는 거르지 않는다. 장소가 숨겨져도 회원 본인의 기록이라서 보여 준다. -->
+    <select id="selectUpcomingByMember" resultType="com.pitchmap.trip.infra.SoloTripRow">
+        SELECT t.id AS solo_trip_id,
+               t.spot_id AS spot_id,
+               s.name AS spot_name,
+               s.type AS spot_type,
+               t.start_date AS start_date,
+               t.end_date AS end_date
+        FROM solo_trip t
+        JOIN spot s ON s.id = t.spot_id
+        WHERE t.member_id = #{memberId}
+          AND t.end_date &gt; #{today}
+        ORDER BY t.start_date, t.id
+    </select>
+</mapper>
