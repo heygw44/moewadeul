@@ -78,6 +78,64 @@ declare namespace kakao.maps {
 
   // 스크립트 주소에 autoload=false를 붙여 불러왔을 때, SDK 나머지 파일을 받은 뒤 callback을 부른다.
   function load(callback: () => void): void;
+
+  // 스크립트 주소에 libraries=services를 붙여야 들어오는 장소 검색·주소 변환 API다.
+  // 좌표는 문자열로 오고, x가 경도, y가 위도다.
+  namespace services {
+    type Status = 'OK' | 'ZERO_RESULT' | 'ERROR';
+
+    const Status: {
+      readonly OK: Status;
+      readonly ZERO_RESULT: Status;
+      readonly ERROR: Status;
+    };
+
+    interface RegionAddress {
+      region_1depth_name: string;
+      region_2depth_name: string;
+      region_3depth_name: string;
+    }
+
+    interface AddressResult {
+      address_name: string;
+      address_type: 'REGION' | 'ROAD' | 'REGION_ADDR' | 'ROAD_ADDR';
+      x: string;
+      y: string;
+      address: RegionAddress | null;
+    }
+
+    interface PlaceResult {
+      place_name: string;
+      address_name: string;
+      road_address_name: string;
+      x: string;
+      y: string;
+    }
+
+    interface AddressSearchOptions {
+      size?: number;
+    }
+
+    interface KeywordSearchOptions {
+      size?: number;
+    }
+
+    class Geocoder {
+      addressSearch(
+        address: string,
+        callback: (result: AddressResult[], status: Status) => void,
+        options?: AddressSearchOptions,
+      ): void;
+    }
+
+    class Places {
+      keywordSearch(
+        keyword: string,
+        callback: (result: PlaceResult[], status: Status) => void,
+        options?: KeywordSearchOptions,
+      ): void;
+    }
+  }
 }
 
 // 스크립트를 불러오기 전에는 전역 kakao가 없으므로 window에서 있는지 먼저 확인한다.

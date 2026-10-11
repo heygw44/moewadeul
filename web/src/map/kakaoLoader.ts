@@ -75,7 +75,8 @@ function startLoading(): Promise<void> {
     }
 
     script = document.createElement('script');
-    script.src = `${SDK_URL}?appkey=${encodeURIComponent(key)}&autoload=false`;
+    // 지역 검색이 주소 검색과 키워드 장소 검색을 쓰므로 services 라이브러리를 함께 받는다.
+    script.src = `${SDK_URL}?appkey=${encodeURIComponent(key)}&libraries=services&autoload=false`;
     script.async = true;
     script.addEventListener('load', finishWithSdk);
     script.addEventListener('error', fail);
