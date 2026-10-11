@@ -24,7 +24,8 @@ export type IconName =
   | 'image'
   | 'arrowUp'
   | 'eye'
-  | 'eyeOff';
+  | 'eyeOff'
+  | 'menu';
 
 export const ICON_PATHS: Record<IconName, string> = {
   tent:
@@ -56,6 +57,7 @@ export const ICON_PATHS: Record<IconName, string> = {
   chevronLeft: '<path d="m15 18-6-6 6-6"/>',
   chevronRight: '<path d="m9 18 6-6-6-6"/>',
   close: '<path d="M18 6 6 18"/>' + '<path d="m6 6 12 12"/>',
+  menu: '<path d="M4 6h16"/>' + '<path d="M4 12h16"/>' + '<path d="M4 18h16"/>',
   info: '<circle cx="12" cy="12" r="9"/>' + '<path d="M12 11v5"/>' + '<path d="M12 8h.01"/>',
   bell:
     '<path d="M6 17V11a6 6 0 0 1 12 0v6"/>' +
