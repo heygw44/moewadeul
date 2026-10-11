@@ -12,6 +12,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { createMapView } from '../../map/KakaoMap';
 import { MapLoadError } from '../../map/kakaoLoader';
 import type { MapLoadErrorReason } from '../../map/kakaoLoader';
+import type { RegionCandidate } from '../../map/regionSearch';
 import type { LatLng, MapView } from '../../map/types';
 import { BasecampDetailPanel } from '../basecamp/BasecampDetailPanel';
 import { BasecampListPanel } from '../basecamp/BasecampListPanel';
@@ -24,6 +25,7 @@ import { useSession } from '../member/session';
 import { AnnouncementBar } from '../program/AnnouncementBar';
 import { BakjiReportPanel } from './BakjiReportPanel';
 import { MapSafetyNotice } from './MapSafetyNotice';
+import { MapSearchBar } from './MapSearchBar';
 import { SpotDetailPanel } from './SpotDetailPanel';
 import { SpotListRow } from './SpotListRow';
 import { useSpotsInView } from './useSpotsInView';
@@ -198,6 +200,14 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   else if (basecampMode) sheetLabel = '베이스캠프 목록';
   else if (spotId !== undefined) sheetLabel = '장소 상세';
 
+  // 검색한 지역으로 지도를 옮긴다. 장소·베이스캠프 상세를 보고 있었다면 그 지역 목록이 보이도록 목록으로 돌아간다.
+  // 제보나 베이스캠프 열기 중에는 쓰던 폼을 지키려고 화면을 바꾸지 않는다.
+  function moveToRegion(candidate: RegionCandidate) {
+    map?.setCenter(candidate.position, candidate.level);
+    if (basecampId !== undefined) navigate('/basecamps');
+    else if (mode === 'browse' && spotId !== undefined) navigate('/map');
+  }
+
   function retryMap() {
     setMapFailure(null);
     setMapAttempt((value) => value + 1);
@@ -302,6 +312,7 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
                 )}
               </div>
             </div>
+            {map && <MapSearchBar onSelect={moveToRegion} />}
             <MapSafetyNotice />
           </div>
         </div>
