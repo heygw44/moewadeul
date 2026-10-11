@@ -17,6 +17,7 @@ import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { MySoloTripsCard } from '../trip/MySoloTripsCard';
 import { AGE_GROUP_LABELS, GENDER_LABELS, trustLevelBadge } from './memberLabels';
 import { withNext } from './nextPath';
 import { useSession } from './session';
@@ -66,6 +67,7 @@ export function MyPage() {
     <PageLayout title="내 정보" description="계정과 신뢰 단계, 프로필을 관리해요." aside={<ShortcutAside me={me} onLogout={() => void session.logout()} />}>
       <AccountCard me={me} />
       <TrustCard me={me} />
+      <MySoloTripsCard />
       <SelfReportForm me={me} onSaved={() => void session.refresh().catch(() => null)} />
     </PageLayout>
   );
