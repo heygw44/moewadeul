@@ -128,7 +128,7 @@ export function CommunityListPage() {
   const data = current?.data ?? null;
 
   useEffect(() => {
-    document.title = '커뮤니티 · 피치맵';
+    document.title = '커뮤니티 · 뫼와들';
   }, []);
 
   const goTo = (next: Partial<ListQuery>) => navigate(listPath({ ...query, ...next }));

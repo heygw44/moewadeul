@@ -37,7 +37,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   const editPostId = props.mode === 'edit' ? props.postId : null;
 
   useEffect(() => {
-    document.title = props.mode === 'create' ? '글쓰기 · 피치맵' : '글 고치기 · 피치맵';
+    document.title = props.mode === 'create' ? '글쓰기 · 뫼와들' : '글 고치기 · 뫼와들';
   }, [props.mode]);
 
   // 글쓰기는 로그인한 세션으로만 할 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.

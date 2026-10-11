@@ -47,7 +47,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   const nickname = current && 'profile' in current ? current.profile.nickname : null;
 
   useEffect(() => {
-    document.title = nickname ? `${nickname} · 피치맵` : '회원 프로필 · 피치맵';
+    document.title = nickname ? `${nickname} · 뫼와들` : '회원 프로필 · 뫼와들';
   }, [nickname]);
 
   let body: ReactNode;

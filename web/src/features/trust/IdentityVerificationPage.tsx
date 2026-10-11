@@ -50,7 +50,7 @@ export function IdentityVerificationPage() {
   const [result, setResult] = useState<IdentityVerificationResponse | null>(null);
 
   useEffect(() => {
-    document.title = '본인확인 · 피치맵';
+    document.title = '본인확인 · 뫼와들';
   }, []);
 
   // 본인확인은 로그인한 세션으로 하므로, 로그인하지 않았으면 로그인한 뒤 이 화면으로 돌아오게 한다.

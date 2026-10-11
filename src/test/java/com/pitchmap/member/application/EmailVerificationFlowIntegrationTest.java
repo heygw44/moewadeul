@@ -31,7 +31,7 @@ class EmailVerificationFlowIntegrationTest {
 
     private static final String VALID_PASSWORD = "Passw0rd!xyz";
     private static final String REQUEST_IP = "203.0.113.7";
-    private static final String MAIL_SUBJECT = "[피치맵] 이메일 인증 코드";
+    private static final String MAIL_SUBJECT = "[뫼와들] 이메일 인증 코드";
 
     @Autowired
     private MemberSignupService memberSignupService;

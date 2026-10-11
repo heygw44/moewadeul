@@ -60,7 +60,7 @@ export function CompanionReviewsPage() {
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
   useEffect(() => {
-    document.title = '동행 후기 · 피치맵';
+    document.title = '동행 후기 · 뫼와들';
   }, []);
 
   // 동행 후기는 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.

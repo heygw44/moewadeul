@@ -63,7 +63,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
   const loadedTitle = current !== null && 'detail' in current ? current.detail.title : null;
 
   useEffect(() => {
-    document.title = loadedTitle ? `${loadedTitle} · 피치맵` : '공식 행사 · 피치맵';
+    document.title = loadedTitle ? `${loadedTitle} · 뫼와들` : '공식 행사 · 뫼와들';
   }, [loadedTitle]);
 
   const reload = () => setAttempt((value) => value + 1);

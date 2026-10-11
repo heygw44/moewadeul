@@ -34,7 +34,7 @@ export function ProgramListPage() {
   const signedIn = session.status === 'authenticated' && session.me !== null;
 
   useEffect(() => {
-    document.title = '공식 행사 · 피치맵';
+    document.title = '공식 행사 · 뫼와들';
   }, []);
 
   return (

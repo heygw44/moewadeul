@@ -36,7 +36,7 @@ export function MyProgramApplicationsPage() {
   const now = useNow(hasPending);
 
   useEffect(() => {
-    document.title = '내 행사 신청 · 피치맵';
+    document.title = '내 행사 신청 · 뫼와들';
   }, []);
 
   // 내 신청은 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.

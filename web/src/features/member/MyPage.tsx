@@ -46,7 +46,7 @@ export function MyPage() {
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
   useEffect(() => {
-    document.title = '내 정보 · 피치맵';
+    document.title = '내 정보 · 뫼와들';
   }, []);
 
   // 내 정보는 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.

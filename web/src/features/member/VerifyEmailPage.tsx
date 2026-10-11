@@ -41,7 +41,7 @@ export function VerifyEmailPage() {
   const [resendNotice, setResendNotice] = useState<ResendNotice | null>(null);
 
   useEffect(() => {
-    document.title = '이메일 인증 · 피치맵';
+    document.title = '이메일 인증 · 뫼와들';
   }, []);
 
   // 인증 코드는 로그인한 세션으로 확인하므로, 로그인하지 않았으면 로그인한 뒤 이 화면으로 돌아오게 한다.

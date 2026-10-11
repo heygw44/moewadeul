@@ -70,7 +70,7 @@ class NotificationMailIntegrationTest {
         assertThat(mailSender.sent()).hasSize(1);
         MailMessage mail = mailSender.sent().get(0);
         assertThat(mail.to()).isEqualTo(applicant.getEmail());
-        assertThat(mail.subject()).isEqualTo("[피치맵] 합류 승인");
+        assertThat(mail.subject()).isEqualTo("[뫼와들] 합류 승인");
         assertThat(mail.body()).contains("/basecamps/3");
         assertThat(countSentNotifications()).isEqualTo(1);
     }
@@ -90,7 +90,7 @@ class NotificationMailIntegrationTest {
         // then
         assertThat(countNotifications()).isEqualTo(2);
         assertThat(mailSender.sent()).hasSize(1);
-        assertThat(mailSender.sent().get(0).subject()).isEqualTo("[피치맵] 합류 거절");
+        assertThat(mailSender.sent().get(0).subject()).isEqualTo("[뫼와들] 합류 거절");
         assertThat(jdbcTemplate.queryForObject(
                         "SELECT email_sent_at IS NULL FROM notification WHERE type = ?", Boolean.class, APPROVED))
                 .isTrue();

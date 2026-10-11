@@ -5,10 +5,10 @@ import com.pitchmap.common.mail.MailMessage;
 /** 이메일 인증 코드를 담은 메일을 만든다. 코드는 이 메일 본문에만 들어간다. */
 final class EmailVerificationMailFactory {
 
-    static final String SUBJECT = "[피치맵] 이메일 인증 코드";
+    static final String SUBJECT = "[뫼와들] 이메일 인증 코드";
 
     private static final String BODY_TEMPLATE = """
-            안녕하세요, 피치맵입니다.
+            안녕하세요, 뫼와들입니다.
 
             아래 인증 코드를 10분 안에 입력해 주세요.
 

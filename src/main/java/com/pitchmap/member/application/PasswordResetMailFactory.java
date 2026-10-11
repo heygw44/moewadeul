@@ -6,10 +6,10 @@ import com.pitchmap.member.domain.PasswordResetPolicy;
 /** 비밀번호 재설정 링크를 담은 메일을 만든다. 토큰은 이 메일 본문의 링크에만 들어간다. */
 final class PasswordResetMailFactory {
 
-    static final String SUBJECT = "[피치맵] 비밀번호 재설정 안내";
+    static final String SUBJECT = "[뫼와들] 비밀번호 재설정 안내";
 
     private static final String BODY_TEMPLATE = """
-            안녕하세요, 피치맵입니다.
+            안녕하세요, 뫼와들입니다.
 
             아래 링크에서 새 비밀번호를 설정해 주세요.
 

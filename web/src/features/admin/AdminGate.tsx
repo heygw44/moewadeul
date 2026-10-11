@@ -21,7 +21,7 @@ export function AdminPage({ title, current, children }: { title: string; current
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
   useEffect(() => {
-    document.title = `${title} · 관리자 · 피치맵`;
+    document.title = `${title} · 관리자 · 뫼와들`;
   }, [title]);
 
   // 로그인한 뒤 이 화면으로 돌아오게 한다.

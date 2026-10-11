@@ -47,7 +47,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
     <header className={`sticky top-0 z-20 border-b border-contour bg-paper ${className}`}>
       <div className={`mx-auto flex min-h-14 items-center gap-6 px-4 ${fluid ? '' : 'max-w-screen-xl'}`}>
         <Link to="/" className="font-serif text-xl font-semibold text-forest-deep">
-          피치맵
+          뫼와들
         </Link>
 
         <nav aria-label="주 메뉴" className="hidden h-14 items-stretch gap-1 lg:flex">
