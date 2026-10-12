@@ -24,7 +24,7 @@ export function AnnouncementBar() {
   }
 
   return (
-    <div className="shrink-0 border-b border-contour bg-forest-soft text-forest-deep">
+    <div className="shrink-0 border-b border-line bg-accent-soft text-accent-deep">
       <div className="mx-auto flex max-w-screen-xl items-center gap-2 pl-4 pr-1">
         <Link
           to={`/programs/${id}`}
@@ -42,7 +42,7 @@ export function AnnouncementBar() {
           type="button"
           onClick={dismiss}
           aria-label="행사 알림 닫기"
-          className="inline-flex size-11 shrink-0 items-center justify-center rounded-control hover:bg-card"
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-control hover:bg-surface"
         >
           <Icon name="close" size={18} />
         </button>

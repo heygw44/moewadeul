@@ -221,12 +221,12 @@ function NotificationRow({ item, onOpen }: { item: NotificationItem; onOpen: () 
       <button
         type="button"
         onClick={onOpen}
-        className={`flex min-h-11 w-full items-start gap-3 px-4 py-3 text-left ${unread ? 'bg-forest-soft' : 'bg-card hover:bg-paper-deep'}`}
+        className={`flex min-h-11 w-full items-start gap-3 px-4 py-3 text-left ${unread ? 'bg-accent-soft' : 'bg-surface hover:bg-fill'}`}
       >
         <span className="flex w-2 shrink-0 justify-center pt-2">
           {unread && (
             <>
-              <span aria-hidden="true" className="size-2 rounded-control bg-forest" />
+              <span aria-hidden="true" className="size-2 rounded-control bg-accent" />
               <span className="sr-only">안 읽음</span>
             </>
           )}
@@ -331,7 +331,7 @@ function EmailSettingsCard() {
             ))}
           </fieldset>
           {result === 'saved' && (
-            <p role="status" className="text-sm font-semibold text-forest-deep">
+            <p role="status" className="text-sm font-semibold text-accent-deep">
               저장했어요.
             </p>
           )}

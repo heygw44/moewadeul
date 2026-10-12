@@ -78,7 +78,7 @@ export function SpotFilterDialog({ initial, onApply, onClose }: SpotFilterDialog
           />
         </fieldset>
 
-        <div className="flex gap-2 border-t border-contour pt-4">
+        <div className="flex gap-2 border-t border-line pt-4">
           <Button type="button" variant="ghost" className="shrink-0" onClick={() => setDraft(NO_SPOT_FILTERS)}>
             초기화
           </Button>

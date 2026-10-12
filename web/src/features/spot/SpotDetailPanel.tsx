@@ -32,7 +32,7 @@ type DetailResult =
   | { spotId: number; attempt: number; detail: SpotDetail }
   | { spotId: number; attempt: number; error: unknown };
 
-const SECTION_CLASS = 'mt-4 border-t border-contour pt-4';
+const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
 const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
 
 // 단기 예보는 앞에서부터 이만큼만 보여 준다.
@@ -104,12 +104,12 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-contour bg-card px-2">
+      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
         <button
           type="button"
           aria-label="목록으로"
           onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep"
+          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
         >
           <Icon name="chevronLeft" size={24} />
         </button>
@@ -203,7 +203,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
           ) : (
             <Link
               to={`/basecamps/new?spotId=${detail.spotId}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
+              className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill"
             >
               이 장소로 베이스캠프 열기
             </Link>
@@ -218,13 +218,13 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <div className="mt-2 flex flex-wrap gap-2">
           <Link
             to={`/community?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill"
           >
             이 장소 관련 글 보기
           </Link>
           <Link
             to={`/community/new?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill"
           >
             이 장소로 글쓰기
           </Link>
@@ -239,7 +239,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <div className="mt-2">
           <Link
             to={newMemoryPath({ lat: detail.lat, lng: detail.lng }, detail.spotId)}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill"
           >
             발자국 남기기
           </Link>
@@ -354,7 +354,7 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
           {phone && (
             <a
               href={`tel:${phone.replace(/[^\d+]/g, '')}`}
-              className="inline-flex min-h-11 items-center self-start text-forest underline underline-offset-2"
+              className="inline-flex min-h-11 items-center self-start text-accent underline underline-offset-2"
             >
               전화 {phone}
             </a>
@@ -365,7 +365,7 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
                 href={homepageUrl.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center self-start text-forest underline underline-offset-2"
+                className="inline-flex min-h-11 items-center self-start text-accent underline underline-offset-2"
               >
                 홈페이지 {homepageUrl.hostname}
               </a>
@@ -430,7 +430,7 @@ function WeatherSection({ weather }: { weather: Weather | null }) {
               </thead>
               <tbody className="font-mono tabular-nums text-ink">
                 {weather.shortTerm.slice(0, SHORT_TERM_LIMIT).map((forecast) => (
-                  <tr key={forecast.at} className="border-t border-contour">
+                  <tr key={forecast.at} className="border-t border-line">
                     <td className="py-2">{formatKstTime(forecast.at)}</td>
                     <td className="py-2 text-right">{formatValue(forecast.temperature, '°C')}</td>
                     <td className="py-2 text-right">{formatValue(forecast.precipitationProbability, '%')}</td>
@@ -480,7 +480,7 @@ function MidTermTable({ forecasts }: { forecasts: MidTermForecast[] }) {
       </thead>
       <tbody className="tabular-nums text-ink">
         {forecasts.map((forecast) => (
-          <tr key={forecast.date} className="border-t border-contour">
+          <tr key={forecast.date} className="border-t border-line">
             <td className="py-2">{formatLocalDate(forecast.date)}</td>
             <td className="py-2 text-right font-mono">
               {formatValue(forecast.minTemperature, '°')}/{formatValue(forecast.maxTemperature, '°')}

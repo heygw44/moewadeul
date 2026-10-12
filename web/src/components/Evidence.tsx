@@ -18,7 +18,7 @@ export function Evidence({ items }: EvidenceProps) {
       {items.map((item, index) => (
         <div
           key={`${index}-${item.label}`}
-          className="flex justify-between gap-4 border-t border-contour py-2 first:border-t-0"
+          className="flex justify-between gap-4 border-t border-line py-2 first:border-t-0"
         >
           <dt className="shrink-0 text-sm text-ink-muted">{item.label}</dt>
           <dd className="min-w-0 text-right font-mono text-sm tabular-nums text-ink break-words">{item.value}</dd>

@@ -1,7 +1,7 @@
 import type { BakjiReportReason, GroundType, PublicFacilities, SignalLevel, SpotType } from '../../api/types';
 import type { IconName } from '../../components/iconPaths';
 
-type SpotTypeTone = 'sea' | 'forest' | 'earth';
+type SpotTypeTone = 'info' | 'accent' | 'bakji';
 
 type SpotTypeMeta = {
   label: string;
@@ -12,9 +12,9 @@ type SpotTypeMeta = {
 };
 
 export const SPOT_TYPE_META: Record<SpotType, SpotTypeMeta> = {
-  CAMPSITE: { label: '공공 야영장', icon: 'tent', tone: 'sea', tileClass: 'bg-sea-soft text-sea' },
-  FOREST: { label: '자연휴양림', icon: 'tree', tone: 'forest', tileClass: 'bg-forest-soft text-forest-deep' },
-  BAKJI: { label: '박지', icon: 'backpack', tone: 'earth', tileClass: 'bg-earth-soft text-earth-strong' },
+  CAMPSITE: { label: '공공 야영장', icon: 'tent', tone: 'info', tileClass: 'bg-info-soft text-info' },
+  FOREST: { label: '자연휴양림', icon: 'tree', tone: 'accent', tileClass: 'bg-accent-soft text-accent-deep' },
+  BAKJI: { label: '박지', icon: 'backpack', tone: 'bakji', tileClass: 'bg-bakji-soft text-bakji-strong' },
 };
 
 export const SIGNAL_LEVEL_LABELS: Record<SignalLevel, string> = {

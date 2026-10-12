@@ -130,7 +130,7 @@ function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
     <Link
       to={`/memories/${item.memoryId}`}
       aria-label={label}
-      className="group relative block aspect-square overflow-hidden bg-paper-deep focus-visible:outline-offset-[-2px]"
+      className="group relative block aspect-square overflow-hidden bg-fill focus-visible:outline-offset-[-2px]"
     >
       {cover ? (
         <img
@@ -141,7 +141,7 @@ function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
           className="h-full w-full object-cover"
         />
       ) : (
-        <div className="flex h-full w-full flex-col gap-1 border border-contour bg-card p-2">
+        <div className="flex h-full w-full flex-col gap-1 border border-line bg-surface p-2">
           {item.excerpt && <p className="line-clamp-4 break-keep text-sm text-ink">{item.excerpt}</p>}
           <p className="mt-auto text-xs text-ink-muted">{formatLocalDate(item.visitedDate)}</p>
         </div>

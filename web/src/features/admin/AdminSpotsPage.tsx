@@ -93,8 +93,8 @@ function SpotReview() {
             }}
             className={`inline-flex min-h-11 items-center rounded-control border px-4 font-semibold ${
               item.status === tab
-                ? 'border-forest bg-forest-soft text-forest-deep'
-                : 'border-ink-subtle bg-card text-ink hover:bg-paper-deep'
+                ? 'border-accent bg-accent-soft text-accent-deep'
+                : 'border-ink-subtle bg-surface text-ink hover:bg-fill'
             }`}
           >
             {item.label}
@@ -171,7 +171,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-control border border-contour bg-card p-4">
+    <li className="flex flex-col gap-3 rounded-control border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.name}</h3>
         <StatusText tone={meta.tone}>{meta.label}</StatusText>
@@ -204,7 +204,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
           <p className="text-sm font-medium text-ink">최근 신고</p>
           <ul className="flex flex-col gap-2">
             {item.recentReports.map((report, index) => (
-              <li key={index} className="rounded-control bg-paper-deep px-3 py-2 text-sm">
+              <li key={index} className="rounded-control bg-fill px-3 py-2 text-sm">
                 <p className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-ink">{REPORT_REASON_LABELS[report.reason] ?? report.reason}</span>
                   <span className="font-mono tabular-nums text-ink-muted">{formatKstDateTime(report.createdAt)}</span>
@@ -225,7 +225,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       <div className="flex flex-wrap items-center gap-2">
         <Link
           to={`/spots/${item.spotId}`}
-          className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
+          className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-surface px-4 font-semibold text-ink hover:bg-fill"
         >
           장소 보기
         </Link>

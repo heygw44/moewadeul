@@ -69,14 +69,14 @@ function PreviewPin({ kind, warning = false, selected = false, style }: PreviewP
 }
 
 const CHIP_CLASS =
-  'inline-flex min-h-9 items-center gap-1.5 rounded-control border border-contour bg-card px-2.5 text-sm font-semibold';
+  'inline-flex min-h-9 items-center gap-1.5 rounded-control border border-line bg-surface px-2.5 text-sm font-semibold';
 
 type PreviewSpot = { name: string; kind: MarkerKind; warning?: boolean; note?: ReactNode };
 
 function PreviewSpotRow({ name, kind, warning = false, note }: PreviewSpot) {
   const meta = SPOT_TYPE_META[kind];
   return (
-    <span className="flex min-h-14 items-center gap-3 border-b border-contour px-4 py-2.5 last:border-b-0">
+    <span className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0">
       <span className={`flex size-8 shrink-0 items-center justify-center rounded-control ${meta.tileClass}`}>
         <Icon name={meta.icon} size={18} />
       </span>
@@ -100,7 +100,7 @@ function PreviewSpotRow({ name, kind, warning = false, note }: PreviewSpot) {
 // 첫 화면 오른쪽의 지도 미리보기. 옅은 회색 바탕에 핀 몇 개와 묶음, 아래에 장소 목록 시트를 겹친다.
 export function HeroPreview() {
   return (
-    <PreviewFrame className="relative h-[22rem] overflow-hidden rounded-sheet border border-contour bg-paper-deep sm:h-[26rem]">
+    <PreviewFrame className="relative h-[22rem] overflow-hidden rounded-sheet border border-line bg-fill sm:h-[26rem]">
       <span className="absolute left-3 top-3 flex gap-2">
         <span className={`${CHIP_CLASS} text-ink`}>
           <BrandMark />
@@ -111,7 +111,7 @@ export function HeroPreview() {
           <Icon name="backpack" size={16} />
           박지 제보
         </span>
-        <span className={`${CHIP_CLASS} border-forest bg-forest-soft text-forest-deep`}>
+        <span className={`${CHIP_CLASS} border-accent bg-accent-soft text-accent-deep`}>
           <Icon name="terrain" size={16} />
           지형
         </span>
@@ -128,11 +128,11 @@ export function HeroPreview() {
         12
       </span>
 
-      <span className="absolute inset-x-3 bottom-0 flex flex-col rounded-t-sheet border border-b-0 border-contour bg-card shadow-raise">
+      <span className="absolute inset-x-3 bottom-0 flex flex-col rounded-t-sheet border border-b-0 border-line bg-surface shadow-raise">
         <span className="flex h-7 items-center justify-center">
           <span className="h-1 w-9 rounded-control bg-ink-subtle" />
         </span>
-        <span className="border-b border-contour px-4 pb-2 text-lg font-semibold text-ink">
+        <span className="border-b border-line px-4 pb-2 text-lg font-semibold text-ink">
           이 지역 장소 <span className="tabular-nums">17곳</span>
         </span>
         <PreviewSpotRow name="물소리 계곡 위 평지" kind="BAKJI" />
@@ -145,7 +145,7 @@ export function HeroPreview() {
 // 경고가 뜬 박지의 상세 일부. 실제 공원 경계 경고 컴포넌트와, 베이스캠프 열기가 막힌 모습을 그대로 보여 준다.
 export function WarningPreview() {
   return (
-    <PreviewFrame className="flex flex-col gap-4 rounded-sheet border border-contour bg-card p-4 sm:p-5">
+    <PreviewFrame className="flex flex-col gap-4 rounded-sheet border border-line bg-surface p-4 sm:p-5">
       <span className="flex flex-col gap-1.5">
         <span className="text-lg font-semibold text-ink">능선 끝 바위 쉼터</span>
         <MetaLine
@@ -161,9 +161,9 @@ export function WarningPreview() {
       <ParkWarningNotice
         warning={{ warned: true, areaName: '설악산국립공원', source: 'KDPA', sourceDate: '2025-12-31' }}
       />
-      <span className="flex flex-col gap-2 border-t border-contour pt-4">
+      <span className="flex flex-col gap-2 border-t border-line pt-4">
         <span className="text-lg font-semibold text-ink">베이스캠프</span>
-        <span className="inline-flex min-h-11 items-center justify-center self-start rounded-control bg-paper-deep px-4 text-base font-semibold text-ink-muted">
+        <span className="inline-flex min-h-11 items-center justify-center self-start rounded-control bg-fill px-4 text-base font-semibold text-ink-muted">
           이 장소로 베이스캠프 열기
         </span>
         <span className="text-sm text-ink-muted">공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요.</span>
@@ -176,7 +176,7 @@ export function WarningPreview() {
 export function TrustPreview() {
   const badge = trustLevelBadge(2);
   return (
-    <PreviewFrame className="flex flex-col gap-4 rounded-sheet border border-contour bg-card p-4 sm:p-5">
+    <PreviewFrame className="flex flex-col gap-4 rounded-sheet border border-line bg-surface p-4 sm:p-5">
       <span className="flex flex-col gap-3">
         <span className="flex flex-wrap items-center gap-2">
           <span className="text-lg font-semibold text-ink">솔바람</span>
@@ -203,8 +203,8 @@ export function TrustPreview() {
 // 흐름 단계마다 붙는 작은 조각들이다.
 export function StepSpotFragment() {
   return (
-    <PreviewFrame caption={false} className="overflow-hidden rounded-control border border-contour bg-card">
-      <PreviewSpotRow name="솔숲 야영장" kind="CAMPSITE" note={<StatusText tone="forest">베이스캠프 2</StatusText>} />
+    <PreviewFrame caption={false} className="overflow-hidden rounded-control border border-line bg-surface">
+      <PreviewSpotRow name="솔숲 야영장" kind="CAMPSITE" note={<StatusText tone="accent">베이스캠프 2</StatusText>} />
     </PreviewFrame>
   );
 }
@@ -213,11 +213,11 @@ export function StepBasecampFragment() {
   return (
     <PreviewFrame
       caption={false}
-      className="flex flex-col gap-2 rounded-control border border-contour bg-card px-4 py-3"
+      className="flex flex-col gap-2 rounded-control border border-line bg-surface px-4 py-3"
     >
       <span className="flex items-center justify-between gap-2">
         <span className="truncate text-base text-ink">주말 1박, 솔숲 야영장</span>
-        <StatusText tone="forest">모집 중</StatusText>
+        <StatusText tone="accent">모집 중</StatusText>
       </span>
       <span className="flex justify-between gap-2 text-sm text-ink-muted">
         <span>11월 7일 (토) · 1박</span>
@@ -233,11 +233,11 @@ export function StepProgramFragment() {
   return (
     <PreviewFrame
       caption={false}
-      className="flex flex-col gap-2 rounded-control border border-contour bg-card px-4 py-3"
+      className="flex flex-col gap-2 rounded-control border border-line bg-surface px-4 py-3"
     >
       <span className="flex items-center justify-between gap-2">
         <span className="truncate text-base text-ink">가을 능선 백패킹</span>
-        <StatusText tone="forest">신청 중</StatusText>
+        <StatusText tone="accent">신청 중</StatusText>
       </span>
       <span className="flex justify-between gap-2 text-sm text-ink-muted">
         <span>30,000원</span>

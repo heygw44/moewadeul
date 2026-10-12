@@ -53,7 +53,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
       breadcrumb={
         <Link
           to={editPostId === null ? '/community' : `/community/${editPostId}`}
-          className="inline-flex min-h-11 items-center gap-1 text-forest underline underline-offset-2"
+          className="inline-flex min-h-11 items-center gap-1 text-accent underline underline-offset-2"
         >
           <Icon name="chevronLeft" size={16} />
           {editPostId === null ? '커뮤니티' : '글로 돌아가기'}
@@ -68,7 +68,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   if (session.status !== 'authenticated' || !session.me) {
     return layout(
       showSkeleton ? (
-        <div className="rounded-control border border-contour bg-card p-5">
+        <div className="rounded-control border border-line bg-surface p-5">
           <Skeleton className="h-40 w-full" />
         </div>
       ) : null,
@@ -76,7 +76,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   }
   if (session.me.status === 'UNVERIFIED') {
     return layout(
-      <div className="rounded-control border border-contour bg-card p-5">
+      <div className="rounded-control border border-line bg-surface p-5">
         <Notice tone="warning" title="이메일 인증을 마치면 글을 쓸 수 있어요">
           <div className="flex flex-col gap-3">
             <p>받은 인증 코드를 입력하면 바로 쓸 수 있어요.</p>
@@ -103,7 +103,7 @@ function WriteAside() {
         <ul className="list-disc pl-5">
           <li>
             동행 모집은{' '}
-            <Link to="/basecamps" className="font-semibold text-forest underline underline-offset-2">
+            <Link to="/basecamps" className="font-semibold text-accent underline underline-offset-2">
               베이스캠프
             </Link>
             에서 해요.
@@ -158,7 +158,7 @@ function EditLoader({ postId, myMemberId }: { postId: number; myMemberId: number
 
   if (result === null || notMine) {
     return showSkeleton ? (
-      <div className="rounded-control border border-contour bg-card p-5">
+      <div className="rounded-control border border-line bg-surface p-5">
         <Skeleton className="h-64 w-full" />
       </div>
     ) : null;
@@ -310,7 +310,7 @@ function PostForm(props: PostFormProps) {
       noValidate
       onSubmit={handleSubmit}
       aria-label={mode === 'create' ? '글쓰기' : '글 수정'}
-      className="divide-y divide-contour rounded-control border border-contour bg-card"
+      className="divide-y divide-line rounded-control border border-line bg-surface"
     >
       {formError && (
         <div role="alert" className="px-5 py-5">
@@ -385,7 +385,7 @@ function PostForm(props: PostFormProps) {
         )}
       </div>
 
-      <div className="sticky bottom-(--bottom-nav-h) flex flex-wrap items-start justify-end gap-2 bg-card px-5 py-4 lg:static">
+      <div className="sticky bottom-(--bottom-nav-h) flex flex-wrap items-start justify-end gap-2 bg-surface px-5 py-4 lg:static">
         <Link to={cancelTarget} className={SECONDARY_LINK_CLASS}>
           취소
         </Link>

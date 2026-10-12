@@ -47,7 +47,7 @@ const REJOIN_OPTIONS: ReadonlyArray<ChoiceOption<'YES' | 'NO'>> = [
 ];
 
 const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill';
 
 function tabFromSearch(search: string): Tab {
   return new URLSearchParams(search).get('tab') === 'received' ? 'received' : 'pending';
@@ -126,7 +126,7 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
     return (
       <div className="flex flex-col items-start gap-1">
         <p className="text-base text-ink">본인확인을 마치면 동행 후기를 쓸 수 있어요.</p>
-        <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-2">
+        <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2">
           본인확인하기
         </Link>
       </div>
@@ -151,7 +151,7 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
   return (
     <>
       {done && (
-        <p role="status" className="text-sm font-semibold text-forest-deep">
+        <p role="status" className="text-sm font-semibold text-accent-deep">
           {done}
         </p>
       )}
@@ -171,11 +171,11 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
               {review.targets.map((target) => (
                 <li
                   key={target.memberId}
-                  className="flex items-center justify-between gap-2 border-t border-contour py-1 first:border-t-0"
+                  className="flex items-center justify-between gap-2 border-t border-line py-1 first:border-t-0"
                 >
                   <Link
                     to={`/members/${target.memberId}`}
-                    className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
+                    className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
                   >
                     {target.nickname}
                   </Link>
@@ -382,11 +382,11 @@ function ReceivedTab() {
               <div className="flex flex-wrap items-center gap-2">
                 <Link
                   to={`/members/${item.reviewer.memberId}`}
-                  className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
+                  className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
                 >
                   {item.reviewer.nickname}
                 </Link>
-                <StatusText tone={item.rejoinWanted ? 'forest' : 'neutral'}>
+                <StatusText tone={item.rejoinWanted ? 'accent' : 'neutral'}>
                   {item.rejoinWanted ? '다시 동행하고 싶어요' : '다시 동행은 아쉬워요'}
                 </StatusText>
               </div>
@@ -405,7 +405,7 @@ function ReceivedTab() {
             <section
               // 공개 전 후기는 ID가 없고, 한 베이스캠프에서 여러 개가 올 수 있어서 순서로 구분한다.
               key={`sealed-${item.basecampId}-${index}`}
-              className="flex flex-col gap-2 rounded-control border border-contour bg-card p-5"
+              className="flex flex-col gap-2 rounded-control border border-line bg-surface p-5"
             >
               <p className="text-base text-ink">내 후기를 쓰면 상대 후기를 볼 수 있어요.</p>
               <Link to={`/basecamps/${item.basecampId}`} className={`${LINK_BUTTON_CLASS} self-start`}>

@@ -16,8 +16,8 @@ export function MemoryGrid({ items, selectedId }: { items: MemoryCellItem[]; sel
             <Link
               to={`/memories/${item.id}`}
               aria-current={selected ? 'true' : undefined}
-              className={`block aspect-square w-full overflow-hidden rounded-control border bg-card ${
-                selected ? 'border-forest ring-2 ring-forest' : 'border-contour'
+              className={`block aspect-square w-full overflow-hidden rounded-control border bg-surface ${
+                selected ? 'border-accent ring-2 ring-accent' : 'border-line'
               }`}
             >
               {item.thumbnailUrl ? (

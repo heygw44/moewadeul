@@ -20,7 +20,7 @@ type LoginField = 'email' | 'password';
 type FormError = { message: string; detail?: string };
 
 const FOOTER_LINK_CLASS =
-  'inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-4 hover:text-forest-strong';
+  'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
 
 // 이메일 인증을 마치지 않은 회원은 로그인은 되지만 인증 코드 화면부터 거친다.
 // 인증 코드 화면에서 로그인하러 왔다면 next가 이미 그 화면이라서 그대로 돌려보낸다.

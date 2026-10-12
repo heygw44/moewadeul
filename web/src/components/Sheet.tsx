@@ -160,7 +160,7 @@ export function Sheet({ snap, onSnapChange, header, children, label, aboveBottom
       onKeyDown={handleKeyDown}
       style={dragging ? { height: `${dragHeight}px` } : undefined}
       className={[
-        'fixed inset-x-0 z-10 flex flex-col rounded-t-sheet border-t border-contour bg-card shadow-raise',
+        'fixed inset-x-0 z-10 flex flex-col rounded-t-sheet border-t border-line bg-surface shadow-raise',
         aboveBottomNav ? 'bottom-(--bottom-nav-h)' : 'bottom-0',
         dragging
           ? 'transition-none'
@@ -180,7 +180,7 @@ export function Sheet({ snap, onSnapChange, header, children, label, aboveBottom
       >
         <span aria-hidden="true" className="h-1 w-9 rounded-control bg-ink-subtle" />
       </button>
-      {header && <div className="shrink-0 border-b border-contour px-4 pb-3 lg:pt-4">{header}</div>}
+      {header && <div className="shrink-0 border-b border-line px-4 pb-3 lg:pt-4">{header}</div>}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
     </section>
   );

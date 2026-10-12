@@ -146,7 +146,7 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
   } else if (session.me.status === 'UNVERIFIED') {
     body = (
       <Notice tone="warning" title="이메일 인증을 마치면 베이스캠프를 열 수 있어요">
-        <Link to="/verify-email" className="inline-flex min-h-11 items-center text-forest underline underline-offset-2">
+        <Link to="/verify-email" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
           이메일 인증하러 가기
         </Link>
       </Notice>
@@ -157,7 +157,7 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
         <p>함께 가는 사람의 안전을 위해 본인확인을 마친 성인만 열 수 있어요.</p>
         <Link
           to="/identity-verification"
-          className="inline-flex min-h-11 items-center text-forest underline underline-offset-2"
+          className="inline-flex min-h-11 items-center text-accent underline underline-offset-2"
         >
           본인확인하러 가기
         </Link>
@@ -169,12 +169,12 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-contour bg-card px-2">
+      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
         <button
           type="button"
           aria-label="장소로 돌아가기"
           onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep"
+          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
         >
           <Icon name="chevronLeft" size={24} />
         </button>
@@ -366,7 +366,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
         error={fieldErrors.capacity}
       />
 
-      <fieldset className="flex min-w-0 flex-col gap-3 rounded-control border border-contour p-3">
+      <fieldset className="flex min-w-0 flex-col gap-3 rounded-control border border-line p-3">
         <legend className="px-1 text-sm font-medium text-ink">합류 조건 (선택)</legend>
         <ChoiceGroup
           legend="최소 신뢰 단계"

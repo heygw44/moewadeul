@@ -27,7 +27,7 @@ import { useSession } from './session';
 type SignupField = 'email' | 'password' | 'passwordConfirm' | 'nickname';
 
 const FOOTER_LINK_CLASS =
-  'inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-4 hover:text-forest-strong';
+  'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
 
 // 서버가 특정 입력란 때문에 거절한 오류는 그 입력란 아래에 보여 준다.
 const FIELD_BY_CODE: Record<string, SignupField> = {

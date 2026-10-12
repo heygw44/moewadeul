@@ -18,8 +18,8 @@ export const GENDER_LABELS: Record<SelfGender, string> = {
 // 신뢰 단계 배지. 0은 이메일 인증, 1은 본인확인, 2는 동행 기록까지 쌓인 신뢰 회원이다.
 const TRUST_LEVEL_BADGES: ReadonlyArray<{ label: string; tone: StatusTone; icon?: IconName }> = [
   { label: '이메일 인증', tone: 'neutral' },
-  { label: '본인확인', tone: 'sea', icon: 'check' },
-  { label: '신뢰 회원', tone: 'forest' },
+  { label: '본인확인', tone: 'info', icon: 'check' },
+  { label: '신뢰 회원', tone: 'accent' },
 ];
 
 export function trustLevelBadge(level: number): { label: string; tone: StatusTone; icon?: IconName } {

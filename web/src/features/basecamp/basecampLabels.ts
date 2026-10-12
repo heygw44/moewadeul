@@ -5,9 +5,9 @@ import { AGE_GROUP_LABELS, GENDER_LABELS } from '../member/memberLabels';
 type StatusMeta = { label: string; tone: StatusTone };
 
 export const BASECAMP_STATUS_META: Record<BasecampStatus, StatusMeta> = {
-  RECRUITING: { label: '모집 중', tone: 'forest' },
+  RECRUITING: { label: '모집 중', tone: 'accent' },
   CLOSED: { label: '모집 마감', tone: 'neutral' },
-  CONFIRMED: { label: '확정', tone: 'sea' },
+  CONFIRMED: { label: '확정', tone: 'info' },
   COMPLETED: { label: '완료', tone: 'neutral' },
   CANCELED: { label: '취소', tone: 'neutral' },
 };

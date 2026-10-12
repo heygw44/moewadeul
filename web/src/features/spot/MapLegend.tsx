@@ -28,19 +28,19 @@ export function MapLegend() {
   }
 
   return (
-    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col rounded-control border border-contour bg-card text-ink lg:bottom-4">
+    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col rounded-control border border-line bg-surface text-ink lg:bottom-4">
       <button
         type="button"
         onClick={toggle}
         aria-expanded={open}
         aria-controls={listId}
-        className="inline-flex min-h-11 items-center gap-1.5 px-3 text-sm font-semibold hover:bg-paper-deep"
+        className="inline-flex min-h-11 items-center gap-1.5 px-3 text-sm font-semibold hover:bg-fill"
       >
         범례
         <Icon name={open ? 'chevronLeft' : 'chevronRight'} size={16} className="shrink-0 text-ink-muted" />
       </button>
       {open && (
-        <ul id={listId} className="flex flex-col gap-1.5 border-t border-contour px-3 pb-2.5 pt-2">
+        <ul id={listId} className="flex flex-col gap-1.5 border-t border-line px-3 pb-2.5 pt-2">
           {LEGEND_KINDS.map((kind) => {
             const style = KIND_STYLE[kind];
             return (

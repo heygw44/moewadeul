@@ -31,7 +31,7 @@ export function Pagination({ page, totalPages, onChange, label = '페이지' }: 
         aria-label="이전 페이지"
         disabled={current <= 1}
         onClick={() => onChange(current - 1)}
-        className={`${BUTTON_CLASS} border-transparent text-ink hover:bg-paper-deep`}
+        className={`${BUTTON_CLASS} border-transparent text-ink hover:bg-fill`}
       >
         <Icon name="chevronLeft" size={18} />
       </button>
@@ -46,7 +46,7 @@ export function Pagination({ page, totalPages, onChange, label = '페이지' }: 
             BUTTON_CLASS,
             number === page
               ? 'border-ink bg-ink font-semibold text-white'
-              : 'border-transparent text-ink hover:bg-paper-deep',
+              : 'border-transparent text-ink hover:bg-fill',
           ].join(' ')}
         >
           {number}
@@ -57,7 +57,7 @@ export function Pagination({ page, totalPages, onChange, label = '페이지' }: 
         aria-label="다음 페이지"
         disabled={current >= totalPages}
         onClick={() => onChange(current + 1)}
-        className={`${BUTTON_CLASS} border-transparent text-ink hover:bg-paper-deep`}
+        className={`${BUTTON_CLASS} border-transparent text-ink hover:bg-fill`}
       >
         <Icon name="chevronRight" size={18} />
       </button>

@@ -26,7 +26,7 @@ export function Checkbox({ label, error, hint, id, className, 'aria-describedby'
           type="checkbox"
           aria-invalid={error ? true : undefined}
           aria-describedby={describedByIds}
-          className="size-5 shrink-0 accent-forest"
+          className="size-5 shrink-0 accent-accent"
           {...rest}
         />
         {label}

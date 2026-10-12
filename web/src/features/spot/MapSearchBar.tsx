@@ -111,7 +111,7 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving }: MapSearchBarProp
             aria-label="지역 검색"
             aria-busy={state.status === 'loading' || undefined}
             disabled={state.status === 'loading'}
-            className="inline-flex size-11 items-center justify-center text-ink hover:text-forest disabled:text-ink-muted"
+            className="inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted"
           >
             <Icon name="search" size={20} />
           </button>
@@ -121,14 +121,14 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving }: MapSearchBarProp
       {state.status === 'candidates' && (
         <ul
           aria-label="지역 후보"
-          className="absolute inset-x-0 top-full z-20 mt-1 flex flex-col rounded-control border border-contour bg-card shadow-raise"
+          className="absolute inset-x-0 top-full z-20 mt-1 flex flex-col rounded-control border border-line bg-surface shadow-raise"
         >
           {state.candidates.map((candidate, index) => (
-            <li key={`${candidate.name}-${index}`} className="border-b border-contour last:border-b-0">
+            <li key={`${candidate.name}-${index}`} className="border-b border-line last:border-b-0">
               <button
                 type="button"
                 onClick={() => choose(candidate)}
-                className="flex min-h-11 w-full flex-col items-start justify-center px-3 py-2 text-left hover:bg-paper-deep"
+                className="flex min-h-11 w-full flex-col items-start justify-center px-3 py-2 text-left hover:bg-fill"
               >
                 <span className="text-base text-ink">{candidate.name}</span>
                 {candidate.detail && <span className="text-sm text-ink-muted">{candidate.detail}</span>}
@@ -141,7 +141,7 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving }: MapSearchBarProp
       {(state.status === 'empty' || state.status === 'error') && (
         <p
           role="status"
-          className="absolute inset-x-0 top-full z-20 mt-1 rounded-control border border-contour bg-card px-3 py-2 text-sm text-ink shadow-raise"
+          className="absolute inset-x-0 top-full z-20 mt-1 rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink shadow-raise"
         >
           {state.status === 'empty'
             ? `'${state.keyword}' 검색 결과가 없어요. 다른 지역 이름이나 주소로 찾아 주세요.`

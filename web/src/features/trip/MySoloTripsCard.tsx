@@ -57,7 +57,7 @@ export function MySoloTripsCard() {
       ) : current.trips.length === 0 ? (
         <p className="text-sm text-ink-muted">
           다가오는 일정이 없어요. 혼자 가는 일정은{' '}
-          <Link to="/map" className="font-semibold text-forest underline underline-offset-2">
+          <Link to="/map" className="font-semibold text-accent underline underline-offset-2">
             지도
           </Link>
           에서 고른 장소의 상세에서 등록할 수 있어요.
@@ -67,7 +67,7 @@ export function MySoloTripsCard() {
           {current.trips.map((trip) => (
             <li
               key={trip.soloTripId}
-              className="flex items-center justify-between gap-3 border-t border-contour py-3 first:border-t-0"
+              className="flex items-center justify-between gap-3 border-t border-line py-3 first:border-t-0"
             >
               <div className="flex min-w-0 flex-col">
                 <Link to={`/spots/${trip.spot.spotId}`} className="truncate font-semibold text-ink hover:underline">

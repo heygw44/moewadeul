@@ -121,7 +121,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
   }
 
   return (
-    <section className="mt-4 border-t border-contour pt-4" aria-labelledby="spot-review-title">
+    <section className="mt-4 border-t border-line pt-4" aria-labelledby="spot-review-title">
       <div className="flex items-center justify-between gap-2">
         <h3 id="spot-review-title" className="text-sm font-semibold text-ink-muted">
           후기
@@ -142,7 +142,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
       </p>
 
       {status && (
-        <p role="status" className="mt-2 text-sm text-forest-deep">
+        <p role="status" className="mt-2 text-sm text-accent-deep">
           {status}
         </p>
       )}
@@ -183,7 +183,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
         <ul className="mt-3 flex flex-col">
           {list.reviews.map((review) =>
             editingId === review.reviewId ? (
-              <li key={review.reviewId} className="border-t border-contour py-3">
+              <li key={review.reviewId} className="border-t border-line py-3">
                 <ReviewForm
                   mode="edit"
                   initial={review}
@@ -271,7 +271,7 @@ function ReviewItem({
   onDelete: () => void;
 }) {
   return (
-    <li className="border-t border-contour py-3">
+    <li className="border-t border-line py-3">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         <Stars rating={review.rating} />
         <Link
@@ -291,7 +291,7 @@ function ReviewItem({
                 src={image.url}
                 alt={`${review.author.nickname}님 후기 사진 ${index + 1}`}
                 loading="lazy"
-                className="aspect-square w-full rounded-control border border-contour bg-paper-deep object-cover"
+                className="aspect-square w-full rounded-control border border-line bg-fill object-cover"
               />
             </li>
           ))}
@@ -401,7 +401,7 @@ function ReviewForm({
       noValidate
       onSubmit={handleSubmit}
       aria-label={title}
-      className="mt-3 flex flex-col gap-4 rounded-control border border-contour bg-paper p-4"
+      className="mt-3 flex flex-col gap-4 rounded-control border border-line bg-canvas p-4"
     >
       {formError && (
         <div role="alert">

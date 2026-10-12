@@ -17,7 +17,7 @@ export function BrandMark({ className = '', rough = false }: BrandMarkProps) {
         role="img"
         aria-label="뫼와들"
         className={[
-          'font-brand font-extrabold whitespace-nowrap tracking-tight',
+          'font-extrabold whitespace-nowrap tracking-tight',
           rough ? 'lg:[filter:url(#brand-mark-rough)]' : '',
           className,
         ].join(' ')}

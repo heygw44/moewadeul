@@ -18,10 +18,10 @@ import { SPOT_TYPE_META } from '../spot/spotLabels';
 // 누른 곳에서 이 반경 안의 장소를 같은 곳으로 본다. 박지를 제보할 때 서버가 중복 후보를 찾는 반경과 같은 50m다.
 const SAME_PLACE_RADIUS_KM = 0.05;
 
-const GUIDE_LINK_CLASS = 'inline-flex min-h-11 items-center text-forest underline underline-offset-2';
+const GUIDE_LINK_CLASS = 'inline-flex min-h-11 items-center text-accent underline underline-offset-2';
 
 const MEMORY_LINK_CLASS =
-  'inline-flex min-h-11 w-full items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
+  'inline-flex min-h-11 w-full items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill';
 
 // 제보 폼이 서버에 보내는 좌표와 같은 정밀도로 줄인다.
 function roundCoordinate(value: number): number {
@@ -142,7 +142,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
       onKeyDown={(event) => {
         if (event.key === 'Escape') onClose();
       }}
-      className="m-1 flex w-64 break-keep whitespace-normal max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-control border border-contour bg-card py-2 pr-1 pl-3 text-ink shadow-raise"
+      className="m-1 flex w-64 break-keep whitespace-normal max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-control border border-line bg-surface py-2 pr-1 pl-3 text-ink shadow-raise"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-1 pt-1">
@@ -153,7 +153,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
           type="button"
           aria-label="닫기"
           onClick={onClose}
-          className="flex size-11 shrink-0 items-center justify-center rounded-control text-ink hover:bg-paper-deep"
+          className="flex size-11 shrink-0 items-center justify-center rounded-control text-ink hover:bg-fill"
         >
           <Icon name="close" size={20} />
         </button>
@@ -186,7 +186,7 @@ export function SpotPickDialog({ spots, onClose }: SpotPickDialogProps) {
       <p className="text-sm text-ink-muted">누른 곳에서 50m 안에 있는 장소예요.</p>
       <ul className="mt-2 flex flex-col">
         {spots.map((spot) => (
-          <li key={spot.spotId} className="border-t border-contour first:border-t-0">
+          <li key={spot.spotId} className="border-t border-line first:border-t-0">
             {spot.parkWarning ? (
               <div aria-disabled="true" className="flex min-h-11 flex-col gap-1 py-2">
                 <SpotPickLabel spot={spot} />
@@ -196,7 +196,7 @@ export function SpotPickDialog({ spots, onClose }: SpotPickDialogProps) {
               <Link
                 to={`/basecamps/new?spotId=${spot.spotId}`}
                 onClick={onClose}
-                className="flex min-h-11 flex-col gap-1 py-2 hover:bg-paper-deep"
+                className="flex min-h-11 flex-col gap-1 py-2 hover:bg-fill"
               >
                 <SpotPickLabel spot={spot} />
               </Link>

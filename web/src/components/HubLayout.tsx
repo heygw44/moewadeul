@@ -40,10 +40,10 @@ export function HubLayout({
   // 좁은 화면은 그 열을 가운데의 max-w-2xl로 줄이고, 안내 열이 있거나 넓은 화면은 바깥 폭을 그대로 쓴다.
   const column = width === 'narrow' && !aside ? 'mx-auto w-full max-w-2xl' : '';
   return (
-    <div className="flex min-h-dvh flex-col bg-paper pb-(--bottom-nav-h)">
+    <div className="flex min-h-dvh flex-col bg-canvas pb-(--bottom-nav-h)">
       {announcement && <AnnouncementBar />}
       <SiteHeader />
-      <div className="border-b border-contour bg-paper">
+      <div className="border-b border-line bg-canvas">
         <div className="mx-auto max-w-screen-xl px-4 pt-6">
           <div className={column}>
             {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
@@ -59,7 +59,7 @@ export function HubLayout({
           </div>
         </div>
       </div>
-      <div className="flex-1 bg-paper">
+      <div className="flex-1 bg-canvas">
         {/* 안내 열이 없으면 두 열 격자를 쓰지 않는다. 쓰면 빈 오른쪽 열 폭만큼 본문이 머리 띠보다 좁아진다. */}
         <main
           className={`mx-auto max-w-screen-xl px-4 py-6 ${aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-6' : ''}`}
@@ -77,7 +77,7 @@ export function HubLayout({
 // 안내 열의 한 묶음이다. 본문 목록은 text-sm이고 항목 사이를 띄운다.
 export function AsideSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 rounded-control border border-contour bg-card p-4">
+    <section className="flex flex-col gap-2 rounded-control border border-line bg-surface p-4">
       <h2 className="text-base font-semibold text-ink">{title}</h2>
       <div className="flex flex-col gap-2 text-sm text-ink-muted [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2">{children}</div>
     </section>
@@ -87,13 +87,13 @@ export function AsideSection({ title, children }: { title: string; children: Rea
 // 목록을 감싸는 패널이다. header가 있으면 위에 한 줄 머리를 두고, 항목 사이에는 선을 긋는다.
 export function ListPanel({ header, children }: { header?: ReactNode; children: ReactNode }) {
   return (
-    <div className="rounded-control border border-contour bg-card">
+    <div className="rounded-control border border-line bg-surface">
       {header && (
-        <div className="flex items-center justify-between border-b border-contour px-4 py-2 text-sm text-ink-muted">
+        <div className="flex items-center justify-between border-b border-line px-4 py-2 text-sm text-ink-muted">
           {header}
         </div>
       )}
-      <ul className="divide-y divide-contour">{children}</ul>
+      <ul className="divide-y divide-line">{children}</ul>
     </div>
   );
 }
