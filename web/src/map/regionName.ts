@@ -25,7 +25,7 @@ export async function regionLabelInView(bounds: Bounds, center: LatLng, level: n
   const regions = results.flatMap((result) =>
     result.status === 'fulfilled' && result.value !== null ? [result.value] : [],
   );
-  return nameRegions(regions, level);
+  return nameRegions(regions, level, points.length);
 }
 
 function findRegion(position: LatLng): Promise<kakao.maps.services.RegionCodeResult | null> {
