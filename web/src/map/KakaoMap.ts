@@ -43,6 +43,8 @@ export async function createMapView(
   const toKakaoLatLng = (position: LatLng) => new kakao.maps.LatLng(position.lat, position.lng);
 
   const map = new kakao.maps.Map(container, { center: toKakaoLatLng(initial.center), level: initial.level });
+  // 왼쪽 아래에는 지도 범례를 두므로, 카카오 로고와 저작권 표시는 오른쪽 아래로 옮긴다.
+  map.setCopyrightPosition(kakao.maps.CopyrightPosition.BOTTOMRIGHT, true);
 
   const idleListeners = new Set<() => void>();
   const moveStartListeners = new Set<() => void>();

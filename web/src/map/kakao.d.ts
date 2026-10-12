@@ -36,6 +36,14 @@ declare namespace kakao.maps {
     readonly TERRAIN: MapTypeId;
   };
 
+  // 지도 저작권·카카오 로고 자리다. MapTypeId처럼 SDK 안에서는 숫자 상수다.
+  type CopyrightPosition = number;
+
+  const CopyrightPosition: {
+    readonly BOTTOMLEFT: CopyrightPosition;
+    readonly BOTTOMRIGHT: CopyrightPosition;
+  };
+
   interface MapOptions {
     center: LatLng;
     level?: number;
@@ -57,6 +65,7 @@ declare namespace kakao.maps {
     relayout(): void;
     addOverlayMapTypeId(mapTypeId: MapTypeId): void;
     removeOverlayMapTypeId(mapTypeId: MapTypeId): void;
+    setCopyrightPosition(position: CopyrightPosition, reversed?: boolean): void;
   }
 
   interface CustomOverlayOptions {

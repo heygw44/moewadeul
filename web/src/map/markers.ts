@@ -4,9 +4,10 @@ import { ICON_PATHS } from '../components/iconPaths';
 import type { IconName } from '../components/iconPaths';
 import type { ClusterData, MarkerKind, SpotMarkerData } from './types';
 
+// 세 유형은 색(야영장 청록, 휴양림 녹색, 박지 흙색)과 아이콘 모양으로 함께 구분한다. 세 색 모두 흰 아이콘과 대비가 4.5:1 이상이다.
 export const KIND_STYLE: Record<MarkerKind, { label: string; icon: IconName; fill: string }> = {
-  CAMPSITE: { label: '공공 야영장', icon: 'tent', fill: 'fill-forest' },
-  FOREST: { label: '자연휴양림', icon: 'tree', fill: 'fill-forest-deep' },
+  CAMPSITE: { label: '공공 야영장', icon: 'tent', fill: 'fill-sea' },
+  FOREST: { label: '자연휴양림', icon: 'tree', fill: 'fill-forest' },
   BAKJI: { label: '박지', icon: 'backpack', fill: 'fill-earth' },
 };
 
