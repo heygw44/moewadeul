@@ -21,11 +21,11 @@ export function SiteFooter() {
   const signedIn = session.status === 'authenticated' && session.me !== null;
 
   return (
-    <footer className="border-t border-line bg-canvas">
+    <footer className="bg-fill">
       <div className="mx-auto grid max-w-screen-xl gap-8 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr_1.4fr]">
         <div className="flex flex-col gap-2">
           <Link to="/" className="self-start text-ink">
-            <BrandMark className="text-xl" />
+            <BrandMark className="text-lg" />
           </Link>
           <p className="max-w-xs text-sm text-ink-muted">
             자도 되는 곳을 찾고, 믿을 수 있는 사람과 함께 가는 백패킹 서비스예요.
@@ -81,7 +81,7 @@ export function SiteFooter() {
         </FooterColumn>
       </div>
 
-      <div className="border-t border-line">
+      <div className="border-t border-fill-strong">
         <div className="mx-auto flex max-w-screen-xl flex-col gap-2 px-4 py-5 text-xs text-ink-muted md:flex-row md:items-center md:justify-between">
           <p>공원 경계는 법적 효력이 없는 참고 자료예요. 공식 경계는 고시 도면을 확인해 주세요.</p>
           <p className="flex items-center gap-3">
