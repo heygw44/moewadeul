@@ -29,7 +29,8 @@ export function navTarget(item: NavItem, signedIn: boolean): string {
 export function activeNavKey(pathname: string): NavKey | null {
   if (pathname === '/map' || pathname.startsWith('/spots/') || pathname.startsWith('/bakjis/')) return 'map';
   if (pathname === '/basecamps' || pathname.startsWith('/basecamps/')) return 'basecamps';
-  if (pathname === '/community' || pathname.startsWith('/community/')) return 'community';
+  // 추억 피드는 커뮤니티 메뉴 아래로 본다. 내 추억지도(/me/memories)는 아래 내 정보 규칙이 맡는다.
+  if (pathname === '/memories' || pathname === '/community' || pathname.startsWith('/community/')) return 'community';
   if (pathname === '/programs' || pathname.startsWith('/programs/')) return 'programs';
   if (pathname === '/me' || pathname.startsWith('/me/') || pathname === '/identity-verification') return 'me';
   return null;

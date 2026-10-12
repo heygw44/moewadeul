@@ -63,3 +63,24 @@ export interface MapView {
   // 오버레이와 이벤트 구독을 모두 지운다.
   destroy(): void;
 }
+
+// 추억지도에 그리는 핀 하나다. 사진이 있으면 사진 칸, 없으면 핀 모양으로 그린다.
+export interface MemoryPinData {
+  id: number;
+  position: LatLng;
+  thumbnailUrl?: string;
+  // 스크린 리더가 핀 이름으로 읽는 글이다.
+  label: string;
+}
+
+export interface MemoryMapView {
+  // 그려진 핀을 모두 지우고 새로 그린다.
+  showPins(pins: MemoryPinData[]): void;
+  onPinClick(listener: (id: number) => void): () => void;
+  // 선택한 핀을 키우고 흰 테두리를 더한다. null이면 선택을 푼다.
+  setSelected(id: number | null): void;
+  // 모든 핀이 보이게 지도를 맞춘다. 핀이 하나면 그 자리로 옮기고, 없으면 처음 화면(대한민국 전체)으로 돌아간다.
+  fitTo(): void;
+  relayout(): void;
+  destroy(): void;
+}

@@ -21,7 +21,10 @@ import { LandingPage } from '../features/landing/LandingPage';
 import { IdentityVerificationPage } from '../features/trust/IdentityVerificationPage';
 import { MapPage } from '../features/spot/MapPage';
 import { MemoryDetailPage } from '../features/memory/MemoryDetailPage';
+import { MemoryFeedPage } from '../features/memory/MemoryFeedPage';
 import { MemoryFormPage } from '../features/memory/MemoryFormPage';
+import { MemberMemoriesPage } from '../features/memory/MemberMemoriesPage';
+import { MyMemoriesPage } from '../features/memory/MyMemoriesPage';
 import NotFoundPage from './NotFoundPage';
 import type { LatLng } from '../map/types';
 import type { RouteDef } from './router';
@@ -106,6 +109,8 @@ export const routes: RouteDef[] = [
   },
   // 지도 메뉴는 누른 좌표(lat, lng)를, 장소 상세는 장소 좌표와 spotId를 주소에 붙인다. 폼이 값을 읽고 검사한다.
   // '/memories/new'가 '/memories/:memoryId'보다 먼저 맞아야 하므로 이 경로를 앞에 둔다.
+  // 세그먼트 수가 달라서 '/memories/new', '/memories/:memoryId'와 겹치지 않는다.
+  { path: '/memories', render: () => <MemoryFeedPage /> },
   { path: '/memories/new', render: () => <MemoryFormPage mode="create" /> },
   {
     path: '/memories/:memoryId/edit',
@@ -132,6 +137,7 @@ export const routes: RouteDef[] = [
   { path: '/me/settings', render: () => <AccountSettingsPage /> },
   { path: '/me/basecamps', render: () => <MyBasecampsPage /> },
   { path: '/me/program-applications', render: () => <MyProgramApplicationsPage /> },
+  { path: '/me/memories', render: () => <MyMemoriesPage /> },
   { path: '/me/companion-reviews', render: () => <CompanionReviewsPage /> },
   { path: '/me/notifications', render: () => <NotificationsPage /> },
   { path: '/admin/reports', render: () => <AdminReportsPage /> },
@@ -148,6 +154,13 @@ export const routes: RouteDef[] = [
   { path: '/verify-email', render: () => <VerifyEmailPage /> },
   { path: '/identity-verification', render: () => <IdentityVerificationPage /> },
   { path: '/me', render: () => <MyPage /> },
+  {
+    path: '/members/:memberId/memories',
+    render: (params) => {
+      const memberId = toPositiveId(params.memberId);
+      return memberId === null ? <NotFoundPage /> : <MemberMemoriesPage key={memberId} memberId={memberId} />;
+    },
+  },
   {
     path: '/members/:memberId',
     // 회원 ID도 양의 정수만 있다. 그 밖의 값은 서버에 묻지 않고 없는 페이지로 보여 준다.

@@ -17,6 +17,7 @@ import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { useSession } from '../member/session';
 import { LocationLabel } from '../spot/LocationLabel';
 import { nightsLabel, VISIBILITY_LABEL } from './memoryLabels';
+import { MemoryLikeButton } from './MemoryLikeButton';
 
 type LoadResult = { memoryId: number; memory: MemoryDetail } | { memoryId: number; error: unknown };
 
@@ -54,10 +55,13 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   }, [title]);
 
   const reload = () => setAttempt((value) => value + 1);
+  // 작성자는 내 추억지도로, 그 밖의 사람은 모두의 추억으로 돌아간다. 아직 모르거나 기록을 못 받았을 때는 모두의 추억으로 둔다.
+  const authorId = current !== null && 'memory' in current ? current.memory.author.memberId : null;
+  const viewerIsAuthor = authorId !== null && session.status === 'authenticated' && session.me?.memberId === authorId;
   const breadcrumb = (
-    <Link to="/map" className={CRUMB_LINK}>
+    <Link to={viewerIsAuthor ? '/me/memories' : '/memories'} className={CRUMB_LINK}>
       <Icon name="chevronLeft" size={16} />
-      지도
+      {viewerIsAuthor ? '내 추억지도' : '모두의 추억'}
     </Link>
   );
 
@@ -173,12 +177,23 @@ function MemoryActions({ memoryId }: { memoryId: number }) {
 
 function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImageError: () => void }) {
   const position = memory.lat !== undefined && memory.lng !== undefined ? { lat: memory.lat, lng: memory.lng } : null;
+  // 작성자가 아닌 사람에게는 정확한 좌표 대신 약 1km로 줄인 좌표만 온다.
+  const approxPosition =
+    memory.approxLat !== undefined && memory.approxLng !== undefined
+      ? { lat: memory.approxLat, lng: memory.approxLng }
+      : null;
   return (
     <article className="divide-y divide-contour rounded-control border border-contour bg-card">
       {position !== null && (
         <div className="flex flex-col gap-1 px-5 py-4">
           <p className="text-sm text-ink-muted">다녀온 곳 · 나만 보는 위치예요</p>
           <LocationLabel position={position} />
+        </div>
+      )}
+      {position === null && approxPosition !== null && (
+        <div className="flex flex-col gap-1 px-5 py-4">
+          <p className="text-sm text-ink-muted">다녀온 곳 · 대략 위치예요</p>
+          <LocationLabel position={approxPosition} />
         </div>
       )}
       {memory.content && (
@@ -202,6 +217,11 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
       {!memory.content && memory.images.length === 0 && (
         <p className="px-5 py-5 text-sm text-ink-muted">사진과 글 없이 남긴 기록이에요.</p>
       )}
+      {memory.visibility === 'PUBLIC' && (
+        <div className="px-5 py-4">
+          <MemoryLikeButton memoryId={memory.memoryId} likedByMe={memory.likedByMe === true} likeCount={memory.likeCount} />
+        </div>
+      )}
     </article>
   );
 }
@@ -216,7 +236,7 @@ function DeleteMemoryDialog({ memoryId, onClose }: { memoryId: number; onClose: 
     setError(null);
     try {
       await deleteMemory(memoryId);
-      navigate('/map');
+      navigate('/me/memories');
     } catch (cause) {
       setSubmitting(false);
       setError(toUserMessage(cause));

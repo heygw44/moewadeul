@@ -10,6 +10,7 @@ declare namespace kakao.maps {
 
   class LatLngBounds {
     constructor(sw?: LatLng, ne?: LatLng);
+    extend(latlng: LatLng): void;
     getSouthWest(): LatLng;
     getNorthEast(): LatLng;
   }
@@ -59,6 +60,7 @@ declare namespace kakao.maps {
     setCenter(latlng: LatLng): void;
     getCenter(): LatLng;
     setLevel(level: number, options?: SetLevelOptions): void;
+    setBounds(bounds: LatLngBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number): void;
     getLevel(): number;
     getBounds(): LatLngBounds;
     getProjection(): MapProjection;

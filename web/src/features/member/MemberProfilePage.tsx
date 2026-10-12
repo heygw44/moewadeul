@@ -13,6 +13,7 @@ import { Notice } from '../../components/Notice';
 import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { AGE_GROUP_LABELS, companionTagLabel, GENDER_LABELS, trustLevelBadge } from './memberLabels';
 import { withNext } from './nextPath';
 import { useSession } from './session';
@@ -88,7 +89,17 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   ) : undefined;
 
   return (
-    <PageLayout title={nickname ?? '회원 프로필'} meta={meta}>
+    <PageLayout
+      title={nickname ?? '회원 프로필'}
+      meta={meta}
+      actions={
+        profile ? (
+          <Link to={`/members/${profile.memberId}/memories`} className={SECONDARY_LINK_CLASS}>
+            추억지도
+          </Link>
+        ) : undefined
+      }
+    >
       {body}
     </PageLayout>
   );
