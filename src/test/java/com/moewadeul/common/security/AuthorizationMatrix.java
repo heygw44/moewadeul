@@ -38,6 +38,7 @@ final class AuthorizationMatrix {
     static final List<Endpoint> LOGIN = List.of(
             new Endpoint(HttpMethod.GET, "/api/me"),
             new Endpoint(HttpMethod.DELETE, "/api/me"),
+            new Endpoint(HttpMethod.PUT, "/api/me/password"),
             new Endpoint(HttpMethod.GET, "/api/me/trust"),
             new Endpoint(HttpMethod.GET, "/api/me/basecamps"),
             new Endpoint(HttpMethod.GET, "/api/me/companion-reviews/received"),

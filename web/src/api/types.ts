@@ -374,6 +374,12 @@ export interface MeUpdateRequest {
   selfGender?: SelfGender | null;
 }
 
+export interface PasswordChangeRequest {
+  currentPassword: string;
+  newPassword: string;
+  newPasswordConfirm: string;
+}
+
 // 신뢰 단계
 
 export interface TrustProgress {

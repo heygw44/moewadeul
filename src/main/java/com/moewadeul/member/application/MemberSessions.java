@@ -23,4 +23,14 @@ public class MemberSessions {
     public void invalidateAll(long memberId) {
         sessionRepository.findByPrincipalName(String.valueOf(memberId)).keySet().forEach(sessionRepository::deleteById);
     }
+
+    /**
+     * 호출하면 keptSessionId인 세션만 남기고 그 회원의 세션을 모두 지운다. 비밀번호를 바꾼 요청의 세션은 로그인을 유지하고,
+     * 다른 기기에 남은 로그인은 끊으려고 쓴다. {@link #invalidateAll}과 같은 이유로 DB 트랜잭션 안에서 부르지 않는다.
+     */
+    public void invalidateAllExcept(long memberId, String keptSessionId) {
+        sessionRepository.findByPrincipalName(String.valueOf(memberId)).keySet().stream()
+                .filter(sessionId -> !sessionId.equals(keptSessionId))
+                .forEach(sessionRepository::deleteById);
+    }
 }

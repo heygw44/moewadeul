@@ -20,6 +20,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   MEMBER_NICKNAME_DUPLICATED: '이미 쓰는 닉네임이에요. 다른 닉네임을 정해 주세요.',
   MEMBER_DISPOSABLE_EMAIL: '일회용 이메일은 쓸 수 없어요. 평소 쓰는 이메일을 넣어 주세요.',
   MEMBER_PASSWORD_POLICY: '비밀번호 규칙에 맞지 않아요. 안내를 보고 다시 정해 주세요.',
+  MEMBER_CURRENT_PASSWORD_MISMATCH: '현재 비밀번호가 맞지 않아요. 다시 확인해 주세요.',
+  MEMBER_PASSWORD_UNCHANGED: '지금 쓰는 비밀번호와 같아요. 다른 비밀번호를 정해 주세요.',
   MEMBER_NOT_VERIFIED: '이메일 인증을 마쳐야 할 수 있어요. 받은 인증 코드를 먼저 입력해 주세요.',
   EMAIL_CODE_INVALID: '인증 코드가 맞지 않아요. 메일에 적힌 코드를 다시 확인해 주세요.',
   EMAIL_CODE_EXPIRED: '인증 코드가 만료됐어요. 코드를 다시 받아 주세요.',
