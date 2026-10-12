@@ -1,5 +1,5 @@
 import { loadKakaoMaps } from './kakaoLoader';
-import { createClusterButton, createDraftPin, createSpotPin } from './markers';
+import { createClusterButton, createDraftPin, createSearchPin, createSpotPin } from './markers';
 import { mergeClusters } from './mergeClusters';
 import type { SpotPin } from './markers';
 import type { Bounds, ClusterData, LatLng, MapView, SpotMarkerData } from './types';
@@ -8,12 +8,15 @@ import type { Bounds, ClusterData, LatLng, MapView, SpotMarkerData } from './typ
 const CLUSTER_Z_INDEX = 1;
 const PIN_Z_INDEX = 2;
 const SELECTED_PIN_Z_INDEX = 3;
-const DRAFT_PIN_Z_INDEX = 4;
+const SEARCH_PIN_Z_INDEX = 4;
+const DRAFT_PIN_Z_INDEX = 5;
 
 // 묶음 원의 지름이 44px이라, 중심이 이보다 가까우면 원이 겹치거나 맞붙어 숫자를 읽기 어렵다.
 const CLUSTER_MIN_DISTANCE_PX = 48;
 // 합친 위치가 가중 평균으로 옮겨지면 이웃 묶음과 다시 가까워질 수 있어서, 더 합칠 것이 없을 때까지 몇 번 되풀이한다.
 const CLUSTER_MERGE_MAX_PASSES = 4;
+
+const MAX_ANIMATED_LEVEL_STEP = 2;
 
 interface DrawnPin {
   overlay: kakao.maps.CustomOverlay;
@@ -65,6 +68,7 @@ export async function createMapView(
   let pins = new Map<number, DrawnPin>();
   let clusterOverlays: kakao.maps.CustomOverlay[] = [];
   let draftOverlay: kakao.maps.CustomOverlay | null = null;
+  let searchOverlay: kakao.maps.CustomOverlay | null = null;
   let selectedId: number | null = null;
   let terrainOn = false;
   let destroyed = false;
@@ -116,10 +120,21 @@ export async function createMapView(
     },
 
     setCenter(position: LatLng, level?: number) {
-      map.setCenter(toKakaoLatLng(position));
-      if (level !== undefined && level !== map.getLevel()) {
-        map.setLevel(level, { animate: true });
+      const current = map.getLevel();
+      if (level === undefined || level === current) {
+        map.setCenter(toKakaoLatLng(position));
+        return;
       }
+      // 카카오맵은 두 단계 이하로 바꿀 때만 확대·축소를 애니메이션으로 보여 준다.
+      // 그보다 크게 바꿀 때 넓은 축척에서 먼저 중심을 잡으면 화면 한 점이 수백 m라서, 확대한 뒤 목표가 가운데에서 벗어난다.
+      // 그래서 크게 바꿀 때는 확대 수준을 먼저 바꾸고 중심을 잡는다.
+      if (Math.abs(level - current) > MAX_ANIMATED_LEVEL_STEP) {
+        map.setLevel(level);
+        map.setCenter(toKakaoLatLng(position));
+        return;
+      }
+      map.setCenter(toKakaoLatLng(position));
+      map.setLevel(level, { animate: true });
     },
 
     showMarkers(markers: SpotMarkerData[], clusters: ClusterData[]) {
@@ -218,6 +233,28 @@ export async function createMapView(
       draftOverlay.setMap(map);
     },
 
+    // 검색 위치 핀도 오버레이 하나를 만들어 두고 위치만 옮긴다.
+    showSearchPin(position: LatLng | null) {
+      if (destroyed) return;
+      if (position === null) {
+        searchOverlay?.setMap(null);
+        return;
+      }
+      if (searchOverlay === null) {
+        searchOverlay = new kakao.maps.CustomOverlay({
+          content: createSearchPin(),
+          position: toKakaoLatLng(position),
+          clickable: false,
+          xAnchor: 0.5,
+          yAnchor: 1,
+          zIndex: SEARCH_PIN_Z_INDEX,
+        });
+      } else {
+        searchOverlay.setPosition(toKakaoLatLng(position));
+      }
+      searchOverlay.setMap(map);
+    },
+
     // 지형도는 기본 지도 위에 겹치는 타일이다. 이미 켜져 있으면 다시 겹치지 않는다.
     setTerrain(on: boolean) {
       if (destroyed || on === terrainOn) return;
@@ -243,6 +280,8 @@ export async function createMapView(
       clearOverlays();
       draftOverlay?.setMap(null);
       draftOverlay = null;
+      searchOverlay?.setMap(null);
+      searchOverlay = null;
       idleListeners.clear();
       moveStartListeners.clear();
       markerListeners.clear();

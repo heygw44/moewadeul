@@ -34,7 +34,7 @@ export interface MapView {
   getBounds(): Bounds;
   getLevel(): number;
   getCenter(): LatLng;
-  // level을 넘기고 지금 확대 수준과 다르면 확대·축소를 애니메이션으로 보여준다.
+  // level을 넘기면 그 확대 수준으로 바꾼다. 두 단계 이하로 바꿀 때만 확대·축소를 애니메이션으로 보여 준다.
   setCenter(position: LatLng, level?: number): void;
   // 지금 그려진 마커와 묶음을 모두 지우고 새로 그린다.
   showMarkers(markers: SpotMarkerData[], clusters: ClusterData[]): void;
@@ -50,6 +50,8 @@ export interface MapView {
   onMapClick(listener: (position: LatLng) => void): () => void;
   // 제보할 위치에 임시 핀 하나를 그린다. null이면 지운다.
   showDraft(position: LatLng | null): void;
+  // 주소 검색으로 찾은 지점에 핀 하나를 그린다. null이면 지운다.
+  showSearchPin(position: LatLng | null): void;
   setTerrain(on: boolean): void;
   // 지도를 담은 요소의 크기가 바뀐 뒤에 부른다.
   relayout(): void;

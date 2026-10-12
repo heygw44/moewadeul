@@ -110,12 +110,31 @@ declare namespace kakao.maps {
       region_3depth_name: string;
     }
 
+    // 지번 주소다. 번지가 없는 행정구역 결과는 main_address_no가 빈 문자열이다.
+    interface JibunAddress extends RegionAddress {
+      address_name: string;
+      main_address_no: string;
+      sub_address_no: string;
+      mountain_yn: 'Y' | 'N';
+    }
+
+    // 도로명 주소다. 도로 이름만 찾은 결과는 main_building_no가 빈 문자열이다.
+    interface RoadAddress extends RegionAddress {
+      address_name: string;
+      road_name: string;
+      main_building_no: string;
+      sub_building_no: string;
+      building_name: string;
+    }
+
+    // REGION은 행정구역, ROAD는 도로 이름, REGION_ADDR은 지번 주소, ROAD_ADDR은 도로명 주소로 찾은 결과다.
     interface AddressResult {
       address_name: string;
       address_type: 'REGION' | 'ROAD' | 'REGION_ADDR' | 'ROAD_ADDR';
       x: string;
       y: string;
-      address: RegionAddress | null;
+      address: JibunAddress | null;
+      road_address: RoadAddress | null;
     }
 
     // 좌표가 속한 행정구역이다. H는 행정동, B는 법정동 기준이다.
