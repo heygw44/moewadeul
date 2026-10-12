@@ -1,18 +1,18 @@
 import type { BakjiReportReason, GroundType, PublicFacilities, SignalLevel, SpotType } from '../../api/types';
 import type { IconName } from '../../components/iconPaths';
 
-type SpotTypeTone = 'forest' | 'earth';
+type SpotTypeTone = 'sea' | 'forest' | 'earth';
 
 type SpotTypeMeta = {
   label: string;
   icon: IconName;
   tone: SpotTypeTone;
-  // 목록 행과 상세 머리글의 유형 아이콘 칸 색. Tailwind가 소스 글자를 읽으므로 클래스 이름을 통째로 적는다.
+  // 목록 행과 상세 머리글의 유형 아이콘 칸 색. 지도 핀 색(map/markers.ts)과 같은 계열로 맞춘다. Tailwind가 소스 글자를 읽으므로 클래스 이름을 통째로 적는다.
   tileClass: string;
 };
 
 export const SPOT_TYPE_META: Record<SpotType, SpotTypeMeta> = {
-  CAMPSITE: { label: '공공 야영장', icon: 'tent', tone: 'forest', tileClass: 'bg-forest-soft text-forest-deep' },
+  CAMPSITE: { label: '공공 야영장', icon: 'tent', tone: 'sea', tileClass: 'bg-sea-soft text-sea' },
   FOREST: { label: '자연휴양림', icon: 'tree', tone: 'forest', tileClass: 'bg-forest-soft text-forest-deep' },
   BAKJI: { label: '박지', icon: 'backpack', tone: 'earth', tileClass: 'bg-earth-soft text-earth-strong' },
 };

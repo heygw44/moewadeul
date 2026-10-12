@@ -31,6 +31,7 @@ import { withNext } from '../member/nextPath';
 import { NotificationBellLink } from '../notification/NotificationLink';
 import { useSession } from '../member/session';
 import { BakjiReportPanel } from './BakjiReportPanel';
+import { MapLegend } from './MapLegend';
 import { MapSafetyNotice } from './MapSafetyNotice';
 import { MapSearchBar } from './MapSearchBar';
 import { SpotDetailPanel } from './SpotDetailPanel';
@@ -388,6 +389,7 @@ export function MapPage({
         {/* z-0으로 쌓임 맥락을 따로 만들어서, 지도와 위에 뜬 버튼이 모바일 시트보다 아래에 그려지게 한다. */}
         <div className="absolute inset-0 z-0 lg:relative lg:flex-1">
           <div ref={hostRef} role="region" aria-label="지도" className="absolute inset-0" />
+          {!mapFailure && <MapLegend />}
 
           {mapFailure && (
             <div className="absolute inset-0 flex items-center justify-center bg-paper p-4">
