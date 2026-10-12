@@ -133,14 +133,14 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true }:
       {state.status === 'candidates' && (
         <ul
           aria-label="지역 후보"
-          className="absolute inset-x-0 top-full z-20 mt-1 flex flex-col rounded-control border border-line bg-surface shadow-raise"
+          className="absolute inset-x-0 top-full z-20 mt-1 flex flex-col overflow-hidden rounded-control border border-line bg-surface shadow-raise"
         >
           {state.candidates.map((candidate, index) => (
             <li key={`${candidate.name}-${index}`} className="border-b border-line last:border-b-0">
               <button
                 type="button"
                 onClick={() => choose(candidate)}
-                className="flex min-h-11 w-full flex-col items-start justify-center px-3 py-2 text-left hover:bg-fill"
+                className="flex min-h-11 w-full flex-col items-start justify-center px-3 py-2 text-left hover:bg-fill focus-visible:-outline-offset-2"
               >
                 <span className="text-base text-ink">{candidate.name}</span>
                 {candidate.detail && <span className="text-sm text-ink-muted">{candidate.detail}</span>}
