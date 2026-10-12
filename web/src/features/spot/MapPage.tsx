@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type { NearbySpot } from '../../api/types';
 import { BottomTabBar } from '../../app/layout/BottomTabBar';
 import { SiteHeader } from '../../app/layout/SiteHeader';
 import { Link, navigate } from '../../app/router';
@@ -20,6 +22,7 @@ import { BasecampDetailPanel } from '../basecamp/BasecampDetailPanel';
 import { BasecampFilterDialog } from '../basecamp/BasecampFilterDialog';
 import { BasecampListPanel } from '../basecamp/BasecampListPanel';
 import { BasecampOpenPanel } from '../basecamp/BasecampOpenPanel';
+import { MapOpenMenu, SpotPickDialog } from '../basecamp/MapOpenMenu';
 import { useBasecampsInView } from '../basecamp/useBasecampsInView';
 import { NO_BASECAMP_FILTERS, basecampFilterChips } from '../basecamp/basecampFilters';
 import type { BasecampFilters } from '../basecamp/basecampFilters';
@@ -45,8 +48,14 @@ type SheetSnap = 'peek' | 'half' | 'full';
 
 type MapFailure = { reason: MapLoadErrorReason; message: string };
 
+// 지도를 우클릭하거나 길게 누른 곳에 띄운 메뉴다. host는 지도 래퍼가 만든 메뉴 칸 요소다.
+type ContextMenu = { position: LatLng; host: HTMLElement };
+
 // 처음에는 전국이 한 화면에 들어오도록 국토 가운데쯤을 중심으로 크게 축소해서 연다.
 const INITIAL_VIEW = { center: { lat: 36.35, lng: 127.85 }, level: 12 };
+
+// 제보 화면을 좌표와 함께 열었는데 그 좌표가 화면 밖이면, 이 확대 수준까지 확대해서 옮긴다.
+const DRAFT_FOCUS_LEVEL = 5;
 
 // 묶음을 누르면 이만큼 확대해서 안의 장소가 풀려 보이게 한다.
 const CLUSTER_ZOOM_STEP = 2;
@@ -63,9 +72,20 @@ type MapPageProps = {
   // report는 지도를 눌러 박지 위치를 찍는 제보 화면이고, basecamps는 베이스캠프 목록과 상세,
   // basecampOpen은 장소에서 베이스캠프를 여는 화면이다.
   mode?: 'browse' | 'report' | 'basecamps' | 'basecampOpen';
+  // report에서 처음 찍어 둘 박지 위치다. 지도 메뉴에서 근처에 장소가 없는 곳을 골랐을 때 넘어온다.
+  initialDraft?: LatLng;
+  // report에서 제보가 끝난 뒤 갈 곳이다. basecamp면 새 박지에서 베이스캠프 열기 폼을 연다.
+  nextAfterReport?: 'basecamp';
 };
 
-export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: MapPageProps) {
+export function MapPage({
+  spotId,
+  basecampId,
+  openSpotId,
+  mode = 'browse',
+  initialDraft,
+  nextAfterReport,
+}: MapPageProps) {
   const reporting = mode === 'report';
   const basecampMode = mode === 'basecamps';
   const opening = mode === 'basecampOpen';
@@ -85,6 +105,11 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   // 그 수준에서 지도가 멈춘 뒤부터 움직임이 시작되면 핀을 지운다. 옮기는 중이 아니면 null이다.
   const searchMoveLevelRef = useRef<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  // 지도 메뉴로 찾은 근처 장소다. 값이 있으면 그중 베이스캠프를 열 곳을 고르는 다이얼로그를 띄운다.
+  const [pickSpots, setPickSpots] = useState<NearbySpot[] | null>(null);
+  // 넘겨받은 처음 위치를 이미 찍었는지 기억한다. 같은 주소에서 다시 그려도 사용자가 옮긴 위치를 덮어쓰지 않기 위해서다.
+  const [appliedDraftKey, setAppliedDraftKey] = useState<string | null>(null);
   const [filters, setFilters] = useState<BasecampFilters>(NO_BASECAMP_FILTERS);
   const [spotFilters, setSpotFilters] = useState<SpotFilters>(NO_SPOT_FILTERS);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -114,6 +139,13 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
 
   // 제보 화면을 벗어나면 이전 제보의 완료 상태를 버린다. 그래야 다시 들어왔을 때 지도를 눌러 위치를 찍을 수 있다.
   if (!reporting && submitted) setSubmitted(false);
+
+  // 제보 화면을 좌표와 함께 열면 그 자리에 임시 핀을 찍어 둔다. 제보 화면을 벗어나면 다음에 다시 찍도록 잊는다.
+  const initialDraftKey = reporting && initialDraft ? `${initialDraft.lat},${initialDraft.lng}` : null;
+  if (initialDraftKey !== appliedDraftKey) {
+    setAppliedDraftKey(initialDraftKey);
+    if (initialDraft && initialDraftKey !== null) setDraft(initialDraft);
+  }
 
   // 상세나 폼이 열리면 내용이 보이도록 시트를 절반으로 열고, 목록으로 돌아오면 접는다.
   // 렌더 중에 이전 값과 비교해서 바꾸므로, 화면이 한 번 그려진 뒤 다시 그리는 일이 없다.
@@ -201,6 +233,41 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   useEffect(() => {
     map?.showDraft(draft);
   }, [map, draft]);
+
+  // 넘겨받은 처음 위치가 지금 화면 밖이면 그 자리로 옮긴다. 주소로 바로 들어오면 지도가 전국 축척으로 열리기 때문이다.
+  const initialLat = reporting ? initialDraft?.lat : undefined;
+  const initialLng = reporting ? initialDraft?.lng : undefined;
+  useEffect(() => {
+    if (!map || initialLat === undefined || initialLng === undefined) return;
+    const { sw, ne } = map.getBounds();
+    const inside = initialLat >= sw.lat && initialLat <= ne.lat && initialLng >= sw.lng && initialLng <= ne.lng;
+    if (!inside) map.setCenter({ lat: initialLat, lng: initialLng }, Math.min(map.getLevel(), DRAFT_FOCUS_LEVEL));
+  }, [map, initialLat, initialLng]);
+
+  // 지도를 둘러보거나 베이스캠프를 찾는 화면에서만 우클릭·길게 누르기 메뉴를 띄운다.
+  // 제보나 베이스캠프 열기 중에는 쓰던 폼을 지키려고 띄우지 않는다.
+  const contextMenuEnabled = browsing || basecampMode;
+  const closeContextMenu = useCallback(() => {
+    map?.showMenu(null);
+    setContextMenu(null);
+  }, [map]);
+
+  // 지도를 움직이거나 빈 곳을 누르면 메뉴를 닫는다. 다른 장소·베이스캠프로 화면이 바뀌어도 닫는다.
+  useEffect(() => {
+    if (!map || !contextMenuEnabled) return;
+    const offContextMenu = map.onContextMenu((position) => {
+      const host = map.showMenu(position);
+      setContextMenu(host ? { position, host } : null);
+    });
+    const offMoveStart = map.onMoveStart(closeContextMenu);
+    const offClick = map.onMapClick(closeContextMenu);
+    return () => {
+      offContextMenu();
+      offMoveStart();
+      offClick();
+      closeContextMenu();
+    };
+  }, [map, contextMenuEnabled, closeContextMenu, spotId, basecampId]);
 
   useEffect(() => {
     map?.showSearchPin(searchPin);
@@ -302,6 +369,7 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
           ) : reporting ? (
             <BakjiReportPanel
               draft={draft}
+              nextBasecamp={nextAfterReport === 'basecamp'}
               onCancel={() => navigate('/map')}
               onSubmitted={() => {
                 // 새 박지가 지도에 보이도록 마커를 다시 불러오고, 등록이 끝났으니 임시 핀은 치운다.
@@ -416,6 +484,20 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
           onClose={() => setFilterDialogOpen(false)}
         />
       )}
+      {contextMenu &&
+        createPortal(
+          <MapOpenMenu
+            key={`${contextMenu.position.lat},${contextMenu.position.lng}`}
+            position={contextMenu.position}
+            onClose={closeContextMenu}
+            onCandidates={(spots) => {
+              closeContextMenu();
+              setPickSpots(spots);
+            }}
+          />,
+          contextMenu.host,
+        )}
+      {pickSpots && <SpotPickDialog spots={pickSpots} onClose={() => setPickSpots(null)} />}
       {/* 상세·폼이 열려 있을 때는 시트 아래 고정 버튼 자리를 지키려고 하단 탭을 숨긴다. 패널의 뒤로 가기로 목록에 돌아오면 다시 보인다. */}
       {!contentOpen && <BottomTabBar />}
     </div>

@@ -110,6 +110,17 @@ export interface SpotAreaResponse {
   clusters: SpotCluster[];
 }
 
+// 반경 검색 결과다. distanceKm은 기준 좌표에서 장소까지의 구면 거리이고, 서버가 소수점 둘째 자리까지 반올림해 준다.
+export interface NearbySpot extends SpotMarker {
+  distanceKm: number;
+}
+
+export interface SpotNearbyQuery {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+}
+
 export interface SpotAreaQuery {
   swLat: number;
   swLng: number;

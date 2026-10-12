@@ -23,6 +23,7 @@ declare namespace kakao.maps {
 
   class MapProjection {
     containerPointFromCoords(latlng: LatLng): Point;
+    coordsFromContainerPoint(point: Point): LatLng;
   }
 
   // SDK 안에서는 숫자 상수다. 값은 kakao.maps.MapTypeId에서 이름으로 꺼내 쓴다.
@@ -79,13 +80,15 @@ declare namespace kakao.maps {
 
   interface MouseEvent {
     latLng: LatLng;
+    // 지도 컨테이너 왼쪽 위를 원점으로 한 픽셀 좌표다.
+    point: Point;
   }
 
   namespace event {
     function addListener(target: Map, type: 'idle', handler: () => void): void;
     function removeListener(target: Map, type: 'idle', handler: () => void): void;
-    function addListener(target: Map, type: 'click', handler: (event: MouseEvent) => void): void;
-    function removeListener(target: Map, type: 'click', handler: (event: MouseEvent) => void): void;
+    function addListener(target: Map, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
+    function removeListener(target: Map, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
     function addListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
     function removeListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
   }
@@ -142,6 +145,12 @@ declare namespace kakao.maps {
       region_type: 'H' | 'B';
     }
 
+    // 좌표에 있는 주소다. 도로명 주소는 건물이 없는 곳(산, 들)에서 null이다.
+    interface Coord2AddressResult {
+      address: { address_name: string } | null;
+      road_address: { address_name: string; building_name: string } | null;
+    }
+
     interface PlaceResult {
       place_name: string;
       address_name: string;
@@ -165,6 +174,7 @@ declare namespace kakao.maps {
         options?: AddressSearchOptions,
       ): void;
       coord2RegionCode(lng: number, lat: number, callback: (result: RegionCodeResult[], status: Status) => void): void;
+      coord2Address(lng: number, lat: number, callback: (result: Coord2AddressResult[], status: Status) => void): void;
     }
 
     class Places {

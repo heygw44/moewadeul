@@ -20,6 +20,7 @@ import { LandingPage } from '../features/landing/LandingPage';
 import { IdentityVerificationPage } from '../features/trust/IdentityVerificationPage';
 import { MapPage } from '../features/spot/MapPage';
 import NotFoundPage from './NotFoundPage';
+import type { LatLng } from '../map/types';
 import type { RouteDef } from './router';
 
 export const routes: RouteDef[] = [
@@ -38,7 +39,22 @@ export const routes: RouteDef[] = [
       );
     },
   },
-  { path: '/bakjis/new', render: () => <MapPage mode="report" /> },
+  {
+    path: '/bakjis/new',
+    // 지도 메뉴에서 넘어오면 주소에 처음 찍을 위치(lat, lng)와 제보 뒤 갈 곳(next=basecamp)이 붙는다.
+    // 좌표가 숫자가 아니거나 범위를 벗어나면 버리고 빈 제보 화면을 연다.
+    render: () => {
+      const search = new URLSearchParams(window.location.search);
+      const initialDraft = toLatLng(search.get('lat'), search.get('lng'));
+      return (
+        <MapPage
+          mode="report"
+          initialDraft={initialDraft ?? undefined}
+          nextAfterReport={search.get('next') === 'basecamp' ? 'basecamp' : undefined}
+        />
+      );
+    },
+  },
   { path: '/basecamps', render: () => <MapPage mode="basecamps" /> },
   {
     path: '/basecamps/new',
@@ -124,4 +140,13 @@ export const routes: RouteDef[] = [
 function toPositiveId(raw: string | undefined): number | null {
   const value = Number(raw ?? '');
   return /^\d+$/.test(raw ?? '') && Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+function toLatLng(rawLat: string | null, rawLng: string | null): LatLng | null {
+  if (rawLat === null || rawLng === null || rawLat.trim() === '' || rawLng.trim() === '') return null;
+  const lat = Number(rawLat);
+  const lng = Number(rawLng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
 }

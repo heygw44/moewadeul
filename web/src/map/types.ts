@@ -48,6 +48,11 @@ export interface MapView {
   onClusterClick(listener: (cluster: ClusterData) => void): () => void;
   // 지도의 빈 곳을 눌렀을 때 그 위치를 알려 준다. 마커와 묶음을 누른 클릭은 오지 않는다.
   onMapClick(listener: (position: LatLng) => void): () => void;
+  // 지도를 우클릭하거나, 터치 화면에서 지도를 움직이지 않고 길게 눌렀을 때 그 위치를 알려 준다.
+  onContextMenu(listener: (position: LatLng) => void): () => void;
+  // 그 위치에 메뉴 칸 하나를 띄우고, 화면 코드가 내용을 그려 넣을 빈 요소를 돌려준다. null이면 지우고 null을 돌려준다.
+  // 메뉴 칸 안을 누른 클릭은 지도 클릭으로 오지 않는다.
+  showMenu(position: LatLng | null): HTMLElement | null;
   // 제보할 위치에 임시 핀 하나를 그린다. null이면 지운다.
   showDraft(position: LatLng | null): void;
   // 주소 검색으로 찾은 지점에 핀 하나를 그린다. null이면 지운다.
