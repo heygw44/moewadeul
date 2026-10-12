@@ -59,8 +59,6 @@ const GROUND_OPTIONS: ChoiceOption<Unknown | GroundType>[] = [
 
 const PRIMARY_LINK_CLASS =
   'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
-const SECONDARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
 
 // 서버가 지도 영역 밖 좌표를 lat, lng 두 필드로 나눠 알려 주므로, 위치 한 곳에 중복 없이 모아 보여 준다.
 function mergeReasons(reasons: string[]): string {
@@ -338,7 +336,6 @@ function ReportForm({
         fullWidth
         loading={submitting}
         disabled={unverified}
-        disabledReason={unverified ? '이메일 인증을 마치면 제보할 수 있어요' : undefined}
       >
         제보하기
       </Button>
@@ -353,18 +350,16 @@ function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionRespon
     <div role="status" className="flex flex-col gap-4">
       <h2 className="text-xl font-bold tracking-tight text-ink">제보를 등록했어요</h2>
 
-      {parkWarning.warned && nextBasecamp && (
-        <Notice tone="danger" title="이 박지에서는 베이스캠프를 열 수 없어요">
-          <p>공원 경계 안일 가능성이 있는 박지라서 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
-        </Notice>
-      )}
-
+      {/* 공원 경계 경고는 경고 상자 하나가 근거와 함께 알린다. 베이스캠프를 열려던 흐름이면 열 수 없다는 결과만 한 줄 더한다. */}
       {parkWarning.warned ? (
-        <ParkWarningNotice warning={parkWarning} />
+        <>
+          <ParkWarningNotice warning={parkWarning} />
+          {nextBasecamp && (
+            <p className="text-base font-semibold text-danger">이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
+          )}
+        </>
       ) : (
-        <Notice tone="info" title="안내">
-          <p>{guide}</p>
-        </Notice>
+        <p className="text-base text-ink">{guide}</p>
       )}
 
       {duplicateCandidates.length > 0 && (
@@ -372,7 +367,7 @@ function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionRespon
           <h3 id="duplicate-title" className="text-sm font-semibold text-ink-muted">
             50m 안에 비슷한 박지가 있어요
           </h3>
-          <p className="text-sm text-ink">제보는 이미 등록됐어요. 같은 곳이라면 기존 박지에서 정보를 확인해 보세요.</p>
+          <p className="text-sm text-ink">제보는 이미 등록됐어요. 같은 곳이라면 기존 박지의 정보를 확인해 주세요.</p>
           <ul className="flex flex-col">
             {duplicateCandidates.map((candidate) => (
               <li key={candidate.spotId} className="border-t border-contour first:border-t-0">
@@ -392,9 +387,6 @@ function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionRespon
       <div className="flex flex-wrap gap-2">
         <Link to={`/spots/${result.spotId}`} className={PRIMARY_LINK_CLASS}>
           제보한 박지 보기
-        </Link>
-        <Link to="/map" className={SECONDARY_LINK_CLASS}>
-          지도로
         </Link>
       </div>
     </div>

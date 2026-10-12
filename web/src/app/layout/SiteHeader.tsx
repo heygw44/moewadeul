@@ -11,7 +11,7 @@ import { Link, useLocation } from '../router';
 import { activeNavKey, NAV_ITEMS } from './navItems';
 
 type SiteHeaderProps = {
-  // 하단 탭이 없는 화면(랜딩)에서 켠다. 모바일에서도 계정 표시를 머리글에 둔다.
+  // 하단 탭이 없는 화면(랜딩·404)에서 켠다. 모바일에서도 계정 표시와 메뉴 버튼을 머리글에 둔다.
   mobileAccount?: boolean;
   // 로그인·가입 화면처럼 계정 표시가 그 화면의 할 일과 겹치는 곳에서 켠다. 알림·계정 자리를 비운다.
   minimal?: boolean;
@@ -23,7 +23,8 @@ const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
 
 // 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 머리글이다. 데스크톱은 서비스 이름 줄과 메뉴 줄, 두 줄이다.
 // 지도 화면을 포함한 모든 화면에서 가운데 최대 폭(max-w-screen-xl) 안에 둔다. 그래서 메뉴로 화면을 오가도 로고와 메뉴 자리가 움직이지 않는다.
-// 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 하단 탭이 없는 랜딩·404에서도 다른 화면으로 갈 수 있게 하기 위해서다.
+// 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 메뉴 버튼은 하단 탭이 없는 랜딩·404(mobileAccount)에만 둔다.
+// 하단 탭이 있는 화면에서 메뉴 버튼까지 두면 같은 네 메뉴가 한 화면에 두 번 있게 된다.
 export function SiteHeader({ mobileAccount = false, minimal = false, className = '' }: SiteHeaderProps) {
   const { pathname, search } = useLocation();
   const session = useSession();
@@ -83,6 +84,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                 </Link>
               </div>
             )}
+            {mobileAccount && (
             <button
               type="button"
               aria-expanded={menuOpen}
@@ -93,6 +95,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
             >
               <Icon name={menuOpen ? 'close' : 'menu'} size={22} />
             </button>
+            )}
           </div>
         )}
       </div>

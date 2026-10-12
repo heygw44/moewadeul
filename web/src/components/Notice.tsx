@@ -37,9 +37,10 @@ const DEFAULT_ICONS: Record<NoticeTone, IconName> = {
 };
 
 // 경고와 안내는 판단 근거라서 접거나 닫을 수 없게 둔다. 본문은 햇빛 아래에서도 읽히도록 먹색으로 쓴다.
+// 한쪽만 굵게 칠한 선 대신 의미 색 1px 테두리로 상자 전체를 두른다. 한쪽 굵은 선은 생성형 화면의 흔한 장식이라 쓰지 않는다.
 export function Notice({ tone, title, icon, children }: NoticeProps) {
   return (
-    <div role="note" className={`flex gap-3 rounded-control border-l-4 p-4 ${BOX_CLASSES[tone]}`}>
+    <div role="note" className={`flex gap-3 rounded-control border p-4 ${BOX_CLASSES[tone]}`}>
       <Icon name={icon ?? DEFAULT_ICONS[tone]} size={20} className={`mt-0.5 shrink-0 ${ICON_CLASSES[tone]}`} />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <p className={`font-semibold ${TITLE_CLASSES[tone]}`}>{title}</p>

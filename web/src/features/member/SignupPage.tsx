@@ -138,7 +138,7 @@ export function SignupPage() {
 
   return (
     <AuthLayout
-      title="가입"
+      title="회원가입"
       description="가입하면 이메일로 인증 코드를 보내요."
       footer={
         <>

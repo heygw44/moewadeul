@@ -144,7 +144,7 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving }: MapSearchBarProp
           className="absolute inset-x-0 top-full z-20 mt-1 rounded-control border border-contour bg-card px-3 py-2 text-sm text-ink shadow-raise"
         >
           {state.status === 'empty'
-            ? `'${state.keyword}' 검색 결과가 없어요. 다른 지역 이름이나 주소로 찾아보세요.`
+            ? `'${state.keyword}' 검색 결과가 없어요. 다른 지역 이름이나 주소로 찾아 주세요.`
             : state.message}
         </p>
       )}

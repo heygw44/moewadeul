@@ -5,15 +5,16 @@ import { toUserMessage } from '../../api/errors';
 import { fetchSpotDetail } from '../../api/spots';
 import type { BakjiDetail, ExpectedPeople, MidTermForecast, PublicDetail, SpotDetail, Weather } from '../../api/types';
 import { Link } from '../../app/router';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
+import { MetaLine } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstTime, formatLocalDate } from '../../lib/datetime';
+import { UnverifiedNote } from '../member/GatedButton';
 import { SpotReviews } from '../review/SpotReviews';
 import { SoloTripSection } from '../trip/SoloTripSection';
 import { BakjiFeedback } from './BakjiFeedback';
@@ -83,14 +84,6 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
       <EmptyState
         title="장소를 찾을 수 없어요"
         description="삭제됐거나 숨김 처리된 장소예요."
-        action={
-          <Link
-            to="/map"
-            className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
-          >
-            목록으로
-          </Link>
-        }
       />
     );
   } else {
@@ -160,23 +153,21 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
     <article>
       <header className="flex flex-col gap-2">
         <h2 className="text-xl font-bold tracking-tight text-ink">{detail.name}</h2>
-        <div className="flex flex-wrap gap-1">
-          <Badge tone={meta.tone} icon={meta.icon}>
-            {meta.label}
-          </Badge>
-          {publicDetail?.closedNow && (
-            <Badge tone="closed" icon="closed">
-              휴장
-            </Badge>
-          )}
-          {warning.warned && (
-            <Badge tone="warning" icon="alert">
-              공원 경계 경고
-            </Badge>
-          )}
-        </div>
-        {detail.address !== null && <p className="text-sm text-ink-muted">{detail.address}</p>}
+        {/* 휴장과 공원 경계 경고는 바로 아래 안내 상자가 기간·근거와 함께 알리므로, 제목 아래에는 장소 유형과 주소만 둔다. */}
+        <MetaLine
+          items={[
+            <span className="inline-flex items-center gap-1">
+              <Icon name={meta.icon} size={16} className="shrink-0" />
+              {meta.label}
+            </span>,
+            detail.address,
+          ]}
+        />
       </header>
+
+      <div className="mt-3">
+        <UnverifiedNote action="박지 확인, 혼자 가는 일정, 후기를 남길 수 있어요." />
+      </div>
 
       {(publicDetail?.closedNow || warning.warned) && (
         <div className="mt-4 flex flex-col gap-3">

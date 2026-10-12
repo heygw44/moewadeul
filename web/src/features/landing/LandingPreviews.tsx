@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { MarkerKind } from '../../map/types';
 import { KIND_STYLE, PIN_PATH } from '../../map/markers';
-import { Badge } from '../../components/Badge';
+import { MetaLine, StatusText } from '../../components/StatusText';
 import { BrandMark } from '../../components/BrandMark';
 import { Evidence } from '../../components/Evidence';
 import { Icon } from '../../components/icons';
@@ -82,15 +82,16 @@ function PreviewSpotRow({ name, kind, warning = false, note }: PreviewSpot) {
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="truncate text-base text-ink">{name}</span>
-        <span className="flex flex-wrap gap-1">
-          <Badge tone="neutral">{meta.label}</Badge>
-          {warning && (
-            <Badge tone="warning" icon="alert">
-              공원 경계 경고
-            </Badge>
-          )}
-          {note}
-        </span>
+        <MetaLine
+          items={[
+            warning && (
+              <StatusText tone="warning" icon="alert">
+                공원 경계 경고
+              </StatusText>
+            ),
+            note,
+          ]}
+        />
       </span>
     </span>
   );
@@ -147,14 +148,15 @@ export function WarningPreview() {
     <PreviewFrame className="flex flex-col gap-4 rounded-sheet border border-contour bg-card p-4 sm:p-5">
       <span className="flex flex-col gap-1.5">
         <span className="text-lg font-semibold text-ink">능선 끝 바위 쉼터</span>
-        <span className="flex flex-wrap gap-1">
-          <Badge tone="earth" icon="backpack">
-            박지
-          </Badge>
-          <Badge tone="warning" icon="alert">
-            공원 경계 경고
-          </Badge>
-        </span>
+        <MetaLine
+          items={[
+            <span className="inline-flex items-center gap-1">
+              <Icon name="backpack" size={16} className="shrink-0" />
+              박지
+            </span>,
+            '강원 인제군 북면 용대리',
+          ]}
+        />
       </span>
       <ParkWarningNotice
         warning={{ warned: true, areaName: '설악산국립공원', source: 'KDPA', sourceDate: '2025-12-31' }}
@@ -178,9 +180,9 @@ export function TrustPreview() {
       <span className="flex flex-col gap-3">
         <span className="flex flex-wrap items-center gap-2">
           <span className="text-lg font-semibold text-ink">솔바람</span>
-          <Badge tone={badge.tone} icon={badge.icon}>
+          <StatusText tone={badge.tone} icon={badge.icon}>
             {badge.label}
-          </Badge>
+          </StatusText>
         </span>
         <Evidence
           items={[
@@ -189,10 +191,7 @@ export function TrustPreview() {
             { label: '"다시 동행하고 싶어요"', value: '92%' },
           ]}
         />
-        <span className="flex flex-wrap gap-1">
-          <Badge tone="forest">시간 약속</Badge>
-          <Badge tone="forest">흔적 남기지 않기 실천</Badge>
-        </span>
+        <span className="text-sm text-ink">시간 약속 · 흔적 남기지 않기 실천</span>
       </span>
       <Notice tone="info" title="내 후기를 쓰면 상대 후기를 볼 수 있어요">
         동행 후기는 서로 쓰기 전까지 가려 둬요.
@@ -205,7 +204,7 @@ export function TrustPreview() {
 export function StepSpotFragment() {
   return (
     <PreviewFrame caption={false} className="overflow-hidden rounded-control border border-contour bg-card">
-      <PreviewSpotRow name="솔숲 야영장" kind="CAMPSITE" note={<Badge tone="forest">베이스캠프 2</Badge>} />
+      <PreviewSpotRow name="솔숲 야영장" kind="CAMPSITE" note={<StatusText tone="forest">베이스캠프 2</StatusText>} />
     </PreviewFrame>
   );
 }
@@ -218,7 +217,7 @@ export function StepBasecampFragment() {
     >
       <span className="flex items-center justify-between gap-2">
         <span className="truncate text-base text-ink">주말 1박, 솔숲 야영장</span>
-        <Badge tone="forest">모집 중</Badge>
+        <StatusText tone="forest">모집 중</StatusText>
       </span>
       <span className="flex justify-between gap-2 text-sm text-ink-muted">
         <span>11월 7일 (토) · 1박</span>
@@ -238,7 +237,7 @@ export function StepProgramFragment() {
     >
       <span className="flex items-center justify-between gap-2">
         <span className="truncate text-base text-ink">가을 능선 백패킹</span>
-        <Badge tone="forest">신청 중</Badge>
+        <StatusText tone="forest">신청 중</StatusText>
       </span>
       <span className="flex justify-between gap-2 text-sm text-ink-muted">
         <span>30,000원</span>

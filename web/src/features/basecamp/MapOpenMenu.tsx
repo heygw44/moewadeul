@@ -4,10 +4,10 @@ import { toUserMessage } from '../../api/errors';
 import { fetchSpotsNearby } from '../../api/spots';
 import type { NearbySpot } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { Icon } from '../../components/icons';
+import { MetaLine, StatusText } from '../../components/StatusText';
 import type { LatLng } from '../../map/types';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -200,19 +200,21 @@ function SpotPickLabel({ spot }: { spot: NearbySpot }) {
           {Math.round(spot.distanceKm * 1000)}m
         </span>
       </span>
-      <span className="flex flex-wrap gap-1">
-        <Badge tone="neutral">{meta.label}</Badge>
-        {spot.parkWarning && (
-          <Badge tone="warning" icon="alert">
-            공원 경계 경고
-          </Badge>
-        )}
-        {spot.closedNow && (
-          <Badge tone="closed" icon="closed">
-            휴장
-          </Badge>
-        )}
-      </span>
+      <MetaLine
+        items={[
+          meta.label,
+          spot.parkWarning && (
+            <StatusText tone="warning" icon="alert">
+              공원 경계 경고
+            </StatusText>
+          ),
+          spot.closedNow && (
+            <StatusText tone="closed" icon="closed">
+              휴장 중
+            </StatusText>
+          ),
+        ]}
+      />
     </>
   );
 }

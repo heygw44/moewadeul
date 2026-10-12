@@ -1,8 +1,8 @@
 import type { BasecampApplicant, BasecampStatus, JoinCondition, JoinUnmetReason } from '../../api/types';
-import type { BadgeTone } from '../../components/Badge';
+import type { StatusTone } from '../../components/StatusText';
 import { AGE_GROUP_LABELS, GENDER_LABELS } from '../member/memberLabels';
 
-type StatusMeta = { label: string; tone: BadgeTone };
+type StatusMeta = { label: string; tone: StatusTone };
 
 export const BASECAMP_STATUS_META: Record<BasecampStatus, StatusMeta> = {
   RECRUITING: { label: '모집 중', tone: 'forest' },

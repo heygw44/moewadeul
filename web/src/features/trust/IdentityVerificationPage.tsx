@@ -155,7 +155,7 @@ export function IdentityVerificationPage() {
   if (session.me.status === 'UNVERIFIED') {
     return (
       <AuthLayout title="이메일 인증이 먼저 필요해요" footer={footer}>
-        <p className="text-ink-muted">본인확인은 이메일 인증을 마친 회원만 할 수 있어요.</p>
+        <p className="text-ink-muted">메일로 받은 인증 코드를 입력하면 바로 본인확인을 할 수 있어요.</p>
         <Link to="/verify-email" className={linkButtonClass}>
           이메일 인증하러 가기
         </Link>

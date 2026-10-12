@@ -56,11 +56,11 @@ export function MySoloTripsCard() {
         </div>
       ) : current.trips.length === 0 ? (
         <p className="text-sm text-ink-muted">
-          다가오는 일정이 없어요.{' '}
+          다가오는 일정이 없어요. 혼자 가는 일정은{' '}
           <Link to="/map" className="font-semibold text-forest underline underline-offset-2">
             지도
           </Link>
-          에서 장소를 골라 일정을 등록해 보세요.
+          에서 고른 장소의 상세에서 등록할 수 있어요.
         </p>
       ) : (
         <ul className="flex flex-col">
@@ -78,7 +78,7 @@ export function MySoloTripsCard() {
                 </span>
               </div>
               <Button variant="danger-outline" onClick={() => setDeleting(trip)}>
-                지우기
+                삭제
               </Button>
             </li>
           ))}
@@ -116,14 +116,14 @@ function DeleteTripDialog({ trip, onClose, onDeleted }: { trip: SoloTrip; onClos
   }
 
   return (
-    <Dialog title="일정을 지울까요?" onClose={onClose}>
+    <Dialog title="일정을 삭제할까요?" onClose={onClose}>
       <div className="flex flex-col gap-4">
         <p className="text-base text-ink">
-          {trip.spot.name} {formatLocalDate(trip.startDate)} 출발 일정을 지워요. 지운 일정은 되돌릴 수 없어요.
+          {trip.spot.name} {formatLocalDate(trip.startDate)} 출발 일정을 삭제해요. 삭제한 일정은 되돌릴 수 없어요.
         </p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="지우지 못했어요">
+            <Notice tone="danger" title="삭제하지 못했어요">
               <p>{error}</p>
             </Notice>
           </div>
@@ -133,7 +133,7 @@ function DeleteTripDialog({ trip, onClose, onDeleted }: { trip: SoloTrip; onClos
             취소
           </Button>
           <Button variant="danger" loading={submitting} onClick={() => void handleDelete()}>
-            지우기
+            삭제
           </Button>
         </div>
       </div>

@@ -11,6 +11,7 @@ import { toUserMessage } from '../../api/errors';
 import type { CommunityComment } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
+import { buttonClassName } from '../../components/buttonClass';
 import { Dialog } from '../../components/Dialog';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
@@ -18,14 +19,13 @@ import { TextArea } from '../../components/TextArea';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime, formatRelativeKst } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
+import { UnverifiedNote } from '../member/GatedButton';
 import { useSession } from '../member/session';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import type { CommunityReportTarget } from './CommunityReportDialog';
 
 // 서버 규칙과 같은 값이다. 댓글은 공백뿐일 수 없고 1,000자 이하다.
 const CONTENT_MAX = 1000;
-const UNVERIFIED_REASON = '이메일 인증을 마치면 쓸 수 있어요';
-const UNVERIFIED_REPORT_REASON = '이메일 인증을 마치면 신고할 수 있어요';
 
 type ListState = {
   comments: CommunityComment[];
@@ -154,7 +154,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
       )}
 
       {list && list.comments.length === 0 && !listError && (
-        <p className="px-4 py-3 text-base text-ink-muted">아직 댓글이 없어요. 첫 댓글을 남겨 보세요.</p>
+        <p className="px-4 py-3 text-base text-ink-muted">아직 댓글이 없어요.</p>
       )}
 
       {list && (list.comments.length > 0 || list.hasNext) && (
@@ -248,7 +248,8 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
   );
 }
 
-// 비회원에게는 로그인 링크를, 이메일 미인증 회원에게는 막힌 이유를 보여 준다. 쓰기 권한은 서버가 다시 확인한다.
+// 비회원에게는 댓글 쓰기 버튼을 보여 주고 누르면 로그인 화면으로 보낸다. 이메일 인증 전인 회원에게는 이 자리에서 한 번만
+// 막힌 이유를 알리고, 글과 댓글마다 있는 좋아요·답글·신고 버튼에는 이유를 되풀이하지 않는다. 쓰기 권한은 서버가 다시 확인한다.
 function NewCommentArea({ onSubmit }: { onSubmit: (content: string) => Promise<void> }) {
   const session = useSession();
   const { pathname, search } = useLocation();
@@ -256,22 +257,13 @@ function NewCommentArea({ onSubmit }: { onSubmit: (content: string) => Promise<v
   if (session.status === 'loading') return null;
   if (session.status === 'anonymous' || session.me === null) {
     return (
-      <Link
-        to={withNext('/login', pathname + search)}
-        className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
-      >
-        로그인하고 댓글 쓰기
+      <Link to={withNext('/login', pathname + search)} className={buttonClassName('secondary')}>
+        댓글 쓰기
       </Link>
     );
   }
   if (session.me.status === 'UNVERIFIED') {
-    return (
-      <div>
-        <Button variant="secondary" disabled disabledReason={UNVERIFIED_REASON}>
-          댓글 쓰기
-        </Button>
-      </div>
-    );
+    return <UnverifiedNote action="좋아요, 댓글, 신고를 할 수 있어요." />;
   }
   return <CommentForm label="댓글" submitLabel="댓글 남기기" onSubmit={onSubmit} />;
 }
@@ -322,8 +314,8 @@ function CommentItem({
   if (editingId === comment.commentId) {
     return (
       <CommentForm
-        label="댓글 고치기"
-        submitLabel="고치기"
+        label="댓글 수정"
+        submitLabel="수정하기"
         initial={content}
         onCancel={onCancelEdit}
         onSubmit={(next) => onSaveEdit(comment.commentId, next)}
@@ -361,7 +353,6 @@ function CommentItem({
             variant="ghost"
             onClick={onReply}
             disabled={unverified}
-            disabledReason={unverified ? UNVERIFIED_REASON : undefined}
             className="px-2"
           >
             답글
@@ -382,7 +373,6 @@ function CommentItem({
               variant="ghost"
               onClick={() => onReport(comment.commentId)}
               disabled={unverified}
-              disabledReason={unverified ? UNVERIFIED_REPORT_REASON : undefined}
               className="px-2"
             >
               신고
@@ -503,12 +493,12 @@ function DeleteCommentDialog({
   }
 
   return (
-    <Dialog title="댓글을 지울까요?" onClose={onClose}>
+    <Dialog title="댓글을 삭제할까요?" onClose={onClose}>
       <div className="flex flex-col gap-4">
-        <p className="text-base text-ink">지운 댓글은 되돌릴 수 없어요. 달린 답글은 그대로 남아요.</p>
+        <p className="text-base text-ink">삭제한 댓글은 되돌릴 수 없어요. 달린 답글은 그대로 남아요.</p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="지우지 못했어요">
+            <Notice tone="danger" title="삭제하지 못했어요">
               <p>{error}</p>
             </Notice>
           </div>
@@ -518,7 +508,7 @@ function DeleteCommentDialog({
             취소
           </Button>
           <Button variant="danger" loading={submitting} onClick={() => void handleDelete()}>
-            지우기
+            삭제
           </Button>
         </div>
       </div>

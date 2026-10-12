@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Link, useLocation } from '../../app/router';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
+import { Icon } from '../../components/icons';
 import { withNext } from './nextPath';
 import { useSession } from './session';
 
-const CHIP_CLASS =
-  'pointer-events-auto inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-control border border-contour bg-card px-2 sm:px-3';
+const TEXT_LINK_CLASS = 'inline-flex min-h-11 items-center whitespace-nowrap px-2 text-sm font-semibold sm:text-base';
 
-// 머리글과 지도 위에서 함께 쓰는 계정 표시다. 비회원은 로그인과 회원가입, 미인증 회원은 이메일 인증 안내, 회원은 닉네임과 로그아웃을 본다.
-// 비회원의 두 칩은 모양을 같게 두고, 자주 누르는 로그인만 숲색 글자로 눈에 띄게 한다.
+// 머리글의 계정 자리다. 비회원은 로그인과 회원가입, 회원은 닉네임과 로그아웃을 본다.
+// 상자나 칩으로 감싸지 않고 글 버튼으로 둔다. 이메일 인증 전인 회원에게만 인증 링크를 더하고,
+// 본인확인 권유는 내 정보 화면과 막힌 행동 곁에서만 한다. 머리글까지 같은 권유를 두면 한 화면에 두 번 보이기 때문이다.
 export function AccountChip() {
   const session = useSession();
   const { pathname, search } = useLocation();
@@ -20,24 +20,14 @@ export function AccountChip() {
   if (session.status === 'anonymous' || session.me === null) {
     const here = pathname + search;
     return (
-      <div className="inline-flex items-center gap-2">
-        <Link to={withNext('/login', here)} className={`${CHIP_CLASS} text-sm font-semibold sm:text-base text-forest`}>
+      <div className="pointer-events-auto inline-flex items-center">
+        <Link to={withNext('/login', here)} className={`${TEXT_LINK_CLASS} text-forest`}>
           로그인
         </Link>
-        <Link to={withNext('/signup', here)} className={`${CHIP_CLASS} text-sm font-semibold sm:text-base text-ink`}>
+        <Link to={withNext('/signup', here)} className={`${TEXT_LINK_CLASS} text-ink`}>
           회원가입
         </Link>
       </div>
-    );
-  }
-
-  if (session.me.status === 'UNVERIFIED') {
-    return (
-      <Link to="/verify-email" className={CHIP_CLASS}>
-        <Badge tone="warning" icon="alert">
-          이메일 인증 필요
-        </Badge>
-      </Link>
     );
   }
 
@@ -51,23 +41,18 @@ export function AccountChip() {
   }
 
   return (
-    <div className="pointer-events-auto inline-flex min-w-0 items-center gap-2 rounded-control border border-contour bg-card py-0.5 pl-3 pr-0.5">
+    <div className="pointer-events-auto inline-flex min-w-0 items-center gap-1">
       <Link
         to="/me"
         aria-label={`내 정보: ${session.me.nickname}`}
-        className="max-w-32 min-h-11 content-center truncate text-sm text-ink underline-offset-2 hover:underline"
+        className="max-w-32 min-h-11 content-center truncate px-2 text-sm text-ink underline-offset-2 hover:underline"
       >
         {session.me.nickname}
       </Link>
-      {session.me.identityVerified ? (
-        <span>
-          <Badge tone="sea" icon="check">
-            본인확인
-          </Badge>
-        </span>
-      ) : (
-        <Link to="/identity-verification" className="min-h-11 content-center text-sm font-semibold text-forest">
-          본인확인
+      {session.me.status === 'UNVERIFIED' && (
+        <Link to="/verify-email" className={`${TEXT_LINK_CLASS} gap-1 text-warning`}>
+          <Icon name="alert" size={16} className="shrink-0" />
+          이메일 인증
         </Link>
       )}
       <Button variant="ghost" loading={loggingOut} onClick={handleLogout}>

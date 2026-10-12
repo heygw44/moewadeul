@@ -136,7 +136,6 @@ export function CommunityListPage() {
   return (
     <HubLayout
       title="커뮤니티"
-      description="백패킹 이야기를 자유롭게 나누는 곳이에요."
       actions={<WriteAction spotId={query.spotId} />}
       tabs={<UnderlineTabs label="글 모아 보기" options={TABS} value={query.tab} onChange={(tab) => goTo({ tab, page: 1 })} />}
       aside={<CommunityAside />}
@@ -186,7 +185,7 @@ export function CommunityListPage() {
               ) : query.tab === 'popular' ? (
                 <PopularEmpty />
               ) : (
-                <CommunityEmpty spotId={query.spotId} />
+                <CommunityEmpty />
               )}
             </li>
           ) : (
@@ -299,7 +298,7 @@ function SearchEmpty({ onClear }: { onClear: () => void }) {
   return (
     <div className="flex flex-col items-start gap-3 p-6">
       <p className="text-lg font-semibold text-ink">검색 결과가 없어요</p>
-      <p className="text-sm text-ink-muted">다른 검색어나 검색 대상으로 찾아보세요.</p>
+      <p className="text-sm text-ink-muted">검색어를 바꾸거나 검색 대상을 넓혀 주세요.</p>
       <Button variant="secondary" onClick={onClear}>
         검색어 지우기
       </Button>
@@ -310,20 +309,18 @@ function SearchEmpty({ onClear }: { onClear: () => void }) {
 function PopularEmpty() {
   return (
     <div className="flex flex-col items-start gap-3 p-6">
-      <Icon name="chat" size={24} className="text-ink-muted" />
       <p className="text-lg font-semibold text-ink">아직 인기글이 없어요</p>
-      <p className="text-sm text-ink-muted">좋아요 5개를 받은 글이 여기에 모여요.</p>
+      <p className="text-sm text-ink-muted">좋아요를 5개 이상 받은 글이 인기글이 돼요.</p>
     </div>
   );
 }
 
-function CommunityEmpty({ spotId }: { spotId: number | null }) {
+// 글쓰기 버튼은 머리 띠에 있으므로 여기에는 상황만 적는다.
+function CommunityEmpty() {
   return (
     <div className="flex flex-col items-start gap-3 p-6">
-      <Icon name="chat" size={24} className="text-ink-muted" />
       <p className="text-lg font-semibold text-ink">아직 올라온 글이 없어요</p>
-      <p className="text-sm text-ink-muted">다녀온 박지, 써 본 장비, 준비하며 궁금한 것을 첫 글로 남겨 보세요.</p>
-      <WriteAction spotId={spotId} />
+      <p className="text-sm text-ink-muted">다녀온 박지, 써 본 장비, 준비하며 궁금한 것을 나눌 수 있어요.</p>
     </div>
   );
 }
@@ -343,24 +340,6 @@ function CommunityAside() {
           <li>송금을 요구하면 신고해 주세요.</li>
           <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
           <li>신고가 5건 쌓이면 글이 잠시 내려가고 관리자가 검토해요.</li>
-        </ul>
-      </AsideSection>
-      <AsideSection title="둘러보기">
-        <ul>
-          {[
-            { to: '/map', label: '지도에서 박지 찾기' },
-            { to: '/basecamps', label: '베이스캠프' },
-            { to: '/programs', label: '공식 행사' },
-          ].map((item) => (
-            <li key={item.to}>
-              <Link
-                to={item.to}
-                className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
         </ul>
       </AsideSection>
     </>

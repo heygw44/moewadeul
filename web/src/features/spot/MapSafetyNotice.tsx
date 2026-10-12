@@ -19,7 +19,7 @@ export function MapSafetyNotice() {
   return (
     <div
       role="note"
-      className="pointer-events-auto flex max-w-md gap-3 rounded-control border-l-4 border-sea bg-sea-soft p-3 shadow-raise"
+      className="pointer-events-auto flex max-w-md gap-3 rounded-control border border-sea bg-sea-soft p-3 shadow-raise"
     >
       <Icon name="info" size={20} className="mt-0.5 shrink-0 text-sea" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">

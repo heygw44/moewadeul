@@ -1,7 +1,7 @@
 import { Link } from '../../app/router';
 import type { SpotMarker } from '../../api/types';
-import { Badge } from '../../components/Badge';
 import { Icon } from '../../components/icons';
+import { MetaLine, StatusText } from '../../components/StatusText';
 import { SPOT_TYPE_META } from './spotLabels';
 
 type SpotListRowProps = {
@@ -23,19 +23,21 @@ export function SpotListRow({ marker }: SpotListRowProps) {
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="truncate text-base text-ink">{marker.name}</span>
-          <span className="flex flex-wrap gap-1">
-            <Badge tone="neutral">{meta.label}</Badge>
-            {marker.parkWarning && (
-              <Badge tone="warning" icon="alert">
-                공원 경계 경고
-              </Badge>
-            )}
-            {marker.closedNow && (
-              <Badge tone="closed" icon="closed">
-                휴장
-              </Badge>
-            )}
-          </span>
+          {/* 장소 유형은 왼쪽 아이콘이 이미 알린다. 그래서 판단에 필요한 경고와 휴장만 글로 적는다. */}
+          <MetaLine
+            items={[
+              marker.parkWarning && (
+                <StatusText tone="warning" icon="alert">
+                  공원 경계 경고
+                </StatusText>
+              ),
+              marker.closedNow && (
+                <StatusText tone="closed" icon="closed">
+                  휴장 중
+                </StatusText>
+              ),
+            ]}
+          />
         </span>
       </Link>
     </li>

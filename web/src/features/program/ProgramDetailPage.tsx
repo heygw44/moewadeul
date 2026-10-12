@@ -12,21 +12,20 @@ import {
 } from '../../api/programs';
 import type { ProgramDetail } from '../../api/types';
 import { Link } from '../../app/router';
-import { ProgramAside } from './ProgramAside';
 import { BackLink } from '../../components/BackLink';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
 import { Notice } from '../../components/Notice';
 import { PageLayout } from '../../components/PageLayout';
+import { MetaLine, StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
-import { APPLICATION_STATUS_META, countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
+import { countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { useNow } from './useNow';
 
 type LoadResult = { programId: number; detail: ProgramDetail } | { programId: number; error: unknown };
@@ -107,12 +106,16 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
   }
 
   const detail = current !== null && 'detail' in current ? current.detail : null;
+  // 장소는 본문 근거 목록이, 취소는 본문 안내가 알리므로 제목 아래에는 상태와 숙박 여부만 둔다.
   const meta = detail ? (
-    <div className="flex flex-wrap items-center gap-1">
-      <Badge tone={PROGRAM_STATUS_META[detail.status].tone}>{PROGRAM_STATUS_META[detail.status].label}</Badge>
-      {detail.overnight && <Badge tone="earth">숙박</Badge>}
-      <span className="text-sm text-ink-muted">{detail.locationText}</span>
-    </div>
+    <MetaLine
+      items={[
+        detail.status !== 'CANCELED' && (
+          <StatusText tone={PROGRAM_STATUS_META[detail.status].tone}>{PROGRAM_STATUS_META[detail.status].label}</StatusText>
+        ),
+        detail.overnight && '숙박',
+      ]}
+    />
   ) : undefined;
 
   return (
@@ -120,7 +123,6 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
       title={detail?.title ?? '공식 행사'}
       breadcrumb={<BackLink to="/programs">공식 행사</BackLink>}
       meta={meta}
-      aside={<ProgramAside signedIn={session.status === 'authenticated'} />}
     >
       <div aria-busy={current === null}>{body}</div>
     </PageLayout>
@@ -267,7 +269,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
     run('alert', null, async () => {
       await subscribeVacancyAlert(detail.programId);
       setAlertOn(true);
-      setNotice('빈자리 알림을 신청했어요. 자리가 나면 알려 드려요.');
+      setNotice('빈자리 알림을 신청했어요. 자리가 나면 알려 줘요.');
     });
 
   const unsubscribe = () =>
@@ -313,13 +315,15 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
                 )}
               </p>
             )}
-            <p className="mt-1">참가비 {feeText(detail.fee)} · 시연용 결제라서 실제로 돈이 나가지 않아요.</p>
+            <p className="mt-1">
+              {detail.fee === 0 ? '참가비가 없는 행사예요.' : `참가비는 ${feeText(detail.fee)}이에요.`} 시연용 결제라서 실제로 돈이
+              나가지 않아요.
+            </p>
           </Notice>
           <Button
             fullWidth
             loading={busy === 'pay'}
             disabled={payExpired || busy !== null}
-            disabledReason={payExpired ? '결제 기한이 지났어요' : undefined}
             onClick={() => void pay()}
           >
             결제하기
@@ -332,10 +336,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
       {confirmed && (
         <>
-          <p className="flex flex-wrap items-center gap-2 text-base text-ink">
-            <Badge tone={APPLICATION_STATUS_META.CONFIRMED.tone}>{APPLICATION_STATUS_META.CONFIRMED.label}</Badge>
-            신청이 확정됐어요.
-          </p>
+          <p className="text-base font-semibold text-forest-deep">신청이 확정됐어요.</p>
           <p className="text-sm text-ink-muted">
             {refundClosed
               ? '환불 기한이 지나서 취소할 수 없어요.'
@@ -355,7 +356,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
       {!active && !authenticated && detail.status === 'OPEN' && (
         <Link to={withNext('/login', `/programs/${detail.programId}`)} className={`${LINK_BUTTON_CLASS} w-full`}>
-          로그인하고 신청하기
+          신청하기
         </Link>
       )}
 

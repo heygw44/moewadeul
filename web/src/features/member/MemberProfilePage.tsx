@@ -5,7 +5,7 @@ import { toUserMessage } from '../../api/errors';
 import { fetchMemberProfile } from '../../api/members';
 import type { MemberProfile } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
@@ -82,11 +82,9 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   const profile = current && 'profile' in current ? current.profile : null;
   const badge = profile && profile.trustLevel !== undefined ? trustLevelBadge(profile.trustLevel) : null;
   const meta = badge ? (
-    <div className="flex flex-wrap gap-1">
-      <Badge tone={badge.tone} icon={badge.icon}>
-        {badge.label}
-      </Badge>
-    </div>
+    <StatusText tone={badge.tone} icon={badge.icon}>
+      {badge.label}
+    </StatusText>
   ) : undefined;
 
   return (
@@ -132,7 +130,7 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
         </p>
         {isMe && (
           <Link to="/me" className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-forest">
-            내 정보 고치기
+            내 정보 수정
           </Link>
         )}
       </PageCard>
@@ -150,13 +148,7 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
         {summary && summary.topTags.length > 0 && (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-ink-muted">자주 받은 태그</p>
-            <div className="flex flex-wrap gap-1">
-              {summary.topTags.map((tag) => (
-                <Badge key={tag} tone="forest">
-                  {companionTagLabel(tag)}
-                </Badge>
-              ))}
-            </div>
+            <p className="text-sm text-ink">{summary.topTags.map(companionTagLabel).join(' · ')}</p>
           </div>
         )}
       </PageCard>
