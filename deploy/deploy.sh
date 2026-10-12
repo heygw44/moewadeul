@@ -37,8 +37,6 @@ declare -rA SECRET_PARAMS=(
 )
 readonly EXPORTER_USER=moewadeul_exporter
 readonly BACKUP_DIR="$DEPLOY_DIR/backup"
-readonly COMPOSE_PROJECT=moewadeul
-readonly OLD_COMPOSE_PROJECT=pitchmap
 readonly ALLOY_CONFIG_FILE="$DEPLOY_DIR/alloy/config.alloy"
 readonly ALLOY_CONTAINER_CONFIG=/etc/alloy/config.alloy
 readonly BACKUP_METRICS_FILE="$DEPLOY_DIR/metrics/backup.prom"
@@ -192,20 +190,6 @@ SQL
     fi
 }
 
-# 서버 이름을 pitchmap에서 moewadeul로 옮기는 동안만 쓰는 확인이다. compose 프로젝트 이름이 바뀌면 볼륨 이름도
-# moewadeul_*로 바뀐다. 그래서 이전 스크립트로 데이터를 옮기기 전에 배포하면, MySQL이 빈 DB를 새로 만들고
-# 앱이 빈 스키마로 떠서 헬스 체크를 통과해 버린다. 옛 볼륨만 있고 새 볼륨이 없으면 아무것도 바꾸지 않고 멈춘다.
-require_renamed_volumes() {
-    if docker volume inspect "${COMPOSE_PROJECT}_mysql-data" > /dev/null 2>&1; then
-        return
-    fi
-    if docker volume inspect "${OLD_COMPOSE_PROJECT}_mysql-data" > /dev/null 2>&1; then
-        log "${OLD_COMPOSE_PROJECT}_mysql-data만 있고 ${COMPOSE_PROJECT}_mysql-data가 없다. 이름 변경 이전이 끝나지 않았다"
-        log "deploy/rename/migrate-to-moewadeul.sh를 먼저 실행한다. 실행 중인 컨테이너는 그대로 둔다"
-        exit 1
-    fi
-}
-
 alloy_config_sum() {
     compose exec -T alloy cat "$ALLOY_CONTAINER_CONFIG" 2> /dev/null | sha256sum | cut -d' ' -f1
 }
@@ -259,7 +243,6 @@ main() {
     fi
 
     check_architecture
-    require_renamed_volumes
     load_server_env
     load_secrets
 

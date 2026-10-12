@@ -20,24 +20,6 @@
    - Swagger UI: http://localhost:8080/swagger-ui/index.html
    - 앱이 시작될 때 Flyway가 `src/main/resources/db/migration`의 마이그레이션을 적용한다. 테이블은 `docker compose exec mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" moewadeul -e "SHOW TABLES"'`로 확인한다.
 
-### 예전 이름(pitchmap)으로 만든 로컬 DB 옮기기
-
-이름을 바꾸기 전에 로컬 DB를 만들었다면 컨테이너 이름과 DB 이름이 `pitchmap`이다. 데이터 디렉터리(`mysql-data/`)는 그대로 쓰고 이름만 옮긴다.
-
-1. `.env`에 `DB_NAME`, `DB_USERNAME`을 `pitchmap`으로 적어 두었다면 `moewadeul`로 바꾸거나 지운다.
-2. 옛 이름의 컨테이너를 내리고 새 이름으로 띄운다.
-   ```bash
-   docker compose -p pitchmap down && docker compose up -d --wait
-   ```
-3. 새 DB와 앱 계정을 만든 뒤 옛 DB를 덤프해 넣는다. 덤프 속 트리거·프로시저의 정의자(DEFINER)도 새 계정으로 바꾼다. 정의자 계정이 없으면 장소를 쓸 때 트리거가 실패하기 때문이다. 옛 DB `pitchmap`은 지우지 않는다.
-   ```bash
-   docker compose exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -e "CREATE DATABASE moewadeul CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci; CREATE USER IF NOT EXISTS moewadeul IDENTIFIED BY \"$MYSQL_PASSWORD\"; GRANT ALL PRIVILEGES ON moewadeul.* TO moewadeul;"'
-   docker compose exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers --set-gtid-purged=OFF --no-tablespaces --hex-blob pitchmap' \
-     | LC_ALL=C sed 's/`pitchmap`@`%`/`moewadeul`@`%`/g' \
-     | docker compose exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot moewadeul'
-   ```
-4. `./gradlew bootRun`으로 앱이 뜨는지 확인한다.
-
 ### 종료
 
 `docker compose down`. 데이터까지 지우려면 내린 뒤 `mysql-data/` 디렉터리를 삭제한다.
