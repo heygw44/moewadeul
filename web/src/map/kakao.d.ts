@@ -48,6 +48,7 @@ declare namespace kakao.maps {
   interface MapOptions {
     center: LatLng;
     level?: number;
+    scrollwheel?: boolean;
   }
 
   interface SetLevelOptions {

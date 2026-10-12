@@ -13,7 +13,6 @@ import { trustLevelBadge } from '../member/memberLabels';
 // 랜딩에서 제품이 무엇을 보여 주는지 미리 보여 주는 예시 조각이다. 실제 화면과 같은 컴포넌트·색으로 그리되,
 // 누를 수 있는 것처럼 보이면 안 되므로 버튼·링크 대신 span을 쓰고, 화면 부분은 스크린 리더와 키보드에서 뺀다.
 // 그 대신 캡션으로 예시라는 것을 글로 알린다.
-// caption을 끄는 곳(흐름 단계의 작은 조각)은 묶음 아래에 예시라는 안내를 한 번만 따로 적는다.
 export function PreviewFrame({
   children,
   className = '',
@@ -60,7 +59,7 @@ function PreviewPin({ kind, warning = false, selected = false, style }: PreviewP
         <Icon name={kindStyle.icon} x={8} y={8} size={20} className="text-white" />
       </svg>
       {warning && (
-        <span className="absolute -left-0.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-control border border-warning-line bg-warning-soft text-warning">
+        <span className="absolute -left-0.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-warning-line bg-warning-soft text-warning">
           <Icon name="alert" size={14} />
         </span>
       )}
@@ -97,7 +96,7 @@ function PreviewSpotRow({ name, kind, warning = false, note }: PreviewSpot) {
   );
 }
 
-// 첫 화면 오른쪽의 지도 미리보기. 옅은 회색 바탕에 핀 몇 개와 묶음, 아래에 장소 목록 시트를 겹친다.
+// 첫 화면 지도를 불러오지 못했을 때 대신 두는 지도 미리보기. 옅은 바탕에 핀 몇 개와 묶음, 아래에 장소 목록 시트를 겹친다.
 export function HeroPreview() {
   return (
     <PreviewFrame className="relative h-[22rem] overflow-hidden rounded-sheet border border-line bg-fill sm:h-[26rem]">
@@ -200,51 +199,3 @@ export function TrustPreview() {
   );
 }
 
-// 흐름 단계마다 붙는 작은 조각들이다.
-export function StepSpotFragment() {
-  return (
-    <PreviewFrame caption={false} className="overflow-hidden rounded-sheet border border-line bg-surface">
-      <PreviewSpotRow name="솔숲 야영장" kind="CAMPSITE" note={<StatusText tone="accent">베이스캠프 2</StatusText>} />
-    </PreviewFrame>
-  );
-}
-
-export function StepBasecampFragment() {
-  return (
-    <PreviewFrame
-      caption={false}
-      className="flex flex-col gap-2 rounded-sheet border border-line bg-surface px-4 py-3"
-    >
-      <span className="flex items-center justify-between gap-2">
-        <span className="truncate text-base text-ink">주말 1박, 솔숲 야영장</span>
-        <StatusText tone="accent">모집 중</StatusText>
-      </span>
-      <span className="flex justify-between gap-2 text-sm text-ink-muted">
-        <span>11월 7일 (토) · 1박</span>
-        <span>
-          인원 <span className="font-mono tabular-nums text-ink">2/4</span>
-        </span>
-      </span>
-    </PreviewFrame>
-  );
-}
-
-export function StepProgramFragment() {
-  return (
-    <PreviewFrame
-      caption={false}
-      className="flex flex-col gap-2 rounded-sheet border border-line bg-surface px-4 py-3"
-    >
-      <span className="flex items-center justify-between gap-2">
-        <span className="truncate text-base text-ink">가을 능선 백패킹</span>
-        <StatusText tone="accent">신청 중</StatusText>
-      </span>
-      <span className="flex justify-between gap-2 text-sm text-ink-muted">
-        <span>30,000원</span>
-        <span>
-          남은 자리 <span className="font-mono tabular-nums text-ink">12</span>
-        </span>
-      </span>
-    </PreviewFrame>
-  );
-}

@@ -21,9 +21,11 @@ type MapSearchBarProps = {
   onSelect: (candidate: RegionCandidate) => void;
   // 지도가 움직이기 시작하면 떠 있던 후보 목록과 안내 문구를 닫는다.
   mapMoving: boolean;
+  // 지도 위에 띄울 때 켠다. 랜딩처럼 지도 밖 흰 바탕에 둘 때는 끈다.
+  floating?: boolean;
 };
 
-export function MapSearchBar({ onSearch, onSelect, mapMoving }: MapSearchBarProps) {
+export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true }: MapSearchBarProps) {
   const [query, setQuery] = useState('');
   const [inputError, setInputError] = useState<string | undefined>();
   const [state, setState] = useState<SearchState>({ status: 'idle' });
@@ -88,13 +90,18 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving }: MapSearchBarProp
   }
 
   // 지도 위에서는 입력란이 옅은 면이면 지도에 묻힌다. 흰 면과 그림자로 띄우고, 오류일 때는 위험색 테두리를 남긴다.
+  // 지도 밖(랜딩)에서는 첫 화면의 주 입력이라 52px로 키우고, 아이콘 대신 '찾기' 글자 버튼을 둔다.
   return (
     <form
       role="search"
       noValidate
       onSubmit={handleSubmit}
       onKeyDown={handleKeyDown}
-      className="pointer-events-auto relative min-w-0 flex-1 [&_input]:bg-surface [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent"
+      className={
+        floating
+          ? 'pointer-events-auto relative min-w-0 flex-1 [&_input]:bg-surface [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent'
+          : 'relative min-w-0 flex-1 [&_input]:min-h-13 [&_input]:pr-24'
+      }
     >
       <TextField
         label="지역 검색"
@@ -112,9 +119,13 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving }: MapSearchBarProp
             aria-label="지역 검색"
             aria-busy={state.status === 'loading' || undefined}
             disabled={state.status === 'loading'}
-            className="inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted"
+            className={
+              floating
+                ? 'inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted'
+                : 'mr-1.5 inline-flex h-10 items-center justify-center rounded-[0.5rem] bg-ink px-4 font-semibold text-white hover:bg-ink-muted disabled:bg-ink-muted'
+            }
           >
-            <Icon name="search" size={20} />
+            {floating ? <Icon name="search" size={20} /> : '찾기'}
           </button>
         }
       />

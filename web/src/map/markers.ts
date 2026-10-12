@@ -114,6 +114,37 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
   return { element: button, setSelected };
 }
 
+// 장소를 작은 점으로 그린다. 랜딩 첫 화면처럼 유형보다 "어디에 장소가 있는지"와 "어느 장소를 골랐는지"만 보여 줄 때 쓴다.
+// 고르지 않은 장소는 먹색 점, 고른 장소 하나만 강조색 점이다. 점은 작아도 누르는 영역은 44px이다.
+// 경고·휴장은 점 모양으로 구분하지 않으므로 버튼 이름에 적는다. 고른 장소의 근거 시트가 같은 내용을 글로 보여 준다.
+export function createSpotDot(data: SpotMarkerData, onActivate: (id: number) => void): SpotPin {
+  const style = KIND_STYLE[data.kind];
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'flex h-11 w-11 cursor-pointer items-center justify-center rounded-full ' + FOCUS_RING;
+  const labelParts = [data.name, style.label];
+  if (data.warning) labelParts.push('공원 경계 경고');
+  if (data.closed) labelParts.push('휴장');
+  button.setAttribute('aria-label', labelParts.join(', '));
+  const dot = document.createElement('span');
+  button.appendChild(dot);
+
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    onActivate(data.id);
+  });
+
+  function setSelected(selected: boolean) {
+    dot.className = selected
+      ? 'block size-[18px] rounded-full bg-accent ring-[3px] ring-white shadow-raise'
+      : 'block size-2.5 rounded-full bg-ink ring-2 ring-white';
+    button.setAttribute('aria-pressed', String(selected));
+  }
+  setSelected(false);
+
+  return { element: button, setSelected };
+}
+
 // 핀 버튼의 크기다(h-11 w-11). 펼친 핀은 핀 끝이 놓일 자리에서 가로로 절반, 세로로 전체만큼 옮겨 놓는다.
 const PIN_BUTTON_SIZE_PX = 44;
 const SPREAD_ANIMATION_MS = 150;
