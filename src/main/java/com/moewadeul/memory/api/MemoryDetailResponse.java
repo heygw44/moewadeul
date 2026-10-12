@@ -10,6 +10,7 @@ import java.util.List;
 // 대략 좌표(approxLat, approxLng)만 준다. 어느 쪽이든 쓰지 않는 필드는 null이 아니라 뺀다.
 // likedByMe는 로그인한 사람이 조회할 때만 담고, 비회원이면 필드를 뺀다.
 // 연결한 장소가 없거나 지도에 보이지 않으면 spot 필드를, 글이 없으면 content 필드를 뺀다.
+// 신고·관리자 조치 상태(status)는 작성자에게만 준다. 다른 사람은 ACTIVE인 기록만 보므로 필드를 뺀다.
 public record MemoryDetailResponse(
         long memoryId,
         Author author,
@@ -22,6 +23,7 @@ public record MemoryDetailResponse(
         int nights,
         @JsonInclude(JsonInclude.Include.NON_NULL) String content,
         String visibility,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String status,
         List<Image> images,
         Instant createdAt,
         Instant updatedAt,
@@ -54,6 +56,7 @@ public record MemoryDetailResponse(
                 view.nights(),
                 view.content(),
                 view.visibility(),
+                author ? view.status() : null,
                 view.images().stream()
                         .map(image -> new Image(image.imageId(), image.url()))
                         .toList(),

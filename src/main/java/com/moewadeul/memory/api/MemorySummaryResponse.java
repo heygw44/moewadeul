@@ -6,7 +6,7 @@ import com.moewadeul.memory.application.MemorySummary;
 import java.time.Instant;
 import java.time.LocalDate;
 
-// 작성자 본인에게만 주는 내 기록 목록의 항목이라 정확한 좌표와 공개 범위를 담는다.
+// 작성자 본인에게만 주는 내 기록 목록의 항목이라 정확한 좌표와 공개 범위, 신고·관리자 조치 상태를 담는다.
 // 연결한 장소가 보이지 않으면 spot을, 글이 없으면 excerpt를, 사진이 없으면 thumbnailUrl을 null이 아니라 필드째 뺀다.
 public record MemorySummaryResponse(
         long memoryId,
@@ -17,6 +17,7 @@ public record MemorySummaryResponse(
         int nights,
         @JsonInclude(JsonInclude.Include.NON_NULL) String excerpt,
         String visibility,
+        String status,
         @JsonInclude(JsonInclude.Include.NON_NULL) String thumbnailUrl,
         long imageCount,
         Instant createdAt) {
@@ -31,6 +32,7 @@ public record MemorySummaryResponse(
                 summary.nights(),
                 summary.excerpt(),
                 summary.visibility(),
+                summary.status(),
                 summary.thumbnailUrl(),
                 summary.imageCount(),
                 summary.createdAt());

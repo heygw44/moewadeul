@@ -17,13 +17,13 @@ public interface MemoryMapper {
     Optional<MemoryRow> selectById(@Param("memoryId") long memoryId, @Param("viewerId") Long viewerId);
 
     /**
-     * 호출하면 memberId인 회원의 기록을 방문일이 늦은 순서로, 방문일이 같으면 ID가 큰 순서로 읽는다. visibility가 null이 아니면 그 공개 범위의
-     * 기록만 읽는다.
+     * 호출하면 memberId인 회원의 기록을 방문일이 늦은 순서로, 방문일이 같으면 ID가 큰 순서로 읽는다. visibility가 null이 아니면 그 공개 범위이면서
+     * ACTIVE인 기록만 읽는다. null이면 상태와 상관없이 모두 읽는다.
      */
     List<MemorySummaryRow> selectByMember(@Param("memberId") long memberId, @Param("visibility") String visibility);
 
     /**
-     * 호출하면 공개 기록을 ID가 큰 순서로 offset건 건너뛰고 limit건 읽는다. viewerId가 null이면(비회원) 좋아요를 눌렀는지는 비워 둔다.
+     * 호출하면 공개이면서 ACTIVE인 기록을 ID가 큰 순서로 offset건 건너뛰고 limit건 읽는다. viewerId가 null이면(비회원) 좋아요를 눌렀는지는 비워 둔다.
      */
     List<MemoryFeedRow> selectPublicFeed(
             @Param("viewerId") Long viewerId, @Param("limit") int limit, @Param("offset") int offset);

@@ -35,6 +35,7 @@ class MemoryViewReader {
                 row.nights(),
                 row.content(),
                 row.visibility(),
+                row.status(),
                 memoryImageReader.readByMemoryId(row.memoryId()),
                 row.createdAt(),
                 row.updatedAt(),

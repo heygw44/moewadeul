@@ -13,6 +13,7 @@ import java.util.List;
  * @param latitude 정확한 위도. 조회한 사람이 작성자일 때만 값이 있다
  * @param longitude 정확한 경도. 조회한 사람이 작성자일 때만 값이 있다
  * @param approximate 정확한 좌표를 소수 둘째 자리로 반올림한 좌표. 누가 보든 담는다
+ * @param status 신고·관리자 조치 상태 이름. 작성자가 아닌 사람에게는 ACTIVE인 기록만 보인다
  * @param likedByMe 조회한 사람이 좋아요를 눌렀는지. 비회원이 조회하면 null이다
  * @param viewedByAuthor 조회한 사람이 작성자이면 true다
  */
@@ -29,6 +30,7 @@ public record MemoryView(
         int nights,
         String content,
         String visibility,
+        String status,
         List<MemoryPhoto> images,
         Instant createdAt,
         Instant updatedAt,

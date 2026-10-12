@@ -116,7 +116,8 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.PUT, "/api/memories/1/like"),
             new Endpoint(HttpMethod.DELETE, "/api/memories/1/like"),
             new Endpoint(HttpMethod.POST, "/api/community/posts/1/reports"),
-            new Endpoint(HttpMethod.POST, "/api/community/comments/1/reports"));
+            new Endpoint(HttpMethod.POST, "/api/community/comments/1/reports"),
+            new Endpoint(HttpMethod.POST, "/api/memories/1/reports"));
 
     // ADMIN 역할만 부를 수 있다.
     static final List<Endpoint> ADMIN = List.of(
@@ -141,6 +142,9 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.GET, "/api/admin/community/comments"),
             new Endpoint(HttpMethod.POST, "/api/admin/community/comments/1/hide"),
             new Endpoint(HttpMethod.POST, "/api/admin/community/comments/1/restore"),
+            new Endpoint(HttpMethod.GET, "/api/admin/memories"),
+            new Endpoint(HttpMethod.POST, "/api/admin/memories/1/hide"),
+            new Endpoint(HttpMethod.POST, "/api/admin/memories/1/restore"),
             new Endpoint(HttpMethod.GET, "/api/admin/audit-logs"));
 
     private AuthorizationMatrix() {}
