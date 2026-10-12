@@ -51,7 +51,8 @@ class MemoryWithdrawalCleanupIntegrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("[F-33][PV-10] 회원이 탈퇴하고 발행기가 돌면 그 회원의 기록과 사진(방금 올린 사진 포함)이 저장소까지 모두 지워지고, 다른 회원의 기록은 남는다")
+    @DisplayName(
+            "[F-33][PV-10] 회원이 탈퇴하고 발행기가 돌면 그 회원의 기록과 사진(방금 올린 사진 포함)이 저장소까지 모두 지워지고, 기록에 달린 좋아요도 함께 지워지며, 다른 회원의 기록은 남는다")
     void withdrawalDeletesMemoriesAndImages() {
         // given
         long member = saveMember();
@@ -63,6 +64,13 @@ class MemoryWithdrawalCleanupIntegrationTest {
         commandService.write(member, write(List.of()));
         long othersImage = uploaded(other);
         long othersMemory = commandService.write(other, write(List.of(othersImage)));
+        long ownMemory = commandService.write(member, write(List.of()));
+        jdbc.update(
+                "INSERT INTO memory_like (memory_id, member_id, created_at) VALUES (?, ?, NOW(6))", ownMemory, other);
+        jdbc.update(
+                "INSERT INTO memory_like (memory_id, member_id, created_at) VALUES (?, ?, NOW(6))",
+                othersMemory,
+                other);
 
         // when
         withdrawalService.withdraw(member, PASSWORD);
@@ -72,6 +80,8 @@ class MemoryWithdrawalCleanupIntegrationTest {
         assertThat(count("memory WHERE member_id = ?", member)).isZero();
         assertThat(count("memory_image WHERE member_id = ?", member)).isZero();
         assertThat(storage.deletedKeys()).containsExactlyInAnyOrderElementsOf(keys);
+        assertThat(count("memory_like WHERE memory_id = ?", ownMemory)).isZero();
+        assertThat(count("memory_like WHERE memory_id = ?", othersMemory)).isEqualTo(1);
         assertThat(count("memory WHERE id = ?", othersMemory)).isEqualTo(1);
         assertThat(storage.hasObject(keyOf(othersImage))).isTrue();
         assertThat(jdbc.queryForObject(

@@ -6,7 +6,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-// 작성자는 회원 ID와 닉네임만 내보낸다. 정확한 좌표는 작성자 본인에게만 주고, 다른 사람에게는 null이 아니라 필드를 뺀다.
+// 작성자는 회원 ID와 닉네임만 내보낸다. 정확한 좌표(lat, lng)는 작성자 본인에게만 주고, 다른 사람에게는 소수 둘째 자리로 반올림한
+// 대략 좌표(approxLat, approxLng)만 준다. 어느 쪽이든 쓰지 않는 필드는 null이 아니라 뺀다.
+// likedByMe는 로그인한 사람이 조회할 때만 담고, 비회원이면 필드를 뺀다.
 // 연결한 장소가 없거나 지도에 보이지 않으면 spot 필드를, 글이 없으면 content 필드를 뺀다.
 public record MemoryDetailResponse(
         long memoryId,
@@ -14,13 +16,17 @@ public record MemoryDetailResponse(
         @JsonInclude(JsonInclude.Include.NON_NULL) LinkedSpot spot,
         @JsonInclude(JsonInclude.Include.NON_NULL) Double lat,
         @JsonInclude(JsonInclude.Include.NON_NULL) Double lng,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Double approxLat,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Double approxLng,
         LocalDate visitedDate,
         int nights,
         @JsonInclude(JsonInclude.Include.NON_NULL) String content,
         String visibility,
         List<Image> images,
         Instant createdAt,
-        Instant updatedAt) {
+        Instant updatedAt,
+        long likeCount,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Boolean likedByMe) {
 
     public record Author(long memberId, String nickname) {}
 
@@ -42,6 +48,8 @@ public record MemoryDetailResponse(
                 LinkedSpot.of(view.spotId(), view.spotName()),
                 author ? view.latitude() : null,
                 author ? view.longitude() : null,
+                author ? null : view.approximate().latitude(),
+                author ? null : view.approximate().longitude(),
                 view.visitedDate(),
                 view.nights(),
                 view.content(),
@@ -50,6 +58,8 @@ public record MemoryDetailResponse(
                         .map(image -> new Image(image.imageId(), image.url()))
                         .toList(),
                 view.createdAt(),
-                view.updatedAt());
+                view.updatedAt(),
+                view.likeCount(),
+                view.likedByMe());
     }
 }

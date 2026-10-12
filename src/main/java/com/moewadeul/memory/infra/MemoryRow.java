@@ -8,6 +8,7 @@ import java.time.LocalDate;
  * 바꾼 것과 같아야 한다.
  *
  * <p>spotId와 spotName은 연결한 장소가 없거나 ACTIVE가 아니면 null이다. content는 글이 없으면 null이다. visibility는 공개 범위 이름이다.
+ * likedByMe는 조회한 사람이 회원일 때만 값이 있고, 비회원이면 null이다.
  */
 public record MemoryRow(
         long memoryId,
@@ -22,4 +23,6 @@ public record MemoryRow(
         String content,
         String visibility,
         Instant createdAt,
-        Instant updatedAt) {}
+        Instant updatedAt,
+        long likeCount,
+        Boolean likedByMe) {}

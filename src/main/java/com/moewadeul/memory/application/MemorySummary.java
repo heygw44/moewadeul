@@ -22,4 +22,5 @@ public record MemorySummary(
         String visibility,
         String thumbnailUrl,
         long imageCount,
+        long likeCount,
         Instant createdAt) {}

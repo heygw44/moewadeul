@@ -94,6 +94,11 @@ public class Memory {
         return this.memberId == memberId;
     }
 
+    /** 공개 범위가 PUBLIC이면 true다. */
+    public boolean isPublic() {
+        return visibility == MemoryVisibility.PUBLIC;
+    }
+
     private void apply(MemoryDetails details) {
         this.spotId = details.spotId();
         this.latitude = details.latitude();

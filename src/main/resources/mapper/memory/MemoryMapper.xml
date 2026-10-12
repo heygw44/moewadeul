@@ -17,15 +17,59 @@
                r.content AS content,
                r.visibility AS visibility,
                r.created_at AS created_at,
-               r.updated_at AS updated_at
+               r.updated_at AS updated_at,
+               (SELECT COUNT(*) FROM memory_like l WHERE l.memory_id = r.id) AS like_count,
+        <include refid="likedByMe"/>
         FROM memory r
         JOIN member m ON m.id = r.member_id
         LEFT JOIN spot s ON s.id = r.spot_id AND s.status = 'ACTIVE'
         WHERE r.id = #{memoryId}
     </select>
 
+    <!-- 조회하는 회원(viewerId)을 넘겼을 때만 그 회원이 좋아요를 눌렀는지 값이 있고, 비회원이면 NULL이다. -->
+    <sql id="likedByMe">
+        <choose>
+            <when test="viewerId != null">
+                EXISTS (SELECT 1 FROM memory_like lk WHERE lk.memory_id = r.id AND lk.member_id = #{viewerId}) AS liked_by_me
+            </when>
+            <otherwise>
+                NULL AS liked_by_me
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!-- 공개 피드는 공개(PUBLIC) 기록만 읽고 id가 큰 것부터 준다. 호출하는 쪽이 다음 페이지 유무를 알려고 한 건 더 읽는다.
+         탈퇴한 회원의 기록은 탈퇴할 때 행째 지워지므로 따로 거르지 않는다. -->
+    <select id="selectPublicFeed" resultType="com.moewadeul.memory.infra.MemoryFeedRow">
+        SELECT r.id AS memory_id,
+               r.member_id AS author_id,
+               m.nickname AS author_nickname,
+               s.id AS spot_id,
+               s.name AS spot_name,
+               r.latitude AS latitude,
+               r.longitude AS longitude,
+               r.visited_date AS visited_date,
+               r.nights AS nights,
+               LEFT(r.content, 100) AS excerpt,
+               (SELECT COUNT(*) FROM memory_like l WHERE l.memory_id = r.id) AS like_count,
+               <include refid="likedByMe"/>,
+               r.created_at AS created_at
+        FROM memory r
+        JOIN member m ON m.id = r.member_id
+        LEFT JOIN spot s ON s.id = r.spot_id AND s.status = 'ACTIVE'
+        WHERE r.visibility = 'PUBLIC'
+        ORDER BY r.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 회원이 탈퇴하지 않았을 때만 참이다. 회원 모듈의 서비스를 부르지 않고 member 테이블을 직접 읽는다. -->
+    <select id="existsActiveMember" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM member WHERE id = #{memberId} AND status &lt;&gt; 'WITHDRAWN')
+    </select>
+
     <!-- 목록은 글 전체를 읽지 않고 앞 100자만 읽는다. thumbnail_key는 기록 안 순서가 가장 앞선 사진의 저장소 객체 키이고,
-         사진이 없으면 NULL이다. 장소는 상세와 같은 규칙으로 ACTIVE일 때만 조인한다. -->
+         사진이 없으면 NULL이다. 장소는 상세와 같은 규칙으로 ACTIVE일 때만 조인한다.
+         visibility를 넘기면 그 공개 범위의 기록만 읽고, null이면 공개 범위와 상관없이 모두 읽는다. -->
     <select id="selectByMember" resultType="com.moewadeul.memory.infra.MemorySummaryRow">
         SELECT r.id AS memory_id,
                s.id AS spot_id,
@@ -38,10 +82,14 @@
                r.visibility AS visibility,
                (SELECT i.object_key FROM memory_image i WHERE i.memory_id = r.id ORDER BY i.display_order LIMIT 1) AS thumbnail_key,
                (SELECT COUNT(*) FROM memory_image i2 WHERE i2.memory_id = r.id) AS image_count,
+               (SELECT COUNT(*) FROM memory_like l WHERE l.memory_id = r.id) AS like_count,
                r.created_at AS created_at
         FROM memory r
         LEFT JOIN spot s ON s.id = r.spot_id AND s.status = 'ACTIVE'
         WHERE r.member_id = #{memberId}
+        <if test="visibility != null">
+          AND r.visibility = #{visibility}
+        </if>
         ORDER BY r.visited_date DESC, r.id DESC
     </select>
 

@@ -21,4 +21,5 @@ public record MemorySummaryRow(
         String visibility,
         String thumbnailKey,
         long imageCount,
+        long likeCount,
         Instant createdAt) {}
