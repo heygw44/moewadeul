@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import type { ButtonHTMLAttributes } from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'ghost';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
@@ -12,18 +12,21 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 // Tailwind가 소스 글자를 읽어 클래스를 만들기 때문에 클래스 이름을 이어 붙이지 않고 통째로 적는다.
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'bg-forest text-white border border-forest',
+  primary: 'bg-ink text-white border border-ink',
   secondary: 'bg-card text-ink border border-ink-subtle',
   danger: 'bg-danger text-white border border-danger',
-  ghost: 'bg-transparent text-forest border border-transparent',
+  // 빼기·지우기처럼 다시 할 수 있는 위험 행동에 쓴다. 되돌릴 수 없는 확정은 Dialog 안의 danger로 한다.
+  'danger-outline': 'bg-card text-danger border border-danger',
+  ghost: 'bg-transparent text-ink border border-transparent',
 };
 
 const HOVER_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'hover:bg-forest-strong hover:border-forest-strong',
+  primary: 'hover:bg-ink-muted hover:border-ink-muted',
   secondary: 'hover:bg-paper-deep',
   // 위험 색에는 더 짙은 토큰이 없어서 hover 색을 바꾸지 않는다.
   danger: '',
-  ghost: 'hover:bg-forest-soft',
+  'danger-outline': 'hover:bg-danger-soft',
+  ghost: 'hover:bg-paper-deep',
 };
 
 // 흐리게 만들면 대비가 떨어지므로 투명도 대신 대비가 확보된 색 조합으로 비활성을 표시한다.

@@ -160,7 +160,7 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
     <>
       <article className="px-4 py-4">
         <header className="flex flex-col gap-2">
-          <h2 className="font-serif text-xl font-semibold text-ink">{detail.title}</h2>
+          <h2 className="text-xl font-bold tracking-tight text-ink">{detail.title}</h2>
           <div className="flex flex-wrap gap-1">
             <Badge tone={status.tone}>{status.label}</Badge>
           </div>
@@ -392,7 +392,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
         <p className="text-sm text-ink-muted">로그인하면 합류 조건을 채웠는지 확인하고 신청할 수 있어요.</p>
         <Link
           to={withNext('/login', pathname + search)}
-          className="inline-flex min-h-11 items-center justify-center rounded-control border border-forest bg-forest px-4 text-base font-semibold text-white hover:border-forest-strong hover:bg-forest-strong"
+          className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted"
         >
           로그인
         </Link>
@@ -404,7 +404,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
         <p className="text-sm text-ink-muted">이메일 인증을 마치면 합류를 신청할 수 있어요.</p>
         <Link
           to="/verify-email"
-          className="inline-flex min-h-11 items-center justify-center rounded-control border border-forest bg-forest px-4 text-base font-semibold text-white hover:border-forest-strong hover:bg-forest-strong"
+          className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted"
         >
           이메일 인증하러 가기
         </Link>

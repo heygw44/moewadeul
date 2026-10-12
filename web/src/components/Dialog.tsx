@@ -38,7 +38,7 @@ export function Dialog({ title, onClose, children }: DialogProps) {
       className="m-auto w-[calc(100%-2rem)] max-w-md rounded-sheet border border-contour bg-card p-0 text-ink shadow-raise backdrop:bg-ink/40"
     >
       <div className="flex items-center justify-between gap-2 border-b border-contour py-1 pr-1 pl-4">
-        <h2 id={titleId} className="font-serif text-lg text-ink">
+        <h2 id={titleId} className="text-lg font-semibold text-ink">
           {title}
         </h2>
         <button

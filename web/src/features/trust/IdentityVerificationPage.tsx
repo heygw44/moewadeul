@@ -33,7 +33,7 @@ function isFieldName(field: string): field is FieldName {
 }
 
 const linkButtonClass =
-  'inline-flex min-h-11 w-full items-center justify-center rounded-control border border-forest bg-forest px-4 font-semibold text-white hover:border-forest-strong hover:bg-forest-strong';
+  'inline-flex min-h-11 w-full items-center justify-center rounded-control border border-ink bg-ink px-4 font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
 
 export function IdentityVerificationPage() {
   const { search } = useLocation();

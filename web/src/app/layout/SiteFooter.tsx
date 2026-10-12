@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { BrandMark } from '../../components/BrandMark';
 import { useSession } from '../../features/member/session';
 import { Link } from '../router';
 
@@ -23,8 +24,8 @@ export function SiteFooter() {
     <footer className="border-t border-contour bg-paper">
       <div className="mx-auto grid max-w-screen-xl gap-8 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr_1.4fr]">
         <div className="flex flex-col gap-2">
-          <Link to="/" className="self-start font-serif text-xl font-semibold text-forest-deep">
-            뫼와들
+          <Link to="/" className="self-start text-ink">
+            <BrandMark className="text-xl" />
           </Link>
           <p className="max-w-xs text-sm text-ink-muted">
             자도 되는 곳을 찾고, 믿을 수 있는 사람과 함께 가는 백패킹 서비스예요.

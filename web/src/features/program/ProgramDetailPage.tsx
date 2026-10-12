@@ -32,7 +32,7 @@ import { useNow } from './useNow';
 type LoadResult = { programId: number; detail: ProgramDetail } | { programId: number; error: unknown };
 
 const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-forest bg-forest px-4 text-base font-semibold text-white hover:bg-forest-strong hover:border-forest-strong';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:bg-ink-muted hover:border-ink-muted';
 const SECONDARY_LINK_CLASS =
   'inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep';
 

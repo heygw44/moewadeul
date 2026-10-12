@@ -82,7 +82,7 @@ const SERVER_FIELD_MAP: Record<string, FormField> = {
 };
 
 const PRIMARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-forest bg-forest px-4 text-base font-semibold text-white hover:border-forest-strong hover:bg-forest-strong';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
 
 // 서버가 같은 필드의 오류를 여러 개 알려 줘도 한 곳에 중복 없이 모아 보여 준다.
 function mergeReasons(reasons: string[]): string {
@@ -126,7 +126,7 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
   } else if (current.detail.parkWarning.warned) {
     body = (
       <div className="flex flex-col gap-4">
-        <h2 className="font-serif text-xl font-semibold text-ink">{current.detail.name}에서 베이스캠프 열기</h2>
+        <h2 className="text-xl font-bold tracking-tight text-ink">{current.detail.name}에서 베이스캠프 열기</h2>
         <Notice tone="danger" title="이 장소에서는 베이스캠프를 열 수 없어요">
           <p>공원 경계 안일 가능성이 있는 박지라서 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
         </Notice>
@@ -311,7 +311,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="font-serif text-xl font-semibold text-ink">베이스캠프 열기</h2>
+        <h2 className="text-xl font-bold tracking-tight text-ink">베이스캠프 열기</h2>
         <p className="text-sm text-ink-muted">장소: {spotName}</p>
       </div>
 

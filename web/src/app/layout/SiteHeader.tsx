@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { BrandMark } from '../../components/BrandMark';
 import { Icon } from '../../components/icons';
 import { AccountChip } from '../../features/member/AccountChip';
 import { withNext } from '../../features/member/nextPath';
@@ -22,7 +23,7 @@ type SiteHeaderProps = {
 const PRIMARY_KEYS = new Set(['map', 'basecamps', 'community', 'programs']);
 const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
 
-// 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 머리글이다.
+// 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 머리글이다. 데스크톱은 서비스 이름 줄과 메뉴 줄, 두 줄이다.
 // 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 하단 탭이 없는 랜딩·404에서도 다른 화면으로 갈 수 있게 하기 위해서다.
 export function SiteHeader({ mobileAccount = false, minimal = false, fluid = false, className = '' }: SiteHeaderProps) {
   const { pathname, search } = useLocation();
@@ -44,30 +45,11 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
   }, [menuOpen]);
 
   return (
-    <header className={`sticky top-0 z-20 border-b border-contour bg-paper ${className}`}>
-      <div className={`mx-auto flex min-h-14 items-center gap-6 px-4 ${fluid ? '' : 'max-w-screen-xl'}`}>
-        <Link to="/" className="font-serif text-xl font-semibold text-forest-deep">
-          뫼와들
+    <header className={`sticky top-0 z-20 border-b border-ink bg-paper ${className}`}>
+      <div className={`mx-auto flex min-h-14 items-center gap-3 px-4 lg:min-h-16 lg:gap-6 ${fluid ? '' : 'max-w-screen-xl'}`}>
+        <Link to="/" className="shrink-0 text-ink">
+          <BrandMark rough className="text-lg sm:text-xl lg:text-4xl" />
         </Link>
-
-        <nav aria-label="주 메뉴" className="hidden h-14 items-stretch gap-1 lg:flex">
-          {PRIMARY_ITEMS.map((item) => {
-            const current = active === item.key;
-            return (
-              <Link
-                key={item.key}
-                to={item.path}
-                aria-current={current ? 'page' : undefined}
-                className={[
-                  'inline-flex items-center border-b-2 px-3 text-base font-semibold',
-                  current ? 'border-forest text-forest-deep' : 'border-transparent text-ink-muted hover:text-ink',
-                ].join(' ')}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
 
         {!minimal && (
           <div className="ml-auto flex min-w-0 items-center gap-2">
@@ -90,13 +72,13 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
               <div className="inline-flex items-center lg:hidden">
                 <Link
                   to={withNext('/login', pathname + search)}
-                  className="inline-flex min-h-11 items-center px-2 font-semibold text-forest"
+                  className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-forest"
                 >
                   로그인
                 </Link>
                 <Link
                   to={withNext('/signup', pathname + search)}
-                  className="inline-flex min-h-11 items-center px-2 font-semibold text-ink"
+                  className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-ink"
                 >
                   회원가입
                 </Link>
@@ -116,6 +98,33 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
         )}
       </div>
 
+      {/* 데스크톱에서는 서비스 이름 아래 줄에 메뉴를 화면 폭 전체로 펼친다. 지금 메뉴와 hover 메뉴는 아래 선 위에 올라앉은 숲색 탭이 된다. */}
+      {!minimal && (
+        <nav
+          aria-label="주 메뉴"
+          className={`mx-auto hidden items-end justify-between px-4 lg:flex ${fluid ? '' : 'max-w-screen-xl'}`}
+        >
+          {PRIMARY_ITEMS.map((item) => {
+            const current = active === item.key;
+            return (
+              <Link
+                key={item.key}
+                to={item.path}
+                aria-current={current ? 'page' : undefined}
+                className={[
+                  'inline-flex items-center border-x border-t px-6 pt-2 pb-1.5 text-xl font-bold tracking-tight',
+                  current
+                    ? 'border-ink bg-forest text-white'
+                    : 'border-transparent text-ink hover:border-ink hover:bg-forest hover:text-white',
+                ].join(' ')}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+
       {!minimal && menuOpen && (
         <nav id="mobile-nav" aria-label="주 메뉴" className="border-t border-contour bg-paper lg:hidden">
           <ul className="mx-auto flex max-w-screen-xl flex-col py-1">
@@ -127,8 +136,8 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
                     to={item.path}
                     aria-current={current ? 'page' : undefined}
                     className={[
-                      'flex min-h-12 items-center gap-3 border-l-2 px-4 text-base font-semibold',
-                      current ? 'border-forest text-forest-deep' : 'border-transparent text-ink-muted hover:text-ink',
+                      'flex min-h-12 items-center gap-3 px-4 text-lg font-bold',
+                      current ? 'bg-forest text-white' : 'text-ink hover:bg-paper-deep',
                     ].join(' ')}
                   >
                     <Icon name={item.icon} size={20} />

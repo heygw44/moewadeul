@@ -208,7 +208,7 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
           <Link to={`/community/${post.postId}/edit`} className={SECONDARY_LINK_CLASS}>
             수정
           </Link>
-          <Button variant="ghost" onClick={() => setDeleting(true)} className="text-danger hover:bg-danger-soft">
+          <Button variant="danger-outline" onClick={() => setDeleting(true)}>
             삭제
           </Button>
         </>

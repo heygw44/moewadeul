@@ -172,7 +172,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
   return (
     <li className="flex flex-col gap-3 rounded-control border border-contour bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="min-w-0 break-words font-serif text-lg text-ink">{item.name}</h3>
+        <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.name}</h3>
         <Badge tone={meta.tone}>{meta.label}</Badge>
         <Badge tone="neutral">
           {item.status === 'HIDDEN' ? '숨김' : '검토 대기'}
