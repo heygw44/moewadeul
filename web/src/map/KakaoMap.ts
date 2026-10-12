@@ -1,5 +1,5 @@
 import { loadKakaoMaps } from './kakaoLoader';
-import { createClusterButton, createDraftPin, createSearchPin, createSpotPin, createSpread } from './markers';
+import { createClusterButton, createDraftPin, createSearchPin, createSpotDot, createSpotPin, createSpread } from './markers';
 import { mergeClusters } from './mergeClusters';
 import { arrangeSpread, stackPins } from './stackPins';
 import type { SpotPin } from './markers';
@@ -48,13 +48,19 @@ interface Spread {
 
 export async function createMapView(
   container: HTMLElement,
-  initial: { center: LatLng; level: number },
+  // scrollWheel을 끄면 마우스 휠이 지도를 확대·축소하지 않고 페이지를 스크롤한다. 랜딩처럼 지도가 페이지 안에 있을 때 끈다.
+  // markerStyle이 'dot'이면 장소를 유형별 핀 대신 작은 점으로 그리고, 겹친 점을 묶지 않는다.
+  initial: { center: LatLng; level: number; scrollWheel?: boolean; markerStyle?: 'pin' | 'dot' },
 ): Promise<MapView> {
   await loadKakaoMaps();
 
   const toKakaoLatLng = (position: LatLng) => new kakao.maps.LatLng(position.lat, position.lng);
 
-  const map = new kakao.maps.Map(container, { center: toKakaoLatLng(initial.center), level: initial.level });
+  const map = new kakao.maps.Map(container, {
+    center: toKakaoLatLng(initial.center),
+    level: initial.level,
+    scrollwheel: initial.scrollWheel ?? true,
+  });
   // 왼쪽 아래에는 지도 범례를 두므로, 카카오 로고와 저작권 표시는 오른쪽 아래로 옮긴다.
   map.setCopyrightPosition(kakao.maps.CopyrightPosition.BOTTOMRIGHT, true);
 
@@ -268,6 +274,25 @@ export async function createMapView(
       seen.add(marker.id);
       const point = projection.containerPointFromCoords(toKakaoLatLng(marker.position));
       placed.push({ marker, x: point.x, y: point.y });
+    }
+
+    if (initial.markerStyle === 'dot') {
+      for (const { marker } of placed) {
+        const pin = createSpotDot(marker, handleMarkerClick);
+        const selected = marker.id === selectedId;
+        pin.setSelected(selected);
+        const overlay = new kakao.maps.CustomOverlay({
+          map,
+          content: pin.element,
+          position: toKakaoLatLng(marker.position),
+          clickable: true,
+          xAnchor: 0.5,
+          yAnchor: 0.5,
+          zIndex: selected ? SELECTED_PIN_Z_INDEX : PIN_Z_INDEX,
+        });
+        pins.set(marker.id, { overlay, pin });
+      }
+      return;
     }
 
     for (const stack of stackPins(placed, selectedId)) {
