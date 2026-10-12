@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { regionNameAt } from '../../map/regionName';
+import { regionLabelInView } from '../../map/regionName';
+import type { RegionLabel } from '../../map/regionLabel';
 import type { MapView } from '../../map/types';
 
-// 지도 가운데가 속한 행정구역 이름이다. 아직 모르거나 찾지 못하면 null이다.
-export function useRegionName(map: MapView | null): string | null {
-  const [name, setName] = useState<string | null>(null);
+// 지금 지도 화면이 어느 지역인지다. 아직 모르거나 찾지 못하면 null이다.
+export function useRegionName(map: MapView | null): RegionLabel | null {
+  const [label, setLabel] = useState<RegionLabel | null>(null);
 
   useEffect(() => {
     if (!map) return;
@@ -13,19 +14,19 @@ export function useRegionName(map: MapView | null): string | null {
     let active = true;
     const lookup = () => {
       const request = ++latest;
-      const accept = (found: string | null) => {
-        if (active && request === latest) setName(found);
+      const accept = (found: RegionLabel | null) => {
+        if (active && request === latest) setLabel(found);
       };
-      regionNameAt(map.getCenter(), map.getLevel()).then(accept, () => accept(null));
+      regionLabelInView(map.getBounds(), map.getCenter(), map.getLevel()).then(accept, () => accept(null));
     };
     const unsubscribe = map.onIdle(lookup);
     lookup();
     return () => {
       active = false;
       unsubscribe();
-      setName(null);
+      setLabel(null);
     };
   }, [map]);
 
-  return name;
+  return label;
 }

@@ -16,7 +16,7 @@ function initialOpen(): boolean {
 }
 
 // 지도 왼쪽 아래의 핀 유형 범례다. 핀은 지도 마커와 같은 모양·색을 작게 그린다.
-// 모바일에서는 접힌 시트 바로 위에 두고, 시트를 올리면 시트가 덮는다.
+// 모바일에서는 접힌 시트 위 지역 칩(높이 36px)의 한 줄 위에 둔다. 펼치면 위로만 커져서 칩을 가리지 않는다. 시트를 올리면 시트가 덮는다.
 export function MapLegend() {
   const [open, setOpen] = useState(initialOpen);
   const listId = useId();
@@ -28,7 +28,7 @@ export function MapLegend() {
   }
 
   return (
-    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+0.75rem)] left-4 z-10 flex flex-col rounded-control border border-contour bg-card text-ink lg:bottom-4">
+    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col rounded-control border border-contour bg-card text-ink lg:bottom-4">
       <button
         type="button"
         onClick={toggle}
