@@ -127,13 +127,8 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
     body = (
       <div className="flex flex-col gap-4">
         <h2 className="text-xl font-bold tracking-tight text-ink">{current.detail.name}에서 베이스캠프 열기</h2>
-        <Notice tone="danger" title="이 장소에서는 베이스캠프를 열 수 없어요">
-          <p>공원 경계 안일 가능성이 있는 박지라서 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
-        </Notice>
         <ParkWarningNotice warning={current.detail.parkWarning} />
-        <Link to={`/spots/${spotId}`} className={PRIMARY_LINK_CLASS}>
-          장소로 돌아가기
-        </Link>
+        <p className="text-base font-semibold text-danger">이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
       </div>
     );
   } else if (session.status === 'anonymous' || session.me === null) {

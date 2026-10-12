@@ -37,7 +37,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   const editPostId = props.mode === 'edit' ? props.postId : null;
 
   useEffect(() => {
-    document.title = props.mode === 'create' ? '글쓰기 · 뫼와들' : '글 고치기 · 뫼와들';
+    document.title = props.mode === 'create' ? '글쓰기 · 뫼와들' : '글 수정 · 뫼와들';
   }, [props.mode]);
 
   // 글쓰기는 로그인한 세션으로만 할 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
@@ -45,7 +45,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
 
-  const title = props.mode === 'create' ? '글쓰기' : '글 고치기';
+  const title = props.mode === 'create' ? '글쓰기' : '글 수정';
   const layout = (children: ReactNode) => (
     <HubLayout
       title={title}
@@ -169,12 +169,7 @@ function EditLoader({ postId, myMemberId }: { postId: number; myMemberId: number
         <EmptyState
           framed
           title="글을 찾을 수 없어요"
-          description="지워졌거나 볼 수 없는 글이에요."
-          action={
-            <Link to="/community" className={SECONDARY_LINK_CLASS}>
-              글 목록으로
-            </Link>
-          }
+          description="삭제됐거나 볼 수 없는 글이에요."
         />
       );
     }
@@ -314,7 +309,7 @@ function PostForm(props: PostFormProps) {
     <form
       noValidate
       onSubmit={handleSubmit}
-      aria-label={mode === 'create' ? '글쓰기' : '글 고치기'}
+      aria-label={mode === 'create' ? '글쓰기' : '글 수정'}
       className="divide-y divide-contour rounded-control border border-contour bg-card"
     >
       {formError && (
@@ -390,17 +385,12 @@ function PostForm(props: PostFormProps) {
         )}
       </div>
 
-      <p className="flex items-center gap-2 px-5 py-3 text-sm text-ink-muted">
-        <Icon name="info" size={16} className="shrink-0" />
-        동행은 베이스캠프에서 구하고, 송금 요구는 신고해 주세요.
-      </p>
-
       <div className="sticky bottom-(--bottom-nav-h) flex flex-wrap items-start justify-end gap-2 bg-card px-5 py-4 lg:static">
         <Link to={cancelTarget} className={SECONDARY_LINK_CLASS}>
           취소
         </Link>
         <Button type="submit" loading={submitting} disabled={uploading || failed} disabledReason={submitReason}>
-          {mode === 'create' ? '올리기' : '고치기'}
+          {mode === 'create' ? '올리기' : '수정하기'}
         </Button>
       </div>
     </form>

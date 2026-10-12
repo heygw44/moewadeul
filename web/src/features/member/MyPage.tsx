@@ -3,7 +3,7 @@ import { toUserMessage } from '../../api/errors';
 import { fetchMyTrust } from '../../api/trust';
 import type { Me, MyTrust } from '../../api/types';
 import { Link, navigate } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { Evidence } from '../../components/Evidence';
 import { AsideSection } from '../../components/HubLayout';
@@ -33,7 +33,7 @@ export function MyPage() {
 
   if (session.status !== 'authenticated' || !session.me) {
     return (
-      <PageLayout title="내 정보" description="계정과 신뢰 단계를 확인해요. 프로필과 비밀번호는 계정 설정에서 바꿔요.">
+      <PageLayout title="내 정보">
         {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
       </PageLayout>
     );
@@ -41,7 +41,7 @@ export function MyPage() {
 
   const me = session.me;
   return (
-    <PageLayout title="내 정보" description="계정과 신뢰 단계를 확인해요. 프로필과 비밀번호는 계정 설정에서 바꿔요." aside={<ShortcutAside me={me} onLogout={() => void session.logout()} />}>
+    <PageLayout title="내 정보" aside={<ShortcutAside me={me} onLogout={() => void session.logout()} />}>
       <AccountCard me={me} />
       <TrustCard me={me} />
       <MySoloTripsCard />
@@ -73,11 +73,6 @@ function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
             동행 후기
           </Link>
         </li>
-        <li>
-          <Link to="/me/notifications" className={SHORTCUT_LINK_CLASS}>
-            알림
-          </Link>
-        </li>
         {me.role === 'ADMIN' && (
           <li>
             <Link to="/admin/reports" className={SHORTCUT_LINK_CLASS}>
@@ -91,7 +86,8 @@ function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </Link>
         </li>
       </ul>
-      <div>
+      {/* 데스크톱 머리글에는 로그아웃이 있어서 여기서는 모바일에만 둔다. 모바일 머리글에는 계정 자리가 없다. */}
+      <div className="lg:hidden">
         <button
           type="button"
           onClick={onLogout}
@@ -155,18 +151,18 @@ function TrustCard({ me }: { me: Me }) {
 
   return (
     <PageCard title="신뢰 단계">
-      <div className="flex flex-wrap gap-1">
-        <Badge tone={badge.tone} icon={badge.icon}>
-          {badge.label}
-        </Badge>
-      </div>
+      <StatusText tone={badge.tone} icon={badge.icon}>
+        {badge.label}
+      </StatusText>
       {!me.identityVerified && (
-        <Notice tone="info" title="본인확인을 하면 베이스캠프를 열 수 있어요">
-          <p>본인확인은 성인만 할 수 있고, 출생연도와 성별만 확인해요.</p>
-          <Link to="/identity-verification" className="mt-1 inline-flex min-h-11 items-center font-semibold text-forest">
+        <div className="flex flex-col items-start gap-1">
+          <p className="text-sm text-ink">
+            본인확인을 마치면 베이스캠프를 열 수 있어요. 성인만 할 수 있고, 출생연도와 성별만 확인해요.
+          </p>
+          <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-2">
             본인확인하기
           </Link>
-        </Notice>
+        </div>
       )}
       {error && (
         <div className="flex flex-col gap-2">

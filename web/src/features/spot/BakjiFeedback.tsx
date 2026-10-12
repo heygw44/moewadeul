@@ -4,15 +4,14 @@ import { confirmBakji, reportBakji } from '../../api/bakjis';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import type { BakjiProblemReportRequest, BakjiReportReason } from '../../api/types';
-import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { Dialog } from '../../components/Dialog';
 import { Notice } from '../../components/Notice';
 import { TextArea } from '../../components/TextArea';
-import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
+import { GatedButton } from '../member/GatedButton';
 import { REPORT_REASON_LABELS } from './spotLabels';
 
 type BakjiFeedbackProps = {
@@ -27,13 +26,11 @@ const REASON_OPTIONS: ChoiceOption<BakjiReportReason>[] = (Object.keys(REPORT_RE
   (value) => ({ value, label: REPORT_REASON_LABELS[value] }),
 );
 
-const UNVERIFIED_REASON = '이메일 인증을 마치면 할 수 있어요';
 
 // 박지를 다녀온 회원이 정보를 확인하거나 문제를 신고한다.
 // 상세 응답에는 내가 이미 확인했는지가 없어서 미리 막지 않고, 서버가 이미 확인했다고 답하면 완료 상태로 바꾼다.
 export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
   const session = useSession();
-  const { pathname, search } = useLocation();
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState<'new' | 'already' | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -45,20 +42,6 @@ export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
 
   if (session.status === 'loading') return null;
 
-  if (session.status === 'anonymous' || session.me === null) {
-    return (
-      <div className="mt-3">
-        <Link
-          to={withNext('/login', pathname + search)}
-          className="inline-flex min-h-11 items-center text-forest underline underline-offset-2"
-        >
-          로그인하면 확인하거나 신고할 수 있어요
-        </Link>
-      </div>
-    );
-  }
-
-  const unverified = session.me.status === 'UNVERIFIED';
 
   async function handleConfirm() {
     if (confirming || confirmed !== null) return;
@@ -87,23 +70,12 @@ export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
   return (
     <div className="mt-3 flex flex-col gap-3">
       <div className="flex flex-wrap items-start gap-2">
-        <Button
-          variant="secondary"
-          loading={confirming}
-          disabled={unverified || confirmed !== null}
-          disabledReason={unverified ? UNVERIFIED_REASON : undefined}
-          onClick={handleConfirm}
-        >
+        <GatedButton variant="secondary" loading={confirming} disabled={confirmed !== null} onClick={handleConfirm}>
           {confirmed !== null ? '확인했어요' : '다녀왔어요, 정보가 맞아요'}
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={unverified || reported}
-          disabledReason={unverified ? UNVERIFIED_REASON : undefined}
-          onClick={() => setReportOpen(true)}
-        >
+        </GatedButton>
+        <GatedButton variant="ghost" disabled={reported} onClick={() => setReportOpen(true)}>
           문제 신고
-        </Button>
+        </GatedButton>
       </div>
 
       {confirmed === 'already' && (

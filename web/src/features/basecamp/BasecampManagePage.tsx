@@ -16,7 +16,7 @@ import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import type { BasecampApplicationItem, BasecampDetail, BasecampMember, KickReason } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
@@ -385,17 +385,11 @@ function HeaderCard({ detail }: { detail: BasecampDetail }) {
     <section className="flex flex-col gap-2 rounded-control border border-contour bg-card p-5">
       <h2 className="text-lg font-semibold text-ink">{detail.title}</h2>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={status.tone}>{status.label}</Badge>
+        <StatusText tone={status.tone}>{status.label}</StatusText>
         <span className="font-mono text-sm tabular-nums text-ink-muted">
           {headcountText(detail.headcount, detail.capacity)}명
         </span>
       </div>
-      <Link
-        to={`/basecamps/${detail.basecampId}`}
-        className="inline-flex min-h-11 items-center self-start text-forest underline underline-offset-2"
-      >
-        상세 화면 보기
-      </Link>
     </section>
   );
 }
@@ -547,9 +541,9 @@ function ApplicationRow({
           {applicant.nickname}
         </Link>
         {badge && (
-          <Badge tone={badge.tone} icon={badge.icon}>
+          <StatusText tone={badge.tone} icon={badge.icon}>
             {badge.label}
-          </Badge>
+          </StatusText>
         )}
       </div>
       {profile.length > 0 && <p className="text-sm text-ink-muted">{profile.join(' · ')}</p>}
@@ -586,11 +580,11 @@ function MembersCard({ detail, onKick }: { detail: BasecampDetail; onKick: (memb
                 >
                   {member.nickname}
                 </Link>
-                {member.role === 'LEADER' && <Badge tone="earth">캠프 리더</Badge>}
+                {member.role === 'LEADER' && <StatusText tone="earth">캠프 리더</StatusText>}
                 {badge && (
-                  <Badge tone={badge.tone} icon={badge.icon}>
+                  <StatusText tone={badge.tone} icon={badge.icon}>
                     {badge.label}
-                  </Badge>
+                  </StatusText>
                 )}
                 {canKick && member.role !== 'LEADER' && (
                   <Button variant="secondary" className="ml-auto" onClick={() => onKick(member)}>

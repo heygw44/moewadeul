@@ -1,10 +1,10 @@
 import type { BasecampSearchItem } from '../../api/types';
 import { Link } from '../../app/router';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
+import { MetaLine, StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
 import { useSession } from '../member/session';
@@ -15,7 +15,6 @@ type BasecampListPanelProps = {
   result: BasecampsInView;
   // 조건 대화상자에서 고른 조건이 하나라도 켜져 있는지다. 결과가 없을 때 안내 문구를 고른다.
   filtered: boolean;
-  onResetFilters: () => void;
   // 지도에서 고른 장소다. 있으면 그 장소의 베이스캠프만 보여 준다.
   spotFilterId: number | null;
   onClearSpotFilter: () => void;
@@ -25,7 +24,6 @@ type BasecampListPanelProps = {
 export function BasecampListPanel({
   result,
   filtered,
-  onResetFilters,
   spotFilterId,
   onClearSpotFilter,
   waitingForMap,
@@ -41,7 +39,7 @@ export function BasecampListPanel({
         <div className="flex items-center justify-between gap-2 border-b border-contour bg-paper px-4 py-1">
           <p className="min-w-0 truncate text-sm text-ink">{filteredSpotName ?? '고른 장소'}의 베이스캠프만 보고 있어요</p>
           <Button variant="ghost" onClick={onClearSpotFilter} className="shrink-0 px-3">
-            모두 보기
+            장소 선택 풀기
           </Button>
         </div>
       )}
@@ -79,17 +77,10 @@ export function BasecampListPanel({
               }
               description={
                 spotFilterId !== null
-                  ? '모두 보기를 눌러 다른 장소의 베이스캠프를 찾아보세요.'
+                  ? undefined
                   : filtered
-                    ? '조건을 줄이거나 지도를 옮겨 보세요.'
-                    : '지도를 옮겨 보세요. 장소 상세에서 직접 열 수도 있어요.'
-              }
-              action={
-                filtered && spotFilterId === null ? (
-                  <Button variant="secondary" onClick={onResetFilters}>
-                    조건 모두 풀기
-                  </Button>
-                ) : undefined
+                    ? '조건을 줄이거나 지도를 옮기면 다시 찾아요.'
+                    : '지도를 옮기면 다시 찾아요. 장소 상세에서 베이스캠프를 직접 열 수도 있어요.'
               }
             />
           )}
@@ -132,11 +123,10 @@ function BasecampRow({ item }: { item: BasecampSearchItem }) {
         to={`/basecamps/${item.basecampId}`}
         className="flex min-h-14 flex-col gap-1 border-b border-contour px-4 py-3 hover:bg-paper-deep focus-visible:-outline-offset-2"
       >
-        <span className="flex items-start justify-between gap-2">
-          <span className="min-w-0 break-words text-base font-semibold text-ink">{item.title}</span>
-          <Badge tone={status.tone}>{status.label}</Badge>
-        </span>
-        <span className="truncate text-sm text-ink-muted">{item.spot.name}</span>
+        <span className="min-w-0 break-words text-base font-semibold text-ink">{item.title}</span>
+        <MetaLine
+          items={[<StatusText tone={status.tone}>{status.label}</StatusText>, <span className="truncate">{item.spot.name}</span>]}
+        />
         <span className="flex items-center justify-between gap-2 text-sm text-ink">
           <span className="tabular-nums">
             {formatLocalDate(item.startDate)} ~ {formatLocalDate(item.endDate)}

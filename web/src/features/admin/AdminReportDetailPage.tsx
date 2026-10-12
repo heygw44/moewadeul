@@ -3,7 +3,7 @@ import { actionReport, dismissReport, fetchAdminMemberReport, liftSanction, star
 import { ApiError } from '../../api/client';
 import type { AdminReportDetail, AdminSanctionHistoryItem, ConfirmableSanctionType } from '../../api/types';
 import { Link } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { Dialog } from '../../components/Dialog';
@@ -106,9 +106,6 @@ function ReportDetail({ reportId }: { reportId: number }) {
   const { detail } = state;
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/admin/reports" className="inline-flex min-h-11 items-center self-start font-semibold text-forest">
-        신고 목록으로
-      </Link>
       <SummaryCard detail={detail} />
       {detail.basecamp && <BasecampCard basecamp={detail.basecamp} />}
       {detail.companionReview && <ReviewCard review={detail.companionReview} />}
@@ -124,8 +121,8 @@ function SummaryCard({ detail }: { detail: AdminReportDetail }) {
   return (
     <PageCard title={`${REPORT_TYPE_LABELS[detail.type]} (${REPORT_KIND_LABELS[detail.kind]})`}>
       <div className="flex flex-wrap items-center gap-2">
-        {detail.urgent && <Badge tone="danger">긴급</Badge>}
-        <Badge tone={status.tone}>{status.label}</Badge>
+        {detail.urgent && <StatusText tone="danger">긴급</StatusText>}
+        <StatusText tone={status.tone}>{status.label}</StatusText>
       </div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-base">
         <dt className="text-sm text-ink-muted">신고자</dt>
@@ -175,19 +172,13 @@ function ReviewCard({ review }: { review: NonNullable<AdminReportDetail['compani
   return (
     <PageCard title="신고된 동행 후기">
       <div className="flex flex-wrap items-center gap-2">
-        {review.hidden && <Badge tone="neutral">숨김</Badge>}
-        <Badge tone={review.rejoinWanted ? 'forest' : 'neutral'}>
+        {review.hidden && <StatusText tone="neutral">숨김</StatusText>}
+        <StatusText tone={review.rejoinWanted ? 'forest' : 'neutral'}>
           {review.rejoinWanted ? '다시 동행하고 싶어요' : '다시 동행하고 싶지 않아요'}
-        </Badge>
+        </StatusText>
       </div>
       {review.tags.length > 0 && (
-        <ul className="flex flex-wrap gap-1" aria-label="후기 태그">
-          {review.tags.map((tag) => (
-            <li key={tag}>
-              <Badge tone="neutral">{tag}</Badge>
-            </li>
-          ))}
-        </ul>
+        <p className="text-sm text-ink-muted">태그: {review.tags.join(' · ')}</p>
       )}
       {review.comment ? (
         <p className="whitespace-pre-line break-words text-base text-ink">{review.comment}</p>
@@ -492,7 +483,7 @@ function SanctionHistoryCard({ items, onChanged }: { items: AdminSanctionHistory
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-base font-semibold text-ink">{SANCTION_TYPE_LABELS[item.type]}</span>
                 {item.level !== null && <span className="font-mono text-sm tabular-nums text-ink-muted">{item.level}단계</span>}
-                <Badge tone={item.status === 'ACTIVE' ? 'danger' : 'neutral'}>{SANCTION_STATUS_LABELS[item.status]}</Badge>
+                <StatusText tone={item.status === 'ACTIVE' ? 'danger' : 'neutral'}>{SANCTION_STATUS_LABELS[item.status]}</StatusText>
               </div>
               <p className="whitespace-pre-line break-words text-sm text-ink">{item.reason}</p>
               <p className="font-mono text-sm tabular-nums text-ink-muted">

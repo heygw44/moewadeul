@@ -92,7 +92,7 @@ export function MemberReportDialog({
           <p role="status" className="text-base font-semibold text-forest-deep">
             신고를 접수했어요
           </p>
-          <p className="text-sm text-ink-muted">관리자가 검토한 뒤 처리 결과를 알림으로 알려 드려요.</p>
+          <p className="text-sm text-ink-muted">관리자가 검토한 뒤 처리 결과를 알림으로 알려 줘요.</p>
           <div className="flex justify-end">
             <Button onClick={onClose}>닫기</Button>
           </div>

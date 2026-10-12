@@ -41,7 +41,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   COMPANION_REVIEW_NOT_ELIGIBLE: '이 베이스캠프의 동행 후기를 쓸 수 없어요. 함께 다녀온 멤버만 쓸 수 있어요.',
   COMPANION_REVIEW_DEADLINE_PASSED: '동행 후기 작성 기한이 지났어요. 다음 베이스캠프에서 남겨 주세요.',
   COMPANION_REVIEW_DUPLICATED: '이미 동행 후기를 썼어요. 받은 후기에서 확인해 주세요.',
-  COMPANION_REVIEW_IMMUTABLE: '동행 후기는 고치거나 지울 수 없어요. 문제가 있으면 신고해 주세요.',
+  COMPANION_REVIEW_IMMUTABLE: '동행 후기는 수정하거나 삭제할 수 없어요. 문제가 있으면 신고해 주세요.',
   REPORT_NOT_ELIGIBLE: '이 회원은 신고할 수 없어요. 함께한 베이스캠프가 있는지 확인해 주세요.',
   REPORT_DUPLICATED: '이미 신고했어요. 처리 결과를 기다려 주세요.',
   REPORT_INVALID_STATE: '이미 처리된 신고예요. 화면을 새로고침해 주세요.',
@@ -49,7 +49,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   // 장소·박지·후기
   SPOT_RADIUS_TOO_LARGE: '반경은 50km까지 고를 수 있어요. 반경을 줄여 주세요.',
-  BAKJI_ALREADY_CONFIRMED: '이미 이 박지를 확인했어요.',
+  BAKJI_ALREADY_CONFIRMED: '이미 이 박지를 확인했어요. 한 박지에 한 번만 확인할 수 있어요.',
   BAKJI_ALREADY_REPORTED: '이미 이 박지를 신고했어요. 처리 결과를 기다려 주세요.',
   SPOT_INVALID_STATE: '지금 상태에서는 할 수 없는 작업이에요. 화면을 새로고침해 주세요.',
   SPOT_REVIEW_DUPLICATED: '같은 날 다녀온 후기가 이미 있어요. 방문일을 확인해 주세요.',
@@ -76,13 +76,13 @@ const ERROR_MESSAGES: Record<string, string> = {
   PROGRAM_PAYMENT_EXPIRED: '결제 기한이 지났어요. 남은 자리가 있으면 다시 신청해 주세요.',
   PROGRAM_INVALID_STATE: '지금 상태에서는 할 수 없는 작업이에요. 화면을 새로고침해 주세요.',
   PROGRAM_CANCEL_NOT_ALLOWED: '취소할 수 있는 기한이 지났어요. 운영자에게 문의해 주세요.',
-  PROGRAM_CAPACITY_DECREASE: '신청이 시작된 뒤에는 정원을 줄일 수 없어요. 정원을 늘리거나 그대로 두세요.',
+  PROGRAM_CAPACITY_DECREASE: '신청이 시작된 뒤에는 정원을 줄일 수 없어요. 정원을 늘리거나 그대로 둬 주세요.',
 
   // 커뮤니티
-  COMMUNITY_ALREADY_REPORTED: '이미 신고한 글이나 댓글이에요.',
+  COMMUNITY_ALREADY_REPORTED: '이미 신고한 글이나 댓글이에요. 처리 결과를 기다려 주세요.',
   // 개인 일정
   SOLO_TRIP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안, 일정은 1~3박으로 골라 주세요.',
-  SOLO_TRIP_LIMIT: '다가오는 혼자 가는 일정은 3개까지 등록할 수 있어요. 내 정보에서 필요 없는 일정을 지워 주세요.',
+  SOLO_TRIP_LIMIT: '다가오는 혼자 가는 일정은 3개까지 등록할 수 있어요. 내 정보에서 필요 없는 일정을 삭제해 주세요.',
   SOLO_TRIP_OVERLAP: '등록한 다른 일정과 날짜가 겹쳐요. 다른 날짜를 골라 주세요.',
 
   COMMUNITY_INVALID_STATE: '지금 상태에서는 할 수 없는 작업이에요. 화면을 새로고침해 주세요.',

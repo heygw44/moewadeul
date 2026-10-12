@@ -1,15 +1,15 @@
 import type { ProgramListStatus } from '../../api/programs';
 import type { ProgramApplicationStatus, ProgramCancelReason, ProgramStatus } from '../../api/types';
-import type { BadgeTone } from '../../components/Badge';
+import type { StatusTone } from '../../components/StatusText';
 
-export const PROGRAM_STATUS_META: Record<ProgramStatus, { label: string; tone: BadgeTone }> = {
+export const PROGRAM_STATUS_META: Record<ProgramStatus, { label: string; tone: StatusTone }> = {
   UPCOMING: { label: '신청 전', tone: 'sea' },
   OPEN: { label: '신청 중', tone: 'forest' },
   CLOSED: { label: '마감', tone: 'neutral' },
   CANCELED: { label: '행사 취소', tone: 'neutral' },
 };
 
-export const APPLICATION_STATUS_META: Record<ProgramApplicationStatus, { label: string; tone: BadgeTone }> = {
+export const APPLICATION_STATUS_META: Record<ProgramApplicationStatus, { label: string; tone: StatusTone }> = {
   PENDING_PAYMENT: { label: '결제 대기', tone: 'warning' },
   CONFIRMED: { label: '확정', tone: 'sea' },
   CANCELED: { label: '취소', tone: 'neutral' },

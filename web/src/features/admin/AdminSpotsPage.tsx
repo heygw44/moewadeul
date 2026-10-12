@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchAdminSpots, hideSpot, restoreSpot } from '../../api/admin';
 import type { AdminSpotStatus, AdminSpotSummary, BakjiReportReason } from '../../api/types';
 import { Link } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
@@ -174,14 +174,14 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
     <li className="flex flex-col gap-3 rounded-control border border-contour bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.name}</h3>
-        <Badge tone={meta.tone}>{meta.label}</Badge>
-        <Badge tone="neutral">
+        <StatusText tone={meta.tone}>{meta.label}</StatusText>
+        <StatusText tone="neutral">
           {item.status === 'HIDDEN' ? '숨김' : '검토 대기'}
-        </Badge>
+        </StatusText>
         {item.parkWarning && (
-          <Badge tone="warning" icon="alert">
+          <StatusText tone="warning" icon="alert">
             공원 경계 경고
-          </Badge>
+          </StatusText>
         )}
       </div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">

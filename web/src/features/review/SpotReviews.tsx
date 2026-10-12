@@ -11,7 +11,7 @@ import {
 } from '../../api/reviews';
 import { fetchSpotDetail } from '../../api/spots';
 import type { SpotRating, SpotReview } from '../../api/types';
-import { Link, useLocation } from '../../app/router';
+import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
@@ -24,8 +24,8 @@ import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useImageUploads } from '../../components/useImageUploads';
 import { formatKstDateTime, formatLocalDate, todayKst } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
+import { GatedButton } from '../member/GatedButton';
 
 // 서버 규칙과 같은 값이다. 내용은 공백뿐일 수 없고 2,000자 이하다.
 const CONTENT_MAX = 2000;
@@ -37,7 +37,6 @@ const RATING_OPTIONS: ReadonlyArray<ChoiceOption<string>> = [5, 4, 3, 2, 1].map(
   label: `${'★'.repeat(value)}${'☆'.repeat(MAX_RATING - value)} ${value}점`,
 }));
 
-const UNVERIFIED_REASON = '이메일 인증을 마치면 쓸 수 있어요';
 
 type SpotReviewsProps = {
   spotId: number;
@@ -239,32 +238,13 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
   );
 }
 
-// 비회원에게는 로그인 링크를, 이메일 미인증 회원에게는 막힌 이유를 보여 준다. 쓰기 권한은 서버가 다시 확인한다.
+// 비회원이 누르면 로그인 화면으로 보낸다. 이메일 인증 전인 회원에게 막힌 이유는 장소 상세 위의 안내가 한 번만 알린다.
 function WriteAction({ writing, onStart }: { writing: boolean; onStart: () => void }) {
-  const session = useSession();
-  const { pathname, search } = useLocation();
-
-  if (session.status === 'loading' || writing) return null;
-  if (session.status === 'anonymous' || session.me === null) {
-    return (
-      <Link
-        to={withNext('/login', pathname + search)}
-        className="inline-flex min-h-11 items-center text-sm font-semibold text-forest underline underline-offset-2"
-      >
-        로그인하고 후기 쓰기
-      </Link>
-    );
-  }
-  const unverified = session.me.status === 'UNVERIFIED';
+  if (writing) return null;
   return (
-    <Button
-      variant="secondary"
-      disabled={unverified}
-      disabledReason={unverified ? UNVERIFIED_REASON : undefined}
-      onClick={onStart}
-    >
+    <GatedButton variant="secondary" onClick={onStart}>
       후기 쓰기
-    </Button>
+    </GatedButton>
   );
 }
 
@@ -415,7 +395,7 @@ function ReviewForm({
     setFormError(toUserMessage(error));
   }
 
-  const title = mode === 'create' ? '후기 쓰기' : '후기 고치기';
+  const title = mode === 'create' ? '후기 쓰기' : '후기 수정';
   return (
     <form
       noValidate
@@ -483,7 +463,7 @@ function ReviewForm({
                 : undefined
           }
         >
-          {mode === 'create' ? '후기 남기기' : '고치기'}
+          {mode === 'create' ? '후기 남기기' : '수정하기'}
         </Button>
       </div>
     </form>
@@ -516,14 +496,14 @@ function DeleteDialog({
   }
 
   return (
-    <Dialog title="후기를 지울까요?" onClose={onClose}>
+    <Dialog title="후기를 삭제할까요?" onClose={onClose}>
       <div className="flex flex-col gap-4">
         <p className="text-base text-ink">
-          {formatLocalDate(review.visitedDate)} 방문 후기를 지워요. 지운 후기는 되돌릴 수 없어요.
+          {formatLocalDate(review.visitedDate)} 방문 후기를 삭제해요. 삭제한 후기는 되돌릴 수 없어요.
         </p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="지우지 못했어요">
+            <Notice tone="danger" title="삭제하지 못했어요">
               <p>{error}</p>
             </Notice>
           </div>
@@ -533,7 +513,7 @@ function DeleteDialog({
             취소
           </Button>
           <Button variant="danger" loading={submitting} onClick={() => void handleDelete()}>
-            지우기
+            삭제
           </Button>
         </div>
       </div>

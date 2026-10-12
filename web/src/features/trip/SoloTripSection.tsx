@@ -3,19 +3,17 @@ import type { FormEvent } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import { createSoloTrip } from '../../api/soloTrips';
-import { Link, useLocation } from '../../app/router';
+import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Notice } from '../../components/Notice';
 import { TextField } from '../../components/TextField';
 import { addDaysToLocalDate, todayKst } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { GatedButton } from '../member/GatedButton';
 
 // 서버와 같은 규칙이다. 출발일은 내일부터 60일 안이고, 일정은 1~3박이다. 서버가 다시 검사하므로 여기서는 입력을 돕는 데만 쓴다.
 const MAX_DAYS_UNTIL_START = 60;
 const MAX_NIGHTS = 3;
 
-const UNVERIFIED_REASON = '이메일 인증을 마치면 등록할 수 있어요';
 
 const SECTION_CLASS = 'mt-4 border-t border-contour pt-4';
 const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
@@ -46,7 +44,7 @@ export function SoloTripSection({ spotId, onRegistered }: SoloTripSectionProps) 
               <Link to="/me" className="font-semibold text-forest underline underline-offset-2">
                 내 정보
               </Link>
-              에서 보고 지울 수 있어요.
+              에서 보고 삭제할 수 있어요.
             </p>
           </Notice>
         </div>
@@ -76,30 +74,10 @@ export function SoloTripSection({ spotId, onRegistered }: SoloTripSectionProps) 
 }
 
 function RegisterAction({ onStart }: { onStart: () => void }) {
-  const session = useSession();
-  const { pathname, search } = useLocation();
-
-  if (session.status === 'loading') return null;
-  if (session.status === 'anonymous' || session.me === null) {
-    return (
-      <Link
-        to={withNext('/login', pathname + search)}
-        className="inline-flex min-h-11 items-center text-sm font-semibold text-forest underline underline-offset-2"
-      >
-        로그인하고 일정 등록하기
-      </Link>
-    );
-  }
-  const unverified = session.me.status === 'UNVERIFIED';
   return (
-    <Button
-      variant="secondary"
-      disabled={unverified}
-      disabledReason={unverified ? UNVERIFIED_REASON : undefined}
-      onClick={onStart}
-    >
+    <GatedButton variant="secondary" onClick={onStart}>
       혼자 가는 일정 등록
-    </Button>
+    </GatedButton>
   );
 }
 

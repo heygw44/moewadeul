@@ -1,5 +1,5 @@
 import type { ReportKind, ReportStatus, ReportType, SanctionStatus, SanctionType } from '../../api/types';
-import type { BadgeTone } from '../../components/Badge';
+import type { StatusTone } from '../../components/StatusText';
 
 export const REPORT_KIND_LABELS: Record<ReportKind, string> = {
   MEMBER: '회원 신고',
@@ -16,7 +16,7 @@ export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
   INAPPROPRIATE_REVIEW: '부적절한 후기',
 };
 
-export const REPORT_STATUS_META: Record<ReportStatus, { label: string; tone: BadgeTone }> = {
+export const REPORT_STATUS_META: Record<ReportStatus, { label: string; tone: StatusTone }> = {
   RECEIVED: { label: '접수', tone: 'neutral' },
   IN_REVIEW: { label: '검토 중', tone: 'sea' },
   ACTIONED: { label: '조치', tone: 'forest' },

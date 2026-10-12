@@ -30,7 +30,6 @@ import type { BasecampsInView } from '../basecamp/useBasecampsInView';
 import { withNext } from '../member/nextPath';
 import { NotificationBellLink } from '../notification/NotificationLink';
 import { useSession } from '../member/session';
-import { AnnouncementBar } from '../program/AnnouncementBar';
 import { BakjiReportPanel } from './BakjiReportPanel';
 import { MapSafetyNotice } from './MapSafetyNotice';
 import { MapSearchBar } from './MapSearchBar';
@@ -333,7 +332,6 @@ export function MapPage({
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-paper">
-      <AnnouncementBar />
       <SiteHeader className="hidden lg:block" />
       <div className="relative min-h-0 flex-1 lg:flex">
         <Sheet
@@ -346,10 +344,9 @@ export function MapPage({
               <BasecampListHeader
                 result={basecamps}
                 regionName={regionName}
-                filterCount={basecampFilterChipList.length}
               />
             ) : (
-              <ListHeader area={area} regionName={regionName} filterCount={spotFilterChipList.length} />
+              <ListHeader area={area} regionName={regionName} />
             )
           }
         >
@@ -361,7 +358,6 @@ export function MapPage({
             <BasecampListPanel
               result={basecamps}
               filtered={basecampFilterChipList.length > 0}
-              onResetFilters={() => setFilters(NO_BASECAMP_FILTERS)}
               spotFilterId={spotFilterId}
               onClearSpotFilter={() => setSpotFilterId(null)}
               waitingForMap={map === null && mapFailure === null}
@@ -383,7 +379,6 @@ export function MapPage({
               area={area}
               waitingForMap={map === null && mapFailure === null}
               filtered={spotFilterChipList.length > 0}
-              onResetFilters={() => setSpotFilters(NO_SPOT_FILTERS)}
             />
           ) : (
             <SpotDetailPanel key={spotId} spotId={spotId} onBack={() => navigate('/map')} />
@@ -516,24 +511,16 @@ const UNKNOWN_REGION = '이 지역';
 function ListHeader({
   area,
   regionName,
-  filterCount,
 }: {
   area: SpotsInView;
   regionName: string | null;
-  filterCount: number;
 }) {
   const counted = area.status === 'ready' || area.markers.length > 0 || area.clusters.length > 0;
   return (
     <h2 className="truncate text-lg font-semibold text-ink">
       {regionName ?? UNKNOWN_REGION} 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
-      {filterCount > 0 && <FilterCountNote count={filterCount} />}
     </h2>
   );
-}
-
-// 목록 머리에서 조건으로 거른 결과라는 것을 알린다. 제목 글꼴이 아니라 본문 글꼴로 작게 적는다.
-function FilterCountNote({ count }: { count: number }) {
-  return <span className="ml-2 font-sans text-sm text-ink-muted tabular-nums">조건 {count}개 적용</span>;
 }
 
 // 검색 칸 오른쪽의 상세 조건 버튼이다. 켜진 조건이 있으면 개수를 함께 적고 선택 색으로 바꾼다.
@@ -560,11 +547,9 @@ function FilterButton({ count, onClick }: { count: number; onClick: () => void }
 function BasecampListHeader({
   result,
   regionName,
-  filterCount,
 }: {
   result: BasecampsInView;
   regionName: string | null;
-  filterCount: number;
 }) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
@@ -577,7 +562,6 @@ function BasecampListHeader({
           {result.hasNext ? '개 이상' : '개'}
         </span>
       )}
-      {filterCount > 0 && <FilterCountNote count={filterCount} />}
     </h2>
   );
 }
@@ -586,12 +570,10 @@ function SpotList({
   area,
   waitingForMap,
   filtered,
-  onResetFilters,
 }: {
   area: SpotsInView;
   waitingForMap: boolean;
   filtered: boolean;
-  onResetFilters: () => void;
 }) {
   const showSkeleton = useDelayedFlag(area.status === 'loading' || waitingForMap);
 
@@ -628,28 +610,16 @@ function SpotList({
 
       {area.status === 'ready' && area.markers.length === 0 && area.clusters.length > 0 && (
         <div className="px-4 pt-4">
-          <Notice tone="info" title="장소가 많아서 묶어서 보여 주고 있어요">
-            <p>
-              지도를 확대하면 장소를 하나씩 볼 수 있어요.{' '}
-              <span className="tabular-nums">모두 {totalCount(area)}곳이에요.</span>
-            </p>
-          </Notice>
+          {/* 장소 수는 목록 머리가 이미 적으므로 여기서는 확대하라는 안내만 한다. 상태 안내라서 상자로 감싸지 않는다. */}
+          <p className="text-sm text-ink-muted">장소가 많아서 묶어서 보여 주고 있어요. 지도를 확대하면 하나씩 볼 수 있어요.</p>
         </div>
       )}
 
       {area.status === 'ready' && area.markers.length === 0 && area.clusters.length === 0 && (
         filtered ? (
-          <EmptyState
-            title="조건에 맞는 장소가 없어요"
-            description="조건을 줄이거나 지도를 옮겨 보세요."
-            action={
-              <Button variant="secondary" onClick={onResetFilters}>
-                조건 모두 풀기
-              </Button>
-            }
-          />
+          <EmptyState title="조건에 맞는 장소가 없어요" description="조건을 줄이거나 지도를 옮기면 다시 찾아요." />
         ) : (
-          <EmptyState title="이 지역에는 장소가 없어요" description="지도를 옮기거나 축소해 보세요." />
+          <EmptyState title="이 지역에는 장소가 없어요" description="지도를 옮기거나 축소하면 다시 찾아요." />
         )
       )}
 

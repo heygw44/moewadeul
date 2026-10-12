@@ -115,15 +115,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     return (
       <HubLayout title="글을 찾을 수 없어요" breadcrumb={<BackToCommunity />} aside={asideNode}>
-        <EmptyState
-          framed
-          title="지워졌거나 볼 수 없는 글이에요."
-          action={
-            <Link to="/community" className={SECONDARY_LINK_CLASS}>
-              커뮤니티로 가기
-            </Link>
-          }
-        />
+        <EmptyState framed title="삭제됐거나 볼 수 없는 글이에요" />
       </HubLayout>
     );
   }
@@ -216,7 +208,6 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
           variant="ghost"
           onClick={() => setReporting(true)}
           disabled={unverified}
-          disabledReason={unverified ? '이메일 인증을 마치면 신고할 수 있어요' : undefined}
         >
           신고
         </Button>
@@ -230,27 +221,11 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
 function PostAside({ post }: { post: CommunityPostDetail | null }) {
   return (
     <>
+      {/* 장소 이름·장소 링크와 글쓴이는 제목 아래 정보 줄에 있으므로, 여기에는 거기에 없는 "같은 장소의 다른 글"만 둔다. */}
       {post?.spot && (
-        <AsideSection title="이 글의 장소">
-          <p className="text-base font-semibold text-ink">{post.spot.name}</p>
-          <ul>
-            <li>
-              <Link to={`/spots/${post.spot.spotId}`} className={ASIDE_LINK}>
-                장소 보기
-              </Link>
-            </li>
-            <li>
-              <Link to={`/community?spotId=${post.spot.spotId}`} className={ASIDE_LINK}>
-                이 장소 관련 글
-              </Link>
-            </li>
-          </ul>
-        </AsideSection>
-      )}
-      {post && (
-        <AsideSection title="글쓴이">
-          <Link to={`/members/${post.author.memberId}`} className={ASIDE_LINK}>
-            {post.author.nickname}
+        <AsideSection title="같은 장소의 글">
+          <Link to={`/community?spotId=${post.spot.spotId}`} className={ASIDE_LINK}>
+            {post.spot.name} 관련 글 보기
           </Link>
         </AsideSection>
       )}
@@ -330,16 +305,13 @@ function LikeButton({ post, onChanged }: { post: CommunityPostDetail; onChanged:
   if (session.status === 'anonymous' || session.me === null) {
     return (
       <Link to={withNext('/login', pathname + search)} className={SECONDARY_LINK_CLASS}>
-        <span className="inline-flex items-center gap-2">
-          {content}
-          <span className="text-sm font-normal text-ink-muted">로그인하고 누르기</span>
-        </span>
+        <span className="inline-flex items-center gap-2">{content}</span>
       </Link>
     );
   }
   if (session.me.status === 'UNVERIFIED') {
     return (
-      <Button variant="secondary" disabled disabledReason="이메일 인증을 마치면 누를 수 있어요">
+      <Button variant="secondary" disabled>
         {content}
       </Button>
     );
@@ -395,12 +367,12 @@ function DeletePostDialog({ postId, onClose }: { postId: number; onClose: () => 
   }
 
   return (
-    <Dialog title="글을 지울까요?" onClose={() => !submitting && onClose()}>
+    <Dialog title="글을 삭제할까요?" onClose={() => !submitting && onClose()}>
       <div className="flex flex-col gap-4">
-        <p className="text-base text-ink">지운 글은 되돌릴 수 없어요. 댓글도 함께 사라져요.</p>
+        <p className="text-base text-ink">삭제한 글은 되돌릴 수 없어요. 댓글도 함께 사라져요.</p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="지우지 못했어요">
+            <Notice tone="danger" title="삭제하지 못했어요">
               <p>{error}</p>
             </Notice>
           </div>
@@ -410,7 +382,7 @@ function DeletePostDialog({ postId, onClose }: { postId: number; onClose: () => 
             취소
           </Button>
           <Button variant="danger" loading={submitting} onClick={() => void handleDelete()}>
-            지우기
+            삭제
           </Button>
         </div>
       </div>

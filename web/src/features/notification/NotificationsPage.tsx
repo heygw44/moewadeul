@@ -28,7 +28,6 @@ function isInternalPath(link: string): boolean {
   return link.startsWith('/') && !link.startsWith('//') && !link.includes('\\');
 }
 
-const DESCRIPTION = '베이스캠프와 행사 소식을 모아 보여 줘요.';
 
 export function NotificationsPage() {
   const session = useSession();
@@ -46,7 +45,7 @@ export function NotificationsPage() {
 
   if (session.status !== 'authenticated' || !session.me) {
     return (
-      <PageLayout title="알림" description={DESCRIPTION}>
+      <PageLayout title="알림">
         {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
       </PageLayout>
     );
@@ -156,7 +155,7 @@ function NotificationList() {
 
   if (state === null) {
     return (
-      <PageLayout title="알림" description={DESCRIPTION} aside={<EmailSettingsCard />}>
+      <PageLayout title="알림" aside={<EmailSettingsCard />}>
         {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
       </PageLayout>
     );
@@ -167,7 +166,7 @@ function NotificationList() {
   return (
     <PageLayout
       title="알림"
-      description={DESCRIPTION}
+     
       wide
       aside={<EmailSettingsCard />}
       actions={

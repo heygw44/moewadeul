@@ -5,13 +5,14 @@ import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import type { BasecampDetail, BasecampMember, JoinUnmetReason } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
+import { buttonClassName } from '../../components/buttonClass';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
+import { MetaLine, StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
@@ -92,18 +93,7 @@ export function BasecampDetailPanel({ basecampId, onBack }: BasecampDetailPanelP
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     body = (
       <div className="px-4 py-4">
-        <EmptyState
-          title="베이스캠프를 찾을 수 없어요"
-          description="삭제됐거나 없는 베이스캠프예요."
-          action={
-            <Link
-              to="/basecamps"
-              className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
-            >
-              목록으로
-            </Link>
-          }
-        />
+        <EmptyState title="베이스캠프를 찾을 수 없어요" description="삭제됐거나 없는 베이스캠프예요." />
       </div>
     );
   } else {
@@ -161,9 +151,7 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
       <article className="px-4 py-4">
         <header className="flex flex-col gap-2">
           <h2 className="text-xl font-bold tracking-tight text-ink">{detail.title}</h2>
-          <div className="flex flex-wrap gap-1">
-            <Badge tone={status.tone}>{status.label}</Badge>
-          </div>
+          <StatusText tone={status.tone}>{status.label}</StatusText>
           <Link
             to={`/spots/${detail.spot.spotId}`}
             className="inline-flex min-h-11 items-center gap-1 self-start text-forest underline underline-offset-2"
@@ -215,19 +203,21 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
           <ContactInfo contactInfo={detail.contactInfo} isMember={isMember} />
         </section>
 
-        <div className={`${SECTION_CLASS} flex flex-col gap-3`}>
+        {/* 안전 안내와 확정 뒤 수칙은 같은 맥락이라 상자 하나에 담는다. 상자를 겹쳐 두면 같은 무게의 안내가 두 번 보인다. */}
+        <div className={SECTION_CLASS}>
           <Notice tone="info" title="안전 안내">
             <p>{detail.safetyNotice}</p>
+            {detail.status === 'CONFIRMED' && (
+              <>
+                <p className="mt-2 font-semibold">출발 전 안전 수칙</p>
+                <ul className="list-disc pl-4">
+                  {CONFIRMED_SAFETY_RULES.map((rule) => (
+                    <li key={rule}>{rule}</li>
+                  ))}
+                </ul>
+              </>
+            )}
           </Notice>
-          {detail.status === 'CONFIRMED' && (
-            <Notice tone="info" title="출발 전 안전 수칙">
-              <ul className="list-disc pl-4">
-                {CONFIRMED_SAFETY_RULES.map((rule) => (
-                  <li key={rule}>{rule}</li>
-                ))}
-              </ul>
-            </Notice>
-          )}
         </div>
       </article>
 
@@ -258,12 +248,16 @@ function MemberRow({
         >
           {member.nickname}
         </Link>
-        {member.role === 'LEADER' && <Badge tone="earth">캠프 리더</Badge>}
-        {badge && (
-          <Badge tone={badge.tone} icon={badge.icon}>
-            {badge.label}
-          </Badge>
-        )}
+        <MetaLine
+          items={[
+            member.role === 'LEADER' && <StatusText tone="earth">캠프 리더</StatusText>,
+            badge && (
+              <StatusText tone={badge.tone} icon={badge.icon}>
+                {badge.label}
+              </StatusText>
+            ),
+          ]}
+        />
         {reportable && (
           <Button variant="ghost" className="ml-auto" onClick={() => setReporting(true)}>
             신고
@@ -387,17 +381,15 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   if (session.status === 'loading') {
     content = null;
   } else if (session.status === 'anonymous' || session.me === null) {
-    content = (
-      <>
-        <p className="text-sm text-ink-muted">로그인하면 합류 조건을 채웠는지 확인하고 신청할 수 있어요.</p>
-        <Link
-          to={withNext('/login', pathname + search)}
-          className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted"
-        >
-          로그인
+    // 비회원에게도 합류 신청 버튼을 그대로 보여 주고, 누르면 로그인한 뒤 이 화면으로 돌아오게 한다.
+    content =
+      detail.status === 'RECRUITING' ? (
+        <Link to={withNext('/login', pathname + search)} className={`${buttonClassName('primary')} w-full`}>
+          합류 신청
         </Link>
-      </>
-    );
+      ) : (
+        <p className="text-base text-ink">{BASECAMP_STATUS_GUIDE[detail.status]}</p>
+      );
   } else if (session.me.status === 'UNVERIFIED') {
     content = (
       <>
@@ -464,7 +456,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   } else {
     content = (
       <>
-        <Button fullWidth disabled disabledReason="합류 조건을 채우지 못해서 신청할 수 없어요.">
+        <Button fullWidth disabled>
           합류 신청
         </Button>
         <UnmetReasonList reasons={detail.unmetReasons ?? []} trustLevel={session.me.trustLevel} />

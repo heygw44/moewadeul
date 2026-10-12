@@ -13,7 +13,7 @@ import type {
   RevealedReceivedCompanionReview,
 } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
@@ -70,7 +70,7 @@ export function CompanionReviewsPage() {
 
   if (session.status !== 'authenticated' || !session.me) {
     return (
-      <PageLayout title="동행 후기" description="함께 다녀온 멤버와 서로 남기는 후기예요.">
+      <PageLayout title="동행 후기">
         {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
       </PageLayout>
     );
@@ -79,7 +79,7 @@ export function CompanionReviewsPage() {
   return (
     <PageLayout
       title="동행 후기"
-      description="함께 다녀온 멤버와 서로 남기는 후기예요."
+     
       tabs={
         <UnderlineTabs
           label="동행 후기 종류"
@@ -124,12 +124,12 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
 
   if (!eligible) {
     return (
-      <Notice tone="info" title="본인확인을 하면 동행 후기를 쓸 수 있어요">
-        <p>동행 후기는 본인확인을 마친 회원만 쓸 수 있어요.</p>
-        <Link to="/identity-verification" className="mt-1 inline-flex min-h-11 items-center font-semibold text-forest">
+      <div className="flex flex-col items-start gap-1">
+        <p className="text-base text-ink">본인확인을 마치면 동행 후기를 쓸 수 있어요.</p>
+        <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-2">
           본인확인하기
         </Link>
-      </Notice>
+      </div>
     );
   }
   if (current === null) return showSkeleton ? <Skeleton className="h-40 w-full" /> : null;
@@ -293,7 +293,7 @@ function WriteDialog({
           error={commentError}
           onChange={(event) => setComment(event.target.value)}
         />
-        <Notice tone="info" title="작성한 뒤에는 고치거나 지울 수 없어요" />
+        <Notice tone="info" title="작성한 뒤에는 수정하거나 삭제할 수 없어요" />
         <div className="flex flex-wrap items-start justify-end gap-2">
           <Button variant="secondary" disabled={submitting} onClick={onClose}>
             닫기
@@ -386,18 +386,12 @@ function ReceivedTab() {
                 >
                   {item.reviewer.nickname}
                 </Link>
-                <Badge tone={item.rejoinWanted ? 'forest' : 'neutral'}>
+                <StatusText tone={item.rejoinWanted ? 'forest' : 'neutral'}>
                   {item.rejoinWanted ? '다시 동행하고 싶어요' : '다시 동행은 아쉬워요'}
-                </Badge>
+                </StatusText>
               </div>
               {item.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {item.tags.map((tag) => (
-                    <Badge key={tag} tone="neutral">
-                      {companionTagLabel(tag)}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-sm text-ink-muted">{item.tags.map(companionTagLabel).join(' · ')}</p>
               )}
               {item.comment && <p className="whitespace-pre-line break-words text-base text-ink">{item.comment}</p>}
               <p className="font-mono text-sm tabular-nums text-ink-muted">{formatKstDateTime(item.createdAt)}</p>

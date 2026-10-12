@@ -1,5 +1,5 @@
 import type { SelfAgeGroup, SelfGender } from '../../api/types';
-import type { BadgeTone } from '../../components/Badge';
+import type { StatusTone } from '../../components/StatusText';
 import type { IconName } from '../../components/iconPaths';
 
 export const AGE_GROUP_LABELS: Record<SelfAgeGroup, string> = {
@@ -16,13 +16,13 @@ export const GENDER_LABELS: Record<SelfGender, string> = {
 };
 
 // 신뢰 단계 배지. 0은 이메일 인증, 1은 본인확인, 2는 동행 기록까지 쌓인 신뢰 회원이다.
-const TRUST_LEVEL_BADGES: ReadonlyArray<{ label: string; tone: BadgeTone; icon?: IconName }> = [
+const TRUST_LEVEL_BADGES: ReadonlyArray<{ label: string; tone: StatusTone; icon?: IconName }> = [
   { label: '이메일 인증', tone: 'neutral' },
   { label: '본인확인', tone: 'sea', icon: 'check' },
   { label: '신뢰 회원', tone: 'forest' },
 ];
 
-export function trustLevelBadge(level: number): { label: string; tone: BadgeTone; icon?: IconName } {
+export function trustLevelBadge(level: number): { label: string; tone: StatusTone; icon?: IconName } {
   return TRUST_LEVEL_BADGES[level] ?? TRUST_LEVEL_BADGES[0]!;
 }
 
@@ -37,7 +37,7 @@ const COMPANION_TAG_LABELS: Record<string, string> = {
   CONSIDERATE: '배려',
   WELL_PREPARED: '준비성',
   LATE: '지각',
-  NO_SHOW: '노쇼',
+  NO_SHOW: '약속 불참',
   LITTERING: '쓰레기 방치',
 };
 
