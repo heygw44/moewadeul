@@ -138,3 +138,17 @@ export function createDraftPin(): HTMLElement {
     '</svg>';
   return element;
 }
+
+// 주소 검색으로 찾은 지점을 알려 주는 핀이다. 장소가 아니라서 누를 수 없고, 먹색 몸통 가운데 흰 점으로 장소 핀과 구분한다.
+export function createSearchPin(): HTMLElement {
+  const element = document.createElement('div');
+  element.setAttribute('aria-hidden', 'true');
+  element.className = 'pointer-events-none flex h-11 w-11 items-end justify-center';
+  element.innerHTML =
+    '<svg class="block overflow-visible" width="36" height="44" viewBox="0 0 36 44">' +
+    `<path class="fill-white stroke-white" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" d="${PIN_PATH}"/>` +
+    `<path class="fill-ink" d="${PIN_PATH}"/>` +
+    '<circle class="fill-white" cx="18" cy="18" r="5"/>' +
+    '</svg>';
+  return element;
+}

@@ -15,13 +15,15 @@ type SearchState =
   | { status: 'error'; message: string };
 
 type MapSearchBarProps = {
+  // 새 검색을 시작할 때 부른다. 앞선 검색이 남긴 표시를 지운다.
+  onSearch: () => void;
   // 고른 지역으로 지도를 옮긴다. 옮긴 뒤 영역 조회는 지도 idle 구독이 맡는다.
   onSelect: (candidate: RegionCandidate) => void;
   // 지도가 움직이기 시작하면 떠 있던 후보 목록과 안내 문구를 닫는다.
   mapMoving: boolean;
 };
 
-export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
+export function MapSearchBar({ onSearch, onSelect, mapMoving }: MapSearchBarProps) {
   const [query, setQuery] = useState('');
   const [inputError, setInputError] = useState<string | undefined>();
   const [state, setState] = useState<SearchState>({ status: 'idle' });
@@ -39,7 +41,7 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
     event.preventDefault();
     const trimmed = query.trim();
     if (normalizeRegionQuery(trimmed) === '') {
-      setInputError('찾을 지역 이름을 입력해 주세요.');
+      setInputError('찾을 지역 이름이나 주소를 입력해 주세요.');
       setState({ status: 'idle' });
       return;
     }
@@ -49,6 +51,7 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
       return;
     }
     setInputError(undefined);
+    onSearch();
 
     const request = ++requestRef.current;
     setState({ status: 'loading' });
@@ -98,7 +101,7 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
         type="text"
         enterKeyHint="search"
         autoComplete="off"
-        placeholder="지역 이름 (예: 안동, 원주)"
+        placeholder="지역 이름이나 주소 (예: 안동, 원주)"
         value={query}
         error={inputError}
         onChange={(event) => setQuery(event.target.value)}
@@ -141,7 +144,7 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
           className="absolute inset-x-0 top-full z-20 mt-1 rounded-control border border-contour bg-card px-3 py-2 text-sm text-ink shadow-raise"
         >
           {state.status === 'empty'
-            ? `'${state.keyword}' 검색 결과가 없어요. 다른 지역 이름으로 찾아보세요.`
+            ? `'${state.keyword}' 검색 결과가 없어요. 다른 지역 이름이나 주소로 찾아보세요.`
             : state.message}
         </p>
       )}

@@ -80,6 +80,10 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   const [snap, setSnap] = useState<SheetSnap>(contentOpen ? 'half' : 'peek');
   const [snapOpen, setSnapOpen] = useState(contentOpen);
   const [draft, setDraft] = useState<LatLng | null>(null);
+  const [searchPin, setSearchPin] = useState<LatLng | null>(null);
+  // 검색으로 지도를 옮기는 확대·축소도 움직임 시작으로 온다. 그래서 옮기는 중에는 목표 확대 수준을 기억해 두고,
+  // 그 수준에서 지도가 멈춘 뒤부터 움직임이 시작되면 핀을 지운다. 옮기는 중이 아니면 null이다.
+  const searchMoveLevelRef = useRef<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [filters, setFilters] = useState<BasecampFilters>(NO_BASECAMP_FILTERS);
   const [spotFilters, setSpotFilters] = useState<SpotFilters>(NO_SPOT_FILTERS);
@@ -199,6 +203,25 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   }, [map, draft]);
 
   useEffect(() => {
+    map?.showSearchPin(searchPin);
+  }, [map, searchPin]);
+
+  // 사용자가 지도를 끌거나 확대·축소하면 검색 위치 핀을 지운다.
+  useEffect(() => {
+    if (!map) return;
+    const offIdle = map.onIdle(() => {
+      if (searchMoveLevelRef.current === map.getLevel()) searchMoveLevelRef.current = null;
+    });
+    const offMoveStart = map.onMoveStart(() => {
+      if (searchMoveLevelRef.current === null) setSearchPin(null);
+    });
+    return () => {
+      offIdle();
+      offMoveStart();
+    };
+  }, [map]);
+
+  useEffect(() => {
     map?.setSelected(basecampMode ? spotFilterId : opening ? (openSpotId ?? null) : (spotId ?? null));
   }, [map, spotId, basecampMode, spotFilterId, opening, openSpotId]);
 
@@ -224,8 +247,14 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
 
   // 검색한 지역으로 지도를 옮긴다. 장소·베이스캠프 상세를 보고 있었다면 그 지역 목록이 보이도록 목록으로 돌아간다.
   // 제보나 베이스캠프 열기 중에는 쓰던 폼을 지키려고 화면을 바꾸지 않는다.
+  // 번지까지 있는 주소로 옮기면 그 지점에 핀을 두고, 아니면 앞서 둔 핀을 지운다.
   function moveToRegion(candidate: RegionCandidate) {
-    map?.setCenter(candidate.position, candidate.level);
+    if (!map) return;
+    searchMoveLevelRef.current = candidate.level;
+    map.setCenter(candidate.position, candidate.level);
+    // 애니메이션 없이 옮기면 이벤트가 호출 안에서 모두 끝난다. 같은 자리로 다시 옮기면 idle이 오지 않으므로 여기서 끝낸다.
+    if (map.getLevel() === candidate.level) searchMoveLevelRef.current = null;
+    setSearchPin(candidate.pinned ? candidate.position : null);
     if (basecampId !== undefined) navigate('/basecamps');
     else if (mode === 'browse' && spotId !== undefined) navigate('/map');
   }
@@ -356,7 +385,7 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
             </div>
             {map && (
               <div className="flex w-full items-start gap-2 lg:max-w-md">
-                <MapSearchBar onSelect={moveToRegion} mapMoving={mapMoving.moving} />
+                <MapSearchBar onSearch={() => setSearchPin(null)} onSelect={moveToRegion} mapMoving={mapMoving.moving} />
                 {(browsing || basecampMode) && (
                   <FilterButton count={filterChipList.length} onClick={() => setFilterDialogOpen(true)} />
                 )}
