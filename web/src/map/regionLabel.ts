@@ -38,7 +38,17 @@ export function nameRegions(regions: RegionNames[], level: number, sampled: numb
     return { kind: 'named', name: joinNames(city || province, first.region_3depth_name) };
   }
   if (sameCity) return { kind: 'named', name: joinNames(province, city) };
+  // 청주시처럼 구가 있는 시는 시·군·구 이름이 "청주시 상당구"·"청주시 흥덕구"로 갈린다.
+  // 구는 달라도 시가 같으면 화면이 한 시 안이라서 시 이름까지 적는다.
+  const cities = distinct(regions.map((region) => cityOf(region.region_2depth_name)));
+  const onlyCity = cities.length === 1 ? cities[0] : undefined;
+  if (onlyCity) return { kind: 'named', name: joinNames(province, onlyCity) };
   return { kind: 'named', name: `${province} 일대` };
+}
+
+// "청주시 상당구"처럼 구가 붙은 시·군·구 이름에서 시 이름만 꺼낸다. 구가 없으면 그대로다.
+function cityOf(name: string): string {
+  return name.split(' ')[0] ?? '';
 }
 
 function distinct(values: string[]): string[] {
