@@ -85,12 +85,12 @@ export function LandingPage() {
                 근거를 같이 보여 드려요
               </h2>
               <p className="text-base leading-relaxed text-ink-muted">
-                장소가 국립공원 같은 자연공원 경계 안에 있을 수 있으면 경고를 띄워요. 어느 기관의 데이터로, 언제
-                기준으로 판단했는지도 함께 적어요.
+                장소가 국립공원 같은 자연공원 경계 안에 있을 수 있으면 경고를 띄워요. 어느 기관 자료를 언제
+                기준으로 봤는지도 함께 적어요.
               </p>
               <p className="text-base leading-relaxed text-ink-muted">
-                경고가 뜬 박지로는 베이스캠프를 열 수 없어요. 여럿이 함께 야영 금지 구역에 들어가는 일을 막기
-                위해서예요.
+                경고가 뜬 박지로는 베이스캠프를 열 수 없어요. 여럿이 함께 야영 금지 구역에 들어가지 않게
+                하려는 거예요.
               </p>
               <ul className="flex flex-col gap-2 pt-2 text-base text-ink">
                 <CheckItem>공공 야영장, 자연휴양림, 회원이 제보한 박지를 한 지도에서</CheckItem>
@@ -152,10 +152,10 @@ export function LandingPage() {
                 같은 날 같은 곳으로 가는 모임에 합류 신청을 보내요. 확정되면 멤버끼리만 연락 수단이 공개돼요.
               </FlowStep>
               <FlowStep number="03" title="공식 행사 신청" fragment={<StepProgramFragment />}>
-                혼자 가기 망설여지면 공식 행사에 신청해요. 정원만큼만 먼저 신청한 순서대로 받아요.
+                혼자 가기 망설여지면 공식 행사에 신청해요. 먼저 신청한 순서대로 정원만큼 받아요.
               </FlowStep>
             </ol>
-            <p className="-mt-6 text-xs text-ink-muted">단계마다 붙은 조각은 예시 화면이에요.</p>
+            <p className="-mt-6 text-xs text-ink-muted">단계마다 붙은 그림은 예시 화면이에요.</p>
           </div>
         </section>
 

@@ -79,7 +79,7 @@ export function basecampFilterChips(
   if (filters.noSameGenderOnly) {
     chips.push({
       key: 'noSameGenderOnly',
-      label: '동성만 아님',
+      label: '성별 제한 없음',
       onRemove: () => onChange({ ...filters, noSameGenderOnly: false }),
     });
   }

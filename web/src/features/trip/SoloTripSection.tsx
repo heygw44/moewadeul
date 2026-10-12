@@ -36,7 +36,7 @@ export function SoloTripSection({ spotId, onRegistered }: SoloTripSectionProps) 
         혼자 가는 일정
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
-        일정은 나만 봐요. 다른 사람에게는 예상 인원에 1명으로만 더해져요.
+        일정은 나만 봐요. 다른 사람에게는 예상 인원 1명으로만 보여요.
       </p>
       {done && (
         <div role="status" className="mt-2">

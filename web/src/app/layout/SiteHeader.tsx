@@ -15,8 +15,6 @@ type SiteHeaderProps = {
   mobileAccount?: boolean;
   // 로그인·가입 화면처럼 계정 표시가 그 화면의 할 일과 겹치는 곳에서 켠다. 알림·계정 자리를 비운다.
   minimal?: boolean;
-  // 지도 화면처럼 본문이 화면 끝까지 차는 곳에서 켠다. 가운데 최대 폭을 두지 않아 로고가 왼쪽 패널과 줄을 맞춘다.
-  fluid?: boolean;
   className?: string;
 };
 
@@ -24,8 +22,9 @@ const PRIMARY_KEYS = new Set(['map', 'basecamps', 'community', 'programs']);
 const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
 
 // 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 머리글이다. 데스크톱은 서비스 이름 줄과 메뉴 줄, 두 줄이다.
+// 지도 화면을 포함한 모든 화면에서 가운데 최대 폭(max-w-screen-xl) 안에 둔다. 그래서 메뉴로 화면을 오가도 로고와 메뉴 자리가 움직이지 않는다.
 // 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 하단 탭이 없는 랜딩·404에서도 다른 화면으로 갈 수 있게 하기 위해서다.
-export function SiteHeader({ mobileAccount = false, minimal = false, fluid = false, className = '' }: SiteHeaderProps) {
+export function SiteHeader({ mobileAccount = false, minimal = false, className = '' }: SiteHeaderProps) {
   const { pathname, search } = useLocation();
   const session = useSession();
   const count = useUnreadCount();
@@ -46,7 +45,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
 
   return (
     <header className={`sticky top-0 z-20 border-b border-ink bg-paper ${className}`}>
-      <div className={`mx-auto flex min-h-14 items-center gap-3 px-4 lg:min-h-16 lg:gap-6 ${fluid ? '' : 'max-w-screen-xl'}`}>
+      <div className="mx-auto flex min-h-14 max-w-screen-xl items-center gap-3 px-4 lg:min-h-16 lg:gap-6">
         <Link to="/" className="shrink-0 text-ink">
           <BrandMark rough className="text-lg sm:text-xl lg:text-4xl" />
         </Link>
@@ -98,11 +97,11 @@ export function SiteHeader({ mobileAccount = false, minimal = false, fluid = fal
         )}
       </div>
 
-      {/* 데스크톱에서는 서비스 이름 아래 줄에 메뉴를 화면 폭 전체로 펼친다. 지금 메뉴와 hover 메뉴는 아래 선 위에 올라앉은 숲색 탭이 된다. */}
+      {/* 데스크톱에서는 서비스 이름 아래 줄에 메뉴를 머리글 폭 안에서 균등하게 펼친다. 지금 메뉴와 hover 메뉴는 아래 선 위에 올라앉은 숲색 탭이 된다. */}
       {!minimal && (
         <nav
           aria-label="주 메뉴"
-          className={`mx-auto hidden items-end justify-between px-4 lg:flex ${fluid ? '' : 'max-w-screen-xl'}`}
+          className="mx-auto hidden max-w-screen-xl items-end justify-between px-4 lg:flex"
         >
           {PRIMARY_ITEMS.map((item) => {
             const current = active === item.key;

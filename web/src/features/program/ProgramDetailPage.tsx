@@ -312,7 +312,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
                 )}
               </p>
             )}
-            <p className="mt-1">참가비 {feeText(detail.fee)}을 가짜 카드로 결제해요. 실제 결제는 일어나지 않아요.</p>
+            <p className="mt-1">참가비 {feeText(detail.fee)} · 시연용 결제라서 실제로 돈이 나가지 않아요.</p>
           </Notice>
           <Button
             fullWidth
@@ -338,7 +338,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
           <p className="text-sm text-ink-muted">
             {refundClosed
               ? '환불 기한이 지나서 취소할 수 없어요.'
-              : `행사 시작 ${REFUND_BEFORE_START_HOURS}시간 전인 ${formatKstDateTime(new Date(refundDeadlineMs).toISOString())}까지 취소하면 환불해요.`}
+              : `행사 시작 ${REFUND_BEFORE_START_HOURS}시간 전인 ${formatKstDateTime(new Date(refundDeadlineMs).toISOString())}까지 취소하면 환불돼요.`}
           </p>
           <Button
             fullWidth

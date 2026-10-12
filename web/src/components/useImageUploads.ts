@@ -76,7 +76,7 @@ export function useImageUploads({ max, initial = [], requestUpload }: UseImageUp
     let room = slotsLeft;
     for (const file of files) {
       if (!IMAGE_TYPES.includes(file.type)) {
-        rejected.push(`${file.name}: JPG, PNG, WebP 파일만 올릴 수 있어요.`);
+        rejected.push(`${file.name}: JPEG, PNG, WebP 파일만 올릴 수 있어요.`);
       } else if (file.size > MAX_IMAGE_BYTES) {
         rejected.push(`${file.name}: 5MB 이하 파일만 올릴 수 있어요. 더 작은 파일을 골라 주세요.`);
       } else if (file.size === 0) {

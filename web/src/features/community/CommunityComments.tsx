@@ -311,7 +311,7 @@ function CommentItem({
   const session = useSession();
 
   if (comment.deleted) {
-    return <p className="text-base text-ink-subtle">삭제된 댓글입니다</p>;
+    return <p className="text-base text-ink-subtle">삭제된 댓글이에요</p>;
   }
 
   const signedIn = session.status === 'authenticated' && session.me !== null;

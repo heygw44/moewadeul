@@ -238,7 +238,7 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-paper">
       <AnnouncementBar />
-      <SiteHeader fluid className="hidden lg:block" />
+      <SiteHeader className="hidden lg:block" />
       <div className="relative min-h-0 flex-1 lg:flex">
         <Sheet
           aboveBottomNav={!contentOpen}
