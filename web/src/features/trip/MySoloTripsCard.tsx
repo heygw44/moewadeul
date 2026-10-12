@@ -77,7 +77,7 @@ export function MySoloTripsCard() {
                   {formatLocalDate(trip.startDate)} ~ {formatLocalDate(trip.endDate)}
                 </span>
               </div>
-              <Button variant="ghost" onClick={() => setDeleting(trip)}>
+              <Button variant="danger-outline" onClick={() => setDeleting(trip)}>
                 지우기
               </Button>
             </li>

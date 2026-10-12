@@ -109,7 +109,7 @@ function ProgramEmpty({ filtered, onReset }: { filtered: boolean; onReset: () =>
   return (
     <div className="flex flex-col items-start gap-3 p-6">
       <Icon name="calendar" size={24} className="text-ink-muted" />
-      <p className="font-serif text-lg text-ink">지금 볼 수 있는 행사가 없어요</p>
+      <p className="text-lg font-semibold text-ink">지금 볼 수 있는 행사가 없어요</p>
       <p className="text-sm text-ink-muted">
         행사가 열리면 이 목록에 올라와요. 그동안 지도에서 합법 야영지를 찾거나 베이스캠프에 합류해 보세요.
       </p>
@@ -166,7 +166,7 @@ function ProgramRow({ item }: { item: ProgramSummary }) {
             <Badge tone={status.tone}>{status.label}</Badge>
             {item.overnight && <Badge tone="earth">숙박</Badge>}
           </span>
-          <span className="break-words font-serif text-lg text-ink">{item.title}</span>
+          <span className="break-words text-lg font-semibold text-ink">{item.title}</span>
           <span className="text-sm text-ink-muted">{item.locationText}</span>
           <span className="font-mono text-sm tabular-nums text-ink-muted">
             {formatKstDateTime(item.startAt)} ~ {formatKstDateTime(item.endAt)}

@@ -45,7 +45,7 @@ export function Pagination({ page, totalPages, onChange, label = '페이지' }: 
           className={[
             BUTTON_CLASS,
             number === page
-              ? 'border-forest bg-forest font-semibold text-white'
+              ? 'border-ink bg-ink font-semibold text-white'
               : 'border-transparent text-ink hover:bg-paper-deep',
           ].join(' ')}
         >

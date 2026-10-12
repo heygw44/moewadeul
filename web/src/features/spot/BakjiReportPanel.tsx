@@ -55,7 +55,7 @@ const GROUND_OPTIONS: ChoiceOption<Unknown | GroundType>[] = [
 ];
 
 const PRIMARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-forest bg-forest px-4 text-base font-semibold text-white hover:border-forest-strong hover:bg-forest-strong';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
 const SECONDARY_LINK_CLASS =
   'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
 
@@ -228,7 +228,7 @@ function ReportForm({
 
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="font-serif text-xl font-semibold text-ink">박지 제보</h2>
+      <h2 className="text-xl font-bold tracking-tight text-ink">박지 제보</h2>
 
       {unverified && (
         <Notice tone="warning" title="이메일 인증을 마치면 박지를 제보할 수 있어요">
@@ -333,7 +333,7 @@ function SubmittedView({ result }: { result: BakjiSubmissionResponse }) {
 
   return (
     <div role="status" className="flex flex-col gap-4">
-      <h2 className="font-serif text-xl font-semibold text-ink">제보를 등록했어요</h2>
+      <h2 className="text-xl font-bold tracking-tight text-ink">제보를 등록했어요</h2>
 
       {parkWarning.warned ? (
         <ParkWarningNotice warning={parkWarning} />

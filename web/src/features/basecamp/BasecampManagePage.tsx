@@ -382,7 +382,7 @@ function HeaderCard({ detail }: { detail: BasecampDetail }) {
   const status = BASECAMP_STATUS_META[detail.status];
   return (
     <section className="flex flex-col gap-2 rounded-control border border-contour bg-card p-5">
-      <h2 className="font-serif text-lg text-ink">{detail.title}</h2>
+      <h2 className="text-lg font-semibold text-ink">{detail.title}</h2>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={status.tone}>{status.label}</Badge>
         <span className="font-mono text-sm tabular-nums text-ink-muted">

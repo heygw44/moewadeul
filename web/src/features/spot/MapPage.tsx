@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BottomTabBar } from '../../app/layout/BottomTabBar';
 import { SiteHeader } from '../../app/layout/SiteHeader';
 import { Link, navigate } from '../../app/router';
+import { BrandMark } from '../../components/BrandMark';
 import { ActiveFilterChips } from '../../components/ActiveFilterChips';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -328,8 +329,8 @@ export function MapPage({ spotId, basecampId, openSpotId, mode = 'browse' }: Map
             <h1 className="sr-only">뫼와들 지도</h1>
             <div className="flex items-start justify-between gap-2">
               {/* 데스크톱은 위의 머리글이 서비스 이름과 메뉴를 보여 주므로, 지도 위에는 모바일에서만 이름을 띄운다. */}
-              <Link to="/" className={`${CHIP_CLASS} font-serif text-lg font-semibold text-forest-deep lg:invisible`}>
-                뫼와들
+              <Link to="/" className={`${CHIP_CLASS} text-ink lg:invisible`}>
+                <BrandMark className="text-lg" />
               </Link>
               <div className="flex flex-wrap justify-end gap-2">
                 <NotificationBellLink className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-contour bg-card px-3 text-ink hover:bg-paper-deep lg:hidden" />
@@ -412,7 +413,7 @@ function ListHeader({
 }) {
   const counted = area.status === 'ready' || area.markers.length > 0 || area.clusters.length > 0;
   return (
-    <h2 className="truncate font-serif text-lg text-ink">
+    <h2 className="truncate text-lg font-semibold text-ink">
       {regionName ?? UNKNOWN_REGION} 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
       {filterCount > 0 && <FilterCountNote count={filterCount} />}
     </h2>
@@ -456,7 +457,7 @@ function BasecampListHeader({
 }) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
-    <h2 className="truncate font-serif text-lg text-ink">
+    <h2 className="truncate text-lg font-semibold text-ink">
       {regionName ?? UNKNOWN_REGION} 베이스캠프
       {counted && (
         <span className="tabular-nums">

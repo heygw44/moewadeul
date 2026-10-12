@@ -159,7 +159,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
   return (
     <article>
       <header className="flex flex-col gap-2">
-        <h2 className="font-serif text-xl font-semibold text-ink">{detail.name}</h2>
+        <h2 className="text-xl font-bold tracking-tight text-ink">{detail.name}</h2>
         <div className="flex flex-wrap gap-1">
           <Badge tone={meta.tone} icon={meta.icon}>
             {meta.label}

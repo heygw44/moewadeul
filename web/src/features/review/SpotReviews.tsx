@@ -324,7 +324,7 @@ function ReviewItem({
             <Button variant="ghost" onClick={onEdit} className="px-2">
               수정
             </Button>
-            <Button variant="ghost" onClick={onDelete} className="px-2 text-danger">
+            <Button variant="danger-outline" onClick={onDelete} className="px-2">
               삭제
             </Button>
           </>

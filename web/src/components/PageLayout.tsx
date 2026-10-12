@@ -23,11 +23,11 @@ export function PageLayout({ wide = false, children, ...rest }: PageLayoutProps)
   );
 }
 
-// 화면 안의 한 묶음. 글자는 등고선 무늬 위가 아니라 카드 바탕 위에 둔다.
+// 화면 안의 한 묶음. 테두리 있는 카드 바탕 위에 글자를 둔다.
 export function PageCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3 rounded-control border border-contour bg-card p-5">
-      <h2 className="font-serif text-lg text-ink">{title}</h2>
+      <h2 className="text-lg font-semibold text-ink">{title}</h2>
       {children}
     </section>
   );

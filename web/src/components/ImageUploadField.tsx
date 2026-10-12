@@ -51,28 +51,34 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
                 {image.error}
               </p>
             )}
-            <div className="flex flex-wrap">
+            {/* 사진 칸이 좁아서 앞으로 옮기기는 화살표만 두고, 이름은 aria-label로 준다. 짝이 없는 버튼은 한 줄을 다 쓴다. */}
+            <div className="mt-1 grid grid-cols-[2.75rem_minmax(0,1fr)] gap-1">
               {image.status === 'failed' && (
-                <Button variant="secondary" onClick={() => uploads.retry(image)} disabled={disabled} className="px-2 text-sm">
+                <Button
+                  variant="secondary"
+                  onClick={() => uploads.retry(image)}
+                  disabled={disabled}
+                  className="col-span-2 px-1 text-sm"
+                >
                   다시 시도
                 </Button>
               )}
               {index > 0 && (
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   aria-label={`이미지 ${index + 1}번 앞으로 옮기기`}
                   onClick={() => uploads.moveForward(index)}
                   disabled={disabled}
-                  className="px-2 text-sm"
+                  title="앞으로"
+                  className="px-1 text-sm"
                 >
                   <Icon name="arrowUp" size={16} />
-                  앞으로
                 </Button>
               )}
               <Button
-                variant="ghost"
+                variant="danger-outline"
                 aria-label={`이미지 ${index + 1}번 빼기`}
-                className="px-2 text-sm text-danger"
+                className={['whitespace-nowrap px-1 text-sm', index > 0 ? '' : 'col-span-2'].join(' ')}
                 onClick={() => uploads.remove(image.key)}
                 disabled={disabled}
               >
