@@ -12,9 +12,9 @@ export const KIND_STYLE: Record<MarkerKind, { label: string; icon: IconName; fil
   BAKJI: { label: '박지', icon: 'backpack', fill: 'fill-bakji' },
 };
 
-// 표지기 핀 모양이다. 28×28 몸통(좌표 4~32) 아래로 뾰족한 끝이 (18, 42)에 온다.
+// 핀 모양이다. 모서리를 6만큼 둥글린 28×28 몸통(좌표 4~32) 아래로 뾰족한 끝이 (18, 42)에 온다.
 // 버튼 높이가 44px이고 오버레이를 아래쪽 끝(yAnchor 1)에 맞추므로, 핀 끝이 장소 좌표에 거의 그대로 놓인다.
-export const PIN_PATH = 'M7 4h22a3 3 0 0 1 3 3v22a3 3 0 0 1-3 3h-5l-6 10-6-10H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z';
+export const PIN_PATH = 'M10 4h16a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6h-3.5L18 42l-4.5-10H10a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6z';
 
 // 흰 윤곽선 굵기다. 선은 경로 양쪽으로 반씩 퍼지고 안쪽 반은 핀 색이 덮으므로, 바깥에 보이는 두께는 절반이다.
 // 기본은 바깥 1px, 경고 핀은 황토 테두리(바깥 1px) 밖으로 1px, 선택하면 흰 링이 2px 더 두꺼워진다.
@@ -70,13 +70,13 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
   // 배지는 몸통 모서리에 걸친다. 휴장이어도 핀을 숨기거나 흐리게 하지 않고 배지만 더한다.
   if (data.warning) {
     markup +=
-      '<span class="pointer-events-none absolute -left-0.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-control border border-warning-line bg-warning-soft text-warning">' +
+      '<span class="pointer-events-none absolute -left-0.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-warning-line bg-warning-soft text-warning">' +
       iconMarkup('alert', 'width="14" height="14"') +
       '</span>';
   }
   if (data.closed) {
     markup +=
-      '<span class="pointer-events-none absolute -right-0.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-control border border-white bg-ink text-white">' +
+      '<span class="pointer-events-none absolute -right-0.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-ink text-white">' +
       iconMarkup('closed', 'width="14" height="14"') +
       '</span>';
   }
@@ -179,8 +179,8 @@ export function createClusterButton(
   const button = document.createElement('button');
   button.type = 'button';
   button.className =
-    'flex h-11 min-w-11 cursor-pointer items-center justify-center rounded-full border border-white bg-ink px-2 ' +
-    'font-mono text-sm tabular-nums text-white ' +
+    'flex h-11 min-w-11 cursor-pointer items-center justify-center rounded-full bg-ink px-2 shadow-raise ' +
+    'font-mono text-sm font-semibold tabular-nums text-white ring-2 ring-white ' +
     FOCUS_RING;
   button.textContent = cluster.count.toLocaleString('ko-KR');
   button.setAttribute('aria-label', `장소 ${cluster.count}곳, 눌러서 확대`);

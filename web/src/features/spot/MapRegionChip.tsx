@@ -12,7 +12,7 @@ export function MapRegionChip({ label }: { label: RegionLabel | null }) {
     <div className="pointer-events-none absolute inset-x-0 bottom-[calc(28dvh+var(--bottom-nav-h)+0.75rem)] z-10 flex justify-center px-4 lg:bottom-4">
       <p
         aria-live="polite"
-        className="inline-flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-control border border-line bg-surface px-3 text-sm text-ink"
+        className="inline-flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-full bg-surface px-3.5 text-sm text-ink shadow-raise"
       >
         <span className="shrink-0 text-ink-muted">지금 보는 곳 ·</span>
         <span className="min-w-0 truncate font-semibold">{name}</span>

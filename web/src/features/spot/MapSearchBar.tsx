@@ -87,13 +87,14 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving }: MapSearchBarProp
     }
   }
 
+  // 지도 위에서는 입력란이 옅은 면이면 지도에 묻힌다. 흰 면과 그림자로 띄우고, 오류일 때는 위험색 테두리를 남긴다.
   return (
     <form
       role="search"
       noValidate
       onSubmit={handleSubmit}
       onKeyDown={handleKeyDown}
-      className="pointer-events-auto relative min-w-0 flex-1"
+      className="pointer-events-auto relative min-w-0 flex-1 [&_input]:bg-surface [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent"
     >
       <TextField
         label="지역 검색"
