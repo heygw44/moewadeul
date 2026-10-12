@@ -16,8 +16,10 @@ import { formatLocalDate } from '../../lib/datetime';
 import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { useSession } from '../member/session';
 import { LocationLabel } from '../spot/LocationLabel';
+import { ApproxLocationLabel } from './ApproxLocationLabel';
 import { nightsLabel, VISIBILITY_LABEL } from './memoryLabels';
 import { MemoryLikeButton } from './MemoryLikeButton';
+import { MemoryPhotoCarousel } from './MemoryPhotoCarousel';
 
 type LoadResult = { memoryId: number; memory: MemoryDetail } | { memoryId: number; error: unknown };
 
@@ -193,26 +195,16 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
       {position === null && approxPosition !== null && (
         <div className="flex flex-col gap-1 px-5 py-4">
           <p className="text-sm text-ink-muted">다녀온 곳 · 대략 위치예요</p>
-          <LocationLabel position={approxPosition} />
+          <ApproxLocationLabel position={approxPosition} />
         </div>
       )}
       {memory.content && (
         <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink">{memory.content}</p>
       )}
       {memory.images.length > 0 && (
-        <ul className="flex flex-col gap-3 px-5 py-5">
-          {memory.images.map((image, index) => (
-            <li key={image.imageId}>
-              <img
-                src={image.url}
-                alt={`기록 사진 ${index + 1} / ${memory.images.length}`}
-                loading="lazy"
-                onError={onImageError}
-                className="max-h-[32rem] w-full rounded-control border border-contour bg-paper-deep object-contain"
-              />
-            </li>
-          ))}
-        </ul>
+        <div className="px-5 py-5">
+          <MemoryPhotoCarousel images={memory.images} owner={memory.author.nickname} onImageError={onImageError} />
+        </div>
       )}
       {!memory.content && memory.images.length === 0 && (
         <p className="px-5 py-5 text-sm text-ink-muted">사진과 글 없이 남긴 기록이에요.</p>

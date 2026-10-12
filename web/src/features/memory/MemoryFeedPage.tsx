@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchMemoryFeed } from '../../api/memories';
 import type { MemoryFeedItem } from '../../api/types';
 import { Link } from '../../app/router';
@@ -13,12 +13,8 @@ import { formatLocalDate } from '../../lib/datetime';
 import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { useSession } from '../member/session';
 import { usePagedList } from '../program/usePagedList';
-import { LocationLabel } from '../spot/LocationLabel';
-import { nightsLabel } from './memoryLabels';
-import { MemoryLikeButton } from './MemoryLikeButton';
-import { MemoryPhotoCarousel } from './MemoryPhotoCarousel';
 
-const FEED_PAGE_SIZE = 10;
+const FEED_PAGE_SIZE = 24;
 
 // 모두에게 공개된 기록을 최신순으로 이어서 보여 준다. 좋아요 상태가 로그인에 따라 달라서 세션을 확인한 뒤에 받는다.
 export function MemoryFeedPage() {
@@ -39,9 +35,10 @@ export function MemoryFeedPage() {
     body = (
       <div aria-busy="true">
         {showSkeleton && (
-          <div className="flex flex-col gap-4">
-            <Skeleton className="aspect-square w-full" />
-            <Skeleton className="h-16 w-full" />
+          <div className="grid grid-cols-3 gap-0.5">
+            {Array.from({ length: 9 }, (_, index) => (
+              <Skeleton key={index} className="aspect-square w-full" />
+            ))}
           </div>
         )}
       </div>
@@ -75,10 +72,10 @@ export function MemoryFeedPage() {
   } else {
     body = (
       <>
-        <ul className="flex flex-col gap-4">
+        <ul className="grid grid-cols-3 gap-0.5">
           {current.items.map((item) => (
             <li key={item.memoryId}>
-              <MemoryFeedCard item={item} />
+              <MemoryFeedCell item={item} />
             </li>
           ))}
         </ul>
@@ -113,51 +110,57 @@ export function MemoryFeedPage() {
   );
 }
 
-// 링크 안에 버튼이나 다른 링크를 넣지 않으려고, 닉네임·장소 줄, 사진, 본문 링크, 좋아요 줄을 서로 형제로 둔다.
-function MemoryFeedCard({ item }: { item: MemoryFeedItem }) {
+// 칸 하나는 기록으로 가는 링크 하나다. 링크 안에 버튼이나 다른 링크를 두지 않는다.
+// 덮개는 마우스를 올리거나 키보드 포커스가 올 때만 보이고, 같은 내용을 링크의 aria-label이 읽어 준다.
+function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
+  // 조회 URL이 만료되는 등 사진을 못 불러오면 사진 없는 칸 모양으로 바꾼다.
+  const [imageFailed, setImageFailed] = useState(false);
+  const photoCount = item.images.length;
+  const cover = imageFailed ? undefined : item.images[0];
+  const label = [
+    `${item.author.nickname}의 발자국`,
+    formatLocalDate(item.visitedDate),
+    photoCount > 0 ? `사진 ${photoCount}장` : null,
+    `좋아요 ${item.likeCount}개`,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   return (
-    <article className="flex flex-col gap-3 rounded-control border border-contour bg-card p-4">
-      <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-          <Link
-            to={`/members/${item.author.memberId}/memories`}
-            className="inline-flex min-h-11 items-center font-semibold text-ink underline-offset-2 hover:underline"
-          >
-            {item.author.nickname}
-          </Link>
-          {item.spot && (
-            <>
-              <span aria-hidden="true" className="text-ink-muted">
-                ·
-              </span>
-              <Link
-                to={`/spots/${item.spot.spotId}`}
-                className="inline-flex min-h-11 items-center gap-1 text-forest underline underline-offset-2"
-              >
-                <Icon name="map" size={14} />
-                {item.spot.name}
-              </Link>
-            </>
-          )}
+    <Link
+      to={`/memories/${item.memoryId}`}
+      aria-label={label}
+      className="group relative block aspect-square overflow-hidden bg-paper-deep focus-visible:outline-offset-[-2px]"
+    >
+      {cover ? (
+        <img
+          src={cover.url}
+          alt=""
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full flex-col gap-1 border border-contour bg-card p-2">
+          {item.excerpt && <p className="line-clamp-4 break-keep text-sm text-ink">{item.excerpt}</p>}
+          <p className="mt-auto text-xs text-ink-muted">{formatLocalDate(item.visitedDate)}</p>
         </div>
-        <div className="flex flex-col">
-          <p className="text-xs text-ink-muted">대략 위치</p>
-          <LocationLabel position={{ lat: item.approxLat, lng: item.approxLng }} />
-        </div>
-      </div>
-      <MemoryPhotoCarousel images={item.images} owner={item.author.nickname} />
-      <Link to={`/memories/${item.memoryId}`} className="flex flex-col gap-1 hover:underline">
-        <span className="text-sm text-ink-muted">
-          <time dateTime={item.visitedDate}>{formatLocalDate(item.visitedDate)}</time>
-          <span aria-hidden="true"> · </span>
-          {nightsLabel(item.nights)}
+      )}
+      {photoCount > 1 && (
+        <span aria-hidden="true" className="absolute right-1 top-1 rounded-control bg-ink/40 p-0.5 text-white">
+          <Icon name="photos" size={16} />
         </span>
-        {item.excerpt && <span className="line-clamp-3 whitespace-pre-line break-words text-base text-ink">{item.excerpt}</span>}
-        {!item.excerpt && <span className="text-sm font-semibold text-forest">기록 보기</span>}
-      </Link>
-      <div>
-        <MemoryLikeButton memoryId={item.memoryId} likedByMe={item.likedByMe === true} likeCount={item.likeCount} />
+      )}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-ink/60 px-2 text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+      >
+        <span className="inline-flex items-center gap-1 font-mono text-sm tabular-nums">
+          <Icon name="heart" size={16} />
+          {item.likeCount}
+        </span>
+        <span className="max-w-full truncate text-xs">{item.author.nickname}</span>
       </div>
-    </article>
+    </Link>
   );
 }

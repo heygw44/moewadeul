@@ -83,9 +83,6 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
       <Link to={`/members/${memberId}`} className={SECONDARY_LINK_CLASS}>
         프로필
       </Link>
-      <Link to="/memories" className={SECONDARY_LINK_CLASS}>
-        발자국
-      </Link>
     </>
   );
 

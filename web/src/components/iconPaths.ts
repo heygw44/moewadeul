@@ -22,6 +22,7 @@ export type IconName =
   | 'chat'
   | 'heart'
   | 'image'
+  | 'photos'
   | 'arrowUp'
   | 'eye'
   | 'eyeOff'
@@ -93,6 +94,9 @@ export const ICON_PATHS: Record<IconName, string> = {
     '<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/>' +
     '<circle cx="9" cy="10" r="1.75"/>' +
     '<path d="m3.5 17 5-4.5 4 3.5 3-2.5 5 4.5"/>',
+  photos:
+    '<rect x="8.5" y="3.5" width="12" height="12" rx="1.5"/>' +
+    '<path d="M5.5 7.5H5a1.5 1.5 0 0 0-1.5 1.5v10A1.5 1.5 0 0 0 5 20.5h10a1.5 1.5 0 0 0 1.5-1.5v-.5"/>',
   arrowUp: '<path d="M12 19V5"/>' + '<path d="m5.5 11.5 6.5-6.5 6.5 6.5"/>',
   eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>' + '<circle cx="12" cy="12" r="3"/>',
   eyeOff:
