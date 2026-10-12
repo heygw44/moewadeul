@@ -19,7 +19,7 @@ export function UnderlineTabs<T extends string>({ label, options, value, onChang
           className={[
             'min-h-11 whitespace-nowrap border-b-2 px-3 text-base',
             value === item.value
-              ? 'border-accent font-semibold text-accent-deep'
+              ? 'border-ink font-semibold text-ink'
               : 'border-transparent text-ink-muted hover:text-ink',
           ].join(' ')}
         >

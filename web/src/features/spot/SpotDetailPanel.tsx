@@ -203,7 +203,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
           ) : (
             <Link
               to={`/basecamps/new?spotId=${detail.spotId}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill"
+              className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
             >
               이 장소로 베이스캠프 열기
             </Link>
@@ -218,13 +218,13 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <div className="mt-2 flex flex-wrap gap-2">
           <Link
             to={`/community?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill"
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
           >
             이 장소 관련 글 보기
           </Link>
           <Link
             to={`/community/new?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill"
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
           >
             이 장소로 글쓰기
           </Link>
@@ -239,7 +239,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <div className="mt-2">
           <Link
             to={newMemoryPath({ lat: detail.lat, lng: detail.lng }, detail.spotId)}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill"
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
           >
             발자국 남기기
           </Link>

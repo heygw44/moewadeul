@@ -131,7 +131,7 @@ export function MyBasecampsPage() {
                   filter === 'ALL' && (
                     <Link
                       to="/basecamps"
-                      className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-surface px-4 font-semibold text-ink hover:bg-fill"
+                      className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
                     >
                       베이스캠프 찾기
                     </Link>

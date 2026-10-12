@@ -72,7 +72,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
   if (session.status !== 'authenticated' || !session.me) {
     return layout(
       showSkeleton ? (
-        <div className="rounded-control border border-line bg-surface p-5">
+        <div className="rounded-sheet border border-line bg-surface p-5">
           <Skeleton className="h-40 w-full" />
         </div>
       ) : null,
@@ -80,7 +80,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
   }
   if (session.me.status === 'UNVERIFIED') {
     return layout(
-      <div className="rounded-control border border-line bg-surface p-5">
+      <div className="rounded-sheet border border-line bg-surface p-5">
         <Notice tone="warning" title="이메일 인증을 마치면 발자국을 남길 수 있어요">
           <div className="flex flex-col gap-3">
             <p>받은 인증 코드를 입력하면 바로 남길 수 있어요.</p>
@@ -172,7 +172,7 @@ function EditLoader({ memoryId, myMemberId }: { memoryId: number; myMemberId: nu
 
   if (result === null || notMine) {
     return showSkeleton ? (
-      <div className="rounded-control border border-line bg-surface p-5">
+      <div className="rounded-sheet border border-line bg-surface p-5">
         <Skeleton className="h-64 w-full" />
       </div>
     ) : null;
@@ -329,7 +329,7 @@ function MemoryForm(props: MemoryFormProps) {
       noValidate
       onSubmit={handleSubmit}
       aria-label={props.mode === 'create' ? '발자국 남기기' : '발자국 고치기'}
-      className="divide-y divide-line rounded-control border border-line bg-surface"
+      className="divide-y divide-line rounded-sheet border border-line bg-surface"
     >
       {formError && (
         <div role="alert" className="px-5 py-5">

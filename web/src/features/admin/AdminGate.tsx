@@ -61,7 +61,7 @@ export function AdminPage({ title, current, children }: { title: string; current
       }
     >
       {/* 필터와 표도 테두리 있는 카드 바탕 위에 둔다. */}
-      <div className="flex min-w-0 flex-col gap-4 rounded-control border border-line bg-surface p-4">{children}</div>
+      <div className="flex min-w-0 flex-col gap-4 rounded-sheet border border-line bg-surface p-4">{children}</div>
     </PageLayout>
   );
 }

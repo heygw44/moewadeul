@@ -178,7 +178,7 @@ export function Sheet({ snap, onSnapChange, header, children, label, aboveBottom
         onPointerCancel={handlePointerCancel}
         className="flex h-11 w-full shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing lg:hidden"
       >
-        <span aria-hidden="true" className="h-1 w-9 rounded-control bg-ink-subtle" />
+        <span aria-hidden="true" className="h-1 w-9 rounded-full bg-ink-subtle/50" />
       </button>
       {header && <div className="shrink-0 border-b border-line px-4 pb-3 lg:pt-4">{header}</div>}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>

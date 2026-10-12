@@ -110,7 +110,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
     <section
       id="comments"
       aria-labelledby="community-comments-title"
-      className="scroll-mt-20 rounded-control border border-line bg-surface"
+      className="scroll-mt-20 rounded-sheet border border-line bg-surface"
     >
       <h2
         id="community-comments-title"

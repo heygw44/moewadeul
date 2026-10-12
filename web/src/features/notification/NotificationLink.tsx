@@ -27,7 +27,7 @@ export function NotificationLink() {
     <Link
       to="/me/notifications"
       aria-label={notificationLabel(count)}
-      className="inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3 text-ink hover:bg-fill"
+      className="inline-flex min-h-11 items-center gap-2 rounded-sheet border border-line bg-surface px-3 text-ink hover:bg-fill"
     >
       <Icon name="bell" size={20} />
       <span className="text-sm">알림</span>

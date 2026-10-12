@@ -22,7 +22,7 @@ type HubLayoutProps = {
   children: ReactNode;
 };
 
-// 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 제목과 탭은 머리글과 같은 회색 바탕 띠에 두고, 목록은 그 아래 흰 패널에 둔다.
+// 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 제목과 탭은 위 띠에 두고, 목록은 그 아래 선으로 나눈 패널에 둔다.
 // 오른쪽 안내 열(aside)은 넓은 화면에서만 옆에 놓고, 좁은 화면에서는 목록 아래로 내려간다.
 export function HubLayout({
   title,
@@ -44,12 +44,12 @@ export function HubLayout({
       {announcement && <AnnouncementBar />}
       <SiteHeader />
       <div className="border-b border-line bg-canvas">
-        <div className="mx-auto max-w-screen-xl px-4 pt-6">
+        <div className="mx-auto max-w-screen-xl px-4 pt-8">
           <div className={column}>
             {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3">
               <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="break-words text-xl font-bold tracking-tight text-ink">{title}</h1>
+                <h1 className="break-words text-2xl font-bold tracking-tight text-ink">{title}</h1>
                 {description && <p className="text-sm text-ink-muted">{description}</p>}
                 {meta}
               </div>
@@ -77,7 +77,7 @@ export function HubLayout({
 // 안내 열의 한 묶음이다. 본문 목록은 text-sm이고 항목 사이를 띄운다.
 export function AsideSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 rounded-control border border-line bg-surface p-4">
+    <section className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-4">
       <h2 className="text-base font-semibold text-ink">{title}</h2>
       <div className="flex flex-col gap-2 text-sm text-ink-muted [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2">{children}</div>
     </section>
@@ -87,7 +87,7 @@ export function AsideSection({ title, children }: { title: string; children: Rea
 // 목록을 감싸는 패널이다. header가 있으면 위에 한 줄 머리를 두고, 항목 사이에는 선을 긋는다.
 export function ListPanel({ header, children }: { header?: ReactNode; children: ReactNode }) {
   return (
-    <div className="rounded-control border border-line bg-surface">
+    <div className="overflow-hidden rounded-sheet border border-line bg-surface">
       {header && (
         <div className="flex items-center justify-between border-b border-line px-4 py-2 text-sm text-ink-muted">
           {header}

@@ -15,7 +15,7 @@ export function AuthLayout({ title, description, children, footer }: AuthLayoutP
     <div className="min-h-dvh bg-canvas">
       <SiteHeader minimal />
       <main className="mx-auto flex max-w-screen-sm flex-col gap-6 px-4 py-10">
-        <section className="flex flex-col gap-4 rounded-control border border-line bg-surface p-6">
+        <section className="flex flex-col gap-4 rounded-sheet border border-line bg-surface p-6">
           <h1 className="text-xl font-bold tracking-tight text-ink">{title}</h1>
           {description !== undefined && description !== null && <div className="text-ink-muted">{description}</div>}
           {children}
