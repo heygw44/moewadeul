@@ -11,6 +11,7 @@ import { MetaLine, StatusText } from '../../components/StatusText';
 import type { LatLng } from '../../map/types';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
+import { newMemoryPath } from '../memory/memoryLabels';
 import { LocationLabel } from '../spot/LocationLabel';
 import { SPOT_TYPE_META } from '../spot/spotLabels';
 
@@ -18,6 +19,9 @@ import { SPOT_TYPE_META } from '../spot/spotLabels';
 const SAME_PLACE_RADIUS_KM = 0.05;
 
 const GUIDE_LINK_CLASS = 'inline-flex min-h-11 items-center text-forest underline underline-offset-2';
+
+const MEMORY_LINK_CLASS =
+  'inline-flex min-h-11 w-full items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
 
 // 제보 폼이 서버에 보내는 좌표와 같은 정밀도로 줄인다.
 function roundCoordinate(value: number): number {
@@ -31,8 +35,9 @@ type MapOpenMenuProps = {
   onCandidates: (spots: NearbySpot[]) => void;
 };
 
-// 지도를 우클릭하거나 길게 누른 곳에 뜨는 메뉴다. 열 자격이 없으면 무엇을 하면 되는지 안내만 한다.
-// 화면의 자격 안내는 편의일 뿐이고, 열기 폼과 서버가 다시 판정한다.
+// 지도를 우클릭하거나 길게 누른 곳에 뜨는 메뉴다. 그 자리에서 베이스캠프를 열거나 추억을 남긴다.
+// 자격이 없으면 무엇을 하면 되는지 안내만 한다. 화면의 자격 안내는 편의일 뿐이고, 폼과 서버가 다시 판정한다.
+// 추억은 이메일 인증만 마치면 남길 수 있어서, 본인확인 전 회원에게도 추억 링크를 보여 준다.
 export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProps) {
   const session = useSession();
   const location = useLocation();
@@ -84,7 +89,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
   } else if (session.status === 'anonymous' || session.me === null) {
     body = (
       <>
-        <p className="text-sm text-ink">로그인하면 베이스캠프를 열 수 있어요.</p>
+        <p className="text-sm text-ink">로그인하면 베이스캠프를 열거나 추억을 남길 수 있어요.</p>
         <Link to={withNext('/login', `${location.pathname}${location.search}`)} className={GUIDE_LINK_CLASS}>
           로그인하러 가기
         </Link>
@@ -93,7 +98,9 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
   } else if (session.me.status === 'UNVERIFIED') {
     body = (
       <>
-        <p className="text-sm text-ink">이메일 인증을 마치고 본인확인을 하면 베이스캠프를 열 수 있어요.</p>
+        <p className="text-sm text-ink">
+          이메일 인증을 마치면 추억을 남길 수 있고, 본인확인까지 하면 베이스캠프를 열 수 있어요.
+        </p>
         <Link to="/verify-email" className={GUIDE_LINK_CLASS}>
           이메일 인증하러 가기
         </Link>
@@ -106,6 +113,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
         <Link to="/identity-verification" className={GUIDE_LINK_CLASS}>
           본인확인하러 가기
         </Link>
+        <MemoryLink position={position} />
       </>
     );
   } else {
@@ -121,6 +129,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
             <span>{error}</span>
           </p>
         )}
+        <MemoryLink position={position} />
       </>
     );
   }
@@ -129,7 +138,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
   return (
     <div
       role="dialog"
-      aria-label="이 위치에서 베이스캠프 열기"
+      aria-label="이 위치에서 할 일"
       onKeyDown={(event) => {
         if (event.key === 'Escape') onClose();
       }}
@@ -153,6 +162,15 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
         {body}
       </div>
     </div>
+  );
+}
+
+// 누른 좌표 그대로 추억 기록 폼을 연다. 장소를 연결하지 않는다.
+function MemoryLink({ position }: { position: LatLng }) {
+  return (
+    <Link to={newMemoryPath(position)} className={MEMORY_LINK_CLASS}>
+      여기에 추억 남기기
+    </Link>
   );
 }
 

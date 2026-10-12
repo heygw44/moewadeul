@@ -14,6 +14,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { MetaLine } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstTime, formatLocalDate } from '../../lib/datetime';
+import { newMemoryPath } from '../memory/memoryLabels';
 import { UnverifiedNote } from '../member/GatedButton';
 import { SpotReviews } from '../review/SpotReviews';
 import { SoloTripSection } from '../trip/SoloTripSection';
@@ -226,6 +227,21 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
             className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
           >
             이 장소로 글쓰기
+          </Link>
+        </div>
+      </section>
+
+      <section className={SECTION_CLASS} aria-labelledby="spot-memory-title">
+        <h3 id="spot-memory-title" className={SECTION_TITLE_CLASS}>
+          추억
+        </h3>
+        <p className="mt-1 text-sm text-ink-muted">다녀온 날의 사진과 글을 남겨 두세요. 처음에는 나만 볼 수 있어요.</p>
+        <div className="mt-2">
+          <Link
+            to={newMemoryPath({ lat: detail.lat, lng: detail.lng }, detail.spotId)}
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
+          >
+            추억 남기기
           </Link>
         </div>
       </section>

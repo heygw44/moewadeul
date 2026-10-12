@@ -20,6 +20,8 @@ import { VerifyEmailPage } from '../features/member/VerifyEmailPage';
 import { LandingPage } from '../features/landing/LandingPage';
 import { IdentityVerificationPage } from '../features/trust/IdentityVerificationPage';
 import { MapPage } from '../features/spot/MapPage';
+import { MemoryDetailPage } from '../features/memory/MemoryDetailPage';
+import { MemoryFormPage } from '../features/memory/MemoryFormPage';
 import NotFoundPage from './NotFoundPage';
 import type { LatLng } from '../map/types';
 import type { RouteDef } from './router';
@@ -100,6 +102,23 @@ export const routes: RouteDef[] = [
     render: (params) => {
       const postId = toPositiveId(params.postId);
       return postId === null ? <NotFoundPage /> : <CommunityPostDetailPage key={postId} postId={postId} />;
+    },
+  },
+  // 지도 메뉴는 누른 좌표(lat, lng)를, 장소 상세는 장소 좌표와 spotId를 주소에 붙인다. 폼이 값을 읽고 검사한다.
+  // '/memories/new'가 '/memories/:memoryId'보다 먼저 맞아야 하므로 이 경로를 앞에 둔다.
+  { path: '/memories/new', render: () => <MemoryFormPage mode="create" /> },
+  {
+    path: '/memories/:memoryId/edit',
+    render: (params) => {
+      const memoryId = toPositiveId(params.memoryId);
+      return memoryId === null ? <NotFoundPage /> : <MemoryFormPage key={memoryId} mode="edit" memoryId={memoryId} />;
+    },
+  },
+  {
+    path: '/memories/:memoryId',
+    render: (params) => {
+      const memoryId = toPositiveId(params.memoryId);
+      return memoryId === null ? <NotFoundPage /> : <MemoryDetailPage key={memoryId} memoryId={memoryId} />;
     },
   },
   { path: '/programs', render: () => <ProgramListPage /> },
