@@ -24,7 +24,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   EMAIL_CODE_INVALID: '인증 코드가 맞지 않아요. 메일에 적힌 코드를 다시 확인해 주세요.',
   EMAIL_CODE_EXPIRED: '인증 코드가 만료됐어요. 코드를 다시 받아 주세요.',
   EMAIL_CODE_ATTEMPTS_EXCEEDED: '코드를 여러 번 틀려서 이 코드는 더 쓸 수 없어요. 코드를 다시 받아 주세요.',
-  EMAIL_ALREADY_VERIFIED: '이미 이메일 인증을 마쳤어요. 바로 이용해 주세요.',
+  EMAIL_ALREADY_VERIFIED: '이미 이메일 인증을 마쳤어요. 그대로 이용하면 돼요.',
   EMAIL_RESEND_LIMITED: '코드를 너무 자주 요청했어요. 잠시 뒤 다시 받아 주세요.',
   LOGIN_FAILED: '이메일이나 비밀번호가 맞지 않아요. 다시 확인해 주세요.',
   LOGIN_LOCKED: '로그인에 여러 번 실패해서 잠시 막혔어요. 잠시 뒤 다시 시도해 주세요.',
@@ -47,16 +47,16 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   // 장소·박지·후기
   SPOT_RADIUS_TOO_LARGE: '반경은 50km까지 고를 수 있어요. 반경을 줄여 주세요.',
-  BAKJI_ALREADY_CONFIRMED: '이미 이 박지를 확인했어요. 다른 박지도 둘러봐 주세요.',
+  BAKJI_ALREADY_CONFIRMED: '이미 이 박지를 확인했어요.',
   BAKJI_ALREADY_REPORTED: '이미 이 박지를 신고했어요. 처리 결과를 기다려 주세요.',
   SPOT_INVALID_STATE: '지금 상태에서는 할 수 없는 작업이에요. 화면을 새로고침해 주세요.',
   SPOT_REVIEW_DUPLICATED: '같은 날 다녀온 후기가 이미 있어요. 방문일을 확인해 주세요.',
 
   // 베이스캠프
   BASECAMP_OPEN_LIMIT: '모집 중인 베이스캠프는 3개까지 열 수 있어요. 기존 모집을 마친 뒤 열어 주세요.',
-  BASECAMP_CAPACITY_INVALID: '정원을 정할 수 있는 범위를 벗어났어요. 정원을 다시 정해 주세요.',
-  BASECAMP_SCHEDULE_INVALID: '출발일이나 일정을 쓸 수 없어요. 날짜를 다시 골라 주세요.',
-  BASECAMP_WARNING_SPOT: '경고 대상 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.',
+  BASECAMP_CAPACITY_INVALID: '정원은 캠프 리더를 포함해 2~6명으로 정해 주세요.',
+  BASECAMP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안, 일정은 1~3박으로 골라 주세요.',
+  BASECAMP_WARNING_SPOT: '공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.',
   BASECAMP_CONDITION_NOT_MET: '합류 조건을 채우지 못했어요. 베이스캠프의 합류 조건을 확인해 주세요.',
   BASECAMP_DATE_CONFLICT: '같은 날짜에 확정된 다른 베이스캠프가 있어요. 다른 날짜를 골라 주세요.',
   BASECAMP_REAPPLY_NOT_ALLOWED: '이 베이스캠프에는 다시 합류 신청할 수 없어요. 다른 베이스캠프를 찾아 주세요.',
@@ -80,14 +80,14 @@ const ERROR_MESSAGES: Record<string, string> = {
   COMMUNITY_ALREADY_REPORTED: '이미 신고한 글이나 댓글이에요.',
   // 개인 일정
   SOLO_TRIP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안, 일정은 1~3박으로 골라 주세요.',
-  SOLO_TRIP_LIMIT: '다가오는 개인 일정은 3개까지 등록할 수 있어요. 내 정보에서 지난 일정을 정리해 주세요.',
+  SOLO_TRIP_LIMIT: '다가오는 혼자 가는 일정은 3개까지 등록할 수 있어요. 내 정보에서 필요 없는 일정을 지워 주세요.',
   SOLO_TRIP_OVERLAP: '등록한 다른 일정과 날짜가 겹쳐요. 다른 날짜를 골라 주세요.',
 
   COMMUNITY_INVALID_STATE: '지금 상태에서는 할 수 없는 작업이에요. 화면을 새로고침해 주세요.',
   IMAGE_UPLOAD_FAILED: '이미지를 올리지 못했어요. 다시 시도해 주세요.',
 
   // 공공데이터
-  SYNC_JOB_ALREADY_RUNNING: '같은 동기화 작업이 이미 돌고 있어요. 끝난 뒤 다시 실행해 주세요.',
+  SYNC_JOB_ALREADY_RUNNING: '같은 동기화 작업이 이미 실행 중이에요. 끝난 뒤 다시 실행해 주세요.',
 
   // 서버에 닿지 못한 경우
   NETWORK_ERROR: '네트워크에 연결하지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.',

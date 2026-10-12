@@ -133,7 +133,7 @@ export function VerifyEmailPage() {
         <Link
           to={next ?? '/map'}
           replace
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-control border border-forest bg-forest px-4 font-semibold text-white hover:border-forest-strong hover:bg-forest-strong"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-control border border-ink bg-ink px-4 font-semibold text-white hover:border-ink-muted hover:bg-ink-muted"
         >
           {next ? '보던 화면으로 가기' : '지도로 가기'}
         </Link>

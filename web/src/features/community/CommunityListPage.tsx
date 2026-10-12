@@ -298,7 +298,7 @@ function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
 function SearchEmpty({ onClear }: { onClear: () => void }) {
   return (
     <div className="flex flex-col items-start gap-3 p-6">
-      <p className="font-serif text-lg text-ink">검색 결과가 없어요</p>
+      <p className="text-lg font-semibold text-ink">검색 결과가 없어요</p>
       <p className="text-sm text-ink-muted">다른 검색어나 검색 대상으로 찾아보세요.</p>
       <Button variant="secondary" onClick={onClear}>
         검색어 지우기
@@ -311,7 +311,7 @@ function PopularEmpty() {
   return (
     <div className="flex flex-col items-start gap-3 p-6">
       <Icon name="chat" size={24} className="text-ink-muted" />
-      <p className="font-serif text-lg text-ink">아직 인기글이 없어요</p>
+      <p className="text-lg font-semibold text-ink">아직 인기글이 없어요</p>
       <p className="text-sm text-ink-muted">좋아요 5개를 받은 글이 여기에 모여요.</p>
     </div>
   );
@@ -321,7 +321,7 @@ function CommunityEmpty({ spotId }: { spotId: number | null }) {
   return (
     <div className="flex flex-col items-start gap-3 p-6">
       <Icon name="chat" size={24} className="text-ink-muted" />
-      <p className="font-serif text-lg text-ink">아직 올라온 글이 없어요</p>
+      <p className="text-lg font-semibold text-ink">아직 올라온 글이 없어요</p>
       <p className="text-sm text-ink-muted">다녀온 박지, 써 본 장비, 준비하며 궁금한 것을 첫 글로 남겨 보세요.</p>
       <WriteAction spotId={spotId} />
     </div>

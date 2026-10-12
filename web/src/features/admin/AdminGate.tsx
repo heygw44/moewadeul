@@ -59,7 +59,7 @@ export function AdminPage({ title, current, children }: { title: string; current
         </UnderlineNav>
       }
     >
-      {/* 필터와 표도 등고선 무늬가 아니라 카드 바탕 위에 둔다. */}
+      {/* 필터와 표도 테두리 있는 카드 바탕 위에 둔다. */}
       <div className="flex min-w-0 flex-col gap-4 rounded-control border border-contour bg-card p-4">{children}</div>
     </PageLayout>
   );

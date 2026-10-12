@@ -19,19 +19,19 @@ type HubLayoutProps = {
   children: ReactNode;
 };
 
-// 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 제목과 탭은 카드 색 띠 위에 두고, 목록은 등고선 무늬 위 패널에 둔다.
+// 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 제목과 탭은 머리글과 같은 회색 바탕 띠에 두고, 목록은 그 아래 흰 패널에 둔다.
 // 오른쪽 안내 열(aside)은 넓은 화면에서만 옆에 놓고, 좁은 화면에서는 목록 아래로 내려간다.
 export function HubLayout({ title, description, breadcrumb, meta, actions, tabs, aside, width = 'wide', children }: HubLayoutProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-paper pb-(--bottom-nav-h)">
       <AnnouncementBar />
       <SiteHeader />
-      <div className="border-b border-contour bg-card">
+      <div className="border-b border-contour bg-paper">
         <div className="mx-auto max-w-screen-xl px-4 pt-6">
           {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3">
             <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="break-words font-serif text-xl font-semibold text-ink">{title}</h1>
+              <h1 className="break-words text-xl font-bold tracking-tight text-ink">{title}</h1>
               {description && <p className="text-sm text-ink-muted">{description}</p>}
               {meta}
             </div>
@@ -40,7 +40,7 @@ export function HubLayout({ title, description, breadcrumb, meta, actions, tabs,
           {tabs}
         </div>
       </div>
-      <div className="flex-1 bg-paper bg-contour">
+      <div className="flex-1 bg-paper">
         <main className="mx-auto max-w-screen-xl px-4 py-6 lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-6">
           <div className={`flex min-w-0 flex-col gap-4 ${width === 'narrow' && !aside ? 'max-w-2xl' : ''}`}>{children}</div>
           {aside && <aside className="mt-6 flex flex-col gap-4 lg:mt-0">{aside}</aside>}
@@ -56,7 +56,7 @@ export function HubLayout({ title, description, breadcrumb, meta, actions, tabs,
 export function AsideSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2 rounded-control border border-contour bg-card p-4">
-      <h2 className="font-serif text-base font-semibold text-ink">{title}</h2>
+      <h2 className="text-base font-semibold text-ink">{title}</h2>
       <div className="flex flex-col gap-2 text-sm text-ink-muted [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2">{children}</div>
     </section>
   );

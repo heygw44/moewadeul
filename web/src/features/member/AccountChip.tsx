@@ -6,7 +6,7 @@ import { withNext } from './nextPath';
 import { useSession } from './session';
 
 const CHIP_CLASS =
-  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-contour bg-card px-3';
+  'pointer-events-auto inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-control border border-contour bg-card px-2 sm:px-3';
 
 // 머리글과 지도 위에서 함께 쓰는 계정 표시다. 비회원은 로그인과 회원가입, 미인증 회원은 이메일 인증 안내, 회원은 닉네임과 로그아웃을 본다.
 // 비회원의 두 칩은 모양을 같게 두고, 자주 누르는 로그인만 숲색 글자로 눈에 띄게 한다.
@@ -21,10 +21,10 @@ export function AccountChip() {
     const here = pathname + search;
     return (
       <div className="inline-flex items-center gap-2">
-        <Link to={withNext('/login', here)} className={`${CHIP_CLASS} text-base font-semibold text-forest`}>
+        <Link to={withNext('/login', here)} className={`${CHIP_CLASS} text-sm font-semibold sm:text-base text-forest`}>
           로그인
         </Link>
-        <Link to={withNext('/signup', here)} className={`${CHIP_CLASS} text-base font-semibold text-ink`}>
+        <Link to={withNext('/signup', here)} className={`${CHIP_CLASS} text-sm font-semibold sm:text-base text-ink`}>
           회원가입
         </Link>
       </div>

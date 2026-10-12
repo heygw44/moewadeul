@@ -15,9 +15,9 @@ const CONTENT_MAX = 1000;
 type MemberReportType = Exclude<ReportType, 'INAPPROPRIATE_REVIEW'>;
 
 const MEMBER_REPORT_OPTIONS: ReadonlyArray<ChoiceOption<MemberReportType>> = [
-  { value: 'NO_SHOW', label: '약속 없이 나오지 않았어요' },
-  { value: 'MONEY_REQUEST', label: '금전을 요구했어요' },
-  { value: 'HARASSMENT_OR_THREAT', label: '성희롱·위협을 했어요' },
+  { value: 'NO_SHOW', label: '약속한 날 나오지 않았어요' },
+  { value: 'MONEY_REQUEST', label: '돈을 요구했어요' },
+  { value: 'HARASSMENT_OR_THREAT', label: '성희롱하거나 위협했어요' },
   { value: 'OFFENSIVE_BEHAVIOR', label: '불쾌한 행동을 했어요' },
   { value: 'FAKE_PROFILE', label: '프로필이 사실과 달라요' },
   { value: 'ILLEGAL_CAMPING_INDUCEMENT', label: '불법 야영을 부추겼어요' },

@@ -319,7 +319,7 @@ function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onCh
   return (
     <PageCard title="처리">
       <p className="text-sm text-ink-muted">
-        제재 단계는 서버가 이전 제재로 계산해요. 고른 단계가 다르면 서버가 거절하니, 그때는 안내 문구를 보고 다시 골라 주세요.
+        제재 단계는 이전 제재 이력에 따라 정해져요. 고른 단계가 맞지 않으면 처리되지 않으니, 안내 문구를 보고 다시 골라 주세요.
         영구 정지는 심각한 위반일 때 바로 고를 수 있어요.
       </p>
       {formError && (

@@ -18,12 +18,12 @@ import {
 } from './LandingPreviews';
 
 const PRIMARY_LINK_CLASS =
-  'inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-forest px-5 text-base font-semibold text-white hover:bg-forest-strong';
+  'inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-ink px-5 text-base font-semibold text-white hover:bg-ink-muted';
 
 const TEXT_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-4 hover:text-forest-strong';
 
-const SECTION_TITLE_CLASS = 'font-serif text-2xl font-semibold leading-snug text-ink lg:text-[1.75rem]';
+const SECTION_TITLE_CLASS = 'text-2xl font-bold tracking-tight leading-snug text-ink lg:text-[1.75rem]';
 
 // 신뢰 단계마다 무엇을 뜻하는지 한 줄로 적는다. 단계는 서버가 매번 계산하고, 여기서는 기준만 소개한다.
 const TRUST_LEVEL_MEANINGS = [
@@ -50,7 +50,7 @@ export function LandingPage() {
       <main className="flex-1 break-keep">
         <section className="mx-auto grid max-w-screen-xl items-center gap-10 px-4 pb-14 pt-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pb-20 lg:pt-16">
           <div className="flex flex-col gap-5">
-            <h1 className="font-serif text-3xl font-semibold leading-tight text-ink sm:text-4xl xl:text-[2.75rem]">
+            <h1 className="text-3xl font-bold tracking-tight leading-tight text-ink sm:text-4xl xl:text-[2.75rem]">
               자도 되는 곳을 찾고,
               <br />
               믿을 수 있는 사람과 <br className="sm:hidden" />
@@ -85,12 +85,12 @@ export function LandingPage() {
                 근거를 같이 보여 드려요
               </h2>
               <p className="text-base leading-relaxed text-ink-muted">
-                장소가 국립공원 같은 자연공원 경계 안에 있을 수 있으면 경고를 띄워요. 어느 기관의 데이터로, 언제
-                기준으로 판단했는지도 함께 적어요.
+                장소가 국립공원 같은 자연공원 경계 안에 있을 수 있으면 경고를 띄워요. 어느 기관 자료를 언제
+                기준으로 봤는지도 함께 적어요.
               </p>
               <p className="text-base leading-relaxed text-ink-muted">
-                경고가 뜬 박지로는 베이스캠프를 열 수 없어요. 여럿이 함께 야영 금지 구역에 들어가는 일을 막기
-                위해서예요.
+                경고가 뜬 박지로는 베이스캠프를 열 수 없어요. 여럿이 함께 야영 금지 구역에 들어가지 않게
+                하려는 거예요.
               </p>
               <ul className="flex flex-col gap-2 pt-2 text-base text-ink">
                 <CheckItem>공공 야영장, 자연휴양림, 회원이 제보한 박지를 한 지도에서</CheckItem>
@@ -152,17 +152,17 @@ export function LandingPage() {
                 같은 날 같은 곳으로 가는 모임에 합류 신청을 보내요. 확정되면 멤버끼리만 연락 수단이 공개돼요.
               </FlowStep>
               <FlowStep number="03" title="공식 행사 신청" fragment={<StepProgramFragment />}>
-                혼자 가기 망설여지면 공식 행사에 신청해요. 정원만큼만 먼저 신청한 순서대로 받아요.
+                혼자 가기 망설여지면 공식 행사에 신청해요. 먼저 신청한 순서대로 정원만큼 받아요.
               </FlowStep>
             </ol>
-            <p className="-mt-6 text-xs text-ink-muted">단계마다 붙은 조각은 예시 화면이에요.</p>
+            <p className="-mt-6 text-xs text-ink-muted">단계마다 붙은 그림은 예시 화면이에요.</p>
           </div>
         </section>
 
         <section aria-labelledby="landing-cta" className="border-t border-contour bg-forest-soft">
           <div className="mx-auto flex max-w-screen-xl flex-col gap-5 px-4 py-12 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-col gap-2">
-              <h2 id="landing-cta" className="font-serif text-2xl font-semibold text-forest-deep">
+              <h2 id="landing-cta" className="text-2xl font-bold tracking-tight text-forest-deep">
                 이번 주말 박지, 지도에서 먼저 확인해요
               </h2>
               <p className="text-base text-ink">공원 경계 경고와 날씨를 보고 나서 떠나도 늦지 않아요.</p>
@@ -201,7 +201,7 @@ function FlowStep({ number, title, fragment, children }: FlowStepProps) {
     <li className="flex flex-col gap-4 lg:px-8 lg:first:pl-0 lg:last:pr-0">
       <div className="flex items-baseline gap-3">
         <span className="font-mono text-sm tabular-nums text-ink-subtle">{number}</span>
-        <h3 className="font-serif text-xl font-semibold text-ink">{title}</h3>
+        <h3 className="text-xl font-bold tracking-tight text-ink">{title}</h3>
       </div>
       <p className="text-base leading-relaxed text-ink-muted">{children}</p>
       <div className="mt-auto">{fragment}</div>

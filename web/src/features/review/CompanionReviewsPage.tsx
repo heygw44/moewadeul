@@ -43,7 +43,7 @@ const TAB_OPTIONS: ReadonlyArray<{ value: Tab; label: string }> = [
 
 const REJOIN_OPTIONS: ReadonlyArray<ChoiceOption<'YES' | 'NO'>> = [
   { value: 'YES', label: '예' },
-  { value: 'NO', label: '아니오' },
+  { value: 'NO', label: '아니요' },
 ];
 
 const LINK_BUTTON_CLASS =
@@ -127,7 +127,7 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
       <Notice tone="info" title="본인확인을 하면 동행 후기를 쓸 수 있어요">
         <p>동행 후기는 본인확인을 마친 회원만 쓸 수 있어요.</p>
         <Link to="/identity-verification" className="mt-1 inline-flex min-h-11 items-center font-semibold text-forest">
-          본인확인 하기
+          본인확인하기
         </Link>
       </Notice>
     );

@@ -120,7 +120,7 @@ export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
       )}
       {reported && (
         <p role="status" className="text-sm text-ink">
-          신고를 접수했어요. 신고가 쌓이면 운영자가 검토할 때까지 지도에서 내려요.
+          신고를 접수했어요. 신고가 쌓이면 관리자가 검토할 때까지 지도에서 내려요.
         </p>
       )}
 
@@ -203,7 +203,7 @@ function ReportDialog({
   return (
     <Dialog title="박지 문제 신고" onClose={onClose}>
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <p className="text-sm text-ink-muted">신고하면 되돌릴 수 없어요. 운영자가 확인할 수 있게 사유를 골라 주세요.</p>
+        <p className="text-sm text-ink-muted">신고하면 되돌릴 수 없어요. 관리자가 확인할 수 있게 사유를 골라 주세요.</p>
         {formError && (
           <div role="alert">
             <Notice tone="danger" title="신고하지 못했어요">

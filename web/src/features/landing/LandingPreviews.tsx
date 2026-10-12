@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { MarkerKind } from '../../map/types';
 import { KIND_STYLE, PIN_PATH } from '../../map/markers';
 import { Badge } from '../../components/Badge';
+import { BrandMark } from '../../components/BrandMark';
 import { Evidence } from '../../components/Evidence';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
@@ -95,12 +96,14 @@ function PreviewSpotRow({ name, kind, warning = false, note }: PreviewSpot) {
   );
 }
 
-// 첫 화면 오른쪽의 지도 미리보기. 등고선 바탕에 핀 몇 개와 묶음, 아래에 장소 목록 시트를 겹친다.
+// 첫 화면 오른쪽의 지도 미리보기. 옅은 회색 바탕에 핀 몇 개와 묶음, 아래에 장소 목록 시트를 겹친다.
 export function HeroPreview() {
   return (
-    <PreviewFrame className="relative h-[22rem] overflow-hidden rounded-sheet border border-contour bg-paper bg-contour sm:h-[26rem]">
+    <PreviewFrame className="relative h-[22rem] overflow-hidden rounded-sheet border border-contour bg-paper-deep sm:h-[26rem]">
       <span className="absolute left-3 top-3 flex gap-2">
-        <span className={`${CHIP_CLASS} font-serif text-forest-deep`}>뫼와들</span>
+        <span className={`${CHIP_CLASS} text-ink`}>
+          <BrandMark />
+        </span>
       </span>
       <span className="absolute right-3 top-3 flex gap-2">
         <span className={`${CHIP_CLASS} text-ink`}>
@@ -128,7 +131,7 @@ export function HeroPreview() {
         <span className="flex h-7 items-center justify-center">
           <span className="h-1 w-9 rounded-control bg-ink-subtle" />
         </span>
-        <span className="border-b border-contour px-4 pb-2 font-serif text-lg text-ink">
+        <span className="border-b border-contour px-4 pb-2 text-lg font-semibold text-ink">
           이 지역 장소 <span className="tabular-nums">17곳</span>
         </span>
         <PreviewSpotRow name="물소리 계곡 위 평지" kind="BAKJI" />
@@ -143,7 +146,7 @@ export function WarningPreview() {
   return (
     <PreviewFrame className="flex flex-col gap-4 rounded-sheet border border-contour bg-card p-4 sm:p-5">
       <span className="flex flex-col gap-1.5">
-        <span className="font-serif text-lg text-ink">능선 끝 바위 쉼터</span>
+        <span className="text-lg font-semibold text-ink">능선 끝 바위 쉼터</span>
         <span className="flex flex-wrap gap-1">
           <Badge tone="earth" icon="backpack">
             박지
@@ -157,7 +160,7 @@ export function WarningPreview() {
         warning={{ warned: true, areaName: '설악산국립공원', source: 'KDPA', sourceDate: '2025-12-31' }}
       />
       <span className="flex flex-col gap-2 border-t border-contour pt-4">
-        <span className="font-serif text-lg text-ink">베이스캠프</span>
+        <span className="text-lg font-semibold text-ink">베이스캠프</span>
         <span className="inline-flex min-h-11 items-center justify-center self-start rounded-control bg-paper-deep px-4 text-base font-semibold text-ink-muted">
           이 장소로 베이스캠프 열기
         </span>
@@ -174,7 +177,7 @@ export function TrustPreview() {
     <PreviewFrame className="flex flex-col gap-4 rounded-sheet border border-contour bg-card p-4 sm:p-5">
       <span className="flex flex-col gap-3">
         <span className="flex flex-wrap items-center gap-2">
-          <span className="font-serif text-lg text-ink">솔바람</span>
+          <span className="text-lg font-semibold text-ink">솔바람</span>
           <Badge tone={badge.tone} icon={badge.icon}>
             {badge.label}
           </Badge>

@@ -208,7 +208,7 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
           <Link to={`/community/${post.postId}/edit`} className={SECONDARY_LINK_CLASS}>
             수정
           </Link>
-          <Button variant="ghost" onClick={() => setDeleting(true)} className="text-danger hover:bg-danger-soft">
+          <Button variant="danger-outline" onClick={() => setDeleting(true)}>
             삭제
           </Button>
         </>
@@ -398,7 +398,7 @@ function DeletePostDialog({ postId, onClose }: { postId: number; onClose: () => 
   return (
     <Dialog title="글을 지울까요?" onClose={() => !submitting && onClose()}>
       <div className="flex flex-col gap-4">
-        <p className="text-base text-ink">지운 글은 되돌릴 수 없어요. 댓글도 함께 보이지 않게 돼요.</p>
+        <p className="text-base text-ink">지운 글은 되돌릴 수 없어요. 댓글도 함께 사라져요.</p>
         {error && (
           <div role="alert">
             <Notice tone="danger" title="지우지 못했어요">

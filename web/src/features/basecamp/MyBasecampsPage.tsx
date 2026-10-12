@@ -173,7 +173,7 @@ function BasecampCard({ item }: { item: MyBasecampItem }) {
         to={`/basecamps/${item.basecampId}`}
         className="flex flex-col gap-1 p-4 hover:bg-paper-deep"
       >
-        <span className="font-serif text-lg text-ink">{item.title}</span>
+        <span className="text-lg font-semibold text-ink">{item.title}</span>
         <span className="text-sm text-ink-muted">{item.spot.name}</span>
         <span className="font-mono text-sm tabular-nums text-ink-muted">
           {formatLocalDate(item.startDate)} ~ {formatLocalDate(item.endDate)} · {headcountText(item.headcount, item.capacity)}명

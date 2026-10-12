@@ -172,7 +172,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
   return (
     <li className="flex flex-col gap-3 rounded-control border border-contour bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="min-w-0 break-words font-serif text-lg text-ink">{item.name}</h3>
+        <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.name}</h3>
         <Badge tone={meta.tone}>{meta.label}</Badge>
         <Badge tone="neutral">
           {item.status === 'HIDDEN' ? '숨김' : '검토 대기'}
@@ -241,7 +241,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
         <Dialog title="박지를 숨길까요?" onClose={() => busy === null && setConfirmHide(false)}>
           <div className="flex flex-col gap-4">
             <p className="text-base text-ink">
-              {item.name}을(를) 지도와 검색에서 숨겨요. 숨긴 박지는 숨김 탭에서 다시 복구할 수 있어요.
+              &apos;{item.name}&apos; 박지를 지도와 검색에서 숨겨요. 숨긴 박지는 숨김 탭에서 다시 복구할 수 있어요.
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={busy !== null} onClick={() => setConfirmHide(false)}>

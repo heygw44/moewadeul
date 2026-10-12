@@ -114,7 +114,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
     >
       <h2
         id="community-comments-title"
-        className="border-b border-contour px-4 py-3 font-serif text-base font-semibold text-ink"
+        className="border-b border-contour px-4 py-3 text-base font-semibold text-ink"
       >
         댓글 <span className="font-mono tabular-nums">{count}</span>
       </h2>
@@ -311,7 +311,7 @@ function CommentItem({
   const session = useSession();
 
   if (comment.deleted) {
-    return <p className="text-base text-ink-subtle">삭제된 댓글입니다</p>;
+    return <p className="text-base text-ink-subtle">삭제된 댓글이에요</p>;
   }
 
   const signedIn = session.status === 'authenticated' && session.me !== null;
@@ -372,7 +372,7 @@ function CommentItem({
             <Button variant="ghost" onClick={() => onEdit(comment.commentId)} className="px-2">
               수정
             </Button>
-            <Button variant="ghost" onClick={() => onDelete(comment.commentId)} className="px-2 text-danger">
+            <Button variant="danger-outline" onClick={() => onDelete(comment.commentId)} className="px-2">
               삭제
             </Button>
           </>

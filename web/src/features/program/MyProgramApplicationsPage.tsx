@@ -73,7 +73,7 @@ export function MyProgramApplicationsPage() {
             {current.items.length === 0 && !current.error ? (
               <EmptyState
                 title="신청한 행사가 없어요"
-                description={filter === 'ALL' ? '공식 행사에서 마음에 드는 행사를 찾아 보세요.' : '다른 상태를 골라 보세요.'}
+                description={filter === 'ALL' ? '공식 행사에서 마음에 드는 행사를 찾아보세요.' : '다른 상태를 골라 보세요.'}
                 action={
                   <Link
                     to="/programs"
@@ -127,7 +127,7 @@ function ApplicationCard({ item, now }: { item: MyProgramApplicationItem; now: n
             </span>
           )}
         </span>
-        <span className="font-serif text-lg text-ink">{item.program.title}</span>
+        <span className="text-lg font-semibold text-ink">{item.program.title}</span>
         <span className="font-mono text-sm tabular-nums text-ink-muted">{formatKstDateTime(item.program.startAt)}</span>
         {item.status === 'CANCELED' && item.cancelReason && (
           <span className="text-sm text-ink-muted">취소 사유: {CANCEL_REASON_LABELS[item.cancelReason]}</span>
