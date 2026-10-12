@@ -40,6 +40,7 @@ public final class ArchitectureRules {
             "notification",
             "community",
             "trip",
+            "memory",
             "admin",
             COMMON);
 
@@ -55,6 +56,7 @@ public final class ArchitectureRules {
             "program", Set.of("trust"),
             "review", Set.of("spot"),
             "trip", Set.of("spot"),
+            "memory", Set.of("spot"),
             "spot", Set.of("weather"),
             "publicdata", Set.of("spot"),
             "trust", Set.of("member"));

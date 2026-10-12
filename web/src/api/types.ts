@@ -1007,3 +1007,76 @@ export interface ImageUpload {
 
 export type CommunityImageUploadRequest = ImageUploadRequest;
 export type CommunityImageUpload = ImageUpload;
+
+// 추억 기록(F-33). 공개 범위는 PRIVATE(작성자만), PUBLIC(누구나)이다.
+export type MemoryVisibility = 'PRIVATE' | 'PUBLIC';
+
+export interface MemoryAuthor {
+  memberId: number;
+  nickname: string;
+}
+
+export interface MemoryLinkedSpot {
+  spotId: number;
+  name: string;
+}
+
+export interface MemoryImage {
+  imageId: number;
+  url: string;
+}
+
+export interface MemoryDetail {
+  memoryId: number;
+  author: MemoryAuthor;
+  // 연결한 장소가 지도에 보이지 않거나 연결하지 않았으면 서버가 뺀다.
+  spot?: MemoryLinkedSpot;
+  // 정확한 좌표는 작성자에게만 준다.
+  lat?: number;
+  lng?: number;
+  visitedDate: string;
+  nights: number;
+  // 글이 없으면 서버가 뺀다.
+  content?: string;
+  visibility: MemoryVisibility;
+  images: MemoryImage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MemorySummary {
+  memoryId: number;
+  spot?: MemoryLinkedSpot;
+  lat: number;
+  lng: number;
+  visitedDate: string;
+  nights: number;
+  excerpt?: string;
+  visibility: MemoryVisibility;
+  thumbnailUrl?: string;
+  imageCount: number;
+  createdAt: string;
+}
+
+export interface MemoryCreateRequest {
+  lat: number;
+  lng: number;
+  visitedDate: string;
+  nights: number;
+  content?: string;
+  visibility?: MemoryVisibility;
+  spotId?: number;
+  imageIds?: number[];
+}
+
+// 보내지 않은 필드는 서버가 그대로 둔다. spotId와 content는 null로 보내면 연결을 끊거나 글을 지운다.
+export interface MemoryUpdateRequest {
+  lat?: number;
+  lng?: number;
+  visitedDate?: string;
+  nights?: number;
+  content?: string | null;
+  visibility?: MemoryVisibility;
+  spotId?: number | null;
+  imageIds?: number[];
+}

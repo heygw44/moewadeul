@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.memory.infra.MemoryMapper">
+
+    <!-- 작성자 닉네임은 조회할 때의 회원 값이다. 탈퇴한 회원은 member 행의 닉네임이 익명 값으로 바뀌어 있어서 그대로 내보낸다.
+         연결한 장소는 ACTIVE일 때만 조인한다. 장소가 숨겨졌거나 연결하지 않았으면 spot_id와 spot_name이 NULL이 되고, 기록은 그대로 나온다. -->
+    <select id="selectById" resultType="com.moewadeul.memory.infra.MemoryRow">
+        SELECT r.id AS memory_id,
+               r.member_id AS author_id,
+               m.nickname AS author_nickname,
+               s.id AS spot_id,
+               s.name AS spot_name,
+               r.latitude AS latitude,
+               r.longitude AS longitude,
+               r.visited_date AS visited_date,
+               r.nights AS nights,
+               r.content AS content,
+               r.visibility AS visibility,
+               r.created_at AS created_at,
+               r.updated_at AS updated_at
+        FROM memory r
+        JOIN member m ON m.id = r.member_id
+        LEFT JOIN spot s ON s.id = r.spot_id AND s.status = 'ACTIVE'
+        WHERE r.id = #{memoryId}
+    </select>
+
+    <!-- 목록은 글 전체를 읽지 않고 앞 100자만 읽는다. thumbnail_key는 기록 안 순서가 가장 앞선 사진의 저장소 객체 키이고,
+         사진이 없으면 NULL이다. 장소는 상세와 같은 규칙으로 ACTIVE일 때만 조인한다. -->
+    <select id="selectByMember" resultType="com.moewadeul.memory.infra.MemorySummaryRow">
+        SELECT r.id AS memory_id,
+               s.id AS spot_id,
+               s.name AS spot_name,
+               r.latitude AS latitude,
+               r.longitude AS longitude,
+               r.visited_date AS visited_date,
+               r.nights AS nights,
+               LEFT(r.content, 100) AS excerpt,
+               r.visibility AS visibility,
+               (SELECT i.object_key FROM memory_image i WHERE i.memory_id = r.id ORDER BY i.display_order LIMIT 1) AS thumbnail_key,
+               (SELECT COUNT(*) FROM memory_image i2 WHERE i2.memory_id = r.id) AS image_count,
+               r.created_at AS created_at
+        FROM memory r
+        LEFT JOIN spot s ON s.id = r.spot_id AND s.status = 'ACTIVE'
+        WHERE r.member_id = #{memberId}
+        ORDER BY r.visited_date DESC, r.id DESC
+    </select>
+
+    <delete id="deleteByMember">
+        DELETE FROM memory
+        WHERE member_id = #{memberId}
+    </delete>
+</mapper>

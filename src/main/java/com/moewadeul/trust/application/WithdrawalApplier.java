@@ -28,7 +28,7 @@ public class WithdrawalApplier {
 
     /**
      * 호출하면 회원을 탈퇴 처리하고, 본인확인 기록이 있으면 출생연도·성별을 지운 뒤 CI 해시 보관 기한을 적고,
-     * 진행 중인 베이스캠프와 행사 신청을 정리하라는 이벤트를 기록한다.
+     * 진행 중인 베이스캠프와 행사 신청, 추억 기록과 사진을 정리하라는 이벤트를 기록한다.
      *
      * <p>회원 행을 쓰기 잠금으로 읽는 일이 가장 먼저다. 제재 확정도 회원 행을 가장 먼저 잠그므로, 같은 회원에게 제재와 탈퇴가 겹쳐도
      * 잠그는 순서가 같아 서로 기다리다 멈추지 않는다. 이미 탈퇴한 회원이면 {@code LOGIN_FAILED}로 거부한다.
@@ -44,6 +44,7 @@ public class WithdrawalApplier {
         });
         recordCleanup(WithdrawalEvents.BASECAMP_CLEANUP_EVENT_TYPE, memberId);
         recordCleanup(WithdrawalEvents.PROGRAM_CLEANUP_EVENT_TYPE, memberId);
+        recordCleanup(WithdrawalEvents.MEMORY_CLEANUP_EVENT_TYPE, memberId);
     }
 
     private void recordCleanup(String eventType, long memberId) {

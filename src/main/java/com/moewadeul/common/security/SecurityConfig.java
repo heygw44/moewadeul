@@ -37,6 +37,7 @@ public class SecurityConfig {
         "/api/community/posts",
         "/api/community/posts/*",
         "/api/community/posts/*/comments",
+        "/api/memories/*",
     };
 
     private static final String[] PUBLIC_POST_PATTERNS = {
@@ -78,6 +79,8 @@ public class SecurityConfig {
         "/api/program-applications/*/pay",
         "/api/program-applications/*/cancel",
         "/api/solo-trips",
+        "/api/memories",
+        "/api/memories/images",
     };
 
     private static final String[] VERIFIED_PUT_PATTERNS = {
@@ -91,6 +94,7 @@ public class SecurityConfig {
         "/api/basecamps/*",
         "/api/community/posts/*",
         "/api/community/comments/*",
+        "/api/memories/*",
     };
 
     private static final String[] VERIFIED_DELETE_PATTERNS = {
@@ -103,6 +107,7 @@ public class SecurityConfig {
         "/api/basecamps/*/members/me",
         "/api/programs/*/vacancy-alerts",
         "/api/solo-trips/*",
+        "/api/memories/*",
     };
 
     private static final AuthorizationManager<RequestAuthorizationContext> EMAIL_VERIFIED =

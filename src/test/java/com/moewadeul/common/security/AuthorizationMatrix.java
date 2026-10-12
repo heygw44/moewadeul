@@ -32,7 +32,8 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.GET, "/api/programs/1"),
             new Endpoint(HttpMethod.GET, "/api/community/posts"),
             new Endpoint(HttpMethod.GET, "/api/community/posts/1"),
-            new Endpoint(HttpMethod.GET, "/api/community/posts/1/comments"));
+            new Endpoint(HttpMethod.GET, "/api/community/posts/1/comments"),
+            new Endpoint(HttpMethod.GET, "/api/memories/1"));
 
     // 로그인만 하면 이메일 인증을 마치지 않은 회원도 부를 수 있다.
     static final List<Endpoint> LOGIN = List.of(
@@ -44,6 +45,7 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.GET, "/api/me/companion-reviews/received"),
             new Endpoint(HttpMethod.GET, "/api/me/program-applications"),
             new Endpoint(HttpMethod.GET, "/api/me/solo-trips"),
+            new Endpoint(HttpMethod.GET, "/api/me/memories"),
             new Endpoint(HttpMethod.GET, "/api/me/notifications"),
             new Endpoint(HttpMethod.GET, "/api/me/notifications/unread-count"),
             new Endpoint(HttpMethod.POST, "/api/me/notifications/1/read"),
@@ -73,6 +75,10 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.POST, "/api/reviews/images"),
             new Endpoint(HttpMethod.POST, "/api/solo-trips"),
             new Endpoint(HttpMethod.DELETE, "/api/solo-trips/1"),
+            new Endpoint(HttpMethod.POST, "/api/memories"),
+            new Endpoint(HttpMethod.PATCH, "/api/memories/1"),
+            new Endpoint(HttpMethod.DELETE, "/api/memories/1"),
+            new Endpoint(HttpMethod.POST, "/api/memories/images"),
             new Endpoint(HttpMethod.POST, "/api/basecamps"),
             new Endpoint(HttpMethod.PATCH, "/api/basecamps/1"),
             new Endpoint(HttpMethod.POST, "/api/basecamps/1/close"),
