@@ -157,6 +157,7 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
       )}
       {current.items.length === 0 ? (
         <EmptyState
+          framed
           title="작성할 후기가 없어요"
           description="함께 다녀온 베이스캠프가 완료되면 14일 안에 동행 후기를 쓸 수 있어요."
         />
@@ -373,7 +374,7 @@ function ReceivedTab() {
         </div>
       )}
       {state.items.length === 0 && !state.error ? (
-        <EmptyState title="받은 후기가 없어요" description="함께 다녀온 멤버가 후기를 남기면 여기에 보여요." />
+        <EmptyState framed title="받은 후기가 없어요" description="함께 다녀온 멤버가 후기를 남기면 여기에 보여요." />
       ) : (
         state.items.map((item, index) =>
           item.revealed ? (

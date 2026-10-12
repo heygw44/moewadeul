@@ -166,17 +166,16 @@ function EditLoader({ postId, myMemberId }: { postId: number; myMemberId: number
   if ('error' in result) {
     if (result.error instanceof ApiError && result.error.code === 'NOT_FOUND') {
       return (
-        <div className="rounded-control border border-contour bg-card">
-          <EmptyState
-            title="글을 찾을 수 없어요"
-            description="지워졌거나 볼 수 없는 글이에요."
-            action={
-              <Link to="/community" className={SECONDARY_LINK_CLASS}>
-                글 목록으로
-              </Link>
-            }
-          />
-        </div>
+        <EmptyState
+          framed
+          title="글을 찾을 수 없어요"
+          description="지워졌거나 볼 수 없는 글이에요."
+          action={
+            <Link to="/community" className={SECONDARY_LINK_CLASS}>
+              글 목록으로
+            </Link>
+          }
+        />
       );
     }
     return (

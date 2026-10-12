@@ -124,7 +124,7 @@ function ReportList() {
       )}
       {state === null && showSkeleton && <Skeleton className="h-40 w-full" />}
       {state !== null && state.items.length === 0 && !state.error && (
-        <EmptyState title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꿔 보세요." />
+        <EmptyState framed title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꿔 보세요." />
       )}
       {state !== null && state.items.length > 0 && (
         <ul className="flex flex-col rounded-control border border-contour bg-card">

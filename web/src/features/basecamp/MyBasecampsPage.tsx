@@ -133,6 +133,7 @@ export function MyBasecampsPage() {
             )}
             {current.items.length === 0 && !current.error ? (
               <EmptyState
+                framed
                 title="해당하는 베이스캠프가 없어요"
                 description="지도에서 베이스캠프를 찾아보세요."
                 action={

@@ -72,6 +72,7 @@ export function MyProgramApplicationsPage() {
             )}
             {current.items.length === 0 && !current.error ? (
               <EmptyState
+                framed
                 title="신청한 행사가 없어요"
                 description={filter === 'ALL' ? '공식 행사에서 마음에 드는 행사를 찾아보세요.' : '다른 상태를 골라 보세요.'}
                 action={

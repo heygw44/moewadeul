@@ -81,6 +81,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     body = (
       <EmptyState
+        framed
         title="행사를 찾을 수 없어요"
         description="없는 행사예요."
         action={

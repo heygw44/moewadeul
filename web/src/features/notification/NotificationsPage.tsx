@@ -194,7 +194,7 @@ function NotificationList() {
         </div>
       )}
       {state.items.length === 0 && !state.error ? (
-        <EmptyState title="알림이 없어요" description="합류 신청, 신고 처리 같은 소식이 생기면 여기에 보여요." />
+        <EmptyState framed title="알림이 없어요" description="합류 신청, 신고 처리 같은 소식이 생기면 여기에 보여요." />
       ) : (
         <ListPanel>
           {state.items.map((item) => (

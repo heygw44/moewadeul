@@ -115,16 +115,15 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     return (
       <HubLayout title="글을 찾을 수 없어요" breadcrumb={<BackToCommunity />} aside={asideNode}>
-        <div className="rounded-control border border-contour bg-card">
-          <EmptyState
-            title="지워졌거나 볼 수 없는 글이에요."
-            action={
-              <Link to="/community" className={SECONDARY_LINK_CLASS}>
-                커뮤니티로 가기
-              </Link>
-            }
-          />
-        </div>
+        <EmptyState
+          framed
+          title="지워졌거나 볼 수 없는 글이에요."
+          action={
+            <Link to="/community" className={SECONDARY_LINK_CLASS}>
+              커뮤니티로 가기
+            </Link>
+          }
+        />
       </HubLayout>
     );
   }
