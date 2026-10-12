@@ -48,26 +48,26 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
 
   const current = result?.memoryId === memoryId ? result : null;
   const showSkeleton = useDelayedFlag(current === null);
-  const title = current !== null && 'memory' in current ? titleOf(current.memory) : '추억 기록';
+  const title = current !== null && 'memory' in current ? titleOf(current.memory) : '발자국';
 
   useEffect(() => {
     document.title = `${title} · 뫼와들`;
   }, [title]);
 
   const reload = () => setAttempt((value) => value + 1);
-  // 작성자는 내 추억지도로, 그 밖의 사람은 모두의 추억으로 돌아간다. 아직 모르거나 기록을 못 받았을 때는 모두의 추억으로 둔다.
+  // 작성자는 내 발자국 지도로, 그 밖의 사람은 발자국으로 돌아간다. 아직 모르거나 기록을 못 받았을 때는 발자국으로 둔다.
   const authorId = current !== null && 'memory' in current ? current.memory.author.memberId : null;
   const viewerIsAuthor = authorId !== null && session.status === 'authenticated' && session.me?.memberId === authorId;
   const breadcrumb = (
     <Link to={viewerIsAuthor ? '/me/memories' : '/memories'} className={CRUMB_LINK}>
       <Icon name="chevronLeft" size={16} />
-      {viewerIsAuthor ? '내 추억지도' : '모두의 추억'}
+      {viewerIsAuthor ? '내 발자국 지도' : '발자국'}
     </Link>
   );
 
   if (current === null) {
     return (
-      <HubLayout title="추억 기록" breadcrumb={breadcrumb} width="narrow">
+      <HubLayout title="발자국" breadcrumb={breadcrumb} width="narrow">
         <div aria-busy="true">
           {showSkeleton && (
             <div className="flex flex-col gap-3 rounded-control border border-contour bg-card p-5">
@@ -112,7 +112,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   }
 
   return (
-    <HubLayout title="추억 기록" breadcrumb={breadcrumb} width="narrow">
+    <HubLayout title="발자국" breadcrumb={breadcrumb} width="narrow">
       <div className="flex flex-col gap-3">
         <Notice tone="danger" title="기록을 불러오지 못했어요">
           {toUserMessage(current.error)}

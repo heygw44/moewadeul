@@ -8,7 +8,7 @@ import { nightsLabel } from './memoryLabels';
 // 칸을 누르면 기록 상세로 간다. 지도에서 고른 기록(selectedId)은 숲색 테두리로 드러낸다.
 export function MemoryGrid({ items, selectedId }: { items: MemoryCellItem[]; selectedId: number | null }) {
   return (
-    <ul aria-label="추억 기록 목록" className="grid grid-cols-3 gap-1">
+    <ul aria-label="발자국 목록" className="grid grid-cols-3 gap-1">
       {items.map((item) => {
         const selected = item.id === selectedId;
         return (

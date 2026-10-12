@@ -10,7 +10,7 @@ export interface MemoryCellItem {
   visitedDate: string;
   nights: number;
   spotName?: string;
-  // 나만 보기로 남긴 기록이다. 내 추억지도에서만 true가 될 수 있다.
+  // 나만 보기로 남긴 기록이다. 내 발자국 지도에서만 true가 될 수 있다.
   isPrivate?: boolean;
   imageCount: number;
 }

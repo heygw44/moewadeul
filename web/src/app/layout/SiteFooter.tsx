@@ -39,6 +39,9 @@ export function SiteFooter() {
           <Link to="/basecamps" className={LINK_CLASS}>
             베이스캠프
           </Link>
+          <Link to="/memories" className={LINK_CLASS}>
+            발자국
+          </Link>
           <Link to="/community" className={LINK_CLASS}>
             커뮤니티
           </Link>

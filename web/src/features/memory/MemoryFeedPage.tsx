@@ -31,7 +31,7 @@ export function MemoryFeedPage() {
   const showSkeleton = useDelayedFlag(current === null);
 
   useEffect(() => {
-    document.title = '모두의 추억 · 뫼와들';
+    document.title = '발자국 · 뫼와들';
   }, []);
 
   let body;
@@ -49,7 +49,7 @@ export function MemoryFeedPage() {
   } else if (current.error !== null && current.items.length === 0) {
     body = (
       <div role="alert" className="flex flex-col gap-3">
-        <Notice tone="danger" title="추억을 불러오지 못했어요">
+        <Notice tone="danger" title="발자국을 불러오지 못했어요">
           {current.error}
         </Notice>
         <div>
@@ -63,11 +63,11 @@ export function MemoryFeedPage() {
     body = (
       <EmptyState
         framed
-        title="공개된 추억이 아직 없어요"
+        title="공개된 발자국이 아직 없어요"
         description="내가 다녀온 곳을 기록하고 공개하면 여기에 보여요."
         action={
           <Link to="/me/memories" className={SECONDARY_LINK_CLASS}>
-            내 추억지도
+            내 발자국 지도
           </Link>
         }
       />
@@ -100,11 +100,11 @@ export function MemoryFeedPage() {
 
   return (
     <HubLayout
-      title="모두의 추억"
+      title="발자국"
       width="narrow"
       actions={
         <Link to="/me/memories" className={SECONDARY_LINK_CLASS}>
-          내 추억지도
+          내 발자국 지도
         </Link>
       }
     >

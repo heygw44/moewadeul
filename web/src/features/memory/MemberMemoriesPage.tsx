@@ -58,7 +58,7 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
   const memories = current && 'memories' in current ? current.memories : null;
   const showSkeleton = useDelayedFlag(current === null);
   const name = nickname?.memberId === memberId ? nickname.value : null;
-  const title = name ? `${name}님의 추억지도` : '회원의 추억지도';
+  const title = name ? `${name}님의 발자국` : '회원의 발자국';
 
   useEffect(() => {
     document.title = `${title} · 뫼와들`;
@@ -84,7 +84,7 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
         프로필
       </Link>
       <Link to="/memories" className={SECONDARY_LINK_CLASS}>
-        모두의 추억
+        발자국
       </Link>
     </>
   );
@@ -105,7 +105,7 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
     if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
       return (
         <HubLayout title="회원을 찾을 수 없어요" width="narrow">
-          <EmptyState framed title="탈퇴했거나 없는 회원이에요" description="모두의 추억에서 다른 기록을 볼 수 있어요." />
+          <EmptyState framed title="탈퇴했거나 없는 회원이에요" description="발자국에서 다른 기록을 볼 수 있어요." />
         </HubLayout>
       );
     }
@@ -122,7 +122,7 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
       </div>
     );
   } else if (items.length === 0) {
-    body = <EmptyState framed title="공개한 추억이 아직 없어요" description="이 회원이 공개로 남긴 기록이 생기면 여기에 보여요." />;
+    body = <EmptyState framed title="공개한 발자국이 아직 없어요" description="이 회원이 공개로 남긴 기록이 생기면 여기에 보여요." />;
   } else {
     body = (
       <>

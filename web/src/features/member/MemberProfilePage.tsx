@@ -95,7 +95,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
       actions={
         profile ? (
           <Link to={`/members/${profile.memberId}/memories`} className={SECONDARY_LINK_CLASS}>
-            추억지도
+            발자국 지도
           </Link>
         ) : undefined
       }

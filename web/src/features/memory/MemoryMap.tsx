@@ -107,7 +107,7 @@ export function MemoryMap({
     <div
       ref={hostRef}
       role="region"
-      aria-label="추억 지도"
+      aria-label="발자국 지도"
       className="relative h-72 w-full overflow-hidden rounded-control border border-contour bg-paper-deep sm:h-96"
     />
   );

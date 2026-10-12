@@ -65,7 +65,7 @@ function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
         </li>
         <li>
           <Link to="/me/memories" className={SHORTCUT_LINK_CLASS}>
-            내 추억지도
+            내 발자국 지도
           </Link>
         </li>
         <li>

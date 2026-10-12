@@ -26,7 +26,7 @@ export function MyMemoriesPage() {
   const authenticated = session.status === 'authenticated';
 
   useEffect(() => {
-    document.title = '내 추억지도 · 뫼와들';
+    document.title = '내 발자국 지도 · 뫼와들';
   }, []);
 
   // 내 기록은 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
@@ -68,7 +68,7 @@ export function MyMemoriesPage() {
   );
 
   if (!authenticated) {
-    return <HubLayout title="내 추억지도" width="narrow">{null}</HubLayout>;
+    return <HubLayout title="내 발자국 지도" width="narrow">{null}</HubLayout>;
   }
 
   let body;
@@ -100,11 +100,11 @@ export function MyMemoriesPage() {
     body = (
       <EmptyState
         framed
-        title="아직 남긴 추억이 없어요"
+        title="아직 남긴 발자국이 없어요"
         description="지도에서 다녀온 곳을 길게 누르거나 장소 상세에서 기록을 남길 수 있어요."
         action={
           <Link to="/map" className={SECONDARY_LINK_CLASS}>
-            지도에서 추억 남기기
+            지도에서 발자국 남기기
           </Link>
         }
       />
@@ -115,11 +115,11 @@ export function MyMemoriesPage() {
 
   return (
     <HubLayout
-      title="내 추억지도"
+      title="내 발자국 지도"
       width="narrow"
       actions={
         <Link to="/memories" className={SECONDARY_LINK_CLASS}>
-          모두의 추억
+          발자국
         </Link>
       }
     >

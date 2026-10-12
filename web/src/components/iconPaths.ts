@@ -26,7 +26,8 @@ export type IconName =
   | 'eye'
   | 'eyeOff'
   | 'menu'
-  | 'sliders';
+  | 'sliders'
+  | 'footprints';
 
 export const ICON_PATHS: Record<IconName, string> = {
   tent:
@@ -72,6 +73,11 @@ export const ICON_PATHS: Record<IconName, string> = {
     '<path d="M4 17h16"/>' +
     '<path d="M10 20.5a2 2 0 0 0 4 0"/>',
   map: '<path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5z"/>' + '<path d="M9 4v13"/>' + '<path d="M15 6.5v13"/>',
+  footprints:
+    '<path d="M8 3.5c2 0 3 2 3 4.5 0 2-1 3-3 3S5 10 5 8c0-2.5 1-4.5 3-4.5z"/>' +
+    '<path d="M6 14.5h4v1.5a2 2 0 0 1-4 0z"/>' +
+    '<path d="M16 9.5c2 0 3 2 3 4.5 0 2-1 3-3 3s-3-1-3-3c0-2.5 1-4.5 3-4.5z"/>' +
+    '<path d="M14 20h4v.5a2 2 0 0 1-4 0z"/>',
   calendar:
     '<rect x="3.5" y="5" width="17" height="15.5" rx="1.5"/>' +
     '<path d="M3.5 10h17"/>' +

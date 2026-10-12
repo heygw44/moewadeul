@@ -17,7 +17,7 @@ import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatRelativeKst } from '../../lib/datetime';
 import { useSession } from '../member/session';
-import { LINK_BUTTON_CLASS, parseSpotId, SECONDARY_LINK_CLASS, UNVERIFIED_WRITE_REASON } from './communityLabels';
+import { LINK_BUTTON_CLASS, parseSpotId, UNVERIFIED_WRITE_REASON } from './communityLabels';
 
 // 주소의 page는 사람이 읽는 1부터 시작하는 번호다. 서버에는 1을 빼서 보낸다.
 type ListTab = 'all' | 'popular';
@@ -137,12 +137,7 @@ export function CommunityListPage() {
     <HubLayout
       title="커뮤니티"
       actions={
-        <>
-          <Link to="/memories" className={SECONDARY_LINK_CLASS}>
-            추억 피드
-          </Link>
-          <WriteAction spotId={query.spotId} />
-        </>
+        <WriteAction spotId={query.spotId} />
       }
       tabs={<UnderlineTabs label="글 모아 보기" options={TABS} value={query.tab} onChange={(tab) => goTo({ tab, page: 1 })} />}
       aside={<CommunityAside />}
