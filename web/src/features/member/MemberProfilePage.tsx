@@ -62,9 +62,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
     body = <ProfileContent profile={current.profile} />;
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     body = (
-      <div className="rounded-control border border-contour bg-card p-5">
-        <EmptyState title="회원을 찾을 수 없어요" description="탈퇴했거나 없는 회원이에요." />
-      </div>
+      <EmptyState framed title="회원을 찾을 수 없어요" description="탈퇴했거나 없는 회원이에요." />
     );
   } else {
     body = (

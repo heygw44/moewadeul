@@ -124,6 +124,7 @@ function SpotReview() {
       {state === null && showSkeleton && <Skeleton className="h-40 w-full" />}
       {state !== null && state.items.length === 0 && !state.error && (
         <EmptyState
+          framed
           title={tab === 'PENDING_REVIEW' ? '검토를 기다리는 박지가 없어요' : '숨긴 박지가 없어요'}
           description="신고가 쌓이거나 박지를 숨기면 여기에 보여요."
         />

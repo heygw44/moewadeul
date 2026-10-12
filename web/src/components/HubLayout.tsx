@@ -22,27 +22,35 @@ type HubLayoutProps = {
 // 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 제목과 탭은 머리글과 같은 회색 바탕 띠에 두고, 목록은 그 아래 흰 패널에 둔다.
 // 오른쪽 안내 열(aside)은 넓은 화면에서만 옆에 놓고, 좁은 화면에서는 목록 아래로 내려간다.
 export function HubLayout({ title, description, breadcrumb, meta, actions, tabs, aside, width = 'wide', children }: HubLayoutProps) {
+  // 머리 띠 안쪽과 본문은 같은 열을 쓴다. 그래야 제목·탭·오른쪽 버튼의 가장자리가 본문 가장자리와 맞는다.
+  // 좁은 화면은 그 열을 가운데의 max-w-2xl로 줄이고, 안내 열이 있거나 넓은 화면은 바깥 폭을 그대로 쓴다.
+  const column = width === 'narrow' && !aside ? 'mx-auto w-full max-w-2xl' : '';
   return (
     <div className="flex min-h-dvh flex-col bg-paper pb-(--bottom-nav-h)">
       <AnnouncementBar />
       <SiteHeader />
       <div className="border-b border-contour bg-paper">
         <div className="mx-auto max-w-screen-xl px-4 pt-6">
-          {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
-          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3">
-            <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="break-words text-xl font-bold tracking-tight text-ink">{title}</h1>
-              {description && <p className="text-sm text-ink-muted">{description}</p>}
-              {meta}
+          <div className={column}>
+            {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3">
+              <div className="flex min-w-0 flex-col gap-1">
+                <h1 className="break-words text-xl font-bold tracking-tight text-ink">{title}</h1>
+                {description && <p className="text-sm text-ink-muted">{description}</p>}
+                {meta}
+              </div>
+              {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
             </div>
-            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+            {tabs}
           </div>
-          {tabs}
         </div>
       </div>
       <div className="flex-1 bg-paper">
-        <main className="mx-auto max-w-screen-xl px-4 py-6 lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-6">
-          <div className={`flex min-w-0 flex-col gap-4 ${width === 'narrow' && !aside ? 'max-w-2xl' : ''}`}>{children}</div>
+        {/* 안내 열이 없으면 두 열 격자를 쓰지 않는다. 쓰면 빈 오른쪽 열 폭만큼 본문이 머리 띠보다 좁아진다. */}
+        <main
+          className={`mx-auto max-w-screen-xl px-4 py-6 ${aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-6' : ''}`}
+        >
+          <div className={`flex min-w-0 flex-col gap-4 ${column}`}>{children}</div>
           {aside && <aside className="mt-6 flex flex-col gap-4 lg:mt-0">{aside}</aside>}
         </main>
       </div>

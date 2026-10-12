@@ -196,6 +196,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   } else if (current.detail.myRelation !== 'LEADER') {
     body = (
       <EmptyState
+        framed
         title="캠프 리더만 관리할 수 있어요"
         description="내가 연 베이스캠프만 관리할 수 있어요."
         action={
