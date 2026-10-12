@@ -1,16 +1,19 @@
 import { loadKakaoMaps } from './kakaoLoader';
-import { createClusterButton, createDraftPin, createSearchPin, createSpotPin } from './markers';
+import { createClusterButton, createDraftPin, createSearchPin, createSpotPin, createSpread } from './markers';
 import { mergeClusters } from './mergeClusters';
+import { arrangeSpread, stackPins } from './stackPins';
 import type { SpotPin } from './markers';
+import type { PinStack, PlacedPin } from './stackPins';
 import type { Bounds, ClusterData, LatLng, MapView, SpotMarkerData } from './types';
 
-// 선택한 핀이 다른 핀과 묶음 위로 올라오게 겹침 순서를 둔다.
+// 선택한 핀이 다른 핀과 묶음 위로, 펼친 핀은 모든 장소 핀 위로 올라오게 겹침 순서를 둔다.
 const CLUSTER_Z_INDEX = 1;
 const PIN_Z_INDEX = 2;
 const SELECTED_PIN_Z_INDEX = 3;
-const SEARCH_PIN_Z_INDEX = 4;
-const DRAFT_PIN_Z_INDEX = 5;
-const MENU_Z_INDEX = 6;
+const SPREAD_Z_INDEX = 4;
+const SEARCH_PIN_Z_INDEX = 5;
+const DRAFT_PIN_Z_INDEX = 6;
+const MENU_Z_INDEX = 7;
 
 // 휴대폰에는 우클릭이 없어서, 지도를 움직이지 않고 이만큼 누르고 있으면 우클릭과 같이 본다.
 const LONG_PRESS_MS = 500;
@@ -27,11 +30,20 @@ const CLUSTER_MIN_DISTANCE_PX = 48;
 // 합친 위치가 가중 평균으로 옮겨지면 이웃 묶음과 다시 가까워질 수 있어서, 더 합칠 것이 없을 때까지 몇 번 되풀이한다.
 const CLUSTER_MERGE_MAX_PASSES = 4;
 
+// 겹친 핀을 펼친 동안 나머지 핀과 묶음을 이만큼 흐리게 해서, 어디까지가 펼친 핀인지 드러낸다.
+const DIMMED_OPACITY = '0.35';
+
 const MAX_ANIMATED_LEVEL_STEP = 2;
 
 interface DrawnPin {
   overlay: kakao.maps.CustomOverlay;
   pin: SpotPin;
+}
+
+interface Spread {
+  overlay: kakao.maps.CustomOverlay;
+  // 펼치는 동안 숨긴 맨 위 핀의 id다.
+  topId: number;
 }
 
 export async function createMapView(
@@ -54,12 +66,16 @@ export async function createMapView(
   const contextMenuListeners = new Set<(position: LatLng) => void>();
 
   // 구독 해제가 반복 중에 일어나도 이번 알림은 모두 받도록 복사본을 돈다.
+  // 확대 수준이 바뀌면 핀 사이의 화면 거리가 바뀌므로 다시 묶는다. 끌기만 했으면 거리가 그대로라 다시 묶지 않는다.
   const handleIdle = () => {
+    if (!destroyed && layoutLevel !== null && map.getLevel() !== layoutLevel) layoutPins();
     for (const listener of [...idleListeners]) listener();
   };
   kakao.maps.event.addListener(map, 'idle', handleIdle);
 
+  // 지도를 끌거나 확대·축소하면 펼친 핀을 접는다. 펼친 위치는 그때의 화면 거리로 계산한 것이라 움직이면 맞지 않는다.
   const handleMoveStart = () => {
+    collapse();
     for (const listener of [...moveStartListeners]) listener();
   };
   kakao.maps.event.addListener(map, 'dragstart', handleMoveStart);
@@ -70,6 +86,7 @@ export async function createMapView(
 
   // 핀과 묶음은 clickable 오버레이라서 그 위를 누른 클릭은 지도 이벤트로 오지 않는다.
   const handleMapClick = (event: kakao.maps.MouseEvent) => {
+    collapse();
     if (performance.now() < suppressClickUntil) return;
     const position = { lat: event.latLng.getLat(), lng: event.latLng.getLng() };
     for (const listener of [...mapClickListeners]) listener(position);
@@ -150,8 +167,14 @@ export async function createMapView(
     for (const listener of [...clusterListeners]) listener(cluster);
   };
 
+  let markers: SpotMarkerData[] = [];
+  // 맨 위 핀의 id로 찾는다. 겹쳐서 가려진 핀은 따로 그리지 않는다.
   let pins = new Map<number, DrawnPin>();
+  let spread: Spread | null = null;
+  // 마지막으로 핀을 묶은 때의 확대 수준이다.
+  let layoutLevel: number | null = null;
   let clusterOverlays: kakao.maps.CustomOverlay[] = [];
+  let clusterElements: HTMLElement[] = [];
   let draftOverlay: kakao.maps.CustomOverlay | null = null;
   let searchOverlay: kakao.maps.CustomOverlay | null = null;
   let menuOverlay: kakao.maps.CustomOverlay | null = null;
@@ -174,11 +197,108 @@ export async function createMapView(
     return merged;
   }
 
-  function clearOverlays() {
+  // 펼친 핀을 지우고 숨겼던 맨 위 핀을 다시 보인다. 키보드로 접었으면 포커스를 그 핀으로 돌려놓는다.
+  function collapse(restoreFocus = false) {
+    if (spread === null) return;
+    spread.overlay.setMap(null);
+    const drawn = pins.get(spread.topId);
+    spread = null;
+    setOthersDimmed(false);
+    if (!drawn) return;
+    drawn.overlay.setMap(map);
+    if (restoreFocus) drawn.pin.element.focus();
+  }
+
+  function setOthersDimmed(dimmed: boolean) {
+    const opacity = dimmed ? DIMMED_OPACITY : '';
+    for (const { pin } of pins.values()) pin.element.style.opacity = opacity;
+    for (const element of clusterElements) element.style.opacity = opacity;
+  }
+
+  // 겹친 핀을 원래 위치에서 펼친다. 지도는 확대하지 않는다.
+  function expand(stack: PinStack) {
+    collapse();
+    const anchor = stack.top;
+    // 화면 좌표는 묶을 때 구한 값이다. 그 뒤로 지도를 끌었더라도 핀 사이의 거리는 그대로라 기준점과의 차이만 쓴다.
+    const placements = arrangeSpread(
+      stack.members.map((member) => ({
+        item: member.marker,
+        origin: { x: member.x - anchor.x, y: member.y - anchor.y },
+      })),
+    );
+    const entries = placements.map(({ item, origin, at }) => ({ marker: item, origin, at }));
+    const { element, buttons } = createSpread(entries, selectedId, (id) => {
+      collapse();
+      handleMarkerClick(id);
+    });
+    element.setAttribute(OVERLAY_ATTRIBUTE, '');
+    element.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      collapse(true);
+    });
+
+    const overlay = new kakao.maps.CustomOverlay({
+      map,
+      content: element,
+      position: toKakaoLatLng(anchor.marker.position),
+      clickable: true,
+      // 내용 요소의 크기가 0이라 기준점은 왼쪽 위로 두고, 안의 핀과 선을 이 점에서 떨어진 거리로 놓는다.
+      xAnchor: 0,
+      yAnchor: 0,
+      zIndex: SPREAD_Z_INDEX,
+    });
+    pins.get(anchor.marker.id)?.overlay.setMap(null);
+    spread = { overlay, topId: anchor.marker.id };
+    setOthersDimmed(true);
+    buttons[0]?.focus();
+  }
+
+  // 지금 확대 수준의 화면 좌표로 핀을 묶고, 묶음마다 맨 위 핀 하나만 그린다.
+  function layoutPins() {
+    collapse();
+    clearPins();
+    layoutLevel = map.getLevel();
+    const projection = map.getProjection();
+    const placed: PlacedPin[] = [];
+    const seen = new Set<number>();
+    for (const marker of markers) {
+      // 같은 id가 두 번 오면 앞의 오버레이를 잃어버려 지울 수 없게 되므로 처음 것만 그린다.
+      if (seen.has(marker.id)) continue;
+      seen.add(marker.id);
+      const point = projection.containerPointFromCoords(toKakaoLatLng(marker.position));
+      placed.push({ marker, x: point.x, y: point.y });
+    }
+
+    for (const stack of stackPins(placed, selectedId)) {
+      const top = stack.top.marker;
+      const stackedCount = stack.members.length - 1;
+      const pin = createSpotPin(top, stackedCount > 0 ? () => expand(stack) : handleMarkerClick, stackedCount);
+      const selected = top.id === selectedId;
+      pin.setSelected(selected);
+      const overlay = new kakao.maps.CustomOverlay({
+        map,
+        content: pin.element,
+        position: toKakaoLatLng(top.position),
+        clickable: true,
+        xAnchor: 0.5,
+        // 핀의 뾰족한 끝이 좌표에 오도록 요소 아래쪽 끝을 기준으로 놓는다.
+        yAnchor: 1,
+        zIndex: selected ? SELECTED_PIN_Z_INDEX : PIN_Z_INDEX,
+      });
+      pins.set(top.id, { overlay, pin });
+    }
+  }
+
+  function clearPins() {
     for (const { overlay } of pins.values()) overlay.setMap(null);
-    for (const overlay of clusterOverlays) overlay.setMap(null);
     pins = new Map();
+  }
+
+  function clearClusters() {
+    for (const overlay of clusterOverlays) overlay.setMap(null);
     clusterOverlays = [];
+    clusterElements = [];
   }
 
   function subscribe<T>(listeners: Set<T>, listener: T): () => void {
@@ -223,34 +343,20 @@ export async function createMapView(
       map.setLevel(level, { animate: true });
     },
 
-    showMarkers(markers: SpotMarkerData[], clusters: ClusterData[]) {
+    // 서버 묶음은 핀과 섞어 묶지 않는다. 묶음끼리만 합쳐서 그린다.
+    showMarkers(nextMarkers: SpotMarkerData[], clusters: ClusterData[]) {
       if (destroyed) return;
-      clearOverlays();
-
-      for (const marker of markers) {
-        // 같은 id가 두 번 오면 앞의 오버레이를 잃어버려 지울 수 없게 되므로 처음 것만 그린다.
-        if (pins.has(marker.id)) continue;
-        const pin = createSpotPin(marker, handleMarkerClick);
-        const selected = marker.id === selectedId;
-        pin.setSelected(selected);
-        const overlay = new kakao.maps.CustomOverlay({
-          map,
-          content: pin.element,
-          position: toKakaoLatLng(marker.position),
-          clickable: true,
-          xAnchor: 0.5,
-          // 핀의 뾰족한 끝이 좌표에 오도록 요소 아래쪽 끝을 기준으로 놓는다.
-          yAnchor: 1,
-          zIndex: selected ? SELECTED_PIN_Z_INDEX : PIN_Z_INDEX,
-        });
-        pins.set(marker.id, { overlay, pin });
-      }
+      markers = nextMarkers;
+      layoutPins();
+      clearClusters();
 
       for (const cluster of mergeOverlappingClusters(clusters)) {
+        const element = createClusterButton(cluster, handleClusterClick);
+        clusterElements.push(element);
         clusterOverlays.push(
           new kakao.maps.CustomOverlay({
             map,
-            content: createClusterButton(cluster, handleClusterClick),
+            content: element,
             position: toKakaoLatLng(cluster.position),
             clickable: true,
             xAnchor: 0.5,
@@ -261,20 +367,12 @@ export async function createMapView(
       }
     },
 
+    // 고른 핀은 겹친 핀 묶음의 맨 위로 올라와야 하므로 핀을 다시 묶는다.
+    // 지금 화면에 없는 id라도 기억해 두었다가, 다음 showMarkers에서 그 핀을 선택 상태로 그린다.
     setSelected(id: number | null) {
       if (id === selectedId) return;
-      const previous = selectedId === null ? undefined : pins.get(selectedId);
-      if (previous) {
-        previous.pin.setSelected(false);
-        previous.overlay.setZIndex(PIN_Z_INDEX);
-      }
-      // 지금 화면에 없는 id라도 기억해 두었다가, 다음 showMarkers에서 그 핀을 선택 상태로 그린다.
       selectedId = id;
-      const next = id === null ? undefined : pins.get(id);
-      if (next) {
-        next.pin.setSelected(true);
-        next.overlay.setZIndex(SELECTED_PIN_Z_INDEX);
-      }
+      if (!destroyed) layoutPins();
     },
 
     onIdle(listener: () => void) {
@@ -403,7 +501,9 @@ export async function createMapView(
       container.removeEventListener('contextmenu', preventNativeMenu);
       cancelPress();
       touchPointers.clear();
-      clearOverlays();
+      collapse();
+      clearPins();
+      clearClusters();
       draftOverlay?.setMap(null);
       draftOverlay = null;
       searchOverlay?.setMap(null);

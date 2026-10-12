@@ -2,6 +2,7 @@
 // Tailwind는 소스 글자를 훑어 클래스를 찾으므로 클래스 이름은 항상 완성된 문자열로 적는다.
 import { ICON_PATHS } from '../components/iconPaths';
 import type { IconName } from '../components/iconPaths';
+import type { Offset } from './stackPins';
 import type { ClusterData, MarkerKind, SpotMarkerData } from './types';
 
 // 세 유형은 색(야영장 청록, 휴양림 녹색, 박지 흙색)과 아이콘 모양으로 함께 구분한다. 세 색 모두 흰 아이콘과 대비가 4.5:1 이상이다.
@@ -36,7 +37,8 @@ export interface SpotPin {
   setSelected(selected: boolean): void;
 }
 
-export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => void): SpotPin {
+// stackedCount는 이 핀 아래에 겹쳐 가린 장소 수다. 1 이상이면 "+n" 배지를 달고, 누르면 펼친다는 것을 이름에 적는다.
+export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => void, stackedCount = 0): SpotPin {
   const style = KIND_STYLE[data.kind];
   const baseOutline = data.warning ? WARNING_OUTLINE_WIDTH : OUTLINE_WIDTH;
 
@@ -51,6 +53,7 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
   if (data.warning) labelParts.push('공원 경계 경고');
   if (data.closed) labelParts.push('휴장');
   if (data.count !== undefined) labelParts.push(`모집 중 베이스캠프 ${data.count}개`);
+  if (stackedCount > 0) labelParts.push(`겹친 장소 ${stackedCount}곳 더, 눌러서 펼치기`);
   button.setAttribute('aria-label', labelParts.join(', '));
 
   // 경고 핀은 몸통에 황토 테두리를 두르고, 그 밖을 흰 윤곽선이 한 번 더 감싼다.
@@ -82,9 +85,16 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
     markup +=
       '<span data-pin-count class="pointer-events-none absolute bottom-2 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-ink px-1 font-mono text-xs tabular-nums text-white"></span>';
   }
+  // 겹친 장소 수는 몸통 왼쪽 아래에 걸친다. 먹 바탕인 베이스캠프 수와 헷갈리지 않게 흰 바탕에 먹 글자로 그린다.
+  if (stackedCount > 0) {
+    markup +=
+      '<span data-pin-stacked class="pointer-events-none absolute bottom-2 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-ink bg-card px-1 font-mono text-xs tabular-nums text-ink"></span>';
+  }
   button.innerHTML = markup;
   const countBadge = button.querySelector('[data-pin-count]');
   if (countBadge && data.count !== undefined) countBadge.textContent = String(data.count);
+  const stackedBadge = button.querySelector('[data-pin-stacked]');
+  if (stackedBadge) stackedBadge.textContent = `+${stackedCount}`;
 
   const outline = button.querySelector('[data-pin-outline]');
 
@@ -102,6 +112,64 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
   setSelected(false);
 
   return { element: button, setSelected };
+}
+
+// 핀 버튼의 크기다(h-11 w-11). 펼친 핀은 핀 끝이 놓일 자리에서 가로로 절반, 세로로 전체만큼 옮겨 놓는다.
+const PIN_BUTTON_SIZE_PX = 44;
+const SPREAD_ANIMATION_MS = 150;
+
+export interface SpreadEntry {
+  marker: SpotMarkerData;
+  // 펼친 핀 끝의 위치다.
+  at: Offset;
+  // 장소의 실제 위치(원래 핀 끝)다.
+  origin: Offset;
+}
+
+// 겹친 핀을 펼친 모습이다. 크기가 0인 기준 요소를 묶음 위치에 놓고, 그 점을 원점으로 연결선과 핀을 그린다.
+// 연결선은 장소의 실제 위치에서 펼친 핀 끝까지 긋는다.
+// 핀은 실제 위치에서 제자리로 짧게 퍼져 나간다. 움직임 줄이기 설정이면 바로 제자리에 그린다.
+export function createSpread(
+  entries: SpreadEntry[],
+  selectedId: number | null,
+  onActivate: (id: number) => void,
+): { element: HTMLElement; buttons: HTMLButtonElement[] } {
+  const element = document.createElement('div');
+  element.className = 'relative h-0 w-0';
+  const animate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const lines = entries
+    .map(
+      ({ at, origin }) =>
+        `<line class="stroke-ink" stroke-width="1.5" x1="${origin.x}" y1="${origin.y}" x2="${at.x}" y2="${at.y}"/>` +
+        `<circle class="fill-ink" cx="${origin.x}" cy="${origin.y}" r="2.5"/>`,
+    )
+    .join('');
+  element.innerHTML =
+    '<svg class="pointer-events-none absolute left-0 top-0 overflow-visible" width="1" height="1" aria-hidden="true">' +
+    `${lines}</svg>`;
+  if (animate) {
+    element.firstElementChild?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: SPREAD_ANIMATION_MS });
+  }
+
+  const buttons = entries.map(({ marker, at, origin }) => {
+    const pin = createSpotPin(marker, onActivate);
+    pin.setSelected(marker.id === selectedId);
+    // 핀 버튼에는 배지를 걸려고 relative 클래스가 있다. 같은 속성의 클래스를 더하면 CSS 순서로 승패가 갈리므로 인라인 스타일로 덮는다.
+    pin.element.style.position = 'absolute';
+    pin.element.style.left = `${at.x - PIN_BUTTON_SIZE_PX / 2}px`;
+    pin.element.style.top = `${at.y - PIN_BUTTON_SIZE_PX}px`;
+    element.appendChild(pin.element);
+    if (animate) {
+      pin.element.animate(
+        [{ transform: `translate(${origin.x - at.x}px, ${origin.y - at.y}px)` }, { transform: 'translate(0, 0)' }],
+        { duration: SPREAD_ANIMATION_MS, easing: 'ease-out' },
+      );
+    }
+    return pin.element;
+  });
+
+  return { element, buttons };
 }
 
 export function createClusterButton(
