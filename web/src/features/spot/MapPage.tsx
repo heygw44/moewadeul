@@ -17,6 +17,7 @@ import { createMapView } from '../../map/KakaoMap';
 import { MapLoadError } from '../../map/kakaoLoader';
 import type { MapLoadErrorReason } from '../../map/kakaoLoader';
 import type { RegionCandidate } from '../../map/regionSearch';
+import type { RegionLabel } from '../../map/regionLabel';
 import type { LatLng, MapView } from '../../map/types';
 import { BasecampDetailPanel } from '../basecamp/BasecampDetailPanel';
 import { BasecampFilterDialog } from '../basecamp/BasecampFilterDialog';
@@ -32,6 +33,7 @@ import { NotificationBellLink } from '../notification/NotificationLink';
 import { useSession } from '../member/session';
 import { BakjiReportPanel } from './BakjiReportPanel';
 import { MapLegend } from './MapLegend';
+import { MapRegionChip } from './MapRegionChip';
 import { MapSafetyNotice } from './MapSafetyNotice';
 import { MapSearchBar } from './MapSearchBar';
 import { SpotDetailPanel } from './SpotDetailPanel';
@@ -389,7 +391,24 @@ export function MapPage({
         {/* z-0으로 쌓임 맥락을 따로 만들어서, 지도와 위에 뜬 버튼이 모바일 시트보다 아래에 그려지게 한다. */}
         <div className="absolute inset-0 z-0 lg:relative lg:flex-1">
           <div ref={hostRef} role="region" aria-label="지도" className="absolute inset-0" />
-          {!mapFailure && <MapLegend />}
+          {!mapFailure && (
+            <>
+              {/* 지도를 끌거나 확대·축소하는 동안에만 지도 가운데를 십자로 표시한다. 지역 이름을 짓는 가운데 점이 어디인지 보여 주기 위해서다. */}
+              <svg
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                className={`pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 stroke-ink-subtle transition-opacity duration-150 motion-reduce:transition-none ${
+                  mapMoving.moving ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                <path d="M10 0v20M0 10h20" strokeWidth="1.5" />
+              </svg>
+              <MapLegend />
+              <MapRegionChip label={regionName} />
+            </>
+          )}
 
           {mapFailure && (
             <div className="absolute inset-0 flex items-center justify-center bg-paper p-4">
@@ -501,26 +520,31 @@ export function MapPage({
   );
 }
 
-// 서버는 장소가 너무 많으면 markers를 비우고 clusters만 준다. 그래서 묶음일 때는 묶음 개수의 합이 이 지역 장소 수다.
+// 서버는 장소가 너무 많으면 markers를 비우고 clusters만 준다. 그래서 묶음일 때는 묶음 개수의 합이 지금 화면의 장소 수다.
 function totalCount(area: SpotsInView): number {
   if (area.markers.length > 0) return area.markers.length;
   return area.clusters.reduce((sum, cluster) => sum + cluster.count, 0);
 }
 
+// 목록 머리 앞에 붙는 지역 이름이다. 화면에 시·도가 여럿 걸치면 "지도에 보이는"으로 적어 개수가 화면 전체의 수임을 드러낸다.
 // 지역 이름을 아직 모르거나 바다처럼 행정구역이 없는 곳에서는 "이 지역"으로 적는다.
-const UNKNOWN_REGION = '이 지역';
+function regionPhrase(label: RegionLabel | null): string {
+  if (label?.kind === 'named') return label.name;
+  if (label?.kind === 'wide') return '지도에 보이는';
+  return '이 지역';
+}
 
 function ListHeader({
   area,
   regionName,
 }: {
   area: SpotsInView;
-  regionName: string | null;
+  regionName: RegionLabel | null;
 }) {
   const counted = area.status === 'ready' || area.markers.length > 0 || area.clusters.length > 0;
   return (
     <h2 className="truncate text-lg font-semibold text-ink">
-      {regionName ?? UNKNOWN_REGION} 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
+      {regionPhrase(regionName)} 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
     </h2>
   );
 }
@@ -551,12 +575,12 @@ function BasecampListHeader({
   regionName,
 }: {
   result: BasecampsInView;
-  regionName: string | null;
+  regionName: RegionLabel | null;
 }) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
     <h2 className="truncate text-lg font-semibold text-ink">
-      {regionName ?? UNKNOWN_REGION} 베이스캠프
+      {regionPhrase(regionName)} 베이스캠프
       {counted && (
         <span className="tabular-nums">
           {' '}
@@ -612,8 +636,11 @@ function SpotList({
 
       {area.status === 'ready' && area.markers.length === 0 && area.clusters.length > 0 && (
         <div className="px-4 pt-4">
-          {/* 장소 수는 목록 머리가 이미 적으므로 여기서는 확대하라는 안내만 한다. 상태 안내라서 상자로 감싸지 않는다. */}
-          <p className="text-sm text-ink-muted">장소가 많아서 묶어서 보여 주고 있어요. 지도를 확대하면 하나씩 볼 수 있어요.</p>
+          {/* 머리의 장소 수가 지역 전체가 아니라 지금 화면의 수라는 것을 함께 적는다. 상태 안내라서 상자로 감싸지 않는다. */}
+          <p className="text-sm text-ink-muted">
+            지금 지도에 보이는 곳에 장소가 모두 <span className="tabular-nums">{totalCount(area)}곳</span> 있어요. 지도를
+            확대하면 하나씩 볼 수 있어요.
+          </p>
         </div>
       )}
 
