@@ -18,8 +18,8 @@ export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
 
 export const REPORT_STATUS_META: Record<ReportStatus, { label: string; tone: StatusTone }> = {
   RECEIVED: { label: '접수', tone: 'neutral' },
-  IN_REVIEW: { label: '검토 중', tone: 'sea' },
-  ACTIONED: { label: '조치', tone: 'forest' },
+  IN_REVIEW: { label: '검토 중', tone: 'info' },
+  ACTIONED: { label: '조치', tone: 'accent' },
   DISMISSED: { label: '기각', tone: 'neutral' },
 };
 

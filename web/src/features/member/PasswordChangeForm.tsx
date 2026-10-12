@@ -146,7 +146,7 @@ export function PasswordChangeForm() {
           error={fieldErrors.newPasswordConfirm}
         />
         {changed && (
-          <p role="status" className="text-sm text-forest-deep">
+          <p role="status" className="text-sm text-accent-deep">
             비밀번호를 바꿨어요. 다른 기기에서는 새 비밀번호로 다시 로그인해 주세요.
           </p>
         )}

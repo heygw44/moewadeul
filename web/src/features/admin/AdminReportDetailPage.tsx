@@ -94,7 +94,7 @@ function ReportDetail({ reportId }: { reportId: number }) {
           </Button>
           <Link
             to="/admin/reports"
-            className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
+            className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-surface px-4 font-semibold text-ink hover:bg-fill"
           >
             신고 목록
           </Link>
@@ -127,13 +127,13 @@ function SummaryCard({ detail }: { detail: AdminReportDetail }) {
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-base">
         <dt className="text-sm text-ink-muted">신고자</dt>
         <dd className="break-words text-ink">
-          <Link to={`/members/${detail.reporter.memberId}`} className="font-semibold text-forest">
+          <Link to={`/members/${detail.reporter.memberId}`} className="font-semibold text-accent">
             {detail.reporter.nickname}
           </Link>
         </dd>
         <dt className="text-sm text-ink-muted">신고 대상</dt>
         <dd className="break-words text-ink">
-          <Link to={`/members/${detail.target.memberId}`} className="font-semibold text-forest">
+          <Link to={`/members/${detail.target.memberId}`} className="font-semibold text-accent">
             {detail.target.nickname}
           </Link>
         </dd>
@@ -160,7 +160,7 @@ function BasecampCard({ basecamp }: { basecamp: NonNullable<AdminReportDetail['b
         ]}
       />
       <div>
-        <Link to={`/basecamps/${basecamp.basecampId}`} className="inline-flex min-h-11 items-center font-semibold text-forest">
+        <Link to={`/basecamps/${basecamp.basecampId}`} className="inline-flex min-h-11 items-center font-semibold text-accent">
           베이스캠프 보기
         </Link>
       </div>
@@ -173,7 +173,7 @@ function ReviewCard({ review }: { review: NonNullable<AdminReportDetail['compani
     <PageCard title="신고된 동행 후기">
       <div className="flex flex-wrap items-center gap-2">
         {review.hidden && <StatusText tone="neutral">숨김</StatusText>}
-        <StatusText tone={review.rejoinWanted ? 'forest' : 'neutral'}>
+        <StatusText tone={review.rejoinWanted ? 'accent' : 'neutral'}>
           {review.rejoinWanted ? '다시 동행하고 싶어요' : '다시 동행하고 싶지 않아요'}
         </StatusText>
       </div>
@@ -479,7 +479,7 @@ function SanctionHistoryCard({ items, onChanged }: { items: AdminSanctionHistory
       ) : (
         <ul className="flex flex-col gap-3">
           {items.map((item) => (
-            <li key={item.sanctionId} className="flex flex-col gap-2 rounded-control bg-paper-deep p-3">
+            <li key={item.sanctionId} className="flex flex-col gap-2 rounded-control bg-fill p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-base font-semibold text-ink">{SANCTION_TYPE_LABELS[item.type]}</span>
                 {item.level !== null && <span className="font-mono text-sm tabular-nums text-ink-muted">{item.level}단계</span>}

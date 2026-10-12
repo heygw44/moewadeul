@@ -128,12 +128,12 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = 
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-contour bg-card px-2">
+      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
         <button
           type="button"
           aria-label="지도로 돌아가기"
           onClick={onCancel}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep"
+          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
         >
           <Icon name="chevronLeft" size={24} />
         </button>
@@ -250,7 +250,7 @@ function ReportForm({
 
       {unverified && (
         <Notice tone="warning" title="이메일 인증을 마치면 박지를 제보할 수 있어요">
-          <Link to="/verify-email" className="inline-flex min-h-11 items-center text-forest underline underline-offset-2">
+          <Link to="/verify-email" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
             이메일 인증하러 가기
           </Link>
         </Notice>
@@ -370,10 +370,10 @@ function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionRespon
           <p className="text-sm text-ink">제보는 이미 등록됐어요. 같은 곳이라면 기존 박지의 정보를 확인해 주세요.</p>
           <ul className="flex flex-col">
             {duplicateCandidates.map((candidate) => (
-              <li key={candidate.spotId} className="border-t border-contour first:border-t-0">
+              <li key={candidate.spotId} className="border-t border-line first:border-t-0">
                 <Link
                   to={`/spots/${candidate.spotId}`}
-                  className="flex min-h-11 items-center justify-between gap-3 py-2 text-forest underline underline-offset-2"
+                  className="flex min-h-11 items-center justify-between gap-3 py-2 text-accent underline underline-offset-2"
                 >
                   <span className="min-w-0 break-words">{candidate.name}</span>
                   <span className="shrink-0 font-mono text-sm tabular-nums text-ink-muted">{candidate.distanceM}m</span>

@@ -37,7 +37,7 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-paper">
+    <div className="flex min-h-dvh flex-col bg-canvas">
       <AnnouncementBar />
       <SiteHeader mobileAccount />
 
@@ -65,7 +65,7 @@ export function LandingPage() {
           <HeroPreview />
         </section>
 
-        <section aria-labelledby="landing-evidence" className="border-t border-contour bg-card">
+        <section aria-labelledby="landing-evidence" className="border-t border-line bg-surface">
           <div className="mx-auto grid max-w-screen-xl items-start gap-10 px-4 py-14 lg:grid-cols-2 lg:gap-16 lg:py-20">
             <div className="flex flex-col gap-4 lg:pt-4">
               <h2 id="landing-evidence" className={SECTION_TITLE_CLASS}>
@@ -90,7 +90,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section aria-labelledby="landing-trust" className="border-t border-contour">
+        <section aria-labelledby="landing-trust" className="border-t border-line">
           <div className="mx-auto grid max-w-screen-xl items-start gap-10 px-4 py-14 lg:grid-cols-[1fr_1.1fr] lg:gap-16 lg:py-20">
             <div className="order-2 lg:order-1">
               <TrustPreview />
@@ -107,7 +107,7 @@ export function LandingPage() {
                   return (
                     <div
                       key={badge.label}
-                      className="flex flex-col gap-1.5 border-t border-contour py-3 first:border-t-0 first:pt-0 sm:flex-row sm:gap-4"
+                      className="flex flex-col gap-1.5 border-t border-line py-3 first:border-t-0 first:pt-0 sm:flex-row sm:gap-4"
                     >
                       <dt className="shrink-0 sm:w-28">
                         <StatusText tone={badge.tone} icon={badge.icon}>
@@ -127,12 +127,12 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section aria-labelledby="landing-flow" className="border-t border-contour bg-card">
+        <section aria-labelledby="landing-flow" className="border-t border-line bg-surface">
           <div className="mx-auto flex max-w-screen-xl flex-col gap-10 px-4 py-14 lg:py-20">
             <h2 id="landing-flow" className={SECTION_TITLE_CLASS}>
               장소를 고르면 동행과 행사까지 이어져요
             </h2>
-            <ol className="grid gap-10 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-contour">
+            <ol className="grid gap-10 lg:grid-cols-3 lg:gap-0 lg:divide-x lg:divide-line">
               <FlowStep number="01" title="장소 찾기" fragment={<StepSpotFragment />}>
                 지도에서 갈 곳을 골라요. 시설과 후기, 날씨, 그곳으로 가는 베이스캠프가 한 화면에 모여요.
               </FlowStep>

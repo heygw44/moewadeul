@@ -14,20 +14,20 @@ type NoticeProps = {
 const BOX_CLASSES: Record<NoticeTone, string> = {
   warning: 'border-warning-line bg-warning-soft',
   danger: 'border-danger bg-danger-soft',
-  info: 'border-sea bg-sea-soft',
+  info: 'border-info bg-info-soft',
 };
 
 const TITLE_CLASSES: Record<NoticeTone, string> = {
   warning: 'text-warning',
   danger: 'text-danger',
-  info: 'text-sea',
+  info: 'text-info',
 };
 
 // 경고 아이콘은 테두리와 같은 황토색으로, 나머지는 제목과 같은 색으로 그린다.
 const ICON_CLASSES: Record<NoticeTone, string> = {
   warning: 'text-warning-line',
   danger: 'text-danger',
-  info: 'text-sea',
+  info: 'text-info',
 };
 
 const DEFAULT_ICONS: Record<NoticeTone, IconName> = {

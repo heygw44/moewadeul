@@ -45,7 +45,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
   }, [menuOpen]);
 
   return (
-    <header className={`sticky top-0 z-20 border-b border-ink bg-paper ${className}`}>
+    <header className={`sticky top-0 z-20 border-b border-ink bg-canvas ${className}`}>
       <div className="mx-auto flex min-h-14 max-w-screen-xl items-center gap-3 px-4 lg:min-h-16 lg:gap-6">
         <Link to="/" className="shrink-0 text-ink">
           <BrandMark rough className="text-lg sm:text-xl lg:text-4xl" />
@@ -58,13 +58,13 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                 to="/me/notifications"
                 aria-label={notificationLabel(count)}
                 aria-current={pathname === '/me/notifications' ? 'page' : undefined}
-                className="hidden min-h-11 items-center gap-2 rounded-control px-3 text-ink hover:bg-paper-deep lg:inline-flex"
+                className="hidden min-h-11 items-center gap-2 rounded-control px-3 text-ink hover:bg-fill lg:inline-flex"
               >
                 <Icon name="bell" size={20} />
                 <UnreadBadge count={count} />
               </Link>
             )}
-            <NotificationBellLink className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-control px-2 text-ink hover:bg-paper-deep lg:hidden" />
+            <NotificationBellLink className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-control px-2 text-ink hover:bg-fill lg:hidden" />
             {!mobileAccount && signedIn && session.me !== null && (
               <Link
                 to="/me"
@@ -82,7 +82,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
               <div className="inline-flex items-center lg:hidden">
                 <Link
                   to={withNext('/login', pathname + search)}
-                  className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-forest"
+                  className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-accent"
                 >
                   로그인
                 </Link>
@@ -101,7 +101,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
               aria-controls="mobile-nav"
               aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
               onClick={() => setOpenedAt(menuOpen ? null : pathname)}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep lg:hidden"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-ink hover:bg-fill lg:hidden"
             >
               <Icon name={menuOpen ? 'close' : 'menu'} size={22} />
             </button>
@@ -126,8 +126,8 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                 className={[
                   'inline-flex items-center border-x border-t px-6 pt-2 pb-1.5 text-xl font-bold tracking-tight',
                   current
-                    ? 'border-ink bg-forest text-white'
-                    : 'border-transparent text-ink hover:border-ink hover:bg-forest hover:text-white',
+                    ? 'border-ink bg-accent text-white'
+                    : 'border-transparent text-ink hover:border-ink hover:bg-accent hover:text-white',
                 ].join(' ')}
               >
                 {item.label}
@@ -138,7 +138,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
       )}
 
       {!minimal && menuOpen && (
-        <nav id="mobile-nav" aria-label="주 메뉴" className="border-t border-contour bg-paper lg:hidden">
+        <nav id="mobile-nav" aria-label="주 메뉴" className="border-t border-line bg-canvas lg:hidden">
           <ul className="mx-auto flex max-w-screen-xl flex-col py-1">
             {PRIMARY_ITEMS.map((item) => {
               const current = active === item.key;
@@ -149,7 +149,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                     aria-current={current ? 'page' : undefined}
                     className={[
                       'flex min-h-12 items-center gap-3 px-4 text-lg font-bold',
-                      current ? 'bg-forest text-white' : 'text-ink hover:bg-paper-deep',
+                      current ? 'bg-accent text-white' : 'text-ink hover:bg-fill',
                     ].join(' ')}
                   >
                     <Icon name={item.icon} size={20} />

@@ -14,7 +14,7 @@ export function BottomTabBar() {
   return (
     <nav
       aria-label="하단 메뉴"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-contour bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul className="grid grid-cols-5">
         {NAV_ITEMS.map((item) => {
@@ -26,7 +26,7 @@ export function BottomTabBar() {
                 aria-current={current ? 'page' : undefined}
                 className={[
                   'relative flex h-14 flex-col items-center justify-center gap-0.5 border-t-2 text-xs',
-                  current ? 'border-forest font-semibold text-forest-deep' : 'border-transparent text-ink-muted',
+                  current ? 'border-accent font-semibold text-accent-deep' : 'border-transparent text-ink-muted',
                 ].join(' ')}
               >
                 <Icon name={item.icon} size={22} />

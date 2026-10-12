@@ -63,7 +63,7 @@ const DRAFT_FOCUS_LEVEL = 5;
 const CLUSTER_ZOOM_STEP = 2;
 
 const CHIP_CLASS =
-  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-contour bg-card px-3';
+  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3';
 
 type MapPageProps = {
   spotId?: number;
@@ -334,7 +334,7 @@ export function MapPage({
   }
 
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-paper">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-canvas">
       <SiteHeader className="hidden lg:block" />
       <div className="relative min-h-0 flex-1 lg:flex">
         <Sheet
@@ -411,7 +411,7 @@ export function MapPage({
           )}
 
           {mapFailure && (
-            <div className="absolute inset-0 flex items-center justify-center bg-paper p-4">
+            <div className="absolute inset-0 flex items-center justify-center bg-canvas p-4">
               <div className="w-full max-w-sm">
                 <Notice tone="danger" title="지도를 불러오지 못했어요">
                   <div className="flex flex-col gap-3">
@@ -446,7 +446,7 @@ export function MapPage({
                 <BrandMark className="text-lg" />
               </Link>
               <div className="flex flex-wrap justify-end gap-2">
-                <NotificationBellLink className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-contour bg-card px-3 text-ink hover:bg-paper-deep lg:hidden" />
+                <NotificationBellLink className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3 text-ink hover:bg-fill lg:hidden" />
                 {map && (
                   <>
                     {!reporting && !basecampMode && !opening && <ReportButton />}
@@ -456,8 +456,8 @@ export function MapPage({
                       onClick={() => setTerrainOn((value) => !value)}
                       className={
                         terrainOn
-                          ? 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-forest bg-forest-soft px-3 text-base font-semibold text-forest-deep'
-                          : 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-contour bg-card px-3 text-base font-semibold text-ink hover:bg-paper-deep'
+                          ? 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-accent-deep'
+                          : 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3 text-base font-semibold text-ink hover:bg-fill'
                       }
                     >
                       <Icon name="terrain" size={20} />
@@ -560,8 +560,8 @@ function FilterButton({ count, onClick }: { count: number; onClick: () => void }
       aria-label={active ? `조건 ${count}개 켜짐, 조건 바꾸기` : '조건 고르기'}
       className={
         active
-          ? 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-forest bg-forest-soft px-3 text-base font-semibold text-forest-deep'
-          : 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-ink-subtle bg-card px-3 text-base font-semibold text-ink hover:bg-paper-deep'
+          ? 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-accent-deep'
+          : 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-ink-subtle bg-surface px-3 text-base font-semibold text-ink hover:bg-fill'
       }
     >
       <Icon name="sliders" size={20} />
@@ -607,7 +607,7 @@ function SpotList({
     return (
       <div aria-busy="true" className="flex flex-col">
         {[0, 1, 2].map((index) => (
-          <div key={index} className="flex min-h-14 items-center gap-3 border-b border-contour px-4 py-3">
+          <div key={index} className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-3">
             <Skeleton className="size-8 shrink-0" />
             <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-4 w-2/3" />
@@ -672,7 +672,7 @@ function ReportButton() {
   return (
     <Link
       to={target}
-      className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-contour bg-card px-3 text-base font-semibold text-ink hover:bg-paper-deep"
+      className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3 text-base font-semibold text-ink hover:bg-fill"
     >
       <Icon name="backpack" size={20} />
       박지 제보

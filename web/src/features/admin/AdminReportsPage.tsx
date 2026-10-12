@@ -127,7 +127,7 @@ function ReportList() {
         <EmptyState framed title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꾸면 다시 찾아요." />
       )}
       {state !== null && state.items.length > 0 && (
-        <ul className="flex flex-col rounded-control border border-contour bg-card">
+        <ul className="flex flex-col rounded-control border border-line bg-surface">
           {state.items.map((item) => (
             <ReportRow key={item.reportId} item={item} />
           ))}
@@ -147,10 +147,10 @@ function ReportList() {
 function ReportRow({ item }: { item: AdminReportSummary }) {
   const status = REPORT_STATUS_META[item.status];
   return (
-    <li className="border-t border-contour first:border-t-0">
+    <li className="border-t border-line first:border-t-0">
       <Link
         to={`/admin/reports/${item.reportId}`}
-        className="flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-paper-deep sm:flex-row sm:items-center sm:gap-4"
+        className="flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-fill sm:flex-row sm:items-center sm:gap-4"
       >
         <span className="flex flex-wrap items-center gap-2 sm:w-72 sm:shrink-0">
           {item.urgent && <StatusText tone="danger">긴급</StatusText>}

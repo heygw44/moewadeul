@@ -89,7 +89,7 @@ export function MemberReportDialog({
     return (
       <Dialog title={isReview ? '후기 신고' : `${targetNickname}님 신고`} onClose={onClose}>
         <div className="flex flex-col gap-4">
-          <p role="status" className="text-base font-semibold text-forest-deep">
+          <p role="status" className="text-base font-semibold text-accent-deep">
             신고를 접수했어요
           </p>
           <p className="text-sm text-ink-muted">관리자가 검토한 뒤 처리 결과를 알림으로 알려 줘요.</p>

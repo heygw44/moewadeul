@@ -77,7 +77,7 @@ export function MyProgramApplicationsPage() {
                   filter === 'ALL' && (
                     <Link
                       to="/programs"
-                      className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
+                      className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-surface px-4 font-semibold text-ink hover:bg-fill"
                     >
                       공식 행사 보기
                     </Link>
@@ -117,7 +117,7 @@ function ApplicationCard({ item, now }: { item: MyProgramApplicationItem; now: n
     <li>
       <Link
         to={`/programs/${item.program.programId}`}
-        className="flex min-h-11 flex-col gap-2 p-4 hover:bg-paper-deep"
+        className="flex min-h-11 flex-col gap-2 p-4 hover:bg-fill"
       >
         <span className="text-lg font-semibold text-ink">{item.program.title}</span>
         <MetaLine

@@ -3,15 +3,15 @@ import type { ProgramApplicationStatus, ProgramCancelReason, ProgramStatus } fro
 import type { StatusTone } from '../../components/StatusText';
 
 export const PROGRAM_STATUS_META: Record<ProgramStatus, { label: string; tone: StatusTone }> = {
-  UPCOMING: { label: '신청 전', tone: 'sea' },
-  OPEN: { label: '신청 중', tone: 'forest' },
+  UPCOMING: { label: '신청 전', tone: 'info' },
+  OPEN: { label: '신청 중', tone: 'accent' },
   CLOSED: { label: '마감', tone: 'neutral' },
   CANCELED: { label: '행사 취소', tone: 'neutral' },
 };
 
 export const APPLICATION_STATUS_META: Record<ProgramApplicationStatus, { label: string; tone: StatusTone }> = {
   PENDING_PAYMENT: { label: '결제 대기', tone: 'warning' },
-  CONFIRMED: { label: '확정', tone: 'sea' },
+  CONFIRMED: { label: '확정', tone: 'info' },
   CANCELED: { label: '취소', tone: 'neutral' },
   EXPIRED: { label: '만료', tone: 'neutral' },
 };

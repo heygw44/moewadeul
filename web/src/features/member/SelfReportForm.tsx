@@ -143,7 +143,7 @@ export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void })
           error={fieldErrors.selfGender}
         />
         {saved && (
-          <p role="status" className="text-sm text-forest-deep">
+          <p role="status" className="text-sm text-accent-deep">
             저장했어요.
           </p>
         )}

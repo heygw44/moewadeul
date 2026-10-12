@@ -17,7 +17,7 @@ export function UnderlineNavLink({ to, active, children }: { to: string; active:
       aria-current={active ? 'page' : undefined}
       className={[
         'inline-flex min-h-11 items-center whitespace-nowrap border-b-2 px-3 text-base',
-        active ? 'border-forest font-semibold text-forest-deep' : 'border-transparent text-ink-muted hover:text-ink',
+        active ? 'border-accent font-semibold text-accent-deep' : 'border-transparent text-ink-muted hover:text-ink',
       ].join(' ')}
     >
       {children}

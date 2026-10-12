@@ -33,7 +33,7 @@ type LoadResult = { programId: number; detail: ProgramDetail } | { programId: nu
 const LINK_BUTTON_CLASS =
   'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:bg-ink-muted hover:border-ink-muted';
 const SECONDARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep';
+  'inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-surface px-4 font-semibold text-ink hover:bg-fill';
 
 export function ProgramDetailPage({ programId }: { programId: number }) {
   const session = useSession();
@@ -132,7 +132,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
 function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged: () => void }) {
   return (
     <div className="flex flex-col gap-4">
-      <article className="flex flex-col gap-3 rounded-control border border-contour bg-card p-5">
+      <article className="flex flex-col gap-3 rounded-control border border-line bg-surface p-5">
         {detail.status === 'CANCELED' && (
           <Notice tone="danger" title="운영자가 행사를 취소했어요">
             <p>신청했던 분께는 취소 알림을 보냈어요. 결제한 금액은 환불돼요.</p>
@@ -146,7 +146,7 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
               label: '장소',
               value:
                 detail.spotId !== null ? (
-                  <Link to={`/spots/${detail.spotId}`} className="font-sans text-forest underline underline-offset-2">
+                  <Link to={`/spots/${detail.spotId}`} className="font-sans text-accent underline underline-offset-2">
                     {detail.locationText}
                   </Link>
                 ) : (
@@ -291,10 +291,10 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   return (
     <section
       aria-label="신청"
-      className="sticky bottom-(--bottom-nav-h) z-10 flex flex-col gap-3 rounded-control border border-contour bg-card p-4 shadow-raise"
+      className="sticky bottom-(--bottom-nav-h) z-10 flex flex-col gap-3 rounded-control border border-line bg-surface p-4 shadow-raise"
     >
       {notice && (
-        <p role="status" className="text-sm font-semibold text-forest-deep">
+        <p role="status" className="text-sm font-semibold text-accent-deep">
           {notice}
         </p>
       )}
@@ -336,7 +336,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
       {confirmed && (
         <>
-          <p className="text-base font-semibold text-forest-deep">신청이 확정됐어요.</p>
+          <p className="text-base font-semibold text-accent-deep">신청이 확정됐어요.</p>
           <p className="text-sm text-ink-muted">
             {refundClosed
               ? '환불 기한이 지나서 취소할 수 없어요.'
@@ -439,7 +439,7 @@ function ActionError({ error }: { error: ApiError }) {
       <p>{error.message}</p>
       {error.code === 'TRUST_LEVEL_INSUFFICIENT' && (
         <p className="mt-2">
-          <Link to="/identity-verification" className="inline-flex min-h-11 items-center text-forest underline underline-offset-2">
+          <Link to="/identity-verification" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
             본인확인하러 가기
           </Link>
         </p>

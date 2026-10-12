@@ -16,7 +16,7 @@ export function SpotListRow({ marker }: SpotListRowProps) {
     <li>
       <Link
         to={`/spots/${marker.spotId}`}
-        className="flex min-h-14 items-center gap-3 border-b border-contour px-4 py-3 hover:bg-paper-deep focus-visible:-outline-offset-2"
+        className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-3 hover:bg-fill focus-visible:-outline-offset-2"
       >
         <span className={`flex size-8 shrink-0 items-center justify-center rounded-control ${meta.tileClass}`}>
           <Icon name={meta.icon} size={18} />

@@ -12,10 +12,10 @@ type AuthLayoutProps = {
 // 알림 띠·하단 탭·바닥글은 두지 않는다. 머리글의 로그인 링크도 이 화면에서는 겹치므로 계정 표시를 숨긴다.
 export function AuthLayout({ title, description, children, footer }: AuthLayoutProps) {
   return (
-    <div className="min-h-dvh bg-paper">
+    <div className="min-h-dvh bg-canvas">
       <SiteHeader minimal />
       <main className="mx-auto flex max-w-screen-sm flex-col gap-6 px-4 py-10">
-        <section className="flex flex-col gap-4 rounded-control border border-contour bg-card p-6">
+        <section className="flex flex-col gap-4 rounded-control border border-line bg-surface p-6">
           <h1 className="text-xl font-bold tracking-tight text-ink">{title}</h1>
           {description !== undefined && description !== null && <div className="text-ink-muted">{description}</div>}
           {children}

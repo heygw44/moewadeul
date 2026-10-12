@@ -25,7 +25,7 @@ import { MemoryReportDialog } from './MemoryReportDialog';
 
 type LoadResult = { memoryId: number; memory: MemoryDetail } | { memoryId: number; error: unknown };
 
-const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-forest underline underline-offset-2';
+const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-accent underline underline-offset-2';
 
 export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   const session = useSession();
@@ -74,7 +74,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
       <HubLayout title="발자국" breadcrumb={breadcrumb} width="narrow">
         <div aria-busy="true">
           {showSkeleton && (
-            <div className="flex flex-col gap-3 rounded-control border border-contour bg-card p-5">
+            <div className="flex flex-col gap-3 rounded-control border border-line bg-surface p-5">
               <Skeleton className="h-8 w-2/3" />
               <Skeleton className="h-40 w-full" />
             </div>
@@ -158,7 +158,7 @@ function MemoryMeta({ memory }: { memory: MemoryDetail }) {
           <span aria-hidden="true">·</span>
           <Link
             to={`/spots/${memory.spot.spotId}`}
-            className="inline-flex items-center gap-1 text-forest underline underline-offset-2"
+            className="inline-flex items-center gap-1 text-accent underline underline-offset-2"
           >
             <Icon name="map" size={14} />
             장소 보기
@@ -229,7 +229,7 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
   return (
     <div className="flex flex-col gap-4">
       <HiddenStatusNotice status={memory.status} />
-      <article className="divide-y divide-contour rounded-control border border-contour bg-card">
+      <article className="divide-y divide-line rounded-control border border-line bg-surface">
         {position !== null && (
           <div className="flex flex-col gap-1 px-5 py-4">
             <p className="text-sm text-ink-muted">다녀온 곳 · 나만 보는 위치예요</p>

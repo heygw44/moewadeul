@@ -36,7 +36,7 @@ export function BasecampListPanel({
   return (
     <div className="flex flex-col">
       {spotFilterId !== null && (
-        <div className="flex items-center justify-between gap-2 border-b border-contour bg-paper px-4 py-1">
+        <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas px-4 py-1">
           <p className="min-w-0 truncate text-sm text-ink">{filteredSpotName ?? '고른 장소'}의 베이스캠프만 보고 있어요</p>
           <Button variant="ghost" onClick={onClearSpotFilter} className="shrink-0 px-3">
             장소 선택 풀기
@@ -47,7 +47,7 @@ export function BasecampListPanel({
       {showSkeleton && result.items.length === 0 ? (
         <div aria-busy="true" className="flex flex-col">
           {[0, 1, 2].map((index) => (
-            <div key={index} className="flex min-h-14 flex-col gap-2 border-b border-contour px-4 py-3">
+            <div key={index} className="flex min-h-14 flex-col gap-2 border-b border-line px-4 py-3">
               <Skeleton className="h-4 w-2/3" />
               <Skeleton className="h-3 w-1/2" />
             </div>
@@ -121,7 +121,7 @@ function BasecampRow({ item }: { item: BasecampSearchItem }) {
     <li>
       <Link
         to={`/basecamps/${item.basecampId}`}
-        className="flex min-h-14 flex-col gap-1 border-b border-contour px-4 py-3 hover:bg-paper-deep focus-visible:-outline-offset-2"
+        className="flex min-h-14 flex-col gap-1 border-b border-line px-4 py-3 hover:bg-fill focus-visible:-outline-offset-2"
       >
         <span className="min-w-0 break-words text-base font-semibold text-ink">{item.title}</span>
         <MetaLine

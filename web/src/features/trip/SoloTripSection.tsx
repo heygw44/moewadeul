@@ -15,7 +15,7 @@ const MAX_DAYS_UNTIL_START = 60;
 const MAX_NIGHTS = 3;
 
 
-const SECTION_CLASS = 'mt-4 border-t border-contour pt-4';
+const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
 const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
 
 type SoloTripSectionProps = {
@@ -41,7 +41,7 @@ export function SoloTripSection({ spotId, onRegistered }: SoloTripSectionProps) 
           <Notice tone="info" title="일정을 등록했어요">
             <p>
               등록한 일정은{' '}
-              <Link to="/me" className="font-semibold text-forest underline underline-offset-2">
+              <Link to="/me" className="font-semibold text-accent underline underline-offset-2">
                 내 정보
               </Link>
               에서 보고 삭제할 수 있어요.
@@ -146,7 +146,7 @@ function SoloTripForm({
       noValidate
       onSubmit={handleSubmit}
       aria-label="혼자 가는 일정 등록"
-      className="flex flex-col gap-4 rounded-control border border-contour bg-paper p-4"
+      className="flex flex-col gap-4 rounded-control border border-line bg-canvas p-4"
     >
       {formError && (
         <div role="alert">

@@ -37,11 +37,11 @@ type BasecampDetailPanelProps = {
 
 type DetailResult = { basecampId: number; detail: BasecampDetail } | { basecampId: number; error: unknown };
 
-const SECTION_CLASS = 'mt-4 border-t border-contour pt-4';
+const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
 const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
 const MESSAGE_MAX = 500;
 const ACTION_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill';
 
 const CONFIRMED_SAFETY_RULES = [
   '출발 전에 일정을 가족이나 지인에게 알려 주세요.',
@@ -113,12 +113,12 @@ export function BasecampDetailPanel({ basecampId, onBack }: BasecampDetailPanelP
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-contour bg-card px-2">
+      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
         <button
           type="button"
           aria-label="목록으로"
           onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep"
+          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
         >
           <Icon name="chevronLeft" size={24} />
         </button>
@@ -154,7 +154,7 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
           <StatusText tone={status.tone}>{status.label}</StatusText>
           <Link
             to={`/spots/${detail.spot.spotId}`}
-            className="inline-flex min-h-11 items-center gap-1 self-start text-forest underline underline-offset-2"
+            className="inline-flex min-h-11 items-center gap-1 self-start text-accent underline underline-offset-2"
           >
             <Icon name="backpack" size={18} className="shrink-0" />
             {detail.spot.name}
@@ -240,17 +240,17 @@ function MemberRow({
   const profile = profileSummary(member);
 
   return (
-    <li className="flex flex-col gap-1 border-t border-contour py-2 first:border-t-0">
+    <li className="flex flex-col gap-1 border-t border-line py-2 first:border-t-0">
       <div className="flex flex-wrap items-center gap-2">
         <Link
           to={`/members/${member.memberId}`}
-          className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
+          className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
         >
           {member.nickname}
         </Link>
         <MetaLine
           items={[
-            member.role === 'LEADER' && <StatusText tone="earth">캠프 리더</StatusText>,
+            member.role === 'LEADER' && <StatusText tone="bakji">캠프 리더</StatusText>,
             badge && (
               <StatusText tone={badge.tone} icon={badge.icon}>
                 {badge.label}
@@ -305,7 +305,7 @@ function ContactInfo({ contactInfo, isMember }: { contactInfo: string | undefine
       href={url.href}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-1 inline-flex min-h-11 items-center break-all text-forest underline underline-offset-2"
+      className="mt-1 inline-flex min-h-11 items-center break-all text-accent underline underline-offset-2"
     >
       {url.href}
     </a>
@@ -325,7 +325,7 @@ function UnmetReasonList({ reasons, trustLevel }: { reasons: JoinUnmetReason[]; 
             {reason === 'TRUST_LEVEL' && trustLevel === 0 && (
               <Link
                 to="/identity-verification"
-                className="ml-2 inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-2"
+                className="ml-2 inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2"
               >
                 본인확인하기
               </Link>
@@ -467,9 +467,9 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   if (content === null && !error && !done) return null;
 
   return (
-    <div className="sticky bottom-0 z-10 mt-auto flex flex-col gap-2 border-t border-contour bg-card px-4 py-3">
+    <div className="sticky bottom-0 z-10 mt-auto flex flex-col gap-2 border-t border-line bg-surface px-4 py-3">
       {done && (
-        <p role="status" className="text-sm font-semibold text-forest-deep">
+        <p role="status" className="text-sm font-semibold text-accent-deep">
           {done}
         </p>
       )}

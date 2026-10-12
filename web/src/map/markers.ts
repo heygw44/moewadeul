@@ -7,9 +7,9 @@ import type { ClusterData, MarkerKind, SpotMarkerData } from './types';
 
 // 세 유형은 색(야영장 청록, 휴양림 녹색, 박지 흙색)과 아이콘 모양으로 함께 구분한다. 세 색 모두 흰 아이콘과 대비가 4.5:1 이상이다.
 export const KIND_STYLE: Record<MarkerKind, { label: string; icon: IconName; fill: string }> = {
-  CAMPSITE: { label: '공공 야영장', icon: 'tent', fill: 'fill-sea' },
-  FOREST: { label: '자연휴양림', icon: 'tree', fill: 'fill-forest' },
-  BAKJI: { label: '박지', icon: 'backpack', fill: 'fill-earth' },
+  CAMPSITE: { label: '공공 야영장', icon: 'tent', fill: 'fill-info' },
+  FOREST: { label: '자연휴양림', icon: 'tree', fill: 'fill-accent' },
+  BAKJI: { label: '박지', icon: 'backpack', fill: 'fill-bakji' },
 };
 
 // 표지기 핀 모양이다. 28×28 몸통(좌표 4~32) 아래로 뾰족한 끝이 (18, 42)에 온다.
@@ -23,7 +23,7 @@ const WARNING_OUTLINE_WIDTH = 4;
 const SELECTED_EXTRA_WIDTH = 4;
 
 const FOCUS_RING =
-  'outline-none focus-visible:ring-2 focus-visible:ring-sea focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+  'outline-none focus-visible:ring-2 focus-visible:ring-info focus-visible:ring-offset-2 focus-visible:ring-offset-canvas';
 
 function iconMarkup(name: IconName, attributes: string): string {
   return (
@@ -88,7 +88,7 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
   // 겹친 장소 수는 몸통 왼쪽 아래에 걸친다. 먹 바탕인 베이스캠프 수와 헷갈리지 않게 흰 바탕에 먹 글자로 그린다.
   if (stackedCount > 0) {
     markup +=
-      '<span data-pin-stacked class="pointer-events-none absolute bottom-2 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-ink bg-card px-1 font-mono text-xs tabular-nums text-ink"></span>';
+      '<span data-pin-stacked class="pointer-events-none absolute bottom-2 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-ink bg-surface px-1 font-mono text-xs tabular-nums text-ink"></span>';
   }
   button.innerHTML = markup;
   const countBadge = button.querySelector('[data-pin-count]');
@@ -202,7 +202,7 @@ export function createDraftPin(): HTMLElement {
   element.innerHTML =
     '<svg class="block overflow-visible" width="36" height="44" viewBox="0 0 36 44">' +
     `<path class="fill-white stroke-white" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" d="${PIN_PATH}"/>` +
-    `<path class="fill-earth stroke-white" stroke-width="2" stroke-dasharray="4 3" stroke-linejoin="round" d="${PIN_PATH}"/>` +
+    `<path class="fill-bakji stroke-white" stroke-width="2" stroke-dasharray="4 3" stroke-linejoin="round" d="${PIN_PATH}"/>` +
     iconMarkup('backpack', 'class="text-white" x="8" y="8" width="20" height="20"') +
     '</svg>';
   return element;
@@ -242,7 +242,7 @@ export function createPhotoPin(
   let yAnchor = 0.5;
   if (data.thumbnailUrl) {
     button.className =
-      'relative block h-11 w-11 cursor-pointer overflow-hidden rounded-control border border-white bg-earth ' +
+      'relative block h-11 w-11 cursor-pointer overflow-hidden rounded-control border border-white bg-bakji ' +
       'transition-[scale] duration-150 motion-reduce:transition-none ' +
       FOCUS_RING;
     const image = document.createElement('img');
@@ -262,7 +262,7 @@ export function createPhotoPin(
     button.innerHTML =
       '<svg class="block overflow-visible" width="36" height="44" viewBox="0 0 36 44" aria-hidden="true">' +
       `<path class="fill-white stroke-white" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" d="${PIN_PATH}"/>` +
-      `<path class="fill-earth" d="${PIN_PATH}"/>` +
+      `<path class="fill-bakji" d="${PIN_PATH}"/>` +
       iconMarkup('image', 'class="text-white" x="8" y="8" width="20" height="20"') +
       '</svg>';
   }

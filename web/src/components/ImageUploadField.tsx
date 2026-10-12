@@ -43,7 +43,7 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
             <ImagePreview file={image.file} url={image.url} alt={`올린 이미지 ${index + 1}`} />
             <p className="text-xs text-ink-muted">
               {image.status === 'uploading' && '올리는 중이에요'}
-              {image.status === 'done' && <span className="text-forest-deep">올렸어요</span>}
+              {image.status === 'done' && <span className="text-accent-deep">올렸어요</span>}
               {image.status === 'failed' && <span className="text-danger">올리지 못했어요</span>}
             </p>
             {image.status === 'failed' && image.error && (
@@ -101,8 +101,8 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
             <label
               htmlFor={inputId}
               className={[
-                'flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-control border border-dashed border-ink-subtle p-1 text-center text-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sea',
-                disabled ? 'cursor-not-allowed bg-paper-deep text-ink-muted' : 'cursor-pointer bg-card text-ink hover:bg-paper-deep',
+                'flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-control border border-dashed border-ink-subtle p-1 text-center text-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-info',
+                disabled ? 'cursor-not-allowed bg-fill text-ink-muted' : 'cursor-pointer bg-surface text-ink hover:bg-fill',
               ].join(' ')}
             >
               <Icon name="image" size={24} />
@@ -138,6 +138,6 @@ function ImagePreview({ file, url, alt }: { file?: File; url?: string; alt: stri
     return () => URL.revokeObjectURL(created);
   }, [file]);
 
-  const box = 'aspect-square w-full rounded-control border border-contour bg-paper-deep object-cover';
+  const box = 'aspect-square w-full rounded-control border border-line bg-fill object-cover';
   return <img ref={ref} src={file ? undefined : url} alt={alt} className={box} />;
 }

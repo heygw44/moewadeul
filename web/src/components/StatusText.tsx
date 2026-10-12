@@ -2,14 +2,14 @@ import type { ReactNode } from 'react';
 import type { IconName } from './iconPaths';
 import { Icon } from './icons';
 
-export type StatusTone = 'neutral' | 'closed' | 'forest' | 'sea' | 'earth' | 'warning' | 'danger';
+export type StatusTone = 'neutral' | 'closed' | 'accent' | 'info' | 'bakji' | 'warning' | 'danger';
 
 const TONE_CLASSES: Record<StatusTone, string> = {
   neutral: 'text-ink-muted',
   closed: 'text-ink-muted',
-  forest: 'text-forest-deep',
-  sea: 'text-sea',
-  earth: 'text-earth-strong',
+  accent: 'text-accent-deep',
+  info: 'text-info',
+  bakji: 'text-bakji-strong',
   warning: 'text-warning',
   danger: 'text-danger',
 };

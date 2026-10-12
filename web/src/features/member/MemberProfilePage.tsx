@@ -54,7 +54,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   let body: ReactNode;
   if (current === null) {
     body = showSkeleton ? (
-      <div className="flex flex-col gap-3 rounded-control border border-contour bg-card p-5">
+      <div className="flex flex-col gap-3 rounded-control border border-line bg-surface p-5">
         <Skeleton className="h-6 w-1/2" />
         <Skeleton className="h-16 w-full" />
       </div>
@@ -117,7 +117,7 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
         <p className="text-base text-ink-muted">로그인하면 이 회원의 신뢰 단계와 동행 기록을 볼 수 있어요.</p>
         <Link
           to={withNext('/login', pathname)}
-          className="inline-flex min-h-11 items-center self-start font-semibold text-forest underline underline-offset-2"
+          className="inline-flex min-h-11 items-center self-start font-semibold text-accent underline underline-offset-2"
         >
           로그인
         </Link>
@@ -140,7 +140,7 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
           본인확인된 값만 베이스캠프의 연령·동성 조건에 쓰여요. 자기 신고 값은 참고만 해 주세요.
         </p>
         {isMe && (
-          <Link to="/me" className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-forest">
+          <Link to="/me" className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-accent">
             내 정보 수정
           </Link>
         )}

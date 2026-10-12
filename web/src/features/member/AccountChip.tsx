@@ -21,7 +21,7 @@ export function AccountChip() {
     const here = pathname + search;
     return (
       <div className="pointer-events-auto inline-flex items-center">
-        <Link to={withNext('/login', here)} className={`${TEXT_LINK_CLASS} text-forest`}>
+        <Link to={withNext('/login', here)} className={`${TEXT_LINK_CLASS} text-accent`}>
           로그인
         </Link>
         <Link to={withNext('/signup', here)} className={`${TEXT_LINK_CLASS} text-ink`}>

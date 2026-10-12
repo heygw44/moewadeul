@@ -334,7 +334,7 @@ function CommunityAside() {
         <ul className="list-disc pl-5">
           <li>
             동행은{' '}
-            <Link to="/basecamps" className="font-semibold text-forest underline underline-offset-2">
+            <Link to="/basecamps" className="font-semibold text-accent underline underline-offset-2">
               베이스캠프
             </Link>
             에서 구해요.
@@ -386,12 +386,12 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
 
   const label = name === null ? '장소 관련 글' : `${name} 관련 글`;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 rounded-control border border-contour bg-card px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 rounded-control border border-line bg-surface px-4 py-3">
       <p className="text-base font-semibold text-ink">{label}</p>
       <button
         type="button"
         onClick={onRemove}
-        className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
+        className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
       >
         모든 글 보기
       </button>
@@ -405,12 +405,12 @@ function PostRow({ item }: { item: CommunityPostSummary }) {
     <li>
       <Link
         to={`/community/${item.postId}`}
-        className={`flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-paper-deep ${ROW_COLUMNS}`}
+        className={`flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-fill ${ROW_COLUMNS}`}
       >
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-base font-semibold text-ink">{item.title}</span>
           {item.commentCount > 0 && (
-            <span className="shrink-0 font-mono text-sm tabular-nums text-forest-deep">
+            <span className="shrink-0 font-mono text-sm tabular-nums text-accent-deep">
               [<span className="sr-only">댓글 </span>
               {item.commentCount}
               <span className="sr-only">개</span>]

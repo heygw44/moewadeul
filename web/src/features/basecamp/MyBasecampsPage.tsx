@@ -131,7 +131,7 @@ export function MyBasecampsPage() {
                   filter === 'ALL' && (
                     <Link
                       to="/basecamps"
-                      className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
+                      className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-surface px-4 font-semibold text-ink hover:bg-fill"
                     >
                       베이스캠프 찾기
                     </Link>
@@ -166,7 +166,7 @@ function BasecampCard({ item, showRelation }: { item: MyBasecampItem; showRelati
     <li>
       <Link
         to={`/basecamps/${item.basecampId}`}
-        className="flex flex-col gap-1 p-4 hover:bg-paper-deep"
+        className="flex flex-col gap-1 p-4 hover:bg-fill"
       >
         <span className="text-lg font-semibold text-ink">{item.title}</span>
         <MetaLine

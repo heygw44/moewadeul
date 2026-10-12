@@ -63,7 +63,7 @@ export function ReportDialog({ targetLabel, reasonOptions, alreadyReportedCode, 
     return (
       <Dialog title={title} onClose={onClose}>
         <div className="flex flex-col gap-4">
-          <p role="status" className="text-base font-semibold text-forest-deep">
+          <p role="status" className="text-base font-semibold text-accent-deep">
             신고를 접수했어요
           </p>
           <p className="text-sm text-ink-muted">관리자가 검토한 뒤 조치해요. 알려 주셔서 고마워요.</p>

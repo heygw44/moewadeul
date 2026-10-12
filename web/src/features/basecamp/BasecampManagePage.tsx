@@ -45,7 +45,7 @@ const KICK_OPTIONS: ReadonlyArray<ChoiceOption<KickReason>> = [
 ];
 
 const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill';
 
 type DetailResult = { basecampId: number; attempt: number; detail: BasecampDetail } | { basecampId: number; attempt: number; error: unknown };
 
@@ -212,7 +212,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
     body = (
       <>
         {done && (
-          <p role="status" className="text-sm font-semibold text-forest-deep">
+          <p role="status" className="text-sm font-semibold text-accent-deep">
             {done}
           </p>
         )}
@@ -382,7 +382,7 @@ function DialogButtons({
 function HeaderCard({ detail }: { detail: BasecampDetail }) {
   const status = BASECAMP_STATUS_META[detail.status];
   return (
-    <section className="flex flex-col gap-2 rounded-control border border-contour bg-card p-5">
+    <section className="flex flex-col gap-2 rounded-control border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold text-ink">{detail.title}</h2>
       <div className="flex flex-wrap items-center gap-2">
         <StatusText tone={status.tone}>{status.label}</StatusText>
@@ -532,11 +532,11 @@ function ApplicationRow({
   const badge = applicant.trustLevel === undefined ? null : trustLevelBadge(applicant.trustLevel);
   const profile = profileSummary(applicant);
   return (
-    <li className="flex flex-col gap-1 border-t border-contour py-3 first:border-t-0 first:pt-0">
+    <li className="flex flex-col gap-1 border-t border-line py-3 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-center gap-2">
         <Link
           to={`/members/${applicant.memberId}`}
-          className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
+          className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
         >
           {applicant.nickname}
         </Link>
@@ -572,15 +572,15 @@ function MembersCard({ detail, onKick }: { detail: BasecampDetail; onKick: (memb
           const badge = member.trustLevel === undefined ? null : trustLevelBadge(member.trustLevel);
           const profile = profileSummary(member);
           return (
-            <li key={member.memberId} className="flex flex-col gap-1 border-t border-contour py-2 first:border-t-0 first:pt-0">
+            <li key={member.memberId} className="flex flex-col gap-1 border-t border-line py-2 first:border-t-0 first:pt-0">
               <div className="flex flex-wrap items-center gap-2">
                 <Link
                   to={`/members/${member.memberId}`}
-                  className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
+                  className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
                 >
                   {member.nickname}
                 </Link>
-                {member.role === 'LEADER' && <StatusText tone="earth">캠프 리더</StatusText>}
+                {member.role === 'LEADER' && <StatusText tone="bakji">캠프 리더</StatusText>}
                 {badge && (
                   <StatusText tone={badge.tone} icon={badge.icon}>
                     {badge.label}

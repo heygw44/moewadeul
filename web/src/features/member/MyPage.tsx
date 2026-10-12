@@ -16,7 +16,7 @@ import { trustLevelBadge } from './memberLabels';
 import { withNext } from './nextPath';
 import { useSession } from './session';
 
-const SHORTCUT_LINK_CLASS = 'inline-flex min-h-11 items-center text-base font-semibold text-forest hover:text-forest-strong';
+const SHORTCUT_LINK_CLASS = 'inline-flex min-h-11 items-center text-base font-semibold text-accent hover:text-accent-strong';
 
 export function MyPage() {
   const session = useSession();
@@ -96,7 +96,7 @@ function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
         <button
           type="button"
           onClick={onLogout}
-          className="inline-flex min-h-11 items-center text-base font-semibold text-forest hover:underline"
+          className="inline-flex min-h-11 items-center text-base font-semibold text-accent hover:underline"
         >
           로그아웃
         </button>
@@ -118,7 +118,7 @@ function AccountCard({ me }: { me: Me }) {
       {me.status === 'UNVERIFIED' && (
         <Notice tone="warning" title="이메일 인증이 필요해요">
           <p>인증을 마쳐야 후기 쓰기, 박지 제보 같은 쓰기 기능을 쓸 수 있어요.</p>
-          <Link to="/verify-email" className="mt-1 inline-flex min-h-11 items-center font-semibold text-forest">
+          <Link to="/verify-email" className="mt-1 inline-flex min-h-11 items-center font-semibold text-accent">
             인증 코드 입력하기
           </Link>
         </Notice>
@@ -164,7 +164,7 @@ function TrustCard({ me }: { me: Me }) {
           <p className="text-sm text-ink">
             본인확인을 마치면 베이스캠프를 열 수 있어요. 성인만 할 수 있고, 출생연도와 성별만 확인해요.
           </p>
-          <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-2">
+          <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2">
             본인확인하기
           </Link>
         </div>

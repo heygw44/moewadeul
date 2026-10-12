@@ -72,7 +72,7 @@ export function UnverifiedNote({ action }: { action: string }) {
   return (
     <p className="text-sm text-ink-muted">
       이메일 인증을 마치면 {action}{' '}
-      <Link to="/verify-email" className="font-semibold text-forest underline underline-offset-2">
+      <Link to="/verify-email" className="font-semibold text-accent underline underline-offset-2">
         이메일 인증하기
       </Link>
     </p>

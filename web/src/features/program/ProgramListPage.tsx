@@ -20,7 +20,7 @@ import { usePagedList } from './usePagedList';
 type ProgramFilter = ProgramListStatus | 'ALL';
 
 const SECONDARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill';
 
 function fetchPrograms(filter: ProgramFilter, page: number, signal?: AbortSignal) {
   return listPrograms(filter === 'ALL' ? undefined : filter, page, signal);
@@ -136,8 +136,8 @@ function ProgramRow({ item }: { item: ProgramSummary }) {
   );
   return (
     <li>
-      <Link to={`/programs/${item.programId}`} className="flex min-h-11 gap-4 px-4 py-4 hover:bg-paper-deep">
-        <span className="flex w-14 shrink-0 flex-col items-center border-r border-contour pr-3 text-center">
+      <Link to={`/programs/${item.programId}`} className="flex min-h-11 gap-4 px-4 py-4 hover:bg-fill">
+        <span className="flex w-14 shrink-0 flex-col items-center border-r border-line pr-3 text-center">
           <span className="text-xs text-ink-muted">{date.month}</span>
           <span className="font-mono text-xl tabular-nums text-ink">{date.day}</span>
           <span className="text-xs text-ink-muted">{date.weekday}</span>
