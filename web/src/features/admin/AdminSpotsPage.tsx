@@ -94,7 +94,7 @@ function SpotReview() {
             className={`inline-flex min-h-11 items-center rounded-control border px-4 font-semibold ${
               item.status === tab
                 ? 'border-accent bg-accent-soft text-accent-deep'
-                : 'border-ink-subtle bg-surface text-ink hover:bg-fill'
+                : 'border-line bg-surface text-ink hover:bg-fill'
             }`}
           >
             {item.label}
@@ -171,7 +171,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-control border border-line bg-surface p-4">
+    <li className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.name}</h3>
         <StatusText tone={meta.tone}>{meta.label}</StatusText>
@@ -225,7 +225,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       <div className="flex flex-wrap items-center gap-2">
         <Link
           to={`/spots/${item.spotId}`}
-          className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-surface px-4 font-semibold text-ink hover:bg-fill"
+          className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
         >
           장소 보기
         </Link>

@@ -102,7 +102,7 @@ function MemoryReview() {
             className={`inline-flex min-h-11 items-center rounded-control border px-4 font-semibold ${
               item.status === tab
                 ? 'border-accent bg-accent-soft text-accent-deep'
-                : 'border-ink-subtle bg-surface text-ink hover:bg-fill'
+                : 'border-line bg-surface text-ink hover:bg-fill'
             }`}
           >
             {item.label}
@@ -179,7 +179,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-control border border-line bg-surface p-4">
+    <li className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.author.nickname}의 발자국</h3>
         <StatusText tone="neutral">{item.status === 'HIDDEN' ? '숨김' : '검토 대기'}</StatusText>

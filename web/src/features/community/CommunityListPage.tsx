@@ -386,7 +386,7 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
 
   const label = name === null ? '장소 관련 글' : `${name} 관련 글`;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 rounded-control border border-line bg-surface px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 rounded-sheet border border-line bg-surface px-4 py-3">
       <p className="text-base font-semibold text-ink">{label}</p>
       <button
         type="button"

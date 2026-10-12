@@ -69,7 +69,7 @@ function PreviewPin({ kind, warning = false, selected = false, style }: PreviewP
 }
 
 const CHIP_CLASS =
-  'inline-flex min-h-9 items-center gap-1.5 rounded-control border border-line bg-surface px-2.5 text-sm font-semibold';
+  'inline-flex min-h-9 items-center gap-1.5 rounded-sheet border border-line bg-surface px-2.5 text-sm font-semibold';
 
 type PreviewSpot = { name: string; kind: MarkerKind; warning?: boolean; note?: ReactNode };
 
@@ -203,7 +203,7 @@ export function TrustPreview() {
 // 흐름 단계마다 붙는 작은 조각들이다.
 export function StepSpotFragment() {
   return (
-    <PreviewFrame caption={false} className="overflow-hidden rounded-control border border-line bg-surface">
+    <PreviewFrame caption={false} className="overflow-hidden rounded-sheet border border-line bg-surface">
       <PreviewSpotRow name="솔숲 야영장" kind="CAMPSITE" note={<StatusText tone="accent">베이스캠프 2</StatusText>} />
     </PreviewFrame>
   );
@@ -213,7 +213,7 @@ export function StepBasecampFragment() {
   return (
     <PreviewFrame
       caption={false}
-      className="flex flex-col gap-2 rounded-control border border-line bg-surface px-4 py-3"
+      className="flex flex-col gap-2 rounded-sheet border border-line bg-surface px-4 py-3"
     >
       <span className="flex items-center justify-between gap-2">
         <span className="truncate text-base text-ink">주말 1박, 솔숲 야영장</span>
@@ -233,7 +233,7 @@ export function StepProgramFragment() {
   return (
     <PreviewFrame
       caption={false}
-      className="flex flex-col gap-2 rounded-control border border-line bg-surface px-4 py-3"
+      className="flex flex-col gap-2 rounded-sheet border border-line bg-surface px-4 py-3"
     >
       <span className="flex items-center justify-between gap-2">
         <span className="truncate text-base text-ink">가을 능선 백패킹</span>

@@ -94,7 +94,7 @@ function ReportDetail({ reportId }: { reportId: number }) {
           </Button>
           <Link
             to="/admin/reports"
-            className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-surface px-4 font-semibold text-ink hover:bg-fill"
+            className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
           >
             신고 목록
           </Link>

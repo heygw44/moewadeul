@@ -47,7 +47,7 @@ const REJOIN_OPTIONS: ReadonlyArray<ChoiceOption<'YES' | 'NO'>> = [
 ];
 
 const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
 
 function tabFromSearch(search: string): Tab {
   return new URLSearchParams(search).get('tab') === 'received' ? 'received' : 'pending';
@@ -405,7 +405,7 @@ function ReceivedTab() {
             <section
               // 공개 전 후기는 ID가 없고, 한 베이스캠프에서 여러 개가 올 수 있어서 순서로 구분한다.
               key={`sealed-${item.basecampId}-${index}`}
-              className="flex flex-col gap-2 rounded-control border border-line bg-surface p-5"
+              className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-5"
             >
               <p className="text-base text-ink">내 후기를 쓰면 상대 후기를 볼 수 있어요.</p>
               <Link to={`/basecamps/${item.basecampId}`} className={`${LINK_BUTTON_CLASS} self-start`}>

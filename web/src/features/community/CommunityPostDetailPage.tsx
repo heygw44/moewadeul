@@ -81,7 +81,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
       <HubLayout title="커뮤니티" breadcrumb={<BackToCommunity />} aside={asideNode}>
         <div aria-busy="true">
           {showSkeleton && (
-            <div className="flex flex-col gap-3 rounded-control border border-line bg-surface p-5">
+            <div className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
               <Skeleton className="h-8 w-2/3" />
               <Skeleton className="h-40 w-full" />
             </div>
@@ -256,7 +256,7 @@ type PostContentProps = {
 
 function PostContent({ post, onLikeChanged, onImageError }: PostContentProps) {
   return (
-    <article className="rounded-control border border-line bg-surface">
+    <article className="rounded-sheet border border-line bg-surface">
       <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink">{post.content}</p>
 
       {post.images.length > 0 && (

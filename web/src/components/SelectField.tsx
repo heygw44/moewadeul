@@ -20,7 +20,7 @@ type SelectFieldProps = Omit<ComponentPropsWithRef<'select'>, 'children'> & {
 
 // 입력란 글자는 16px 아래로 내리지 않는다. iOS가 작은 입력란에 포커스하면 화면을 확대하기 때문이다.
 const SELECT_BASE =
-  'min-h-11 w-full rounded-control border bg-surface px-3 text-base text-ink disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-muted';
+  'min-h-11 w-full rounded-control border bg-fill px-3 text-base text-ink focus:bg-surface focus:border-info disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-subtle';
 
 export function SelectField({
   label,
@@ -51,7 +51,7 @@ export function SelectField({
         id={selectId}
         aria-invalid={error || invalid ? true : undefined}
         aria-describedby={describedByIds}
-        className={`${SELECT_BASE} ${error || invalid ? 'border-danger' : 'border-ink-subtle'}`}
+        className={`${SELECT_BASE} ${error || invalid ? 'border-danger' : 'border-line'}`}
         {...rest}
       >
         {options.map((option) => (

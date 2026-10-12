@@ -127,7 +127,7 @@ function ReportList() {
         <EmptyState framed title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꾸면 다시 찾아요." />
       )}
       {state !== null && state.items.length > 0 && (
-        <ul className="flex flex-col rounded-control border border-line bg-surface">
+        <ul className="flex flex-col rounded-sheet border border-line bg-surface">
           {state.items.map((item) => (
             <ReportRow key={item.reportId} item={item} />
           ))}

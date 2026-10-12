@@ -18,5 +18,5 @@ export function EmptyState({ title, description, action, framed = false }: Empty
     </div>
   );
   if (!framed) return body;
-  return <div className="rounded-control border border-line bg-surface">{body}</div>;
+  return <div className="rounded-sheet border border-line bg-surface">{body}</div>;
 }

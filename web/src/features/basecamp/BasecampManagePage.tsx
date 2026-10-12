@@ -45,7 +45,7 @@ const KICK_OPTIONS: ReadonlyArray<ChoiceOption<KickReason>> = [
 ];
 
 const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
 
 type DetailResult = { basecampId: number; attempt: number; detail: BasecampDetail } | { basecampId: number; attempt: number; error: unknown };
 
@@ -382,7 +382,7 @@ function DialogButtons({
 function HeaderCard({ detail }: { detail: BasecampDetail }) {
   const status = BASECAMP_STATUS_META[detail.status];
   return (
-    <section className="flex flex-col gap-2 rounded-control border border-line bg-surface p-5">
+    <section className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold text-ink">{detail.title}</h2>
       <div className="flex flex-wrap items-center gap-2">
         <StatusText tone={status.tone}>{status.label}</StatusText>

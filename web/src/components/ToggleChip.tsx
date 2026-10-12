@@ -12,7 +12,7 @@ type ToggleChipProps = {
 const PRESSED =
   'inline-flex min-h-11 items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-ink';
 const IDLE =
-  'inline-flex min-h-11 items-center gap-2 rounded-control border border-ink-subtle bg-surface px-3 text-base text-ink hover:bg-fill';
+  'inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3 text-base text-ink hover:bg-fill';
 
 // 여러 개를 함께 고를 수 있는 칩이다. 고른 칩은 색만으로 구분되지 않게 체크 아이콘을 함께 보여 준다.
 export function ToggleChip({ pressed, onToggle, children }: ToggleChipProps) {

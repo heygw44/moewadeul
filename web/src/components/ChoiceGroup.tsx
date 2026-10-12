@@ -22,7 +22,7 @@ type ChoiceGroupProps<T extends string> = {
 const OPTION_SELECTED =
   'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-ink';
 const OPTION_IDLE =
-  'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-ink-subtle bg-surface px-3 text-base text-ink hover:bg-fill';
+  'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-line bg-surface px-3 text-base text-ink hover:bg-fill';
 
 // 라디오 버튼 묶음이다. 선택 항목이 하나뿐이고 보기가 적을 때 쓴다.
 // 기본 선택을 두지 않을 수 있어서, 잘못된 기본값이 서버에 저장되는 일을 막는 데도 쓴다.
