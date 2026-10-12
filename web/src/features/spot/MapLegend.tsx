@@ -28,7 +28,7 @@ export function MapLegend() {
   }
 
   return (
-    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col rounded-control border border-line bg-surface text-ink lg:bottom-4">
+    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col rounded-control border border-transparent bg-surface shadow-raise text-ink lg:bottom-4">
       <button
         type="button"
         onClick={toggle}

@@ -63,7 +63,7 @@ const DRAFT_FOCUS_LEVEL = 5;
 const CLUSTER_ZOOM_STEP = 2;
 
 const CHIP_CLASS =
-  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3';
+  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3';
 
 type MapPageProps = {
   spotId?: number;
@@ -446,7 +446,7 @@ export function MapPage({
                 <BrandMark className="text-lg" />
               </Link>
               <div className="flex flex-wrap justify-end gap-2">
-                <NotificationBellLink className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3 text-ink hover:bg-fill lg:hidden" />
+                <NotificationBellLink className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-ink hover:bg-fill lg:hidden" />
                 {map && (
                   <>
                     {!reporting && !basecampMode && !opening && <ReportButton />}
@@ -457,7 +457,7 @@ export function MapPage({
                       className={
                         terrainOn
                           ? 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-accent-deep'
-                          : 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3 text-base font-semibold text-ink hover:bg-fill'
+                          : 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-base font-semibold text-ink hover:bg-fill'
                       }
                     >
                       <Icon name="terrain" size={20} />
@@ -561,7 +561,7 @@ function FilterButton({ count, onClick }: { count: number; onClick: () => void }
       className={
         active
           ? 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-accent-deep'
-          : 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-ink-subtle bg-surface px-3 text-base font-semibold text-ink hover:bg-fill'
+          : 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-base font-semibold text-ink hover:bg-fill'
       }
     >
       <Icon name="sliders" size={20} />
@@ -672,7 +672,7 @@ function ReportButton() {
   return (
     <Link
       to={target}
-      className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-line bg-surface px-3 text-base font-semibold text-ink hover:bg-fill"
+      className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-base font-semibold text-ink hover:bg-fill"
     >
       <Icon name="backpack" size={20} />
       박지 제보

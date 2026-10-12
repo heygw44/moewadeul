@@ -21,7 +21,7 @@ const SAME_PLACE_RADIUS_KM = 0.05;
 const GUIDE_LINK_CLASS = 'inline-flex min-h-11 items-center text-accent underline underline-offset-2';
 
 const MEMORY_LINK_CLASS =
-  'inline-flex min-h-11 w-full items-center justify-center rounded-control border border-ink-subtle bg-surface px-4 text-base font-semibold text-ink hover:bg-fill';
+  'inline-flex min-h-11 w-full items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
 
 // 제보 폼이 서버에 보내는 좌표와 같은 정밀도로 줄인다.
 function roundCoordinate(value: number): number {
