@@ -11,6 +11,7 @@ import { ProgramListPage } from '../features/program/ProgramListPage';
 import { MyBasecampsPage } from '../features/basecamp/MyBasecampsPage';
 import { NotificationsPage } from '../features/notification/NotificationsPage';
 import { CompanionReviewsPage } from '../features/review/CompanionReviewsPage';
+import { AccountSettingsPage } from '../features/member/AccountSettingsPage';
 import { LoginPage } from '../features/member/LoginPage';
 import { MemberProfilePage } from '../features/member/MemberProfilePage';
 import { MyPage } from '../features/member/MyPage';
@@ -109,6 +110,7 @@ export const routes: RouteDef[] = [
       return programId === null ? <NotFoundPage /> : <ProgramDetailPage key={programId} programId={programId} />;
     },
   },
+  { path: '/me/settings', render: () => <AccountSettingsPage /> },
   { path: '/me/basecamps', render: () => <MyBasecampsPage /> },
   { path: '/me/program-applications', render: () => <MyProgramApplicationsPage /> },
   { path: '/me/companion-reviews', render: () => <CompanionReviewsPage /> },
