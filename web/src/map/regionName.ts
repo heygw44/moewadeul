@@ -42,3 +42,12 @@ function findRegion(position: LatLng): Promise<kakao.maps.services.RegionCodeRes
     });
   });
 }
+
+// 좌표가 속한 읍·면·동 이름을 "시도 시군구 읍면동"으로 만든다. 행정구역이 없으면 null이고, 조회가 실패하면 거절한다.
+export async function regionNameAt(position: LatLng): Promise<string | null> {
+  await loadKakaoMaps();
+  const region = await findRegion(position);
+  if (region === null) return null;
+  const name = [region.region_1depth_name, region.region_2depth_name, region.region_3depth_name].filter(Boolean).join(' ');
+  return name || null;
+}

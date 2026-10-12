@@ -1008,7 +1008,7 @@ export interface ImageUpload {
 export type CommunityImageUploadRequest = ImageUploadRequest;
 export type CommunityImageUpload = ImageUpload;
 
-// 추억 기록(F-33). 공개 범위는 PRIVATE(작성자만), PUBLIC(누구나)이다.
+// 추억 기록. 공개 범위는 PRIVATE(작성자만), PUBLIC(누구나)이다.
 export type MemoryVisibility = 'PRIVATE' | 'PUBLIC';
 
 export interface MemoryAuthor {
@@ -1034,12 +1034,18 @@ export interface MemoryDetail {
   // 정확한 좌표는 작성자에게만 준다.
   lat?: number;
   lng?: number;
+  // 작성자가 아닌 사람에게는 소수 둘째 자리(약 1km)로 줄인 좌표만 준다.
+  approxLat?: number;
+  approxLng?: number;
   visitedDate: string;
   nights: number;
   // 글이 없으면 서버가 뺀다.
   content?: string;
   visibility: MemoryVisibility;
   images: MemoryImage[];
+  likeCount: number;
+  // 비로그인 요청에는 서버가 뺀다.
+  likedByMe?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -1056,6 +1062,42 @@ export interface MemorySummary {
   thumbnailUrl?: string;
   imageCount: number;
   createdAt: string;
+}
+
+// 공개 피드 항목. 좌표는 약 1km로 줄인 값이고, 공개 기록만 온다.
+export interface MemoryFeedItem {
+  memoryId: number;
+  author: MemoryAuthor;
+  spot?: MemoryLinkedSpot;
+  approxLat: number;
+  approxLng: number;
+  visitedDate: string;
+  nights: number;
+  excerpt?: string;
+  images: MemoryImage[];
+  likeCount: number;
+  likedByMe?: boolean;
+  createdAt: string;
+}
+
+// 다른 회원의 발자국 항목. 공개 기록만 오고 좌표는 약 1km로 줄인 값이다.
+export interface MemberMemorySummary {
+  memoryId: number;
+  spot?: MemoryLinkedSpot;
+  approxLat: number;
+  approxLng: number;
+  visitedDate: string;
+  nights: number;
+  excerpt?: string;
+  thumbnailUrl?: string;
+  imageCount: number;
+  likeCount: number;
+  createdAt: string;
+}
+
+export interface MemoryLikeResponse {
+  liked: boolean;
+  likeCount: number;
 }
 
 export interface MemoryCreateRequest {

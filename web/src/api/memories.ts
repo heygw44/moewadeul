@@ -3,9 +3,13 @@ import type {
   ImageUpload,
   ImageUploadRequest,
   MemoryCreateRequest,
+  MemberMemorySummary,
   MemoryDetail,
+  MemoryFeedItem,
+  MemoryLikeResponse,
   MemorySummary,
   MemoryUpdateRequest,
+  Page,
 } from './types';
 
 export function createMemory(req: MemoryCreateRequest): Promise<{ memoryId: number }> {
@@ -32,4 +36,22 @@ export function requestMemoryImageUpload(req: ImageUploadRequest): Promise<Image
 // 내 기록을 공개 범위와 상관없이 모두 방문일이 늦은 순서로 준다. 지도에 한 번에 그리려고 서버가 페이지 없이 준다.
 export function fetchMyMemories(signal?: AbortSignal): Promise<MemorySummary[]> {
   return apiFetch<MemorySummary[]>('/api/me/memories', { signal });
+}
+
+// 공개 기록을 최신순으로 준다. 비로그인도 볼 수 있다.
+export function fetchMemoryFeed(page: number, size: number, signal?: AbortSignal): Promise<Page<MemoryFeedItem>> {
+  return apiFetch<Page<MemoryFeedItem>>(`/api/memories/feed?page=${page}&size=${size}`, { signal });
+}
+
+// 다른 회원의 공개 기록만 준다. 회원이 없거나 탈퇴했으면 404다.
+export function fetchMemberMemories(memberId: number, signal?: AbortSignal): Promise<MemberMemorySummary[]> {
+  return apiFetch<MemberMemorySummary[]>(`/api/members/${memberId}/memories`, { signal });
+}
+
+export function likeMemory(memoryId: number): Promise<MemoryLikeResponse> {
+  return apiFetch<MemoryLikeResponse>(`/api/memories/${memoryId}/like`, { method: 'PUT' });
+}
+
+export function unlikeMemory(memoryId: number): Promise<MemoryLikeResponse> {
+  return apiFetch<MemoryLikeResponse>(`/api/memories/${memoryId}/like`, { method: 'DELETE' });
 }

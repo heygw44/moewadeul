@@ -45,7 +45,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
   const editMemoryId = props.mode === 'edit' ? props.memoryId : null;
 
   useEffect(() => {
-    document.title = props.mode === 'create' ? '추억 남기기 · 뫼와들' : '추억 수정 · 뫼와들';
+    document.title = props.mode === 'create' ? '발자국 남기기 · 뫼와들' : '발자국 고치기 · 뫼와들';
   }, [props.mode]);
 
   // 기록은 로그인한 세션으로만 남긴다. 로그인한 뒤 이 화면으로 돌아오게 한다.
@@ -55,7 +55,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
 
   const layout = (children: ReactNode) => (
     <HubLayout
-      title={props.mode === 'create' ? '추억 남기기' : '추억 수정'}
+      title={props.mode === 'create' ? '발자국 남기기' : '발자국 고치기'}
       description={props.mode === 'create' ? '다녀온 곳을 사진과 글로 남겨 두세요.' : undefined}
       breadcrumb={
         <Link to={editMemoryId === null ? '/map' : `/memories/${editMemoryId}`} className={CRUMB_LINK}>
@@ -81,7 +81,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
   if (session.me.status === 'UNVERIFIED') {
     return layout(
       <div className="rounded-control border border-contour bg-card p-5">
-        <Notice tone="warning" title="이메일 인증을 마치면 추억을 남길 수 있어요">
+        <Notice tone="warning" title="이메일 인증을 마치면 발자국을 남길 수 있어요">
           <div className="flex flex-col gap-3">
             <p>받은 인증 코드를 입력하면 바로 남길 수 있어요.</p>
             <div>
@@ -132,7 +132,7 @@ function CreateForm() {
       <EmptyState
         framed
         title="어디를 다녀왔는지 골라 주세요"
-        description="지도를 길게 누르거나 우클릭하고 '여기에 추억 남기기'를 누르면 그 위치로 기록해요."
+        description="지도를 길게 누르거나 우클릭하고 '여기에 발자국 남기기'를 누르면 그 위치로 기록해요."
         action={
           <Link to="/map" className={SECONDARY_LINK_CLASS}>
             지도로 가기
@@ -328,7 +328,7 @@ function MemoryForm(props: MemoryFormProps) {
     <form
       noValidate
       onSubmit={handleSubmit}
-      aria-label={props.mode === 'create' ? '추억 남기기' : '추억 수정'}
+      aria-label={props.mode === 'create' ? '발자국 남기기' : '발자국 고치기'}
       className="divide-y divide-contour rounded-control border border-contour bg-card"
     >
       {formError && (

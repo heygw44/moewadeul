@@ -18,13 +18,13 @@ type SiteHeaderProps = {
   className?: string;
 };
 
-const PRIMARY_KEYS = new Set(['map', 'basecamps', 'community', 'programs']);
+const PRIMARY_KEYS = new Set(['map', 'basecamps', 'footprints', 'community', 'programs']);
 const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
 
 // 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 머리글이다. 데스크톱은 서비스 이름 줄과 메뉴 줄, 두 줄이다.
 // 지도 화면을 포함한 모든 화면에서 가운데 최대 폭(max-w-screen-xl) 안에 둔다. 그래서 메뉴로 화면을 오가도 로고와 메뉴 자리가 움직이지 않는다.
 // 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 메뉴 버튼은 하단 탭이 없는 랜딩·404(mobileAccount)에만 둔다.
-// 하단 탭이 있는 화면에서 메뉴 버튼까지 두면 같은 네 메뉴가 한 화면에 두 번 있게 된다.
+// 하단 탭이 있는 화면에서 메뉴 버튼까지 두면 같은 다섯 메뉴가 한 화면에 두 번 있게 된다.
 export function SiteHeader({ mobileAccount = false, minimal = false, className = '' }: SiteHeaderProps) {
   const { pathname, search } = useLocation();
   const session = useSession();
@@ -65,6 +65,16 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
               </Link>
             )}
             <NotificationBellLink className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-control px-2 text-ink hover:bg-paper-deep lg:hidden" />
+            {!mobileAccount && signedIn && session.me !== null && (
+              <Link
+                to="/me"
+                aria-label={`내 정보: ${session.me.nickname}`}
+                aria-current={pathname === '/me' ? 'page' : undefined}
+                className="inline-flex min-h-11 max-w-28 min-w-11 items-center px-2 text-sm text-ink underline-offset-2 hover:underline lg:hidden"
+              >
+                <span className="truncate">{session.me.nickname}</span>
+              </Link>
+            )}
             <div className={mobileAccount ? 'flex min-w-0' : 'hidden min-w-0 lg:flex'}>
               <AccountChip />
             </div>

@@ -33,7 +33,9 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.GET, "/api/community/posts"),
             new Endpoint(HttpMethod.GET, "/api/community/posts/1"),
             new Endpoint(HttpMethod.GET, "/api/community/posts/1/comments"),
-            new Endpoint(HttpMethod.GET, "/api/memories/1"));
+            new Endpoint(HttpMethod.GET, "/api/memories/feed"),
+            new Endpoint(HttpMethod.GET, "/api/memories/1"),
+            new Endpoint(HttpMethod.GET, "/api/members/1/memories"));
 
     // 로그인만 하면 이메일 인증을 마치지 않은 회원도 부를 수 있다.
     static final List<Endpoint> LOGIN = List.of(
@@ -111,6 +113,8 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.DELETE, "/api/community/comments/1"),
             new Endpoint(HttpMethod.PUT, "/api/community/posts/1/like"),
             new Endpoint(HttpMethod.DELETE, "/api/community/posts/1/like"),
+            new Endpoint(HttpMethod.PUT, "/api/memories/1/like"),
+            new Endpoint(HttpMethod.DELETE, "/api/memories/1/like"),
             new Endpoint(HttpMethod.POST, "/api/community/posts/1/reports"),
             new Endpoint(HttpMethod.POST, "/api/community/comments/1/reports"));
 

@@ -37,7 +37,9 @@ public class SecurityConfig {
         "/api/community/posts",
         "/api/community/posts/*",
         "/api/community/posts/*/comments",
+        "/api/memories/feed",
         "/api/memories/*",
+        "/api/members/*/memories",
     };
 
     private static final String[] PUBLIC_POST_PATTERNS = {
@@ -84,7 +86,7 @@ public class SecurityConfig {
     };
 
     private static final String[] VERIFIED_PUT_PATTERNS = {
-        "/api/basecamps/*/contact", "/api/community/posts/*/like",
+        "/api/basecamps/*/contact", "/api/community/posts/*/like", "/api/memories/*/like",
     };
 
     private static final String[] VERIFIED_PATCH_PATTERNS = {
@@ -103,6 +105,7 @@ public class SecurityConfig {
         "/api/community/posts/*",
         "/api/community/comments/*",
         "/api/community/posts/*/like",
+        "/api/memories/*/like",
         "/api/basecamps/*/applications/me",
         "/api/basecamps/*/members/me",
         "/api/programs/*/vacancy-alerts",

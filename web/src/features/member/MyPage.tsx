@@ -64,6 +64,11 @@ function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </Link>
         </li>
         <li>
+          <Link to="/me/memories" className={SHORTCUT_LINK_CLASS}>
+            내 발자국 지도
+          </Link>
+        </li>
+        <li>
           <Link to="/me/program-applications" className={SHORTCUT_LINK_CLASS}>
             내 행사 신청
           </Link>

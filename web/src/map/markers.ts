@@ -221,3 +221,65 @@ export function createSearchPin(): HTMLElement {
     '</svg>';
   return element;
 }
+
+export interface PhotoPin {
+  element: HTMLButtonElement;
+  // 오버레이를 놓을 세로 기준이다. 사진 칸은 위치가 가운데, 사진이 없을 때의 핀은 끝이 위치다.
+  yAnchor: number;
+  setSelected(selected: boolean): void;
+}
+
+// 추억 기록 하나를 지도에 나타내는 핀이다. 사진이 있으면 44px 정사각 사진 칸이고, 없으면 박지 핀 모양이다.
+// 사진은 글로 설명할 내용이 없어서 alt를 비우고, 버튼의 aria-label이 기록을 설명한다.
+export function createPhotoPin(
+  data: { thumbnailUrl?: string; label: string },
+  onActivate: () => void,
+): PhotoPin {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.setAttribute('aria-label', data.label);
+
+  let yAnchor = 0.5;
+  if (data.thumbnailUrl) {
+    button.className =
+      'relative block h-11 w-11 cursor-pointer overflow-hidden rounded-control border border-white bg-earth ' +
+      'transition-[scale] duration-150 motion-reduce:transition-none ' +
+      FOCUS_RING;
+    const image = document.createElement('img');
+    image.src = data.thumbnailUrl;
+    image.alt = '';
+    image.draggable = false;
+    image.className = 'block h-full w-full object-cover';
+    // 조회 주소가 만료되는 등으로 사진을 못 받으면 사진 칸을 흙색 바탕만 남긴다.
+    image.addEventListener('error', () => image.remove());
+    button.appendChild(image);
+  } else {
+    yAnchor = 1;
+    button.className =
+      'relative flex h-11 w-11 cursor-pointer items-end justify-center rounded-control origin-bottom ' +
+      'transition-[scale] duration-150 motion-reduce:transition-none ' +
+      FOCUS_RING;
+    button.innerHTML =
+      '<svg class="block overflow-visible" width="36" height="44" viewBox="0 0 36 44" aria-hidden="true">' +
+      `<path class="fill-white stroke-white" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" d="${PIN_PATH}"/>` +
+      `<path class="fill-earth" d="${PIN_PATH}"/>` +
+      iconMarkup('image', 'class="text-white" x="8" y="8" width="20" height="20"') +
+      '</svg>';
+  }
+
+  // 키보드의 Enter·Space도 click으로 들어온다. 지도까지 클릭이 전달되지 않게 여기서 멈춘다.
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    onActivate();
+  });
+
+  function setSelected(selected: boolean) {
+    button.classList.toggle('scale-125', selected);
+    button.classList.toggle('ring-2', selected && Boolean(data.thumbnailUrl));
+    button.classList.toggle('ring-white', selected && Boolean(data.thumbnailUrl));
+    button.setAttribute('aria-pressed', String(selected));
+  }
+  setSelected(false);
+
+  return { element: button, yAnchor, setSelected };
+}

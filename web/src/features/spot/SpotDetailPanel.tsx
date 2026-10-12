@@ -233,7 +233,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
 
       <section className={SECTION_CLASS} aria-labelledby="spot-memory-title">
         <h3 id="spot-memory-title" className={SECTION_TITLE_CLASS}>
-          추억
+          발자국
         </h3>
         <p className="mt-1 text-sm text-ink-muted">다녀온 날의 사진과 글을 남겨 두세요. 처음에는 나만 볼 수 있어요.</p>
         <div className="mt-2">
@@ -241,7 +241,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
             to={newMemoryPath({ lat: detail.lat, lng: detail.lng }, detail.spotId)}
             className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
           >
-            추억 남기기
+            발자국 남기기
           </Link>
         </div>
       </section>

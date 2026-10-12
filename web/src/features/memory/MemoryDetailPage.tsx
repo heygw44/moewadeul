@@ -16,7 +16,10 @@ import { formatLocalDate } from '../../lib/datetime';
 import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { useSession } from '../member/session';
 import { LocationLabel } from '../spot/LocationLabel';
+import { ApproxLocationLabel } from './ApproxLocationLabel';
 import { nightsLabel, VISIBILITY_LABEL } from './memoryLabels';
+import { MemoryLikeButton } from './MemoryLikeButton';
+import { MemoryPhotoCarousel } from './MemoryPhotoCarousel';
 
 type LoadResult = { memoryId: number; memory: MemoryDetail } | { memoryId: number; error: unknown };
 
@@ -47,23 +50,26 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
 
   const current = result?.memoryId === memoryId ? result : null;
   const showSkeleton = useDelayedFlag(current === null);
-  const title = current !== null && 'memory' in current ? titleOf(current.memory) : '추억 기록';
+  const title = current !== null && 'memory' in current ? titleOf(current.memory) : '발자국';
 
   useEffect(() => {
     document.title = `${title} · 뫼와들`;
   }, [title]);
 
   const reload = () => setAttempt((value) => value + 1);
+  // 작성자는 내 발자국 지도로, 그 밖의 사람은 발자국으로 돌아간다. 아직 모르거나 기록을 못 받았을 때는 발자국으로 둔다.
+  const authorId = current !== null && 'memory' in current ? current.memory.author.memberId : null;
+  const viewerIsAuthor = authorId !== null && session.status === 'authenticated' && session.me?.memberId === authorId;
   const breadcrumb = (
-    <Link to="/map" className={CRUMB_LINK}>
+    <Link to={viewerIsAuthor ? '/me/memories' : '/memories'} className={CRUMB_LINK}>
       <Icon name="chevronLeft" size={16} />
-      지도
+      {viewerIsAuthor ? '내 발자국 지도' : '발자국'}
     </Link>
   );
 
   if (current === null) {
     return (
-      <HubLayout title="추억 기록" breadcrumb={breadcrumb} width="narrow">
+      <HubLayout title="발자국" breadcrumb={breadcrumb} width="narrow">
         <div aria-busy="true">
           {showSkeleton && (
             <div className="flex flex-col gap-3 rounded-control border border-contour bg-card p-5">
@@ -108,7 +114,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   }
 
   return (
-    <HubLayout title="추억 기록" breadcrumb={breadcrumb} width="narrow">
+    <HubLayout title="발자국" breadcrumb={breadcrumb} width="narrow">
       <div className="flex flex-col gap-3">
         <Notice tone="danger" title="기록을 불러오지 못했어요">
           {toUserMessage(current.error)}
@@ -173,6 +179,11 @@ function MemoryActions({ memoryId }: { memoryId: number }) {
 
 function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImageError: () => void }) {
   const position = memory.lat !== undefined && memory.lng !== undefined ? { lat: memory.lat, lng: memory.lng } : null;
+  // 작성자가 아닌 사람에게는 정확한 좌표 대신 약 1km로 줄인 좌표만 온다.
+  const approxPosition =
+    memory.approxLat !== undefined && memory.approxLng !== undefined
+      ? { lat: memory.approxLat, lng: memory.approxLng }
+      : null;
   return (
     <article className="divide-y divide-contour rounded-control border border-contour bg-card">
       {position !== null && (
@@ -181,26 +192,27 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
           <LocationLabel position={position} />
         </div>
       )}
+      {position === null && approxPosition !== null && (
+        <div className="flex flex-col gap-1 px-5 py-4">
+          <p className="text-sm text-ink-muted">다녀온 곳 · 대략 위치예요</p>
+          <ApproxLocationLabel position={approxPosition} />
+        </div>
+      )}
       {memory.content && (
         <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink">{memory.content}</p>
       )}
       {memory.images.length > 0 && (
-        <ul className="flex flex-col gap-3 px-5 py-5">
-          {memory.images.map((image, index) => (
-            <li key={image.imageId}>
-              <img
-                src={image.url}
-                alt={`기록 사진 ${index + 1} / ${memory.images.length}`}
-                loading="lazy"
-                onError={onImageError}
-                className="max-h-[32rem] w-full rounded-control border border-contour bg-paper-deep object-contain"
-              />
-            </li>
-          ))}
-        </ul>
+        <div className="px-5 py-5">
+          <MemoryPhotoCarousel images={memory.images} owner={memory.author.nickname} onImageError={onImageError} />
+        </div>
       )}
       {!memory.content && memory.images.length === 0 && (
         <p className="px-5 py-5 text-sm text-ink-muted">사진과 글 없이 남긴 기록이에요.</p>
+      )}
+      {memory.visibility === 'PUBLIC' && (
+        <div className="px-5 py-4">
+          <MemoryLikeButton memoryId={memory.memoryId} likedByMe={memory.likedByMe === true} likeCount={memory.likeCount} />
+        </div>
       )}
     </article>
   );
@@ -216,7 +228,7 @@ function DeleteMemoryDialog({ memoryId, onClose }: { memoryId: number; onClose: 
     setError(null);
     try {
       await deleteMemory(memoryId);
-      navigate('/map');
+      navigate('/me/memories');
     } catch (cause) {
       setSubmitting(false);
       setError(toUserMessage(cause));

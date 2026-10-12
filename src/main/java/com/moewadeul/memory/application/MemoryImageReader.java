@@ -3,7 +3,10 @@ package com.moewadeul.memory.application;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.memory.infra.MemoryImageMapper;
 import com.moewadeul.memory.infra.MemoryImageRow;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +25,16 @@ class MemoryImageReader {
         return memoryImageMapper.selectByMemoryIds(List.of(memoryId)).stream()
                 .map(this::toPhoto)
                 .toList();
+    }
+
+    /** 호출하면 memoryIds인 기록들에 붙은 사진을 한 번에 읽어 기록 ID별로 모아 돌려준다. 사진이 없는 기록은 키가 없다. */
+    Map<Long, List<MemoryPhoto>> readByMemoryIds(Collection<Long> memoryIds) {
+        if (memoryIds.isEmpty()) {
+            return Map.of();
+        }
+        return memoryImageMapper.selectByMemoryIds(memoryIds).stream()
+                .collect(Collectors.groupingBy(
+                        MemoryImageRow::memoryId, Collectors.mapping(this::toPhoto, Collectors.toList())));
     }
 
     /** 호출하면 objectKey인 사진의 조회 URL을 서명한다. */

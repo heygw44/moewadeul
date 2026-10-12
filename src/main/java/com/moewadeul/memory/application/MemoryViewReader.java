@@ -1,5 +1,6 @@
 package com.moewadeul.memory.application;
 
+import com.moewadeul.memory.domain.ApproximateLocation;
 import com.moewadeul.memory.infra.MemoryMapper;
 import com.moewadeul.memory.infra.MemoryRow;
 import java.util.Optional;
@@ -16,18 +17,20 @@ class MemoryViewReader {
 
     /** 호출하면 memoryId인 기록을 viewerId인 사람(비회원이면 null)이 보는 모양으로 읽는다. 공개 범위는 거르지 않는다. 기록이 없으면 빈 값이다. */
     Optional<MemoryView> read(long memoryId, Long viewerId) {
-        return memoryMapper.selectById(memoryId).map(row -> toView(row, viewerId));
+        return memoryMapper.selectById(memoryId, viewerId).map(row -> toView(row, viewerId));
     }
 
     private MemoryView toView(MemoryRow row, Long viewerId) {
+        boolean author = viewerId != null && viewerId == row.authorId();
         return new MemoryView(
                 row.memoryId(),
                 row.authorId(),
                 row.authorNickname(),
                 row.spotId(),
                 row.spotName(),
-                row.latitude(),
-                row.longitude(),
+                author ? row.latitude() : null,
+                author ? row.longitude() : null,
+                ApproximateLocation.of(row.latitude(), row.longitude()),
                 row.visitedDate(),
                 row.nights(),
                 row.content(),
@@ -35,6 +38,8 @@ class MemoryViewReader {
                 memoryImageReader.readByMemoryId(row.memoryId()),
                 row.createdAt(),
                 row.updatedAt(),
-                viewerId != null && viewerId == row.authorId());
+                row.likeCount(),
+                row.likedByMe(),
+                author);
     }
 }
