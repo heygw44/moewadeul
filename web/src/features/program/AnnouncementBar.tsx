@@ -24,7 +24,8 @@ export function AnnouncementBar() {
   }
 
   return (
-    <div className="shrink-0 border-b border-line bg-accent-soft text-accent-deep">
+    // 포인트 면이라 흰 글자를 쓰고, 정보색 포커스 링은 짙은 바탕에서 보이지 않아 흰 윤곽선으로 바꾼다.
+    <div className="shrink-0 bg-brand text-white [&_:focus-visible]:outline-white">
       <div className="mx-auto flex max-w-screen-xl items-center gap-2 pl-4 pr-1">
         <Link
           to={`/programs/${id}`}
@@ -42,7 +43,7 @@ export function AnnouncementBar() {
           type="button"
           onClick={dismiss}
           aria-label="행사 알림 닫기"
-          className="inline-flex size-11 shrink-0 items-center justify-center rounded-control hover:bg-surface"
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-control hover:bg-white/15"
         >
           <Icon name="close" size={18} />
         </button>
