@@ -234,7 +234,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
     else if (startDate < minStart || startDate > maxStart) errors.startDate = '출발일은 내일부터 60일 안에서 골라 주세요.';
     if (endDate === '') errors.endDate = '귀가일을 골라 주세요.';
     else if (endMin !== undefined && endMax !== undefined && (endDate < endMin || endDate > endMax)) {
-      errors.endDate = '귀가일은 출발일로부터 1박에서 3박 사이로 골라 주세요.';
+      errors.endDate = '귀가일은 출발일 기준 1박에서 3박 사이로 골라 주세요.';
     }
     if (capacity === null) errors.capacity = '정원을 골라 주세요.';
     if ((ageMin === '') !== (ageMax === '')) {

@@ -111,7 +111,7 @@ export function BasecampFilterDialog({ initial, onApply, onClose }: BasecampFilt
             onChange={(event) => setDraft({ ...draft, noAgeLimit: event.target.checked })}
           />
           <Checkbox
-            label="동성만 받지 않는 곳"
+            label="성별 제한 없는 곳"
             checked={draft.noSameGenderOnly}
             onChange={(event) => setDraft({ ...draft, noSameGenderOnly: event.target.checked })}
           />

@@ -28,7 +28,7 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   BASECAMP_MEMBER_CHANGED: '베이스캠프 멤버가 바뀌었을 때',
   MEMBER_REPORT_RESOLVED: '내가 한 신고의 처리 결과가 나왔을 때',
   SANCTION_CONFIRMED: '내게 제재가 확정됐을 때',
-  PROGRAM_APPLICATION_CONFIRMED: '행사 신청이 결제로 확정됐을 때',
+  PROGRAM_APPLICATION_CONFIRMED: '결제해서 행사 신청이 확정됐을 때',
   PROGRAM_APPLICATION_CANCELED: '행사 신청이 취소됐을 때',
-  PROGRAM_APPLICATION_EXPIRED: '행사 신청이 결제 기한이 지나 만료됐을 때',
+  PROGRAM_APPLICATION_EXPIRED: '결제 기한이 지나 행사 신청이 만료됐을 때',
 };

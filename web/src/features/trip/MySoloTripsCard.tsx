@@ -39,7 +39,7 @@ export function MySoloTripsCard() {
   return (
     <PageCard title="혼자 가는 일정">
       <p className="text-sm text-ink-muted">
-        나만 보는 일정이에요. 다른 사람에게는 장소의 예상 인원에 1명으로만 더해져요.
+        나만 보는 일정이에요. 다른 사람에게는 장소의 예상 인원 1명으로만 보여요.
       </p>
       {current === null ? (
         showSkeleton && <Skeleton className="h-16 w-full" />

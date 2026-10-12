@@ -19,14 +19,14 @@ type HubLayoutProps = {
   children: ReactNode;
 };
 
-// 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 제목과 탭은 카드 색 띠 위에 두고, 목록은 그 아래 패널에 둔다.
+// 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 제목과 탭은 머리글과 같은 회색 바탕 띠에 두고, 목록은 그 아래 흰 패널에 둔다.
 // 오른쪽 안내 열(aside)은 넓은 화면에서만 옆에 놓고, 좁은 화면에서는 목록 아래로 내려간다.
 export function HubLayout({ title, description, breadcrumb, meta, actions, tabs, aside, width = 'wide', children }: HubLayoutProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-paper pb-(--bottom-nav-h)">
       <AnnouncementBar />
       <SiteHeader />
-      <div className="border-b border-contour bg-card">
+      <div className="border-b border-contour bg-paper">
         <div className="mx-auto max-w-screen-xl px-4 pt-6">
           {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3">

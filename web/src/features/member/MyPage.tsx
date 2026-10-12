@@ -183,7 +183,7 @@ function TrustCard({ me }: { me: Me }) {
         <Notice tone="info" title="본인확인을 하면 베이스캠프를 열 수 있어요">
           <p>본인확인은 성인만 할 수 있고, 출생연도와 성별만 확인해요.</p>
           <Link to="/identity-verification" className="mt-1 inline-flex min-h-11 items-center font-semibold text-forest">
-            본인확인 하기
+            본인확인하기
           </Link>
         </Notice>
       )}

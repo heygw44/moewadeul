@@ -111,7 +111,7 @@ function ProgramEmpty({ filtered, onReset }: { filtered: boolean; onReset: () =>
       <Icon name="calendar" size={24} className="text-ink-muted" />
       <p className="text-lg font-semibold text-ink">지금 볼 수 있는 행사가 없어요</p>
       <p className="text-sm text-ink-muted">
-        행사가 열리면 이 목록에 올라와요. 그동안 지도에서 합법 야영지를 찾거나 베이스캠프에 합류해 보세요.
+        행사가 열리면 이 목록에 올라와요. 그동안 지도에서 야영할 수 있는 곳을 찾거나 베이스캠프에 합류해 보세요.
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <Link to="/map" className={SECONDARY_LINK_CLASS}>

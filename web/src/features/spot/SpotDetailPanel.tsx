@@ -262,7 +262,7 @@ function ClosedNotice({ publicDetail }: { publicDetail: PublicDetail }) {
     <Notice tone="info" title="지금은 휴장 기간이에요">
       <div className="flex flex-col gap-2">
         {period && <p className="tabular-nums">{period}</p>}
-        <p>운영 정보는 원천 데이터 기준이라 실제와 다를 수 있어요. 방문 전에 야영장에 확인해 주세요.</p>
+        <p>운영 정보는 공공데이터 기준이라 실제와 다를 수 있어요. 방문 전에 야영장에 확인해 주세요.</p>
       </div>
     </Notice>
   );
@@ -439,7 +439,7 @@ function WeatherSection({ weather }: { weather: Weather | null }) {
               items={[
                 { label: '일출', value: weather.sun.sunrise },
                 { label: '일몰', value: weather.sun.sunset },
-                { label: '시민박명 끝', value: weather.sun.civilTwilightEnd },
+                { label: '어두워지는 시각', value: weather.sun.civilTwilightEnd },
               ]}
             />
           ) : (
