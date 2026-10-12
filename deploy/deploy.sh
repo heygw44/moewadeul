@@ -12,13 +12,13 @@ set -euo pipefail
 # snap으로 설치한 AWS CLI는 /snap/bin에 있다. SSM이 여는 셸의 PATH에는 이 경로가 없을 수 있다.
 export PATH="$PATH:/snap/bin"
 
-readonly DEPLOY_DIR=/opt/pitchmap
+readonly DEPLOY_DIR=/opt/moewadeul
 readonly COMPOSE_FILE="$DEPLOY_DIR/docker-compose.prod.yml"
 readonly ENV_FILE="$DEPLOY_DIR/.env"
 readonly SERVER_ENV_FILE="$DEPLOY_DIR/server.env"
 readonly LAST_TAG_FILE="$DEPLOY_DIR/last-successful-tag"
 readonly REGION=ap-northeast-2
-readonly PARAM_PREFIX=/pitchmap/prod
+readonly PARAM_PREFIX=/moewadeul/prod
 readonly APP_REPO=ghcr.io/heygw44/moewadeul-app
 readonly CADDY_REPO=ghcr.io/heygw44/moewadeul-caddy
 readonly HEALTH_URL=http://127.0.0.1:8080/actuator/health
@@ -35,8 +35,10 @@ declare -rA SECRET_PARAMS=(
     [db/exporter-password]=MYSQL_EXPORTER_PASSWORD
     [grafana/token]=GRAFANA_CLOUD_TOKEN
 )
-readonly EXPORTER_USER=pitchmap_exporter
+readonly EXPORTER_USER=moewadeul_exporter
 readonly BACKUP_DIR="$DEPLOY_DIR/backup"
+readonly COMPOSE_PROJECT=moewadeul
+readonly OLD_COMPOSE_PROJECT=pitchmap
 readonly ALLOY_CONFIG_FILE="$DEPLOY_DIR/alloy/config.alloy"
 readonly ALLOY_CONTAINER_CONFIG=/etc/alloy/config.alloy
 readonly BACKUP_METRICS_FILE="$DEPLOY_DIR/metrics/backup.prom"
@@ -190,6 +192,20 @@ SQL
     fi
 }
 
+# 서버 이름을 pitchmap에서 moewadeul로 옮기는 동안만 쓰는 확인이다. compose 프로젝트 이름이 바뀌면 볼륨 이름도
+# moewadeul_*로 바뀐다. 그래서 이전 스크립트로 데이터를 옮기기 전에 배포하면, MySQL이 빈 DB를 새로 만들고
+# 앱이 빈 스키마로 떠서 헬스 체크를 통과해 버린다. 옛 볼륨만 있고 새 볼륨이 없으면 아무것도 바꾸지 않고 멈춘다.
+require_renamed_volumes() {
+    if docker volume inspect "${COMPOSE_PROJECT}_mysql-data" > /dev/null 2>&1; then
+        return
+    fi
+    if docker volume inspect "${OLD_COMPOSE_PROJECT}_mysql-data" > /dev/null 2>&1; then
+        log "${OLD_COMPOSE_PROJECT}_mysql-data만 있고 ${COMPOSE_PROJECT}_mysql-data가 없다. 이름 변경 이전이 끝나지 않았다"
+        log "deploy/rename/migrate-to-moewadeul.sh를 먼저 실행한다. 실행 중인 컨테이너는 그대로 둔다"
+        exit 1
+    fi
+}
+
 alloy_config_sum() {
     compose exec -T alloy cat "$ALLOY_CONTAINER_CONFIG" 2> /dev/null | sha256sum | cut -d' ' -f1
 }
@@ -222,16 +238,16 @@ install_backup_timer() {
         log "server.env에 BACKUP_BUCKET이 없어 백업 타이머를 설치하지 않는다"
         return
     fi
-    if ! install -m 644 "$BACKUP_DIR/pitchmap-backup.service" "$BACKUP_DIR/pitchmap-backup.timer" "$SYSTEMD_DIR/" \
+    if ! install -m 644 "$BACKUP_DIR/moewadeul-backup.service" "$BACKUP_DIR/moewadeul-backup.timer" "$SYSTEMD_DIR/" \
         || ! systemctl daemon-reload \
-        || ! systemctl enable --now pitchmap-backup.timer > /dev/null 2>&1; then
+        || ! systemctl enable --now moewadeul-backup.timer > /dev/null 2>&1; then
         log "백업 타이머를 설치하지 못했다"
         return
     fi
-    log "백업 타이머 확인 완료: $(systemctl show pitchmap-backup.timer -p NextElapseUSecRealtime --value)"
+    log "백업 타이머 확인 완료: $(systemctl show moewadeul-backup.timer -p NextElapseUSecRealtime --value)"
     if [[ ! -f "$BACKUP_METRICS_FILE" ]]; then
-        systemctl start --no-block pitchmap-backup.service
-        log "첫 백업을 시작했다. 결과는 journalctl -u pitchmap-backup 으로 본다"
+        systemctl start --no-block moewadeul-backup.service
+        log "첫 백업을 시작했다. 결과는 journalctl -u moewadeul-backup 으로 본다"
     fi
 }
 
@@ -243,6 +259,7 @@ main() {
     fi
 
     check_architecture
+    require_renamed_volumes
     load_server_env
     load_secrets
 

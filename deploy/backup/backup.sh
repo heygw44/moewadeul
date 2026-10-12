@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 운영 MySQL을 덤프해 압축한 뒤 S3 백업 버킷에 올린다. systemd 타이머(pitchmap-backup.timer)가 매일 새벽 root로 실행한다.
+# 운영 MySQL을 덤프해 압축한 뒤 S3 백업 버킷에 올린다. systemd 타이머(moewadeul-backup.timer)가 매일 새벽 root로 실행한다.
 #
 # - 앱 계정으로 --single-transaction 덤프를 뜬다. InnoDB 테이블을 잠그지 않고 덤프를 시작한 시점의 일관된 상태를 읽는다.
 # - 세션 테이블(SPRING_SESSION*)은 뺀다. 로그인 정보가 들어 있고, 복원한 뒤에는 회원이 다시 로그인하면 되기 때문이다.
@@ -11,10 +11,10 @@ set -euo pipefail
 # snap으로 설치한 AWS CLI는 /snap/bin에 있다. systemd가 여는 환경의 PATH에는 이 경로가 없다.
 export PATH="$PATH:/snap/bin"
 
-readonly DEPLOY_DIR=/opt/pitchmap
+readonly DEPLOY_DIR=/opt/moewadeul
 # 환경 파일 경로와 Compose 프로젝트 이름은 기본값이 운영 값이다. 서버 밖에서 시험할 때만 환경 변수로 바꾼다.
-readonly ENV_FILE="${PITCHMAP_ENV_FILE:-$DEPLOY_DIR/.env}"
-readonly COMPOSE_PROJECT="${COMPOSE_PROJECT_NAME:-pitchmap}"
+readonly ENV_FILE="${MOEWADEUL_ENV_FILE:-$DEPLOY_DIR/.env}"
+readonly COMPOSE_PROJECT="${COMPOSE_PROJECT_NAME:-moewadeul}"
 readonly METRICS_DIR="$DEPLOY_DIR/metrics"
 readonly METRICS_FILE="$METRICS_DIR/backup.prom"
 readonly REGION=ap-northeast-2
@@ -77,7 +77,7 @@ main() {
     fi
 
     # 임시 파일 경로는 전역 변수에 둔다. EXIT trap은 main이 끝난 뒤 실행되므로, 지역 변수를 쓰면 그때는 이미 사라져 있다.
-    DUMP_FILE="$(mktemp /var/tmp/pitchmap-backup.XXXXXX)"
+    DUMP_FILE="$(mktemp /var/tmp/moewadeul-backup.XXXXXX)"
     trap 'rm -f "$DUMP_FILE"' EXIT
     key="$S3_PREFIX/${db_name}-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
 

@@ -1,7 +1,7 @@
 # 뫼와들 (moewadeul)
 
 백패커가 합법적인 박지를 찾고 믿을 수 있는 동행과 함께 가는 서비스.
-'뫼와들'은 순우리말 '뫼(산)'와 '들'에서 따온 이름이다. 서비스·저장소·코드 이름은 바꿨지만, 로컬 DB 이름은 아직 예전 이름인 `pitchmap`이다.
+'뫼와들'은 순우리말 '뫼(산)'와 '들'에서 따온 이름이다. 예전 이름은 '피치맵(pitchmap)'이었다.
 
 ## 로컬 개발 환경
 
@@ -18,7 +18,25 @@
 4. 확인
    - `curl http://localhost:8080/actuator/health` 응답의 `status`가 `UP`이다(DB 연결 포함). 예: `{"groups":["liveness","readiness"],"status":"UP"}`. MySQL을 멈추면 503 `DOWN`이 된다.
    - Swagger UI: http://localhost:8080/swagger-ui/index.html
-   - 앱이 시작될 때 Flyway가 `src/main/resources/db/migration`의 마이그레이션을 적용한다. 테이블은 `docker compose exec mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" pitchmap -e "SHOW TABLES"'`로 확인한다.
+   - 앱이 시작될 때 Flyway가 `src/main/resources/db/migration`의 마이그레이션을 적용한다. 테이블은 `docker compose exec mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" moewadeul -e "SHOW TABLES"'`로 확인한다.
+
+### 예전 이름(pitchmap)으로 만든 로컬 DB 옮기기
+
+이름을 바꾸기 전에 로컬 DB를 만들었다면 컨테이너 이름과 DB 이름이 `pitchmap`이다. 데이터 디렉터리(`mysql-data/`)는 그대로 쓰고 이름만 옮긴다.
+
+1. `.env`에 `DB_NAME`, `DB_USERNAME`을 `pitchmap`으로 적어 두었다면 `moewadeul`로 바꾸거나 지운다.
+2. 옛 이름의 컨테이너를 내리고 새 이름으로 띄운다.
+   ```bash
+   docker compose -p pitchmap down && docker compose up -d --wait
+   ```
+3. 새 DB와 앱 계정을 만든 뒤 옛 DB를 덤프해 넣는다. 덤프 속 트리거·프로시저의 정의자(DEFINER)도 새 계정으로 바꾼다. 정의자 계정이 없으면 장소를 쓸 때 트리거가 실패하기 때문이다. 옛 DB `pitchmap`은 지우지 않는다.
+   ```bash
+   docker compose exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -e "CREATE DATABASE moewadeul CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci; CREATE USER IF NOT EXISTS moewadeul IDENTIFIED BY \"$MYSQL_PASSWORD\"; GRANT ALL PRIVILEGES ON moewadeul.* TO moewadeul;"'
+   docker compose exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers --set-gtid-purged=OFF --no-tablespaces --hex-blob pitchmap' \
+     | LC_ALL=C sed 's/`pitchmap`@`%`/`moewadeul`@`%`/g' \
+     | docker compose exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot moewadeul'
+   ```
+4. `./gradlew bootRun`으로 앱이 뜨는지 확인한다.
 
 ### 종료
 

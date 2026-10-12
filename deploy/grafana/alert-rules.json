@@ -307,7 +307,7 @@
         "service": "moewadeul"
       },
       "annotations": {
-        "summary": "마지막으로 성공한 DB 백업이 26시간보다 오래됐다. 서버에서 journalctl -u pitchmap-backup 으로 원인을 본다. 백업 지표가 아예 없어도 이 알림이 온다."
+        "summary": "마지막으로 성공한 DB 백업이 26시간보다 오래됐다. 서버에서 journalctl -u moewadeul-backup 으로 원인을 본다. 백업 지표가 아예 없어도 이 알림이 온다."
       },
       "data": [
         {
