@@ -38,6 +38,7 @@ export function MemoryGrid({ items, selectedId }: { items: MemoryCellItem[]; sel
               )}
             </Link>
             {item.isPrivate && <span className="text-xs text-ink-muted">나만 보기</span>}
+            {item.hiddenLabel && <span className="text-xs font-semibold text-warning">{item.hiddenLabel}</span>}
           </li>
         );
       })}

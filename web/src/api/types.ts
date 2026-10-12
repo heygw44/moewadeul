@@ -1011,6 +1011,32 @@ export type CommunityImageUpload = ImageUpload;
 // 추억 기록. 공개 범위는 PRIVATE(작성자만), PUBLIC(누구나)이다.
 export type MemoryVisibility = 'PRIVATE' | 'PUBLIC';
 
+// 신고와 관리자 조치에 따른 상태. 검토 대기·숨김 기록은 작성자만 본다.
+export type MemoryStatus = 'ACTIVE' | 'PENDING_REVIEW' | 'HIDDEN';
+
+// 사유 값은 커뮤니티 신고와 같다.
+export type MemoryReportRequest = CommunityReportRequest;
+
+export type AdminMemoryStatus = 'PENDING_REVIEW' | 'HIDDEN';
+
+// 관리자 검토 목록 항목. 관리자에게도 정확한 좌표는 주지 않는다.
+export interface AdminMemorySummary {
+  memoryId: number;
+  author: MemoryAuthor;
+  approxLat: number;
+  approxLng: number;
+  visitedDate: string;
+  nights: number;
+  // 글이 없으면 서버가 뺀다.
+  content?: string;
+  images: MemoryImage[];
+  status: AdminMemoryStatus;
+  reportCount: number;
+  reasonCounts: Record<CommunityReportReason, number>;
+  recentReports: { reason: CommunityReportReason; content: string | null; createdAt: string }[];
+  statusChangedAt: string;
+}
+
 export interface MemoryAuthor {
   memberId: number;
   nickname: string;
@@ -1042,6 +1068,8 @@ export interface MemoryDetail {
   // 글이 없으면 서버가 뺀다.
   content?: string;
   visibility: MemoryVisibility;
+  // 작성자에게만 준다. 다른 사람은 정상(ACTIVE) 기록만 볼 수 있어서 서버가 뺀다.
+  status?: MemoryStatus;
   images: MemoryImage[];
   likeCount: number;
   // 비로그인 요청에는 서버가 뺀다.
@@ -1059,6 +1087,7 @@ export interface MemorySummary {
   nights: number;
   excerpt?: string;
   visibility: MemoryVisibility;
+  status: MemoryStatus;
   thumbnailUrl?: string;
   imageCount: number;
   createdAt: string;

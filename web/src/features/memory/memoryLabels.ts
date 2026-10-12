@@ -1,6 +1,6 @@
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import type { SelectOption } from '../../components/SelectField';
-import type { MemoryVisibility } from '../../api/types';
+import type { MemoryStatus, MemoryVisibility } from '../../api/types';
 
 // 서버 규칙과 같은 값이다.
 export const MEMORY_CONTENT_MAX = 2000;
@@ -15,6 +15,12 @@ export const VISIBILITY_OPTIONS: ReadonlyArray<ChoiceOption<MemoryVisibility>> =
 export const VISIBILITY_LABEL: Record<MemoryVisibility, string> = {
   PRIVATE: '나만 보기',
   PUBLIC: '공개',
+};
+
+// 작성자에게만 보여 주는 상태 이름이다. 정상(ACTIVE)이면 따로 적지 않는다.
+export const MEMORY_STATUS_LABEL: Record<Exclude<MemoryStatus, 'ACTIVE'>, string> = {
+  PENDING_REVIEW: '검토 중',
+  HIDDEN: '숨김',
 };
 
 export function nightsLabel(nights: number): string {

@@ -1,5 +1,6 @@
 import { AdminReportDetailPage } from '../features/admin/AdminReportDetailPage';
 import { AdminReportsPage } from '../features/admin/AdminReportsPage';
+import { AdminMemoriesPage } from '../features/admin/AdminMemoriesPage';
 import { AdminSpotsPage } from '../features/admin/AdminSpotsPage';
 import { BasecampManagePage } from '../features/basecamp/BasecampManagePage';
 import { CommunityListPage } from '../features/community/CommunityListPage';
@@ -149,6 +150,7 @@ export const routes: RouteDef[] = [
     },
   },
   { path: '/admin/spots', render: () => <AdminSpotsPage /> },
+  { path: '/admin/memories', render: () => <AdminMemoriesPage /> },
   { path: '/login', render: () => <LoginPage /> },
   { path: '/signup', render: () => <SignupPage /> },
   { path: '/verify-email', render: () => <VerifyEmailPage /> },

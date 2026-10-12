@@ -7,6 +7,7 @@ import type {
   MemoryDetail,
   MemoryFeedItem,
   MemoryLikeResponse,
+  MemoryReportRequest,
   MemorySummary,
   MemoryUpdateRequest,
   Page,
@@ -54,4 +55,9 @@ export function likeMemory(memoryId: number): Promise<MemoryLikeResponse> {
 
 export function unlikeMemory(memoryId: number): Promise<MemoryLikeResponse> {
   return apiFetch<MemoryLikeResponse>(`/api/memories/${memoryId}/like`, { method: 'DELETE' });
+}
+
+// 공개 기록만 신고할 수 있다. 같은 기록을 다시 신고하면 서버가 MEMORY_ALREADY_REPORTED로 거부한다.
+export function reportMemory(memoryId: number, req: MemoryReportRequest): Promise<void> {
+  return apiFetch<void>(`/api/memories/${memoryId}/reports`, { method: 'POST', body: req });
 }
