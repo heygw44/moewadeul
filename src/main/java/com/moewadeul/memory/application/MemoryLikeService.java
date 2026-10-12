@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 회원이 공개 추억 기록에 좋아요를 누르거나 취소한다.
  *
- * <p>기록이 없거나 비공개이면 작성자 본인에게도 NOT_FOUND로 거부한다. 공개 기록이면 작성자 본인도 누를 수 있다. 이미 누른 기록에 다시 누르거나
+ * <p>기록이 없거나 비공개이거나 검토 대기·숨김이면 작성자 본인에게도 NOT_FOUND로 거부한다. 공개이면서 ACTIVE인 기록이면 작성자 본인도 누를 수 있다. 이미 누른 기록에 다시 누르거나
  * 누르지 않은 기록을 취소해도 예외 없이 같은 결과를 돌려주므로, 호출하는 쪽이 같은 요청을 다시 보내도 된다. 기록을 비공개로 바꿔도 좋아요 행은
  * 지우지 않아서, 다시 공개하면 좋아요 수가 돌아온다.
  */
@@ -28,7 +28,7 @@ public class MemoryLikeService {
     /** 호출하면 memberId인 회원의 좋아요를 memoryId인 기록에 남기고, 그 뒤의 상태를 돌려준다. */
     @Transactional
     public MemoryLikeResult like(long memberId, long memoryId) {
-        requirePublicMemory(memoryId);
+        requireVisibleMemory(memoryId);
         memoryLikeMapper.insertIgnoringDuplicate(memoryId, memberId, clock.instant());
         return new MemoryLikeResult(true, memoryLikeMapper.countByMemory(memoryId));
     }
@@ -36,15 +36,15 @@ public class MemoryLikeService {
     /** 호출하면 memberId인 회원의 좋아요를 memoryId인 기록에서 지우고, 그 뒤의 상태를 돌려준다. */
     @Transactional
     public MemoryLikeResult unlike(long memberId, long memoryId) {
-        requirePublicMemory(memoryId);
+        requireVisibleMemory(memoryId);
         memoryLikeMapper.delete(memoryId, memberId);
         return new MemoryLikeResult(false, memoryLikeMapper.countByMemory(memoryId));
     }
 
-    private void requirePublicMemory(long memoryId) {
+    private void requireVisibleMemory(long memoryId) {
         memoryRepository
                 .findById(memoryId)
-                .filter(Memory::isPublic)
+                .filter(Memory::isVisibleToOthers)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 }

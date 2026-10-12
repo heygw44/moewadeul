@@ -3,6 +3,7 @@ package com.moewadeul.memory.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -83,6 +84,91 @@ class MemoryTest {
         assertThat(MemoryVisibility.from("PUBLIC")).contains(MemoryVisibility.PUBLIC);
         assertThat(MemoryVisibility.from("public")).isEmpty();
         assertThat(MemoryVisibility.from(null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-10] 새 기록은 ACTIVE로 시작하고, 공개이면서 ACTIVE일 때만 다른 사람에게 보인다")
+    void newMemoryIsActiveAndVisibleOnlyWhenPublic() {
+        Memory privateMemory = Memory.write(1L, details(1, null), NOW);
+        Memory publicMemory = Memory.write(1L, publicDetails(), NOW);
+
+        assertThat(privateMemory.getStatus()).isEqualTo(MemoryStatus.ACTIVE);
+        assertThat(privateMemory.isVisibleToOthers()).isFalse();
+        assertThat(publicMemory.isVisibleToOthers()).isTrue();
+
+        publicMemory.markPendingReview(NOW.plusSeconds(60));
+
+        assertThat(publicMemory.getStatus()).isEqualTo(MemoryStatus.PENDING_REVIEW);
+        assertThat(publicMemory.isVisibleToOthers()).isFalse();
+        assertThat(publicMemory.getUpdatedAt()).isEqualTo(NOW.plusSeconds(60));
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-10] 검토 대기로는 ACTIVE에서만 바꾸고, 이미 검토 대기이거나 숨긴 기록이면 거부한다")
+    void markPendingReviewOnlyFromActive() {
+        Memory pending = Memory.write(1L, publicDetails(), NOW);
+        pending.markPendingReview(NOW);
+        Memory hidden = Memory.write(1L, publicDetails(), NOW);
+        hidden.hide(NOW);
+
+        assertThatThrownBy(() -> pending.markPendingReview(NOW)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> hidden.markPendingReview(NOW)).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-11] 관리자는 ACTIVE와 검토 대기 기록을 숨기고, 이미 숨긴 기록을 숨기면 MEMORY_INVALID_STATE다")
+    void hideFromActiveOrPendingReview() {
+        Memory active = Memory.write(1L, publicDetails(), NOW);
+        Memory pending = Memory.write(1L, publicDetails(), NOW);
+        pending.markPendingReview(NOW);
+
+        active.hide(NOW.plusSeconds(60));
+        pending.hide(NOW.plusSeconds(60));
+
+        assertThat(active.getStatus()).isEqualTo(MemoryStatus.HIDDEN);
+        assertThat(pending.getStatus()).isEqualTo(MemoryStatus.HIDDEN);
+        assertThat(active.getUpdatedAt()).isEqualTo(NOW.plusSeconds(60));
+        assertThatThrownBy(() -> active.hide(NOW))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(MemoryErrorCode.MEMORY_INVALID_STATE));
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-11] 관리자는 검토 대기와 숨긴 기록을 ACTIVE로 복구하고, ACTIVE 기록을 복구하면 MEMORY_INVALID_STATE다")
+    void restoreFromPendingReviewOrHidden() {
+        Memory pending = Memory.write(1L, publicDetails(), NOW);
+        pending.markPendingReview(NOW);
+        Memory hidden = Memory.write(1L, publicDetails(), NOW);
+        hidden.hide(NOW);
+        Memory active = Memory.write(1L, publicDetails(), NOW);
+
+        pending.restore(NOW);
+        hidden.restore(NOW);
+
+        assertThat(pending.getStatus()).isEqualTo(MemoryStatus.ACTIVE);
+        assertThat(hidden.getStatus()).isEqualTo(MemoryStatus.ACTIVE);
+        assertThatThrownBy(() -> active.restore(NOW))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(MemoryErrorCode.MEMORY_INVALID_STATE));
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-10] 작성자가 숨긴 기록의 내용과 공개 범위를 고쳐도 상태는 그대로다")
+    void reviseKeepsStatus() {
+        Memory memory = Memory.write(1L, publicDetails(), NOW);
+        memory.hide(NOW);
+
+        memory.revise(details(2, "고친 글"), NOW.plusSeconds(60));
+        memory.revise(publicDetails(), NOW.plusSeconds(120));
+
+        assertThat(memory.getStatus()).isEqualTo(MemoryStatus.HIDDEN);
+        assertThat(memory.isVisibleToOthers()).isFalse();
+    }
+
+    private static MemoryDetails publicDetails() {
+        return new MemoryDetails(null, 37.25, 127.25, TODAY, 1, null, MemoryVisibility.PUBLIC);
     }
 
     private static MemoryDetails details(int nights, String content) {

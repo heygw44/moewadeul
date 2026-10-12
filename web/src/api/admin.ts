@@ -1,5 +1,7 @@
 import { apiFetch } from './client';
 import type {
+  AdminMemoryStatus,
+  AdminMemorySummary,
   AdminReportActionRequest,
   AdminReportActionResponse,
   AdminReportDetail,
@@ -64,4 +66,23 @@ export function hideSpot(spotId: number): Promise<{ spotId: number; status: stri
 
 export function restoreSpot(spotId: number): Promise<{ spotId: number; status: string }> {
   return apiFetch(`/api/admin/spots/${spotId}/restore`, { method: 'POST' });
+}
+
+// 관리자도 비공개 기록은 보지 못해서, 서버는 공개 기록만 준다.
+export function fetchAdminMemories(
+  params: { status: AdminMemoryStatus; page: number },
+  signal?: AbortSignal,
+): Promise<Page<AdminMemorySummary>> {
+  return apiFetch<Page<AdminMemorySummary>>('/api/admin/memories', {
+    query: { status: params.status, page: params.page, size: ADMIN_PAGE_SIZE },
+    signal,
+  });
+}
+
+export function hideMemory(memoryId: number): Promise<{ memoryId: number; status: string }> {
+  return apiFetch(`/api/admin/memories/${memoryId}/hide`, { method: 'POST' });
+}
+
+export function restoreMemory(memoryId: number): Promise<{ memoryId: number; status: string }> {
+  return apiFetch(`/api/admin/memories/${memoryId}/restore`, { method: 'POST' });
 }

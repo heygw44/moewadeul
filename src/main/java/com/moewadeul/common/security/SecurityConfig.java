@@ -83,6 +83,7 @@ public class SecurityConfig {
         "/api/solo-trips",
         "/api/memories",
         "/api/memories/images",
+        "/api/memories/*/reports",
     };
 
     private static final String[] VERIFIED_PUT_PATTERNS = {

@@ -13,6 +13,7 @@ import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import type { MemoryCellItem } from './memoryItems';
+import { MEMORY_STATUS_LABEL } from './memoryLabels';
 import { MemoryMapGrid } from './MemoryMapGrid';
 
 type LoadResult = { attempt: number; memories: MemorySummary[] } | { attempt: number; error: unknown };
@@ -62,6 +63,7 @@ export function MyMemoriesPage() {
         nights: memory.nights,
         spotName: memory.spot?.name,
         isPrivate: memory.visibility === 'PRIVATE',
+        hiddenLabel: memory.status === 'ACTIVE' ? undefined : MEMORY_STATUS_LABEL[memory.status],
         imageCount: memory.imageCount,
       })),
     [memories],

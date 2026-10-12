@@ -8,6 +8,7 @@ public final class AdminAuditTargetType {
     public static final String SPOT = "SPOT";
     public static final String COMMUNITY_POST = "COMMUNITY_POST";
     public static final String COMMUNITY_COMMENT = "COMMUNITY_COMMENT";
+    public static final String MEMORY = "MEMORY";
     public static final String PROGRAM = "PROGRAM";
     public static final String SYNC_JOB_RUN = "SYNC_JOB_RUN";
 

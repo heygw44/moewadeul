@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.memory.infra.AdminMemoryMapper">
+
+    <!-- 관리자 화면에는 작성자 닉네임이 함께 필요해서 member 테이블을 SQL로 직접 읽는다. 이 매퍼는 읽기만 한다.
+         관리자도 비공개 기록은 보지 못하므로 공개(PUBLIC) 기록만 읽는다. 그래서 작성자가 검토 대기 기록을 비공개로 바꾸면 목록에서 빠진다.
+         신고 수는 검토 전 신고(reviewed_at IS NULL)만 센다. 사유별 개수는 CASE로 한 번에 센다. 신고가 없는 기록은 LEFT JOIN이 NULL을
+         주므로 COALESCE로 0을 채운다.
+         정렬은 금전 요구·사기 신고가 있는 기록이 먼저이고, 같은 묶음에서는 상태가 바뀐 시각이 이른 기록, 즉 오래 기다린 기록이 먼저다.
+         상태가 바뀐 시각으로 updated_at을 쓰므로 작성자가 기록을 고치면 이 값도 바뀐다.
+         시각이 같아도 페이지 경계에서 순서가 흔들리지 않도록 id를 보조 정렬 키로 쓴다.
+         정확한 좌표는 읽지만 서비스가 대략 좌표로 바꿔서만 내보낸다. -->
+    <select id="selectMemories" resultType="com.moewadeul.memory.infra.AdminMemoryRow">
+        SELECT r.id AS memory_id,
+               r.member_id AS author_id,
+               m.nickname AS author_nickname,
+               r.latitude AS latitude,
+               r.longitude AS longitude,
+               r.visited_date AS visited_date,
+               r.nights AS nights,
+               r.content AS content,
+               r.status AS status,
+               COALESCE(rc.report_count, 0) AS report_count,
+               COALESCE(rc.spam_count, 0) AS spam_count,
+               COALESCE(rc.abuse_count, 0) AS abuse_count,
+               COALESCE(rc.illegal_camping_count, 0) AS illegal_camping_count,
+               COALESCE(rc.privacy_count, 0) AS privacy_count,
+               COALESCE(rc.money_scam_count, 0) AS money_scam_count,
+               COALESCE(rc.other_count, 0) AS other_count,
+               r.updated_at AS status_changed_at
+        FROM memory r
+        JOIN member m ON m.id = r.member_id
+        LEFT JOIN (
+            SELECT mr.memory_id AS memory_id,
+                   COUNT(*) AS report_count,
+                   COUNT(CASE WHEN mr.reason = 'SPAM' THEN 1 END) AS spam_count,
+                   COUNT(CASE WHEN mr.reason = 'ABUSE' THEN 1 END) AS abuse_count,
+                   COUNT(CASE WHEN mr.reason = 'ILLEGAL_CAMPING' THEN 1 END) AS illegal_camping_count,
+                   COUNT(CASE WHEN mr.reason = 'PRIVACY' THEN 1 END) AS privacy_count,
+                   COUNT(CASE WHEN mr.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count,
+                   COUNT(CASE WHEN mr.reason = 'OTHER' THEN 1 END) AS other_count
+            FROM memory_report mr
+            WHERE mr.reviewed_at IS NULL
+            GROUP BY mr.memory_id
+        ) rc ON rc.memory_id = r.id
+        WHERE r.status = #{status}
+          AND r.visibility = 'PUBLIC'
+        ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, r.updated_at ASC, r.id ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 기록마다 검토 전 신고를 최신순으로 번호 매겨 5번째까지만 남긴다. 신고 시각이 같아도 순서가 고정되도록 id를 보조 정렬 키로 쓴다.
+         신고자(reporter_id)는 읽지 않는다. -->
+    <select id="selectRecentReports" resultType="com.moewadeul.memory.infra.AdminMemoryRecentReportRow">
+        SELECT ranked.memory_id AS memory_id,
+               ranked.reason AS reason,
+               ranked.content AS content,
+               ranked.created_at AS created_at
+        FROM (
+            SELECT mr.memory_id AS memory_id,
+                   mr.reason AS reason,
+                   mr.content AS content,
+                   mr.created_at AS created_at,
+                   ROW_NUMBER() OVER (PARTITION BY mr.memory_id ORDER BY mr.created_at DESC, mr.id DESC) AS row_num
+            FROM memory_report mr
+            WHERE mr.reviewed_at IS NULL
+              AND mr.memory_id IN
+            <foreach collection="memoryIds" item="memoryId" open="(" separator="," close=")">
+                #{memoryId}
+            </foreach>
+        ) ranked
+        WHERE ranked.row_num &lt;= 5
+        ORDER BY ranked.memory_id ASC, ranked.row_num ASC
+    </select>
+
+</mapper>

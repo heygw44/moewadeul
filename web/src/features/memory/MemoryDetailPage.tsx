@@ -11,15 +11,17 @@ import { HubLayout } from '../../components/HubLayout';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
+import { StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
 import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { useSession } from '../member/session';
 import { LocationLabel } from '../spot/LocationLabel';
 import { ApproxLocationLabel } from './ApproxLocationLabel';
-import { nightsLabel, VISIBILITY_LABEL } from './memoryLabels';
+import { MEMORY_STATUS_LABEL, nightsLabel, VISIBILITY_LABEL } from './memoryLabels';
 import { MemoryLikeButton } from './MemoryLikeButton';
 import { MemoryPhotoCarousel } from './MemoryPhotoCarousel';
+import { MemoryReportDialog } from './MemoryReportDialog';
 
 type LoadResult = { memoryId: number; memory: MemoryDetail } | { memoryId: number; error: unknown };
 
@@ -90,7 +92,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
         title={title}
         breadcrumb={breadcrumb}
         meta={<MemoryMeta memory={memory} />}
-        actions={mine ? <MemoryActions memoryId={memory.memoryId} /> : undefined}
+        actions={mine ? <MemoryActions memoryId={memory.memoryId} /> : <ReportAction memory={memory} />}
         width="narrow"
       >
         <MemoryContent
@@ -145,6 +147,12 @@ function MemoryMeta({ memory }: { memory: MemoryDetail }) {
       <span>{nightsLabel(memory.nights)}</span>
       <span aria-hidden="true">·</span>
       <span>{VISIBILITY_LABEL[memory.visibility]}</span>
+      {memory.status !== undefined && memory.status !== 'ACTIVE' && (
+        <>
+          <span aria-hidden="true">·</span>
+          <StatusText tone="warning">{MEMORY_STATUS_LABEL[memory.status]}</StatusText>
+        </>
+      )}
       {memory.spot && (
         <>
           <span aria-hidden="true">·</span>
@@ -177,6 +185,38 @@ function MemoryActions({ memoryId }: { memoryId: number }) {
   );
 }
 
+// 로그인한 회원이 남의 공개 기록을 볼 때만 신고를 보여 준다. 이메일 인증 여부와 신고할 수 있는지는 서버가 다시 확인한다.
+function ReportAction({ memory }: { memory: MemoryDetail }) {
+  const session = useSession();
+  const [reporting, setReporting] = useState(false);
+  const signedIn = session.status === 'authenticated' && session.me !== null;
+  if (!signedIn || memory.visibility !== 'PUBLIC') return null;
+  const unverified = session.me?.status === 'UNVERIFIED';
+  return (
+    <>
+      <Button variant="ghost" onClick={() => setReporting(true)} disabled={unverified}>
+        신고
+      </Button>
+      {reporting && <MemoryReportDialog memoryId={memory.memoryId} onClose={() => setReporting(false)} />}
+    </>
+  );
+}
+
+// 신고가 쌓여 검토 중이거나 관리자가 숨긴 기록은 작성자만 본다. 작성자에게 왜 다른 사람에게 보이지 않는지 알린다.
+function HiddenStatusNotice({ status }: { status: MemoryDetail['status'] }) {
+  if (status === undefined || status === 'ACTIVE') return null;
+  const reviewing = status === 'PENDING_REVIEW';
+  return (
+    <Notice tone="warning" title={reviewing ? '신고가 쌓여 검토 중인 발자국이에요' : '관리자가 숨긴 발자국이에요'}>
+      <p>
+        {reviewing
+          ? '관리자가 검토하는 동안 다른 사람에게 보이지 않아요. 고치거나 지우는 건 그대로 할 수 있어요.'
+          : '다른 사람에게 보이지 않아요. 공개로 바꿔도 다시 보이지 않고, 고치거나 지우는 건 그대로 할 수 있어요.'}
+      </p>
+    </Notice>
+  );
+}
+
 function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImageError: () => void }) {
   const position = memory.lat !== undefined && memory.lng !== undefined ? { lat: memory.lat, lng: memory.lng } : null;
   // 작성자가 아닌 사람에게는 정확한 좌표 대신 약 1km로 줄인 좌표만 온다.
@@ -184,37 +224,42 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
     memory.approxLat !== undefined && memory.approxLng !== undefined
       ? { lat: memory.approxLat, lng: memory.approxLng }
       : null;
+  // 검토 중이거나 숨긴 기록은 서버가 좋아요를 받지 않는다.
+  const likeable = memory.visibility === 'PUBLIC' && (memory.status === undefined || memory.status === 'ACTIVE');
   return (
-    <article className="divide-y divide-contour rounded-control border border-contour bg-card">
-      {position !== null && (
-        <div className="flex flex-col gap-1 px-5 py-4">
-          <p className="text-sm text-ink-muted">다녀온 곳 · 나만 보는 위치예요</p>
-          <LocationLabel position={position} />
-        </div>
-      )}
-      {position === null && approxPosition !== null && (
-        <div className="flex flex-col gap-1 px-5 py-4">
-          <p className="text-sm text-ink-muted">다녀온 곳 · 대략 위치예요</p>
-          <ApproxLocationLabel position={approxPosition} />
-        </div>
-      )}
-      {memory.content && (
-        <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink">{memory.content}</p>
-      )}
-      {memory.images.length > 0 && (
-        <div className="px-5 py-5">
-          <MemoryPhotoCarousel images={memory.images} owner={memory.author.nickname} onImageError={onImageError} />
-        </div>
-      )}
-      {!memory.content && memory.images.length === 0 && (
-        <p className="px-5 py-5 text-sm text-ink-muted">사진과 글 없이 남긴 기록이에요.</p>
-      )}
-      {memory.visibility === 'PUBLIC' && (
-        <div className="px-5 py-4">
-          <MemoryLikeButton memoryId={memory.memoryId} likedByMe={memory.likedByMe === true} likeCount={memory.likeCount} />
-        </div>
-      )}
-    </article>
+    <div className="flex flex-col gap-4">
+      <HiddenStatusNotice status={memory.status} />
+      <article className="divide-y divide-contour rounded-control border border-contour bg-card">
+        {position !== null && (
+          <div className="flex flex-col gap-1 px-5 py-4">
+            <p className="text-sm text-ink-muted">다녀온 곳 · 나만 보는 위치예요</p>
+            <LocationLabel position={position} />
+          </div>
+        )}
+        {position === null && approxPosition !== null && (
+          <div className="flex flex-col gap-1 px-5 py-4">
+            <p className="text-sm text-ink-muted">다녀온 곳 · 대략 위치예요</p>
+            <ApproxLocationLabel position={approxPosition} />
+          </div>
+        )}
+        {memory.content && (
+          <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink">{memory.content}</p>
+        )}
+        {memory.images.length > 0 && (
+          <div className="px-5 py-5">
+            <MemoryPhotoCarousel images={memory.images} owner={memory.author.nickname} onImageError={onImageError} />
+          </div>
+        )}
+        {!memory.content && memory.images.length === 0 && (
+          <p className="px-5 py-5 text-sm text-ink-muted">사진과 글 없이 남긴 기록이에요.</p>
+        )}
+        {likeable && (
+          <div className="px-5 py-4">
+            <MemoryLikeButton memoryId={memory.memoryId} likedByMe={memory.likedByMe === true} likeCount={memory.likeCount} />
+          </div>
+        )}
+      </article>
+    </div>
   );
 }
 

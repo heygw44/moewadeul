@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * 내 기록 목록의 한 항목. 작성자 본인에게만 주므로 정확한 좌표와 공개 범위를 담는다.
+ * 내 기록 목록의 한 항목. 작성자 본인에게만 주므로 정확한 좌표와 공개 범위, 신고·관리자 조치 상태를 담는다.
  *
  * @param spotId 연결한 장소가 ACTIVE일 때만 값이 있다. 아니면 spotName과 함께 null이다
  * @param excerpt 글 앞 100자. 글이 없으면 null이다
@@ -20,6 +20,7 @@ public record MemorySummary(
         int nights,
         String excerpt,
         String visibility,
+        String status,
         String thumbnailUrl,
         long imageCount,
         long likeCount,
