@@ -27,11 +27,14 @@ import org.springframework.stereotype.Service;
  * <p>이 파일은 휴양림 목록이 아니라 예약 정책 목록이다. 예약 정책마다 한 행이라 같은 휴양림이 여러 행에 반복되고, 이름·좌표·연락처·홈페이지는 모든
  * 행에서 같다. 그래서 서비스는 기관아이디마다 처음 나온 행 하나만 적재한다.
  *
- * <p>서비스는 휴양림을 추가하고 갱신하기만 하고, 새 파일에 없는 기존 휴양림을 숨기지 않는다. 휴양림은 예약 정책이 없는 기간에 파일에서 빠질 수 있다.
- * 그래서 파일에 없다는 이유만으로 숨기면 운영 중인 휴양림을 잘못 숨기게 된다. 실제로 문을 닫은 휴양림은 관리자가 직접 숨긴다.
+ * <p>새 파일에 기관아이디가 없는 기존 휴양림은 고캠핑의 원천 삭제와 같은 방식으로 숨기고, 숨긴 시각을 남긴다. 그 휴양림이 파일에 다시 나타나면
+ * 되돌린다. 관리자가 숨긴 휴양림은 숨긴 시각이 없어서 숨기지도 되돌리지도 않는다. 좌표가 잘못돼 건너뛴 행도 파일에는 있으므로 숨기지 않는다.
+ * 휴양림이 하나도 없는 파일은 읽기에 실패한 것으로 보고, 아무것도 숨기지 않고 실행을 실패로 끝낸다.
  *
  * <p>서비스는 파일 전체를 장소 모듈의 트랜잭션 하나로 적재한다. 그래서 적재 도중 실패하면 DB가 그 트랜잭션을 모두 되돌리고, 다음 실행이 이어서
- * 처리할 위치도 없다. 따라서 서비스는 실행 기록에 진행 위치를 쓰지 않고, 직전 실행이 실패했어도 파일을 처음부터 다시 적재한다.
+ * 처리할 위치도 없다. 따라서 서비스는 실행 기록에 진행 위치를 쓰지 않고, 직전 실행이 실패했어도 파일을 처음부터 다시 적재한다. 빠진 휴양림
+ * 숨기기는 적재를 커밋한 뒤 다른 트랜잭션에서 한다. 그래서 숨기기만 실패하면 적재 결과는 남고 실행은 실패로 기록된다. 이때 같은 파일로 다시
+ * 실행하면 적재는 바뀐 것이 없고 숨기기를 다시 한다.
  *
  * <p>이 서비스는 트랜잭션을 열지 않는다. 실행 기록과 적재는 각 서비스의 트랜잭션에서 따로 커밋한다. 그래서 적재가 실패해도 실패한 실행 기록은 남는다.
  */
@@ -93,10 +96,14 @@ public class ForestLoadService {
         log.info("forest load started runId={} file={}", runId, file.getFileName());
         ForestFile forestFile = forestFileReader.read(file);
         Collection<ForestRecord> forests = firstRowPerInstitution(forestFile.records());
+        if (forests.isEmpty()) {
+            throw new IllegalStateException("휴양림 파일에 휴양림이 없습니다. file=" + file.getFileName());
+        }
         List<PublicSpotCommand> commands = toCommands(forests, forestFile.sourceDate());
         PublicSpotUpsertResult upserted = publicSpotSyncService.upsert(PublicSpotSource.FOREST, commands);
+        int removed = publicSpotSyncService.markMissingRemoved(PublicSpotSource.FOREST, institutionIds(forests));
         ForestLoadResult result = ForestLoadResult.of(
-                forestFile.sourceDate(), forests.size(), forests.size() - commands.size(), upserted);
+                forestFile.sourceDate(), forests.size(), forests.size() - commands.size(), upserted, removed);
         syncJobRunService.recordProgress(runId, null, result.processedCount(), result.skipped());
         return result;
     }
@@ -107,6 +114,10 @@ public class ForestLoadService {
             byInstitutionId.putIfAbsent(record.institutionId().strip(), record);
         }
         return byInstitutionId.values();
+    }
+
+    private static List<String> institutionIds(Collection<ForestRecord> forests) {
+        return forests.stream().map(ForestRecord::institutionId).toList();
     }
 
     private static List<PublicSpotCommand> toCommands(Collection<ForestRecord> forests, LocalDate sourceDate) {
@@ -156,13 +167,14 @@ public class ForestLoadService {
 
     private static void logCompleted(long runId, ForestLoadResult result) {
         log.info(
-                "forest load completed runId={} sourceDate={} processed={} inserted={} updated={} unchanged={} skipped={}",
+                "forest load completed runId={} sourceDate={} processed={} inserted={} updated={} unchanged={} removed={} skipped={}",
                 runId,
                 result.sourceDate(),
                 result.processedCount(),
                 result.inserted(),
                 result.updated(),
                 result.unchanged(),
+                result.removed(),
                 result.skipped());
     }
 }

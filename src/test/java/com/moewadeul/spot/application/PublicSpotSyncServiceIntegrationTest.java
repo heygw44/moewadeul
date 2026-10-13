@@ -1,6 +1,7 @@
 package com.moewadeul.spot.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -521,6 +522,97 @@ class PublicSpotSyncServiceIntegrationTest {
         StoredSpot other = findSpot(PublicSpotSource.GOCAMPING, "101");
         assertThat(other.status()).isEqualTo("ACTIVE");
         assertThat(other.sourceRemovedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-06] 현재 목록에 없는 외부 ID의 장소만 숨기고, 다른 출처의 장소는 건드리지 않는다")
+    void markMissingRemovedHidesOnlyMissingIdsOfGivenSource() {
+        // given
+        publicSpotSyncService.upsert(
+                PublicSpotSource.FOREST, List.of(seoulCampsite("100", "솔숲 휴양림"), seoulCampsite("101", "갈대 휴양림")));
+        publicSpotSyncService.upsert(PublicSpotSource.GOCAMPING, List.of(seoulCampsite("101", "갈대 야영장")));
+
+        // when
+        int hidden = publicSpotSyncService.markMissingRemoved(PublicSpotSource.FOREST, List.of("100"));
+
+        // then
+        assertThat(hidden).isEqualTo(1);
+        assertThat(findSpot(PublicSpotSource.FOREST, "100").status()).isEqualTo("ACTIVE");
+        StoredSpot missing = findSpot(PublicSpotSource.FOREST, "101");
+        assertThat(missing.status()).isEqualTo("HIDDEN");
+        assertThat(missing.sourceRemovedAt()).isNotNull();
+        StoredSpot otherSource = findSpot(PublicSpotSource.GOCAMPING, "101");
+        assertThat(otherSource.status()).isEqualTo("ACTIVE");
+        assertThat(otherSource.sourceRemovedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-06] 모든 외부 ID가 목록에 있으면 아무것도 숨기지 않고 0을 돌려준다")
+    void markMissingRemovedReturnsZeroWhenAllPresent() {
+        // given
+        publicSpotSyncService.upsert(
+                PublicSpotSource.FOREST, List.of(seoulCampsite("100", "솔숲 휴양림"), seoulCampsite("101", "갈대 휴양림")));
+
+        // when
+        int hidden = publicSpotSyncService.markMissingRemoved(PublicSpotSource.FOREST, List.of("100", "101"));
+
+        // then
+        assertThat(hidden).isZero();
+        assertThat(findSpot(PublicSpotSource.FOREST, "100").status()).isEqualTo("ACTIVE");
+        assertThat(findSpot(PublicSpotSource.FOREST, "101").status()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("[F-06] 원천 목록이 비어 있으면 예외를 던지고 아무 장소도 숨기지 않는다")
+    void markMissingRemovedRejectsEmptyPresentList() {
+        // given
+        publicSpotSyncService.upsert(PublicSpotSource.FOREST, List.of(seoulCampsite("100", "솔숲 휴양림")));
+
+        // when & then: 빈 목록을 그대로 쓰면 출처의 장소를 모두 숨기게 되므로 서비스가 거부한다.
+        assertThatThrownBy(() -> publicSpotSyncService.markMissingRemoved(PublicSpotSource.FOREST, List.of(" ")))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(findSpot(PublicSpotSource.FOREST, "100").status()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("[F-06] 이미 숨긴 표시가 있거나 관리자가 숨긴 장소는 목록에 없어도 다시 숨기지 않는다")
+    void markMissingRemovedSkipsAlreadyMarkedAndAdminHiddenSpots() {
+        // given
+        publicSpotSyncService.upsert(
+                PublicSpotSource.FOREST,
+                List.of(
+                        seoulCampsite("100", "솔숲 휴양림"),
+                        seoulCampsite("101", "갈대 휴양림"),
+                        seoulCampsite("102", "달빛 휴양림")));
+        publicSpotSyncService.markRemoved(PublicSpotSource.FOREST, List.of("100"));
+        Instant firstMarker = findSpot(PublicSpotSource.FOREST, "100").sourceRemovedAt();
+        setSpotStatus(findSpotId(PublicSpotSource.FOREST, "101"), "HIDDEN");
+        clock.advance(NEXT_SYNC);
+
+        // when
+        int hidden = publicSpotSyncService.markMissingRemoved(PublicSpotSource.FOREST, List.of("102"));
+
+        // then
+        assertThat(hidden).isZero();
+        assertThat(findSpot(PublicSpotSource.FOREST, "100").sourceRemovedAt()).isEqualTo(firstMarker);
+        StoredSpot adminHidden = findSpot(PublicSpotSource.FOREST, "101");
+        assertThat(adminHidden.status()).isEqualTo("HIDDEN");
+        assertThat(adminHidden.sourceRemovedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-06] 목록의 외부 ID에 앞뒤 공백이 있어도 그 장소는 목록에 있는 것으로 본다")
+    void markMissingRemovedTreatsPaddedPresentIdsAsPresent() {
+        // given
+        publicSpotSyncService.upsert(
+                PublicSpotSource.FOREST, List.of(seoulCampsite("100", "솔숲 휴양림"), seoulCampsite("101", "갈대 휴양림")));
+
+        // when
+        int hidden = publicSpotSyncService.markMissingRemoved(PublicSpotSource.FOREST, List.of(" 100 ", "101\t"));
+
+        // then
+        assertThat(hidden).isZero();
+        assertThat(findSpot(PublicSpotSource.FOREST, "100").status()).isEqualTo("ACTIVE");
     }
 
     @Test

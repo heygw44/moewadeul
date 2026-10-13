@@ -6,6 +6,9 @@ import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.spot.application.PublicSpotCommand;
+import com.moewadeul.spot.application.PublicSpotSource;
+import com.moewadeul.spot.application.PublicSpotSyncService;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +43,9 @@ class ForestLoadServiceIntegrationTest {
     private ForestLoadService forestLoadService;
 
     @Autowired
+    private PublicSpotSyncService publicSpotSyncService;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -55,7 +61,7 @@ class ForestLoadServiceIntegrationTest {
         ForestLoadResult result = forestLoadService.load(fixture()).orElseThrow();
 
         // then
-        assertThat(result).isEqualTo(new ForestLoadResult(FIXTURE_SOURCE_DATE, FOREST_COUNT, FOREST_COUNT, 0, 0, 0));
+        assertThat(result).isEqualTo(new ForestLoadResult(FIXTURE_SOURCE_DATE, FOREST_COUNT, FOREST_COUNT, 0, 0, 0, 0));
         assertThat(jdbcTemplate.queryForList("SELECT DISTINCT type FROM spot", String.class))
                 .containsExactly("FOREST");
         assertThat(jdbcTemplate.queryForList("SELECT DISTINCT status FROM spot", String.class))
@@ -105,7 +111,7 @@ class ForestLoadServiceIntegrationTest {
         ForestLoadResult result = forestLoadService.load(fixture()).orElseThrow();
 
         // then
-        assertThat(result).isEqualTo(new ForestLoadResult(FIXTURE_SOURCE_DATE, FOREST_COUNT, 0, 0, FOREST_COUNT, 0));
+        assertThat(result).isEqualTo(new ForestLoadResult(FIXTURE_SOURCE_DATE, FOREST_COUNT, 0, 0, FOREST_COUNT, 0, 0));
         assertThat(spotRows()).isEqualTo(spotsBefore);
         assertThat(detailRowsWithTimestamps()).isEqualTo(detailsBefore);
         assertThat(runs()).hasSize(2).allSatisfy(run -> assertThat(run.status()).isEqualTo("COMPLETED"));
@@ -124,7 +130,7 @@ class ForestLoadServiceIntegrationTest {
 
         // then
         LocalDate newSourceDate = LocalDate.of(2026, 9, 1);
-        assertThat(result).isEqualTo(new ForestLoadResult(newSourceDate, FOREST_COUNT, 0, FOREST_COUNT, 0, 0));
+        assertThat(result).isEqualTo(new ForestLoadResult(newSourceDate, FOREST_COUNT, 0, FOREST_COUNT, 0, 0, 0));
         assertThat(jdbcTemplate.queryForList(
                         "SELECT DISTINCT CAST(source_date AS CHAR) FROM public_spot_detail", String.class))
                 .containsExactly(newSourceDate.toString());
@@ -143,7 +149,7 @@ class ForestLoadServiceIntegrationTest {
 
         // then
         assertThat(result)
-                .isEqualTo(new ForestLoadResult(FIXTURE_SOURCE_DATE, FOREST_COUNT + 1, FOREST_COUNT, 0, 0, 1));
+                .isEqualTo(new ForestLoadResult(FIXTURE_SOURCE_DATE, FOREST_COUNT + 1, FOREST_COUNT, 0, 0, 0, 1));
         assertThat(countRows("public_spot_detail WHERE external_id = '9999'")).isZero();
         assertThat(runs()).singleElement().satisfies(run -> {
             assertThat(run.status()).isEqualTo("COMPLETED");
@@ -191,6 +197,155 @@ class ForestLoadServiceIntegrationTest {
         assertThat(result.sourceDate()).isEqualTo(FIXTURE_SOURCE_DATE);
         assertThat(result.inserted()).isEqualTo(FOREST_COUNT);
         assertThat(countRows("public_spot_detail WHERE source = 'FOREST'")).isEqualTo(FOREST_COUNT);
+    }
+
+    @Test
+    @DisplayName("[F-06] 새 파일에 없는 휴양림은 숨기고 숨긴 시각을 남기며, 나머지 휴양림은 그대로 둔다")
+    void hidesForestMissingFromNewFile() throws IOException {
+        // given
+        forestLoadService.load(fixture());
+        Path without0116 = fileWithoutInstitution("forest_20260901.csv", "0116");
+
+        // when
+        ForestLoadResult result = forestLoadService.load(without0116).orElseThrow();
+
+        // then
+        assertThat(result.removed()).isEqualTo(1);
+        assertThat(result.processedCount()).isEqualTo(FOREST_COUNT - 1);
+        assertThat(statusOf("0116")).isEqualTo("HIDDEN");
+        assertThat(removedMarkerCount("0116")).isEqualTo(1);
+        assertThat(statusOf("0101")).isEqualTo("ACTIVE");
+        assertThat(statusOf("0305")).isEqualTo("ACTIVE");
+        assertThat(removedMarkerCount("0101") + removedMarkerCount("0305")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-06] 숨겨진 휴양림이 파일에 다시 나타나면 공개 상태로 되돌리고 숨긴 시각을 지운다")
+    void restoresForestThatReappearsInFile() throws IOException {
+        // given
+        forestLoadService.load(fixture());
+        forestLoadService.load(fileWithoutInstitution("forest_20260901.csv", "0116"));
+        clock.advance(Duration.ofDays(1));
+
+        // when
+        ForestLoadResult result = forestLoadService.load(fixture()).orElseThrow();
+
+        // then
+        assertThat(result.removed()).isZero();
+        assertThat(statusOf("0116")).isEqualTo("ACTIVE");
+        assertThat(removedMarkerCount("0116")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-06] 관리자가 숨긴 휴양림은 파일에서 빠져도 표시하지 않고, 다시 나타나도 공개하지 않는다")
+    void leavesAdminHiddenForestUntouched() throws IOException {
+        // given
+        forestLoadService.load(fixture());
+        jdbcTemplate.update("UPDATE spot SET status = 'HIDDEN' WHERE id = (SELECT spot_id FROM public_spot_detail"
+                + " WHERE external_id = '0116')");
+
+        // when
+        ForestLoadResult removedLoad = forestLoadService
+                .load(fileWithoutInstitution("forest_20260901.csv", "0116"))
+                .orElseThrow();
+
+        // then
+        assertThat(removedLoad.removed()).isZero();
+        assertThat(statusOf("0116")).isEqualTo("HIDDEN");
+        assertThat(removedMarkerCount("0116")).isZero();
+
+        // when
+        forestLoadService.load(fixture());
+
+        // then
+        assertThat(statusOf("0116")).isEqualTo("HIDDEN");
+        assertThat(removedMarkerCount("0116")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-06] 좌표가 잘못돼 건너뛴 행만 파일에 남은 휴양림은 파일에 있는 것으로 보고 숨기지 않는다")
+    void doesNotHideForestSkippedForInvalidCoordinate() throws IOException {
+        // given
+        forestLoadService.load(fixture());
+        String header = Files.readAllLines(fixture(), StandardCharsets.UTF_8).get(0);
+        Path onlyInvalid = Files.writeString(
+                tempDir.resolve("forest_20260901.csv"),
+                header + "\n" + invalidRowFor("0116") + "\n",
+                StandardCharsets.UTF_8);
+
+        // when
+        ForestLoadResult result = forestLoadService.load(onlyInvalid).orElseThrow();
+
+        // then
+        assertThat(result.skipped()).isEqualTo(1);
+        assertThat(result.removed()).isEqualTo(FOREST_COUNT - 1);
+        assertThat(statusOf("0116")).isEqualTo("ACTIVE");
+        assertThat(removedMarkerCount("0116")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-06] 휴양림이 하나도 없는 파일은 실행을 실패로 남기고 기존 휴양림을 숨기지 않는다")
+    void failsRunAndHidesNothingWhenFileHasNoForests() throws IOException {
+        // given
+        forestLoadService.load(fixture());
+        String header = Files.readAllLines(fixture(), StandardCharsets.UTF_8).get(0);
+        Path headerOnly =
+                Files.writeString(tempDir.resolve("forest_20260901.csv"), header + "\n", StandardCharsets.UTF_8);
+
+        // when, then
+        assertThatThrownBy(() -> forestLoadService.load(headerOnly)).isInstanceOf(IllegalStateException.class);
+        assertThat(countRows("spot WHERE status = 'HIDDEN'")).isZero();
+        assertThat(runs()).hasSize(2).last().satisfies(run -> {
+            assertThat(run.status()).isEqualTo("FAILED");
+            assertThat(run.errorMessage()).startsWith("IllegalStateException: ");
+        });
+    }
+
+    @Test
+    @DisplayName("[F-06] 휴양림 파일을 적재해도 고캠핑 장소는 숨기지 않는다")
+    void doesNotHideGoCampingSpotWhenLoadingForestFile() throws IOException {
+        // given
+        publicSpotSyncService.upsert(
+                PublicSpotSource.GOCAMPING,
+                List.of(new PublicSpotCommand(
+                        "0116", "솔숲 야영장", 37.5665, 126.978, null, null, null, null, null, null, null, null, null)));
+
+        // when
+        ForestLoadResult result = forestLoadService.load(fixture()).orElseThrow();
+
+        // then
+        assertThat(result.removed()).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT s.status FROM spot s JOIN public_spot_detail d ON d.spot_id = s.id"
+                                + " WHERE d.source = 'GOCAMPING'",
+                        String.class))
+                .isEqualTo("ACTIVE");
+        assertThat(countRows("public_spot_detail WHERE source_removed_at IS NOT NULL"))
+                .isZero();
+    }
+
+    private Path fileWithoutInstitution(String fileName, String institutionId) throws IOException {
+        List<String> lines = Files.readAllLines(fixture(), StandardCharsets.UTF_8).stream()
+                .filter(line -> !line.startsWith(institutionId + ","))
+                .toList();
+        return Files.write(tempDir.resolve(fileName), lines, StandardCharsets.UTF_8);
+    }
+
+    private static String invalidRowFor(String institutionId) {
+        return INVALID_COORDINATE_ROW.replaceFirst("^9999", institutionId);
+    }
+
+    private String statusOf(String externalId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT s.status FROM spot s JOIN public_spot_detail d ON d.spot_id = s.id"
+                        + " WHERE d.source = 'FOREST' AND d.external_id = ?",
+                String.class,
+                externalId);
+    }
+
+    private int removedMarkerCount(String externalId) {
+        return countRows("public_spot_detail WHERE source = 'FOREST' AND external_id = '" + externalId
+                + "' AND source_removed_at IS NOT NULL");
     }
 
     private static Path fixture() throws IOException {
