@@ -2,7 +2,7 @@ package com.moewadeul.basecamp.application;
 
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.basecamp.domain.JoinGender;
-import com.moewadeul.trust.application.TrustDetail;
+import com.moewadeul.trust.application.profile.TrustDetail;
 
 /** 신뢰 모듈이 준 회원 정보를 합류 자격 판정이 쓰는 {@link Applicant}로 바꾼다. 검색과 합류 신청이 같은 변환을 쓴다. */
 final class JoinApplicants {

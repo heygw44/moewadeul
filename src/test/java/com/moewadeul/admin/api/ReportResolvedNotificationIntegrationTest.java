@@ -8,7 +8,7 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.notification.application.OutboxPublisher;
 import com.moewadeul.trust.application.CompanionReviewFixture;
-import com.moewadeul.trust.application.MemberReportFixture;
+import com.moewadeul.trust.application.report.MemberReportFixture;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.util.List;

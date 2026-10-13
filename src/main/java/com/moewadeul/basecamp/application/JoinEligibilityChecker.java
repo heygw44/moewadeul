@@ -9,7 +9,7 @@ import com.moewadeul.basecamp.domain.JoinUnmetReason;
 import com.moewadeul.basecamp.domain.PriorRelation;
 import com.moewadeul.basecamp.infra.BasecampSearchMapper;
 import com.moewadeul.basecamp.infra.ConfirmedScheduleRow;
-import com.moewadeul.trust.application.TrustSummaryService;
+import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

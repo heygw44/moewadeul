@@ -8,7 +8,7 @@ import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.notification.application.OutboxPublisher;
 import com.moewadeul.program.domain.ProgramCancelReason;
-import com.moewadeul.trust.application.WithdrawalService;
+import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;

@@ -1,6 +1,6 @@
 package com.moewadeul.admin.api;
 
-import com.moewadeul.trust.application.MemberReportActionResult;
+import com.moewadeul.trust.application.report.MemberReportActionResult;
 
 /** 신고 조치의 응답. 제재를 내리지 않았으면 sanctionId가 null이다. */
 public record MemberReportActionResponse(long reportId, String status, Long sanctionId) {

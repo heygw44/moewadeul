@@ -7,7 +7,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.notification.application.OutboxPublisher;
-import com.moewadeul.trust.application.WithdrawalService;
+import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
