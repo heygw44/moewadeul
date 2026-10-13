@@ -39,6 +39,7 @@ export const FACILITY_LABELS: ReadonlyArray<readonly [keyof PublicFacilities, st
 const SOURCE_LABELS: Record<string, string> = {
   GOCAMPING: '한국관광공사 고캠핑',
   FOREST: '산림청 국립자연휴양림관리소',
+  FOREST_STANDARD: '전국휴양림표준데이터',
   KDPA: '한국보호지역통합DB(KDPA)',
 };
 

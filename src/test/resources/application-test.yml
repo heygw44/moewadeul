@@ -87,6 +87,9 @@ moewadeul:
     forest:
       # 실제 파일에서 휴양림 3곳의 행만 옮긴 픽스처다. 상대 경로라 Gradle이 테스트를 실행하는 저장소 루트를 기준으로 찾는다.
       file: src/test/resources/fixtures/publicdata/forest/forest_20260325.csv
+    forest-standard:
+      # 손으로 만든 휴양림 5행(숙박 불가 1행, 100m 안의 중복 1쌍 포함)이다. 상대 경로라 Gradle이 테스트를 실행하는 저장소 루트를 기준으로 찾는다.
+      file: src/test/resources/fixtures/publicdata/forest-standard/forest-standard.json
     park-boundary:
       # 공원 세 곳에 작은 사각형 경계를 지어 넣은 픽스처다. 상대 경로라 Gradle이 테스트를 실행하는 저장소 루트를 기준으로 찾는다.
       file: src/test/resources/fixtures/publicdata/park-boundary/parks_20251231.tsv

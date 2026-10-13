@@ -142,6 +142,17 @@ public class PublicSpotSyncService {
         return markRemoved(source, missing);
     }
 
+    /**
+     * 호출하면 source 출처의 모든 장소를 상태와 상관없이(숨긴 장소도 포함해서) 외부 ID, 이름, 좌표로 돌려준다. 적재하는 쪽이 다른 출처의 장소와
+     * 겹치는지 가리거나, 이미 저장한 장소에 외부 ID를 이어 붙일 때 쓴다.
+     */
+    @Transactional(readOnly = true)
+    public List<PublicSpotLocation> findLocations(PublicSpotSource source) {
+        return publicSpotMapper.selectLocationsBySource(source.name()).stream()
+                .map(row -> new PublicSpotLocation(row.externalId(), row.name(), row.latitude(), row.longitude()))
+                .toList();
+    }
+
     // 외부 ID를 키로 모으므로, 같은 외부 ID가 다시 나오면 뒤의 명령이 앞의 명령을 덮어쓴다.
     // 그래야 한 INSERT 문에 같은 (출처, 외부 ID)가 두 번 들어가 유니크 제약을 어기는 일이 없다.
     private Map<String, NormalizedPublicSpot> normalize(PublicSpotSource source, List<PublicSpotCommand> commands) {

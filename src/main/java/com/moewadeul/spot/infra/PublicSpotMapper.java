@@ -72,4 +72,7 @@ public interface PublicSpotMapper {
 
     /** 호출하면 spotIds의 public_spot_detail에 원천 삭제로 숨긴 시각을 now로 기록하고 updated_at도 now로 바꾼다. */
     int markSourceRemoved(@Param("spotIds") Collection<Long> spotIds, @Param("now") Instant now);
+
+    /** 호출하면 source 출처의 모든 장소(상태와 원천 삭제 표시와 상관없이)의 외부 ID, 이름, 좌표를 읽는다. */
+    List<PublicSpotLocationRow> selectLocationsBySource(@Param("source") String source);
 }

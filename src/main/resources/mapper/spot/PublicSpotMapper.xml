@@ -157,6 +157,17 @@
         </foreach>
     </select>
 
+    <select id="selectLocationsBySource" resultType="com.moewadeul.spot.infra.PublicSpotLocationRow">
+        SELECT d.external_id AS external_id,
+               s.name AS name,
+               ST_Latitude(s.location) AS latitude,
+               ST_Longitude(s.location) AS longitude
+        FROM public_spot_detail d
+        JOIN spot s ON s.id = d.spot_id
+        WHERE d.source = #{source}
+        ORDER BY d.spot_id
+    </select>
+
     <select id="selectLiveExternalIds" resultType="string">
         SELECT d.external_id
         FROM public_spot_detail d

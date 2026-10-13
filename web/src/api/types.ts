@@ -168,19 +168,19 @@ export interface PublicFacilities {
   petPolicy: string | null;
 }
 
-export type PublicSpotSource = 'GOCAMPING' | 'FOREST';
+export type PublicSpotSource = 'GOCAMPING' | 'FOREST' | 'FOREST_STANDARD';
 
 export type OperatingStatus = 'OPERATING' | 'TEMPORARILY_CLOSED' | 'PERMANENTLY_CLOSED';
 
 export interface PublicDetail {
   source: PublicSpotSource;
-  // 휴양림은 원천에 분류가 없어서 null이다.
+  // 휴양림(국립·표준데이터)은 원천에서 분류를 받지 않아서 null이다.
   category: string | null;
-  // 원천이 시설 정보를 하나도 주지 않았으면 null이다. 휴양림은 늘 null이다.
+  // 원천이 시설 정보를 하나도 주지 않았으면 null이다. 휴양림은 늘 null이다(표준데이터의 시설 정보는 아직 받지 않는다).
   facilities: PublicFacilities | null;
   phone: string | null;
   homepage: string | null;
-  // 원천의 정보 기준일(YYYY-MM-DD). 고캠핑은 원천 수정일, 휴양림은 파일 기준일이고 없으면 null이다.
+  // 원천의 정보 기준일(YYYY-MM-DD). 고캠핑은 원천 수정일, 국립 휴양림은 파일 기준일, 표준데이터 휴양림은 행의 데이터기준일자이고 없으면 null이다.
   sourceDate: string | null;
   // 서버가 이 원천의 동기화를 마지막으로 성공한 시각(UTC ISO). 성공한 동기화가 없으면 null이다.
   checkedAt: string | null;
