@@ -1,8 +1,8 @@
 package com.moewadeul.admin.api;
 
 import com.moewadeul.common.web.PatchField;
-import com.moewadeul.program.application.ProgramLimits;
-import com.moewadeul.program.application.ProgramReviseCommand;
+import com.moewadeul.program.application.catalog.ProgramLimits;
+import com.moewadeul.program.application.catalog.ProgramReviseCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;

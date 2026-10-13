@@ -1,7 +1,7 @@
 package com.moewadeul.admin.api;
 
-import com.moewadeul.program.application.ProgramApplicantItem;
-import com.moewadeul.program.application.ProgramApplicantPage;
+import com.moewadeul.program.application.catalog.ProgramApplicantItem;
+import com.moewadeul.program.application.catalog.ProgramApplicantPage;
 import java.time.Instant;
 import java.util.List;
 

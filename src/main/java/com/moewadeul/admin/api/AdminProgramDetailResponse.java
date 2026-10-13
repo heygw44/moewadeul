@@ -1,6 +1,6 @@
 package com.moewadeul.admin.api;
 
-import com.moewadeul.program.application.ProgramDetail;
+import com.moewadeul.program.application.catalog.ProgramDetail;
 import java.time.Instant;
 
 /**

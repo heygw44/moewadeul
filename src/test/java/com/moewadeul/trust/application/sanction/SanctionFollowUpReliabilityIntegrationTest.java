@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 
-import com.moewadeul.basecamp.application.BasecampSanctionCleanupService;
+import com.moewadeul.basecamp.application.lifecycle.BasecampSanctionCleanupService;
 import com.moewadeul.basecamp.domain.RemovalCause;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -12,7 +12,7 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.notification.application.outbox.OutboxProperties;
 import com.moewadeul.notification.application.outbox.OutboxPublisher;
-import com.moewadeul.program.application.ProgramSanctionCleanupService;
+import com.moewadeul.program.application.enrollment.ProgramSanctionCleanupService;
 import com.moewadeul.program.domain.ProgramCancelReason;
 import com.moewadeul.trust.application.CompanionReviewFixture;
 import com.moewadeul.trust.domain.sanction.SanctionType;

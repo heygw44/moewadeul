@@ -1,7 +1,7 @@
 package com.moewadeul.admin.api;
 
-import com.moewadeul.program.application.ProgramCreateCommand;
-import com.moewadeul.program.application.ProgramLimits;
+import com.moewadeul.program.application.catalog.ProgramCreateCommand;
+import com.moewadeul.program.application.catalog.ProgramLimits;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
