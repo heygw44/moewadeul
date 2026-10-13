@@ -7,6 +7,7 @@ import { Link } from '../router';
 const DATA_SOURCES = [
   '한국관광공사 고캠핑',
   '산림청 국립자연휴양림관리소',
+  '전국휴양림표준데이터',
   '한국보호지역통합DB(KDPA)',
   '기상청',
   '한국천문연구원',
