@@ -41,6 +41,7 @@ public final class ArchitectureRules {
             "community",
             "trip",
             "memory",
+            "aisearch",
             "admin",
             COMMON);
 
