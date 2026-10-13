@@ -157,6 +157,26 @@
         </foreach>
     </select>
 
+    <select id="selectLocationsBySource" resultType="com.moewadeul.spot.infra.PublicSpotLocationRow">
+        SELECT d.external_id AS external_id,
+               s.name AS name,
+               ST_Latitude(s.location) AS latitude,
+               ST_Longitude(s.location) AS longitude
+        FROM public_spot_detail d
+        JOIN spot s ON s.id = d.spot_id
+        WHERE d.source = #{source}
+        ORDER BY d.spot_id
+    </select>
+
+    <select id="selectLiveExternalIds" resultType="string">
+        SELECT d.external_id
+        FROM public_spot_detail d
+        JOIN spot s ON s.id = d.spot_id
+        WHERE d.source = #{source}
+          AND s.status = 'ACTIVE'
+          AND d.source_removed_at IS NULL
+    </select>
+
     <!-- 기본 키로만 읽으므로, 존재하지 않는 키 사이의 틈에는 잠금이 걸리지 않는다. -->
     <select id="lockRemovalCandidates" resultType="long">
         SELECT d.spot_id

@@ -28,7 +28,6 @@ function isInternalPath(link: string): boolean {
   return link.startsWith('/') && !link.startsWith('//') && !link.includes('\\');
 }
 
-const DESCRIPTION = '베이스캠프와 행사 소식을 모아 보여 줘요.';
 
 export function NotificationsPage() {
   const session = useSession();
@@ -46,7 +45,7 @@ export function NotificationsPage() {
 
   if (session.status !== 'authenticated' || !session.me) {
     return (
-      <PageLayout title="알림" description={DESCRIPTION}>
+      <PageLayout title="알림">
         {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
       </PageLayout>
     );
@@ -156,7 +155,7 @@ function NotificationList() {
 
   if (state === null) {
     return (
-      <PageLayout title="알림" description={DESCRIPTION} aside={<EmailSettingsCard />}>
+      <PageLayout title="알림" aside={<EmailSettingsCard />}>
         {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
       </PageLayout>
     );
@@ -167,13 +166,13 @@ function NotificationList() {
   return (
     <PageLayout
       title="알림"
-      description={DESCRIPTION}
+     
       wide
       aside={<EmailSettingsCard />}
       actions={
         hasUnread ? (
           <Button variant="secondary" loading={markingAll} onClick={() => void readAll()}>
-            모두 읽음
+            모두 읽음 표시
           </Button>
         ) : undefined
       }
@@ -181,7 +180,7 @@ function NotificationList() {
     <section className="flex flex-col gap-3" aria-label="알림 목록">
       {(state.error || actionError) && (
         <div role="alert" className="flex flex-col gap-3">
-          <Notice tone="danger" title={state.error ? '알림을 불러오지 못했어요' : '알림을 처리하지 못했어요'}>
+          <Notice tone="danger" title={state.error ? '알림을 불러오지 못했어요' : '읽음으로 바꾸지 못했어요'}>
             <p>{state.error ?? actionError}</p>
           </Notice>
           {state.error && state.items.length === 0 && (
@@ -194,7 +193,7 @@ function NotificationList() {
         </div>
       )}
       {state.items.length === 0 && !state.error ? (
-        <EmptyState title="알림이 없어요" description="합류 신청, 신고 처리 같은 소식이 생기면 여기에 보여요." />
+        <EmptyState framed title="알림이 없어요" description="합류 신청이나 신고 처리 결과가 오면 여기에 보여요." />
       ) : (
         <ListPanel>
           {state.items.map((item) => (
@@ -222,12 +221,12 @@ function NotificationRow({ item, onOpen }: { item: NotificationItem; onOpen: () 
       <button
         type="button"
         onClick={onOpen}
-        className={`flex min-h-11 w-full items-start gap-3 px-4 py-3 text-left ${unread ? 'bg-forest-soft' : 'bg-card hover:bg-paper-deep'}`}
+        className={`flex min-h-11 w-full items-start gap-3 px-4 py-3 text-left ${unread ? 'bg-accent-soft' : 'bg-surface hover:bg-fill'}`}
       >
         <span className="flex w-2 shrink-0 justify-center pt-2">
           {unread && (
             <>
-              <span aria-hidden="true" className="size-2 rounded-control bg-forest" />
+              <span aria-hidden="true" className="size-2 rounded-control bg-accent" />
               <span className="sr-only">안 읽음</span>
             </>
           )}
@@ -303,7 +302,7 @@ function EmailSettingsCard() {
 
   return (
     <AsideSection title="이메일 수신 설정">
-      <p className="text-sm text-ink-muted">끄더라도 알림함에는 알림이 계속 쌓여요.</p>
+      <p className="text-sm text-ink-muted">꺼도 알림함에는 알림이 계속 쌓여요.</p>
       {state.status === 'loading' && <Skeleton className="h-40 w-full" />}
       {state.status === 'error' && (
         <div className="flex flex-col gap-2">
@@ -332,7 +331,7 @@ function EmailSettingsCard() {
             ))}
           </fieldset>
           {result === 'saved' && (
-            <p role="status" className="text-sm font-semibold text-forest-deep">
+            <p role="status" className="text-sm font-semibold text-accent-deep">
               저장했어요.
             </p>
           )}

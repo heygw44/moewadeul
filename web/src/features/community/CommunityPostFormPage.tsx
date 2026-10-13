@@ -37,7 +37,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   const editPostId = props.mode === 'edit' ? props.postId : null;
 
   useEffect(() => {
-    document.title = props.mode === 'create' ? '글쓰기 · 뫼와들' : '글 고치기 · 뫼와들';
+    document.title = props.mode === 'create' ? '글쓰기 · 뫼와들' : '글 수정 · 뫼와들';
   }, [props.mode]);
 
   // 글쓰기는 로그인한 세션으로만 할 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
@@ -45,15 +45,15 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
 
-  const title = props.mode === 'create' ? '글쓰기' : '글 고치기';
+  const title = props.mode === 'create' ? '글쓰기' : '글 수정';
   const layout = (children: ReactNode) => (
     <HubLayout
       title={title}
-      description={props.mode === 'create' ? '다녀온 이야기, 장비, 궁금한 점을 나눠 주세요.' : undefined}
+      description={props.mode === 'create' ? '다녀온 이야기, 써 본 장비, 궁금한 점을 나눠 주세요.' : undefined}
       breadcrumb={
         <Link
           to={editPostId === null ? '/community' : `/community/${editPostId}`}
-          className="inline-flex min-h-11 items-center gap-1 text-forest underline underline-offset-2"
+          className="inline-flex min-h-11 items-center gap-1 text-accent underline underline-offset-2"
         >
           <Icon name="chevronLeft" size={16} />
           {editPostId === null ? '커뮤니티' : '글로 돌아가기'}
@@ -68,7 +68,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   if (session.status !== 'authenticated' || !session.me) {
     return layout(
       showSkeleton ? (
-        <div className="rounded-control border border-contour bg-card p-5">
+        <div className="rounded-sheet border border-line bg-surface p-5">
           <Skeleton className="h-40 w-full" />
         </div>
       ) : null,
@@ -76,10 +76,10 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   }
   if (session.me.status === 'UNVERIFIED') {
     return layout(
-      <div className="rounded-control border border-contour bg-card p-5">
+      <div className="rounded-sheet border border-line bg-surface p-5">
         <Notice tone="warning" title="이메일 인증을 마치면 글을 쓸 수 있어요">
           <div className="flex flex-col gap-3">
-            <p>받은 인증 코드를 입력하면 바로 쓸 수 있어요.</p>
+            <p>메일로 받은 인증 코드만 입력하면 돼요.</p>
             <div>
               <Link to="/verify-email" className={SECONDARY_LINK_CLASS}>
                 이메일 인증하기
@@ -99,25 +99,24 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
 function WriteAside() {
   return (
     <>
-      <AsideSection title="글쓰기 안내">
+      <AsideSection title="커뮤니티 안내">
         <ul className="list-disc pl-5">
           <li>
-            동행 모집은{' '}
-            <Link to="/basecamps" className="font-semibold text-forest underline underline-offset-2">
+            동행은{' '}
+            <Link to="/basecamps" className="font-semibold text-accent underline underline-offset-2">
               베이스캠프
             </Link>
-            에서 해요.
+            에서 구해요.
           </li>
-          <li>송금을 요구하는 글은 신고 대상이에요.</li>
-          <li>공원 안 야영을 권하지 않아요.</li>
-          <li>전화번호나 주소 같은 개인정보는 쓰지 않아요.</li>
+          <li>돈을 보내 달라는 글은 신고해 주세요.</li>
+          <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
+          <li>전화번호나 주소 같은 개인정보는 적지 말아 주세요.</li>
         </ul>
       </AsideSection>
       <AsideSection title="사진">
         <ul className="list-disc pl-5">
-          <li>최대 5장까지 올려요.</li>
-          <li>JPEG, PNG, WebP 파일을 장당 5MB까지 올릴 수 있어요.</li>
-          <li>맨 앞 사진이 글에서 가장 먼저 보여요. 순서는 &apos;앞으로&apos; 버튼으로 바꿔요.</li>
+          <li>JPEG, PNG, WebP 파일을 5장까지, 장당 5MB까지 올릴 수 있어요.</li>
+          <li>맨 앞 사진이 대표 사진이 돼요. 순서는 &apos;앞으로&apos; 버튼으로 바꿀 수 있어요.</li>
         </ul>
       </AsideSection>
     </>
@@ -158,7 +157,7 @@ function EditLoader({ postId, myMemberId }: { postId: number; myMemberId: number
 
   if (result === null || notMine) {
     return showSkeleton ? (
-      <div className="rounded-control border border-contour bg-card p-5">
+      <div className="rounded-sheet border border-line bg-surface p-5">
         <Skeleton className="h-64 w-full" />
       </div>
     ) : null;
@@ -166,17 +165,11 @@ function EditLoader({ postId, myMemberId }: { postId: number; myMemberId: number
   if ('error' in result) {
     if (result.error instanceof ApiError && result.error.code === 'NOT_FOUND') {
       return (
-        <div className="rounded-control border border-contour bg-card">
-          <EmptyState
-            title="글을 찾을 수 없어요"
-            description="지워졌거나 볼 수 없는 글이에요."
-            action={
-              <Link to="/community" className={SECONDARY_LINK_CLASS}>
-                글 목록으로
-              </Link>
-            }
-          />
-        </div>
+        <EmptyState
+          framed
+          title="글을 찾을 수 없어요"
+          description="삭제됐거나 볼 수 없는 글이에요."
+        />
       );
     }
     return (
@@ -305,8 +298,8 @@ function PostForm(props: PostFormProps) {
   }
 
   let submitReason: string | undefined;
-  if (uploading) submitReason = '이미지를 올리는 중이에요. 끝나면 저장할 수 있어요.';
-  else if (failed) submitReason = '올리지 못한 이미지를 다시 시도하거나 빼 주세요.';
+  if (uploading) submitReason = '사진을 올리는 중이에요. 다 올라가면 저장할 수 있어요.';
+  else if (failed) submitReason = '올리지 못한 사진은 다시 올리거나 빼 주세요.';
 
   const spotLabel = spot === null ? null : spot.name === null ? '선택한 장소' : spot.name;
   const cancelTarget = props.mode === 'edit' ? `/community/${props.post.postId}` : '/community';
@@ -315,12 +308,12 @@ function PostForm(props: PostFormProps) {
     <form
       noValidate
       onSubmit={handleSubmit}
-      aria-label={mode === 'create' ? '글쓰기' : '글 고치기'}
-      className="divide-y divide-contour rounded-control border border-contour bg-card"
+      aria-label={mode === 'create' ? '글쓰기' : '글 수정'}
+      className="divide-y divide-line rounded-sheet border border-line bg-surface"
     >
       {formError && (
         <div role="alert" className="px-5 py-5">
-          <Notice tone="danger" title={mode === 'create' ? '글을 올리지 못했어요' : '글을 고치지 못했어요'}>
+          <Notice tone="danger" title={mode === 'create' ? '글을 올리지 못했어요' : '글을 수정하지 못했어요'}>
             <p>{typeof formError === 'string' ? formError : formError.message}</p>
             {typeof formError !== 'string' && formError.status >= 500 && formError.traceId && (
               <p className="mt-1 font-mono text-xs text-ink-muted">문의 번호 {formError.traceId}</p>
@@ -348,7 +341,7 @@ function PostForm(props: PostFormProps) {
 
       <div className="flex flex-col gap-3 px-5 py-5">
         <TextArea
-          label="본문"
+          label="내용"
           name="content"
           rows={12}
           maxLength={CONTENT_MAX}
@@ -371,7 +364,7 @@ function PostForm(props: PostFormProps) {
         <p className="text-sm font-medium text-ink">연결한 장소</p>
         {spotLabel === null ? (
           <p className="text-sm text-ink-muted">
-            지도 장소 상세에서 &apos;이 장소로 글쓰기&apos;를 누르면 장소를 연결할 수 있어요.
+            지도에서 장소를 열고 &apos;이 장소로 글쓰기&apos;를 누르면 장소가 연결돼요.
           </p>
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -391,17 +384,12 @@ function PostForm(props: PostFormProps) {
         )}
       </div>
 
-      <p className="flex items-center gap-2 px-5 py-3 text-sm text-ink-muted">
-        <Icon name="info" size={16} className="shrink-0" />
-        동행은 베이스캠프에서 구하고, 송금 요구는 신고해 주세요.
-      </p>
-
-      <div className="sticky bottom-(--bottom-nav-h) flex flex-wrap items-start justify-end gap-2 bg-card px-5 py-4 lg:static">
+      <div className="sticky bottom-(--bottom-nav-h) flex flex-wrap items-start justify-end gap-2 bg-surface px-5 py-4 lg:static">
         <Link to={cancelTarget} className={SECONDARY_LINK_CLASS}>
           취소
         </Link>
         <Button type="submit" loading={submitting} disabled={uploading || failed} disabledReason={submitReason}>
-          {mode === 'create' ? '올리기' : '고치기'}
+          {mode === 'create' ? '올리기' : '수정하기'}
         </Button>
       </div>
     </form>

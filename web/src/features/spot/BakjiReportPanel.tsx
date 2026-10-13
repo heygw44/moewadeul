@@ -4,7 +4,7 @@ import { createBakji } from '../../api/bakjis';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import type { BakjiCreateRequest, BakjiSubmissionResponse, GroundType, SignalLevel } from '../../api/types';
-import { Link } from '../../app/router';
+import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
@@ -19,12 +19,15 @@ import type { LatLng } from '../../map/types';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { ParkWarningNotice } from './ParkWarningNotice';
+import { LocationLabel } from './LocationLabel';
 import { GROUND_TYPE_LABELS, SIGNAL_LEVEL_LABELS } from './spotLabels';
 
 type BakjiReportPanelProps = {
   draft: LatLng | null;
   onCancel: () => void;
   onSubmitted: (response: BakjiSubmissionResponse) => void;
+  // 지도 메뉴에서 베이스캠프를 열려다가 근처에 장소가 없어 넘어온 제보다. 등록되면 새 박지에서 베이스캠프 열기 폼을 연다.
+  nextBasecamp?: boolean;
 };
 
 type YesNo = 'YES' | 'NO';
@@ -56,8 +59,6 @@ const GROUND_OPTIONS: ChoiceOption<Unknown | GroundType>[] = [
 
 const PRIMARY_LINK_CLASS =
   'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
-const SECONDARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
 
 // 서버가 지도 영역 밖 좌표를 lat, lng 두 필드로 나눠 알려 주므로, 위치 한 곳에 중복 없이 모아 보여 준다.
 function mergeReasons(reasons: string[]): string {
@@ -75,14 +76,15 @@ const SERVER_FIELD_MAP: Record<string, FormField> = {
   groundType: 'groundType',
 };
 
-export function BakjiReportPanel({ draft, onCancel, onSubmitted }: BakjiReportPanelProps) {
+export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = false }: BakjiReportPanelProps) {
   const session = useSession();
+  const location = useLocation();
   const showSessionSkeleton = useDelayedFlag(session.status === 'loading');
   const [result, setResult] = useState<BakjiSubmissionResponse | null>(null);
 
   let body: ReactNode;
   if (result) {
-    body = <SubmittedView result={result} />;
+    body = <SubmittedView result={result} nextBasecamp={nextBasecamp} />;
   } else if (session.status === 'loading') {
     body = showSessionSkeleton ? (
       <div aria-busy="true" className="flex flex-col gap-3">
@@ -95,9 +97,10 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted }: BakjiReportPa
     body = (
       <EmptyState
         title="로그인하면 박지를 제보할 수 있어요"
-        description="제보한 박지는 지도에 올라가고, 다른 회원이 확인하거나 신고할 수 있어요."
+        description="제보한 박지는 지도에 바로 올라가요. 다른 회원이 다녀와서 확인하거나 문제를 신고해요."
         action={
-          <Link to={withNext('/login', '/bakjis/new')} className={PRIMARY_LINK_CLASS}>
+          // 지도 메뉴에서 찍어 온 위치와 다음 갈 곳이 로그인 뒤에도 남도록 주소를 그대로 돌려받는다.
+          <Link to={withNext('/login', `${location.pathname}${location.search}`)} className={PRIMARY_LINK_CLASS}>
             로그인
           </Link>
         }
@@ -108,9 +111,16 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted }: BakjiReportPa
       <ReportForm
         draft={draft}
         unverified={session.me.status === 'UNVERIFIED'}
+        nextBasecamp={nextBasecamp}
         onSubmitted={(response) => {
-          setResult(response);
           onSubmitted(response);
+          // 경고 박지로는 베이스캠프를 열 수 없으므로, 그때는 열기 폼으로 가지 않고 등록 결과와 경고를 보여 준다.
+          // 뒤로 가기로 이 제보 화면에 돌아와 같은 박지를 다시 제보하지 않도록 주소를 바꿔치기한다.
+          if (nextBasecamp && !response.parkWarning.warned) {
+            navigate(`/basecamps/new?spotId=${response.spotId}`, { replace: true });
+            return;
+          }
+          setResult(response);
         }}
       />
     );
@@ -118,12 +128,12 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted }: BakjiReportPa
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-contour bg-card px-2">
+      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
         <button
           type="button"
           aria-label="지도로 돌아가기"
           onClick={onCancel}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep"
+          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
         >
           <Icon name="chevronLeft" size={24} />
         </button>
@@ -136,10 +146,12 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted }: BakjiReportPa
 function ReportForm({
   draft,
   unverified,
+  nextBasecamp,
   onSubmitted,
 }: {
   draft: LatLng | null;
   unverified: boolean;
+  nextBasecamp: boolean;
   onSubmitted: (response: BakjiSubmissionResponse) => void;
 }) {
   const [name, setName] = useState('');
@@ -230,10 +242,16 @@ function ReportForm({
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
       <h2 className="text-xl font-bold tracking-tight text-ink">박지 제보</h2>
 
+      {nextBasecamp && (
+        <Notice tone="info" title="50m 안에 장소가 없어요">
+          <p>이 위치를 박지로 먼저 제보해 주세요. 등록되면 이어서 이 박지에서 베이스캠프를 열 수 있어요.</p>
+        </Notice>
+      )}
+
       {unverified && (
         <Notice tone="warning" title="이메일 인증을 마치면 박지를 제보할 수 있어요">
-          <Link to="/verify-email" className="inline-flex min-h-11 items-center text-forest underline underline-offset-2">
-            이메일 인증하러 가기
+          <Link to="/verify-email" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
+            이메일 인증하기
           </Link>
         </Notice>
       )}
@@ -252,9 +270,7 @@ function ReportForm({
           <p className="text-base text-ink">지도를 눌러 박지 위치를 찍어 주세요</p>
         ) : (
           <>
-            <p className="font-mono text-sm tabular-nums text-ink">
-              {draft.lat.toFixed(5)}, {draft.lng.toFixed(5)}
-            </p>
+            <LocationLabel position={draft} />
             <p className="text-sm text-ink-muted">지도를 다시 누르면 위치가 바뀌어요.</p>
           </>
         )}
@@ -320,7 +336,6 @@ function ReportForm({
         fullWidth
         loading={submitting}
         disabled={unverified}
-        disabledReason={unverified ? '이메일 인증을 마치면 제보할 수 있어요' : undefined}
       >
         제보하기
       </Button>
@@ -328,19 +343,23 @@ function ReportForm({
   );
 }
 
-function SubmittedView({ result }: { result: BakjiSubmissionResponse }) {
+function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionResponse; nextBasecamp: boolean }) {
   const { parkWarning, guide, duplicateCandidates } = result;
 
   return (
     <div role="status" className="flex flex-col gap-4">
       <h2 className="text-xl font-bold tracking-tight text-ink">제보를 등록했어요</h2>
 
+      {/* 공원 경계 경고는 경고 상자 하나가 근거와 함께 알린다. 베이스캠프를 열려던 흐름이면 열 수 없다는 결과만 한 줄 더한다. */}
       {parkWarning.warned ? (
-        <ParkWarningNotice warning={parkWarning} />
+        <>
+          <ParkWarningNotice warning={parkWarning} />
+          {nextBasecamp && (
+            <p className="text-base font-semibold text-danger">이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
+          )}
+        </>
       ) : (
-        <Notice tone="info" title="안내">
-          <p>{guide}</p>
-        </Notice>
+        <p className="text-base text-ink">{guide}</p>
       )}
 
       {duplicateCandidates.length > 0 && (
@@ -348,13 +367,13 @@ function SubmittedView({ result }: { result: BakjiSubmissionResponse }) {
           <h3 id="duplicate-title" className="text-sm font-semibold text-ink-muted">
             50m 안에 비슷한 박지가 있어요
           </h3>
-          <p className="text-sm text-ink">제보는 이미 등록됐어요. 같은 곳이라면 기존 박지에서 정보를 확인해 보세요.</p>
+          <p className="text-sm text-ink">같은 곳이라면 아래 박지의 정보를 확인해 주세요.</p>
           <ul className="flex flex-col">
             {duplicateCandidates.map((candidate) => (
-              <li key={candidate.spotId} className="border-t border-contour first:border-t-0">
+              <li key={candidate.spotId} className="border-t border-line first:border-t-0">
                 <Link
                   to={`/spots/${candidate.spotId}`}
-                  className="flex min-h-11 items-center justify-between gap-3 py-2 text-forest underline underline-offset-2"
+                  className="flex min-h-11 items-center justify-between gap-3 py-2 text-accent underline underline-offset-2"
                 >
                   <span className="min-w-0 break-words">{candidate.name}</span>
                   <span className="shrink-0 font-mono text-sm tabular-nums text-ink-muted">{candidate.distanceM}m</span>
@@ -368,9 +387,6 @@ function SubmittedView({ result }: { result: BakjiSubmissionResponse }) {
       <div className="flex flex-wrap gap-2">
         <Link to={`/spots/${result.spotId}`} className={PRIMARY_LINK_CLASS}>
           제보한 박지 보기
-        </Link>
-        <Link to="/map" className={SECONDARY_LINK_CLASS}>
-          지도로
         </Link>
       </div>
     </div>

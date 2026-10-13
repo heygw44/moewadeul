@@ -57,6 +57,11 @@ public interface PublicSpotMapper {
             @Param("source") String source, @Param("externalIds") Collection<String> externalIds);
 
     /**
+     * 호출하면 source 출처에서 지금 ACTIVE이고 원천 삭제 표시가 없는 장소의 외부 ID를 모두 잠그지 않고 읽는다.
+     */
+    List<String> selectLiveExternalIds(@Param("source") String source);
+
+    /**
      * 호출하면 spotIds 중 지금도 ACTIVE이고 원천 삭제 표시가 없는 장소의 spot ID를 읽으면서 spot과 public_spot_detail 행을 잠근다. 호출하는
      * 쪽이 연 트랜잭션이 끝날 때까지 다른 트랜잭션은 이 행들을 바꾸지 못한다.
      */
@@ -67,4 +72,7 @@ public interface PublicSpotMapper {
 
     /** 호출하면 spotIds의 public_spot_detail에 원천 삭제로 숨긴 시각을 now로 기록하고 updated_at도 now로 바꾼다. */
     int markSourceRemoved(@Param("spotIds") Collection<Long> spotIds, @Param("now") Instant now);
+
+    /** 호출하면 source 출처의 모든 장소(상태와 원천 삭제 표시와 상관없이)의 외부 ID, 이름, 좌표를 읽는다. */
+    List<PublicSpotLocationRow> selectLocationsBySource(@Param("source") String source);
 }

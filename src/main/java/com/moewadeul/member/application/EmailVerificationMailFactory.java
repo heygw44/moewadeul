@@ -8,13 +8,13 @@ final class EmailVerificationMailFactory {
     static final String SUBJECT = "[뫼와들] 이메일 인증 코드";
 
     private static final String BODY_TEMPLATE = """
-            안녕하세요, 뫼와들입니다.
+            안녕하세요, 뫼와들이에요.
 
             아래 인증 코드를 10분 안에 입력해 주세요.
 
             인증 코드: %s
 
-            직접 가입하지 않으셨다면 이 메일을 무시해 주세요. 별도로 하실 일은 없습니다.
+            직접 가입하지 않았다면 이 메일은 무시해 주세요. 따로 할 일은 없어요.
             """;
 
     private EmailVerificationMailFactory() {}

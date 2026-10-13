@@ -50,15 +50,20 @@ class BakjiRejudgeServiceIntegrationTest {
 
         // then
         assertThat(first.judgedCount()).isEqualTo(3);
+        assertThat(first.newlyWarnedCount()).isEqualTo(1);
+        assertThat(first.clearedCount()).isZero();
         assertWarned(oldInside, bukhansanId);
         assertNotWarned(newInside);
         assertNotWarned(outside);
 
         // when: 북한산 경계를 옮긴 파일을 적재하고 다시 판정한다.
         parkBoundaryLoadService.load(fixture(NEWER_FIXTURE)).orElseThrow();
-        bakjiRejudgeService.rejudge().orElseThrow();
+        BakjiRejudgeResult second = bakjiRejudgeService.rejudge().orElseThrow();
 
         // then
+        assertThat(second.judgedCount()).isEqualTo(3);
+        assertThat(second.newlyWarnedCount()).isEqualTo(1);
+        assertThat(second.clearedCount()).isEqualTo(1);
         assertThat(idOf("북한산")).isEqualTo(bukhansanId);
         assertNotWarned(oldInside);
         assertWarned(newInside, bukhansanId);

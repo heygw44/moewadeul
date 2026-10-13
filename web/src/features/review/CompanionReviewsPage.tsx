@@ -13,7 +13,7 @@ import type {
   RevealedReceivedCompanionReview,
 } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
@@ -37,7 +37,7 @@ const COMMENT_MAX = 300;
 type Tab = 'pending' | 'received';
 
 const TAB_OPTIONS: ReadonlyArray<{ value: Tab; label: string }> = [
-  { value: 'pending', label: '작성할 후기' },
+  { value: 'pending', label: '쓸 후기' },
   { value: 'received', label: '받은 후기' },
 ];
 
@@ -47,7 +47,7 @@ const REJOIN_OPTIONS: ReadonlyArray<ChoiceOption<'YES' | 'NO'>> = [
 ];
 
 const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
 
 function tabFromSearch(search: string): Tab {
   return new URLSearchParams(search).get('tab') === 'received' ? 'received' : 'pending';
@@ -70,7 +70,7 @@ export function CompanionReviewsPage() {
 
   if (session.status !== 'authenticated' || !session.me) {
     return (
-      <PageLayout title="동행 후기" description="함께 다녀온 멤버와 서로 남기는 후기예요.">
+      <PageLayout title="동행 후기">
         {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
       </PageLayout>
     );
@@ -79,7 +79,7 @@ export function CompanionReviewsPage() {
   return (
     <PageLayout
       title="동행 후기"
-      description="함께 다녀온 멤버와 서로 남기는 후기예요."
+     
       tabs={
         <UnderlineTabs
           label="동행 후기 종류"
@@ -124,19 +124,19 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
 
   if (!eligible) {
     return (
-      <Notice tone="info" title="본인확인을 하면 동행 후기를 쓸 수 있어요">
-        <p>동행 후기는 본인확인을 마친 회원만 쓸 수 있어요.</p>
-        <Link to="/identity-verification" className="mt-1 inline-flex min-h-11 items-center font-semibold text-forest">
+      <div className="flex flex-col items-start gap-1">
+        <p className="text-base text-ink">본인확인을 마치면 동행 후기를 쓸 수 있어요.</p>
+        <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2">
           본인확인하기
         </Link>
-      </Notice>
+      </div>
     );
   }
   if (current === null) return showSkeleton ? <Skeleton className="h-40 w-full" /> : null;
   if ('error' in current) {
     return (
       <div className="flex flex-col gap-3">
-        <Notice tone="danger" title="작성할 후기를 불러오지 못했어요">
+        <Notice tone="danger" title="쓸 후기를 불러오지 못했어요">
           <p>{current.error}</p>
         </Notice>
         <div>
@@ -151,13 +151,14 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
   return (
     <>
       {done && (
-        <p role="status" className="text-sm font-semibold text-forest-deep">
+        <p role="status" className="text-sm font-semibold text-accent-deep">
           {done}
         </p>
       )}
       {current.items.length === 0 ? (
         <EmptyState
-          title="작성할 후기가 없어요"
+          framed
+          title="쓸 후기가 없어요"
           description="함께 다녀온 베이스캠프가 완료되면 14일 안에 동행 후기를 쓸 수 있어요."
         />
       ) : (
@@ -170,11 +171,11 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
               {review.targets.map((target) => (
                 <li
                   key={target.memberId}
-                  className="flex items-center justify-between gap-2 border-t border-contour py-1 first:border-t-0"
+                  className="flex items-center justify-between gap-2 border-t border-line py-1 first:border-t-0"
                 >
                   <Link
                     to={`/members/${target.memberId}`}
-                    className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
+                    className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
                   >
                     {target.nickname}
                   </Link>
@@ -206,7 +207,7 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
 function deadlineText(deadline: string): string {
   const days = daysUntilKst(deadline);
   if (days < 0) return '기한이 지났어요';
-  return days === 0 ? '오늘까지 작성' : `D-${days}`;
+  return days === 0 ? '오늘 마감' : `D-${days}`;
 }
 
 function WriteDialog({
@@ -253,7 +254,7 @@ function WriteDialog({
   }
 
   return (
-    <Dialog title={`${target.nickname}님 동행 후기`} onClose={() => !submitting && onClose()}>
+    <Dialog title={`${target.nickname}님에게 남길 동행 후기`} onClose={() => !submitting && onClose()}>
       <div className="flex flex-col gap-4">
         <p className="text-sm text-ink-muted">{review.basecampTitle}</p>
         {error && (
@@ -264,7 +265,7 @@ function WriteDialog({
           </div>
         )}
         <ChoiceGroup
-          legend="다시 동행하고 싶어요?"
+          legend="다시 동행하고 싶나요?"
           name="rejoinWanted"
           options={REJOIN_OPTIONS}
           value={rejoin}
@@ -272,7 +273,7 @@ function WriteDialog({
           disabled={submitting}
         />
         <fieldset className="flex min-w-0 flex-col gap-1">
-          <legend className="mb-1 text-sm font-medium text-ink">함께 다녀온 느낌 (선택)</legend>
+          <legend className="mb-1 text-sm font-medium text-ink">어울리는 태그 (선택)</legend>
           {[...POSITIVE_COMPANION_TAGS, ...NEGATIVE_COMPANION_TAGS].map((tag) => (
             <Checkbox
               key={tag}
@@ -292,7 +293,7 @@ function WriteDialog({
           error={commentError}
           onChange={(event) => setComment(event.target.value)}
         />
-        <Notice tone="info" title="작성한 뒤에는 고치거나 지울 수 없어요" />
+        <Notice tone="info" title="남긴 뒤에는 수정하거나 삭제할 수 없어요" />
         <div className="flex flex-wrap items-start justify-end gap-2">
           <Button variant="secondary" disabled={submitting} onClick={onClose}>
             닫기
@@ -373,7 +374,7 @@ function ReceivedTab() {
         </div>
       )}
       {state.items.length === 0 && !state.error ? (
-        <EmptyState title="받은 후기가 없어요" description="함께 다녀온 멤버가 후기를 남기면 여기에 보여요." />
+        <EmptyState framed title="받은 후기가 없어요" description="함께 다녀온 멤버가 후기를 남기면 여기에 보여요." />
       ) : (
         state.items.map((item, index) =>
           item.revealed ? (
@@ -381,22 +382,16 @@ function ReceivedTab() {
               <div className="flex flex-wrap items-center gap-2">
                 <Link
                   to={`/members/${item.reviewer.memberId}`}
-                  className="inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2"
+                  className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
                 >
                   {item.reviewer.nickname}
                 </Link>
-                <Badge tone={item.rejoinWanted ? 'forest' : 'neutral'}>
-                  {item.rejoinWanted ? '다시 동행하고 싶어요' : '다시 동행은 아쉬워요'}
-                </Badge>
+                <StatusText tone={item.rejoinWanted ? 'accent' : 'neutral'}>
+                  {item.rejoinWanted ? '다시 동행하고 싶어요' : '다시 동행하고 싶지는 않아요'}
+                </StatusText>
               </div>
               {item.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {item.tags.map((tag) => (
-                    <Badge key={tag} tone="neutral">
-                      {companionTagLabel(tag)}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-sm text-ink-muted">{item.tags.map(companionTagLabel).join(' · ')}</p>
               )}
               {item.comment && <p className="whitespace-pre-line break-words text-base text-ink">{item.comment}</p>}
               <p className="font-mono text-sm tabular-nums text-ink-muted">{formatKstDateTime(item.createdAt)}</p>
@@ -410,9 +405,9 @@ function ReceivedTab() {
             <section
               // 공개 전 후기는 ID가 없고, 한 베이스캠프에서 여러 개가 올 수 있어서 순서로 구분한다.
               key={`sealed-${item.basecampId}-${index}`}
-              className="flex flex-col gap-2 rounded-control border border-contour bg-card p-5"
+              className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-5"
             >
-              <p className="text-base text-ink">내 후기를 쓰면 상대 후기를 볼 수 있어요.</p>
+              <p className="text-base text-ink">내 후기를 남기면 상대가 쓴 후기를 볼 수 있어요.</p>
               <Link to={`/basecamps/${item.basecampId}`} className={`${LINK_BUTTON_CLASS} self-start`}>
                 베이스캠프 보기
               </Link>

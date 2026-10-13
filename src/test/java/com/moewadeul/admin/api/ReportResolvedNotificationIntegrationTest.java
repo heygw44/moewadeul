@@ -83,7 +83,7 @@ class ReportResolvedNotificationIntegrationTest {
                 .containsEntry("member_id", reporterId)
                 .containsEntry("type", "MEMBER_REPORT_RESOLVED")
                 .containsEntry("title", "신고 처리 완료")
-                .containsEntry("body", "신고하신 내용을 검토했지만 조치 대상이 아니라고 판단했습니다.")
+                .containsEntry("body", "신고한 내용을 검토했지만 조치할 일은 아니라고 판단했어요.")
                 .containsEntry("link", null);
     }
 
@@ -99,9 +99,9 @@ class ReportResolvedNotificationIntegrationTest {
         assertThat(actioned).hasStatus(HttpStatus.OK);
         String reporterBody =
                 jdbc.queryForObject("SELECT body FROM notification WHERE member_id = ?", String.class, reporterId);
-        assertThat(reporterBody).isEqualTo("신고하신 내용을 검토해 조치했습니다.").doesNotContain("경고", "제재", "정지");
+        assertThat(reporterBody).isEqualTo("신고한 내용을 검토해 조치했어요.").doesNotContain("경고", "제재", "정지");
         assertThat(jdbc.queryForObject("SELECT body FROM notification WHERE member_id = ?", String.class, targetId))
-                .isEqualTo("경고를 받았습니다.");
+                .isEqualTo("경고를 받았어요.");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notification", Integer.class))
                 .isEqualTo(2);
     }

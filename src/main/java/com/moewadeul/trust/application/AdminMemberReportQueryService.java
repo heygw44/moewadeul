@@ -62,7 +62,7 @@ public class AdminMemberReportQueryService {
         try {
             return ReportStatus.valueOf(status);
         } catch (IllegalArgumentException e) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "알 수 없는 신고 상태입니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "알 수 없는 신고 상태예요.");
         }
     }
 

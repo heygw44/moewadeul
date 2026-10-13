@@ -21,7 +21,7 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
   return (
     <fieldset className={['flex min-w-0 flex-col gap-3', className ?? ''].join(' ')}>
       <legend className="float-left mb-3 w-full text-sm font-medium text-ink">사진 (최대 {max}장)</legend>
-      <p className="text-sm text-ink-muted">JPEG·PNG·WebP, 장당 5MB까지예요.</p>
+      <p className="text-sm text-ink-muted">JPEG, PNG, WebP 파일을 장당 5MB까지 올릴 수 있어요.</p>
 
       {messages.length > 0 && (
         <div role="alert">
@@ -40,10 +40,10 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
       <ul className={`clear-both grid grid-cols-3 gap-2 ${max > 3 ? 'sm:grid-cols-5' : ''}`}>
         {images.map((image, index) => (
           <li key={image.key} className="flex min-w-0 flex-col gap-1">
-            <ImagePreview file={image.file} url={image.url} alt={`올린 이미지 ${index + 1}`} />
+            <ImagePreview file={image.file} url={image.url} alt={`올린 사진 ${index + 1}`} />
             <p className="text-xs text-ink-muted">
               {image.status === 'uploading' && '올리는 중이에요'}
-              {image.status === 'done' && <span className="text-forest-deep">올렸어요</span>}
+              {image.status === 'done' && <span className="text-accent-deep">올렸어요</span>}
               {image.status === 'failed' && <span className="text-danger">올리지 못했어요</span>}
             </p>
             {image.status === 'failed' && image.error && (
@@ -66,10 +66,10 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
               {index > 0 && (
                 <Button
                   variant="secondary"
-                  aria-label={`이미지 ${index + 1}번 앞으로 옮기기`}
+                  aria-label={`사진 ${index + 1}번 앞으로 옮기기`}
                   onClick={() => uploads.moveForward(index)}
                   disabled={disabled}
-                  title="앞으로"
+                  title="앞으로 옮기기"
                   className="px-1 text-sm"
                 >
                   <Icon name="arrowUp" size={16} />
@@ -77,7 +77,7 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
               )}
               <Button
                 variant="danger-outline"
-                aria-label={`이미지 ${index + 1}번 빼기`}
+                aria-label={`사진 ${index + 1}번 빼기`}
                 className={['whitespace-nowrap px-1 text-sm', index > 0 ? '' : 'col-span-2'].join(' ')}
                 onClick={() => uploads.remove(image.key)}
                 disabled={disabled}
@@ -101,8 +101,8 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
             <label
               htmlFor={inputId}
               className={[
-                'flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-control border border-dashed border-ink-subtle p-1 text-center text-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sea',
-                disabled ? 'cursor-not-allowed bg-paper-deep text-ink-muted' : 'cursor-pointer bg-card text-ink hover:bg-paper-deep',
+                'flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-control border border-dashed border-ink-subtle p-1 text-center text-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-info',
+                disabled ? 'cursor-not-allowed bg-fill text-ink-muted' : 'cursor-pointer bg-surface text-ink hover:bg-fill',
               ].join(' ')}
             >
               <Icon name="image" size={24} />
@@ -138,6 +138,6 @@ function ImagePreview({ file, url, alt }: { file?: File; url?: string; alt: stri
     return () => URL.revokeObjectURL(created);
   }, [file]);
 
-  const box = 'aspect-square w-full rounded-control border border-contour bg-paper-deep object-cover';
+  const box = 'aspect-square w-full rounded-control border border-line bg-fill object-cover';
   return <img ref={ref} src={file ? undefined : url} alt={alt} className={box} />;
 }

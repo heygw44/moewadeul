@@ -44,7 +44,7 @@ public class CommunityPostCommandService {
             // 글이 없거나 남의 글이면 이미지 검사보다 먼저 404나 403으로 거부한다.
             communityPostWriter.requireOwnActivePost(memberId, postId);
             if (imageIds.value() == null) {
-                throw CommunityImageAttachmentChecker.invalid("imageIds는 비울 수 없습니다. 이미지를 모두 떼려면 빈 배열을 보내야 합니다.");
+                throw CommunityImageAttachmentChecker.invalid("imageIds는 비울 수 없어요. 이미지를 모두 떼려면 빈 배열을 보내 주세요.");
             }
             communityImageAttachmentChecker.verify(memberId, postId, imageIds.value());
         }

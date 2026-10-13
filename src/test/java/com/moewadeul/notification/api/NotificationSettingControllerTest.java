@@ -126,7 +126,7 @@ class NotificationSettingControllerTest {
     @DisplayName("[F-20] 서비스가 알 수 없거나 중복된 종류로 INVALID_INPUT을 던지면 400으로 응답한다")
     void putMapsServiceInvalidInput() {
         when(notificationSettingService.replace(anyLong(), anyList()))
-                .thenThrow(new BusinessException(CommonErrorCode.INVALID_INPUT, "알 수 없는 알림 종류입니다."));
+                .thenThrow(new BusinessException(CommonErrorCode.INVALID_INPUT, "알 수 없는 알림 종류예요."));
 
         MvcTestResult result = put("[{\"type\":\"NO_SUCH\",\"emailEnabled\":true}]", true);
 

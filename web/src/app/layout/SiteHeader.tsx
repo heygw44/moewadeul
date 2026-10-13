@@ -11,19 +11,20 @@ import { Link, useLocation } from '../router';
 import { activeNavKey, NAV_ITEMS } from './navItems';
 
 type SiteHeaderProps = {
-  // 하단 탭이 없는 화면(랜딩)에서 켠다. 모바일에서도 계정 표시를 머리글에 둔다.
+  // 하단 탭이 없는 화면(랜딩·404)에서 켠다. 모바일에서도 계정 표시와 메뉴 버튼을 머리글에 둔다.
   mobileAccount?: boolean;
   // 로그인·가입 화면처럼 계정 표시가 그 화면의 할 일과 겹치는 곳에서 켠다. 알림·계정 자리를 비운다.
   minimal?: boolean;
   className?: string;
 };
 
-const PRIMARY_KEYS = new Set(['map', 'basecamps', 'community', 'programs']);
+const PRIMARY_KEYS = new Set(['map', 'basecamps', 'footprints', 'community', 'programs']);
 const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
 
-// 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 머리글이다. 데스크톱은 서비스 이름 줄과 메뉴 줄, 두 줄이다.
+// 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 한 줄 머리글이다. 왼쪽부터 서비스 이름, 메뉴, 오른쪽 끝에 알림·계정을 둔다.
 // 지도 화면을 포함한 모든 화면에서 가운데 최대 폭(max-w-screen-xl) 안에 둔다. 그래서 메뉴로 화면을 오가도 로고와 메뉴 자리가 움직이지 않는다.
-// 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 하단 탭이 없는 랜딩·404에서도 다른 화면으로 갈 수 있게 하기 위해서다.
+// 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 메뉴 버튼은 하단 탭이 없는 랜딩·404(mobileAccount)에만 둔다.
+// 하단 탭이 있는 화면에서 메뉴 버튼까지 두면 같은 다섯 메뉴가 한 화면에 두 번 있게 된다.
 export function SiteHeader({ mobileAccount = false, minimal = false, className = '' }: SiteHeaderProps) {
   const { pathname, search } = useLocation();
   const session = useSession();
@@ -44,11 +45,33 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
   }, [menuOpen]);
 
   return (
-    <header className={`sticky top-0 z-20 border-b border-ink bg-paper ${className}`}>
-      <div className="mx-auto flex min-h-14 max-w-screen-xl items-center gap-3 px-4 lg:min-h-16 lg:gap-6">
+    <header className={`sticky top-0 z-20 border-b border-line bg-canvas ${className}`}>
+      <div className="mx-auto flex min-h-13 max-w-screen-xl items-center gap-3 px-4 lg:gap-10">
         <Link to="/" className="shrink-0 text-ink">
-          <BrandMark rough className="text-lg sm:text-xl lg:text-4xl" />
+          <BrandMark className="text-lg" />
         </Link>
+
+        {/* 데스크톱 메뉴는 서비스 이름 바로 옆에 둔다. 지금 메뉴는 먹색 굵은 글자, 나머지는 보조 글자색이다. */}
+        {!minimal && (
+          <nav aria-label="주 메뉴" className="hidden items-center gap-7 lg:flex">
+            {PRIMARY_ITEMS.map((item) => {
+              const current = active === item.key;
+              return (
+                <Link
+                  key={item.key}
+                  to={item.path}
+                  aria-current={current ? 'page' : undefined}
+                  className={[
+                    'inline-flex min-h-11 items-center text-sm',
+                    current ? 'font-semibold text-ink' : 'text-ink-muted hover:text-ink',
+                  ].join(' ')}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
 
         {!minimal && (
           <div className="ml-auto flex min-w-0 items-center gap-2">
@@ -57,13 +80,23 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                 to="/me/notifications"
                 aria-label={notificationLabel(count)}
                 aria-current={pathname === '/me/notifications' ? 'page' : undefined}
-                className="hidden min-h-11 items-center gap-2 rounded-control px-3 text-ink hover:bg-paper-deep lg:inline-flex"
+                className="hidden min-h-11 items-center gap-2 rounded-control px-3 text-ink hover:bg-fill lg:inline-flex"
               >
                 <Icon name="bell" size={20} />
                 <UnreadBadge count={count} />
               </Link>
             )}
-            <NotificationBellLink className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-control px-2 text-ink hover:bg-paper-deep lg:hidden" />
+            <NotificationBellLink className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-control px-2 text-ink hover:bg-fill lg:hidden" />
+            {!mobileAccount && signedIn && session.me !== null && (
+              <Link
+                to="/me"
+                aria-label={`내 정보: ${session.me.nickname}`}
+                aria-current={pathname === '/me' ? 'page' : undefined}
+                className="inline-flex min-h-11 max-w-28 min-w-11 items-center px-2 text-sm text-ink underline-offset-2 hover:underline lg:hidden"
+              >
+                <span className="truncate">{session.me.nickname}</span>
+              </Link>
+            )}
             <div className={mobileAccount ? 'flex min-w-0' : 'hidden min-w-0 lg:flex'}>
               <AccountChip />
             </div>
@@ -71,7 +104,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
               <div className="inline-flex items-center lg:hidden">
                 <Link
                   to={withNext('/login', pathname + search)}
-                  className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-forest"
+                  className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-accent"
                 >
                   로그인
                 </Link>
@@ -83,49 +116,25 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                 </Link>
               </div>
             )}
+            {mobileAccount && (
             <button
               type="button"
               aria-expanded={menuOpen}
               aria-controls="mobile-nav"
               aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
               onClick={() => setOpenedAt(menuOpen ? null : pathname)}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep lg:hidden"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-ink hover:bg-fill lg:hidden"
             >
               <Icon name={menuOpen ? 'close' : 'menu'} size={22} />
             </button>
+            )}
           </div>
         )}
       </div>
 
-      {/* 데스크톱에서는 서비스 이름 아래 줄에 메뉴를 머리글 폭 안에서 균등하게 펼친다. 지금 메뉴와 hover 메뉴는 아래 선 위에 올라앉은 숲색 탭이 된다. */}
-      {!minimal && (
-        <nav
-          aria-label="주 메뉴"
-          className="mx-auto hidden max-w-screen-xl items-end justify-between px-4 lg:flex"
-        >
-          {PRIMARY_ITEMS.map((item) => {
-            const current = active === item.key;
-            return (
-              <Link
-                key={item.key}
-                to={item.path}
-                aria-current={current ? 'page' : undefined}
-                className={[
-                  'inline-flex items-center border-x border-t px-6 pt-2 pb-1.5 text-xl font-bold tracking-tight',
-                  current
-                    ? 'border-ink bg-forest text-white'
-                    : 'border-transparent text-ink hover:border-ink hover:bg-forest hover:text-white',
-                ].join(' ')}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-      )}
 
       {!minimal && menuOpen && (
-        <nav id="mobile-nav" aria-label="주 메뉴" className="border-t border-contour bg-paper lg:hidden">
+        <nav id="mobile-nav" aria-label="주 메뉴" className="border-t border-line bg-canvas lg:hidden">
           <ul className="mx-auto flex max-w-screen-xl flex-col py-1">
             {PRIMARY_ITEMS.map((item) => {
               const current = active === item.key;
@@ -135,8 +144,8 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                     to={item.path}
                     aria-current={current ? 'page' : undefined}
                     className={[
-                      'flex min-h-12 items-center gap-3 px-4 text-lg font-bold',
-                      current ? 'bg-forest text-white' : 'text-ink hover:bg-paper-deep',
+                      'flex min-h-12 items-center gap-3 px-4 text-lg',
+                      current ? 'font-semibold text-ink' : 'text-ink-muted hover:bg-fill hover:text-ink',
                     ].join(' ')}
                   >
                     <Icon name={item.icon} size={20} />

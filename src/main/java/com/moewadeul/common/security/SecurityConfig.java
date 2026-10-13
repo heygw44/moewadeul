@@ -37,6 +37,9 @@ public class SecurityConfig {
         "/api/community/posts",
         "/api/community/posts/*",
         "/api/community/posts/*/comments",
+        "/api/memories/feed",
+        "/api/memories/*",
+        "/api/members/*/memories",
     };
 
     private static final String[] PUBLIC_POST_PATTERNS = {
@@ -78,10 +81,13 @@ public class SecurityConfig {
         "/api/program-applications/*/pay",
         "/api/program-applications/*/cancel",
         "/api/solo-trips",
+        "/api/memories",
+        "/api/memories/images",
+        "/api/memories/*/reports",
     };
 
     private static final String[] VERIFIED_PUT_PATTERNS = {
-        "/api/basecamps/*/contact", "/api/community/posts/*/like",
+        "/api/basecamps/*/contact", "/api/community/posts/*/like", "/api/memories/*/like",
     };
 
     private static final String[] VERIFIED_PATCH_PATTERNS = {
@@ -91,6 +97,7 @@ public class SecurityConfig {
         "/api/basecamps/*",
         "/api/community/posts/*",
         "/api/community/comments/*",
+        "/api/memories/*",
     };
 
     private static final String[] VERIFIED_DELETE_PATTERNS = {
@@ -99,10 +106,12 @@ public class SecurityConfig {
         "/api/community/posts/*",
         "/api/community/comments/*",
         "/api/community/posts/*/like",
+        "/api/memories/*/like",
         "/api/basecamps/*/applications/me",
         "/api/basecamps/*/members/me",
         "/api/programs/*/vacancy-alerts",
         "/api/solo-trips/*",
+        "/api/memories/*",
     };
 
     private static final AuthorizationManager<RequestAuthorizationContext> EMAIL_VERIFIED =

@@ -56,7 +56,7 @@ public class MyInfoService {
     // 지금 쓰는 닉네임을 그대로 보내면 바꿀 것이 없으므로, 서비스는 중복 검사도 하지 않고 그대로 성공시킨다.
     private void changeNickname(Member member, String nickname, Instant now) {
         if (nickname == null) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "닉네임은 지울 수 없습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "닉네임은 지울 수 없어요.");
         }
         if (nickname.equals(member.getNickname())) {
             return;

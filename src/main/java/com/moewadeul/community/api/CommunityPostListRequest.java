@@ -18,12 +18,12 @@ public record CommunityPostListRequest(
         CommunitySearchType searchType,
 
         @Schema(description = "검색어. 앞뒤 공백을 지운 뒤 2~50자이고, 없거나 공백뿐이면 검색하지 않는다.")
-        @Size(min = 2, max = 50, message = "검색어는 2자 이상 50자 이하여야 합니다.")
+        @Size(min = 2, max = 50, message = "검색어는 2자 이상 50자 이하여야 해요.")
         String keyword,
 
-        @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") Integer page,
+        @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.") Integer page,
 
-        @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+        @Min(value = 1, message = "페이지 크기는 1 이상이어야 해요.") @Max(value = 50, message = "페이지 크기는 50 이하여야 해요.")
         Integer size) {
 
     private static final int DEFAULT_PAGE = 0;

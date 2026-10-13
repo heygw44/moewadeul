@@ -1,24 +1,31 @@
 import { loadKakaoMaps } from './kakaoLoader';
-import type { LatLng } from './types';
+import { nameRegions } from './regionLabel';
+import type { RegionLabel } from './regionLabel';
+import type { Bounds, LatLng } from './types';
 
-// 많이 확대하면 동네까지, 시 하나가 들어오는 축척이면 시·도와 시·군·구까지 적는다.
-// 그보다 넓으면 화면에 여러 시·군이 걸쳐서 가운데 시·도만 "일대"로 적는다.
-const TOWN_MAX_LEVEL = 7;
-const CITY_MAX_LEVEL = 10;
+// 모서리에서 화면 폭·높이의 이만큼 안쪽으로 들인 점을 조회한다. 모서리 바로 위는 화면에 조금만 걸친 지역이라 이름에 넣지 않는다.
+const CORNER_INSET = 0.25;
 
-// 좌표가 속한 행정구역 이름을 지도 확대 수준에 맞춰 만든다. 바다처럼 행정구역이 없으면 null이다.
-export async function regionNameAt(position: LatLng, level: number): Promise<string | null> {
+// 지금 화면이 어느 지역인지 이름을 짓는다. 장소 개수를 화면 영역 전체에서 세므로, 이름도 가운데 한 점이 아니라 화면 안 다섯 점으로 짓는다.
+// 카카오 API는 좌표 하나의 행정구역만 돌려줘서 가운데와 네 모서리 안쪽 점을 함께 조회한다.
+// 바다처럼 행정구역이 없거나 조회에 실패한 점은 빼고, 남은 점이 없으면 null이다.
+export async function regionLabelInView(bounds: Bounds, center: LatLng, level: number): Promise<RegionLabel | null> {
   await loadKakaoMaps();
-  const region = await findRegion(position);
-  if (region === null) return null;
-
-  const province = region.region_1depth_name;
-  const city = region.region_2depth_name;
-  const town = region.region_3depth_name;
-  // 세종시처럼 시·군·구가 없는 곳은 시·도 이름이 그 자리를 대신한다.
-  if (level <= TOWN_MAX_LEVEL) return joinNames(city || province, town);
-  if (level <= CITY_MAX_LEVEL) return joinNames(province, city);
-  return `${province} 일대`;
+  const { sw, ne } = bounds;
+  const latInset = (ne.lat - sw.lat) * CORNER_INSET;
+  const lngInset = (ne.lng - sw.lng) * CORNER_INSET;
+  const points: LatLng[] = [
+    center,
+    { lat: ne.lat - latInset, lng: sw.lng + lngInset },
+    { lat: ne.lat - latInset, lng: ne.lng - lngInset },
+    { lat: sw.lat + latInset, lng: sw.lng + lngInset },
+    { lat: sw.lat + latInset, lng: ne.lng - lngInset },
+  ];
+  const results = await Promise.allSettled(points.map(findRegion));
+  const regions = results.flatMap((result) =>
+    result.status === 'fulfilled' && result.value !== null ? [result.value] : [],
+  );
+  return nameRegions(regions, level, points.length);
 }
 
 function findRegion(position: LatLng): Promise<kakao.maps.services.RegionCodeResult | null> {
@@ -36,6 +43,11 @@ function findRegion(position: LatLng): Promise<kakao.maps.services.RegionCodeRes
   });
 }
 
-function joinNames(...names: string[]): string {
-  return names.filter((name) => name !== '').join(' ');
+// 좌표가 속한 읍·면·동 이름을 "시도 시군구 읍면동"으로 만든다. 행정구역이 없으면 null이고, 조회가 실패하면 거절한다.
+export async function regionNameAt(position: LatLng): Promise<string | null> {
+  await loadKakaoMaps();
+  const region = await findRegion(position);
+  if (region === null) return null;
+  const name = [region.region_1depth_name, region.region_2depth_name, region.region_3depth_name].filter(Boolean).join(' ');
+  return name || null;
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchAdminMemberReports } from '../../api/admin';
 import type { AdminReportSummary, ReportStatus } from '../../api/types';
 import { Link } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { EmptyState } from '../../components/EmptyState';
@@ -21,7 +21,7 @@ const STATUS_OPTIONS = [
   { value: ALL, label: '전체' },
   { value: 'RECEIVED', label: '접수' },
   { value: 'IN_REVIEW', label: '검토 중' },
-  { value: 'ACTIONED', label: '조치' },
+  { value: 'ACTIONED', label: '조치 완료' },
   { value: 'DISMISSED', label: '기각' },
 ];
 
@@ -97,7 +97,7 @@ function ReportList() {
           onChange={(event) => changeFilter(() => setStatus(event.target.value))}
         />
         <Checkbox
-          label="긴급만"
+          label="긴급 신고만"
           checked={urgentOnly}
           onChange={(event) => changeFilter(() => setUrgentOnly(event.target.checked))}
         />
@@ -124,10 +124,10 @@ function ReportList() {
       )}
       {state === null && showSkeleton && <Skeleton className="h-40 w-full" />}
       {state !== null && state.items.length === 0 && !state.error && (
-        <EmptyState title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꿔 보세요." />
+        <EmptyState framed title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꿔 주세요." />
       )}
       {state !== null && state.items.length > 0 && (
-        <ul className="flex flex-col rounded-control border border-contour bg-card">
+        <ul className="flex flex-col rounded-sheet border border-line bg-surface">
           {state.items.map((item) => (
             <ReportRow key={item.reportId} item={item} />
           ))}
@@ -147,16 +147,16 @@ function ReportList() {
 function ReportRow({ item }: { item: AdminReportSummary }) {
   const status = REPORT_STATUS_META[item.status];
   return (
-    <li className="border-t border-contour first:border-t-0">
+    <li className="border-t border-line first:border-t-0">
       <Link
         to={`/admin/reports/${item.reportId}`}
-        className="flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-paper-deep sm:flex-row sm:items-center sm:gap-4"
+        className="flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-fill sm:flex-row sm:items-center sm:gap-4"
       >
         <span className="flex flex-wrap items-center gap-2 sm:w-72 sm:shrink-0">
-          {item.urgent && <Badge tone="danger">긴급</Badge>}
+          {item.urgent && <StatusText tone="danger">긴급</StatusText>}
           <span className="text-base font-semibold text-ink">{REPORT_TYPE_LABELS[item.type]}</span>
           <span className="text-sm text-ink-muted">{REPORT_KIND_LABELS[item.kind]}</span>
-          <Badge tone={status.tone}>{status.label}</Badge>
+          <StatusText tone={status.tone}>{status.label}</StatusText>
         </span>
         <span className="min-w-0 flex-1 break-words text-base text-ink">
           {item.reporter.nickname} → {item.target.nickname}

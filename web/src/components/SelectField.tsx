@@ -19,8 +19,10 @@ type SelectFieldProps = Omit<ComponentPropsWithRef<'select'>, 'children'> & {
 };
 
 // 입력란 글자는 16px 아래로 내리지 않는다. iOS가 작은 입력란에 포커스하면 화면을 확대하기 때문이다.
+// 브라우저 기본 모양의 선택란은 최소 높이를 무시해서 옆 입력란보다 낮게 그려진다. 그래서 기본 모양을 끄고(appearance-none)
+// 높이를 입력란과 같은 44px로 고정한 뒤, 펼침 화살표는 아이콘으로 직접 그린다.
 const SELECT_BASE =
-  'min-h-11 w-full rounded-control border bg-card px-3 text-base text-ink disabled:cursor-not-allowed disabled:bg-paper-deep disabled:text-ink-muted';
+  'h-11 w-full appearance-none rounded-control border bg-fill pr-10 pl-3 text-base text-ink focus:bg-surface focus:border-info disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-subtle';
 
 export function SelectField({
   label,
@@ -47,19 +49,26 @@ export function SelectField({
       <label htmlFor={selectId} className={hideLabel ? 'sr-only' : 'text-sm font-medium text-ink'}>
         {label}
       </label>
-      <select
-        id={selectId}
-        aria-invalid={error || invalid ? true : undefined}
-        aria-describedby={describedByIds}
-        className={`${SELECT_BASE} ${error || invalid ? 'border-danger' : 'border-ink-subtle'}`}
-        {...rest}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          id={selectId}
+          aria-invalid={error || invalid ? true : undefined}
+          aria-describedby={describedByIds}
+          className={`${SELECT_BASE} ${error || invalid ? 'border-danger' : 'border-line'}`}
+          {...rest}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <Icon
+          name="chevronRight"
+          size={18}
+          className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rotate-90 text-ink-muted"
+        />
+      </div>
       {hint && (
         <p id={hintId} className="text-sm text-ink-muted">
           {hint}

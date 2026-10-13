@@ -104,22 +104,22 @@ class SpotReviewWriter {
     // 방문일은 한국 날짜로 받으므로, 오늘도 한국 날짜로 계산해서 비교한다. 오늘 방문한 장소의 후기는 쓸 수 있다.
     private static void requireNotFuture(LocalDate visitedDate, Instant now) {
         if (visitedDate == null) {
-            throw invalidInput("방문일을 입력해야 합니다.");
+            throw invalidInput("방문일을 입력해 주세요.");
         }
         if (visitedDate.isAfter(LocalDate.ofInstant(now, KOREA))) {
-            throw invalidInput("방문일은 오늘(한국 날짜)보다 뒤일 수 없습니다.");
+            throw invalidInput("방문일은 오늘(한국 날짜)보다 뒤일 수 없어요.");
         }
     }
 
     private static void requireValidBody(int rating, String content) {
         if (rating < SpotReview.MIN_RATING || rating > SpotReview.MAX_RATING) {
-            throw invalidInput("평점은 " + SpotReview.MIN_RATING + "~" + SpotReview.MAX_RATING + "이어야 합니다.");
+            throw invalidInput("평점은 " + SpotReview.MIN_RATING + "~" + SpotReview.MAX_RATING + "이어야 해요.");
         }
         if (content == null || content.isBlank()) {
-            throw invalidInput("후기 내용을 입력해야 합니다.");
+            throw invalidInput("후기 내용을 입력해 주세요.");
         }
         if (content.length() > SpotReview.CONTENT_MAX_LENGTH) {
-            throw invalidInput("후기 내용은 " + SpotReview.CONTENT_MAX_LENGTH + "자 이하여야 합니다.");
+            throw invalidInput("후기 내용은 " + SpotReview.CONTENT_MAX_LENGTH + "자 이하여야 해요.");
         }
     }
 

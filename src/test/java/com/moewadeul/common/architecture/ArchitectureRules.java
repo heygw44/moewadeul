@@ -40,6 +40,7 @@ public final class ArchitectureRules {
             "notification",
             "community",
             "trip",
+            "memory",
             "admin",
             COMMON);
 
@@ -49,12 +50,13 @@ public final class ArchitectureRules {
      * 클래스 의존으로 나타나지 않는다.
      */
     static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.of(
-            "admin", Set.of("trust", "program", "spot", "member", "community"),
+            "admin", Set.of("trust", "program", "spot", "member", "community", "memory"),
             "community", Set.of("spot"),
             "basecamp", Set.of("trust", "spot"),
             "program", Set.of("trust"),
             "review", Set.of("spot"),
             "trip", Set.of("spot"),
+            "memory", Set.of("spot"),
             "spot", Set.of("weather"),
             "publicdata", Set.of("spot"),
             "trust", Set.of("member"));

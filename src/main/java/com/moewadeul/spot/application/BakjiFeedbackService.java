@@ -102,7 +102,7 @@ public class BakjiFeedbackService {
                 .filter(reason -> reason.name().equals(value))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(
-                        CommonErrorCode.INVALID_INPUT, "신고 사유는 " + allowedReasons() + " 중 하나여야 합니다."));
+                        CommonErrorCode.INVALID_INPUT, "신고 사유는 " + allowedReasons() + " 중 하나여야 해요."));
     }
 
     private static String allowedReasons() {

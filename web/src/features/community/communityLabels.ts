@@ -22,4 +22,4 @@ export const UNVERIFIED_WRITE_REASON = '이메일 인증을 마치면 쓸 수 �
 export const LINK_BUTTON_CLASS =
   'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:bg-ink-muted hover:border-ink-muted';
 export const SECONDARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep';
+  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';

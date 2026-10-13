@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -110,6 +111,46 @@ public class PublicSpotSyncService {
             log.info("public spot hidden by source removal source={} count={}", source, hidden);
         }
         return hidden;
+    }
+
+    /**
+     * 호출하면 source 출처에서 지금 공개 중이고 원천 삭제로 숨긴 적이 없는 장소 가운데 presentExternalIds에 없는 장소를 {@link #markRemoved}로
+     * 숨기고, 숨긴 장소 수를 돌려준다. 원천이 목록 전체를 주고 삭제를 따로 알리지 않을 때, 새 목록에 빠진 장소를 숨기려고 쓴다.
+     *
+     * <p>관리자가 숨긴 장소는 삭제 표시가 없으므로 {@link #markRemoved}와 같이 건드리지 않는다. 호출하는 쪽은 원천에서 받은 목록이 온전한지
+     * 먼저 확인해야 한다. 빈 목록을 받으면 출처의 장소를 모두 숨기게 되므로, 서비스는 그 경우 예외를 던지고 아무것도 숨기지 않는다.
+     * presentExternalIds의 외부 ID는 앞뒤 공백을 지우고 비교한다. 읽기와 숨기기는 한 트랜잭션에서 처리한다.
+     *
+     * @throws IllegalArgumentException presentExternalIds에 비어 있지 않은 외부 ID가 하나도 없을 때
+     */
+    @Transactional
+    public int markMissingRemoved(PublicSpotSource source, Collection<String> presentExternalIds) {
+        Set<String> present = presentExternalIds.stream()
+                .filter(Objects::nonNull)
+                .map(String::strip)
+                .filter(id -> !id.isEmpty())
+                .collect(Collectors.toSet());
+        if (present.isEmpty()) {
+            throw new IllegalArgumentException("원천 목록이 비어 있어 빠진 장소를 숨기지 않습니다. source=" + source);
+        }
+        List<String> missing = publicSpotMapper.selectLiveExternalIds(source.name()).stream()
+                .filter(id -> !present.contains(id.strip()))
+                .toList();
+        if (missing.isEmpty()) {
+            return 0;
+        }
+        return markRemoved(source, missing);
+    }
+
+    /**
+     * 호출하면 source 출처의 모든 장소를 상태와 상관없이(숨긴 장소도 포함해서) 외부 ID, 이름, 좌표로 돌려준다. 적재하는 쪽이 다른 출처의 장소와
+     * 겹치는지 가리거나, 이미 저장한 장소에 외부 ID를 이어 붙일 때 쓴다.
+     */
+    @Transactional(readOnly = true)
+    public List<PublicSpotLocation> findLocations(PublicSpotSource source) {
+        return publicSpotMapper.selectLocationsBySource(source.name()).stream()
+                .map(row -> new PublicSpotLocation(row.externalId(), row.name(), row.latitude(), row.longitude()))
+                .toList();
     }
 
     // 외부 ID를 키로 모으므로, 같은 외부 ID가 다시 나오면 뒤의 명령이 앞의 명령을 덮어쓴다.

@@ -5,20 +5,22 @@ import { toUserMessage } from '../../api/errors';
 import { fetchSpotDetail } from '../../api/spots';
 import type { BakjiDetail, ExpectedPeople, MidTermForecast, PublicDetail, SpotDetail, Weather } from '../../api/types';
 import { Link } from '../../app/router';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
+import { MetaLine } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { formatKstTime, formatLocalDate } from '../../lib/datetime';
+import { formatKstMonthDay, formatKstTime, formatLocalDate } from '../../lib/datetime';
+import { newMemoryPath } from '../memory/memoryLabels';
+import { UnverifiedNote } from '../member/GatedButton';
 import { SpotReviews } from '../review/SpotReviews';
 import { SoloTripSection } from '../trip/SoloTripSection';
 import { BakjiFeedback } from './BakjiFeedback';
 import { ParkWarningNotice } from './ParkWarningNotice';
-import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META } from './spotLabels';
+import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META, sourceLabel } from './spotLabels';
 
 type SpotDetailPanelProps = {
   spotId: number;
@@ -30,7 +32,7 @@ type DetailResult =
   | { spotId: number; attempt: number; detail: SpotDetail }
   | { spotId: number; attempt: number; error: unknown };
 
-const SECTION_CLASS = 'mt-4 border-t border-contour pt-4';
+const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
 const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
 
 // 단기 예보는 앞에서부터 이만큼만 보여 준다.
@@ -82,15 +84,7 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
     body = (
       <EmptyState
         title="장소를 찾을 수 없어요"
-        description="삭제됐거나 숨김 처리된 장소예요."
-        action={
-          <Link
-            to="/map"
-            className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
-          >
-            목록으로
-          </Link>
-        }
+        description="삭제됐거나 숨겨진 장소예요."
       />
     );
   } else {
@@ -110,12 +104,12 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-contour bg-card px-2">
+      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
         <button
           type="button"
           aria-label="목록으로"
           onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep"
+          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
         >
           <Icon name="chevronLeft" size={24} />
         </button>
@@ -160,23 +154,21 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
     <article>
       <header className="flex flex-col gap-2">
         <h2 className="text-xl font-bold tracking-tight text-ink">{detail.name}</h2>
-        <div className="flex flex-wrap gap-1">
-          <Badge tone={meta.tone} icon={meta.icon}>
-            {meta.label}
-          </Badge>
-          {publicDetail?.closedNow && (
-            <Badge tone="closed" icon="closed">
-              휴장
-            </Badge>
-          )}
-          {warning.warned && (
-            <Badge tone="warning" icon="alert">
-              공원 경계 경고
-            </Badge>
-          )}
-        </div>
-        {detail.address !== null && <p className="text-sm text-ink-muted">{detail.address}</p>}
+        {/* 휴장과 공원 경계 경고는 바로 아래 안내 상자가 기간·근거와 함께 알리므로, 제목 아래에는 장소 유형과 주소만 둔다. */}
+        <MetaLine
+          items={[
+            <span className="inline-flex items-center gap-1">
+              <Icon name={meta.icon} size={16} className="shrink-0" />
+              {meta.label}
+            </span>,
+            detail.address,
+          ]}
+        />
       </header>
+
+      <div className="mt-3">
+        <UnverifiedNote action="박지를 확인하고 혼자 가는 일정과 후기를 남길 수 있어요." />
+      </div>
 
       {(publicDetail?.closedNow || warning.warned) && (
         <div className="mt-4 flex flex-col gap-3">
@@ -206,14 +198,14 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
               disabled
               disabledReason="공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요."
             >
-              이 장소로 베이스캠프 열기
+              이 장소에서 베이스캠프 열기
             </Button>
           ) : (
             <Link
               to={`/basecamps/new?spotId=${detail.spotId}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
+              className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
             >
-              이 장소로 베이스캠프 열기
+              이 장소에서 베이스캠프 열기
             </Link>
           )}
         </div>
@@ -226,15 +218,30 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <div className="mt-2 flex flex-wrap gap-2">
           <Link
             to={`/community?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
           >
-            이 장소 관련 글 보기
+            이 장소 글 보기
           </Link>
           <Link
             to={`/community/new?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink-subtle bg-card px-4 text-base font-semibold text-ink hover:bg-paper-deep"
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
           >
             이 장소로 글쓰기
+          </Link>
+        </div>
+      </section>
+
+      <section className={SECTION_CLASS} aria-labelledby="spot-memory-title">
+        <h3 id="spot-memory-title" className={SECTION_TITLE_CLASS}>
+          발자국
+        </h3>
+        <p className="mt-1 text-sm text-ink-muted">다녀온 날의 사진과 글을 남겨 두세요. 처음에는 나만 봐요.</p>
+        <div className="mt-2">
+          <Link
+            to={newMemoryPath({ lat: detail.lat, lng: detail.lng }, detail.spotId)}
+            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
+          >
+            발자국 남기기
           </Link>
         </div>
       </section>
@@ -315,7 +322,7 @@ function parseHomepage(homepage: string): URL | null {
 }
 
 function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
-  const { category, facilities, phone, homepage } = publicDetail;
+  const { category, facilities, phone, homepage, source, sourceDate, checkedAt } = publicDetail;
   const facilityRows = facilities
     ? FACILITY_LABELS.flatMap(([key, label]) => {
         const value = facilities[key];
@@ -323,8 +330,6 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
       })
     : [];
   const homepageUrl = homepage ? parseHomepage(homepage) : null;
-
-  if (category === null && facilityRows.length === 0 && !phone && !homepage) return null;
 
   return (
     <section className={SECTION_CLASS} aria-labelledby="spot-public-title">
@@ -347,7 +352,7 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
           {phone && (
             <a
               href={`tel:${phone.replace(/[^\d+]/g, '')}`}
-              className="inline-flex min-h-11 items-center self-start text-forest underline underline-offset-2"
+              className="inline-flex min-h-11 items-center self-start text-accent underline underline-offset-2"
             >
               전화 {phone}
             </a>
@@ -358,7 +363,7 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
                 href={homepageUrl.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center self-start text-forest underline underline-offset-2"
+                className="inline-flex min-h-11 items-center self-start text-accent underline underline-offset-2"
               >
                 홈페이지 {homepageUrl.hostname}
               </a>
@@ -367,6 +372,15 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
             ))}
         </div>
       )}
+      <div className="mt-3">
+        <Evidence
+          items={[
+            { label: '출처', value: sourceLabel(source) },
+            ...(sourceDate ? [{ label: '정보 기준일', value: sourceDate }] : []),
+            ...(checkedAt ? [{ label: '마지막 확인', value: formatKstMonthDay(checkedAt) }] : []),
+          ]}
+        />
+      </div>
     </section>
   );
 }
@@ -379,10 +393,10 @@ function ExpectedPeopleSection({ expectedPeople }: { expectedPeople: ExpectedPeo
         예상 인원
       </h3>
       {expectedPeople.length === 0 ? (
-        <p className="mt-2 text-sm text-ink-muted">아직 확정된 베이스캠프, 행사 참가자, 혼자 가는 일정이 없어요</p>
+        <p className="mt-2 text-sm text-ink-muted">아직 예상 인원이 없어요</p>
       ) : (
         <div className="mt-2 flex flex-col gap-2">
-          <p className="text-sm text-ink-muted">확정된 베이스캠프 멤버, 행사 참가자, 혼자 가는 일정을 밤마다 센 인원이에요.</p>
+          <p className="text-sm text-ink-muted">확정된 베이스캠프 멤버, 행사 참가자, 혼자 가는 일정을 합쳐 밤마다 센 인원이에요.</p>
           <Evidence
             items={expectedPeople.map((day) => ({ label: formatLocalDate(day.date), value: `${day.count}명` }))}
           />
@@ -423,7 +437,7 @@ function WeatherSection({ weather }: { weather: Weather | null }) {
               </thead>
               <tbody className="font-mono tabular-nums text-ink">
                 {weather.shortTerm.slice(0, SHORT_TERM_LIMIT).map((forecast) => (
-                  <tr key={forecast.at} className="border-t border-contour">
+                  <tr key={forecast.at} className="border-t border-line">
                     <td className="py-2">{formatKstTime(forecast.at)}</td>
                     <td className="py-2 text-right">{formatValue(forecast.temperature, '°C')}</td>
                     <td className="py-2 text-right">{formatValue(forecast.precipitationProbability, '%')}</td>
@@ -473,7 +487,7 @@ function MidTermTable({ forecasts }: { forecasts: MidTermForecast[] }) {
       </thead>
       <tbody className="tabular-nums text-ink">
         {forecasts.map((forecast) => (
-          <tr key={forecast.date} className="border-t border-contour">
+          <tr key={forecast.date} className="border-t border-line">
             <td className="py-2">{formatLocalDate(forecast.date)}</td>
             <td className="py-2 text-right font-mono">
               {formatValue(forecast.minTemperature, '°')}/{formatValue(forecast.maxTemperature, '°')}

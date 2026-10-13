@@ -30,9 +30,11 @@ public class SyncJobLauncher {
     private final SyncJobRunService syncJobRunService;
     private final GoCampingSyncService goCampingSyncService;
     private final ForestLoadService forestLoadService;
+    private final ForestStandardLoadService forestStandardLoadService;
     private final ParkBoundaryLoadService parkBoundaryLoadService;
     private final GoCampingSyncProperties goCampingSyncProperties;
     private final ForestLoadProperties forestLoadProperties;
+    private final ForestStandardLoadProperties forestStandardLoadProperties;
     private final ParkBoundaryLoadProperties parkBoundaryLoadProperties;
     private final BakjiRejudgeService bakjiRejudgeService;
     private final BakjiRejudgeProperties bakjiRejudgeProperties;
@@ -42,9 +44,11 @@ public class SyncJobLauncher {
             SyncJobRunService syncJobRunService,
             GoCampingSyncService goCampingSyncService,
             ForestLoadService forestLoadService,
+            ForestStandardLoadService forestStandardLoadService,
             ParkBoundaryLoadService parkBoundaryLoadService,
             GoCampingSyncProperties goCampingSyncProperties,
             ForestLoadProperties forestLoadProperties,
+            ForestStandardLoadProperties forestStandardLoadProperties,
             ParkBoundaryLoadProperties parkBoundaryLoadProperties,
             BakjiRejudgeService bakjiRejudgeService,
             BakjiRejudgeProperties bakjiRejudgeProperties,
@@ -52,9 +56,11 @@ public class SyncJobLauncher {
         this.syncJobRunService = syncJobRunService;
         this.goCampingSyncService = goCampingSyncService;
         this.forestLoadService = forestLoadService;
+        this.forestStandardLoadService = forestStandardLoadService;
         this.parkBoundaryLoadService = parkBoundaryLoadService;
         this.goCampingSyncProperties = goCampingSyncProperties;
         this.forestLoadProperties = forestLoadProperties;
+        this.forestStandardLoadProperties = forestStandardLoadProperties;
         this.parkBoundaryLoadProperties = parkBoundaryLoadProperties;
         this.bakjiRejudgeService = bakjiRejudgeService;
         this.bakjiRejudgeProperties = bakjiRejudgeProperties;
@@ -81,6 +87,7 @@ public class SyncJobLauncher {
         return switch (jobType) {
             case GOCAMPING -> new Job(goCampingSyncProperties.staleAfter(), goCampingSyncService::run);
             case FOREST -> new Job(forestLoadProperties.staleAfter(), forestLoadService::run);
+            case FOREST_STANDARD -> new Job(forestStandardLoadProperties.staleAfter(), forestStandardLoadService::run);
             case PARK_BOUNDARY -> new Job(parkBoundaryLoadProperties.staleAfter(), this::loadParkBoundaryThenRejudge);
             case BAKJI_REJUDGE -> new Job(bakjiRejudgeProperties.staleAfter(), bakjiRejudgeService::run);
         };

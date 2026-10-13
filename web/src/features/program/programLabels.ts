@@ -1,33 +1,33 @@
 import type { ProgramListStatus } from '../../api/programs';
 import type { ProgramApplicationStatus, ProgramCancelReason, ProgramStatus } from '../../api/types';
-import type { BadgeTone } from '../../components/Badge';
+import type { StatusTone } from '../../components/StatusText';
 
-export const PROGRAM_STATUS_META: Record<ProgramStatus, { label: string; tone: BadgeTone }> = {
-  UPCOMING: { label: '신청 전', tone: 'sea' },
-  OPEN: { label: '신청 중', tone: 'forest' },
+export const PROGRAM_STATUS_META: Record<ProgramStatus, { label: string; tone: StatusTone }> = {
+  UPCOMING: { label: '신청 예정', tone: 'info' },
+  OPEN: { label: '신청 받는 중', tone: 'accent' },
   CLOSED: { label: '마감', tone: 'neutral' },
   CANCELED: { label: '행사 취소', tone: 'neutral' },
 };
 
-export const APPLICATION_STATUS_META: Record<ProgramApplicationStatus, { label: string; tone: BadgeTone }> = {
+export const APPLICATION_STATUS_META: Record<ProgramApplicationStatus, { label: string; tone: StatusTone }> = {
   PENDING_PAYMENT: { label: '결제 대기', tone: 'warning' },
-  CONFIRMED: { label: '확정', tone: 'sea' },
+  CONFIRMED: { label: '확정', tone: 'info' },
   CANCELED: { label: '취소', tone: 'neutral' },
   EXPIRED: { label: '만료', tone: 'neutral' },
 };
 
 export const CANCEL_REASON_LABELS: Record<ProgramCancelReason, string> = {
-  USER: '본인 취소',
+  USER: '직접 취소',
   EXPIRED: '결제 기한 만료',
   SANCTIONED: '이용 정지',
   PROGRAM_CANCELED: '행사 취소',
-  WITHDRAWN: '탈퇴',
+  WITHDRAWN: '회원 탈퇴',
 };
 
 export const PROGRAM_FILTERS: ReadonlyArray<{ value: ProgramListStatus | 'ALL'; label: string }> = [
   { value: 'ALL', label: '전체' },
-  { value: 'UPCOMING', label: '신청 전' },
-  { value: 'OPEN', label: '신청 중' },
+  { value: 'UPCOMING', label: '신청 예정' },
+  { value: 'OPEN', label: '신청 받는 중' },
   { value: 'CLOSED', label: '마감' },
 ];
 

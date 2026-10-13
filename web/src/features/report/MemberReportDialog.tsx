@@ -89,10 +89,10 @@ export function MemberReportDialog({
     return (
       <Dialog title={isReview ? '후기 신고' : `${targetNickname}님 신고`} onClose={onClose}>
         <div className="flex flex-col gap-4">
-          <p role="status" className="text-base font-semibold text-forest-deep">
+          <p role="status" className="text-base font-semibold text-accent-deep">
             신고를 접수했어요
           </p>
-          <p className="text-sm text-ink-muted">관리자가 검토한 뒤 처리 결과를 알림으로 알려 드려요.</p>
+          <p className="text-sm text-ink-muted">관리자가 검토한 뒤 결과를 알림으로 보내요.</p>
           <div className="flex justify-end">
             <Button onClick={onClose}>닫기</Button>
           </div>
@@ -120,10 +120,10 @@ export function MemberReportDialog({
           </div>
         )}
         {isReview ? (
-          <p className="text-base text-ink">신고 유형: 부적절한 후기</p>
+          <p className="text-base text-ink">신고 사유: 부적절한 후기</p>
         ) : (
           <ChoiceGroup
-            legend="신고 유형"
+            legend="신고 사유"
             name="reportType"
             options={MEMBER_REPORT_OPTIONS}
             value={type}
@@ -133,8 +133,8 @@ export function MemberReportDialog({
           />
         )}
         {type === 'HARASSMENT_OR_THREAT' && (
-          <Notice tone="warning" title="접수하면 바로 이용이 정지돼요">
-            <p>접수하면 상대 회원은 바로 72시간 동안 이용이 정지돼요. 관리자가 검토해서 확정하거나 풀어요.</p>
+          <Notice tone="warning" title="상대가 바로 임시 정지돼요">
+            <p>접수하면 상대 회원은 72시간 동안 이용이 정지돼요. 관리자가 검토한 뒤 정지를 확정하거나 풀어요.</p>
           </Notice>
         )}
         <TextArea
@@ -156,7 +156,7 @@ export function MemberReportDialog({
             loading={submitting}
             disabled={!ready}
             disabledReason={
-              ready ? undefined : isReview ? '신고 내용을 적어 주세요.' : '신고 유형과 내용을 입력해 주세요.'
+              ready ? undefined : isReview ? '신고 내용을 적어 주세요.' : '신고 사유를 고르고 내용을 적어 주세요.'
             }
             onClick={() => void submit()}
           >

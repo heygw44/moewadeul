@@ -95,7 +95,7 @@ public class IdempotencyExecutor {
             throw new BusinessException(CommonErrorCode.IDEMPOTENCY_KEY_REQUIRED);
         }
         if (!KEY_PATTERN.matcher(key).matches()) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "멱등성 키는 영문, 숫자, '-', '_'로 이루어진 1~64자여야 합니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "멱등성 키는 영문, 숫자, '-', '_'로 이루어진 1~64자여야 해요.");
         }
         return key;
     }

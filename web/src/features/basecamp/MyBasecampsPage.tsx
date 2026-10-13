@@ -4,13 +4,13 @@ import { toUserMessage } from '../../api/errors';
 import type { MyBasecampItem, MyBasecampRelation } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ListPanel } from '../../components/HubLayout';
 import { Notice } from '../../components/Notice';
 import { PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
+import { MetaLine, StatusText } from '../../components/StatusText';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
@@ -24,13 +24,13 @@ const FILTERS: ReadonlyArray<{ value: RelationFilter; label: string }> = [
   { value: 'ALL', label: '전체' },
   { value: 'LEADER', label: '캠프 리더' },
   { value: 'MEMBER', label: '멤버' },
-  { value: 'APPLICANT', label: '신청 중' },
+  { value: 'APPLICANT', label: '승인 대기' },
 ];
 
 const RELATION_LABELS: Record<MyBasecampRelation, string> = {
   LEADER: '캠프 리더',
   MEMBER: '멤버',
-  APPLICANT: '신청 중',
+  APPLICANT: '승인 대기',
 };
 
 type ListState = {
@@ -100,17 +100,8 @@ export function MyBasecampsPage() {
   return (
     <PageLayout
       title="내 베이스캠프"
-      description="열었거나 합류했거나 신청한 베이스캠프를 모아 보여 줘요."
       breadcrumb={<BackLink to="/me">내 정보</BackLink>}
-      actions={
-        <Link
-          to="/basecamps"
-          className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
-        >
-          베이스캠프 찾기
-        </Link>
-      }
-      tabs={<UnderlineTabs label="관계" options={FILTERS} value={filter} onChange={setFilter} />}
+      tabs={<UnderlineTabs label="내 역할" options={FILTERS} value={filter} onChange={setFilter} />}
     >
       <div aria-busy={authenticated && current === null} className="flex flex-col gap-3">
         {!authenticated || current === null ? (
@@ -133,21 +124,24 @@ export function MyBasecampsPage() {
             )}
             {current.items.length === 0 && !current.error ? (
               <EmptyState
-                title="해당하는 베이스캠프가 없어요"
-                description="지도에서 베이스캠프를 찾아보세요."
+                framed
+                title={filter === 'ALL' ? '열었거나 합류한 베이스캠프가 없어요' : '해당하는 베이스캠프가 없어요'}
+                description={filter === 'ALL' ? '같은 날 같은 곳으로 가는 베이스캠프를 찾아 합류 신청을 보낼 수 있어요.' : undefined}
                 action={
-                  <Link
-                    to="/basecamps"
-                    className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
-                  >
-                    베이스캠프 찾기
-                  </Link>
+                  filter === 'ALL' && (
+                    <Link
+                      to="/basecamps"
+                      className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
+                    >
+                      베이스캠프 찾기
+                    </Link>
+                  )
                 }
               />
             ) : (
               <ListPanel>
                 {current.items.map((item) => (
-                  <BasecampCard key={`${item.basecampId}-${item.myRelation}`} item={item} />
+                  <BasecampCard key={`${item.basecampId}-${item.myRelation}`} item={item} showRelation={filter === 'ALL'} />
                 ))}
               </ListPanel>
             )}
@@ -165,22 +159,25 @@ export function MyBasecampsPage() {
   );
 }
 
-function BasecampCard({ item }: { item: MyBasecampItem }) {
+// 관계(캠프 리더·멤버·신청 중)로 거른 탭에서는 모든 행의 관계가 탭 이름과 같으므로 '전체' 탭에서만 적는다.
+function BasecampCard({ item, showRelation }: { item: MyBasecampItem; showRelation: boolean }) {
   const status = BASECAMP_STATUS_META[item.status];
   return (
     <li>
       <Link
         to={`/basecamps/${item.basecampId}`}
-        className="flex flex-col gap-1 p-4 hover:bg-paper-deep"
+        className="flex flex-col gap-1 p-4 hover:bg-fill"
       >
         <span className="text-lg font-semibold text-ink">{item.title}</span>
-        <span className="text-sm text-ink-muted">{item.spot.name}</span>
+        <MetaLine
+          items={[
+            <StatusText tone={status.tone}>{status.label}</StatusText>,
+            showRelation && RELATION_LABELS[item.myRelation],
+            item.spot.name,
+          ]}
+        />
         <span className="font-mono text-sm tabular-nums text-ink-muted">
           {formatLocalDate(item.startDate)} ~ {formatLocalDate(item.endDate)} · {headcountText(item.headcount, item.capacity)}명
-        </span>
-        <span className="mt-1 flex flex-wrap gap-1">
-          <Badge tone={status.tone}>{status.label}</Badge>
-          <Badge tone={item.myRelation === 'LEADER' ? 'earth' : 'sea'}>{RELATION_LABELS[item.myRelation]}</Badge>
         </span>
       </Link>
     </li>

@@ -405,7 +405,7 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-12][F-19][PV-02] 탈퇴하면 베이스캠프 정리와 행사 신청 정리 이벤트가 회원마다 하나씩 기록된다")
+    @DisplayName("[F-12][F-19][F-33][PV-02][PV-10] 탈퇴하면 베이스캠프 정리, 행사 신청 정리, 추억 기록 정리 이벤트가 회원마다 하나씩 기록된다")
     void recordsCleanupEvents() {
         Member member = saveActiveMember();
 
@@ -413,6 +413,7 @@ class WithdrawalApiIntegrationTest {
 
         assertThat(eventPayloads("WITHDRAWAL_BASECAMP_CLEANUP", member.getId())).hasSize(1);
         assertThat(eventPayloads("WITHDRAWAL_PROGRAM_CLEANUP", member.getId())).hasSize(1);
+        assertThat(eventPayloads("WITHDRAWAL_MEMORY_CLEANUP", member.getId())).hasSize(1);
         assertThat(count("outbox_event WHERE payload LIKE ?", "%" + member.getEmail() + "%"))
                 .isZero();
     }

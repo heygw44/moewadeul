@@ -68,10 +68,10 @@ public class NotificationSettingService {
         Set<String> seen = new HashSet<>();
         for (NotificationSettingItem item : requested) {
             if (!NotificationEventTypes.EMAIL_CONFIGURABLE.contains(item.type())) {
-                throw new BusinessException(CommonErrorCode.INVALID_INPUT, "알 수 없는 알림 종류입니다.");
+                throw new BusinessException(CommonErrorCode.INVALID_INPUT, "알 수 없는 알림 종류예요.");
             }
             if (!seen.add(item.type())) {
-                throw new BusinessException(CommonErrorCode.INVALID_INPUT, "같은 알림 종류를 두 번 보낼 수 없습니다.");
+                throw new BusinessException(CommonErrorCode.INVALID_INPUT, "같은 알림 종류를 두 번 보낼 수 없어요.");
             }
         }
     }

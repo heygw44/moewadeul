@@ -65,6 +65,17 @@ public class LoginSessionManager {
         storeContext(authenticationOf(verified), request, response);
     }
 
+    /**
+     * 호출하면 현재 세션의 속성과 로그인 상태는 그대로 두고 세션 ID만 새로 발급한다. 새 ID는 응답의 세션 쿠키로 나간다.
+     * 비밀번호를 바꾼 뒤 부른다. 예전 세션 ID가 새어 나갔더라도 그 ID로는 더 이상 로그인 상태를 쓸 수 없게 하려는 것이다.
+     */
+    public void changeSessionId(HttpServletRequest request) {
+        if (request.getSession(false) == null) {
+            throw new IllegalStateException("세션이 없는 요청에서 세션 ID 재발급을 요청했습니다.");
+        }
+        request.changeSessionId();
+    }
+
     public void logout(HttpServletRequest request, HttpServletResponse response) {
         logoutHandler.logout(
                 request, response, securityContextHolderStrategy.getContext().getAuthentication());

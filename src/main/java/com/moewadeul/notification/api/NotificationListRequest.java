@@ -9,8 +9,8 @@ public record NotificationListRequest(
         Integer page,
 
         @Schema(description = "페이지 크기. 1~50이고 생략하면 20이다.")
-        @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
-        @Max(value = 50, message = "페이지 크기는 50 이하여야 합니다.")
+        @Min(value = 1, message = "페이지 크기는 1 이상이어야 해요.")
+        @Max(value = 50, message = "페이지 크기는 50 이하여야 해요.")
         Integer size) {
 
     private static final int DEFAULT_PAGE = 0;

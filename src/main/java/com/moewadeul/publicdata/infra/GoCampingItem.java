@@ -7,7 +7,7 @@ package com.moewadeul.publicdata.infra;
  * 처리는 이 값을 쓰는 쪽이 한다. 원천에서 {@code mapX}는 경도, {@code mapY}는 위도다.
  *
  * <p>{@code syncStatus}는 원천이 이 항목을 어떻게 다루는지 나타내고, 관찰한 값은 {@code A}(추가), {@code U}(수정), {@code D}(삭제)다.
- * {@code manageSttus}는 운영 상태(운영, 휴장, 폐업), {@code hvofBgnde}와 {@code hvofEnddle}은 휴장 시작일과 종료일이다.
+ * {@code manageSttus}는 운영 상태(운영, 휴장, 폐업), {@code hvofBgnde}와 {@code hvofEnddle}은 휴장 시작일과 종료일이다. {@code modifiedtime}은 원천이 이 항목을 마지막으로 고친 날(예: 2026-10-02)이다.
  */
 public record GoCampingItem(
         String contentId,
@@ -31,4 +31,5 @@ public record GoCampingItem(
         String syncStatus,
         String manageSttus,
         String hvofBgnde,
-        String hvofEnddle) {}
+        String hvofEnddle,
+        String modifiedtime) {}

@@ -12,6 +12,8 @@ import { useSession } from '../member/session';
 const NAV_ITEMS = [
   { to: '/admin/reports', label: '신고 처리' },
   { to: '/admin/spots', label: '박지 검토' },
+  { to: '/admin/memories', label: '발자국 검토' },
+  { to: '/admin/sync-jobs', label: '데이터 적재' },
 ] as const;
 
 // 관리자 화면의 공통 틀이다. 관리자가 아니면 안에 있는 화면을 그리지 않아서 관리자 API도 부르지 않는다. 권한은 서버도 검사한다.
@@ -40,7 +42,7 @@ export function AdminPage({ title, current, children }: { title: string; current
   if (session.me.role !== 'ADMIN') {
     return (
       <PageLayout title={title} wide>
-        <EmptyState title="관리자만 볼 수 있어요" description="관리자 계정으로 로그인한 뒤 다시 들어와 주세요." />
+        <EmptyState framed title="관리자만 볼 수 있어요" description="관리자 계정으로 로그인해 주세요." />
       </PageLayout>
     );
   }
@@ -60,7 +62,7 @@ export function AdminPage({ title, current, children }: { title: string; current
       }
     >
       {/* 필터와 표도 테두리 있는 카드 바탕 위에 둔다. */}
-      <div className="flex min-w-0 flex-col gap-4 rounded-control border border-contour bg-card p-4">{children}</div>
+      <div className="flex min-w-0 flex-col gap-4 rounded-sheet border border-line bg-surface p-4">{children}</div>
     </PageLayout>
   );
 }

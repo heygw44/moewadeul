@@ -171,7 +171,7 @@ public class ProgramAdminService {
         try {
             return ProgramApplicationStatus.valueOf(status);
         } catch (IllegalArgumentException e) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "status: 신청 상태가 올바르지 않습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "status: 신청 상태가 맞지 않아요.");
         }
     }
 
@@ -184,7 +184,7 @@ public class ProgramAdminService {
     // 장소가 없거나 지도에 보이지 않는 상태이면 연결하지 않는다. spotId가 null이면 연결하지 않는 행사라서 검사하지 않는다.
     private void requireVisibleSpot(Long spotId) {
         if (spotId != null && !programQueryMapper.existsActiveSpot(spotId)) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "spotId: 지도에 보이는 장소만 연결할 수 있습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "spotId: 지도에 보이는 장소만 연결할 수 있어요.");
         }
     }
 

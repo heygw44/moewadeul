@@ -3,13 +3,13 @@ import { listMyProgramApplications } from '../../api/programs';
 import type { MyProgramApplicationItem, ProgramApplicationStatus } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ListPanel } from '../../components/HubLayout';
 import { Notice } from '../../components/Notice';
 import { PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
+import { MetaLine, StatusText } from '../../components/StatusText';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
@@ -47,7 +47,6 @@ export function MyProgramApplicationsPage() {
   return (
     <PageLayout
       title="내 행사 신청"
-      description="신청한 공식 행사의 결제와 확정 상태를 확인해요."
       breadcrumb={<BackLink to="/me">내 정보</BackLink>}
       tabs={<UnderlineTabs label="신청 상태" options={APPLICATION_FILTERS} value={filter} onChange={setFilter} />}
     >
@@ -58,7 +57,7 @@ export function MyProgramApplicationsPage() {
           <>
             {current.error && (
               <div className="flex flex-col gap-3">
-                <Notice tone="danger" title="내 신청을 불러오지 못했어요">
+                <Notice tone="danger" title="내 행사 신청을 불러오지 못했어요">
                   <p>{current.error}</p>
                 </Notice>
                 {current.items.length === 0 && (
@@ -72,15 +71,17 @@ export function MyProgramApplicationsPage() {
             )}
             {current.items.length === 0 && !current.error ? (
               <EmptyState
-                title="신청한 행사가 없어요"
-                description={filter === 'ALL' ? '공식 행사에서 마음에 드는 행사를 찾아보세요.' : '다른 상태를 골라 보세요.'}
+                framed
+                title={filter === 'ALL' ? '신청한 행사가 없어요' : '해당하는 신청이 없어요'}
                 action={
-                  <Link
-                    to="/programs"
-                    className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
-                  >
-                    공식 행사 보기
-                  </Link>
+                  filter === 'ALL' && (
+                    <Link
+                      to="/programs"
+                      className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
+                    >
+                      공식 행사 보기
+                    </Link>
+                  )
                 }
               />
             ) : (
@@ -116,23 +117,28 @@ function ApplicationCard({ item, now }: { item: MyProgramApplicationItem; now: n
     <li>
       <Link
         to={`/programs/${item.program.programId}`}
-        className="flex min-h-11 flex-col gap-2 p-4 hover:bg-paper-deep"
+        className="flex min-h-11 flex-col gap-2 p-4 hover:bg-fill"
       >
-        <span className="flex flex-wrap items-center gap-1">
-          <Badge tone={status.tone}>{status.label}</Badge>
-          {item.program.status === 'CANCELED' && <Badge tone="neutral">행사 취소</Badge>}
-          {pending && item.paymentDueAt && (
-            <span className="font-mono text-sm tabular-nums text-warning">
-              <span className="font-sans">남은 시간</span> {countdownText(item.paymentDueAt, now, paymentWindowSeconds(item.createdAt, item.paymentDueAt))}
-            </span>
-          )}
-        </span>
         <span className="text-lg font-semibold text-ink">{item.program.title}</span>
+        <MetaLine
+          items={[
+            <StatusText tone={status.tone}>{status.label}</StatusText>,
+            item.program.status === 'CANCELED' && '행사 취소',
+            pending && item.paymentDueAt && (
+              <span className="text-warning">
+                남은 시간{' '}
+                <span className="font-mono tabular-nums">
+                  {countdownText(item.paymentDueAt, now, paymentWindowSeconds(item.createdAt, item.paymentDueAt))}
+                </span>
+              </span>
+            ),
+          ]}
+        />
         <span className="font-mono text-sm tabular-nums text-ink-muted">{formatKstDateTime(item.program.startAt)}</span>
         {item.status === 'CANCELED' && item.cancelReason && (
           <span className="text-sm text-ink-muted">취소 사유: {CANCEL_REASON_LABELS[item.cancelReason]}</span>
         )}
-        {item.status === 'EXPIRED' && <span className="text-sm text-ink-muted">결제 기한이 지나 만료됐어요</span>}
+        {item.status === 'EXPIRED' && <span className="text-sm text-ink-muted">결제 기한이 지났어요</span>}
       </Link>
     </li>
   );

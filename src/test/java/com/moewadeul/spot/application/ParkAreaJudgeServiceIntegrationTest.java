@@ -169,10 +169,10 @@ class ParkAreaJudgeServiceIntegrationTest {
         clock.setInstant(JUDGED_AT);
 
         // when
-        int judged = parkAreaJudgeService.rejudgeBakjis();
+        BakjiRejudgeCounts counts = parkAreaJudgeService.rejudgeBakjis();
 
-        // then
-        assertThat(judged).isEqualTo(6);
+        // then: 경계 안이고 예전 경고가 없던 박지는 inside, hidden, deleted, pending 넷이고, 경고가 풀린 박지는 staleWarned 하나다.
+        assertThat(counts).isEqualTo(new BakjiRejudgeCounts(6, 4, 1));
         assertThat(judgementOf(insideId)).isEqualTo(new SpotJudgementRow(true, areaId, JUDGED_AT, SAVED_AT));
         assertThat(judgementOf(outsideId)).isEqualTo(new SpotJudgementRow(false, null, JUDGED_AT, SAVED_AT));
         assertThat(judgementOf(staleWarnedId)).isEqualTo(new SpotJudgementRow(false, null, JUDGED_AT, SAVED_AT));
@@ -180,6 +180,28 @@ class ParkAreaJudgeServiceIntegrationTest {
         assertThat(judgementOf(deletedId)).isEqualTo(new SpotJudgementRow(true, areaId, JUDGED_AT, SAVED_AT));
         assertThat(judgementOf(pendingId)).isEqualTo(new SpotJudgementRow(true, areaId, JUDGED_AT, SAVED_AT));
         assertThat(judgementOf(campsiteId)).isEqualTo(new SpotJudgementRow(false, null, null, SAVED_AT));
+    }
+
+    @Test
+    @DisplayName("[F-06][F-07] 경고를 유지하면서 근거 경계만 바뀐 박지는 새 경고와 해제에 세지 않고 새 경계로 기록한다")
+    void doesNotCountBakjiWhoseWarningStaysWithChangedArea() {
+        // given: 예전 경계(경도 129.0~129.5)에서 경고를 받은 박지가 지금은 다른 경계(PARK_SQUARE) 안에 있다.
+        long oldAreaId = insertProtectedArea("MULTIPOLYGON(((129 35, 129.5 35, 129.5 35.5, 129 35.5, 129 35)))");
+        long newAreaId = insertProtectedArea(PARK_SQUARE);
+        long bakjiId = insertSpot("BAKJI", "ACTIVE", INSIDE_PARK);
+        jdbcTemplate.update(
+                "UPDATE spot SET park_warning = TRUE, protected_area_id = ?, area_checked_at = ? WHERE id = ?",
+                oldAreaId,
+                Timestamp.from(SAVED_AT),
+                bakjiId);
+        clock.setInstant(JUDGED_AT);
+
+        // when
+        BakjiRejudgeCounts counts = parkAreaJudgeService.rejudgeBakjis();
+
+        // then
+        assertThat(counts).isEqualTo(new BakjiRejudgeCounts(1, 0, 0));
+        assertThat(judgementOf(bakjiId)).isEqualTo(new SpotJudgementRow(true, newAreaId, JUDGED_AT, SAVED_AT));
     }
 
     @Test
@@ -195,10 +217,10 @@ class ParkAreaJudgeServiceIntegrationTest {
         clock.setInstant(JUDGED_AT);
 
         // when
-        int judged = parkAreaJudgeService.rejudgeBakjis();
+        BakjiRejudgeCounts counts = parkAreaJudgeService.rejudgeBakjis();
 
         // then
-        assertThat(judged).isGreaterThanOrEqualTo(insideCount + outsideCount);
+        assertThat(counts.judged()).isGreaterThanOrEqualTo(insideCount + outsideCount);
         assertThat(countBatchSpots(prefix + "-in%", true, areaId)).isEqualTo(insideCount);
         assertThat(countBatchSpots(prefix + "-out%", false, null)).isEqualTo(outsideCount);
     }

@@ -43,12 +43,12 @@ export function spotFilterChips(filters: SpotFilters, onChange: (next: SpotFilte
   if (filters.excludeWarning) {
     chips.push({
       key: 'excludeWarning',
-      label: '경고 장소 빼기',
+      label: '공원 경계 경고 빼기',
       onRemove: () => onChange({ ...filters, excludeWarning: false }),
     });
   }
   if (filters.hideClosed) {
-    chips.push({ key: 'hideClosed', label: '휴장 빼기', onRemove: () => onChange({ ...filters, hideClosed: false }) });
+    chips.push({ key: 'hideClosed', label: '휴장인 곳 빼기', onRemove: () => onChange({ ...filters, hideClosed: false }) });
   }
   return chips;
 }

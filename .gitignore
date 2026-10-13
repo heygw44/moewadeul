@@ -18,6 +18,9 @@ GEMINI.md
 .github/copilot-instructions.md
 .mcp.json
 .superloopy/
+PRODUCT.md
+DESIGN.md
+.impeccable/
 
 ### 비밀값 ###
 .env

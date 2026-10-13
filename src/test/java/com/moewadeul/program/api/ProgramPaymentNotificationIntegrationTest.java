@@ -122,7 +122,7 @@ class ProgramPaymentNotificationIntegrationTest {
                 mvc.get().uri("/api/me/notifications").cookie(session).exchange();
         assertThat(inbox).hasStatus(HttpStatus.OK);
         assertThat(inbox).bodyJson().extractingPath("$.content[0].type").isEqualTo("PROGRAM_APPLICATION_CANCELED");
-        assertThat(inbox).bodyJson().extractingPath("$.content[0].body").isEqualTo("행사 신청을 취소했습니다. 결제한 금액은 환불됩니다.");
+        assertThat(inbox).bodyJson().extractingPath("$.content[0].body").isEqualTo("행사 신청을 취소했어요. 결제한 금액은 환불돼요.");
         assertThat(inbox).bodyJson().extractingPath("$.content[0].link").isEqualTo("/programs/" + programId);
     }
 
@@ -144,7 +144,7 @@ class ProgramPaymentNotificationIntegrationTest {
         assertThat(inbox).bodyJson().extractingPath("$.content.length()").isEqualTo(1);
         assertThat(inbox).bodyJson().extractingPath("$.content[0].type").isEqualTo("PROGRAM_APPLICATION_EXPIRED");
         assertThat(inbox).bodyJson().extractingPath("$.content[0].title").isEqualTo("행사 신청 만료");
-        assertThat(inbox).bodyJson().extractingPath("$.content[0].body").isEqualTo("결제 기한이 지나 행사 신청이 취소됐습니다.");
+        assertThat(inbox).bodyJson().extractingPath("$.content[0].body").isEqualTo("결제 기한이 지나 행사 신청이 취소됐어요.");
         assertThat(inbox).bodyJson().extractingPath("$.content[0].link").isEqualTo("/programs/" + programId);
         assertThat(fixture.applicationStatus(applicationId)).isEqualTo("EXPIRED");
     }

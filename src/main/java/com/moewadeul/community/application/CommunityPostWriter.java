@@ -128,31 +128,31 @@ public class CommunityPostWriter {
     // 제목과 본문은 지울 수 있는 값이 아니다. 요청에 있는데 null이면 지우려는 것으로 보고 거부한다.
     private static void requireNotCleared(PatchField<?> field, String label) {
         if (field.present() && field.value() == null) {
-            throw invalidInput(label + "은(는) 비울 수 없습니다.");
+            throw invalidInput(label + "은(는) 비울 수 없어요.");
         }
     }
 
     private void requireLinkable(long spotId) {
         if (!activeSpotChecker.isActive(spotId)) {
-            throw invalidInput("연결할 수 없는 장소입니다.");
+            throw invalidInput("연결할 수 없는 장소예요.");
         }
     }
 
     private static void requireValidTitle(String title) {
         if (title == null || title.isBlank()) {
-            throw invalidInput("제목을 입력해야 합니다.");
+            throw invalidInput("제목을 입력해 주세요.");
         }
         if (title.length() > CommunityPost.TITLE_MAX_LENGTH) {
-            throw invalidInput("제목은 " + CommunityPost.TITLE_MAX_LENGTH + "자 이하여야 합니다.");
+            throw invalidInput("제목은 " + CommunityPost.TITLE_MAX_LENGTH + "자 이하여야 해요.");
         }
     }
 
     private static void requireValidContent(String content) {
         if (content == null || content.isBlank()) {
-            throw invalidInput("본문을 입력해야 합니다.");
+            throw invalidInput("본문을 입력해 주세요.");
         }
         if (content.length() > CommunityPost.CONTENT_MAX_LENGTH) {
-            throw invalidInput("본문은 " + CommunityPost.CONTENT_MAX_LENGTH + "자 이하여야 합니다.");
+            throw invalidInput("본문은 " + CommunityPost.CONTENT_MAX_LENGTH + "자 이하여야 해요.");
         }
     }
 

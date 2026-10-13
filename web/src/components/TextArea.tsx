@@ -12,7 +12,7 @@ type TextAreaProps = Omit<ComponentPropsWithRef<'textarea'>, 'value'> & {
 
 // 입력란 글자는 16px 아래로 내리지 않는다. iOS가 작은 입력란에 포커스하면 화면을 확대하기 때문이다.
 const AREA_BASE =
-  'min-h-24 w-full resize-y rounded-control border bg-card px-3 py-2 text-base text-ink disabled:cursor-not-allowed disabled:bg-paper-deep disabled:text-ink-muted';
+  'min-h-24 w-full resize-y rounded-control border bg-fill px-3 py-2 text-base text-ink focus:bg-surface focus:border-info disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-subtle';
 
 export function TextArea({
   label,
@@ -44,7 +44,7 @@ export function TextArea({
         maxLength={maxLength}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedByIds}
-        className={`${AREA_BASE} ${error ? 'border-danger' : 'border-ink-subtle'}`}
+        className={`${AREA_BASE} ${error ? 'border-danger' : 'border-line'}`}
         {...rest}
       />
       <div className="flex items-start justify-between gap-2">

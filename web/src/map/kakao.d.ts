@@ -10,6 +10,7 @@ declare namespace kakao.maps {
 
   class LatLngBounds {
     constructor(sw?: LatLng, ne?: LatLng);
+    extend(latlng: LatLng): void;
     getSouthWest(): LatLng;
     getNorthEast(): LatLng;
   }
@@ -23,6 +24,7 @@ declare namespace kakao.maps {
 
   class MapProjection {
     containerPointFromCoords(latlng: LatLng): Point;
+    coordsFromContainerPoint(point: Point): LatLng;
   }
 
   // SDK 안에서는 숫자 상수다. 값은 kakao.maps.MapTypeId에서 이름으로 꺼내 쓴다.
@@ -35,9 +37,18 @@ declare namespace kakao.maps {
     readonly TERRAIN: MapTypeId;
   };
 
+  // 지도 저작권·카카오 로고 자리다. MapTypeId처럼 SDK 안에서는 숫자 상수다.
+  type CopyrightPosition = number;
+
+  const CopyrightPosition: {
+    readonly BOTTOMLEFT: CopyrightPosition;
+    readonly BOTTOMRIGHT: CopyrightPosition;
+  };
+
   interface MapOptions {
     center: LatLng;
     level?: number;
+    scrollwheel?: boolean;
   }
 
   interface SetLevelOptions {
@@ -50,12 +61,14 @@ declare namespace kakao.maps {
     setCenter(latlng: LatLng): void;
     getCenter(): LatLng;
     setLevel(level: number, options?: SetLevelOptions): void;
+    setBounds(bounds: LatLngBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number): void;
     getLevel(): number;
     getBounds(): LatLngBounds;
     getProjection(): MapProjection;
     relayout(): void;
     addOverlayMapTypeId(mapTypeId: MapTypeId): void;
     removeOverlayMapTypeId(mapTypeId: MapTypeId): void;
+    setCopyrightPosition(position: CopyrightPosition, reversed?: boolean): void;
   }
 
   interface CustomOverlayOptions {
@@ -79,13 +92,15 @@ declare namespace kakao.maps {
 
   interface MouseEvent {
     latLng: LatLng;
+    // 지도 컨테이너 왼쪽 위를 원점으로 한 픽셀 좌표다.
+    point: Point;
   }
 
   namespace event {
     function addListener(target: Map, type: 'idle', handler: () => void): void;
     function removeListener(target: Map, type: 'idle', handler: () => void): void;
-    function addListener(target: Map, type: 'click', handler: (event: MouseEvent) => void): void;
-    function removeListener(target: Map, type: 'click', handler: (event: MouseEvent) => void): void;
+    function addListener(target: Map, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
+    function removeListener(target: Map, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
     function addListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
     function removeListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
   }
@@ -110,17 +125,42 @@ declare namespace kakao.maps {
       region_3depth_name: string;
     }
 
+    // 지번 주소다. 번지가 없는 행정구역 결과는 main_address_no가 빈 문자열이다.
+    interface JibunAddress extends RegionAddress {
+      address_name: string;
+      main_address_no: string;
+      sub_address_no: string;
+      mountain_yn: 'Y' | 'N';
+    }
+
+    // 도로명 주소다. 도로 이름만 찾은 결과는 main_building_no가 빈 문자열이다.
+    interface RoadAddress extends RegionAddress {
+      address_name: string;
+      road_name: string;
+      main_building_no: string;
+      sub_building_no: string;
+      building_name: string;
+    }
+
+    // REGION은 행정구역, ROAD는 도로 이름, REGION_ADDR은 지번 주소, ROAD_ADDR은 도로명 주소로 찾은 결과다.
     interface AddressResult {
       address_name: string;
       address_type: 'REGION' | 'ROAD' | 'REGION_ADDR' | 'ROAD_ADDR';
       x: string;
       y: string;
-      address: RegionAddress | null;
+      address: JibunAddress | null;
+      road_address: RoadAddress | null;
     }
 
     // 좌표가 속한 행정구역이다. H는 행정동, B는 법정동 기준이다.
     interface RegionCodeResult extends RegionAddress {
       region_type: 'H' | 'B';
+    }
+
+    // 좌표에 있는 주소다. 도로명 주소는 건물이 없는 곳(산, 들)에서 null이다.
+    interface Coord2AddressResult {
+      address: { address_name: string } | null;
+      road_address: { address_name: string; building_name: string } | null;
     }
 
     interface PlaceResult {
@@ -146,6 +186,7 @@ declare namespace kakao.maps {
         options?: AddressSearchOptions,
       ): void;
       coord2RegionCode(lng: number, lat: number, callback: (result: RegionCodeResult[], status: Status) => void): void;
+      coord2Address(lng: number, lat: number, callback: (result: Coord2AddressResult[], status: Status) => void): void;
     }
 
     class Places {

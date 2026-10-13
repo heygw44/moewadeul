@@ -5,7 +5,7 @@ import { toUserMessage } from '../../api/errors';
 import { fetchMemberProfile } from '../../api/members';
 import type { MemberProfile } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
@@ -13,6 +13,7 @@ import { Notice } from '../../components/Notice';
 import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { AGE_GROUP_LABELS, companionTagLabel, GENDER_LABELS, trustLevelBadge } from './memberLabels';
 import { withNext } from './nextPath';
 import { useSession } from './session';
@@ -53,7 +54,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   let body: ReactNode;
   if (current === null) {
     body = showSkeleton ? (
-      <div className="flex flex-col gap-3 rounded-control border border-contour bg-card p-5">
+      <div className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
         <Skeleton className="h-6 w-1/2" />
         <Skeleton className="h-16 w-full" />
       </div>
@@ -62,9 +63,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
     body = <ProfileContent profile={current.profile} />;
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     body = (
-      <div className="rounded-control border border-contour bg-card p-5">
-        <EmptyState title="회원을 찾을 수 없어요" description="탈퇴했거나 없는 회원이에요." />
-      </div>
+      <EmptyState framed title="회원을 찾을 수 없어요" description="탈퇴했거나 주소가 잘못됐어요." />
     );
   } else {
     body = (
@@ -84,15 +83,23 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   const profile = current && 'profile' in current ? current.profile : null;
   const badge = profile && profile.trustLevel !== undefined ? trustLevelBadge(profile.trustLevel) : null;
   const meta = badge ? (
-    <div className="flex flex-wrap gap-1">
-      <Badge tone={badge.tone} icon={badge.icon}>
-        {badge.label}
-      </Badge>
-    </div>
+    <StatusText tone={badge.tone} icon={badge.icon}>
+      {badge.label}
+    </StatusText>
   ) : undefined;
 
   return (
-    <PageLayout title={nickname ?? '회원 프로필'} meta={meta}>
+    <PageLayout
+      title={nickname ?? '회원 프로필'}
+      meta={meta}
+      actions={
+        profile ? (
+          <Link to={`/members/${profile.memberId}/memories`} className={SECONDARY_LINK_CLASS}>
+            발자국 지도
+          </Link>
+        ) : undefined
+      }
+    >
       {body}
     </PageLayout>
   );
@@ -110,7 +117,7 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
         <p className="text-base text-ink-muted">로그인하면 이 회원의 신뢰 단계와 동행 기록을 볼 수 있어요.</p>
         <Link
           to={withNext('/login', pathname)}
-          className="inline-flex min-h-11 items-center self-start font-semibold text-forest underline underline-offset-2"
+          className="inline-flex min-h-11 items-center self-start font-semibold text-accent underline underline-offset-2"
         >
           로그인
         </Link>
@@ -130,11 +137,11 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
           ]}
         />
         <p className="text-sm text-ink-muted">
-          본인확인된 값만 베이스캠프의 연령·동성 조건에 쓰여요. 자기 신고 값은 참고만 해 주세요.
+          베이스캠프의 연령·성별 조건은 본인확인한 정보로만 따져요. 직접 입력한 정보는 참고로만 봐 주세요.
         </p>
         {isMe && (
-          <Link to="/me" className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-forest">
-            내 정보 고치기
+          <Link to="/me" className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-accent">
+            계정 설정
           </Link>
         )}
       </PageCard>
@@ -145,20 +152,14 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
             { label: '완료한 동행', value: `${profile.completedCompanions ?? 0}회` },
             {
               label: '"다시 동행하고 싶어요"',
-              value: summary?.rejoinRate === null || summary === undefined ? '아직 받은 후기가 없어요' : `${summary.rejoinRate}%`,
+              value: summary?.rejoinRate === null || summary === undefined ? '받은 후기 없음' : `${summary.rejoinRate}%`,
             },
           ]}
         />
         {summary && summary.topTags.length > 0 && (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-ink-muted">자주 받은 태그</p>
-            <div className="flex flex-wrap gap-1">
-              {summary.topTags.map((tag) => (
-                <Badge key={tag} tone="forest">
-                  {companionTagLabel(tag)}
-                </Badge>
-              ))}
-            </div>
+            <p className="text-sm text-ink">{summary.topTags.map(companionTagLabel).join(' · ')}</p>
           </div>
         )}
       </PageCard>
@@ -169,5 +170,5 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
 // 본인확인된 값인지 자기 신고 값인지 글로 구분한다. 값이 없으면 밝히지 않은 것이다.
 function verifiedValue(label: string | null, verified: boolean | undefined): string {
   if (label === null) return '밝히지 않음';
-  return `${label} · ${verified ? '본인확인됨' : '자기 신고'}`;
+  return `${label} · ${verified ? '본인확인됨' : '직접 입력'}`;
 }

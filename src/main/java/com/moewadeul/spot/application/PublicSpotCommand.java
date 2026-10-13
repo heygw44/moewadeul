@@ -12,7 +12,7 @@ import java.util.Map;
  * <p>operatingStatus, closedFrom, closedUntil은 원천이 준 운영 상태와 휴장 기간이고, 원천에 없으면 null이다. 서버는 세 값을 그대로 저장할 뿐
  * closedFrom이 closedUntil보다 늦은지 같은 앞뒤 관계를 검사하지 않는다.
  *
- * <p>sourceDate는 원천 데이터의 기준일이다. 파일로 받는 원천은 파일 기준일을 넣고, 기준일이 없는 원천은 null을 넣는다.
+ * <p>sourceDate는 원천 데이터의 기준일이다. 파일로 받는 원천은 파일 기준일을, 고캠핑은 항목별 원천 수정일을 넣고, 기준일이 없으면 null을 넣는다.
  */
 public record PublicSpotCommand(
         String externalId,

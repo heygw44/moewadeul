@@ -45,7 +45,7 @@ export function SpotFilterDialog({ initial, onApply, onClose }: SpotFilterDialog
               </ToggleChip>
             ))}
           </div>
-          <p className="text-sm text-ink-muted">고르지 않으면 모든 유형을 보여 줘요.</p>
+          <p className="text-sm text-ink-muted">고르지 않으면 모든 유형이 보여요.</p>
         </fieldset>
 
         <fieldset className="flex min-w-0 flex-col">
@@ -66,7 +66,7 @@ export function SpotFilterDialog({ initial, onApply, onClose }: SpotFilterDialog
         <fieldset className="flex min-w-0 flex-col">
           <legend className="mb-1 text-sm font-medium text-ink">그 밖의 조건</legend>
           <Checkbox
-            label="공원 경계 경고 장소 빼기"
+            label="공원 경계 경고가 있는 곳 빼기"
             checked={draft.excludeWarning}
             onChange={(event) => setDraft({ ...draft, excludeWarning: event.target.checked })}
           />
@@ -78,7 +78,7 @@ export function SpotFilterDialog({ initial, onApply, onClose }: SpotFilterDialog
           />
         </fieldset>
 
-        <div className="flex gap-2 border-t border-contour pt-4">
+        <div className="flex gap-2 border-t border-line pt-4">
           <Button type="button" variant="ghost" className="shrink-0" onClick={() => setDraft(NO_SPOT_FILTERS)}>
             초기화
           </Button>

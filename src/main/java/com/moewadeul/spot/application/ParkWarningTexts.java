@@ -8,12 +8,12 @@ final class ParkWarningTexts {
      * 경고가 아닌 박지에는 {@link #NORMAL_GUIDE}를 쓴다.
      */
     static final String WARNED_GUIDE =
-            "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고, 어기면 과태료 대상입니다. 이곳에서 야영하지 말고 가까운 지정 야영장을 이용하세요.";
+            "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요.";
 
-    static final String NORMAL_GUIDE = "머문 자리에 흔적을 남기지 마세요. 쓰레기는 모두 되가져가세요.";
+    static final String NORMAL_GUIDE = "머문 자리에 흔적을 남기지 마세요. 쓰레기는 모두 가져가 주세요.";
 
     /** 경계 데이터는 참고용이라서, 장소 상세와 박지 제보 응답은 경고와 함께 이 고지를 준다. */
-    static final String NOTICE = "참고용 데이터입니다. 공식 경계는 고시 도면을 확인하세요.";
+    static final String NOTICE = "공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요.";
 
     private ParkWarningTexts() {}
 }

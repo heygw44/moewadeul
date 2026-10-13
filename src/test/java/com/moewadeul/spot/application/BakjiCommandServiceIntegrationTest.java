@@ -38,10 +38,10 @@ class BakjiCommandServiceIntegrationTest {
     private static final double DEGREES_PER_METER = Math.toDegrees(1.0 / 6_370_986.0);
 
     private static final String WARNED_GUIDE =
-            "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고, 어기면 과태료 대상입니다. 이곳에서 야영하지 말고 가까운 지정 야영장을 이용하세요.";
+            "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요.";
     private static final String AREA_SOURCE = "KDPA";
     private static final LocalDate AREA_SOURCE_DATE = LocalDate.of(2026, 1, 1);
-    private static final String NORMAL_GUIDE = "머문 자리에 흔적을 남기지 마세요. 쓰레기는 모두 되가져가세요.";
+    private static final String NORMAL_GUIDE = "머문 자리에 흔적을 남기지 마세요. 쓰레기는 모두 가져가 주세요.";
 
     @Autowired
     private BakjiCommandService bakjiCommandService;
@@ -193,10 +193,10 @@ class BakjiCommandServiceIntegrationTest {
         // when & then
         assertThatThrownBy(() -> bakjiCommandService.report(
                         reporterId, new BakjiReportCommand("이름", 37.6, 128.7, null, true, true, null, "MUD")))
-                .hasMessage("바닥 유형은 SOIL, GRASS, GRAVEL, SAND, ROCK, DECK 중 하나여야 합니다.");
+                .hasMessage("바닥 유형은 SOIL, GRASS, GRAVEL, SAND, ROCK, DECK 중 하나여야 해요.");
         assertThatThrownBy(() -> bakjiCommandService.report(
                         reporterId, new BakjiReportCommand("이름", 37.6, 128.7, null, true, true, "STRONG", null)))
-                .hasMessage("통신 상태는 NONE, WEAK, GOOD 중 하나여야 합니다.");
+                .hasMessage("통신 상태는 NONE, WEAK, GOOD 중 하나여야 해요.");
     }
 
     @Test

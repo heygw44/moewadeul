@@ -12,21 +12,20 @@ import {
 } from '../../api/programs';
 import type { ProgramDetail } from '../../api/types';
 import { Link } from '../../app/router';
-import { ProgramAside } from './ProgramAside';
 import { BackLink } from '../../components/BackLink';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
 import { Notice } from '../../components/Notice';
 import { PageLayout } from '../../components/PageLayout';
+import { MetaLine, StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
-import { APPLICATION_STATUS_META, countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
+import { countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { useNow } from './useNow';
 
 type LoadResult = { programId: number; detail: ProgramDetail } | { programId: number; error: unknown };
@@ -34,7 +33,7 @@ type LoadResult = { programId: number; detail: ProgramDetail } | { programId: nu
 const LINK_BUTTON_CLASS =
   'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:bg-ink-muted hover:border-ink-muted';
 const SECONDARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep';
+  'inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong';
 
 export function ProgramDetailPage({ programId }: { programId: number }) {
   const session = useSession();
@@ -81,8 +80,9 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     body = (
       <EmptyState
+        framed
         title="행사를 찾을 수 없어요"
-        description="없는 행사예요."
+        description="삭제됐거나 주소가 잘못됐어요."
         action={
           <Link to="/programs" className={SECONDARY_LINK_CLASS}>
             행사 목록으로
@@ -106,12 +106,16 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
   }
 
   const detail = current !== null && 'detail' in current ? current.detail : null;
+  // 장소는 본문 근거 목록이, 취소는 본문 안내가 알리므로 제목 아래에는 상태와 숙박 여부만 둔다.
   const meta = detail ? (
-    <div className="flex flex-wrap items-center gap-1">
-      <Badge tone={PROGRAM_STATUS_META[detail.status].tone}>{PROGRAM_STATUS_META[detail.status].label}</Badge>
-      {detail.overnight && <Badge tone="earth">숙박</Badge>}
-      <span className="text-sm text-ink-muted">{detail.locationText}</span>
-    </div>
+    <MetaLine
+      items={[
+        detail.status !== 'CANCELED' && (
+          <StatusText tone={PROGRAM_STATUS_META[detail.status].tone}>{PROGRAM_STATUS_META[detail.status].label}</StatusText>
+        ),
+        detail.overnight && '숙박',
+      ]}
+    />
   ) : undefined;
 
   return (
@@ -119,7 +123,6 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
       title={detail?.title ?? '공식 행사'}
       breadcrumb={<BackLink to="/programs">공식 행사</BackLink>}
       meta={meta}
-      aside={<ProgramAside signedIn={session.status === 'authenticated'} />}
     >
       <div aria-busy={current === null}>{body}</div>
     </PageLayout>
@@ -129,10 +132,10 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
 function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged: () => void }) {
   return (
     <div className="flex flex-col gap-4">
-      <article className="flex flex-col gap-3 rounded-control border border-contour bg-card p-5">
+      <article className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
         {detail.status === 'CANCELED' && (
-          <Notice tone="danger" title="운영자가 행사를 취소했어요">
-            <p>신청했던 분께는 취소 알림을 보냈어요. 결제한 금액은 환불돼요.</p>
+          <Notice tone="danger" title="관리자가 행사를 취소했어요">
+            <p>신청한 회원에게 취소 알림을 보냈어요. 결제한 금액은 환불돼요.</p>
           </Notice>
         )}
 
@@ -143,7 +146,7 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
               label: '장소',
               value:
                 detail.spotId !== null ? (
-                  <Link to={`/spots/${detail.spotId}`} className="font-sans text-forest underline underline-offset-2">
+                  <Link to={`/spots/${detail.spotId}`} className="font-sans text-accent underline underline-offset-2">
                     {detail.locationText}
                   </Link>
                 ) : (
@@ -174,6 +177,14 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
 
 type Busy = 'apply' | 'pay' | 'cancel' | 'alert' | null;
 
+// 실패 안내 제목은 무엇을 하지 못했는지 동작으로 적는다.
+const FAIL_TITLES: Record<Exclude<Busy, null>, string> = {
+  apply: '신청하지 못했어요',
+  pay: '결제하지 못했어요',
+  cancel: '신청을 취소하지 못했어요',
+  alert: '빈자리 알림을 바꾸지 못했어요',
+};
+
 type KeyRef = { current: { scope: number; key: string } | null };
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -182,7 +193,7 @@ const REFUND_BEFORE_START_HOURS = 72;
 function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: () => void }) {
   const session = useSession();
   const [busy, setBusy] = useState<Busy>(null);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<{ kind: Exclude<Busy, null>; apiError: ApiError } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [soldOut, setSoldOut] = useState(false);
   const [alertOn, setAlertOn] = useState(false);
@@ -222,7 +233,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
       // 응답을 받지 못한 경우(네트워크 오류)만 같은 키를 남겨 다시 시도할 때 중복 처리를 막는다.
       if (keyRef && apiError.code !== 'NETWORK_ERROR') keyRef.current = null;
       if (apiError.code === 'PROGRAM_SOLD_OUT') setSoldOut(true);
-      setError(apiError);
+      setError({ kind, apiError });
       if (STALE_CODES.has(apiError.code)) onChanged();
     } finally {
       setBusy(null);
@@ -266,14 +277,14 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
     run('alert', null, async () => {
       await subscribeVacancyAlert(detail.programId);
       setAlertOn(true);
-      setNotice('빈자리 알림을 신청했어요. 자리가 나면 알려 드려요.');
+      setNotice('빈자리 알림을 신청했어요. 자리가 나면 알림이 가요.');
     });
 
   const unsubscribe = () =>
     run('alert', null, async () => {
       await unsubscribeVacancyAlert(detail.programId);
       setAlertOn(false);
-      setNotice('빈자리 알림을 해제했어요.');
+      setNotice('빈자리 알림을 껐어요.');
     });
 
   if (session.status === 'loading') return null;
@@ -288,14 +299,14 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   return (
     <section
       aria-label="신청"
-      className="sticky bottom-(--bottom-nav-h) z-10 flex flex-col gap-3 rounded-control border border-contour bg-card p-4 shadow-raise"
+      className="sticky bottom-(--bottom-nav-h) z-10 flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4 shadow-raise"
     >
       {notice && (
-        <p role="status" className="text-sm font-semibold text-forest-deep">
+        <p role="status" className="text-sm font-semibold text-accent-deep">
           {notice}
         </p>
       )}
-      {error && <ActionError error={error} />}
+      {error && <ActionError title={FAIL_TITLES[error.kind]} error={error.apiError} />}
 
       {pending && (
         <>
@@ -303,7 +314,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
             {dueAt && (
               <p>
                 {payExpired ? (
-                  '결제 기한이 지났어요. 곧 자리가 반환돼요.'
+                  '결제 기한이 지났어요. 곧 이 자리가 다시 열려요.'
                 ) : (
                   <>
                     남은 시간{' '}
@@ -312,13 +323,15 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
                 )}
               </p>
             )}
-            <p className="mt-1">참가비 {feeText(detail.fee)} · 시연용 결제라서 실제로 돈이 나가지 않아요.</p>
+            <p className="mt-1">
+              {detail.fee === 0 ? '참가비가 없는 행사예요.' : `참가비는 ${feeText(detail.fee)}이에요.`} 시연용 결제라서 실제로 돈이
+              나가지 않아요.
+            </p>
           </Notice>
           <Button
             fullWidth
             loading={busy === 'pay'}
             disabled={payExpired || busy !== null}
-            disabledReason={payExpired ? '결제 기한이 지났어요' : undefined}
             onClick={() => void pay()}
           >
             결제하기
@@ -331,10 +344,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
       {confirmed && (
         <>
-          <p className="flex flex-wrap items-center gap-2 text-base text-ink">
-            <Badge tone={APPLICATION_STATUS_META.CONFIRMED.tone}>{APPLICATION_STATUS_META.CONFIRMED.label}</Badge>
-            신청이 확정됐어요.
-          </p>
+          <p className="text-base font-semibold text-accent-deep">신청이 확정됐어요.</p>
           <p className="text-sm text-ink-muted">
             {refundClosed
               ? '환불 기한이 지나서 취소할 수 없어요.'
@@ -344,7 +354,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
             fullWidth
             variant="danger"
             disabled={refundClosed || busy !== null}
-            disabledReason={refundClosed ? '환불 기한이 지나면 취소할 수 없어요' : undefined}
+            disabledReason={refundClosed ? '환불 기한이 지나 취소할 수 없어요' : undefined}
             onClick={() => setConfirmCancel(true)}
           >
             신청 취소
@@ -354,7 +364,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
       {!active && !authenticated && detail.status === 'OPEN' && (
         <Link to={withNext('/login', `/programs/${detail.programId}`)} className={`${LINK_BUTTON_CLASS} w-full`}>
-          로그인하고 신청하기
+          신청하기
         </Link>
       )}
 
@@ -383,7 +393,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-ink">빈자리 알림을 신청했어요</p>
               <Button variant="ghost" loading={busy === 'alert'} disabled={busy !== null} onClick={() => void unsubscribe()}>
-                알림 해제
+                알림 끄기
               </Button>
             </div>
           )}
@@ -395,8 +405,8 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
           <div className="flex flex-col gap-4">
             <p className="text-base text-ink">
               {confirmed
-                ? '취소하면 결제한 금액을 환불하고 자리를 돌려줘요. 환불 기한이 지나면 취소할 수 없어요.'
-                : '취소하면 자리를 돌려줘요. 다시 신청하려면 남은 자리가 있어야 해요.'}
+                ? '취소하면 결제한 금액은 환불되고 자리는 다른 사람이 신청할 수 있게 열려요.'
+                : '취소하면 자리가 다시 열려요. 다시 신청하려면 남은 자리가 있어야 해요.'}
             </p>
             <div className="flex flex-col gap-2">
               <Button variant="danger" fullWidth loading={busy === 'cancel'} disabled={busy !== null} onClick={() => void cancel()}>
@@ -431,14 +441,14 @@ function ClosedApplyButton({ detail }: { detail: ProgramDetail }) {
   );
 }
 
-function ActionError({ error }: { error: ApiError }) {
+function ActionError({ title, error }: { title: string; error: ApiError }) {
   return (
-    <Notice tone="danger" title="처리하지 못했어요">
+    <Notice tone="danger" title={title}>
       <p>{error.message}</p>
       {error.code === 'TRUST_LEVEL_INSUFFICIENT' && (
         <p className="mt-2">
-          <Link to="/identity-verification" className="inline-flex min-h-11 items-center text-forest underline underline-offset-2">
-            본인확인하러 가기
+          <Link to="/identity-verification" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
+            본인확인하기
           </Link>
         </p>
       )}

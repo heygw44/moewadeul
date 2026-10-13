@@ -81,7 +81,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
       <HubLayout title="커뮤니티" breadcrumb={<BackToCommunity />} aside={asideNode}>
         <div aria-busy="true">
           {showSkeleton && (
-            <div className="flex flex-col gap-3 rounded-control border border-contour bg-card p-5">
+            <div className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
               <Skeleton className="h-8 w-2/3" />
               <Skeleton className="h-40 w-full" />
             </div>
@@ -115,16 +115,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     return (
       <HubLayout title="글을 찾을 수 없어요" breadcrumb={<BackToCommunity />} aside={asideNode}>
-        <div className="rounded-control border border-contour bg-card">
-          <EmptyState
-            title="지워졌거나 볼 수 없는 글이에요."
-            action={
-              <Link to="/community" className={SECONDARY_LINK_CLASS}>
-                커뮤니티로 가기
-              </Link>
-            }
-          />
-        </div>
+        <EmptyState framed title="삭제됐거나 볼 수 없는 글이에요" />
       </HubLayout>
     );
   }
@@ -145,7 +136,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   );
 }
 
-const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-forest underline underline-offset-2';
+const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-accent underline underline-offset-2';
 
 function BackToCommunity() {
   return (
@@ -180,7 +171,7 @@ function PostMeta({ post }: { post: CommunityPostDetail }) {
           <span aria-hidden="true">·</span>
           <Link
             to={`/spots/${post.spot.spotId}`}
-            className="inline-flex items-center gap-1 text-forest underline underline-offset-2"
+            className="inline-flex items-center gap-1 text-accent underline underline-offset-2"
           >
             <Icon name="map" size={14} />
             {post.spot.name}
@@ -217,7 +208,6 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
           variant="ghost"
           onClick={() => setReporting(true)}
           disabled={unverified}
-          disabledReason={unverified ? '이메일 인증을 마치면 신고할 수 있어요' : undefined}
         >
           신고
         </Button>
@@ -231,40 +221,24 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
 function PostAside({ post }: { post: CommunityPostDetail | null }) {
   return (
     <>
+      {/* 장소 이름·장소 링크와 글쓴이는 제목 아래 정보 줄에 있으므로, 여기에는 거기에 없는 "같은 장소의 다른 글"만 둔다. */}
       {post?.spot && (
-        <AsideSection title="이 글의 장소">
-          <p className="text-base font-semibold text-ink">{post.spot.name}</p>
-          <ul>
-            <li>
-              <Link to={`/spots/${post.spot.spotId}`} className={ASIDE_LINK}>
-                장소 보기
-              </Link>
-            </li>
-            <li>
-              <Link to={`/community?spotId=${post.spot.spotId}`} className={ASIDE_LINK}>
-                이 장소 관련 글
-              </Link>
-            </li>
-          </ul>
-        </AsideSection>
-      )}
-      {post && (
-        <AsideSection title="글쓴이">
-          <Link to={`/members/${post.author.memberId}`} className={ASIDE_LINK}>
-            {post.author.nickname}
+        <AsideSection title="같은 장소의 글">
+          <Link to={`/community?spotId=${post.spot.spotId}`} className={ASIDE_LINK}>
+            {post.spot.name} 글 모아 보기
           </Link>
         </AsideSection>
       )}
-      <AsideSection title="이용 안내">
+      <AsideSection title="커뮤니티 안내">
         <ul className="list-disc pl-5">
           <li>
             동행은{' '}
-            <Link to="/basecamps" className="font-semibold text-forest underline underline-offset-2">
+            <Link to="/basecamps" className="font-semibold text-accent underline underline-offset-2">
               베이스캠프
             </Link>
             에서 구해요.
           </li>
-          <li>송금을 요구하면 신고해 주세요.</li>
+          <li>돈을 보내 달라는 글은 신고해 주세요.</li>
           <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
         </ul>
       </AsideSection>
@@ -272,7 +246,7 @@ function PostAside({ post }: { post: CommunityPostDetail | null }) {
   );
 }
 
-const ASIDE_LINK = 'inline-flex min-h-11 items-center text-base font-semibold text-forest underline underline-offset-2';
+const ASIDE_LINK = 'inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2';
 
 type PostContentProps = {
   post: CommunityPostDetail;
@@ -282,7 +256,7 @@ type PostContentProps = {
 
 function PostContent({ post, onLikeChanged, onImageError }: PostContentProps) {
   return (
-    <article className="rounded-control border border-contour bg-card">
+    <article className="rounded-sheet border border-line bg-surface">
       <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink">{post.content}</p>
 
       {post.images.length > 0 && (
@@ -291,17 +265,17 @@ function PostContent({ post, onLikeChanged, onImageError }: PostContentProps) {
             <li key={image.imageId}>
               <img
                 src={image.url}
-                alt={`글 이미지 ${index + 1} / ${post.images.length}`}
+                alt={`글 사진 ${post.images.length}장 중 ${index + 1}번째`}
                 loading="lazy"
                 onError={onImageError}
-                className="max-h-[32rem] w-full rounded-control border border-contour bg-paper-deep object-contain"
+                className="max-h-[32rem] w-full rounded-control border border-line bg-fill object-contain"
               />
             </li>
           ))}
         </ul>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-contour px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-3">
         <LikeButton post={post} onChanged={onLikeChanged} />
         <a href="#comments" className="inline-flex min-h-11 items-center gap-1 text-base text-ink-muted hover:text-ink">
           <Icon name="chat" size={18} />
@@ -331,16 +305,13 @@ function LikeButton({ post, onChanged }: { post: CommunityPostDetail; onChanged:
   if (session.status === 'anonymous' || session.me === null) {
     return (
       <Link to={withNext('/login', pathname + search)} className={SECONDARY_LINK_CLASS}>
-        <span className="inline-flex items-center gap-2">
-          {content}
-          <span className="text-sm font-normal text-ink-muted">로그인하고 누르기</span>
-        </span>
+        <span className="inline-flex items-center gap-2">{content}</span>
       </Link>
     );
   }
   if (session.me.status === 'UNVERIFIED') {
     return (
-      <Button variant="secondary" disabled disabledReason="이메일 인증을 마치면 누를 수 있어요">
+      <Button variant="secondary" disabled>
         {content}
       </Button>
     );
@@ -396,12 +367,12 @@ function DeletePostDialog({ postId, onClose }: { postId: number; onClose: () => 
   }
 
   return (
-    <Dialog title="글을 지울까요?" onClose={() => !submitting && onClose()}>
+    <Dialog title="글을 삭제할까요?" onClose={() => !submitting && onClose()}>
       <div className="flex flex-col gap-4">
-        <p className="text-base text-ink">지운 글은 되돌릴 수 없어요. 댓글도 함께 사라져요.</p>
+        <p className="text-base text-ink">삭제한 글은 되돌릴 수 없어요. 댓글도 함께 사라져요.</p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="지우지 못했어요">
+            <Notice tone="danger" title="삭제하지 못했어요">
               <p>{error}</p>
             </Notice>
           </div>
@@ -411,7 +382,7 @@ function DeletePostDialog({ postId, onClose }: { postId: number; onClose: () => 
             취소
           </Button>
           <Button variant="danger" loading={submitting} onClick={() => void handleDelete()}>
-            지우기
+            삭제
           </Button>
         </div>
       </div>

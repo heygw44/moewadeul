@@ -60,12 +60,12 @@ const CAPACITY_OPTIONS: ChoiceOption<string>[] = [2, 3, 4, 5, 6].map((value) => 
 
 const TRUST_OPTIONS: ChoiceOption<TrustChoice>[] = [
   { value: 'NONE', label: '없음' },
-  { value: '1', label: '단계 1 이상' },
-  { value: '2', label: '단계 2 이상' },
+  { value: '1', label: '신뢰 단계 1 이상' },
+  { value: '2', label: '신뢰 단계 2 이상' },
 ];
 
 const AGE_OPTIONS = [
-  { value: '', label: '선택 안 함' },
+  { value: '', label: '제한 없음' },
   ...AGE_GROUP_STEPS.map((step) => ({ value: String(step), label: ageGroupStepLabel(step) })),
 ];
 
@@ -117,7 +117,7 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
   } else if ('error' in current) {
     body =
       current.error instanceof ApiError && current.error.code === 'NOT_FOUND' ? (
-        <EmptyState title="장소를 찾을 수 없어요" description="삭제됐거나 숨김 처리된 장소예요." />
+        <EmptyState title="장소를 찾을 수 없어요" description="삭제됐거나 숨겨진 장소예요." />
       ) : (
         <Notice tone="danger" title="장소 정보를 불러오지 못했어요">
           {toUserMessage(current.error)}
@@ -127,20 +127,15 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
     body = (
       <div className="flex flex-col gap-4">
         <h2 className="text-xl font-bold tracking-tight text-ink">{current.detail.name}에서 베이스캠프 열기</h2>
-        <Notice tone="danger" title="이 장소에서는 베이스캠프를 열 수 없어요">
-          <p>공원 경계 안일 가능성이 있는 박지라서 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
-        </Notice>
         <ParkWarningNotice warning={current.detail.parkWarning} />
-        <Link to={`/spots/${spotId}`} className={PRIMARY_LINK_CLASS}>
-          장소로 돌아가기
-        </Link>
+        <p className="text-base font-semibold text-danger">이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
       </div>
     );
   } else if (session.status === 'anonymous' || session.me === null) {
     body = (
       <EmptyState
-        title="로그인하면 베이스캠프를 열 수 있어요"
-        description="본인확인을 마친 회원만 베이스캠프를 열 수 있어요."
+        title="로그인이 필요해요"
+        description="베이스캠프는 본인확인을 마친 회원만 열 수 있어요."
         action={
           <Link to={withNext('/login', `/basecamps/new?spotId=${spotId}`)} className={PRIMARY_LINK_CLASS}>
             로그인
@@ -151,20 +146,20 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
   } else if (session.me.status === 'UNVERIFIED') {
     body = (
       <Notice tone="warning" title="이메일 인증을 마치면 베이스캠프를 열 수 있어요">
-        <Link to="/verify-email" className="inline-flex min-h-11 items-center text-forest underline underline-offset-2">
-          이메일 인증하러 가기
+        <Link to="/verify-email" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
+          이메일 인증하기
         </Link>
       </Notice>
     );
   } else if (session.me.trustLevel < 1) {
     body = (
-      <Notice tone="warning" title="본인확인을 마치면 베이스캠프를 열 수 있어요">
-        <p>함께 가는 사람의 안전을 위해 본인확인을 마친 성인만 열 수 있어요.</p>
+      <Notice tone="warning" title="본인확인이 필요해요">
+        <p>베이스캠프는 본인확인을 마친 성인만 열 수 있어요.</p>
         <Link
           to="/identity-verification"
-          className="inline-flex min-h-11 items-center text-forest underline underline-offset-2"
+          className="inline-flex min-h-11 items-center text-accent underline underline-offset-2"
         >
-          본인확인하러 가기
+          본인확인하기
         </Link>
       </Notice>
     );
@@ -174,12 +169,12 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-contour bg-card px-2">
+      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
         <button
           type="button"
           aria-label="장소로 돌아가기"
           onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-paper-deep"
+          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
         >
           <Icon name="chevronLeft" size={24} />
         </button>
@@ -232,15 +227,15 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
     if (description.trim() === '') errors.description = '설명을 적어 주세요.';
     if (startDate === '') errors.startDate = '출발일을 골라 주세요.';
     else if (startDate < minStart || startDate > maxStart) errors.startDate = '출발일은 내일부터 60일 안에서 골라 주세요.';
-    if (endDate === '') errors.endDate = '귀가일을 골라 주세요.';
+    if (endDate === '') errors.endDate = '돌아오는 날을 골라 주세요.';
     else if (endMin !== undefined && endMax !== undefined && (endDate < endMin || endDate > endMax)) {
-      errors.endDate = '귀가일은 출발일 기준 1박에서 3박 사이로 골라 주세요.';
+      errors.endDate = '돌아오는 날은 출발일에서 1~3박 뒤로 골라 주세요.';
     }
     if (capacity === null) errors.capacity = '정원을 골라 주세요.';
     if ((ageMin === '') !== (ageMax === '')) {
-      errors.ageGroup = '연령대는 가장 낮은 값과 높은 값을 함께 골라 주세요.';
+      errors.ageGroup = '연령대는 시작과 끝을 모두 골라 주세요.';
     } else if (ageMin !== '' && Number(ageMin) > Number(ageMax)) {
-      errors.ageGroup = '연령대의 낮은 값이 높은 값보다 클 수 없어요.';
+      errors.ageGroup = '시작 연령대가 끝 연령대보다 높아요. 다시 골라 주세요.';
     }
     return errors;
   }
@@ -351,7 +346,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
           error={fieldErrors.startDate}
         />
         <TextField
-          label="귀가일"
+          label="돌아오는 날"
           name="endDate"
           type="date"
           min={endMin}
@@ -361,7 +356,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
           error={fieldErrors.endDate}
         />
       </div>
-      <p className="-mt-2 text-sm text-ink-muted">출발일은 내일부터 60일 안, 1박에서 3박까지 열 수 있어요.</p>
+      <p className="-mt-2 text-sm text-ink-muted">출발일은 내일부터 60일 안에서 골라요. 일정은 1~3박이에요.</p>
       <ChoiceGroup
         legend="정원 (캠프 리더 포함)"
         name="capacity"
@@ -371,7 +366,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
         error={fieldErrors.capacity}
       />
 
-      <fieldset className="flex min-w-0 flex-col gap-3 rounded-control border border-contour p-3">
+      <fieldset className="flex min-w-0 flex-col gap-3 rounded-control border border-line p-3">
         <legend className="px-1 text-sm font-medium text-ink">합류 조건 (선택)</legend>
         <ChoiceGroup
           legend="최소 신뢰 단계"
@@ -379,12 +374,12 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
           options={TRUST_OPTIONS}
           value={minTrust}
           onChange={setMinTrust}
-          hint="합류하려면 본인확인은 늘 필요해요."
+          hint="신뢰 단계를 '없음'으로 둬도 합류하려면 본인확인이 필요해요."
           error={fieldErrors.minTrustLevel}
         />
         <div className="grid grid-cols-2 gap-2">
           <SelectField
-            label="연령대 낮은 값"
+            label="연령대 시작"
             name="ageGroupMin"
             options={AGE_OPTIONS}
             value={ageMin}
@@ -392,7 +387,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
             error={fieldErrors.ageGroup}
           />
           <SelectField
-            label="연령대 높은 값"
+            label="연령대 끝"
             name="ageGroupMax"
             options={AGE_OPTIONS}
             value={ageMax}
@@ -404,7 +399,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
           name="sameGenderOnly"
           checked={sameGenderOnly}
           onChange={(event) => setSameGenderOnly(event.target.checked)}
-          hint="연령대와 성별은 본인확인한 값으로만 판단해요."
+          hint="연령대와 성별은 본인확인한 정보로만 따져요."
           error={fieldErrors.sameGenderOnly}
         />
       </fieldset>

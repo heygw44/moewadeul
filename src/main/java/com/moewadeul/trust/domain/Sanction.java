@@ -31,7 +31,7 @@ public class Sanction {
     /** 확정 제재 사유의 최대 길이다. DB 컬럼 크기와 같다. */
     public static final int REASON_MAX_LENGTH = 500;
 
-    static final String TEMPORARY_REASON = "성희롱·위협 신고가 접수되어 관리자가 확인하기 전까지 이용을 임시로 정지합니다.";
+    static final String TEMPORARY_REASON = "성희롱·위협 신고가 접수되어 관리자가 확인하기 전까지 이용을 임시로 정지해요.";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

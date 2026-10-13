@@ -9,7 +9,7 @@ export function UnreadBadge({ count }: { count: number }) {
   return (
     <span
       aria-hidden="true"
-      className="rounded-control bg-forest px-1.5 font-mono text-xs font-semibold tabular-nums text-white"
+      className="rounded-control bg-accent px-1.5 font-mono text-xs font-semibold tabular-nums text-white"
     >
       {count > 99 ? '99+' : count}
     </span>
@@ -27,7 +27,7 @@ export function NotificationLink() {
     <Link
       to="/me/notifications"
       aria-label={notificationLabel(count)}
-      className="inline-flex min-h-11 items-center gap-2 rounded-control border border-contour bg-card px-3 text-ink hover:bg-paper-deep"
+      className="inline-flex min-h-11 items-center gap-2 rounded-sheet border border-line bg-surface px-3 text-ink hover:bg-fill"
     >
       <Icon name="bell" size={20} />
       <span className="text-sm">알림</span>

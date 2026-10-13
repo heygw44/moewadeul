@@ -15,13 +15,17 @@ type SearchState =
   | { status: 'error'; message: string };
 
 type MapSearchBarProps = {
+  // 새 검색을 시작할 때 부른다. 앞선 검색이 남긴 표시를 지운다.
+  onSearch: () => void;
   // 고른 지역으로 지도를 옮긴다. 옮긴 뒤 영역 조회는 지도 idle 구독이 맡는다.
   onSelect: (candidate: RegionCandidate) => void;
   // 지도가 움직이기 시작하면 떠 있던 후보 목록과 안내 문구를 닫는다.
   mapMoving: boolean;
+  // 지도 위에 띄울 때 켠다. 랜딩처럼 지도 밖 흰 바탕에 둘 때는 끈다.
+  floating?: boolean;
 };
 
-export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
+export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true }: MapSearchBarProps) {
   const [query, setQuery] = useState('');
   const [inputError, setInputError] = useState<string | undefined>();
   const [state, setState] = useState<SearchState>({ status: 'idle' });
@@ -39,7 +43,7 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
     event.preventDefault();
     const trimmed = query.trim();
     if (normalizeRegionQuery(trimmed) === '') {
-      setInputError('찾을 지역 이름을 입력해 주세요.');
+      setInputError('찾을 지역 이름이나 주소를 입력해 주세요.');
       setState({ status: 'idle' });
       return;
     }
@@ -49,6 +53,7 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
       return;
     }
     setInputError(undefined);
+    onSearch();
 
     const request = ++requestRef.current;
     setState({ status: 'loading' });
@@ -84,13 +89,19 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
     }
   }
 
+  // 지도 위에서는 입력란이 옅은 면이면 지도에 묻힌다. 흰 면과 그림자로 띄우고, 오류일 때는 위험색 테두리를 남긴다.
+  // 지도 밖(랜딩)에서는 첫 화면의 주 입력이라 52px로 키우고, 아이콘 대신 '찾기' 글자 버튼을 둔다.
   return (
     <form
       role="search"
       noValidate
       onSubmit={handleSubmit}
       onKeyDown={handleKeyDown}
-      className="pointer-events-auto relative min-w-0 flex-1"
+      className={
+        floating
+          ? 'pointer-events-auto relative min-w-0 flex-1 [&_input]:bg-surface [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent'
+          : 'relative min-w-0 flex-1 [&_input]:min-h-13 [&_input]:pr-24'
+      }
     >
       <TextField
         label="지역 검색"
@@ -98,7 +109,7 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
         type="text"
         enterKeyHint="search"
         autoComplete="off"
-        placeholder="지역 이름 (예: 안동, 원주)"
+        placeholder="지역 이름이나 주소 (예: 안동, 원주)"
         value={query}
         error={inputError}
         onChange={(event) => setQuery(event.target.value)}
@@ -108,9 +119,13 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
             aria-label="지역 검색"
             aria-busy={state.status === 'loading' || undefined}
             disabled={state.status === 'loading'}
-            className="inline-flex size-11 items-center justify-center text-ink hover:text-forest disabled:text-ink-muted"
+            className={
+              floating
+                ? 'inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted'
+                : 'mr-1.5 inline-flex h-10 items-center justify-center rounded-[0.5rem] bg-ink px-4 font-semibold text-white hover:bg-ink-muted disabled:bg-ink-muted'
+            }
           >
-            <Icon name="search" size={20} />
+            {floating ? <Icon name="search" size={20} /> : '찾기'}
           </button>
         }
       />
@@ -118,14 +133,14 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
       {state.status === 'candidates' && (
         <ul
           aria-label="지역 후보"
-          className="absolute inset-x-0 top-full z-20 mt-1 flex flex-col rounded-control border border-contour bg-card shadow-raise"
+          className="absolute inset-x-0 top-full z-20 mt-1 flex flex-col overflow-hidden rounded-control border border-line bg-surface shadow-raise"
         >
           {state.candidates.map((candidate, index) => (
-            <li key={`${candidate.name}-${index}`} className="border-b border-contour last:border-b-0">
+            <li key={`${candidate.name}-${index}`} className="border-b border-line last:border-b-0">
               <button
                 type="button"
                 onClick={() => choose(candidate)}
-                className="flex min-h-11 w-full flex-col items-start justify-center px-3 py-2 text-left hover:bg-paper-deep"
+                className="flex min-h-11 w-full flex-col items-start justify-center px-3 py-2 text-left hover:bg-fill focus-visible:-outline-offset-2"
               >
                 <span className="text-base text-ink">{candidate.name}</span>
                 {candidate.detail && <span className="text-sm text-ink-muted">{candidate.detail}</span>}
@@ -138,10 +153,10 @@ export function MapSearchBar({ onSelect, mapMoving }: MapSearchBarProps) {
       {(state.status === 'empty' || state.status === 'error') && (
         <p
           role="status"
-          className="absolute inset-x-0 top-full z-20 mt-1 rounded-control border border-contour bg-card px-3 py-2 text-sm text-ink shadow-raise"
+          className="absolute inset-x-0 top-full z-20 mt-1 rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink shadow-raise"
         >
           {state.status === 'empty'
-            ? `'${state.keyword}' 검색 결과가 없어요. 다른 지역 이름으로 찾아보세요.`
+            ? `'${state.keyword}' 검색 결과가 없어요. 다른 지역 이름이나 주소로 찾아 주세요.`
             : state.message}
         </p>
       )}

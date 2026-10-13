@@ -74,7 +74,7 @@ public class IdentityVerificationApplier {
         if (birthYear < IdentityVerificationService.MIN_BIRTH_YEAR || birthYear > currentYear.getValue()) {
             throw new BusinessException(
                     CommonErrorCode.INVALID_INPUT,
-                    "출생연도는 " + IdentityVerificationService.MIN_BIRTH_YEAR + "년부터 올해까지여야 합니다.");
+                    "출생연도는 " + IdentityVerificationService.MIN_BIRTH_YEAR + "년부터 올해까지여야 해요.");
         }
     }
 }

@@ -1,20 +1,20 @@
 import type { BakjiReportReason, GroundType, PublicFacilities, SignalLevel, SpotType } from '../../api/types';
 import type { IconName } from '../../components/iconPaths';
 
-type SpotTypeTone = 'forest' | 'earth';
+type SpotTypeTone = 'info' | 'accent' | 'bakji';
 
 type SpotTypeMeta = {
   label: string;
   icon: IconName;
   tone: SpotTypeTone;
-  // 목록 행과 상세 머리글의 유형 아이콘 칸 색. Tailwind가 소스 글자를 읽으므로 클래스 이름을 통째로 적는다.
+  // 목록 행과 상세 머리글의 유형 아이콘 칸 색. 지도 핀 색(map/markers.ts)과 같은 계열로 맞춘다. Tailwind가 소스 글자를 읽으므로 클래스 이름을 통째로 적는다.
   tileClass: string;
 };
 
 export const SPOT_TYPE_META: Record<SpotType, SpotTypeMeta> = {
-  CAMPSITE: { label: '공공 야영장', icon: 'tent', tone: 'forest', tileClass: 'bg-forest-soft text-forest-deep' },
-  FOREST: { label: '자연휴양림', icon: 'tree', tone: 'forest', tileClass: 'bg-forest-soft text-forest-deep' },
-  BAKJI: { label: '박지', icon: 'backpack', tone: 'earth', tileClass: 'bg-earth-soft text-earth-strong' },
+  CAMPSITE: { label: '공공 야영장', icon: 'tent', tone: 'info', tileClass: 'bg-info-soft text-info' },
+  FOREST: { label: '자연휴양림', icon: 'tree', tone: 'accent', tileClass: 'bg-accent-soft text-accent-deep' },
+  BAKJI: { label: '박지', icon: 'backpack', tone: 'bakji', tileClass: 'bg-bakji-soft text-bakji-strong' },
 };
 
 export const SIGNAL_LEVEL_LABELS: Record<SignalLevel, string> = {
@@ -30,15 +30,16 @@ export const FACILITY_LABELS: ReadonlyArray<readonly [keyof PublicFacilities, st
   ['sinkCount', '개수대 수'],
   ['brazier', '화로대'],
   ['amenities', '부대시설'],
-  ['amenitiesEtc', '부대시설 기타'],
+  ['amenitiesEtc', '기타 부대시설'],
   ['nearbyFacilities', '주변 시설'],
-  ['nearbyFacilitiesEtc', '주변 시설 기타'],
+  ['nearbyFacilitiesEtc', '기타 주변 시설'],
   ['petPolicy', '반려동물'],
 ];
 
 const SOURCE_LABELS: Record<string, string> = {
   GOCAMPING: '한국관광공사 고캠핑',
   FOREST: '산림청 국립자연휴양림관리소',
+  FOREST_STANDARD: '전국휴양림표준데이터',
   KDPA: '한국보호지역통합DB(KDPA)',
 };
 
@@ -59,5 +60,5 @@ export const GROUND_TYPE_LABELS: Record<GroundType, string> = {
 export const REPORT_REASON_LABELS: Record<BakjiReportReason, string> = {
   ILLEGAL_AREA: '야영이 금지된 곳',
   CLOSED: '더는 야영할 수 없는 곳',
-  FALSE_INFO: '정보가 사실과 다름',
+  FALSE_INFO: '정보가 사실과 다른 곳',
 };

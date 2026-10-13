@@ -178,12 +178,12 @@ class BakjiControllerTest {
                 .bodyJson()
                 .extractingPath("$.fieldErrors[?(@.field=='lat')].reason")
                 .asList()
-                .containsExactly("서비스 지역 밖 좌표입니다.");
+                .containsExactly("서비스 지역 밖 좌표예요.");
         assertThat(result)
                 .bodyJson()
                 .extractingPath("$.fieldErrors[?(@.field=='lng')].reason")
                 .asList()
-                .containsExactly("서비스 지역 밖 좌표입니다.");
+                .containsExactly("서비스 지역 밖 좌표예요.");
         verifyNoInteractions(bakjiCommandService);
     }
 

@@ -53,6 +53,6 @@ public class MemberReportActionService {
         } catch (IllegalArgumentException e) {
             // 알 수 없는 이름과 임시 정지는 같은 입력 오류로 거부한다.
         }
-        throw new BusinessException(CommonErrorCode.INVALID_INPUT, "관리자가 내릴 수 없는 제재 종류입니다.");
+        throw new BusinessException(CommonErrorCode.INVALID_INPUT, "관리자가 내릴 수 없는 제재 종류예요.");
     }
 }

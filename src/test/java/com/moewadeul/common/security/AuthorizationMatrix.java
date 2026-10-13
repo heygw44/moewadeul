@@ -32,17 +32,22 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.GET, "/api/programs/1"),
             new Endpoint(HttpMethod.GET, "/api/community/posts"),
             new Endpoint(HttpMethod.GET, "/api/community/posts/1"),
-            new Endpoint(HttpMethod.GET, "/api/community/posts/1/comments"));
+            new Endpoint(HttpMethod.GET, "/api/community/posts/1/comments"),
+            new Endpoint(HttpMethod.GET, "/api/memories/feed"),
+            new Endpoint(HttpMethod.GET, "/api/memories/1"),
+            new Endpoint(HttpMethod.GET, "/api/members/1/memories"));
 
     // 로그인만 하면 이메일 인증을 마치지 않은 회원도 부를 수 있다.
     static final List<Endpoint> LOGIN = List.of(
             new Endpoint(HttpMethod.GET, "/api/me"),
             new Endpoint(HttpMethod.DELETE, "/api/me"),
+            new Endpoint(HttpMethod.PUT, "/api/me/password"),
             new Endpoint(HttpMethod.GET, "/api/me/trust"),
             new Endpoint(HttpMethod.GET, "/api/me/basecamps"),
             new Endpoint(HttpMethod.GET, "/api/me/companion-reviews/received"),
             new Endpoint(HttpMethod.GET, "/api/me/program-applications"),
             new Endpoint(HttpMethod.GET, "/api/me/solo-trips"),
+            new Endpoint(HttpMethod.GET, "/api/me/memories"),
             new Endpoint(HttpMethod.GET, "/api/me/notifications"),
             new Endpoint(HttpMethod.GET, "/api/me/notifications/unread-count"),
             new Endpoint(HttpMethod.POST, "/api/me/notifications/1/read"),
@@ -72,6 +77,10 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.POST, "/api/reviews/images"),
             new Endpoint(HttpMethod.POST, "/api/solo-trips"),
             new Endpoint(HttpMethod.DELETE, "/api/solo-trips/1"),
+            new Endpoint(HttpMethod.POST, "/api/memories"),
+            new Endpoint(HttpMethod.PATCH, "/api/memories/1"),
+            new Endpoint(HttpMethod.DELETE, "/api/memories/1"),
+            new Endpoint(HttpMethod.POST, "/api/memories/images"),
             new Endpoint(HttpMethod.POST, "/api/basecamps"),
             new Endpoint(HttpMethod.PATCH, "/api/basecamps/1"),
             new Endpoint(HttpMethod.POST, "/api/basecamps/1/close"),
@@ -104,8 +113,11 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.DELETE, "/api/community/comments/1"),
             new Endpoint(HttpMethod.PUT, "/api/community/posts/1/like"),
             new Endpoint(HttpMethod.DELETE, "/api/community/posts/1/like"),
+            new Endpoint(HttpMethod.PUT, "/api/memories/1/like"),
+            new Endpoint(HttpMethod.DELETE, "/api/memories/1/like"),
             new Endpoint(HttpMethod.POST, "/api/community/posts/1/reports"),
-            new Endpoint(HttpMethod.POST, "/api/community/comments/1/reports"));
+            new Endpoint(HttpMethod.POST, "/api/community/comments/1/reports"),
+            new Endpoint(HttpMethod.POST, "/api/memories/1/reports"));
 
     // ADMIN 역할만 부를 수 있다.
     static final List<Endpoint> ADMIN = List.of(
@@ -130,6 +142,9 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.GET, "/api/admin/community/comments"),
             new Endpoint(HttpMethod.POST, "/api/admin/community/comments/1/hide"),
             new Endpoint(HttpMethod.POST, "/api/admin/community/comments/1/restore"),
+            new Endpoint(HttpMethod.GET, "/api/admin/memories"),
+            new Endpoint(HttpMethod.POST, "/api/admin/memories/1/hide"),
+            new Endpoint(HttpMethod.POST, "/api/admin/memories/1/restore"),
             new Endpoint(HttpMethod.GET, "/api/admin/audit-logs"));
 
     private AuthorizationMatrix() {}

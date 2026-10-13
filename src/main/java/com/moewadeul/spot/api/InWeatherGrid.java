@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 @Constraint(validatedBy = InWeatherGrid.Validator.class)
 @interface InWeatherGrid {
 
-    String message() default "서비스 지역 밖 좌표입니다.";
+    String message() default "서비스 지역 밖 좌표예요.";
 
     Class<?>[] groups() default {};
 

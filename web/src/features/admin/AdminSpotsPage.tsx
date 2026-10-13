@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchAdminSpots, hideSpot, restoreSpot } from '../../api/admin';
 import type { AdminSpotStatus, AdminSpotSummary, BakjiReportReason } from '../../api/types';
 import { Link } from '../../app/router';
-import { Badge } from '../../components/Badge';
+import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
@@ -93,8 +93,8 @@ function SpotReview() {
             }}
             className={`inline-flex min-h-11 items-center rounded-control border px-4 font-semibold ${
               item.status === tab
-                ? 'border-forest bg-forest-soft text-forest-deep'
-                : 'border-ink-subtle bg-card text-ink hover:bg-paper-deep'
+                ? 'border-accent bg-accent-soft text-accent-deep'
+                : 'border-line bg-surface text-ink hover:bg-fill'
             }`}
           >
             {item.label}
@@ -124,8 +124,9 @@ function SpotReview() {
       {state === null && showSkeleton && <Skeleton className="h-40 w-full" />}
       {state !== null && state.items.length === 0 && !state.error && (
         <EmptyState
+          framed
           title={tab === 'PENDING_REVIEW' ? '검토를 기다리는 박지가 없어요' : '숨긴 박지가 없어요'}
-          description="신고가 쌓이거나 박지를 숨기면 여기에 보여요."
+          description={tab === 'PENDING_REVIEW' ? '신고가 쌓인 박지가 여기에 모여요.' : '숨긴 박지가 여기에 모여요.'}
         />
       )}
       {state !== null && state.items.length > 0 && (
@@ -170,17 +171,17 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-control border border-contour bg-card p-4">
+    <li className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.name}</h3>
-        <Badge tone={meta.tone}>{meta.label}</Badge>
-        <Badge tone="neutral">
+        <StatusText tone={meta.tone}>{meta.label}</StatusText>
+        <StatusText tone="neutral">
           {item.status === 'HIDDEN' ? '숨김' : '검토 대기'}
-        </Badge>
+        </StatusText>
         {item.parkWarning && (
-          <Badge tone="warning" icon="alert">
+          <StatusText tone="warning" icon="alert">
             공원 경계 경고
-          </Badge>
+          </StatusText>
         )}
       </div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -203,7 +204,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
           <p className="text-sm font-medium text-ink">최근 신고</p>
           <ul className="flex flex-col gap-2">
             {item.recentReports.map((report, index) => (
-              <li key={index} className="rounded-control bg-paper-deep px-3 py-2 text-sm">
+              <li key={index} className="rounded-control bg-fill px-3 py-2 text-sm">
                 <p className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-ink">{REPORT_REASON_LABELS[report.reason] ?? report.reason}</span>
                   <span className="font-mono tabular-nums text-ink-muted">{formatKstDateTime(report.createdAt)}</span>
@@ -216,7 +217,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       )}
       {error && (
         <div role="alert">
-          <Notice tone="danger" title="처리하지 못했어요">
+          <Notice tone="danger" title="상태를 바꾸지 못했어요">
             <p>{error}</p>
           </Notice>
         </div>
@@ -224,13 +225,13 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       <div className="flex flex-wrap items-center gap-2">
         <Link
           to={`/spots/${item.spotId}`}
-          className="inline-flex min-h-11 items-center rounded-control border border-ink-subtle bg-card px-4 font-semibold text-ink hover:bg-paper-deep"
+          className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
         >
           장소 보기
         </Link>
         {tab === 'PENDING_REVIEW' && (
           <Button variant="danger" disabled={busy !== null} onClick={() => setConfirmHide(true)}>
-            숨김
+            숨기기
           </Button>
         )}
         <Button variant="secondary" loading={busy === 'restore'} disabled={busy === 'hide'} onClick={() => void run('restore')}>
@@ -241,7 +242,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
         <Dialog title="박지를 숨길까요?" onClose={() => busy === null && setConfirmHide(false)}>
           <div className="flex flex-col gap-4">
             <p className="text-base text-ink">
-              &apos;{item.name}&apos; 박지를 지도와 검색에서 숨겨요. 숨긴 박지는 숨김 탭에서 다시 복구할 수 있어요.
+              &apos;{item.name}&apos; 박지를 지도와 검색에서 숨겨요. 숨긴 박지는 숨김 탭에서 복구할 수 있어요.
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={busy !== null} onClick={() => setConfirmHide(false)}>
