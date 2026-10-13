@@ -2,8 +2,8 @@ package com.moewadeul.memory.application;
 
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.storage.ImageStorage;
-import com.moewadeul.memory.domain.MemoryImage;
-import com.moewadeul.memory.domain.MemoryImageRepository;
+import com.moewadeul.memory.domain.image.MemoryImage;
+import com.moewadeul.memory.domain.image.MemoryImageRepository;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
