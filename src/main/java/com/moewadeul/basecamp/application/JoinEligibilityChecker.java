@@ -7,8 +7,8 @@ import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.basecamp.domain.JoinUnmetReason;
 import com.moewadeul.basecamp.domain.PriorRelation;
-import com.moewadeul.basecamp.infra.BasecampSearchMapper;
-import com.moewadeul.basecamp.infra.ConfirmedScheduleRow;
+import com.moewadeul.basecamp.infra.query.BasecampSearchMapper;
+import com.moewadeul.basecamp.infra.query.ConfirmedScheduleRow;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +20,13 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
-class JoinEligibilityChecker {
+public class JoinEligibilityChecker {
 
     private final TrustSummaryService trustSummaryService;
     private final BasecampSearchMapper basecampSearchMapper;
 
     /** 호출하면 memberId인 회원의 신뢰 정보를 읽어 자격 판정에 쓰는 값으로 돌려준다. */
-    Applicant applicantOf(long memberId) {
+    public Applicant applicantOf(long memberId) {
         return JoinApplicants.from(trustSummaryService.detail(memberId));
     }
 
@@ -37,7 +37,7 @@ class JoinEligibilityChecker {
      *
      * <p>이전 관계(이미 멤버이거나 거절·탈퇴·강퇴된 적)는 도메인의 신청·승인 검사가 먼저 다루므로 NONE으로 넘긴다.
      */
-    void requireEligible(Basecamp basecamp, Applicant applicant, long memberId) {
+    public void requireEligible(Basecamp basecamp, Applicant applicant, long memberId) {
         boolean dateConflict = hasDateConflict(basecamp, memberId);
         List<JoinUnmetReason> reasons = JoinEligibilityPolicy.unmetReasons(
                 basecamp.getJoinCondition(), applicant, dateConflict, PriorRelation.NONE);
@@ -50,7 +50,7 @@ class JoinEligibilityChecker {
      * 호출하면 viewerId인 회원이 basecamp에 신청할 수 있는지와, 없다면 모든 이유를 순서대로 돌려준다. 이미 멤버이거나 대기 중인 신청이 있으면
      * ALREADY_JOINED, 거절·탈퇴·강퇴된 적이 있으면 REAPPLY_NOT_ALLOWED가 이유에 들어간다.
      */
-    JoinEligibility judge(Basecamp basecamp, long viewerId) {
+    public JoinEligibility judge(Basecamp basecamp, long viewerId) {
         Applicant applicant = applicantOf(viewerId);
         PriorRelation prior = basecampSearchMapper.selectViewerHistory(viewerId, List.of(basecamp.getId())).stream()
                 .findFirst()

@@ -1,8 +1,8 @@
 package com.moewadeul.admin.api;
 
 import com.moewadeul.common.security.LoginMember;
-import com.moewadeul.program.application.ProgramAdminService;
-import com.moewadeul.program.application.ProgramApplicantQuery;
+import com.moewadeul.program.application.catalog.ProgramAdminService;
+import com.moewadeul.program.application.catalog.ProgramApplicantQuery;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
