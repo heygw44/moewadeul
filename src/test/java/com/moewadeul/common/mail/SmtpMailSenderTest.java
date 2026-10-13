@@ -23,12 +23,13 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 class SmtpMailSenderTest {
 
     private static final String FROM = "moewadeul@example.com";
+    private static final String FROM_NAME = "뫼와들";
     private static final String RECIPIENT = "hiker@example.com";
     private static final String SUBJECT = "[뫼와들] 이메일 인증 코드";
     private static final String BODY = "인증 코드는 123456입니다.";
 
     private final JavaMailSender javaMailSender = mock(JavaMailSender.class);
-    private final SmtpMailSender mailSender = new SmtpMailSender(javaMailSender, FROM);
+    private final SmtpMailSender mailSender = new SmtpMailSender(javaMailSender, FROM, FROM_NAME);
 
     @BeforeEach
     void stubMimeMessageCreation() {
@@ -60,6 +61,19 @@ class SmtpMailSenderTest {
         assertThat(sent.getContent()).isNotInstanceOf(MimeMultipart.class);
         assertThat(sent.getHeader("Subject", null)).contains("=?UTF-8?");
         assertThat(sent.getSubject()).isEqualTo(SUBJECT);
+    }
+
+    @Test
+    @DisplayName("[F-01] 발신자에 서비스 이름을 UTF-8로 인코딩해 붙이고, 받는 쪽에서 한글 이름이 그대로 복원된다")
+    void addsEncodedSenderName() throws Exception {
+        mailSender.send(new MailMessage(RECIPIENT, SUBJECT, BODY));
+
+        MimeMessage sent = captureSentMessage();
+        sent.saveChanges();
+        InternetAddress sender = (InternetAddress) sent.getFrom()[0];
+        assertThat(sender.getAddress()).isEqualTo(FROM);
+        assertThat(sender.getPersonal()).isEqualTo(FROM_NAME);
+        assertThat(sent.getHeader("From", null)).contains("=?UTF-8?");
     }
 
     @Test
