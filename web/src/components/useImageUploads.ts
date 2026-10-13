@@ -76,13 +76,13 @@ export function useImageUploads({ max, initial = [], requestUpload }: UseImageUp
     let room = slotsLeft;
     for (const file of files) {
       if (!IMAGE_TYPES.includes(file.type)) {
-        rejected.push(`${file.name}: JPEG, PNG, WebP 파일만 올릴 수 있어요.`);
+        rejected.push(`${file.name}: JPEG, PNG, WebP 파일만 올릴 수 있어요. 다른 파일을 골라 주세요.`);
       } else if (file.size > MAX_IMAGE_BYTES) {
         rejected.push(`${file.name}: 5MB 이하 파일만 올릴 수 있어요. 더 작은 파일을 골라 주세요.`);
       } else if (file.size === 0) {
         rejected.push(`${file.name}: 비어 있는 파일이에요. 다른 파일을 골라 주세요.`);
       } else if (room <= 0) {
-        rejected.push(`${file.name}: 이미지는 ${max}장까지 올릴 수 있어요. 다른 이미지를 빼고 올려 주세요.`);
+        rejected.push(`${file.name}: 사진은 ${max}장까지 올릴 수 있어요. 다른 사진을 빼고 올려 주세요.`);
       } else {
         room -= 1;
         accepted.push({ key: `new-${nextKey.current++}`, file, status: 'uploading' });

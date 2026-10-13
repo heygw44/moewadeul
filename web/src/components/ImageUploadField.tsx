@@ -21,7 +21,7 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
   return (
     <fieldset className={['flex min-w-0 flex-col gap-3', className ?? ''].join(' ')}>
       <legend className="float-left mb-3 w-full text-sm font-medium text-ink">사진 (최대 {max}장)</legend>
-      <p className="text-sm text-ink-muted">JPEG·PNG·WebP, 장당 5MB까지예요.</p>
+      <p className="text-sm text-ink-muted">JPEG, PNG, WebP 파일을 장당 5MB까지 올릴 수 있어요.</p>
 
       {messages.length > 0 && (
         <div role="alert">
@@ -40,7 +40,7 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
       <ul className={`clear-both grid grid-cols-3 gap-2 ${max > 3 ? 'sm:grid-cols-5' : ''}`}>
         {images.map((image, index) => (
           <li key={image.key} className="flex min-w-0 flex-col gap-1">
-            <ImagePreview file={image.file} url={image.url} alt={`올린 이미지 ${index + 1}`} />
+            <ImagePreview file={image.file} url={image.url} alt={`올린 사진 ${index + 1}`} />
             <p className="text-xs text-ink-muted">
               {image.status === 'uploading' && '올리는 중이에요'}
               {image.status === 'done' && <span className="text-accent-deep">올렸어요</span>}
@@ -66,10 +66,10 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
               {index > 0 && (
                 <Button
                   variant="secondary"
-                  aria-label={`이미지 ${index + 1}번 앞으로 옮기기`}
+                  aria-label={`사진 ${index + 1}번 앞으로 옮기기`}
                   onClick={() => uploads.moveForward(index)}
                   disabled={disabled}
-                  title="앞으로"
+                  title="앞으로 옮기기"
                   className="px-1 text-sm"
                 >
                   <Icon name="arrowUp" size={16} />
@@ -77,7 +77,7 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
               )}
               <Button
                 variant="danger-outline"
-                aria-label={`이미지 ${index + 1}번 빼기`}
+                aria-label={`사진 ${index + 1}번 빼기`}
                 className={['whitespace-nowrap px-1 text-sm', index > 0 ? '' : 'col-span-2'].join(' ')}
                 onClick={() => uploads.remove(image.key)}
                 disabled={disabled}

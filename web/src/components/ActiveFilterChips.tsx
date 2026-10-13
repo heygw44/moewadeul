@@ -24,14 +24,14 @@ export function ActiveFilterChips({ chips, onReset, className }: ActiveFilterChi
   if (chips.length === 0) return null;
   return (
     <ul
-      aria-label="켜진 조건"
+      aria-label="적용한 조건"
       className={['pointer-events-auto flex w-fit max-w-full gap-2 overflow-x-auto', className ?? '']
         .filter(Boolean)
         .join(' ')}
     >
       {chips.map((chip) => (
         <li key={chip.key} className="shrink-0">
-          <button type="button" aria-label={`${chip.label} 조건 풀기`} onClick={chip.onRemove} className={CHIP}>
+          <button type="button" aria-label={`${chip.label} 조건 빼기`} onClick={chip.onRemove} className={CHIP}>
             {chip.label}
             <Icon name="close" size={16} className="shrink-0" />
           </button>
@@ -40,7 +40,7 @@ export function ActiveFilterChips({ chips, onReset, className }: ActiveFilterChi
       {chips.length > 1 && (
         <li className="shrink-0">
           <button type="button" onClick={onReset} className={RESET}>
-            모두 풀기
+            모두 지우기
           </button>
         </li>
       )}

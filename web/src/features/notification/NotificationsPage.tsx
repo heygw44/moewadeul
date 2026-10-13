@@ -172,7 +172,7 @@ function NotificationList() {
       actions={
         hasUnread ? (
           <Button variant="secondary" loading={markingAll} onClick={() => void readAll()}>
-            모두 읽음
+            모두 읽음 표시
           </Button>
         ) : undefined
       }
@@ -180,7 +180,7 @@ function NotificationList() {
     <section className="flex flex-col gap-3" aria-label="알림 목록">
       {(state.error || actionError) && (
         <div role="alert" className="flex flex-col gap-3">
-          <Notice tone="danger" title={state.error ? '알림을 불러오지 못했어요' : '알림을 처리하지 못했어요'}>
+          <Notice tone="danger" title={state.error ? '알림을 불러오지 못했어요' : '읽음으로 바꾸지 못했어요'}>
             <p>{state.error ?? actionError}</p>
           </Notice>
           {state.error && state.items.length === 0 && (
@@ -193,7 +193,7 @@ function NotificationList() {
         </div>
       )}
       {state.items.length === 0 && !state.error ? (
-        <EmptyState framed title="알림이 없어요" description="합류 신청, 신고 처리 같은 소식이 생기면 여기에 보여요." />
+        <EmptyState framed title="알림이 없어요" description="합류 신청이나 신고 처리 결과가 오면 여기에 보여요." />
       ) : (
         <ListPanel>
           {state.items.map((item) => (
@@ -302,7 +302,7 @@ function EmailSettingsCard() {
 
   return (
     <AsideSection title="이메일 수신 설정">
-      <p className="text-sm text-ink-muted">끄더라도 알림함에는 알림이 계속 쌓여요.</p>
+      <p className="text-sm text-ink-muted">꺼도 알림함에는 알림이 계속 쌓여요.</p>
       {state.status === 'loading' && <Skeleton className="h-40 w-full" />}
       {state.status === 'error' && (
         <div className="flex flex-col gap-2">

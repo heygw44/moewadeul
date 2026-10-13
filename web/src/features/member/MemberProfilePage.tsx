@@ -63,7 +63,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
     body = <ProfileContent profile={current.profile} />;
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     body = (
-      <EmptyState framed title="회원을 찾을 수 없어요" description="탈퇴했거나 없는 회원이에요." />
+      <EmptyState framed title="회원을 찾을 수 없어요" description="탈퇴했거나 주소가 잘못됐어요." />
     );
   } else {
     body = (
@@ -137,11 +137,11 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
           ]}
         />
         <p className="text-sm text-ink-muted">
-          본인확인된 값만 베이스캠프의 연령·동성 조건에 쓰여요. 자기 신고 값은 참고만 해 주세요.
+          베이스캠프의 연령·성별 조건은 본인확인한 정보로만 따져요. 직접 입력한 정보는 참고로만 봐 주세요.
         </p>
         {isMe && (
           <Link to="/me" className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-accent">
-            내 정보 수정
+            계정 설정
           </Link>
         )}
       </PageCard>
@@ -152,7 +152,7 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
             { label: '완료한 동행', value: `${profile.completedCompanions ?? 0}회` },
             {
               label: '"다시 동행하고 싶어요"',
-              value: summary?.rejoinRate === null || summary === undefined ? '아직 받은 후기가 없어요' : `${summary.rejoinRate}%`,
+              value: summary?.rejoinRate === null || summary === undefined ? '받은 후기 없음' : `${summary.rejoinRate}%`,
             },
           ]}
         />
@@ -170,5 +170,5 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
 // 본인확인된 값인지 자기 신고 값인지 글로 구분한다. 값이 없으면 밝히지 않은 것이다.
 function verifiedValue(label: string | null, verified: boolean | undefined): string {
   if (label === null) return '밝히지 않음';
-  return `${label} · ${verified ? '본인확인됨' : '자기 신고'}`;
+  return `${label} · ${verified ? '본인확인됨' : '직접 입력'}`;
 }

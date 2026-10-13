@@ -14,7 +14,7 @@ export interface RegionCandidate {
 
 export class RegionSearchError extends Error {
   constructor() {
-    super('지역을 찾지 못했어요. 잠시 뒤 다시 검색해 주세요.');
+    super('지역을 검색하지 못했어요. 잠시 뒤 다시 검색해 주세요.');
     this.name = 'RegionSearchError';
   }
 }

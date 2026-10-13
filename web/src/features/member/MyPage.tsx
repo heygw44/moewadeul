@@ -114,12 +114,12 @@ function AccountCard({ me }: { me: Me }) {
           { label: '이메일', value: me.email },
         ]}
       />
-      <p className="text-sm text-ink-muted">이메일은 나만 볼 수 있어요. 다른 회원에게는 보이지 않아요.</p>
+      <p className="text-sm text-ink-muted">이메일은 나만 볼 수 있어요.</p>
       {me.status === 'UNVERIFIED' && (
         <Notice tone="warning" title="이메일 인증이 필요해요">
-          <p>인증을 마쳐야 후기 쓰기, 박지 제보 같은 쓰기 기능을 쓸 수 있어요.</p>
+          <p>인증을 마치면 후기를 쓰고 박지를 제보할 수 있어요.</p>
           <Link to="/verify-email" className="mt-1 inline-flex min-h-11 items-center font-semibold text-accent">
-            인증 코드 입력하기
+            이메일 인증하기
           </Link>
         </Notice>
       )}
@@ -162,7 +162,7 @@ function TrustCard({ me }: { me: Me }) {
       {!me.identityVerified && (
         <div className="flex flex-col items-start gap-1">
           <p className="text-sm text-ink">
-            본인확인을 마치면 베이스캠프를 열 수 있어요. 성인만 할 수 있고, 출생연도와 성별만 확인해요.
+            본인확인을 마치면 베이스캠프를 열거나 합류할 수 있어요. 성인만 할 수 있고 출생연도와 성별만 확인해요.
           </p>
           <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2">
             본인확인하기
@@ -183,7 +183,7 @@ function TrustCard({ me }: { me: Me }) {
       )}
       {next && (
         <div className="flex flex-col gap-2">
-          <p className="text-sm text-ink-muted">신뢰 회원(단계 {next.level})이 되려면</p>
+          <p className="text-sm text-ink-muted">신뢰 단계 {next.level} 조건</p>
           <Evidence
             items={[
               {
