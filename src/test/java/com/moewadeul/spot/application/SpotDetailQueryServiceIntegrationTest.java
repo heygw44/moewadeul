@@ -146,6 +146,7 @@ class SpotDetailQueryServiceIntegrationTest {
                         "033-123-4567",
                         "https://example.com",
                         null,
+                        null,
                         PublicSpotOperatingStatus.OPERATING,
                         null,
                         null,
@@ -235,7 +236,80 @@ class SpotDetailQueryServiceIntegrationTest {
                         null,
                         null,
                         null,
+                        null,
                         false));
+    }
+
+    @Test
+    @DisplayName("[F-05] 점검 시각은 장소 원천과 같은 종류에서 마지막으로 성공한 동기화의 종료 시각이고, 실패와 실행 중인 기록은 무시한다")
+    void reportsLatestCompletedSyncFinishTimeOfSameSource() {
+        // given: 고캠핑은 성공 두 번, 그 뒤에 끝난 실패 한 번, 실행 중 한 번이 있다. 자연휴양림 성공 기록은 더 늦다.
+        long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
+        insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
+        insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-01 03:00:00.000000", "2026-10-01 03:10:00.000000");
+        insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-02 03:00:00.000000", "2026-10-02 03:12:30.500000");
+        insertSyncRun("GOCAMPING", "FAILED", "2026-10-03 03:00:00.000000", "2026-10-03 03:05:00.000000");
+        insertSyncRun("GOCAMPING", "RUNNING", "2026-10-04 03:00:00.000000", null);
+        insertSyncRun("FOREST", "COMPLETED", "2026-10-05 03:00:00.000000", "2026-10-05 03:01:00.000000");
+
+        // when
+        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+
+        // then
+        assertThat(detail.publicDetail().checkedAt()).isEqualTo(Instant.parse("2026-10-02T03:12:30.500Z"));
+    }
+
+    @Test
+    @DisplayName("[F-05] 성공한 동기화 기록이 없거나 다른 종류뿐이면 점검 시각은 null이다")
+    void returnsNullCheckedAtWithoutCompletedRunOfSameSource() {
+        // given
+        long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
+        insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
+
+        // when, then: 기록이 없다.
+        assertThat(spotDetailQueryService.findDetail(spotId).publicDetail().checkedAt())
+                .isNull();
+
+        // when, then: 다른 종류의 성공 기록과 같은 종류의 실패 기록만 있다.
+        insertSyncRun("FOREST", "COMPLETED", "2026-10-05 03:00:00.000000", "2026-10-05 03:01:00.000000");
+        insertSyncRun("GOCAMPING", "FAILED", "2026-10-06 03:00:00.000000", "2026-10-06 03:01:00.000000");
+        assertThat(spotDetailQueryService.findDetail(spotId).publicDetail().checkedAt())
+                .isNull();
+    }
+
+    @Test
+    @DisplayName("[F-05] 자연휴양림 상세의 점검 시각은 자연휴양림 동기화 기록을 따른다")
+    void forestDetailUsesForestSyncRuns() {
+        // given
+        long spotId = insertSpot("FOREST", "ACTIVE", TestSequence.unique("휴양림"), null, false, RIDGE);
+        insertPublicDetail(spotId, "FOREST", null, LocalDate.parse("2025-12-31"), null, null, null);
+        insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-07 03:00:00.000000", "2026-10-07 03:30:00.000000");
+        insertSyncRun("FOREST", "COMPLETED", "2026-10-05 03:00:00.000000", "2026-10-05 03:01:00.000000");
+
+        // when
+        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+
+        // then
+        assertThat(detail.publicDetail().checkedAt()).isEqualTo(Instant.parse("2026-10-05T03:01:00Z"));
+    }
+
+    @Test
+    @DisplayName("[F-05] 박지 상세에는 공공데이터 상세가 없으므로 동기화 기록이 있어도 점검 시각을 주지 않는다")
+    void bakjiHasNoCheckedAt() {
+        // given
+        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        jdbcTemplate.update(
+                "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
+                        + " VALUES (?, ?, FALSE, FALSE, NOW(6), NOW(6))",
+                spotId,
+                insertMember(TestSequence.nickname()));
+        insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-07 03:00:00.000000", "2026-10-07 03:30:00.000000");
+
+        // when
+        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+
+        // then
+        assertThat(detail.publicDetail()).isNull();
     }
 
     @ParameterizedTest
@@ -738,6 +812,18 @@ class SpotDetailQueryServiceIntegrationTest {
                 operatingStatus,
                 closedFrom,
                 closedUntil);
+    }
+
+    // 시각은 UTC 문자열로 넣는다. finishedAt이 null이면 끝나지 않은 기록이다.
+    private void insertSyncRun(String jobType, String status, String startedAt, String finishedAt) {
+        jdbcTemplate.update(
+                "INSERT INTO sync_job_run (job_type, status, processed_count, skipped_count, started_at,"
+                        + " finished_at, created_at, updated_at)"
+                        + " VALUES (?, ?, 0, 0, ?, ?, NOW(6), NOW(6))",
+                jobType,
+                status,
+                startedAt,
+                finishedAt);
     }
 
     private void insertConfirmation(long spotId, long memberId) {

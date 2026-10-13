@@ -73,6 +73,7 @@ class GoCampingItemConverterTest {
                 "A",
                 "운영",
                 "",
+                "",
                 "");
 
         // when
@@ -148,6 +149,25 @@ class GoCampingItemConverterTest {
     }
 
     @Test
+    @DisplayName("[F-06] 원천 수정일(modifiedtime)은 yyyy-MM-dd로 읽어 기준일로 쓰고, 앞뒤 공백은 지운다")
+    void parsesModifiedTimeAsSourceDate() {
+        // when
+        PublicSpotCommand command = convertWithModifiedTime(" 2026-10-02 ");
+
+        // then
+        assertThat(command.sourceDate()).isEqualTo(LocalDate.of(2026, 10, 2));
+    }
+
+    @Test
+    @DisplayName("[F-06] 원천 수정일이 비었거나 응답에 없거나 날짜로 읽을 수 없으면 기준일을 null로 두고 항목은 그대로 적재한다")
+    void leavesSourceDateNullWhenModifiedTimeIsBlankMissingOrUnparseable() {
+        assertThat(convertWithModifiedTime("").sourceDate()).isNull();
+        assertThat(convertWithModifiedTime(null).sourceDate()).isNull();
+        assertThat(convertWithModifiedTime("2026/10/02").sourceDate()).isNull();
+        assertThat(convertWithModifiedTime("어제").sourceDate()).isNull();
+    }
+
+    @Test
     @DisplayName("[F-06] 동기화 상태가 D인 항목만 삭제된 항목으로 본다")
     void treatsOnlySyncStatusDAsRemoved() {
         // when, then
@@ -162,16 +182,29 @@ class GoCampingItemConverterTest {
 
     private static PublicSpotCommand convertWith(String manageSttus, String hvofBgnde, String hvofEnddle) {
         return GoCampingItemConverter.convert(gangbyeonSari(
-                        "", "127.190085215523", "35.4952105728394", "U", manageSttus, hvofBgnde, hvofEnddle))
+                        "",
+                        "127.190085215523",
+                        "35.4952105728394",
+                        "U",
+                        manageSttus,
+                        hvofBgnde,
+                        hvofEnddle,
+                        "2026-10-02"))
+                .orElseThrow();
+    }
+
+    private static PublicSpotCommand convertWithModifiedTime(String modifiedtime) {
+        return GoCampingItemConverter.convert(
+                        gangbyeonSari("", "127.190085215523", "35.4952105728394", "U", "운영", "", "", modifiedtime))
                 .orElseThrow();
     }
 
     private static GoCampingItem withSyncStatus(String syncStatus) {
-        return gangbyeonSari("", "127.190085215523", "35.4952105728394", syncStatus, "운영", "", "");
+        return gangbyeonSari("", "127.190085215523", "35.4952105728394", syncStatus, "운영", "", "", "2026-10-02");
     }
 
     private static GoCampingItem gangbyeonSari(String addr2, String mapX, String mapY) {
-        return gangbyeonSari(addr2, mapX, mapY, "A", "운영", "", "");
+        return gangbyeonSari(addr2, mapX, mapY, "A", "운영", "", "", "2026-10-02");
     }
 
     private static GoCampingItem gangbyeonSari(
@@ -181,7 +214,8 @@ class GoCampingItemConverterTest {
             String syncStatus,
             String manageSttus,
             String hvofBgnde,
-            String hvofEnddle) {
+            String hvofEnddle,
+            String modifiedtime) {
         return new GoCampingItem(
                 "146",
                 "강변사리 캠핑장",
@@ -204,6 +238,7 @@ class GoCampingItemConverterTest {
                 syncStatus,
                 manageSttus,
                 hvofBgnde,
-                hvofEnddle);
+                hvofEnddle,
+                modifiedtime);
     }
 }

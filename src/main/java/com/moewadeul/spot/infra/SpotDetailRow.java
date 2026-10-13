@@ -1,6 +1,7 @@
 package com.moewadeul.spot.infra;
 
 import com.moewadeul.spot.domain.SpotType;
+import java.time.Instant;
 import java.time.LocalDate;
 
 /**
@@ -12,7 +13,7 @@ import java.time.LocalDate;
  * <p>description부터 reporterNickname까지는 bakji_detail과 제보한 회원의 값이고, 박지가 아니면 모두 {@code null}이다. confirmationCount는 박지
  * 확인 수이고, 박지가 아니면 0이다.
  *
- * <p>source부터 closedUntil까지는 public_spot_detail의 값이고, 공공데이터 상세가 없으면 모두 {@code null}이다. source와 operatingStatus는 enum
+ * <p>source부터 closedUntil까지는 public_spot_detail의 값이고, 공공데이터 상세가 없으면 모두 {@code null}이다. checkedAt은 그 원천의 마지막 성공 동기화 시각이고, 성공한 실행이 없으면 {@code null}이다. source와 operatingStatus는 enum
  * 이름이고, facilities는 MySQL이 정규화한 JSON 문자열이다.
  */
 public record SpotDetailRow(
@@ -43,4 +44,5 @@ public record SpotDetailRow(
         LocalDate sourceDate,
         String operatingStatus,
         LocalDate closedFrom,
-        LocalDate closedUntil) {}
+        LocalDate closedUntil,
+        Instant checkedAt) {}

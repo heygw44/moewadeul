@@ -195,6 +195,7 @@ class SpotDetailReader {
                 row.phone(),
                 row.homepage(),
                 row.sourceDate(),
+                row.checkedAt(),
                 toOperatingStatus(row.operatingStatus()),
                 row.closedFrom(),
                 row.closedUntil(),

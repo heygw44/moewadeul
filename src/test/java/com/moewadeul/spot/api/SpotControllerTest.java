@@ -585,6 +585,7 @@ class SpotControllerTest {
                 "033-000-0000",
                 "https://camp.example.com",
                 LocalDate.of(2025, 12, 31),
+                Instant.parse("2026-10-02T03:12:30Z"),
                 PublicSpotOperatingStatus.OPERATING,
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 10, 31),
@@ -624,6 +625,7 @@ class SpotControllerTest {
                       "nearbyFacilitiesEtc": "계곡", "petPolicy": "불가능"
                     },
                     "phone": "033-000-0000", "homepage": "https://camp.example.com", "sourceDate": "2025-12-31",
+                    "checkedAt": "2026-10-02T03:12:30Z",
                     "operatingStatus": "OPERATING", "closedFrom": "2026-10-01", "closedUntil": "2026-10-31",
                     "closedNow": true
                   },
