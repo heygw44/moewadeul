@@ -1,6 +1,5 @@
-package com.moewadeul.spot.domain;
+package com.moewadeul.spot.application;
 
-import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import java.time.LocalDate;
 import java.util.Objects;
 
