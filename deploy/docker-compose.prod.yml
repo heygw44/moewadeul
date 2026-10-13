@@ -39,9 +39,10 @@ services:
       UPLOAD_BUCKET: ${UPLOAD_BUCKET:?}
       WEB_BASE_URL: https://${SITE_ADDRESS:?}
       PUBLICDATA_FOREST_FILE: ${PUBLICDATA_FOREST_FILE:-}
+      PUBLICDATA_FOREST_STANDARD_FILE: ${PUBLICDATA_FOREST_STANDARD_FILE:-}
       PUBLICDATA_PARK_BOUNDARY_FILE: ${PUBLICDATA_PARK_BOUNDARY_FILE:-}
     volumes:
-      # 공공데이터 파일(휴양림 CSV, 공원 경계 TSV)은 저장소에 없어서 서버의 /opt/moewadeul/data에 둔다.
+      # 공공데이터 파일(휴양림 CSV, 전국휴양림표준데이터 JSON, 공원 경계 TSV)은 저장소에 없어서 서버의 /opt/moewadeul/data에 둔다.
       - ./data:/data:ro
     depends_on:
       mysql:
