@@ -61,7 +61,7 @@ export function MemoryFeedPage() {
       <EmptyState
         framed
         title="공개된 발자국이 아직 없어요"
-        description="내가 다녀온 곳을 기록하고 공개하면 여기에 보여요."
+        description="다녀온 곳을 발자국으로 남기고 공개하면 여기에 보여요."
         action={
           <Link to="/me/memories" className={SECONDARY_LINK_CLASS}>
             내 발자국 지도
@@ -118,7 +118,7 @@ function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
   const photoCount = item.images.length;
   const cover = imageFailed ? undefined : item.images[0];
   const label = [
-    `${item.author.nickname}의 발자국`,
+    `${item.author.nickname}님의 발자국`,
     formatLocalDate(item.visitedDate),
     photoCount > 0 ? `사진 ${photoCount}장` : null,
     `좋아요 ${item.likeCount}개`,

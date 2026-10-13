@@ -45,7 +45,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
   const editMemoryId = props.mode === 'edit' ? props.memoryId : null;
 
   useEffect(() => {
-    document.title = props.mode === 'create' ? '발자국 남기기 · 뫼와들' : '발자국 고치기 · 뫼와들';
+    document.title = props.mode === 'create' ? '발자국 남기기 · 뫼와들' : '발자국 수정 · 뫼와들';
   }, [props.mode]);
 
   // 기록은 로그인한 세션으로만 남긴다. 로그인한 뒤 이 화면으로 돌아오게 한다.
@@ -55,12 +55,12 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
 
   const layout = (children: ReactNode) => (
     <HubLayout
-      title={props.mode === 'create' ? '발자국 남기기' : '발자국 고치기'}
+      title={props.mode === 'create' ? '발자국 남기기' : '발자국 수정'}
       description={props.mode === 'create' ? '다녀온 곳을 사진과 글로 남겨 두세요.' : undefined}
       breadcrumb={
         <Link to={editMemoryId === null ? '/map' : `/memories/${editMemoryId}`} className={CRUMB_LINK}>
           <Icon name="chevronLeft" size={16} />
-          {editMemoryId === null ? '지도' : '기록으로 돌아가기'}
+          {editMemoryId === null ? '지도' : '발자국으로 돌아가기'}
         </Link>
       }
       aside={<MemoryAside />}
@@ -83,7 +83,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
       <div className="rounded-sheet border border-line bg-surface p-5">
         <Notice tone="warning" title="이메일 인증을 마치면 발자국을 남길 수 있어요">
           <div className="flex flex-col gap-3">
-            <p>받은 인증 코드를 입력하면 바로 남길 수 있어요.</p>
+            <p>메일로 받은 인증 코드만 입력하면 돼요.</p>
             <div>
               <Link to="/verify-email" className={SECONDARY_LINK_CLASS}>
                 이메일 인증하기
@@ -105,16 +105,14 @@ function MemoryAside() {
     <>
       <AsideSection title="공개 범위">
         <ul className="list-disc pl-5">
-          <li>처음에는 나만 볼 수 있어요. 언제든 공개로 바꿀 수 있어요.</li>
-          <li>공개해도 정확한 위치는 나만 봐요.</li>
-          <li>전화번호나 주소 같은 개인정보는 쓰지 않아요.</li>
+          <li>처음에는 나만 보기로 남아요. 공개로는 언제든 바꿀 수 있어요.</li>
+          <li>전화번호나 주소 같은 개인정보는 적지 말아 주세요.</li>
         </ul>
       </AsideSection>
       <AsideSection title="사진">
         <ul className="list-disc pl-5">
-          <li>최대 {MEMORY_MAX_IMAGES}장까지 올려요.</li>
-          <li>JPEG, PNG, WebP 파일을 장당 5MB까지 올릴 수 있어요.</li>
-          <li>맨 앞 사진이 기록에서 가장 먼저 보여요. 순서는 &apos;앞으로&apos; 버튼으로 바꿔요.</li>
+          <li>JPEG, PNG, WebP 파일을 {MEMORY_MAX_IMAGES}장까지, 장당 5MB까지 올릴 수 있어요.</li>
+          <li>맨 앞 사진이 대표 사진이 돼요. 순서는 &apos;앞으로&apos; 버튼으로 바꿀 수 있어요.</li>
         </ul>
       </AsideSection>
     </>
@@ -132,7 +130,7 @@ function CreateForm() {
       <EmptyState
         framed
         title="어디를 다녀왔는지 골라 주세요"
-        description="지도를 길게 누르거나 우클릭하고 '여기에 발자국 남기기'를 누르면 그 위치로 기록해요."
+        description="지도에서 다녀온 곳을 길게 누르거나 우클릭한 뒤 '여기에 발자국 남기기'를 눌러 주세요."
         action={
           <Link to="/map" className={SECONDARY_LINK_CLASS}>
             지도로 가기
@@ -179,11 +177,11 @@ function EditLoader({ memoryId, myMemberId }: { memoryId: number; myMemberId: nu
   }
   if ('error' in result) {
     if (result.error instanceof ApiError && result.error.code === 'NOT_FOUND') {
-      return <EmptyState framed title="기록을 찾을 수 없어요" description="삭제됐거나 볼 수 없는 기록이에요." />;
+      return <EmptyState framed title="발자국을 찾을 수 없어요" description="삭제됐거나 볼 수 없는 발자국이에요." />;
     }
     return (
       <div className="flex flex-col gap-3">
-        <Notice tone="danger" title="기록을 불러오지 못했어요">
+        <Notice tone="danger" title="발자국을 불러오지 못했어요">
           {toUserMessage(result.error)}
         </Notice>
         <div>
@@ -259,7 +257,7 @@ function MemoryForm(props: MemoryFormProps) {
   function validate(): FormFieldErrors {
     const errors: FormFieldErrors = {};
     if (visitedDate === '') errors.visitedDate = '다녀온 날을 골라 주세요.';
-    else if (visitedDate > today) errors.visitedDate = '오늘이나 지난 날만 고를 수 있어요.';
+    else if (visitedDate > today) errors.visitedDate = '오늘이나 그 전 날짜를 골라 주세요.';
     if (content.length > MEMORY_CONTENT_MAX) errors.content = `${MEMORY_CONTENT_MAX.toLocaleString()}자 이하로 적어 주세요.`;
     return errors;
   }
@@ -318,8 +316,8 @@ function MemoryForm(props: MemoryFormProps) {
   }
 
   let submitReason: string | undefined;
-  if (uploading) submitReason = '사진을 올리는 중이에요. 끝나면 저장할 수 있어요.';
-  else if (failed) submitReason = '올리지 못한 사진을 다시 시도하거나 빼 주세요.';
+  if (uploading) submitReason = '사진을 올리는 중이에요. 다 올라가면 저장할 수 있어요.';
+  else if (failed) submitReason = '올리지 못한 사진은 다시 올리거나 빼 주세요.';
 
   const spotLabel = spot === null ? null : (spot.name ?? '선택한 장소');
   const cancelTarget = props.mode === 'edit' ? `/memories/${props.memory.memoryId}` : '/map';
@@ -328,12 +326,12 @@ function MemoryForm(props: MemoryFormProps) {
     <form
       noValidate
       onSubmit={handleSubmit}
-      aria-label={props.mode === 'create' ? '발자국 남기기' : '발자국 고치기'}
+      aria-label={props.mode === 'create' ? '발자국 남기기' : '발자국 수정'}
       className="divide-y divide-line rounded-sheet border border-line bg-surface"
     >
       {formError && (
         <div role="alert" className="px-5 py-5">
-          <Notice tone="danger" title={props.mode === 'create' ? '기록을 남기지 못했어요' : '기록을 고치지 못했어요'}>
+          <Notice tone="danger" title={props.mode === 'create' ? '발자국을 남기지 못했어요' : '발자국을 수정하지 못했어요'}>
             <p>{typeof formError === 'string' ? formError : formError.message}</p>
             {typeof formError !== 'string' && formError.status >= 500 && formError.traceId && (
               <p className="mt-1 font-mono text-xs text-ink-muted">문의 번호 {formError.traceId}</p>

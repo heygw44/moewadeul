@@ -225,11 +225,11 @@ function PostAside({ post }: { post: CommunityPostDetail | null }) {
       {post?.spot && (
         <AsideSection title="같은 장소의 글">
           <Link to={`/community?spotId=${post.spot.spotId}`} className={ASIDE_LINK}>
-            {post.spot.name} 관련 글 보기
+            {post.spot.name} 글 모아 보기
           </Link>
         </AsideSection>
       )}
-      <AsideSection title="이용 안내">
+      <AsideSection title="커뮤니티 안내">
         <ul className="list-disc pl-5">
           <li>
             동행은{' '}
@@ -238,7 +238,7 @@ function PostAside({ post }: { post: CommunityPostDetail | null }) {
             </Link>
             에서 구해요.
           </li>
-          <li>송금을 요구하면 신고해 주세요.</li>
+          <li>돈을 보내 달라는 글은 신고해 주세요.</li>
           <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
         </ul>
       </AsideSection>
@@ -265,7 +265,7 @@ function PostContent({ post, onLikeChanged, onImageError }: PostContentProps) {
             <li key={image.imageId}>
               <img
                 src={image.url}
-                alt={`글 이미지 ${index + 1} / ${post.images.length}`}
+                alt={`글 사진 ${post.images.length}장 중 ${index + 1}번째`}
                 loading="lazy"
                 onError={onImageError}
                 className="max-h-[32rem] w-full rounded-control border border-line bg-fill object-contain"

@@ -41,7 +41,7 @@ export function AdminPage({ title, current, children }: { title: string; current
   if (session.me.role !== 'ADMIN') {
     return (
       <PageLayout title={title} wide>
-        <EmptyState framed title="관리자만 볼 수 있어요" description="관리자 계정으로 로그인한 뒤 다시 들어와 주세요." />
+        <EmptyState framed title="관리자만 볼 수 있어요" description="관리자 계정으로 로그인해 주세요." />
       </PageLayout>
     );
   }

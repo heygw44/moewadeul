@@ -51,7 +51,7 @@ function parseKeyword(raw: string | null): string | null {
 }
 
 const TABS: ReadonlyArray<{ value: ListTab; label: string }> = [
-  { value: 'all', label: '전체글' },
+  { value: 'all', label: '전체 글' },
   { value: 'popular', label: '인기글' },
 ];
 
@@ -330,7 +330,7 @@ function CommunityEmpty() {
 function CommunityAside() {
   return (
     <>
-      <AsideSection title="이용 안내">
+      <AsideSection title="커뮤니티 안내">
         <ul className="list-disc pl-5">
           <li>
             동행은{' '}
@@ -339,7 +339,7 @@ function CommunityAside() {
             </Link>
             에서 구해요.
           </li>
-          <li>송금을 요구하면 신고해 주세요.</li>
+          <li>돈을 보내 달라는 글은 신고해 주세요.</li>
           <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
           <li>신고가 5건 쌓이면 글이 잠시 내려가고 관리자가 검토해요.</li>
         </ul>
@@ -384,7 +384,7 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
     return () => controller.abort();
   }, [spotId]);
 
-  const label = name === null ? '장소 관련 글' : `${name} 관련 글`;
+  const label = name === null ? '이 장소 글' : `${name} 글`;
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 rounded-sheet border border-line bg-surface px-4 py-3">
       <p className="text-base font-semibold text-ink">{label}</p>
@@ -393,7 +393,7 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
         onClick={onRemove}
         className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
       >
-        모든 글 보기
+        전체 글 보기
       </button>
     </div>
   );

@@ -109,8 +109,8 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
 
   if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     return (
-      <HubLayout title="기록을 찾을 수 없어요" breadcrumb={breadcrumb} width="narrow">
-        <EmptyState framed title="삭제됐거나 볼 수 없는 기록이에요" description="나만 보기로 남긴 기록은 작성자만 볼 수 있어요." />
+      <HubLayout title="발자국을 찾을 수 없어요" breadcrumb={breadcrumb} width="narrow">
+        <EmptyState framed title="삭제됐거나 볼 수 없는 발자국이에요" description="나만 보기 발자국은 남긴 사람만 열 수 있어요." />
       </HubLayout>
     );
   }
@@ -118,7 +118,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   return (
     <HubLayout title="발자국" breadcrumb={breadcrumb} width="narrow">
       <div className="flex flex-col gap-3">
-        <Notice tone="danger" title="기록을 불러오지 못했어요">
+        <Notice tone="danger" title="발자국을 불러오지 못했어요">
           {toUserMessage(current.error)}
         </Notice>
         <div>
@@ -132,7 +132,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
 }
 
 function titleOf(memory: MemoryDetail): string {
-  return memory.spot ? memory.spot.name : `${formatLocalDate(memory.visitedDate)}의 기록`;
+  return memory.spot ? memory.spot.name : `${formatLocalDate(memory.visitedDate)} 발자국`;
 }
 
 function MemoryMeta({ memory }: { memory: MemoryDetail }) {
@@ -210,8 +210,8 @@ function HiddenStatusNotice({ status }: { status: MemoryDetail['status'] }) {
     <Notice tone="warning" title={reviewing ? '신고가 쌓여 검토 중인 발자국이에요' : '관리자가 숨긴 발자국이에요'}>
       <p>
         {reviewing
-          ? '관리자가 검토하는 동안 다른 사람에게 보이지 않아요. 고치거나 지우는 건 그대로 할 수 있어요.'
-          : '다른 사람에게 보이지 않아요. 공개로 바꿔도 다시 보이지 않고, 고치거나 지우는 건 그대로 할 수 있어요.'}
+          ? '관리자가 검토하는 동안 다른 사람에게 보이지 않아요. 수정과 삭제는 할 수 있어요.'
+          : '다른 사람에게 보이지 않아요. 공개로 바꿔도 마찬가지예요. 수정과 삭제는 할 수 있어요.'}
       </p>
     </Notice>
   );
@@ -232,13 +232,13 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
       <article className="divide-y divide-line rounded-sheet border border-line bg-surface">
         {position !== null && (
           <div className="flex flex-col gap-1 px-5 py-4">
-            <p className="text-sm text-ink-muted">다녀온 곳 · 나만 보는 위치예요</p>
+            <p className="text-sm text-ink-muted">다녀온 곳 (정확한 위치, 나만 봐요)</p>
             <LocationLabel position={position} />
           </div>
         )}
         {position === null && approxPosition !== null && (
           <div className="flex flex-col gap-1 px-5 py-4">
-            <p className="text-sm text-ink-muted">다녀온 곳 · 대략 위치예요</p>
+            <p className="text-sm text-ink-muted">다녀온 곳 (대략 위치)</p>
             <ApproxLocationLabel position={approxPosition} />
           </div>
         )}
@@ -251,7 +251,7 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
           </div>
         )}
         {!memory.content && memory.images.length === 0 && (
-          <p className="px-5 py-5 text-sm text-ink-muted">사진과 글 없이 남긴 기록이에요.</p>
+          <p className="px-5 py-5 text-sm text-ink-muted">사진도 글도 없는 발자국이에요.</p>
         )}
         {likeable && (
           <div className="px-5 py-4">
@@ -281,9 +281,9 @@ function DeleteMemoryDialog({ memoryId, onClose }: { memoryId: number; onClose: 
   }
 
   return (
-    <Dialog title="기록을 삭제할까요?" onClose={() => !submitting && onClose()}>
+    <Dialog title="발자국을 삭제할까요?" onClose={() => !submitting && onClose()}>
       <div className="flex flex-col gap-4">
-        <p className="text-base text-ink">삭제한 기록은 되돌릴 수 없어요. 사진도 함께 사라져요.</p>
+        <p className="text-base text-ink">삭제한 발자국은 되돌릴 수 없어요. 사진도 함께 사라져요.</p>
         {error && (
           <div role="alert">
             <Notice tone="danger" title="삭제하지 못했어요">
