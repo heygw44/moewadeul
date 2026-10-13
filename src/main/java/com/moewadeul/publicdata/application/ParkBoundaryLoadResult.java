@@ -1,6 +1,6 @@
 package com.moewadeul.publicdata.application;
 
-import com.moewadeul.spot.application.ProtectedAreaUpsertResult;
+import com.moewadeul.spot.application.park.ProtectedAreaUpsertResult;
 import java.time.LocalDate;
 
 /**

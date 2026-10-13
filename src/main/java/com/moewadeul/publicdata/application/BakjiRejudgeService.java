@@ -2,8 +2,8 @@ package com.moewadeul.publicdata.application;
 
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
 import com.moewadeul.publicdata.domain.SyncJobType;
-import com.moewadeul.spot.application.BakjiRejudgeCounts;
-import com.moewadeul.spot.application.ParkAreaJudgeService;
+import com.moewadeul.spot.application.park.BakjiRejudgeCounts;
+import com.moewadeul.spot.application.park.ParkAreaJudgeService;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

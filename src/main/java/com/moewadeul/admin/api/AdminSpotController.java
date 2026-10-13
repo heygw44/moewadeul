@@ -1,8 +1,8 @@
 package com.moewadeul.admin.api;
 
 import com.moewadeul.common.security.LoginMember;
-import com.moewadeul.spot.application.AdminSpotQueryService;
-import com.moewadeul.spot.application.SpotModerationService;
+import com.moewadeul.spot.application.moderation.AdminSpotQueryService;
+import com.moewadeul.spot.application.moderation.SpotModerationService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;

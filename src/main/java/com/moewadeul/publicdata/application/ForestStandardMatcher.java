@@ -1,7 +1,7 @@
 package com.moewadeul.publicdata.application;
 
 import com.moewadeul.publicdata.infra.ForestStandardRecord;
-import com.moewadeul.spot.application.PublicSpotLocation;
+import com.moewadeul.spot.application.publicspot.PublicSpotLocation;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

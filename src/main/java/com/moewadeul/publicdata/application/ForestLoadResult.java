@@ -1,6 +1,6 @@
 package com.moewadeul.publicdata.application;
 
-import com.moewadeul.spot.application.PublicSpotUpsertResult;
+import com.moewadeul.spot.application.publicspot.PublicSpotUpsertResult;
 import java.time.LocalDate;
 
 /**

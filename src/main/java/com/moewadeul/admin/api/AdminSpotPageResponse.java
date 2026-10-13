@@ -1,6 +1,6 @@
 package com.moewadeul.admin.api;
 
-import com.moewadeul.spot.application.AdminSpotPage;
+import com.moewadeul.spot.application.moderation.AdminSpotPage;
 import java.util.List;
 
 /** 관리자 박지 검토 목록의 한 페이지 응답이다. 전체 개수는 없고 다음 페이지가 있는지만 hasNext로 알려 준다. */
