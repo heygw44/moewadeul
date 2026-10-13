@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { NearbySpot } from '../../api/types';
+import type { AiInterpretResponse, NearbySpot } from '../../api/types';
 import { BottomTabBar } from '../../app/layout/BottomTabBar';
 import { SiteHeader } from '../../app/layout/SiteHeader';
 import { Link, navigate } from '../../app/router';
@@ -18,6 +18,7 @@ import { MapLoadError } from '../../map/kakaoLoader';
 import type { MapLoadErrorReason } from '../../map/kakaoLoader';
 import type { RegionCandidate } from '../../map/regionSearch';
 import type { RegionLabel } from '../../map/regionLabel';
+import { radiusBounds } from '../../map/radiusBounds';
 import type { LatLng, MapView } from '../../map/types';
 import { BasecampDetailPanel } from '../basecamp/BasecampDetailPanel';
 import { BasecampFilterDialog } from '../basecamp/BasecampFilterDialog';
@@ -35,16 +36,20 @@ import { BakjiReportPanel } from './BakjiReportPanel';
 import { MapLegend } from './MapLegend';
 import { MapRegionChip } from './MapRegionChip';
 import { MapSafetyNotice } from './MapSafetyNotice';
+import { AiInterpretSummary } from './AiInterpretSummary';
+import type { AiSummary } from './AiInterpretSummary';
 import { MapSearchBar } from './MapSearchBar';
 import { SpotDetailPanel } from './SpotDetailPanel';
 import { SpotFilterDialog } from './SpotFilterDialog';
-import { NO_SPOT_FILTERS, spotFilterChips } from './spotFilters';
+import { NO_SPOT_FILTERS, filtersFromInterpretation, spotFilterChips } from './spotFilters';
 import type { SpotFilters } from './spotFilters';
 import { SpotListRow } from './SpotListRow';
 import { useMapMoving } from './useMapMoving';
 import { useRegionName } from './useRegionName';
 import { useSpotsInView } from './useSpotsInView';
 import type { SpotsInView } from './useSpotsInView';
+import { useSpotsNearby } from './useSpotsNearby';
+import type { SpotsNearby } from './useSpotsNearby';
 
 type SheetSnap = 'peek' | 'half' | 'full';
 
@@ -52,6 +57,9 @@ type MapFailure = { reason: MapLoadErrorReason; message: string };
 
 // 지도를 우클릭하거나 길게 누른 곳에 띄운 메뉴다. host는 지도 래퍼가 만든 메뉴 칸 요소다.
 type ContextMenu = { position: LatLng; host: HTMLElement };
+
+// 반경 검색의 기준점과 반경이다. label은 목록 머리에 적는 기준점 이름이다.
+type RadiusSearch = { center: LatLng; radiusKm: number; label: string };
 
 // 처음에는 전국이 한 화면에 들어오도록 국토 가운데쯤을 중심으로 크게 축소해서 연다.
 const INITIAL_VIEW = { center: { lat: 36.35, lng: 127.85 }, level: 12 };
@@ -115,17 +123,45 @@ export function MapPage({
   const [filters, setFilters] = useState<BasecampFilters>(NO_BASECAMP_FILTERS);
   const [spotFilters, setSpotFilters] = useState<SpotFilters>(NO_SPOT_FILTERS);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  // AI가 반경을 읽어 냈을 때의 반경 검색이다. 값이 있으면 지도 영역 대신 이 기준점에서 가까운 순으로 장소를 보여 준다.
+  const [radiusSearch, setRadiusSearch] = useState<RadiusSearch | null>(null);
+  const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
   // 지도에서 장소 마커를 눌러 고른 장소다. 베이스캠프 목록을 그 장소로 거른다.
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
   // 장소 조건은 지도를 둘러보는 화면에서만 쓴다. 박지를 제보하거나 베이스캠프를 여는 중에는 근처 장소를 빠짐없이 보여 준다.
   const browsing = mode === 'browse';
+  // 반경 검색과 AI 요약은 지도를 둘러보는 화면에서만 쓴다. 다른 화면으로 가면 버린다.
+  if (!browsing && (radiusSearch !== null || aiSummary !== null)) {
+    setRadiusSearch(null);
+    setAiSummary(null);
+  }
+  const radiusActive = browsing && radiusSearch !== null;
   const spotFilterChipList = browsing ? spotFilterChips(spotFilters, setSpotFilters) : [];
   const basecampFilterChipList = basecampMode ? basecampFilterChips(filters, setFilters) : [];
   // 조건 버튼과 칩 줄은 장소를 둘러볼 때와 베이스캠프를 찾을 때만 보이고, 화면마다 자기 조건을 보여 준다.
-  const filterChipList = basecampMode ? basecampFilterChipList : spotFilterChipList;
-  const resetFilters = basecampMode ? () => setFilters(NO_BASECAMP_FILTERS) : () => setSpotFilters(NO_SPOT_FILTERS);
-  // 베이스캠프를 찾는 동안에는 지도의 마커를 베이스캠프가 맡고, 장소 조회는 쉰다.
-  const area = useSpotsInView(map, !basecampMode, browsing ? spotFilters : NO_SPOT_FILTERS);
+  // 반경 칩은 상세 조건이 아니라서 조건 버튼의 개수에는 세지 않는다.
+  const filterChipList = basecampMode
+    ? basecampFilterChipList
+    : radiusSearch !== null
+      ? [
+          {
+            key: 'radius',
+            label: `반경 ${radiusSearch.radiusKm}km`,
+            onRemove: () => setRadiusSearch(null),
+          },
+          ...spotFilterChipList,
+        ]
+      : spotFilterChipList;
+  const resetFilters = basecampMode
+    ? () => setFilters(NO_BASECAMP_FILTERS)
+    : () => {
+        setSpotFilters(NO_SPOT_FILTERS);
+        setRadiusSearch(null);
+        setAiSummary(null);
+      };
+  // 베이스캠프를 찾는 동안에는 지도의 마커를 베이스캠프가 맡고, 장소 조회는 쉰다. 반경 검색 중에도 영역 조회는 쉰다.
+  const area = useSpotsInView(map, !basecampMode && !radiusActive, browsing ? spotFilters : NO_SPOT_FILTERS);
+  const nearby = useSpotsNearby(map, radiusSearch, spotFilters, radiusActive);
   const basecamps = useBasecampsInView(
     map,
     basecampMode && session.status !== 'loading',
@@ -328,6 +364,39 @@ export function MapPage({
     else if (mode === 'browse' && spotId !== undefined) navigate('/map');
   }
 
+  // 일반 지역 검색으로 지역을 고르면 반경 검색과 AI 요약은 끝내고, 지도 영역 조회로 돌아간다.
+  function selectRegion(candidate: RegionCandidate) {
+    setRadiusSearch(null);
+    setAiSummary(null);
+    moveToRegion(candidate);
+  }
+
+  // AI가 읽은 조건으로 장소 조건을 통째로 바꾼다. 반경이 있으면 지역 후보(없으면 지도 가운데)를 기준점으로 반경 검색을 하고,
+  // 없으면 지역 후보로 지도만 옮긴다. 상세 화면을 보고 있었다면 결과 목록이 보이도록 지도 화면으로 돌아간다.
+  function applyAiResult(result: AiInterpretResponse, candidate: RegionCandidate | null) {
+    if (!map) return;
+    const { filters: nextFilters, droppedSettings } = filtersFromInterpretation(result);
+    setSpotFilters(nextFilters);
+    setSearchPin(null);
+    if (result.radiusKm !== undefined) {
+      const center = candidate?.position ?? map.getCenter();
+      setRadiusSearch({ center, radiusKm: result.radiusKm, label: candidate?.name ?? '지도 가운데' });
+      map.fitBounds(radiusBounds(center, result.radiusKm));
+      if (spotId !== undefined) navigate('/map');
+    } else {
+      setRadiusSearch(null);
+      if (candidate) moveToRegion(candidate);
+      else if (spotId !== undefined) navigate('/map');
+    }
+    const hasFilter = spotFilterChips(nextFilters, () => {}).length > 0;
+    setAiSummary({
+      unparsed: result.unparsed,
+      missingRegion: result.region !== undefined && candidate === null ? result.region : undefined,
+      droppedSettings,
+      empty: result.region === undefined && result.radiusKm === undefined && !hasFilter && droppedSettings.length === 0,
+    });
+  }
+
   function retryMap() {
     setMapFailure(null);
     setMapAttempt((value) => value + 1);
@@ -348,6 +417,8 @@ export function MapPage({
                 result={basecamps}
                 regionName={regionName}
               />
+            ) : radiusActive && radiusSearch ? (
+              <NearbyListHeader nearby={nearby} radius={radiusSearch} />
             ) : (
               <ListHeader area={area} regionName={regionName} />
             )
@@ -377,6 +448,8 @@ export function MapPage({
                 area.retry();
               }}
             />
+          ) : spotId === undefined && radiusActive ? (
+            <NearbyList nearby={nearby} waitingForMap={map === null && mapFailure === null} />
           ) : spotId === undefined ? (
             <SpotList
               area={area}
@@ -469,13 +542,22 @@ export function MapPage({
             </div>
             {map && (
               <div className="flex w-full items-start gap-2 lg:max-w-md">
-                <MapSearchBar onSearch={() => setSearchPin(null)} onSelect={moveToRegion} mapMoving={mapMoving.moving} />
+                <MapSearchBar
+                  onSearch={() => setSearchPin(null)}
+                  onSelect={selectRegion}
+                  mapMoving={mapMoving.moving}
+                  ai={browsing ? { onResult: applyAiResult } : undefined}
+                />
                 {(browsing || basecampMode) && (
-                  <FilterButton count={filterChipList.length} onClick={() => setFilterDialogOpen(true)} />
+                  <FilterButton
+                    count={basecampMode ? basecampFilterChipList.length : spotFilterChipList.length}
+                    onClick={() => setFilterDialogOpen(true)}
+                  />
                 )}
               </div>
             )}
             <ActiveFilterChips chips={filterChipList} onReset={resetFilters} className="lg:max-w-md" />
+            {aiSummary && <AiInterpretSummary summary={aiSummary} className="w-fit max-w-full lg:max-w-md" />}
             <MapSafetyNotice />
           </div>
         </div>
@@ -545,6 +627,22 @@ function ListHeader({
   return (
     <h2 className="truncate text-lg font-semibold text-ink">
       {regionPhrase(regionName)} 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
+    </h2>
+  );
+}
+
+function NearbyListHeader({ nearby, radius }: { nearby: SpotsNearby; radius: RadiusSearch }) {
+  const counted = nearby.status === 'ready' || nearby.items.length > 0;
+  return (
+    <h2 className="truncate text-lg font-semibold text-ink">
+      {radius.label}에서 {radius.radiusKm}km 안 장소
+      {counted && (
+        <span className="tabular-nums">
+          {' '}
+          {nearby.items.length}
+          {nearby.hasNext ? '곳 이상' : '곳'}
+        </span>
+      )}
     </h2>
   );
 }
@@ -657,6 +755,69 @@ function SpotList({
             <SpotListRow key={marker.spotId} marker={marker} />
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+// 반경 검색 결과 목록이다. 기준점에서 가까운 순서로 오고, 행마다 거리를 함께 적는다.
+function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingForMap: boolean }) {
+  const showSkeleton = useDelayedFlag((nearby.status === 'loading' && nearby.items.length === 0) || waitingForMap);
+
+  if (showSkeleton) {
+    return (
+      <div aria-busy="true" className="flex flex-col">
+        {[0, 1, 2].map((index) => (
+          <div key={index} className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-3">
+            <Skeleton className="size-8 shrink-0" />
+            <div className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col">
+      {nearby.status === 'error' && nearby.error && (
+        <div className="flex flex-col gap-3 px-4 pt-4">
+          <Notice tone="danger" title="장소를 불러오지 못했어요">
+            {nearby.error}
+          </Notice>
+          <div>
+            <Button variant="secondary" onClick={nearby.retry}>
+              다시 불러오기
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {nearby.status === 'ready' && nearby.items.length === 0 && (
+        <EmptyState title="반경 안에 조건에 맞는 장소가 없어요" description="반경 칩을 빼거나 조건을 줄여 주세요." />
+      )}
+
+      {nearby.items.length > 0 && (
+        <ul aria-label="반경 안의 장소">
+          {nearby.items.map((item) => (
+            <SpotListRow key={item.spotId} marker={item} distanceKm={item.distanceKm} />
+          ))}
+        </ul>
+      )}
+
+      {nearby.hasNext && (
+        <div className="flex flex-col gap-2 px-4 py-4">
+          {nearby.moreError && (
+            <p role="alert" className="text-sm text-danger">
+              {nearby.moreError}
+            </p>
+          )}
+          <Button variant="secondary" fullWidth loading={nearby.loadingMore} onClick={nearby.loadMore}>
+            더 보기
+          </Button>
+        </div>
       )}
     </div>
   );

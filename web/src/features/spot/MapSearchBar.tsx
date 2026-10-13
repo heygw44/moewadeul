@@ -1,16 +1,40 @@
 import { useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
+import { interpretSpotQuery } from '../../api/aiSearch';
+import { ApiError } from '../../api/client';
+import { toUserMessage } from '../../api/errors';
+import type { AiInterpretResponse } from '../../api/types';
+import { Link, useLocation } from '../../app/router';
 import { Icon } from '../../components/icons';
 import { TextField } from '../../components/TextField';
+import { useRetryCountdown } from '../member/useRetryCountdown';
+import { withNext } from '../member/nextPath';
+import { useSession } from '../member/session';
 import { RegionSearchError, normalizeRegionQuery, searchRegions } from '../../map/regionSearch';
 import type { RegionCandidate } from '../../map/regionSearch';
+import { formatRemaining } from './formatRemaining';
 
 const MAX_QUERY_LENGTH = 50;
+const AI_MIN_LENGTH = 2;
+const AI_MAX_LENGTH = 100;
+
+const AI_LENGTH_MESSAGE = `${AI_MIN_LENGTH}자 이상 ${AI_MAX_LENGTH}자 이하로 입력해 주세요.`;
+const AI_PLACEHOLDER = '예: 강원도 계곡 옆 식수 있는 박지';
+const AI_NOTICE = '입력한 문장은 해석을 위해 OpenAI로 보내져요. 하루 20번까지 쓸 수 있어요.';
+const GUIDE_BOX_CLASS = 'rounded-control bg-surface px-3 py-3 text-sm text-ink shadow-raise';
+const GUIDE_LINK_CLASS =
+  'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2 hover:text-accent-deep';
+const MODE_BUTTON_CLASS =
+  'inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2 hover:text-accent';
+
+// AI 검색이 실패했을 때 입력란 아래에 띄울 안내의 종류다. 하루 횟수를 다 썼을 때는 남은 시간을 알 때만 시간을 적는다.
+type AiError = { kind: 'limited'; timed: boolean } | { kind: 'unavailable' } | { kind: 'message'; text: string };
 
 type SearchState =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'candidates'; candidates: RegionCandidate[] }
+  // aiResult가 있으면 AI가 읽은 조건을 쥐고 있다가, 후보를 고르면 그 후보와 함께 넘긴다.
+  | { status: 'candidates'; candidates: RegionCandidate[]; aiResult?: AiInterpretResponse }
   | { status: 'empty'; keyword: string }
   | { status: 'error'; message: string };
 
@@ -23,10 +47,21 @@ type MapSearchBarProps = {
   mapMoving: boolean;
   // 지도 위에 띄울 때 켠다. 랜딩처럼 지도 밖 흰 바탕에 둘 때는 끈다.
   floating?: boolean;
+  // 넘기면 입력란에서 문장으로 찾는 AI 모드로 바꿀 수 있다. 읽어 낸 조건과, 그 조건의 지역으로 정한 후보(없으면 null)를 넘겨 준다.
+  ai?: { onResult: (result: AiInterpretResponse, candidate: RegionCandidate | null) => void };
 };
 
-export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true }: MapSearchBarProps) {
+export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, ai }: MapSearchBarProps) {
+  const session = useSession();
+  const { pathname, search } = useLocation();
+  const countdown = useRetryCountdown();
   const [query, setQuery] = useState('');
+  // 문장은 해석에 쓰고 버리는 값이라 화면 상태에만 둔다. 저장소나 콘솔에는 남기지 않는다.
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiMode, setAiMode] = useState(false);
+  // 결과를 받은 뒤에는 OpenAI 안내를 접어 지도를 덜 가린다. 문장을 고치거나 모드를 바꾸면 다시 보인다.
+  const [aiResolved, setAiResolved] = useState(false);
+  const [aiError, setAiError] = useState<AiError | null>(null);
   const [inputError, setInputError] = useState<string | undefined>();
   const [state, setState] = useState<SearchState>({ status: 'idle' });
   const [wasMoving, setWasMoving] = useState(mapMoving);
@@ -36,11 +71,21 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true }:
     setWasMoving(mapMoving);
     if (mapMoving && state.status !== 'idle' && state.status !== 'loading') setState({ status: 'idle' });
   }
+  const anonymous = session.status === 'anonymous' || (session.status === 'authenticated' && session.me === null);
+  const unverified = session.status === 'authenticated' && session.me?.status === 'UNVERIFIED';
+  // 세션을 아직 모를 때는 모드 토글을 그리지 않는다. 로그인 여부에 따라 보여 줄 내용이 달라서다.
+  const aiAvailable = ai !== undefined && session.status !== 'loading';
+  // 이 화면이 AI를 허용하지 않으면(ai를 안 넘기면) 모드가 켜져 있어도 지역 검색으로 그린다.
+  const aiActive = aiMode && aiAvailable;
+  const aiGuide = aiActive && (anonymous || unverified);
+  const loading = state.status === 'loading';
+  const waiting = aiActive && countdown.secondsLeft > 0;
+  const limitedShown = aiError?.kind === 'limited' && (!aiError.timed || countdown.secondsLeft > 0);
+
   // 앞선 검색이 늦게 끝나도 마지막 검색 결과만 보여 주려고 요청마다 번호를 붙인다.
   const requestRef = useRef(0);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleRegionSubmit() {
     const trimmed = query.trim();
     if (normalizeRegionQuery(trimmed) === '') {
       setInputError('찾을 지역 이름이나 주소를 입력해 주세요.');
@@ -77,9 +122,82 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true }:
     }
   }
 
-  function choose(candidate: RegionCandidate) {
+  // 문장을 조건으로 바꾼 뒤, 조건에 지역 이름이 있으면 지역 검색으로 좌표 후보를 찾는다.
+  // 지역을 찾지 못하거나 지역 검색이 실패해도 읽어 낸 조건은 버리지 않고, 후보 없이 넘긴다.
+  async function handleAiSubmit() {
+    if (!ai) return;
+    const trimmed = aiQuery.trim();
+    if (trimmed.length < AI_MIN_LENGTH || trimmed.length > AI_MAX_LENGTH) {
+      setInputError(AI_LENGTH_MESSAGE);
+      setState({ status: 'idle' });
+      return;
+    }
+    setInputError(undefined);
+    setAiError(null);
+    onSearch();
+
+    const request = ++requestRef.current;
+    setState({ status: 'loading' });
+    try {
+      const result = await interpretSpotQuery(trimmed);
+      if (request !== requestRef.current) return;
+      let candidates: RegionCandidate[] = [];
+      if (result.region) {
+        try {
+          candidates = await searchRegions(result.region);
+        } catch {
+          candidates = [];
+        }
+        if (request !== requestRef.current) return;
+      }
+      if (candidates.length > 1) {
+        setState({ status: 'candidates', candidates, aiResult: result });
+        return;
+      }
+      setState({ status: 'idle' });
+      setAiResolved(true);
+      ai.onResult(result, candidates[0] ?? null);
+    } catch (error: unknown) {
+      if (request !== requestRef.current) return;
+      setState({ status: 'idle' });
+      if (error instanceof ApiError && error.code === 'AI_SEARCH_LIMITED') {
+        const wait = error.retryAfterSeconds;
+        countdown.start(wait ?? 0);
+        setAiError({ kind: 'limited', timed: wait !== undefined && wait > 0 });
+      } else if (error instanceof ApiError && error.code === 'AI_SEARCH_UNAVAILABLE') {
+        setAiError({ kind: 'unavailable' });
+      } else if (error instanceof ApiError && error.code === 'INVALID_INPUT') {
+        setInputError(AI_LENGTH_MESSAGE);
+      } else {
+        setAiError({ kind: 'message', text: toUserMessage(error) });
+      }
+    }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (aiActive) void handleAiSubmit();
+    else void handleRegionSubmit();
+  }
+
+  // 모드를 바꾸면 하던 검색과 안내를 모두 걷는다. 진행 중인 요청의 응답은 번호를 올려서 버린다.
+  function toggleMode() {
+    requestRef.current++;
+    setAiMode((value) => !value);
+    setAiResolved(false);
+    setInputError(undefined);
+    setAiError(null);
     setState({ status: 'idle' });
-    onSelect(candidate);
+  }
+
+  function choose(candidate: RegionCandidate) {
+    const pending = state.status === 'candidates' ? state.aiResult : undefined;
+    setState({ status: 'idle' });
+    if (pending && ai) {
+      setAiResolved(true);
+      ai.onResult(pending, candidate);
+    }
+    else onSelect(candidate);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLFormElement>) {
@@ -88,6 +206,18 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true }:
       setState({ status: 'idle' });
     }
   }
+
+  const modeButton = aiAvailable && (
+    <button
+      type="button"
+      aria-pressed={aiActive}
+      aria-label={aiActive ? '지역 검색으로 바꾸기' : 'AI 검색으로 바꾸기'}
+      onClick={toggleMode}
+      className={`inline-flex size-11 items-center justify-center text-sm font-semibold ${aiActive ? 'text-accent' : 'text-ink hover:text-accent'}`}
+    >
+      AI
+    </button>
+  );
 
   // 지도 위에서는 입력란이 옅은 면이면 지도에 묻힌다. 흰 면과 그림자로 띄우고, 오류일 때는 위험색 테두리를 남긴다.
   // 지도 밖(랜딩)에서는 첫 화면의 주 입력이라 52px로 키우고, 아이콘 대신 '찾기' 글자 버튼을 둔다.
@@ -99,36 +229,86 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true }:
       onKeyDown={handleKeyDown}
       className={
         floating
-          ? 'pointer-events-auto relative min-w-0 flex-1 [&_input]:bg-surface [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent'
+          ? `pointer-events-auto relative min-w-0 flex-1 [&_input]:bg-surface [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent${aiAvailable ? ' [&_input]:pr-24' : ''}`
           : 'relative min-w-0 flex-1 [&_input]:min-h-13 [&_input]:pr-24'
       }
     >
-      <TextField
-        label="지역 검색"
-        hideLabel
-        type="text"
-        enterKeyHint="search"
-        autoComplete="off"
-        placeholder="지역 이름이나 주소 (예: 안동, 원주)"
-        value={query}
-        error={inputError}
-        onChange={(event) => setQuery(event.target.value)}
-        trailing={
-          <button
-            type="submit"
-            aria-label="지역 검색"
-            aria-busy={state.status === 'loading' || undefined}
-            disabled={state.status === 'loading'}
-            className={
-              floating
-                ? 'inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted'
-                : 'mr-1.5 inline-flex h-10 items-center justify-center rounded-[0.5rem] bg-ink px-4 font-semibold text-white hover:bg-ink-muted disabled:bg-ink-muted'
-            }
+      {aiGuide ? (
+        <div className={`${GUIDE_BOX_CLASS} flex flex-col items-start gap-1`}>
+          <p>{anonymous ? 'AI 검색은 로그인한 회원이 쓸 수 있어요.' : '이메일 인증을 마친 뒤에 쓸 수 있어요.'}</p>
+          <Link
+            to={anonymous ? withNext('/login', pathname + search) : '/verify-email'}
+            className={GUIDE_LINK_CLASS}
           >
-            {floating ? <Icon name="search" size={20} /> : '찾기'}
+            {anonymous ? '로그인' : '이메일 인증하기'}
+          </Link>
+          <button type="button" onClick={toggleMode} className={MODE_BUTTON_CLASS}>
+            지역 검색으로 바꾸기
           </button>
-        }
-      />
+        </div>
+      ) : (
+        <TextField
+          label={aiActive ? 'AI 검색' : '지역 검색'}
+          hideLabel
+          type="text"
+          enterKeyHint="search"
+          autoComplete="off"
+          placeholder={aiActive ? AI_PLACEHOLDER : '지역 이름이나 주소 (예: 안동, 원주)'}
+          value={aiActive ? aiQuery : query}
+          error={inputError}
+          onChange={(event) => {
+            if (aiActive) {
+              setAiQuery(event.target.value);
+              setAiResolved(false);
+            } else setQuery(event.target.value);
+          }}
+          trailing={
+            <>
+              {modeButton}
+              <button
+                type="submit"
+                aria-label={aiActive ? 'AI 검색' : '지역 검색'}
+                aria-busy={loading || undefined}
+                disabled={loading || waiting}
+                className={
+                  floating
+                    ? 'inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted'
+                    : 'mr-1.5 inline-flex h-10 items-center justify-center rounded-[0.5rem] bg-ink px-4 font-semibold text-white hover:bg-ink-muted disabled:bg-ink-muted'
+                }
+              >
+                {floating ? <Icon name="search" size={20} /> : '찾기'}
+              </button>
+            </>
+          }
+        />
+      )}
+
+      {aiActive && !aiGuide && !aiResolved && (
+        <p className="mt-1 rounded-control bg-surface px-3 py-2 text-sm text-ink-muted shadow-raise">{AI_NOTICE}</p>
+      )}
+
+      {aiActive && limitedShown && (
+        <p role="alert" className={`${GUIDE_BOX_CLASS} mt-1`}>
+          오늘 AI 검색 20번을 모두 썼어요.{' '}
+          {aiError.timed ? `${formatRemaining(countdown.secondsLeft)} 뒤에 다시 쓸 수 있어요.` : '내일 다시 쓸 수 있어요.'}{' '}
+          지역 이름 검색은 지금도 쓸 수 있어요.
+        </p>
+      )}
+
+      {aiActive && aiError?.kind === 'unavailable' && (
+        <div role="alert" className={`${GUIDE_BOX_CLASS} mt-1 flex flex-col items-start gap-1`}>
+          <p>지금은 AI 검색을 쓸 수 없어요. 지역 이름으로 검색해 주세요.</p>
+          <button type="button" onClick={toggleMode} className={MODE_BUTTON_CLASS}>
+            지역 검색으로 바꾸기
+          </button>
+        </div>
+      )}
+
+      {aiActive && aiError?.kind === 'message' && (
+        <p role="alert" className={`${GUIDE_BOX_CLASS} mt-1`}>
+          {aiError.text}
+        </p>
+      )}
 
       {state.status === 'candidates' && (
         <ul

@@ -90,6 +90,25 @@ declare namespace kakao.maps {
     setPosition(position: LatLng): void;
   }
 
+  interface CircleOptions {
+    map?: Map;
+    center: LatLng;
+    // 미터 단위다.
+    radius: number;
+    strokeWeight?: number;
+    strokeColor?: string;
+    strokeOpacity?: number;
+    fillColor?: string;
+    fillOpacity?: number;
+    zIndex?: number;
+  }
+
+  class Circle {
+    constructor(options: CircleOptions);
+    setMap(map: Map | null): void;
+    setOptions(options: Partial<CircleOptions>): void;
+  }
+
   interface MouseEvent {
     latLng: LatLng;
     // 지도 컨테이너 왼쪽 위를 원점으로 한 픽셀 좌표다.
@@ -101,6 +120,7 @@ declare namespace kakao.maps {
     function removeListener(target: Map, type: 'idle', handler: () => void): void;
     function addListener(target: Map, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
     function removeListener(target: Map, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
+    function addListener(target: Circle, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
     function addListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
     function removeListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
   }

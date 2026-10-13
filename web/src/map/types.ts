@@ -57,6 +57,10 @@ export interface MapView {
   showDraft(position: LatLng | null): void;
   // 주소 검색으로 찾은 지점에 핀 하나를 그린다. null이면 지운다.
   showSearchPin(position: LatLng | null): void;
+  // 영역이 모두 보이게 지도를 맞춘다. 가장자리에 붙지 않도록 둘레에 여백을 둔다.
+  fitBounds(bounds: Bounds): void;
+  // 반경 검색의 기준점과 반경을 원 하나로 그린다. null이면 지운다. 원 위를 눌러도 지도를 누른 것과 같게 다룬다.
+  showRadius(area: { center: LatLng; radiusKm: number } | null): void;
   setTerrain(on: boolean): void;
   // 지도를 담은 요소의 크기가 바뀐 뒤에 부른다.
   relayout(): void;

@@ -24,7 +24,19 @@ export function fetchSpotsInArea(query: SpotAreaQuery, signal?: AbortSignal): Pr
 // 기준 좌표에서 반경 안의 장소를 가까운 순서로 받는다. 서버는 휴장 중인 장소도 빼지 않는다.
 export function fetchSpotsNearby(query: SpotNearbyQuery, signal?: AbortSignal): Promise<Page<NearbySpot>> {
   return apiFetch<Page<NearbySpot>>('/api/spots/nearby', {
-    query: { lat: query.lat, lng: query.lng, radiusKm: query.radiusKm },
+    query: {
+      lat: query.lat,
+      lng: query.lng,
+      radiusKm: query.radiusKm,
+      types: query.types,
+      settings: query.settings,
+      hasWater: query.hasWater,
+      hasToilet: query.hasToilet,
+      excludeWarning: query.excludeWarning,
+      hideClosed: query.hideClosed,
+      page: query.page,
+      size: query.size,
+    },
     signal,
   });
 }
