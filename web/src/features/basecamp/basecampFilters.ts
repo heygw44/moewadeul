@@ -69,7 +69,7 @@ export function basecampFilterChips(
   if (filters.maxTrustLevel !== null) {
     chips.push({
       key: 'maxTrustLevel',
-      label: '본인확인만 요구',
+      label: '본인확인만으로 합류',
       onRemove: () => onChange({ ...filters, maxTrustLevel: null }),
     });
   }

@@ -30,9 +30,9 @@ export const FACILITY_LABELS: ReadonlyArray<readonly [keyof PublicFacilities, st
   ['sinkCount', '개수대 수'],
   ['brazier', '화로대'],
   ['amenities', '부대시설'],
-  ['amenitiesEtc', '부대시설 기타'],
+  ['amenitiesEtc', '기타 부대시설'],
   ['nearbyFacilities', '주변 시설'],
-  ['nearbyFacilitiesEtc', '주변 시설 기타'],
+  ['nearbyFacilitiesEtc', '기타 주변 시설'],
   ['petPolicy', '반려동물'],
 ];
 
@@ -59,5 +59,5 @@ export const GROUND_TYPE_LABELS: Record<GroundType, string> = {
 export const REPORT_REASON_LABELS: Record<BakjiReportReason, string> = {
   ILLEGAL_AREA: '야영이 금지된 곳',
   CLOSED: '더는 야영할 수 없는 곳',
-  FALSE_INFO: '정보가 사실과 다름',
+  FALSE_INFO: '정보가 사실과 다른 곳',
 };

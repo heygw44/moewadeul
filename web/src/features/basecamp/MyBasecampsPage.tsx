@@ -24,13 +24,13 @@ const FILTERS: ReadonlyArray<{ value: RelationFilter; label: string }> = [
   { value: 'ALL', label: '전체' },
   { value: 'LEADER', label: '캠프 리더' },
   { value: 'MEMBER', label: '멤버' },
-  { value: 'APPLICANT', label: '신청 중' },
+  { value: 'APPLICANT', label: '승인 대기' },
 ];
 
 const RELATION_LABELS: Record<MyBasecampRelation, string> = {
   LEADER: '캠프 리더',
   MEMBER: '멤버',
-  APPLICANT: '신청 중',
+  APPLICANT: '승인 대기',
 };
 
 type ListState = {
@@ -101,7 +101,7 @@ export function MyBasecampsPage() {
     <PageLayout
       title="내 베이스캠프"
       breadcrumb={<BackLink to="/me">내 정보</BackLink>}
-      tabs={<UnderlineTabs label="관계" options={FILTERS} value={filter} onChange={setFilter} />}
+      tabs={<UnderlineTabs label="내 역할" options={FILTERS} value={filter} onChange={setFilter} />}
     >
       <div aria-busy={authenticated && current === null} className="flex flex-col gap-3">
         {!authenticated || current === null ? (
@@ -125,8 +125,8 @@ export function MyBasecampsPage() {
             {current.items.length === 0 && !current.error ? (
               <EmptyState
                 framed
-                title={filter === 'ALL' ? '열었거나 합류한 베이스캠프가 없어요' : '이 조건의 베이스캠프가 없어요'}
-                description={filter === 'ALL' ? '같은 날 같은 곳으로 가는 베이스캠프에 합류를 신청할 수 있어요.' : undefined}
+                title={filter === 'ALL' ? '열었거나 합류한 베이스캠프가 없어요' : '해당하는 베이스캠프가 없어요'}
+                description={filter === 'ALL' ? '같은 날 같은 곳으로 가는 베이스캠프를 찾아 합류 신청을 보낼 수 있어요.' : undefined}
                 action={
                   filter === 'ALL' && (
                     <Link

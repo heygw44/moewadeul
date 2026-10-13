@@ -97,7 +97,7 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = 
     body = (
       <EmptyState
         title="로그인하면 박지를 제보할 수 있어요"
-        description="제보한 박지는 지도에 올라가고, 다른 회원이 확인하거나 신고할 수 있어요."
+        description="제보한 박지는 지도에 바로 올라가요. 다른 회원이 다녀와서 확인하거나 문제를 신고해요."
         action={
           // 지도 메뉴에서 찍어 온 위치와 다음 갈 곳이 로그인 뒤에도 남도록 주소를 그대로 돌려받는다.
           <Link to={withNext('/login', `${location.pathname}${location.search}`)} className={PRIMARY_LINK_CLASS}>
@@ -244,14 +244,14 @@ function ReportForm({
 
       {nextBasecamp && (
         <Notice tone="info" title="50m 안에 장소가 없어요">
-          <p>이 위치를 박지로 먼저 제보해 주세요. 등록되면 이 박지에서 베이스캠프 열기로 이어져요.</p>
+          <p>이 위치를 박지로 먼저 제보해 주세요. 등록되면 이어서 이 박지에서 베이스캠프를 열 수 있어요.</p>
         </Notice>
       )}
 
       {unverified && (
         <Notice tone="warning" title="이메일 인증을 마치면 박지를 제보할 수 있어요">
           <Link to="/verify-email" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
-            이메일 인증하러 가기
+            이메일 인증하기
           </Link>
         </Notice>
       )}
@@ -367,7 +367,7 @@ function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionRespon
           <h3 id="duplicate-title" className="text-sm font-semibold text-ink-muted">
             50m 안에 비슷한 박지가 있어요
           </h3>
-          <p className="text-sm text-ink">제보는 이미 등록됐어요. 같은 곳이라면 기존 박지의 정보를 확인해 주세요.</p>
+          <p className="text-sm text-ink">같은 곳이라면 아래 박지의 정보를 확인해 주세요.</p>
           <ul className="flex flex-col">
             {duplicateCandidates.map((candidate) => (
               <li key={candidate.spotId} className="border-t border-line first:border-t-0">

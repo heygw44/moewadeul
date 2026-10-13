@@ -40,13 +40,13 @@ export function BasecampFilterDialog({ initial, onApply, onClose }: BasecampFilt
           <legend className="mb-1 text-sm font-medium text-ink">출발일</legend>
           <div className="grid grid-cols-2 gap-2">
             <TextField
-              label="출발일 시작"
+              label="시작 날짜"
               type="date"
               value={draft.fromDate}
               onChange={(event) => setDraft({ ...draft, fromDate: event.target.value })}
             />
             <TextField
-              label="출발일 끝"
+              label="끝 날짜"
               type="date"
               value={draft.toDate}
               min={draft.fromDate || undefined}
@@ -56,11 +56,11 @@ export function BasecampFilterDialog({ initial, onApply, onClose }: BasecampFilt
           {reversed && (
             <p role="alert" className="flex items-start gap-1 text-sm text-danger">
               <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
-              <span>출발일 끝이 시작보다 빠를 수 없어요.</span>
+              <span>끝 날짜가 시작 날짜보다 빨라요. 다시 골라 주세요.</span>
             </p>
           )}
           <Checkbox
-            label="빈자리 있는 것만"
+            label="빈자리 있는 곳만"
             checked={draft.hasVacancy}
             onChange={(event) => setDraft({ ...draft, hasVacancy: event.target.checked })}
           />
@@ -94,14 +94,14 @@ export function BasecampFilterDialog({ initial, onApply, onClose }: BasecampFilt
               </ToggleChip>
             ))}
           </div>
-          <p className="text-sm text-ink-muted">고르지 않으면 모든 유형과 박 수를 보여 줘요.</p>
+          <p className="text-sm text-ink-muted">고르지 않으면 모든 유형과 박 수가 보여요.</p>
         </fieldset>
 
         <fieldset className="flex min-w-0 flex-col">
           <legend className="mb-1 text-sm font-medium text-ink">합류 조건</legend>
           <Checkbox
             label="본인확인만 하면 합류할 수 있는 곳"
-            hint="신뢰 회원(단계 2)을 요구하는 베이스캠프를 빼요."
+            hint="신뢰 단계 2가 필요한 베이스캠프는 빼요."
             checked={draft.maxTrustLevel !== null}
             onChange={(event) => setDraft({ ...draft, maxTrustLevel: event.target.checked ? 1 : null })}
           />

@@ -23,9 +23,9 @@ export function MapSafetyNotice() {
     >
       <Icon name="info" size={20} className="mt-0.5 shrink-0 text-info" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="font-semibold text-info">야영하기 전에 확인해 주세요</p>
+        <p className="font-semibold text-info">야영하기 전에 알아 두세요</p>
         <p className="text-sm text-ink">
-          공원 경계는 참고용 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요. 자연공원 안에서는 지정된 야영장
+          공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요. 자연공원 안에서는 지정된 야영장
           밖의 야영과 취사가 금지돼 있어요.
         </p>
         <button

@@ -195,7 +195,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
                       imageIds: values.imageIds,
                     });
                     setEditingId(null);
-                    await refreshAfterChange('후기를 고쳤어요.');
+                    await refreshAfterChange('후기를 수정했어요.');
                   }}
                 />
               </li>
@@ -230,7 +230,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
           onClose={() => setDeleting(null)}
           onDeleted={async () => {
             setDeleting(null);
-            await refreshAfterChange('후기를 지웠어요.');
+            await refreshAfterChange('후기를 삭제했어요.');
           }}
         />
       )}
@@ -351,7 +351,7 @@ function ReviewForm({
     const errors: ReviewFieldErrors = {};
     if (mode === 'create') {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(visitedDate)) errors.visitedDate = '방문한 날짜를 골라 주세요.';
-      else if (visitedDate > today) errors.visitedDate = '오늘 이후 날짜는 고를 수 없어요.';
+      else if (visitedDate > today) errors.visitedDate = '오늘이나 그 전 날짜를 골라 주세요.';
     }
     if (rating === null) errors.rating = '평점을 골라 주세요.';
     if (content.trim() === '') errors.content = '후기 내용을 적어 주세요.';
@@ -405,7 +405,7 @@ function ReviewForm({
     >
       {formError && (
         <div role="alert">
-          <Notice tone="danger" title={mode === 'create' ? '후기를 남기지 못했어요' : '후기를 고치지 못했어요'}>
+          <Notice tone="danger" title={mode === 'create' ? '후기를 남기지 못했어요' : '후기를 수정하지 못했어요'}>
             <p>{formError}</p>
           </Notice>
         </div>
@@ -439,7 +439,7 @@ function ReviewForm({
         value={content}
         onChange={(event) => setContent(event.target.value)}
         error={fieldErrors.content}
-        hint="다음에 갈 사람에게 도움이 되는 내용을 적어 주세요. 흔적 남기지 않기도 함께 지켜 주세요."
+        hint="다음에 갈 사람에게 도움이 될 내용을 적어 주세요."
       />
       <ImageUploadField
         uploads={uploads}
@@ -457,9 +457,9 @@ function ReviewForm({
           disabled={uploads.uploading || uploads.failed}
           disabledReason={
             uploads.uploading
-              ? '사진을 올리는 중이에요. 끝나면 저장할 수 있어요.'
+              ? '사진을 올리는 중이에요. 다 올라가면 저장할 수 있어요.'
               : uploads.failed
-                ? '올리지 못한 사진이 있어요. 다시 시도하거나 빼 주세요.'
+                ? '올리지 못한 사진은 다시 올리거나 빼 주세요.'
                 : undefined
           }
         >
@@ -499,7 +499,7 @@ function DeleteDialog({
     <Dialog title="후기를 삭제할까요?" onClose={onClose}>
       <div className="flex flex-col gap-4">
         <p className="text-base text-ink">
-          {formatLocalDate(review.visitedDate)} 방문 후기를 삭제해요. 삭제한 후기는 되돌릴 수 없어요.
+          {formatLocalDate(review.visitedDate)} 방문 후기를 삭제하면 되돌릴 수 없어요.
         </p>
         {error && (
           <div role="alert">

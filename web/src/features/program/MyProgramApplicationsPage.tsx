@@ -57,7 +57,7 @@ export function MyProgramApplicationsPage() {
           <>
             {current.error && (
               <div className="flex flex-col gap-3">
-                <Notice tone="danger" title="내 신청을 불러오지 못했어요">
+                <Notice tone="danger" title="내 행사 신청을 불러오지 못했어요">
                   <p>{current.error}</p>
                 </Notice>
                 {current.items.length === 0 && (
@@ -72,7 +72,7 @@ export function MyProgramApplicationsPage() {
             {current.items.length === 0 && !current.error ? (
               <EmptyState
                 framed
-                title={filter === 'ALL' ? '신청한 행사가 없어요' : '이 상태의 신청이 없어요'}
+                title={filter === 'ALL' ? '신청한 행사가 없어요' : '해당하는 신청이 없어요'}
                 action={
                   filter === 'ALL' && (
                     <Link
@@ -138,7 +138,7 @@ function ApplicationCard({ item, now }: { item: MyProgramApplicationItem; now: n
         {item.status === 'CANCELED' && item.cancelReason && (
           <span className="text-sm text-ink-muted">취소 사유: {CANCEL_REASON_LABELS[item.cancelReason]}</span>
         )}
-        {item.status === 'EXPIRED' && <span className="text-sm text-ink-muted">결제 기한이 지나 만료됐어요</span>}
+        {item.status === 'EXPIRED' && <span className="text-sm text-ink-muted">결제 기한이 지났어요</span>}
       </Link>
     </li>
   );

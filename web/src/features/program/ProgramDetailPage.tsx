@@ -82,7 +82,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
       <EmptyState
         framed
         title="행사를 찾을 수 없어요"
-        description="없는 행사예요."
+        description="삭제됐거나 주소가 잘못됐어요."
         action={
           <Link to="/programs" className={SECONDARY_LINK_CLASS}>
             행사 목록으로
@@ -134,8 +134,8 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
     <div className="flex flex-col gap-4">
       <article className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
         {detail.status === 'CANCELED' && (
-          <Notice tone="danger" title="운영자가 행사를 취소했어요">
-            <p>신청했던 분께는 취소 알림을 보냈어요. 결제한 금액은 환불돼요.</p>
+          <Notice tone="danger" title="관리자가 행사를 취소했어요">
+            <p>신청한 회원에게 취소 알림을 보냈어요. 결제한 금액은 환불돼요.</p>
           </Notice>
         )}
 
@@ -177,6 +177,14 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
 
 type Busy = 'apply' | 'pay' | 'cancel' | 'alert' | null;
 
+// 실패 안내 제목은 무엇을 하지 못했는지 동작으로 적는다.
+const FAIL_TITLES: Record<Exclude<Busy, null>, string> = {
+  apply: '신청하지 못했어요',
+  pay: '결제하지 못했어요',
+  cancel: '신청을 취소하지 못했어요',
+  alert: '빈자리 알림을 바꾸지 못했어요',
+};
+
 type KeyRef = { current: { scope: number; key: string } | null };
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -185,7 +193,7 @@ const REFUND_BEFORE_START_HOURS = 72;
 function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: () => void }) {
   const session = useSession();
   const [busy, setBusy] = useState<Busy>(null);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<{ kind: Exclude<Busy, null>; apiError: ApiError } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [soldOut, setSoldOut] = useState(false);
   const [alertOn, setAlertOn] = useState(false);
@@ -225,7 +233,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
       // 응답을 받지 못한 경우(네트워크 오류)만 같은 키를 남겨 다시 시도할 때 중복 처리를 막는다.
       if (keyRef && apiError.code !== 'NETWORK_ERROR') keyRef.current = null;
       if (apiError.code === 'PROGRAM_SOLD_OUT') setSoldOut(true);
-      setError(apiError);
+      setError({ kind, apiError });
       if (STALE_CODES.has(apiError.code)) onChanged();
     } finally {
       setBusy(null);
@@ -269,14 +277,14 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
     run('alert', null, async () => {
       await subscribeVacancyAlert(detail.programId);
       setAlertOn(true);
-      setNotice('빈자리 알림을 신청했어요. 자리가 나면 알려 줘요.');
+      setNotice('빈자리 알림을 신청했어요. 자리가 나면 알림이 가요.');
     });
 
   const unsubscribe = () =>
     run('alert', null, async () => {
       await unsubscribeVacancyAlert(detail.programId);
       setAlertOn(false);
-      setNotice('빈자리 알림을 해제했어요.');
+      setNotice('빈자리 알림을 껐어요.');
     });
 
   if (session.status === 'loading') return null;
@@ -298,7 +306,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
           {notice}
         </p>
       )}
-      {error && <ActionError error={error} />}
+      {error && <ActionError title={FAIL_TITLES[error.kind]} error={error.apiError} />}
 
       {pending && (
         <>
@@ -306,7 +314,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
             {dueAt && (
               <p>
                 {payExpired ? (
-                  '결제 기한이 지났어요. 곧 자리가 반환돼요.'
+                  '결제 기한이 지났어요. 곧 이 자리가 다시 열려요.'
                 ) : (
                   <>
                     남은 시간{' '}
@@ -346,7 +354,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
             fullWidth
             variant="danger"
             disabled={refundClosed || busy !== null}
-            disabledReason={refundClosed ? '환불 기한이 지나면 취소할 수 없어요' : undefined}
+            disabledReason={refundClosed ? '환불 기한이 지나 취소할 수 없어요' : undefined}
             onClick={() => setConfirmCancel(true)}
           >
             신청 취소
@@ -385,7 +393,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-ink">빈자리 알림을 신청했어요</p>
               <Button variant="ghost" loading={busy === 'alert'} disabled={busy !== null} onClick={() => void unsubscribe()}>
-                알림 해제
+                알림 끄기
               </Button>
             </div>
           )}
@@ -397,8 +405,8 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
           <div className="flex flex-col gap-4">
             <p className="text-base text-ink">
               {confirmed
-                ? '취소하면 결제한 금액을 환불하고 자리를 돌려줘요. 환불 기한이 지나면 취소할 수 없어요.'
-                : '취소하면 자리를 돌려줘요. 다시 신청하려면 남은 자리가 있어야 해요.'}
+                ? '취소하면 결제한 금액은 환불되고 자리는 다른 사람이 신청할 수 있게 열려요.'
+                : '취소하면 자리가 다시 열려요. 다시 신청하려면 남은 자리가 있어야 해요.'}
             </p>
             <div className="flex flex-col gap-2">
               <Button variant="danger" fullWidth loading={busy === 'cancel'} disabled={busy !== null} onClick={() => void cancel()}>
@@ -433,14 +441,14 @@ function ClosedApplyButton({ detail }: { detail: ProgramDetail }) {
   );
 }
 
-function ActionError({ error }: { error: ApiError }) {
+function ActionError({ title, error }: { title: string; error: ApiError }) {
   return (
-    <Notice tone="danger" title="처리하지 못했어요">
+    <Notice tone="danger" title={title}>
       <p>{error.message}</p>
       {error.code === 'TRUST_LEVEL_INSUFFICIENT' && (
         <p className="mt-2">
           <Link to="/identity-verification" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
-            본인확인하러 가기
+            본인확인하기
           </Link>
         </p>
       )}

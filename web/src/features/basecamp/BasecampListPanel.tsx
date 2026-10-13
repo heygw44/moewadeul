@@ -37,9 +37,9 @@ export function BasecampListPanel({
     <div className="flex flex-col">
       {spotFilterId !== null && (
         <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas px-4 py-1">
-          <p className="min-w-0 truncate text-sm text-ink">{filteredSpotName ?? '고른 장소'}의 베이스캠프만 보고 있어요</p>
+          <p className="min-w-0 truncate text-sm text-ink">{filteredSpotName ?? '고른 장소'} 베이스캠프만 보여요</p>
           <Button variant="ghost" onClick={onClearSpotFilter} className="shrink-0 px-3">
-            장소 선택 풀기
+            모든 장소 보기
           </Button>
         </div>
       )}
@@ -79,14 +79,14 @@ export function BasecampListPanel({
                 spotFilterId !== null
                   ? undefined
                   : filtered
-                    ? '조건을 줄이거나 지도를 옮기면 다시 찾아요.'
-                    : '지도를 옮기면 다시 찾아요. 장소 상세에서 베이스캠프를 직접 열 수도 있어요.'
+                    ? '조건을 줄이거나 지도를 다른 곳으로 옮겨 주세요.'
+                    : '지도를 다른 곳으로 옮겨 주세요. 장소를 고르면 베이스캠프를 직접 열 수도 있어요.'
               }
             />
           )}
 
           {visible.length > 0 && (
-            <ul aria-label="이 지역 베이스캠프">
+            <ul aria-label="이 지역의 베이스캠프">
               {visible.map((item) => (
                 <BasecampRow key={item.basecampId} item={item} />
               ))}
@@ -136,7 +136,7 @@ function BasecampRow({ item }: { item: BasecampSearchItem }) {
         <span className="text-sm text-ink-muted">합류 조건: {joinConditionSummary(item.joinCondition)}</span>
         {unmet.length > 0 && (
           <span className="text-sm text-warning">
-            신청할 수 없어요: {unmet.map((reason) => unmetReasonText(reason, trustLevel).reason).join(' ')}
+            신청할 수 없어요. {unmet.map((reason) => unmetReasonText(reason, trustLevel).reason).join(' ')}
           </span>
         )}
       </Link>
