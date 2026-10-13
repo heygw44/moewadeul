@@ -12,7 +12,7 @@ import { useSession } from '../member/session';
 const NAV_ITEMS = [
   { to: '/admin/reports', label: '신고 처리' },
   { to: '/admin/spots', label: '박지 검토' },
-  { to: '/admin/memories', label: '발자국 검토' },
+  { to: '/admin/memories', label: '기록 검토' },
   { to: '/admin/sync-jobs', label: '데이터 적재' },
 ] as const;
 

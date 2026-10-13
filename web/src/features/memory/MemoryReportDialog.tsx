@@ -7,11 +7,11 @@ type MemoryReportDialogProps = {
   onClose: () => void;
 };
 
-// 남의 공개 발자국을 신고한다. 사유는 커뮤니티 신고와 같다.
+// 남의 공개 기록을 신고한다. 사유는 커뮤니티 신고와 같다.
 export function MemoryReportDialog({ memoryId, onClose }: MemoryReportDialogProps) {
   return (
     <ReportDialog
-      targetLabel="발자국"
+      targetLabel="기록"
       reasonOptions={REPORT_REASON_OPTIONS}
       alreadyReportedCode="MEMORY_ALREADY_REPORTED"
       submit={(request) => reportMemory(memoryId, request)}

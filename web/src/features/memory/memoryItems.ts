@@ -10,9 +10,9 @@ export interface MemoryCellItem {
   visitedDate: string;
   nights: number;
   spotName?: string;
-  // 나만 보기로 남긴 기록이다. 내 발자국 지도에서만 true가 될 수 있다.
+  // 나만 보기로 남긴 기록이다. 내 기록 지도에서만 true가 될 수 있다.
   isPrivate?: boolean;
-  // 신고로 검토 중이거나 관리자가 숨겨 다른 사람에게 보이지 않는 기록의 상태 이름이다. 내 발자국 지도에서만 값이 있다.
+  // 신고로 검토 중이거나 관리자가 숨겨 다른 사람에게 보이지 않는 기록의 상태 이름이다. 내 기록 지도에서만 값이 있다.
   hiddenLabel?: string;
   imageCount: number;
 }
