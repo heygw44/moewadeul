@@ -95,7 +95,7 @@ class SecurityConfigIntegrationTest {
         assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(result.getResponse().getContentType()).startsWith(MediaType.APPLICATION_JSON_VALUE);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("AUTHENTICATION_REQUIRED");
-        assertThat(result).bodyJson().extractingPath("$.message").isEqualTo("로그인이 필요합니다.");
+        assertThat(result).bodyJson().extractingPath("$.message").isEqualTo("로그인이 필요해요.");
         assertThat(result).bodyJson().doesNotHavePath("$.fieldErrors");
         String headerTraceId = result.getResponse().getHeader(TraceIdFilter.HEADER);
         assertThat(headerTraceId).isNotBlank();

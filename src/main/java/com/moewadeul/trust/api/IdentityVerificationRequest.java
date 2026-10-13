@@ -16,8 +16,8 @@ public record IdentityVerificationRequest(
         Gender gender,
 
         @Schema(description = "시연용 식별 문자열. 같은 값이면 같은 사람으로 본다.", example = "demo-person-1")
-        @NotBlank(message = "시연용 식별 문자열을 입력해야 합니다.")
-        @Size(max = MAX_DEMO_IDENTITY_KEY_LENGTH, message = "시연용 식별 문자열은 100자 이하여야 합니다.")
+        @NotBlank(message = "시연용 식별 문자열을 입력해 주세요.")
+        @Size(max = MAX_DEMO_IDENTITY_KEY_LENGTH, message = "시연용 식별 문자열은 100자 이하여야 해요.")
         String demoIdentityKey) {
 
     static final int MAX_DEMO_IDENTITY_KEY_LENGTH = 100;

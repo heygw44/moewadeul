@@ -4,7 +4,7 @@ import com.moewadeul.common.error.ErrorCode;
 import org.springframework.http.HttpStatus;
 
 public enum ReviewErrorCode implements ErrorCode {
-    SPOT_REVIEW_DUPLICATED(HttpStatus.CONFLICT, "같은 장소에 같은 방문일로 쓴 후기가 이미 있습니다.");
+    SPOT_REVIEW_DUPLICATED(HttpStatus.CONFLICT, "같은 장소에 같은 방문일로 쓴 후기가 이미 있어요.");
 
     private final HttpStatus httpStatus;
     private final String message;

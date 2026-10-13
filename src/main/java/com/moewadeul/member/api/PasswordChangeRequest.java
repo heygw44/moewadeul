@@ -5,15 +5,15 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 // 비밀번호 규칙(길이와 문자 종류)은 서비스가 검사한다. 여기서는 너무 긴 입력을 싸게 거르는 상한만 둔다.
-@PasswordsMatch(message = "새 비밀번호 확인이 새 비밀번호와 다릅니다.")
+@PasswordsMatch(message = "새 비밀번호 확인이 새 비밀번호와 달라요.")
 public record PasswordChangeRequest(
-        @NotBlank(message = "현재 비밀번호는 필수입니다.") @Size(max = 128, message = "현재 비밀번호가 너무 깁니다.")
+        @NotBlank(message = "현재 비밀번호를 입력해 주세요.") @Size(max = 128, message = "현재 비밀번호가 너무 길어요.")
         String currentPassword,
 
-        @NotBlank(message = "새 비밀번호는 필수입니다.") @Size(max = 128, message = "새 비밀번호가 너무 깁니다.")
+        @NotBlank(message = "새 비밀번호를 입력해 주세요.") @Size(max = 128, message = "새 비밀번호가 너무 길어요.")
         String newPassword,
 
-        @NotNull(message = "새 비밀번호 확인은 필수입니다.") @Size(max = 128, message = "새 비밀번호 확인이 너무 깁니다.")
+        @NotNull(message = "새 비밀번호 확인을 입력해 주세요.") @Size(max = 128, message = "새 비밀번호 확인이 너무 길어요.")
         String newPasswordConfirm)
         implements ConfirmedPassword {
 

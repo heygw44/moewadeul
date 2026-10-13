@@ -79,7 +79,7 @@ public class CompanionReviewCommandService {
             long basecampId, long reviewerId, CompanionReviewWriteCommand command, Instant now) {
         if (command.comment() != null && command.comment().length() > CompanionReview.COMMENT_MAX_LENGTH) {
             throw new BusinessException(
-                    CommonErrorCode.INVALID_INPUT, "코멘트는 " + CompanionReview.COMMENT_MAX_LENGTH + "자 이하여야 합니다.");
+                    CommonErrorCode.INVALID_INPUT, "코멘트는 " + CompanionReview.COMMENT_MAX_LENGTH + "자 이하여야 해요.");
         }
         return CompanionReview.write(
                 basecampId,

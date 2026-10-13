@@ -12,13 +12,13 @@ import java.util.List;
 
 // 평점과 내용을 둘 다 받는다. 방문일은 고칠 수 없어서 받지 않는다. 이미지 목록은 보낼 때만 바꾼다.
 public record SpotReviewUpdateRequest(
-        @NotNull(message = "평점을 입력해야 합니다.")
-        @Min(value = SpotReview.MIN_RATING, message = "평점은 1 이상이어야 합니다.")
-        @Max(value = SpotReview.MAX_RATING, message = "평점은 5 이하여야 합니다.")
+        @NotNull(message = "평점을 입력해 주세요.")
+        @Min(value = SpotReview.MIN_RATING, message = "평점은 1 이상이어야 해요.")
+        @Max(value = SpotReview.MAX_RATING, message = "평점은 5 이하여야 해요.")
         Integer rating,
 
-        @NotBlank(message = "후기 내용을 입력해야 합니다.")
-        @Size(max = SpotReview.CONTENT_MAX_LENGTH, message = "후기 내용은 2000자 이하여야 합니다.")
+        @NotBlank(message = "후기 내용을 입력해 주세요.")
+        @Size(max = SpotReview.CONTENT_MAX_LENGTH, message = "후기 내용은 2000자 이하여야 해요.")
         String content,
 
         @Schema(description = "바꿀 이미지 ID 목록. 보내면 그 순서대로 통째로 바꾸고, 보내지 않으면 그대로 둔다. 빈 배열이면 모두 뗀다.")

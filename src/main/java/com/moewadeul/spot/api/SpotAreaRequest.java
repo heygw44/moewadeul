@@ -14,44 +14,44 @@ import java.util.Set;
 // 그래서 래퍼 타입으로 받고, 서버는 빠진 값을 @NotNull 위반으로 보고 필드 오류로 돌려준다.
 // types는 쉼표로 구분한 문자열(CAMPSITE,BAKJI)과 같은 이름을 여러 번 쓴 형태를 모두 받는다.
 public record SpotAreaRequest(
-        @NotNull(message = "남서쪽 위도를 입력해야 합니다.")
-        @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 합니다.")
-        @DecimalMax(value = "90", message = "위도는 90 이하여야 합니다.")
+        @NotNull(message = "남서쪽 위도를 입력해 주세요.")
+        @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 해요.")
+        @DecimalMax(value = "90", message = "위도는 90 이하여야 해요.")
         Double swLat,
 
-        @NotNull(message = "남서쪽 경도를 입력해야 합니다.")
-        @DecimalMin(value = "-180", message = "경도는 -180 이상이어야 합니다.")
-        @DecimalMax(value = "180", message = "경도는 180 이하여야 합니다.")
+        @NotNull(message = "남서쪽 경도를 입력해 주세요.")
+        @DecimalMin(value = "-180", message = "경도는 -180 이상이어야 해요.")
+        @DecimalMax(value = "180", message = "경도는 180 이하여야 해요.")
         Double swLng,
 
-        @NotNull(message = "북동쪽 위도를 입력해야 합니다.")
-        @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 합니다.")
-        @DecimalMax(value = "90", message = "위도는 90 이하여야 합니다.")
+        @NotNull(message = "북동쪽 위도를 입력해 주세요.")
+        @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 해요.")
+        @DecimalMax(value = "90", message = "위도는 90 이하여야 해요.")
         Double neLat,
 
-        @NotNull(message = "북동쪽 경도를 입력해야 합니다.")
-        @DecimalMin(value = "-180", message = "경도는 -180 이상이어야 합니다.")
-        @DecimalMax(value = "180", message = "경도는 180 이하여야 합니다.")
+        @NotNull(message = "북동쪽 경도를 입력해 주세요.")
+        @DecimalMin(value = "-180", message = "경도는 -180 이상이어야 해요.")
+        @DecimalMax(value = "180", message = "경도는 180 이하여야 해요.")
         Double neLng,
 
-        @NotNull(message = "지도 확대 수준을 입력해야 합니다.")
-        @Min(value = 1, message = "지도 확대 수준은 1 이상이어야 합니다.")
-        @Max(value = 14, message = "지도 확대 수준은 14 이하여야 합니다.")
+        @NotNull(message = "지도 확대 수준을 입력해 주세요.")
+        @Min(value = 1, message = "지도 확대 수준은 1 이상이어야 해요.")
+        @Max(value = 14, message = "지도 확대 수준은 14 이하여야 해요.")
         Integer zoom,
 
-        Set<@NotNull(message = "장소 유형에 빈 값이 있습니다.") SpotType> types,
+        Set<@NotNull(message = "장소 유형에 빈 값이 있어요.") SpotType> types,
         Boolean hasWater,
         Boolean hasToilet,
         Boolean excludeWarning,
         Boolean hideClosed) {
 
     // 위도나 경도가 빠졌으면 @NotNull이 따로 오류를 내므로, 여기서는 둘 다 있을 때만 순서를 본다.
-    @AssertTrue(message = "남서쪽 위도는 북동쪽 위도보다 작아야 합니다.")
+    @AssertTrue(message = "남서쪽 위도는 북동쪽 위도보다 작아야 해요.")
     public boolean isLatitudeOrdered() {
         return swLat == null || neLat == null || swLat < neLat;
     }
 
-    @AssertTrue(message = "남서쪽 경도는 북동쪽 경도보다 작아야 합니다.")
+    @AssertTrue(message = "남서쪽 경도는 북동쪽 경도보다 작아야 해요.")
     public boolean isLongitudeOrdered() {
         return swLng == null || neLng == null || swLng < neLng;
     }

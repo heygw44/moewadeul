@@ -55,7 +55,7 @@ class SanctionNotificationIntegrationTest {
                 .containsEntry("member_id", targetId)
                 .containsEntry("type", "SANCTION_CONFIRMED")
                 .containsEntry("title", "이용 제재 안내")
-                .containsEntry("body", "경고를 받았습니다.")
+                .containsEntry("body", "경고를 받았어요.")
                 .containsEntry("link", null);
     }
 
@@ -71,7 +71,7 @@ class SanctionNotificationIntegrationTest {
 
         // then
         List<String> bodies = jdbc.queryForList("SELECT body FROM notification ORDER BY id", String.class);
-        assertThat(bodies).containsExactly("경고를 받았습니다.", "2026-10-12 12:00까지 이용이 정지됩니다.");
+        assertThat(bodies).containsExactly("경고를 받았어요.", "2026-10-12 12:00까지 이용이 정지돼요.");
     }
 
     private void confirm(SanctionType type) {

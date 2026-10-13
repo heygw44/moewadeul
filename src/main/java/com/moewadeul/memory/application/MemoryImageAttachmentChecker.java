@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 class MemoryImageAttachmentChecker {
 
     static final String FIELD = "imageIds";
-    static final String UNUSABLE_MESSAGE = "붙일 수 없는 사진이 있습니다.";
+    static final String UNUSABLE_MESSAGE = "붙일 수 없는 사진이 있어요.";
 
     private final MemoryImageRepository memoryImageRepository;
     private final ImageStorage imageStorage;
@@ -54,13 +54,13 @@ class MemoryImageAttachmentChecker {
 
     private static void requireValidShape(List<Long> imageIds) {
         if (imageIds.size() > MemoryImage.MAX_PER_MEMORY) {
-            throw invalid("사진은 " + MemoryImage.MAX_PER_MEMORY + "장까지 붙일 수 있습니다.");
+            throw invalid("사진은 " + MemoryImage.MAX_PER_MEMORY + "장까지 붙일 수 있어요.");
         }
         if (imageIds.stream().anyMatch(Objects::isNull)) {
             throw invalid(UNUSABLE_MESSAGE);
         }
         if (new HashSet<>(imageIds).size() != imageIds.size()) {
-            throw invalid("같은 사진을 두 번 붙일 수 없습니다.");
+            throw invalid("같은 사진을 두 번 붙일 수 없어요.");
         }
     }
 

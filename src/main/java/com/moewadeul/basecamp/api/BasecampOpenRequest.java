@@ -11,13 +11,12 @@ import java.time.LocalDate;
 
 // 빠진 값을 @NotNull 위반으로 돌려주려고 숫자는 래퍼 타입으로 받는다. 출발일 범위, 박 수, 정원 범위는 서비스가 검사한다.
 public record BasecampOpenRequest(
-        @NotNull(message = "장소를 입력해야 합니다.") Long spotId,
+        @NotNull(message = "장소를 입력해 주세요.") Long spotId,
 
-        @NotBlank(message = "제목을 입력해야 합니다.") @Size(max = Basecamp.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 합니다.")
+        @NotBlank(message = "제목을 입력해 주세요.") @Size(max = Basecamp.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 해요.")
         String title,
 
-        @NotBlank(message = "설명을 입력해야 합니다.")
-        @Size(max = Basecamp.DESCRIPTION_MAX_LENGTH, message = "설명은 2000자 이하여야 합니다.")
+        @NotBlank(message = "설명을 입력해 주세요.") @Size(max = Basecamp.DESCRIPTION_MAX_LENGTH, message = "설명은 2000자 이하여야 해요.")
         String description,
 
         @Schema(description = "출발일(한국 날짜). 내일부터 60일 뒤까지다.", example = "2026-10-20") @NotNull(message = "출발일을 입력해야 합니다.")

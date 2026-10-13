@@ -11,12 +11,12 @@ import jakarta.validation.constraints.Size;
 
 // 보내지 않은(null) 필드는 현재 값을 그대로 둔다. 정원 범위와 합류 조건 값은 서비스가 검사한다.
 public record BasecampReviseRequest(
-        @Size(max = Basecamp.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 합니다.")
-        @Pattern(regexp = ".*\\S.*", message = "제목은 공백뿐일 수 없습니다.")
+        @Size(max = Basecamp.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 해요.")
+        @Pattern(regexp = ".*\\S.*", message = "제목은 공백뿐일 수 없어요.")
         String title,
 
-        @Size(max = Basecamp.DESCRIPTION_MAX_LENGTH, message = "설명은 2000자 이하여야 합니다.")
-        @Pattern(regexp = "(?s).*\\S.*", message = "설명은 공백뿐일 수 없습니다.")
+        @Size(max = Basecamp.DESCRIPTION_MAX_LENGTH, message = "설명은 2000자 이하여야 해요.")
+        @Pattern(regexp = "(?s).*\\S.*", message = "설명은 공백뿐일 수 없어요.")
         String description,
 
         @Schema(description = "보내면 합류 조건 전체를 바꾼다. 열 때와 같은 규칙이다.") @Valid
@@ -26,7 +26,7 @@ public record BasecampReviseRequest(
         Integer capacity) {
 
     @Schema(hidden = true)
-    @AssertTrue(message = "고칠 필드를 하나 이상 보내야 합니다.")
+    @AssertTrue(message = "고칠 필드를 하나 이상 보내 주세요.")
     public boolean isAnyFieldPresent() {
         return title != null || description != null || joinCondition != null || capacity != null;
     }

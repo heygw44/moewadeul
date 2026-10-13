@@ -45,7 +45,7 @@ public record MemoryReviseCommand(
         requireNotCleared(nights, "nights", "박 수");
         requireNotCleared(visibility, "visibility", "공개 범위");
         if (lat.present() != lng.present()) {
-            throw MemoryWriteCommand.invalid(lat.present() ? "lng" : "lat", "위도와 경도는 함께 보내야 합니다.");
+            throw MemoryWriteCommand.invalid(lat.present() ? "lng" : "lat", "위도와 경도는 함께 보내 주세요.");
         }
         return new MemoryWriteCommand(
                 pick(spotId, current.spotId()),
@@ -65,7 +65,7 @@ public record MemoryReviseCommand(
 
     private static void requireNotCleared(PatchField<?> field, String name, String label) {
         if (field.present() && field.value() == null) {
-            throw MemoryWriteCommand.invalid(name, label + "은(는) 비울 수 없습니다.");
+            throw MemoryWriteCommand.invalid(name, label + "은(는) 비울 수 없어요.");
         }
     }
 

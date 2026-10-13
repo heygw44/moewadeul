@@ -60,12 +60,12 @@ public final class SanctionPolicy {
      */
     public static int decideLevel(Integer highestConfirmedLevel, SanctionType requested) {
         if (requested == null || requested == SanctionType.TEMPORARY_72H) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "관리자가 내릴 수 없는 제재 종류입니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "관리자가 내릴 수 없는 제재 종류예요.");
         }
         int next = nextLevel(highestConfirmedLevel);
         if (requested != SanctionType.PERMANENT && requested != typeOf(next)) {
             throw new BusinessException(
-                    CommonErrorCode.INVALID_INPUT, "이 회원의 다음 제재 단계는 " + typeOf(next) + "입니다. 요청한 종류와 다릅니다.");
+                    CommonErrorCode.INVALID_INPUT, "요청한 제재 종류가 이 회원의 다음 단계(" + typeOf(next) + ")와 달라요.");
         }
         return levelOf(requested);
     }

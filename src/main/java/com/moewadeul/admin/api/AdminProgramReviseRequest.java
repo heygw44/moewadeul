@@ -19,38 +19,38 @@ import java.time.Instant;
  * JSON에 빠진 필드를 Jackson이 Java {@code null}로 넘기는 경우가 있다. 그래서 생성자가 spotId의 {@code null}을 "요청에 없음"으로 바꾼다.
  */
 public record AdminProgramReviseRequest(
-        @Size(max = ProgramLimits.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 합니다.")
-        @Pattern(regexp = ".*\\S.*", message = "제목은 공백뿐일 수 없습니다.")
+        @Size(max = ProgramLimits.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 해요.")
+        @Pattern(regexp = ".*\\S.*", message = "제목은 공백뿐일 수 없어요.")
         String title,
 
-        @Size(max = ProgramLimits.DESCRIPTION_MAX_LENGTH, message = "설명은 5000자 이하여야 합니다.")
-        @Pattern(regexp = "(?s).*\\S.*", message = "설명은 공백뿐일 수 없습니다.")
+        @Size(max = ProgramLimits.DESCRIPTION_MAX_LENGTH, message = "설명은 5000자 이하여야 해요.")
+        @Pattern(regexp = "(?s).*\\S.*", message = "설명은 공백뿐일 수 없어요.")
         String description,
 
         @Schema(implementation = Long.class, description = "null로 보내면 지도 장소와의 연결을 끊는다. 값이 있으면 지도에 보이는 장소여야 한다.")
         PatchField<Long> spotId,
 
-        @Size(max = ProgramLimits.LOCATION_TEXT_MAX_LENGTH, message = "장소 설명은 255자 이하여야 합니다.")
-        @Pattern(regexp = ".*\\S.*", message = "장소 설명은 공백뿐일 수 없습니다.")
+        @Size(max = ProgramLimits.LOCATION_TEXT_MAX_LENGTH, message = "장소 설명은 255자 이하여야 해요.")
+        @Pattern(regexp = ".*\\S.*", message = "장소 설명은 공백뿐일 수 없어요.")
         String locationText,
 
         Instant startAt,
         Instant endAt,
 
         @Schema(description = "정원. 1~1000이고, 신청이 시작된 뒤에는 줄일 수 없다.", example = "250")
-        @Min(value = ProgramLimits.CAPACITY_MIN, message = "정원은 1 이상이어야 합니다.")
-        @Max(value = ProgramLimits.CAPACITY_MAX, message = "정원은 1000 이하여야 합니다.")
+        @Min(value = ProgramLimits.CAPACITY_MIN, message = "정원은 1 이상이어야 해요.")
+        @Max(value = ProgramLimits.CAPACITY_MAX, message = "정원은 1000 이하여야 해요.")
         Integer capacity,
 
-        @Min(value = ProgramLimits.FEE_MIN, message = "참가비는 0 이상이어야 합니다.")
-        @Max(value = ProgramLimits.FEE_MAX, message = "참가비는 1000000 이하여야 합니다.")
+        @Min(value = ProgramLimits.FEE_MIN, message = "참가비는 0 이상이어야 해요.")
+        @Max(value = ProgramLimits.FEE_MAX, message = "참가비는 1000000 이하여야 해요.")
         Integer fee,
 
         Instant applyOpenAt,
         Instant applyCloseAt,
 
-        @Min(value = ProgramLimits.PAYMENT_DEADLINE_MINUTES_MIN, message = "결제 기한은 1분 이상이어야 합니다.")
-        @Max(value = ProgramLimits.PAYMENT_DEADLINE_MINUTES_MAX, message = "결제 기한은 1440분 이하여야 합니다.")
+        @Min(value = ProgramLimits.PAYMENT_DEADLINE_MINUTES_MIN, message = "결제 기한은 1분 이상이어야 해요.")
+        @Max(value = ProgramLimits.PAYMENT_DEADLINE_MINUTES_MAX, message = "결제 기한은 1440분 이하여야 해요.")
         Integer paymentDeadlineMinutes,
 
         Boolean overnight) {
@@ -60,7 +60,7 @@ public record AdminProgramReviseRequest(
     }
 
     @Schema(hidden = true)
-    @AssertTrue(message = "고칠 필드를 하나 이상 보내야 합니다.")
+    @AssertTrue(message = "고칠 필드를 하나 이상 보내 주세요.")
     public boolean isAnyFieldPresent() {
         return title != null
                 || description != null

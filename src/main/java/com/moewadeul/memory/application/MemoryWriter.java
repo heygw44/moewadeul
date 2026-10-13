@@ -99,7 +99,7 @@ class MemoryWriter {
 
     private void requireLinkable(long spotId) {
         if (!activeSpotChecker.isActive(spotId)) {
-            throw MemoryWriteCommand.invalid("spotId", "연결할 수 없는 장소입니다.");
+            throw MemoryWriteCommand.invalid("spotId", "연결할 수 없는 장소예요.");
         }
     }
 
