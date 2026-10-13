@@ -13,14 +13,14 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { MetaLine } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { formatKstTime, formatLocalDate } from '../../lib/datetime';
+import { formatKstMonthDay, formatKstTime, formatLocalDate } from '../../lib/datetime';
 import { newMemoryPath } from '../memory/memoryLabels';
 import { UnverifiedNote } from '../member/GatedButton';
 import { SpotReviews } from '../review/SpotReviews';
 import { SoloTripSection } from '../trip/SoloTripSection';
 import { BakjiFeedback } from './BakjiFeedback';
 import { ParkWarningNotice } from './ParkWarningNotice';
-import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META } from './spotLabels';
+import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META, sourceLabel } from './spotLabels';
 
 type SpotDetailPanelProps = {
   spotId: number;
@@ -322,7 +322,7 @@ function parseHomepage(homepage: string): URL | null {
 }
 
 function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
-  const { category, facilities, phone, homepage } = publicDetail;
+  const { category, facilities, phone, homepage, source, sourceDate, checkedAt } = publicDetail;
   const facilityRows = facilities
     ? FACILITY_LABELS.flatMap(([key, label]) => {
         const value = facilities[key];
@@ -330,8 +330,6 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
       })
     : [];
   const homepageUrl = homepage ? parseHomepage(homepage) : null;
-
-  if (category === null && facilityRows.length === 0 && !phone && !homepage) return null;
 
   return (
     <section className={SECTION_CLASS} aria-labelledby="spot-public-title">
@@ -374,6 +372,15 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
             ))}
         </div>
       )}
+      <div className="mt-3">
+        <Evidence
+          items={[
+            { label: '출처', value: sourceLabel(source) },
+            ...(sourceDate ? [{ label: '정보 기준일', value: sourceDate }] : []),
+            ...(checkedAt ? [{ label: '마지막 확인', value: formatKstMonthDay(checkedAt) }] : []),
+          ]}
+        />
+      </div>
     </section>
   );
 }

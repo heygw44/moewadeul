@@ -52,6 +52,11 @@ export function formatLocalDate(date: string): string {
 
 const KST_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });
 
+// 시각을 한국 시간 기준 MM-DD로 돌려준다. 예: 2026-10-12T18:04:11Z -> 10-13
+export function formatKstMonthDay(iso: string): string {
+  return KST_DATE.format(new Date(iso)).slice(5);
+}
+
 // 오늘 한국 날짜를 YYYY-MM-DD로 돌려준다. 브라우저 시간대와 상관없이 한국 기준이다.
 // 서버도 방문일이 오늘(한국 날짜)보다 뒤면 거부하므로, 날짜 입력의 최댓값으로 쓴다.
 export function todayKst(now: Date = new Date()): string {
