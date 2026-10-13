@@ -28,6 +28,8 @@ public class WireMockTestConfig {
             registry.add("moewadeul.weather.kma.base-url", () -> wireMockServer.baseUrl() + "/1360000");
             registry.add(
                     "moewadeul.weather.kasi.base-url", () -> wireMockServer.baseUrl() + "/B090041/openapi/service");
+            registry.add("moewadeul.aisearch.openai.base-url", () -> wireMockServer.baseUrl() + "/openai/v1");
+            registry.add("moewadeul.aisearch.openai.api-key", () -> "test-openai-key");
         };
     }
 }

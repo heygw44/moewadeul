@@ -64,7 +64,7 @@ tasks.withType<Test> {
 
 tasks.test {
     useJUnitPlatform {
-        excludeTags("integration")
+        excludeTags("integration", "ai-eval")
     }
 }
 
@@ -79,6 +79,21 @@ val integrationTest by tasks.registering(Test::class) {
     // 우리는 UTC가 아닌 JVM에서도 시각이 UTC로 저장되는지 확인하려고, 일부러 한국 표준시(KST)로 JVM을 띄운다.
     jvmArgs("-Duser.timezone=Asia/Seoul")
     shouldRunAfter(tasks.test)
+}
+
+// 실제 OpenAI를 호출해 문장 해석 정확도를 재는 평가다. 비용이 들어서 check에는 넣지 않고, OPENAI_API_KEY를 넣고 직접 실행한다.
+val aiSearchEval by tasks.registering(Test::class) {
+    description = "OpenAI를 실제로 호출해 AI 검색 문장 해석 정확도를 평가한다. OPENAI_API_KEY가 필요하다."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("ai-eval")
+    }
+    outputs.upToDateWhen { false }
+    testLogging {
+        showStandardStreams = true
+    }
 }
 
 // 운영 이미지(Dockerfile)는 build/libs에 있는 jar 하나를 가져간다. 그래서 실행할 수 없는 plain jar는 만들지 않는다.
