@@ -1,7 +1,7 @@
 package com.moewadeul.trust.api.profile;
 
 import com.moewadeul.common.web.PatchField;
-import com.moewadeul.member.application.MyInfoUpdateCommand;
+import com.moewadeul.member.application.profile.MyInfoUpdateCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**

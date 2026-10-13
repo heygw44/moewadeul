@@ -5,6 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.application.signup.MemberSignupService;
+import com.moewadeul.member.application.signup.SignupCommand;
+import com.moewadeul.member.application.signup.SignupResult;
+import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.MemberException;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.DisplayName;

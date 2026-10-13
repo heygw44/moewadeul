@@ -2,7 +2,7 @@ package com.moewadeul.trust.application.companion;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.member.application.MemberProfileService;
+import com.moewadeul.member.application.profile.MemberProfileService;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.CompanionReviewPolicy;
 import com.moewadeul.trust.infra.companion.CompanionReviewMapper;

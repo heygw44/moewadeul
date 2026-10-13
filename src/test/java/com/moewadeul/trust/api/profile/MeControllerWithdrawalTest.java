@@ -12,7 +12,7 @@ import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.LoginSessionManager;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
-import com.moewadeul.member.application.MyInfoService;
+import com.moewadeul.member.application.profile.MyInfoService;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import java.util.List;

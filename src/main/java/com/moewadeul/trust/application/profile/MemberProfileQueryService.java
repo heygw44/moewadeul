@@ -1,7 +1,7 @@
 package com.moewadeul.trust.application.profile;
 
-import com.moewadeul.member.application.MemberProfile;
-import com.moewadeul.member.application.MemberProfileService;
+import com.moewadeul.member.application.profile.MemberProfile;
+import com.moewadeul.member.application.profile.MemberProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
