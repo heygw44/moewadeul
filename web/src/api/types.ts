@@ -115,13 +115,37 @@ export interface NearbySpot extends SpotMarker {
   distanceKm: number;
 }
 
+export type SpotSetting = 'MOUNTAIN' | 'FOREST' | 'VALLEY' | 'BEACH' | 'ISLAND' | 'RIVER' | 'LAKE' | 'CITY';
+
 export interface SpotNearbyQuery {
   lat: number;
   lng: number;
   radiusKm: number;
+  // 영역 조회와 같은 조건이다. 비우거나 false로 두면 거르지 않는다.
+  types?: SpotType[];
+  settings?: SpotSetting[];
+  hasWater?: boolean;
+  hasToilet?: boolean;
+  excludeWarning?: boolean;
+  hideClosed?: boolean;
+  // 쪽 번호는 0부터이고, size는 50까지다.
+  page?: number;
+  size?: number;
 }
 
-export type SpotSetting = 'MOUNTAIN' | 'FOREST' | 'VALLEY' | 'BEACH' | 'ISLAND' | 'RIVER' | 'LAKE' | 'CITY';
+// AI가 문장에서 읽어 낸 장소 검색 조건이다. 읽어 내지 못한 조건은 응답에서 빠지므로 모두 선택 속성이다.
+// unparsed는 조건으로 바꾸지 못한 말이고, 항상 온다.
+export interface AiInterpretResponse {
+  region?: string;
+  radiusKm?: number;
+  types?: SpotType[];
+  hasWater?: boolean;
+  hasToilet?: boolean;
+  excludeWarning?: boolean;
+  hideClosed?: boolean;
+  settings?: SpotSetting[];
+  unparsed: string[];
+}
 
 export interface SpotAreaQuery {
   swLat: number;
