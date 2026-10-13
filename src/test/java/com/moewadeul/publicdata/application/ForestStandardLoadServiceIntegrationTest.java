@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -294,7 +295,7 @@ class ForestStandardLoadServiceIntegrationTest {
         publicSpotSyncService.upsert(
                 PublicSpotSource.FOREST,
                 List.of(new PublicSpotCommand(
-                        externalId, name, lat, lng, null, null, null, null, null, null, null, null, null)));
+                        externalId, name, lat, lng, null, null, null, null, null, null, null, null, null, Set.of())));
     }
 
     private String statusOf(String name) {

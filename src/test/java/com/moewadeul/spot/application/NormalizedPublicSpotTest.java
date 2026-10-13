@@ -7,6 +7,7 @@ import com.moewadeul.spot.infra.PublicSpotRow;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +34,8 @@ class NormalizedPublicSpotTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                Set.of());
 
         // when
         NormalizedPublicSpot spot = NormalizedPublicSpot.from(command);
@@ -64,7 +66,8 @@ class NormalizedPublicSpotTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                Set.of());
 
         // when
         NormalizedPublicSpot spot = NormalizedPublicSpot.from(command);
@@ -83,7 +86,20 @@ class NormalizedPublicSpotTest {
         String camping = Character.toString(CAMPING_EMOJI_CODE_POINT);
         String name = "가".repeat(NormalizedPublicSpot.MAX_NAME_LENGTH - 1) + camping + camping;
         PublicSpotCommand command = new PublicSpotCommand(
-                "100", name, SEOUL_LATITUDE, SEOUL_LONGITUDE, null, null, null, null, null, null, null, null, null);
+                "100",
+                name,
+                SEOUL_LATITUDE,
+                SEOUL_LONGITUDE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Set.of());
 
         // when
         NormalizedPublicSpot spot = NormalizedPublicSpot.from(command);
@@ -111,7 +127,8 @@ class NormalizedPublicSpotTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                Set.of());
 
         // when
         NormalizedPublicSpot spot = NormalizedPublicSpot.from(command);
@@ -141,7 +158,8 @@ class NormalizedPublicSpotTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                Set.of());
         PublicSpotCommand withBlankFacilities = new PublicSpotCommand(
                 "101",
                 "갈대 야영장",
@@ -155,7 +173,8 @@ class NormalizedPublicSpotTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                Set.of());
 
         // when
         NormalizedPublicSpot spot = NormalizedPublicSpot.from(withFacilities);
@@ -171,9 +190,35 @@ class NormalizedPublicSpotTest {
     void rejectsBlankExternalIdOrName() {
         // given
         PublicSpotCommand blankExternalId = new PublicSpotCommand(
-                " ", "솔숲 야영장", SEOUL_LATITUDE, SEOUL_LONGITUDE, null, null, null, null, null, null, null, null, null);
+                " ",
+                "솔숲 야영장",
+                SEOUL_LATITUDE,
+                SEOUL_LONGITUDE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Set.of());
         PublicSpotCommand blankName = new PublicSpotCommand(
-                "100", "", SEOUL_LATITUDE, SEOUL_LONGITUDE, null, null, null, null, null, null, null, null, null);
+                "100",
+                "",
+                SEOUL_LATITUDE,
+                SEOUL_LONGITUDE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Set.of());
 
         // when & then
         assertThatThrownBy(() -> NormalizedPublicSpot.from(blankExternalId))
@@ -199,7 +244,8 @@ class NormalizedPublicSpotTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                Set.of());
 
         // when & then
         assertThatThrownBy(() -> NormalizedPublicSpot.from(command)).isInstanceOf(IllegalArgumentException.class);
@@ -209,8 +255,8 @@ class NormalizedPublicSpotTest {
     @DisplayName("[F-06] 기상청 격자 밖 좌표는 저장할 수 없는 값으로 거부한다")
     void rejectsCoordinateOutsideWeatherGrid() {
         // given
-        PublicSpotCommand command =
-                new PublicSpotCommand("100", "적도 야영장", 0, 0, null, null, null, null, null, null, null, null, null);
+        PublicSpotCommand command = new PublicSpotCommand(
+                "100", "적도 야영장", 0, 0, null, null, null, null, null, null, null, null, null, Set.of());
 
         // when & then
         assertThatThrownBy(() -> NormalizedPublicSpot.from(command)).isInstanceOf(IllegalArgumentException.class);
@@ -221,7 +267,7 @@ class NormalizedPublicSpotTest {
     void treatsCoordinateWithinFloatingPointErrorAsUnchanged() {
         // given: 실제 MySQL에서 127.7298을 저장하고 ST_Longitude로 읽으면 127.72979999999998이 나왔다.
         NormalizedPublicSpot spot = NormalizedPublicSpot.from(new PublicSpotCommand(
-                "100", "솔숲 야영장", 37.8813, 127.7298, null, null, null, null, null, null, null, null, null));
+                "100", "솔숲 야영장", 37.8813, 127.7298, null, null, null, null, null, null, null, null, null, Set.of()));
         PublicSpotRow stored = storedRow(37.8813, 127.72979999999998);
 
         // when
@@ -236,7 +282,7 @@ class NormalizedPublicSpotTest {
     void treatsCoordinateBeyondToleranceAsChanged() {
         // given: 1e-6도는 허용 오차 1e-7도의 열 배이고 약 10cm다.
         NormalizedPublicSpot spot = NormalizedPublicSpot.from(new PublicSpotCommand(
-                "100", "솔숲 야영장", 37.8813, 127.7298, null, null, null, null, null, null, null, null, null));
+                "100", "솔숲 야영장", 37.8813, 127.7298, null, null, null, null, null, null, null, null, null, Set.of()));
         PublicSpotRow movedLatitude = storedRow(37.8813 + 1e-6, 127.7298);
         PublicSpotRow movedLongitude = storedRow(37.8813, 127.7298 + 1e-6);
 
@@ -349,7 +395,8 @@ class NormalizedPublicSpotTest {
                 null,
                 null,
                 null,
-                sourceDate);
+                sourceDate,
+                Set.of());
     }
 
     private static PublicSpotRow sourceDateRow(LocalDate sourceDate) {
@@ -386,7 +433,8 @@ class NormalizedPublicSpotTest {
                 operatingStatus,
                 closedFrom,
                 closedUntil,
-                null);
+                null,
+                Set.of());
     }
 
     private static PublicSpotRow detailRow(String operatingStatus, LocalDate closedFrom, LocalDate closedUntil) {

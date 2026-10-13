@@ -60,6 +60,16 @@
         <if test="nearby.excludeWarning">
           AND s.park_warning = FALSE
         </if>
+        <if test="!nearby.settings.isEmpty()">
+          AND EXISTS (
+              SELECT 1
+              FROM public_spot_setting ps
+              WHERE ps.spot_id = s.id
+                AND ps.setting IN
+                <foreach collection="nearby.settings" item="setting" open="(" separator="," close=")">
+                    #{setting}
+                </foreach>)
+        </if>
         <if test="nearby.hideClosed">
           AND NOT (
                 s.type &lt;&gt; 'BAKJI'

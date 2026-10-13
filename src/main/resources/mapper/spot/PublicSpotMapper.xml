@@ -157,6 +157,32 @@
         </foreach>
     </select>
 
+    <select id="selectSettings" resultType="com.moewadeul.spot.infra.PublicSpotSettingRow">
+        SELECT spot_id AS spot_id,
+               setting AS setting
+        FROM public_spot_setting
+        WHERE spot_id IN
+        <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
+            #{spotId}
+        </foreach>
+    </select>
+
+    <delete id="deleteSettings">
+        DELETE FROM public_spot_setting
+        WHERE spot_id IN
+        <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
+            #{spotId}
+        </foreach>
+    </delete>
+
+    <insert id="insertSettings">
+        INSERT INTO public_spot_setting (spot_id, setting)
+        VALUES
+        <foreach collection="settings" item="row" separator=",">
+            (#{row.spotId}, #{row.setting})
+        </foreach>
+    </insert>
+
     <select id="selectLocationsBySource" resultType="com.moewadeul.spot.infra.PublicSpotLocationRow">
         SELECT d.external_id AS external_id,
                s.name AS name,

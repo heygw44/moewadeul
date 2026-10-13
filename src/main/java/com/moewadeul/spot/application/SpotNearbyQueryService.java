@@ -53,6 +53,7 @@ public class SpotNearbyQueryService {
                 box.neLat(),
                 box.neLng(),
                 query.types(),
+                query.settings(),
                 query.hasWater(),
                 query.hasToilet(),
                 query.excludeWarning(),

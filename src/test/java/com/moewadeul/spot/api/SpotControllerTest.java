@@ -12,6 +12,7 @@ import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
+import com.moewadeul.spot.application.PublicSpotSetting;
 import com.moewadeul.spot.application.PublicSpotSource;
 import com.moewadeul.spot.application.SpotAreaQuery;
 import com.moewadeul.spot.application.SpotAreaResult;
@@ -156,7 +157,16 @@ class SpotControllerTest {
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(capturedQuery())
                 .isEqualTo(new SpotAreaQuery(
-                        37.0, 127.0, 38.0, 128.0, Set.of(SpotType.CAMPSITE, SpotType.BAKJI), true, false, true, true));
+                        37.0,
+                        127.0,
+                        38.0,
+                        128.0,
+                        Set.of(SpotType.CAMPSITE, SpotType.BAKJI),
+                        Set.of(),
+                        true,
+                        false,
+                        true,
+                        true));
     }
 
     @Test
@@ -188,7 +198,7 @@ class SpotControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(capturedQuery())
-                .isEqualTo(new SpotAreaQuery(37.0, 127.0, 38.0, 128.0, Set.of(), false, false, false, false));
+                .isEqualTo(new SpotAreaQuery(37.0, 127.0, 38.0, 128.0, Set.of(), Set.of(), false, false, false, false));
     }
 
     @Test
@@ -265,6 +275,84 @@ class SpotControllerTest {
         assertInvalidInput(result, field);
     }
 
+    @Test
+    @DisplayName("[F-31] 쉼표로 구분한 입지를 영역 조회 조건에 넣는다")
+    void settingsAreParsedIntoAreaQuery() {
+        // given
+        whenServiceReturnsEmpty();
+        Map<String, String> params = validParams();
+        params.put("settings", "VALLEY,BEACH");
+
+        // when
+        MvcTestResult result = get(params);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(capturedQuery().settings())
+                .containsExactlyInAnyOrder(PublicSpotSetting.VALLEY, PublicSpotSetting.BEACH);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"SEA", "valley", "VALLEY,,BEACH"})
+    @DisplayName("[F-31] 모르는 입지나 빈 입지가 있으면 400 INVALID_INPUT을 응답하고 영역 조회를 하지 않는다")
+    void unknownSettingReturnsInvalidInput(String settings) {
+        // given
+        Map<String, String> params = validParams();
+        params.put("settings", settings);
+
+        // when
+        MvcTestResult result = get(params);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[?(@.field =~ /settings.*/)]")
+                .asList()
+                .isNotEmpty();
+        verifyNoInteractions(spotMapQueryService);
+    }
+
+    @Test
+    @DisplayName("[F-31] 쉼표로 구분한 입지를 반경 검색 조건에 넣는다")
+    void settingsAreParsedIntoNearbyQuery() {
+        // given
+        whenNearbyServiceReturnsEmpty();
+        Map<String, String> params = validNearbyParams();
+        params.put("settings", "VALLEY,BEACH");
+
+        // when
+        MvcTestResult result = getNearby(params);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(capturedNearbyQuery().settings())
+                .containsExactlyInAnyOrder(PublicSpotSetting.VALLEY, PublicSpotSetting.BEACH);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"SEA", "valley", "VALLEY,,BEACH"})
+    @DisplayName("[F-31] 모르는 입지나 빈 입지가 있으면 반경 검색도 400 INVALID_INPUT을 응답하고 조회하지 않는다")
+    void unknownSettingReturnsInvalidInputForNearby(String settings) {
+        // given
+        Map<String, String> params = validNearbyParams();
+        params.put("settings", settings);
+
+        // when
+        MvcTestResult result = getNearby(params);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[?(@.field =~ /settings.*/)]")
+                .asList()
+                .isNotEmpty();
+        verifyNoInteractions(spotNearbyQueryService);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"UNKNOWN", "campsite", "CAMPSITE,PARK", "CAMPSITE,,FOREST"})
     @DisplayName("[F-03] 모르는 유형이나 빈 유형이 있으면 400 INVALID_INPUT을 응답하고 조회하지 않는다")
@@ -329,7 +417,8 @@ class SpotControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(capturedNearbyQuery())
-                .isEqualTo(new SpotNearbyQuery(37.5, 127.0, 10.0, Set.of(), false, false, false, false, 0, 20));
+                .isEqualTo(
+                        new SpotNearbyQuery(37.5, 127.0, 10.0, Set.of(), Set.of(), false, false, false, false, 0, 20));
     }
 
     @Test
@@ -352,7 +441,17 @@ class SpotControllerTest {
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(capturedNearbyQuery())
                 .isEqualTo(new SpotNearbyQuery(
-                        37.5, 127.0, 10.0, Set.of(SpotType.CAMPSITE, SpotType.BAKJI), false, true, true, true, 2, 50));
+                        37.5,
+                        127.0,
+                        10.0,
+                        Set.of(SpotType.CAMPSITE, SpotType.BAKJI),
+                        Set.of(),
+                        false,
+                        true,
+                        true,
+                        true,
+                        2,
+                        50));
     }
 
     @Test

@@ -44,6 +44,9 @@ public class SpotMapQueryService {
      * 상한을 넘는지는 영역 안 장소 수로 정확히 판단한다. 먼저 영역 안에 통째로 든 격자 칸만 세어 상한을 넘으면 바로 묶음을 주고, 그렇지 않을 때만 마커를
      * 상한보다 한 건 더 읽어 판단한다.
      *
+     * <p>입지 필터를 켜면 격자 집계 표에 입지 축이 없어서 먼저 세는 단계를 건너뛰고, 마커를 상한보다 한 건 더 읽어 판단한다. 상한을 넘으면 집계 표
+     * 대신 장소를 직접 세어 묶는다. 입지가 있는 장소는 고캠핑 야영장뿐이라 그 수가 적다.
+     *
      * <p>모든 조회를 읽기 전용 트랜잭션 하나에서 실행한다. 그래서 MySQL은 모든 조회에 같은 스냅숏을 보여 주고, 그 사이 다른 트랜잭션이 장소를 바꿔도
      * 판단과 묶음 결과가 어긋나지 않는다.
      */
@@ -54,7 +57,7 @@ public class SpotMapQueryService {
         SpotClusterGrid grid = toGrid(query);
         SpotGridCells cells = SpotGridCells.covering(
                 query.swLat(), query.swLng(), query.neLat(), query.neLng(), Math.min(grid.cellLat(), grid.cellLng()));
-        if (countCertainlyInArea(condition, cells) > MAX_ITEMS) {
+        if (!condition.filtersSettings() && countCertainlyInArea(condition, cells) > MAX_ITEMS) {
             return new SpotAreaResult(List.of(), findClusters(condition, grid, cells));
         }
         List<SpotMarkerRow> rows = spotAreaMapper.selectMarkers(condition, MAX_ITEMS + 1);
@@ -77,9 +80,18 @@ public class SpotMapQueryService {
     }
 
     private List<SpotCluster> findClusters(SpotAreaCondition condition, SpotClusterGrid grid, SpotGridCells cells) {
-        return spotAreaMapper.selectClusters(condition, grid, cells).stream()
+        return selectClusterRows(condition, grid, cells).stream()
                 .map(SpotMapQueryService::toCluster)
                 .toList();
+    }
+
+    // 입지 필터는 격자 집계 표에 없는 조건이라, 켜면 집계 표 대신 장소를 직접 센다.
+    private List<SpotClusterRow> selectClusterRows(
+            SpotAreaCondition condition, SpotClusterGrid grid, SpotGridCells cells) {
+        if (condition.filtersSettings()) {
+            return spotAreaMapper.selectSettingClusters(condition, grid);
+        }
+        return spotAreaMapper.selectClusters(condition, grid, cells);
     }
 
     private static SpotClusterGrid toGrid(SpotAreaQuery query) {
@@ -96,6 +108,7 @@ public class SpotMapQueryService {
                 query.neLat(),
                 query.neLng(),
                 query.types(),
+                query.settings(),
                 query.hasWater(),
                 query.hasToilet(),
                 query.excludeWarning(),

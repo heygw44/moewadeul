@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.entry;
 import com.moewadeul.publicdata.infra.GoCampingItem;
 import com.moewadeul.spot.application.PublicSpotCommand;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
+import com.moewadeul.spot.application.PublicSpotSetting;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -74,6 +75,7 @@ class GoCampingItemConverterTest {
                 "운영",
                 "",
                 "",
+                "",
                 "");
 
         // when
@@ -90,6 +92,48 @@ class GoCampingItemConverterTest {
                         entry("wtrplCo", "0"),
                         entry("sbrsCl", "전기,물놀이장,놀이터"),
                         entry("animalCmgCl", "불가능"));
+    }
+
+    @Test
+    @DisplayName("[F-31] 쉼표로 구분한 입지를 각각 입지 값으로 바꾼다")
+    void convertsCommaSeparatedSettings() {
+        // when
+        PublicSpotCommand command = convertWithSettings("산,숲,계곡");
+
+        // then
+        assertThat(command.settings())
+                .containsExactlyInAnyOrder(
+                        PublicSpotSetting.MOUNTAIN, PublicSpotSetting.FOREST, PublicSpotSetting.VALLEY);
+    }
+
+    @Test
+    @DisplayName("[F-31] 입지 값 앞뒤 공백은 지우고, 비어 있거나 없는 입지는 빈 집합으로 둔다")
+    void stripsSettingWhitespaceAndTreatsBlankAsEmpty() {
+        // when, then
+        assertThat(convertWithSettings(" 산 , 강 ").settings())
+                .containsExactlyInAnyOrder(PublicSpotSetting.MOUNTAIN, PublicSpotSetting.RIVER);
+        assertThat(convertWithSettings("").settings()).isEmpty();
+        assertThat(convertWithSettings(null).settings()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-31] 모르는 입지는 버리고 아는 입지만 남긴다")
+    void discardsUnknownSetting() {
+        // when
+        PublicSpotCommand command = convertWithSettings("산,바다");
+
+        // then
+        assertThat(command.settings()).containsExactly(PublicSpotSetting.MOUNTAIN);
+    }
+
+    @Test
+    @DisplayName("[F-31] 같은 입지가 여러 번 와도 한 번만 담는다")
+    void keepsDuplicateSettingOnce() {
+        // when
+        PublicSpotCommand command = convertWithSettings("산,산");
+
+        // then
+        assertThat(command.settings()).containsExactly(PublicSpotSetting.MOUNTAIN);
     }
 
     @Test
@@ -189,22 +233,29 @@ class GoCampingItemConverterTest {
                         manageSttus,
                         hvofBgnde,
                         hvofEnddle,
-                        "2026-10-02"))
+                        "2026-10-02",
+                        ""))
+                .orElseThrow();
+    }
+
+    private static PublicSpotCommand convertWithSettings(String lctCl) {
+        return GoCampingItemConverter.convert(gangbyeonSari(
+                        "", "127.190085215523", "35.4952105728394", "U", "운영", "", "", "2026-10-02", lctCl))
                 .orElseThrow();
     }
 
     private static PublicSpotCommand convertWithModifiedTime(String modifiedtime) {
         return GoCampingItemConverter.convert(
-                        gangbyeonSari("", "127.190085215523", "35.4952105728394", "U", "운영", "", "", modifiedtime))
+                        gangbyeonSari("", "127.190085215523", "35.4952105728394", "U", "운영", "", "", modifiedtime, ""))
                 .orElseThrow();
     }
 
     private static GoCampingItem withSyncStatus(String syncStatus) {
-        return gangbyeonSari("", "127.190085215523", "35.4952105728394", syncStatus, "운영", "", "", "2026-10-02");
+        return gangbyeonSari("", "127.190085215523", "35.4952105728394", syncStatus, "운영", "", "", "2026-10-02", "");
     }
 
     private static GoCampingItem gangbyeonSari(String addr2, String mapX, String mapY) {
-        return gangbyeonSari(addr2, mapX, mapY, "A", "운영", "", "", "2026-10-02");
+        return gangbyeonSari(addr2, mapX, mapY, "A", "운영", "", "", "2026-10-02", "");
     }
 
     private static GoCampingItem gangbyeonSari(
@@ -215,7 +266,8 @@ class GoCampingItemConverterTest {
             String manageSttus,
             String hvofBgnde,
             String hvofEnddle,
-            String modifiedtime) {
+            String modifiedtime,
+            String lctCl) {
         return new GoCampingItem(
                 "146",
                 "강변사리 캠핑장",
@@ -239,6 +291,7 @@ class GoCampingItemConverterTest {
                 manageSttus,
                 hvofBgnde,
                 hvofEnddle,
-                modifiedtime);
+                modifiedtime,
+                lctCl);
     }
 }

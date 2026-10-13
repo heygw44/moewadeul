@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -308,7 +309,8 @@ class ForestLoadServiceIntegrationTest {
         publicSpotSyncService.upsert(
                 PublicSpotSource.GOCAMPING,
                 List.of(new PublicSpotCommand(
-                        "0116", "솔숲 야영장", 37.5665, 126.978, null, null, null, null, null, null, null, null, null)));
+                        "0116", "솔숲 야영장", 37.5665, 126.978, null, null, null, null, null, null, null, null, null,
+                        Set.of())));
 
         // when
         ForestLoadResult result = forestLoadService.load(fixture()).orElseThrow();

@@ -1,5 +1,6 @@
 package com.moewadeul.spot.api;
 
+import com.moewadeul.spot.application.PublicSpotSetting;
 import com.moewadeul.spot.application.SpotNearbyQuery;
 import com.moewadeul.spot.domain.SpotType;
 import jakarta.validation.constraints.DecimalMax;
@@ -27,6 +28,7 @@ public record SpotNearbyRequest(
         Double radiusKm,
 
         Set<@NotNull(message = "장소 유형에 빈 값이 있어요.") SpotType> types,
+        Set<@NotNull(message = "입지에 빈 값이 있어요.") PublicSpotSetting> settings,
         Boolean hasWater,
         Boolean hasToilet,
         Boolean excludeWarning,
@@ -46,6 +48,7 @@ public record SpotNearbyRequest(
                 lng,
                 radiusKm,
                 types == null ? Set.of() : types,
+                settings == null ? Set.of() : settings,
                 Boolean.TRUE.equals(hasWater),
                 Boolean.TRUE.equals(hasToilet),
                 Boolean.TRUE.equals(excludeWarning),

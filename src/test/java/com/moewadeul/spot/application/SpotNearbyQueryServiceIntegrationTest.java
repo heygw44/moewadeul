@@ -153,6 +153,30 @@ class SpotNearbyQueryServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-31] 입지를 지정하면 그 입지가 하나라도 맞는 야영장만 찾고, 지정하지 않으면 모두 찾는다")
+    void filtersBySettingsOnlyWhenSettingsAreGiven() {
+        // given
+        long valleyId = insertCampsiteWithSettings("계곡 야영장", NORTH_2_KM, "VALLEY");
+        long beachId = insertCampsiteWithSettings("해변 야영장", EAST_5_KM, "BEACH");
+        long multiId = insertCampsiteWithSettings("산 호수 야영장", SOUTH_8_KM, "MOUNTAIN", "LAKE");
+        long noSettingId = insertSpot("CAMPSITE", "입지 없는 야영장", NORTH_9_8_KM);
+        long forestId = insertSpot("FOREST", "휴양림", SOUTH_9_8_KM);
+
+        // when
+        SpotNearbyPage valley = spotNearbyQueryService.findNearby(querying(Set.of(PublicSpotSetting.VALLEY)));
+        SpotNearbyPage anyOf =
+                spotNearbyQueryService.findNearby(querying(Set.of(PublicSpotSetting.BEACH, PublicSpotSetting.LAKE)));
+        SpotNearbyPage all = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+
+        // then
+        assertThat(valley.content()).extracting(SpotNearbyItem::spotId).containsExactly(valleyId);
+        assertThat(anyOf.content()).extracting(SpotNearbyItem::spotId).containsExactly(beachId, multiId);
+        assertThat(all.content())
+                .extracting(SpotNearbyItem::spotId)
+                .containsExactly(valleyId, beachId, multiId, noSettingId, forestId);
+    }
+
+    @Test
     @DisplayName("[F-04] 공원 경계 경고가 붙은 장소는 경고 표시와 함께 나오고, 경고 제외를 켜면 빠진다")
     void reportsParkWarningAndExcludesWarnedSpotsOnRequest() {
         // given
@@ -302,8 +326,14 @@ class SpotNearbyQueryServiceIntegrationTest {
         return query(center, radiusKm, Set.of(), false, false, false, 0, 20);
     }
 
+    private static SpotNearbyQuery querying(Set<PublicSpotSetting> settings) {
+        return new SpotNearbyQuery(
+                CENTER.lat(), CENTER.lng(), RADIUS_KM, Set.of(), settings, false, false, false, false, 0, 20);
+    }
+
     private static SpotNearbyQuery hidingClosed(Coordinate center, double radiusKm) {
-        return new SpotNearbyQuery(center.lat(), center.lng(), radiusKm, Set.of(), false, false, false, true, 0, 20);
+        return new SpotNearbyQuery(
+                center.lat(), center.lng(), radiusKm, Set.of(), Set.of(), false, false, false, true, 0, 20);
     }
 
     private static SpotNearbyQuery query(
@@ -316,7 +346,17 @@ class SpotNearbyQueryServiceIntegrationTest {
             int page,
             int size) {
         return new SpotNearbyQuery(
-                center.lat(), center.lng(), radiusKm, types, hasWater, hasToilet, excludeWarning, false, page, size);
+                center.lat(),
+                center.lng(),
+                radiusKm,
+                types,
+                Set.of(),
+                hasWater,
+                hasToilet,
+                excludeWarning,
+                false,
+                page,
+                size);
     }
 
     private long insertSpot(String type, String name, Coordinate at) {
@@ -368,6 +408,15 @@ class SpotNearbyQueryServiceIntegrationTest {
                 operatingStatus,
                 closedFrom,
                 closedUntil);
+    }
+
+    private long insertCampsiteWithSettings(String name, Coordinate at, String... settings) {
+        long spotId = insertSpot("CAMPSITE", name, at);
+        insertPublicDetail(spotId, "GOCAMPING", null, null, null);
+        for (String setting : settings) {
+            jdbcTemplate.update("INSERT INTO public_spot_setting (spot_id, setting) VALUES (?, ?)", spotId, setting);
+        }
+        return spotId;
     }
 
     private long insertMember() {
