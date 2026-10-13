@@ -23,11 +23,12 @@ spring:
       # SPRING_SESSION 테이블은 Flyway가 만든다. Spring Session이 스키마 스크립트를 따로 실행하지 않게 끈다.
       initialize-schema: never
   mail:
-    # 네이버 SMTP는 STARTTLS 587 포트를 쓴다. 평문으로 연결한 뒤 TLS로 올리므로, 올리지 못하면 연결을 끊도록 required까지 켠다.
+    # Gmail SMTP는 STARTTLS 587 포트를 쓴다. 평문으로 연결한 뒤 TLS로 올리므로, 올리지 못하면 연결을 끊도록 required까지 켠다.
     # 그렇지 않으면 TLS 없이 인증 정보와 메일 본문이 오갈 수 있다.
-    # 계정에 2단계 인증을 켜면 일반 비밀번호로는 SMTP에 로그인할 수 없다. 그래서 MAIL_APP_PASSWORD에는 네이버가 발급한 앱 비밀번호를 넣는다.
+    # Gmail은 일반 계정 비밀번호로 SMTP에 로그인하지 못하게 한다. 그래서 계정에 2단계 인증을 켜고,
+    # MAIL_APP_PASSWORD에는 Google이 발급한 앱 비밀번호를 넣는다.
     # 이 값들은 비밀값이라 파일에 쓰지 않고 환경 변수로만 받는다. 값이 없으면 앱은 뜨지만 메일 발송은 실패한다.
-    host: ${MAIL_HOST:smtp.naver.com}
+    host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_APP_PASSWORD:}
@@ -105,8 +106,10 @@ moewadeul:
     # 값이 없거나 32바이트보다 짧으면 앱이 시작하지 않는다. 키를 바꾸면 저장해 둔 CI 해시와 새 해시가 달라지므로 운영 키는 바꾸지 않는다.
     ci-hmac-key: ${CI_HMAC_KEY:}
   mail:
-    # 네이버 SMTP는 발신 주소가 인증한 계정과 다르면 메일을 거부한다. 그래서 기본값을 SMTP 계정으로 둔다.
+    # Gmail은 발신 주소가 로그인한 계정과 다르면 계정 주소로 바꿔서 보낸다. 그래서 기본값을 SMTP 계정으로 둔다.
     from: ${spring.mail.username:}
+    # 받는 사람의 메일함에 주소 대신 보이는 발신자 이름이다.
+    from-name: ${MAIL_FROM_NAME:뫼와들}
   web:
     # 메일 안의 링크에 쓰는 프론트엔드 주소다. 로컬 기본값은 Vite 개발 서버다.
     base-url: ${WEB_BASE_URL:http://localhost:5173}
