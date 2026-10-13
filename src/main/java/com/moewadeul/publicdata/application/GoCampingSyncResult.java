@@ -1,6 +1,6 @@
 package com.moewadeul.publicdata.application;
 
-import com.moewadeul.spot.application.PublicSpotUpsertResult;
+import com.moewadeul.spot.application.publicspot.PublicSpotUpsertResult;
 
 /**
  * 고캠핑 동기화를 한 번 실행한 결과. 건수는 이번 실행이 처리한 페이지만 센다. 그래서 실패한 실행을 이어받은 실행이면 이어받기 전 페이지는 들어 있지 않다.

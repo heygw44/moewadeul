@@ -6,9 +6,9 @@ import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.spot.application.PublicSpotCommand;
-import com.moewadeul.spot.application.PublicSpotSource;
-import com.moewadeul.spot.application.PublicSpotSyncService;
+import com.moewadeul.spot.application.publicspot.PublicSpotCommand;
+import com.moewadeul.spot.application.publicspot.PublicSpotSource;
+import com.moewadeul.spot.application.publicspot.PublicSpotSyncService;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;

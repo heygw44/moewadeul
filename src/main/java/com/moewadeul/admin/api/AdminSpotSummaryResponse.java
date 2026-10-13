@@ -1,7 +1,7 @@
 package com.moewadeul.admin.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.moewadeul.spot.application.AdminSpotSummary;
+import com.moewadeul.spot.application.moderation.AdminSpotSummary;
 import java.time.Instant;
 import java.util.List;
 

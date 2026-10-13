@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.publicdata.application.ForestStandardMatcher.Forest;
 import com.moewadeul.publicdata.application.ForestStandardMatcher.Result;
 import com.moewadeul.publicdata.infra.ForestStandardRecord;
-import com.moewadeul.spot.application.PublicSpotLocation;
+import com.moewadeul.spot.application.publicspot.PublicSpotLocation;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

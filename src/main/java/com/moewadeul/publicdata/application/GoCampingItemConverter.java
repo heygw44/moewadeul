@@ -1,9 +1,9 @@
 package com.moewadeul.publicdata.application;
 
 import com.moewadeul.publicdata.infra.GoCampingItem;
-import com.moewadeul.spot.application.PublicSpotCommand;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.PublicSpotSetting;
+import com.moewadeul.spot.application.publicspot.PublicSpotCommand;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
