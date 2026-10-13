@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.notification.application.OutboxPublisher;
+import com.moewadeul.notification.application.outbox.OutboxPublisher;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import java.time.LocalDate;
 import java.util.List;

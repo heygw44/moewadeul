@@ -1,8 +1,8 @@
 package com.moewadeul.trust.api.profile;
 
 import com.moewadeul.common.security.LoginMember;
-import com.moewadeul.member.application.MemberProfile;
-import com.moewadeul.member.application.MemberProfileService;
+import com.moewadeul.member.application.profile.MemberProfile;
+import com.moewadeul.member.application.profile.MemberProfileService;
 import com.moewadeul.trust.application.profile.MemberProfileQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

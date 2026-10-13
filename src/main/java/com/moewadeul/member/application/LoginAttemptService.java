@@ -1,8 +1,9 @@
 package com.moewadeul.member.application;
 
-import com.moewadeul.member.domain.LoginHistory;
-import com.moewadeul.member.domain.LoginHistoryRepository;
-import com.moewadeul.member.domain.LoginLockout;
+import com.moewadeul.member.application.login.MemberLoginService;
+import com.moewadeul.member.domain.login.LoginHistory;
+import com.moewadeul.member.domain.login.LoginHistoryRepository;
+import com.moewadeul.member.domain.login.LoginLockout;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

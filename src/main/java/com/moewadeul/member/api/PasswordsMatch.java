@@ -19,7 +19,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = PasswordsMatch.Validator.class)
-@interface PasswordsMatch {
+public @interface PasswordsMatch {
 
     String message() default "비밀번호 확인이 비밀번호와 달라요.";
 

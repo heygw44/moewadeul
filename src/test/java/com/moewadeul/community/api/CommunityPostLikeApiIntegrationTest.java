@@ -4,7 +4,7 @@ import static com.moewadeul.community.api.CommunityApiFixture.POSTS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.member.application.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;

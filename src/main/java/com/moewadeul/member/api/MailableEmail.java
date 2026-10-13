@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = MailableEmail.Validator.class)
-@interface MailableEmail {
+public @interface MailableEmail {
 
     String message() default "이메일 도메인에 점이 있어야 하고 IP 주소는 쓸 수 없어요.";
 

@@ -1,6 +1,6 @@
 package com.moewadeul.trust.api.profile;
 
-import com.moewadeul.member.application.MyInfo;
+import com.moewadeul.member.application.profile.MyInfo;
 import com.moewadeul.trust.application.profile.TrustSummary;
 
 /**
