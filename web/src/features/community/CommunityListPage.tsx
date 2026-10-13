@@ -249,7 +249,7 @@ function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
     event.preventDefault();
     const trimmed = text.trim();
     if (trimmed !== '' && trimmed.length < KEYWORD_MIN) {
-      setError(`검색어를 ${KEYWORD_MIN}자 이상 적어 주세요.`);
+      setError('검색어를 두 글자 이상 적어 주세요.');
       return;
     }
     setError(null);
@@ -279,7 +279,7 @@ function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
             setText(event.target.value);
             setError(null);
           }}
-          placeholder="2자 이상"
+          placeholder="두 글자 이상"
           className="min-w-0 flex-1"
         />
         <Button type="submit" variant="secondary">

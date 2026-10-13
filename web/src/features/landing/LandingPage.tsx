@@ -50,7 +50,7 @@ export function LandingPage() {
               근거를 보고 판단해요
             </h2>
             <p className={SECTION_LEAD_CLASS}>
-              공원 경계는 법적 효력이 없는 참고 자료예요. 경고를 단정하지 않고 출처와 기준일을 함께 적어요.
+              공원 경계는 법적 효력이 없는 참고 자료예요.
             </p>
             <div className="mt-12 grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
               <WarningPreview />
@@ -107,7 +107,7 @@ export function LandingPage() {
             <p className="mt-6 max-w-3xl text-lg leading-relaxed text-ink-muted">
               지도에서 갈 곳을 고르면 시설, 후기, 날씨와 그곳으로 가는 베이스캠프가 한 화면에 모여요. 같은 날 같은 곳으로
               가는 베이스캠프에 합류 신청을 보내요. 베이스캠프가 확정되면 멤버끼리만 연락 수단이 보여요. 혼자 가기
-              망설여지면 공식 행사를 신청해 주세요. 정원이 찰 때까지 먼저 신청한 순서대로 받아요.
+              망설여지면 공식 행사를 신청해 주세요.
             </p>
           </div>
         </section>
