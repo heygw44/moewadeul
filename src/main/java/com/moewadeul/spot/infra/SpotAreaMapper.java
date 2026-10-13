@@ -26,6 +26,14 @@ public interface SpotAreaMapper {
     long countClosedInArea(@Param("area") SpotAreaCondition area);
 
     /**
+     * 호출하면 area 안의 ACTIVE 장소 중 조건에 맞는 장소를 격자 집계 표 없이 직접 세어 grid의 화면 칸별 평균 좌표와 장소 수로 읽는다. 입지 필터처럼
+     * 집계 표에 없는 조건이 있을 때 쓴다. 장소 자기 좌표로 화면 칸을 정하고, 휴장 제외도 반영한다. 장소가 없는 칸은 결과에 나오지 않고, 결과는 남쪽
+     * 행부터, 같은 행에서는 서쪽 칸부터 나온다.
+     */
+    List<SpotClusterRow> selectSettingClusters(
+            @Param("area") SpotAreaCondition area, @Param("grid") SpotClusterGrid grid);
+
+    /**
      * 호출하면 미리 세어 둔 cells의 격자 칸을 grid의 화면 칸으로 합쳐 칸마다 평균 좌표와 장소 수를 읽는다. 격자 칸의 장소는 모두 그 격자 칸 중심이 속한
      * 화면 칸에 들어가고, 중심이 영역 밖인 격자 칸은 세지 않는다. 장소가 없는 칸은 결과에 나오지 않고, 결과는 남쪽 행부터, 같은 행에서는 서쪽 칸부터 나온다.
      */

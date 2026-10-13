@@ -84,6 +84,7 @@ class GoCampingClientIntegrationTest {
         assertThat(page.items())
                 .extracting(GoCampingItem::hvofBgnde, GoCampingItem::hvofEnddle)
                 .containsExactly(tuple("", ""), tuple("2026-11-16", "2027-03-15"), tuple("2023-07-20", "2026-12-31"));
+        assertThat(page.items()).extracting(GoCampingItem::lctCl).containsExactly("", "산,숲,계곡", "산,계곡");
     }
 
     @Test

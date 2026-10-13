@@ -3,12 +3,15 @@ package com.moewadeul.publicdata.application;
 import com.moewadeul.publicdata.infra.GoCampingItem;
 import com.moewadeul.spot.application.PublicSpotCommand;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
+import com.moewadeul.spot.application.PublicSpotSetting;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,11 +34,22 @@ final class GoCampingItemConverter {
             "휴장", PublicSpotOperatingStatus.TEMPORARILY_CLOSED,
             "폐업", PublicSpotOperatingStatus.PERMANENTLY_CLOSED);
 
+    private static final Map<String, PublicSpotSetting> SETTINGS = Map.of(
+            "산", PublicSpotSetting.MOUNTAIN,
+            "숲", PublicSpotSetting.FOREST,
+            "계곡", PublicSpotSetting.VALLEY,
+            "해변", PublicSpotSetting.BEACH,
+            "섬", PublicSpotSetting.ISLAND,
+            "강", PublicSpotSetting.RIVER,
+            "호수", PublicSpotSetting.LAKE,
+            "도심", PublicSpotSetting.CITY);
+
     private GoCampingItemConverter() {}
 
     /**
      * 호출하면 항목을 명령으로 바꾼다. ID·이름이 비었거나 좌표를 숫자로 읽을 수 없으면 WARN 로그를 남기고 빈 값을 돌려준다.
      * 운영 상태, 휴장 기간, 원천 수정일은 읽을 수 없으면 null로 두고 항목은 그대로 적재한다.
+     * 입지는 알려진 값만 담고, 비어 있으면 빈 집합이다.
      */
     static Optional<PublicSpotCommand> convert(GoCampingItem item) {
         String externalId = blankToNull(item.contentId());
@@ -63,7 +77,8 @@ final class GoCampingItemConverter {
                 operatingStatus(externalId, item.manageSttus()),
                 parseDate(externalId, "hvofBgnde", item.hvofBgnde()),
                 parseDate(externalId, "hvofEnddle", item.hvofEnddle()),
-                parseDate(externalId, "modifiedtime", item.modifiedtime())));
+                parseDate(externalId, "modifiedtime", item.modifiedtime()),
+                settings(externalId, item.lctCl())));
     }
 
     /** 호출하면 원천에서 삭제된 항목인지 알려 준다. 동기화 목록의 syncStatus가 정확히 D일 때만 삭제로 본다. 다른 값이나 빈 값은 모두 살아 있는 항목이다. */
@@ -82,6 +97,31 @@ final class GoCampingItemConverter {
             log.warn("gocamping item has unknown operating status contentId={} manageSttus={}", externalId, trimmed);
         }
         return status;
+    }
+
+    // 입지는 "산,숲,계곡"처럼 쉼표로 여러 값이 온다. 모르는 값은 버리고, 원천에 새 입지가 생겼음을 알리려고 WARN을 남긴다.
+    private static Set<PublicSpotSetting> settings(String externalId, String value) {
+        Set<PublicSpotSetting> settings = EnumSet.noneOf(PublicSpotSetting.class);
+        String trimmed = blankToNull(value);
+        if (trimmed == null) {
+            return settings;
+        }
+        for (String part : trimmed.split(",")) {
+            addSetting(settings, externalId, blankToNull(part));
+        }
+        return settings;
+    }
+
+    private static void addSetting(Set<PublicSpotSetting> settings, String externalId, String value) {
+        if (value == null) {
+            return;
+        }
+        PublicSpotSetting setting = SETTINGS.get(value);
+        if (setting == null) {
+            log.warn("gocamping item has unknown setting contentId={} lctCl={}", externalId, value);
+            return;
+        }
+        settings.add(setting);
     }
 
     // 원천이 준 날짜 문자열을 읽는다. 비어 있거나 형식이 맞지 않으면 null로 두고, 형식이 틀린 경우에만 WARN을 남긴다.

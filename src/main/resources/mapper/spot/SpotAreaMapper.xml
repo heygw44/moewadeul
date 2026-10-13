@@ -64,6 +64,16 @@
         <if test="area.hideClosed">
           AND NOT <include refid="closedToday"/>
         </if>
+        <if test="!area.settings.isEmpty()">
+          AND EXISTS (
+              SELECT 1
+              FROM public_spot_setting ps
+              WHERE ps.spot_id = s.id
+                AND ps.setting IN
+                <foreach collection="area.settings" item="setting" open="(" separator="," close=")">
+                    #{setting}
+                </foreach>)
+        </if>
     </sql>
 
     <!-- 힌트는 MySQL이 ORDER BY s.id LIMIT를 맞추려고 기본 키 순서로 훑는 계획을 우선하지 않게 한다. 그 계획은 장소가 빽빽한 넓은 영역에서는
@@ -201,6 +211,26 @@
         ) v
         GROUP BY v.view_row, v.view_column
         HAVING SUM(v.spot_count) &gt; 0
+        ORDER BY v.view_row, v.view_column
+    </select>
+
+    <!-- 격자 집계 표에는 입지 축이 없다. 입지가 있는 장소는 고캠핑 야영장(약 3,100곳)뿐이라서, 입지 필터를 켜면 집계 표를 쓰지 않고 장소를 직접 센다.
+         장소 자기 좌표로 화면 칸을 정하므로, 북쪽·동쪽 경계선 위의 장소는 칸 번호가 칸 수와 같아진다. 그래서 LEAST로 마지막 칸에 넣는다.
+         결과는 남쪽 행부터, 같은 행에서는 서쪽 칸부터 나온다. -->
+    <select id="selectSettingClusters" resultType="com.moewadeul.spot.infra.SpotClusterRow">
+        SELECT AVG(v.lat) AS lat,
+               AVG(v.lng) AS lng,
+               COUNT(*) AS spot_count
+        FROM (
+            SELECT s.latitude AS lat,
+                   s.longitude AS lng,
+                   LEAST(FLOOR((s.latitude - #{area.swLat}) / #{grid.cellLat}), #{grid.lastCellIndex}) AS view_row,
+                   LEAST(FLOOR((s.longitude - #{area.swLng}) / #{grid.cellLng}), #{grid.lastCellIndex}) AS view_column
+            FROM spot s
+            <include refid="filterJoins"/>
+            <include refid="spotInAreaCondition"/>
+        ) v
+        GROUP BY v.view_row, v.view_column
         ORDER BY v.view_row, v.view_column
     </select>
 

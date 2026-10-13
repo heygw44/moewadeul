@@ -211,7 +211,8 @@ public class GoCampingClient {
                 textOf(node, "manageSttus"),
                 textOf(node, "hvofBgnde"),
                 textOf(node, "hvofEnddle"),
-                textOf(node, "modifiedtime"));
+                textOf(node, "modifiedtime"),
+                textOf(node, "lctCl"));
     }
 
     private static String textOf(JsonNode node, String field) {

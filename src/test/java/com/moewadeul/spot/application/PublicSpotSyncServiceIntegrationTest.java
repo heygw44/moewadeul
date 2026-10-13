@@ -68,7 +68,8 @@ class PublicSpotSyncServiceIntegrationTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                Set.of());
 
         // when
         PublicSpotUpsertResult result = publicSpotSyncService.upsert(PublicSpotSource.GOCAMPING, List.of(command));
@@ -193,7 +194,8 @@ class PublicSpotSyncServiceIntegrationTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                Set.of());
 
         // when
         PublicSpotUpsertResult result = publicSpotSyncService.upsert(PublicSpotSource.GOCAMPING, List.of(changed));
@@ -783,7 +785,8 @@ class PublicSpotSyncServiceIntegrationTest {
                 null,
                 null,
                 null,
-                sourceDate);
+                sourceDate,
+                Set.of());
     }
 
     private LocalDate findSourceDate(PublicSpotSource source, String externalId) {
@@ -792,6 +795,98 @@ class PublicSpotSyncServiceIntegrationTest {
                 LocalDate.class,
                 source.name(),
                 externalId);
+    }
+
+    @Test
+    @DisplayName("[F-31] 새 야영장의 입지를 public_spot_setting에 저장하고, 입지가 없는 야영장은 행을 만들지 않는다")
+    void insertsSettingsOfNewCampsite() {
+        // given
+        PublicSpotCommand withSettings =
+                campsiteWithSettings("100", Set.of(PublicSpotSetting.MOUNTAIN, PublicSpotSetting.VALLEY));
+        PublicSpotCommand withoutSettings = campsiteWithSettings("101", Set.of());
+
+        // when
+        PublicSpotUpsertResult result =
+                publicSpotSyncService.upsert(PublicSpotSource.GOCAMPING, List.of(withSettings, withoutSettings));
+
+        // then
+        assertThat(result).isEqualTo(new PublicSpotUpsertResult(2, 0, 0, 0));
+        assertThat(findSettings("100")).containsExactlyInAnyOrder("MOUNTAIN", "VALLEY");
+        assertThat(findSettings("101")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-31] 입지가 그대로인 야영장을 다시 적재하면 바뀌지 않은 것으로 센다")
+    void unchangedSettingsAreNotUpdated() {
+        // given
+        PublicSpotCommand command = campsiteWithSettings("100", Set.of(PublicSpotSetting.RIVER));
+        publicSpotSyncService.upsert(PublicSpotSource.GOCAMPING, List.of(command));
+
+        // when
+        PublicSpotUpsertResult result = publicSpotSyncService.upsert(PublicSpotSource.GOCAMPING, List.of(command));
+
+        // then
+        assertThat(result).isEqualTo(new PublicSpotUpsertResult(0, 0, 1, 0));
+        assertThat(findSettings("100")).containsExactly("RIVER");
+    }
+
+    @Test
+    @DisplayName("[F-31] 입지가 바뀐 야영장은 입지 행을 새 값으로 바꾸고 갱신 한 건으로 센다")
+    void changedSettingsReplaceRowsAndCountAsOneUpdate() {
+        // given
+        publicSpotSyncService.upsert(
+                PublicSpotSource.GOCAMPING,
+                List.of(campsiteWithSettings("100", Set.of(PublicSpotSetting.MOUNTAIN, PublicSpotSetting.VALLEY))));
+        PublicSpotCommand changed =
+                campsiteWithSettings("100", Set.of(PublicSpotSetting.VALLEY, PublicSpotSetting.LAKE));
+
+        // when
+        PublicSpotUpsertResult result = publicSpotSyncService.upsert(PublicSpotSource.GOCAMPING, List.of(changed));
+
+        // then
+        assertThat(result).isEqualTo(new PublicSpotUpsertResult(0, 1, 0, 0));
+        assertThat(findSettings("100")).containsExactlyInAnyOrder("VALLEY", "LAKE");
+    }
+
+    @Test
+    @DisplayName("[F-31] 입지가 비게 된 야영장은 입지 행을 모두 지운다")
+    void emptiedSettingsDeleteRows() {
+        // given
+        publicSpotSyncService.upsert(
+                PublicSpotSource.GOCAMPING, List.of(campsiteWithSettings("100", Set.of(PublicSpotSetting.BEACH))));
+
+        // when
+        PublicSpotUpsertResult result = publicSpotSyncService.upsert(
+                PublicSpotSource.GOCAMPING, List.of(campsiteWithSettings("100", Set.of())));
+
+        // then
+        assertThat(result).isEqualTo(new PublicSpotUpsertResult(0, 1, 0, 0));
+        assertThat(findSettings("100")).isEmpty();
+    }
+
+    private List<String> findSettings(String externalId) {
+        return jdbcTemplate.queryForList(
+                "SELECT setting FROM public_spot_setting WHERE spot_id = ?",
+                String.class,
+                findSpotId(PublicSpotSource.GOCAMPING, externalId));
+    }
+
+    private static PublicSpotCommand campsiteWithSettings(String externalId, Set<PublicSpotSetting> settings) {
+        return new PublicSpotCommand(
+                externalId,
+                "입지 야영장 " + externalId,
+                CHUNCHEON_LATITUDE,
+                CHUNCHEON_LONGITUDE,
+                "강원 춘천시 남산면 1",
+                "일반야영장",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                settings);
     }
 
     private static PublicSpotCommand campsite(String externalId, String name, double latitude, double longitude) {
@@ -820,7 +915,8 @@ class PublicSpotSyncServiceIntegrationTest {
                 operatingStatus,
                 closedFrom,
                 closedUntil,
-                null);
+                null,
+                Set.of());
     }
 
     private PublicSpotCommand seoulCampsite(String externalId, String name) {

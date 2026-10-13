@@ -4,11 +4,14 @@ import com.moewadeul.spot.infra.PublicSpotColumns;
 import com.moewadeul.spot.infra.PublicSpotInsertRow;
 import com.moewadeul.spot.infra.PublicSpotMapper;
 import com.moewadeul.spot.infra.PublicSpotRow;
+import com.moewadeul.spot.infra.PublicSpotSettingRow;
 import com.moewadeul.spot.infra.PublicSpotUpdateRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +28,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 공공데이터 원천의 장소 목록을 spot과 public_spot_detail에 적재한다. 같은 원천 행은 출처와 외부 ID로 찾아서 한 행만 유지한다.
+ * 공공데이터 원천의 장소 목록을 spot, public_spot_detail, public_spot_setting에 적재한다. 같은 원천 행은 출처와 외부 ID로 찾아서 한 행만 유지한다.
  *
  * <p>서버는 바뀐 행만 갱신한다. 원천 데이터는 대부분 날마다 그대로라서, 모든 행을 다시 쓰면 updated_at과 synced_at이 실제 변경과 상관없이
  * 매일 바뀐다. 그래서 서버는 묶음의 기존 행을 먼저 읽어 Java에서 비교하고, 새 행은 추가하고, 값이 다른 행만 갱신하고, 같은 행에는 SQL을
@@ -54,6 +57,8 @@ public class PublicSpotSyncService {
      * <p>예외는 {@link #markRemoved}가 원천 삭제로 숨긴 장소다. 그 장소가 다시 오면 서버는 HIDDEN이던 상태를 ACTIVE로 되돌리고 삭제 표시를
      * 지운다. 삭제 표시가 있지만 이미 ACTIVE인 장소(관리자가 다시 공개한 장소)는 표시만 지운다. 되돌린 장소는 다른 값이 바뀌었는지와 상관없이
      * 갱신한 것으로 한 번 센다.
+     *
+     * <p>입지(settings)가 바뀐 장소는 상세 값이 바뀐 것과 같이 한 번 갱신한 것으로 센다. 서버는 그 장소의 입지 행을 모두 지우고 새 입지로 다시 넣는다.
      */
     @Transactional
     public PublicSpotUpsertResult upsert(PublicSpotSource source, List<PublicSpotCommand> commands) {
@@ -63,10 +68,12 @@ public class PublicSpotSyncService {
             return new PublicSpotUpsertResult(0, 0, 0, skipped);
         }
         Map<String, PublicSpotRow> storedById = findStored(source, spots);
-        UpsertPlan plan = new UpsertPlan();
+        Map<Long, Set<PublicSpotSetting>> storedSettings = findStoredSettings(storedById.values());
+        UpsertPlan plan = new UpsertPlan(storedSettings);
         spots.values().forEach(spot -> plan.add(spot, storedById.get(spot.externalId())));
         Instant now = Instant.now(clock);
         insert(source, plan.inserts, now);
+        insertSettingsOfNewSpots(plan.insertedSettings);
         update(plan, now);
         return new PublicSpotUpsertResult(plan.inserts.size(), plan.detailUpdates.size(), plan.unchanged, skipped);
     }
@@ -189,6 +196,20 @@ public class PublicSpotSyncService {
                 .collect(Collectors.toMap(PublicSpotRow::externalId, Function.identity()));
     }
 
+    // 저장된 장소가 없으면 IN 목록이 비어 문장이 깨지므로 조회하지 않는다. 입지가 없는 장소는 맵에 키가 없다.
+    private Map<Long, Set<PublicSpotSetting>> findStoredSettings(Collection<PublicSpotRow> stored) {
+        if (stored.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> spotIds = stored.stream().map(PublicSpotRow::spotId).toList();
+        Map<Long, Set<PublicSpotSetting>> settings = new HashMap<>();
+        for (PublicSpotSettingRow row : publicSpotMapper.selectSettings(spotIds)) {
+            settings.computeIfAbsent(row.spotId(), id -> EnumSet.noneOf(PublicSpotSetting.class))
+                    .add(row.setting());
+        }
+        return settings;
+    }
+
     private void insert(PublicSpotSource source, List<PublicSpotInsertRow> inserts, Instant now) {
         if (inserts.isEmpty()) {
             return;
@@ -197,12 +218,34 @@ public class PublicSpotSyncService {
         publicSpotMapper.insertDetails(source.name(), inserts, now);
     }
 
+    private void insertSettingsOfNewSpots(Map<PublicSpotInsertRow, Set<PublicSpotSetting>> settingsByInsert) {
+        List<PublicSpotSettingRow> rows = new ArrayList<>();
+        settingsByInsert.forEach((insert, settings) -> rows.addAll(settingRows(insert.getSpotId(), settings)));
+        insertSettings(rows);
+    }
+
+    private void insertSettings(List<PublicSpotSettingRow> rows) {
+        if (!rows.isEmpty()) {
+            publicSpotMapper.insertSettings(rows);
+        }
+    }
+
+    private static List<PublicSpotSettingRow> settingRows(long spotId, Set<PublicSpotSetting> settings) {
+        return settings.stream()
+                .map(setting -> new PublicSpotSettingRow(spotId, setting))
+                .toList();
+    }
+
     private void update(UpsertPlan plan, Instant now) {
         if (!plan.spotUpdates.isEmpty()) {
             publicSpotMapper.updateSpots(plan.spotUpdates, now);
         }
         if (!plan.detailUpdates.isEmpty()) {
             publicSpotMapper.updateDetails(plan.detailUpdates, now);
+        }
+        if (!plan.settingReplacementIds.isEmpty()) {
+            publicSpotMapper.deleteSettings(plan.settingReplacementIds);
+            insertSettings(plan.settingReplacementRows);
         }
         if (!plan.restoredSpotIds.isEmpty()) {
             // 순서가 중요하다. 상태를 되돌리는 문장이 삭제 표시를 보고 대상을 고르므로, 표시를 지우기 전에 실행한다.
@@ -238,22 +281,37 @@ public class PublicSpotSyncService {
      *
      * <p>원천 삭제 표시가 있는 장소가 다시 오면 다른 값이 그대로여도 detailUpdates와 restoredSpotIds에 넣는다. 그래서 되돌린 장소는 갱신 건수에
      * 한 번만 들어간다.
+     *
+     * <p>입지가 바뀐 장소도 detailUpdates에 넣는다. 그리고 그 장소의 ID와 새 입지 행을 따로 모은다. 입지는 지우고 다시 넣는 방식으로 바꾸기 때문이다.
+     * 새로 추가하는 장소의 입지는 spotId를 DB에서 받은 뒤에 넣어야 해서 insertedSettings에 추가 행과 함께 모아 둔다.
      */
     private final class UpsertPlan {
 
+        private final Map<Long, Set<PublicSpotSetting>> storedSettings;
         private final List<PublicSpotInsertRow> inserts = new ArrayList<>();
+        private final Map<PublicSpotInsertRow, Set<PublicSpotSetting>> insertedSettings = new LinkedHashMap<>();
+        private final List<Long> settingReplacementIds = new ArrayList<>();
+        private final List<PublicSpotSettingRow> settingReplacementRows = new ArrayList<>();
         private final List<PublicSpotUpdateRow> spotUpdates = new ArrayList<>();
         private final List<PublicSpotUpdateRow> detailUpdates = new ArrayList<>();
         private final List<Long> restoredSpotIds = new ArrayList<>();
         private int unchanged;
 
+        UpsertPlan(Map<Long, Set<PublicSpotSetting>> storedSettings) {
+            this.storedSettings = storedSettings;
+        }
+
         void add(NormalizedPublicSpot spot, PublicSpotRow stored) {
             if (stored == null) {
-                inserts.add(new PublicSpotInsertRow(toColumns(spot)));
+                PublicSpotInsertRow insert = new PublicSpotInsertRow(toColumns(spot));
+                inserts.add(insert);
+                insertedSettings.put(insert, spot.settings());
                 return;
             }
             boolean spotChanged = spot.differsInSpotColumns(stored);
-            boolean detailChanged = spot.differsInDetailColumns(stored, parseFacilities(stored.facilities()));
+            boolean settingsChanged = spot.differsInSettings(storedSettings.getOrDefault(stored.spotId(), Set.of()));
+            boolean detailChanged =
+                    settingsChanged || spot.differsInDetailColumns(stored, parseFacilities(stored.facilities()));
             if (!spotChanged && !detailChanged && !stored.sourceRemoved()) {
                 unchanged++;
                 return;
@@ -263,6 +321,10 @@ public class PublicSpotSyncService {
                 spotUpdates.add(row);
             }
             detailUpdates.add(row);
+            if (settingsChanged) {
+                settingReplacementIds.add(stored.spotId());
+                settingReplacementRows.addAll(settingRows(stored.spotId(), spot.settings()));
+            }
             if (stored.sourceRemoved()) {
                 restoredSpotIds.add(stored.spotId());
             }

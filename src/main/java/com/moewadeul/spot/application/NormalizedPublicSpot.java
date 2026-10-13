@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -32,7 +33,8 @@ record NormalizedPublicSpot(
         PublicSpotOperatingStatus operatingStatus,
         LocalDate closedFrom,
         LocalDate closedUntil,
-        LocalDate sourceDate) {
+        LocalDate sourceDate,
+        Set<PublicSpotSetting> settings) {
 
     // 열 크기는 spot, public_spot_detail 테이블 정의와 같다. MySQL VARCHAR는 바이트가 아니라 문자 수로 길이를 센다.
     static final int MAX_EXTERNAL_ID_LENGTH = 50;
@@ -71,7 +73,8 @@ record NormalizedPublicSpot(
                 command.operatingStatus(),
                 command.closedFrom(),
                 command.closedUntil(),
-                command.sourceDate());
+                command.sourceDate(),
+                command.settings());
     }
 
     /** 호출하면 spot 테이블에 저장한 이름, 주소, 좌표 중 하나라도 이 값과 다른지 돌려준다. */
@@ -95,6 +98,11 @@ record NormalizedPublicSpot(
                 || !Objects.equals(closedFrom, stored.closedFrom())
                 || !Objects.equals(closedUntil, stored.closedUntil())
                 || !Objects.equals(sourceDate, stored.sourceDate());
+    }
+
+    /** 호출하면 public_spot_setting에 저장한 입지가 이 값과 다른지 돌려준다. */
+    boolean differsInSettings(Set<PublicSpotSetting> stored) {
+        return !settings.equals(stored);
     }
 
     PublicSpotColumns toColumns(String facilitiesJson) {

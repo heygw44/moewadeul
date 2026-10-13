@@ -8,6 +8,7 @@ package com.moewadeul.publicdata.infra;
  *
  * <p>{@code syncStatus}는 원천이 이 항목을 어떻게 다루는지 나타내고, 관찰한 값은 {@code A}(추가), {@code U}(수정), {@code D}(삭제)다.
  * {@code manageSttus}는 운영 상태(운영, 휴장, 폐업), {@code hvofBgnde}와 {@code hvofEnddle}은 휴장 시작일과 종료일이다. {@code modifiedtime}은 원천이 이 항목을 마지막으로 고친 날(예: 2026-10-02)이다.
+ * {@code lctCl}은 입지 구분이고, "산,숲,계곡"처럼 쉼표로 여러 값을 준다.
  */
 public record GoCampingItem(
         String contentId,
@@ -32,4 +33,5 @@ public record GoCampingItem(
         String manageSttus,
         String hvofBgnde,
         String hvofEnddle,
-        String modifiedtime) {}
+        String modifiedtime,
+        String lctCl) {}

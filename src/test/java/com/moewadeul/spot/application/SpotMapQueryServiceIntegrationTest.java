@@ -37,7 +37,7 @@ class SpotMapQueryServiceIntegrationTest {
 
     // 물 필터와 휴장 제외를 함께 켠 조회다. 매퍼는 두 필터가 쓰는 상세 테이블을 모두 조인해야 한다.
     private static final Function<Area, SpotAreaQuery> BULK_FILTER_QUERY = area -> new SpotAreaQuery(
-            area.swLat(), area.swLng(), area.neLat(), area.neLng(), Set.of(), true, false, false, true);
+            area.swLat(), area.swLng(), area.neLat(), area.neLng(), Set.of(), Set.of(), true, false, false, true);
 
     @Autowired
     private SpotMapQueryService spotMapQueryService;
@@ -276,6 +276,64 @@ class SpotMapQueryServiceIntegrationTest {
         assertThat(all.clusters().stream().mapToLong(SpotCluster::count).sum()).isEqualTo(openCount + 3);
         assertThat(open.markers()).isEmpty();
         assertThat(open.clusters().stream().mapToLong(SpotCluster::count).sum()).isEqualTo(openCount);
+    }
+
+    @Test
+    @DisplayName("[F-31] 입지를 지정하면 그 입지가 하나라도 맞는 야영장만 찾고, 지정하지 않으면 모두 찾는다")
+    void filtersBySettingsOnlyWhenSettingsAreGiven() {
+        // given
+        long valleyId = insertCampsiteWithSettings("계곡 야영장", SEORAK, "VALLEY");
+        long beachId = insertCampsiteWithSettings("해변 야영장", SEORAK, "BEACH");
+        long multiId = insertCampsiteWithSettings("산 계곡 야영장", SEORAK, "MOUNTAIN", "VALLEY");
+        long noSettingId = insertSpot("CAMPSITE", "입지 없는 야영장", SEORAK);
+        long bakjiId = insertSpot("BAKJI", "박지", SEORAK);
+        long forestId = insertSpot("FOREST", "휴양림", SEORAK);
+
+        // when
+        SpotAreaResult valley =
+                spotMapQueryService.findInArea(SEORAK_AREA.queryWithSettings(Set.of(PublicSpotSetting.VALLEY), false));
+        SpotAreaResult valleyOrBeach = spotMapQueryService.findInArea(
+                SEORAK_AREA.queryWithSettings(Set.of(PublicSpotSetting.VALLEY, PublicSpotSetting.BEACH), false));
+        SpotAreaResult all = spotMapQueryService.findInArea(SEORAK_AREA.query());
+
+        // then
+        assertThat(valley.markers()).extracting(SpotMarker::spotId).containsExactly(valleyId, multiId);
+        assertThat(valleyOrBeach.markers()).extracting(SpotMarker::spotId).containsExactly(valleyId, beachId, multiId);
+        assertThat(all.markers())
+                .extracting(SpotMarker::spotId)
+                .containsExactly(valleyId, beachId, multiId, noSettingId, bakjiId, forestId);
+    }
+
+    @Test
+    @DisplayName("[F-31] 입지 필터로 500개를 넘으면 입지가 맞는 장소만 직접 세어 묶고, 휴장 제외도 함께 적용한다")
+    void settingFilterClustersCountOnlyMatchingSpotsAndApplyHideClosed() {
+        // given: 계곡 야영장 501곳과 북동 꼭짓점의 한 곳, 입지가 다른 야영장과 입지 없는 야영장, 휴장 중인 계곡 야영장
+        clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
+        List<Coordinate> valleyCoordinates = new ArrayList<>(spreadInBulkArea(SpotMapQueryService.MAX_ITEMS + 1));
+        valleyCoordinates.add(new Coordinate(BULK_AREA.neLat(), BULK_AREA.neLng()));
+        insertBulkCampsitesWithSetting(valleyCoordinates, "VALLEY");
+        insertBulkCampsitesWithSetting(spreadInBulkArea(10), "BEACH");
+        insertCampsites(spreadInBulkArea(10));
+        for (int i = 0; i < 3; i++) {
+            long closedId = insertCampsiteWithSettings("휴장 계곡 야영장 " + i, new Coordinate(36.5, 127.5), "VALLEY");
+            jdbcTemplate.update(
+                    "UPDATE public_spot_detail SET operating_status = 'TEMPORARILY_CLOSED' WHERE spot_id = ?",
+                    closedId);
+        }
+        Set<PublicSpotSetting> valley = Set.of(PublicSpotSetting.VALLEY);
+
+        // when
+        SpotAreaResult withClosed = spotMapQueryService.findInArea(BULK_AREA.queryWithSettings(valley, false));
+        SpotAreaResult openOnly = spotMapQueryService.findInArea(BULK_AREA.queryWithSettings(valley, true));
+
+        // then
+        long matching = valleyCoordinates.size();
+        assertThat(withClosed.markers()).isEmpty();
+        assertThat(withClosed.clusters().stream().mapToLong(SpotCluster::count).sum())
+                .isEqualTo(matching + 3);
+        assertThat(openOnly.markers()).isEmpty();
+        assertThat(openOnly.clusters().stream().mapToLong(SpotCluster::count).sum())
+                .isEqualTo(matching);
     }
 
     @Test
@@ -521,6 +579,30 @@ class SpotMapQueryServiceIntegrationTest {
                         + values);
     }
 
+    private long insertCampsiteWithSettings(String name, Coordinate at, String... settings) {
+        long spotId = insertSpot("CAMPSITE", name, at);
+        insertPublicDetail(spotId, "GOCAMPING", null, null, null);
+        insertSettings(spotId, settings);
+        return spotId;
+    }
+
+    private void insertSettings(long spotId, String... settings) {
+        for (String setting : settings) {
+            jdbcTemplate.update("INSERT INTO public_spot_setting (spot_id, setting) VALUES (?, ?)", spotId, setting);
+        }
+    }
+
+    // 방금 넣은 야영장은 공공데이터 상세 행이 아직 없는 장소뿐이라, 그 장소에만 상세 행과 입지를 붙인다.
+    private void insertBulkCampsitesWithSetting(List<Coordinate> coordinates, String setting) {
+        insertCampsites(coordinates);
+        List<Long> spotIds = jdbcTemplate.queryForList(
+                "SELECT s.id FROM spot s LEFT JOIN public_spot_detail d ON d.spot_id = s.id"
+                        + " WHERE s.type = 'CAMPSITE' AND d.spot_id IS NULL AND s.name LIKE 'bulk%'",
+                Long.class);
+        spotIds.forEach(spotId -> insertPublicDetail(spotId, "GOCAMPING", null, null, null));
+        spotIds.forEach(spotId -> insertSettings(spotId, setting));
+    }
+
     private long insertMember() {
         String nickname = TestSequence.nickname();
         jdbcTemplate.update(
@@ -550,11 +632,16 @@ class SpotMapQueryServiceIntegrationTest {
         }
 
         SpotAreaQuery query(Set<SpotType> types, boolean hasWater, boolean hasToilet, boolean excludeWarning) {
-            return new SpotAreaQuery(swLat, swLng, neLat, neLng, types, hasWater, hasToilet, excludeWarning, false);
+            return new SpotAreaQuery(
+                    swLat, swLng, neLat, neLng, types, Set.of(), hasWater, hasToilet, excludeWarning, false);
+        }
+
+        SpotAreaQuery queryWithSettings(Set<PublicSpotSetting> settings, boolean hideClosed) {
+            return new SpotAreaQuery(swLat, swLng, neLat, neLng, Set.of(), settings, false, false, false, hideClosed);
         }
 
         SpotAreaQuery hidingClosed() {
-            return new SpotAreaQuery(swLat, swLng, neLat, neLng, Set.of(), false, false, false, true);
+            return new SpotAreaQuery(swLat, swLng, neLat, neLng, Set.of(), Set.of(), false, false, false, true);
         }
     }
 }
