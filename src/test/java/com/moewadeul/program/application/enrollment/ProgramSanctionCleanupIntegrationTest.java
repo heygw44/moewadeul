@@ -6,7 +6,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.notification.application.outbox.OutboxPublisher;
+import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.domain.ProgramCancelReason;
 import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;

@@ -1,4 +1,4 @@
-package com.moewadeul.notification.application.outbox;
+package com.moewadeul.outbox.application;
 
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;

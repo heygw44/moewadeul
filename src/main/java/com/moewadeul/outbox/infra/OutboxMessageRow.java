@@ -1,4 +1,4 @@
-package com.moewadeul.notification.infra.outbox;
+package com.moewadeul.outbox.infra;
 
 import java.time.Instant;
 

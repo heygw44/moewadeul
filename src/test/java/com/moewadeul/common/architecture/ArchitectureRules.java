@@ -38,6 +38,7 @@ public final class ArchitectureRules {
             "basecamp",
             "program",
             "notification",
+            "outbox",
             "community",
             "trip",
             "memory",

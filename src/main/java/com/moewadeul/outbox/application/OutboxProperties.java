@@ -1,4 +1,4 @@
-package com.moewadeul.notification.application.outbox;
+package com.moewadeul.outbox.application;
 
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;

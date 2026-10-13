@@ -16,7 +16,7 @@ import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
 import com.moewadeul.member.domain.password.ResetToken;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.notification.application.outbox.OutboxPublisher;
+import com.moewadeul.outbox.application.OutboxPublisher;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.List;

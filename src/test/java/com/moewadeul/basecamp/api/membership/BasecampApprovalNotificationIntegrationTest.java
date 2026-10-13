@@ -8,7 +8,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.notification.application.outbox.OutboxPublisher;
+import com.moewadeul.outbox.application.OutboxPublisher;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.Map;

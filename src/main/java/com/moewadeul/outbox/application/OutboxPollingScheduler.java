@@ -1,4 +1,4 @@
-package com.moewadeul.notification.application.outbox;
+package com.moewadeul.outbox.application;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

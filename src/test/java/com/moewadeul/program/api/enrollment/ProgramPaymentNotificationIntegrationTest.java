@@ -9,7 +9,7 @@ import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.notification.application.outbox.OutboxPublisher;
+import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.application.enrollment.ProgramPaymentExpiryService;
 import jakarta.servlet.http.Cookie;

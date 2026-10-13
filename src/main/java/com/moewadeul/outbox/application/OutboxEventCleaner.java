@@ -1,6 +1,6 @@
-package com.moewadeul.notification.application.outbox;
+package com.moewadeul.outbox.application;
 
-import com.moewadeul.notification.infra.outbox.OutboxEventCleanupMapper;
+import com.moewadeul.outbox.infra.OutboxEventCleanupMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

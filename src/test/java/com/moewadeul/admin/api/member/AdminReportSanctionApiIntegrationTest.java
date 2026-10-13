@@ -8,7 +8,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.notification.application.outbox.OutboxPublisher;
+import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.CompanionReviewFixture;
 import com.moewadeul.trust.application.companion.CompanionReviewQueryService;
 import com.moewadeul.trust.application.report.MemberReportCommand;

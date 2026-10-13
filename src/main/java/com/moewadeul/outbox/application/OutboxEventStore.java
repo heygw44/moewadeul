@@ -1,8 +1,8 @@
-package com.moewadeul.notification.application.outbox;
+package com.moewadeul.outbox.application;
 
 import com.moewadeul.common.outbox.OutboxMessage;
-import com.moewadeul.notification.infra.outbox.OutboxEventMapper;
-import com.moewadeul.notification.infra.outbox.OutboxMessageRow;
+import com.moewadeul.outbox.infra.OutboxEventMapper;
+import com.moewadeul.outbox.infra.OutboxMessageRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
