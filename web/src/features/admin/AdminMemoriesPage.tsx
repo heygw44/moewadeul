@@ -134,7 +134,7 @@ function MemoryReview() {
         <EmptyState
           framed
           title={tab === 'PENDING_REVIEW' ? '검토를 기다리는 발자국이 없어요' : '숨긴 발자국이 없어요'}
-          description="신고가 쌓이거나 발자국을 숨기면 여기에 보여요."
+          description={tab === 'PENDING_REVIEW' ? '신고가 쌓인 발자국이 여기에 모여요.' : '숨긴 발자국이 여기에 모여요.'}
         />
       )}
       {state !== null && state.items.length > 0 && (
@@ -181,7 +181,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
   return (
     <li className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.author.nickname}의 발자국</h3>
+        <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.author.nickname}님의 발자국</h3>
         <StatusText tone="neutral">{item.status === 'HIDDEN' ? '숨김' : '검토 대기'}</StatusText>
       </div>
       {thumbnails.length > 0 && (
@@ -241,7 +241,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
       )}
       {error && (
         <div role="alert">
-          <Notice tone="danger" title="처리하지 못했어요">
+          <Notice tone="danger" title="상태를 바꾸지 못했어요">
             <p>{error}</p>
           </Notice>
         </div>
@@ -249,7 +249,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
       <div className="flex flex-wrap items-center gap-2">
         {tab === 'PENDING_REVIEW' && (
           <Button variant="danger" disabled={busy !== null} onClick={() => setConfirmHide(true)}>
-            숨김
+            숨기기
           </Button>
         )}
         <Button variant="secondary" loading={busy === 'restore'} disabled={busy === 'hide'} onClick={() => void run('restore')}>
@@ -260,7 +260,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
         <Dialog title="발자국을 숨길까요?" onClose={() => busy === null && setConfirmHide(false)}>
           <div className="flex flex-col gap-4">
             <p className="text-base text-ink">
-              {item.author.nickname}의 발자국을 작성자 말고는 볼 수 없게 숨겨요. 숨긴 발자국은 숨김 탭에서 다시 복구할 수 있어요.
+              {item.author.nickname}님의 발자국을 작성자만 볼 수 있게 숨겨요. 숨긴 발자국은 숨김 탭에서 복구할 수 있어요.
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={busy !== null} onClick={() => setConfirmHide(false)}>

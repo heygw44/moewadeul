@@ -195,7 +195,7 @@ function ResultCard({ detail }: { detail: AdminReportDetail }) {
     <PageCard title="처리 결과">
       <Evidence
         items={[
-          ...(detail.handledBy !== null ? [{ label: '처리한 관리자', value: `회원 ${detail.handledBy}` }] : []),
+          ...(detail.handledBy !== null ? [{ label: '처리한 관리자', value: `회원 번호 ${detail.handledBy}` }] : []),
           ...(detail.handledAt ? [{ label: '처리 시각', value: formatKstDateTime(detail.handledAt) }] : []),
         ]}
       />
@@ -281,7 +281,7 @@ function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onCh
   const reasonMissing = hasSanction && trimmedReason.length === 0;
   const nothingChosen = !hasSanction && !hideReview;
   const disabledReason = nothingChosen
-    ? '제재를 고르거나 후기를 숨겨야 조치할 수 있어요.'
+    ? '조치하려면 제재를 고르거나 신고된 후기 숨기기를 켜 주세요.'
     : reasonMissing
       ? '제재 사유를 적어 주세요.'
       : undefined;
@@ -310,12 +310,12 @@ function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onCh
   return (
     <PageCard title="처리">
       <p className="text-sm text-ink-muted">
-        제재 단계는 이전 제재 이력에 따라 정해져요. 고른 단계가 맞지 않으면 처리되지 않으니, 안내 문구를 보고 다시 골라 주세요.
-        영구 정지는 심각한 위반일 때 바로 고를 수 있어요.
+        제재 단계는 이전 제재 이력에 따라 정해져요. 고른 단계가 맞지 않으면 저장되지 않아요. 오류 안내에 맞춰 다시 골라 주세요.
+        심각한 위반이면 영구 정지를 바로 고를 수 있어요.
       </p>
       {formError && (
         <div role="alert">
-          <Notice tone="danger" title="처리하지 못했어요">
+          <Notice tone="danger" title="조치하지 못했어요">
             <p>{formError}</p>
           </Notice>
         </div>
@@ -335,7 +335,7 @@ function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onCh
           value={reason}
           disabled={busy}
           error={errors.reason}
-          hint="회원에게 제재 사유로 안내돼요. 1~500자로 적어 주세요."
+          hint="회원에게 그대로 보여요. 1~500자로 적어 주세요."
           onChange={(event) => setReason(event.target.value)}
         />
       )}
@@ -376,8 +376,8 @@ function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onCh
             <p className="text-base text-ink">
               {detail.target.nickname}님에게 {SANCTION_TYPE_LABELS[sanction as ConfirmableSanctionType]}를 확정해요.
               {sanction === 'WARNING'
-                ? ' 경고는 이용을 막지 않지만 다음 제재 단계에 반영돼요.'
-                : ' 정지는 확정하는 즉시 적용되고, 진행 중인 베이스캠프에서도 빠져요.'}
+                ? ' 경고만으로 활동이 막히지는 않지만 다음 제재 단계에 반영돼요.'
+                : ' 정지는 확정하는 즉시 적용되고 이 회원은 진행 중인 베이스캠프에서도 빠져요.'}
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={busy} onClick={() => setConfirmAction(false)}>
@@ -545,7 +545,7 @@ function LiftDialog({
     <Dialog title="제재를 해제할까요?" onClose={() => !busy && onClose()}>
       <div className="flex flex-col gap-4">
         <p className="text-base text-ink">
-          {SANCTION_TYPE_LABELS[sanction.type]}를 해제해요. 이미 정리된 베이스캠프와 결제 대기 신청은 되돌아가지 않아요.
+          {SANCTION_TYPE_LABELS[sanction.type]}를 해제해요. 이미 빠진 베이스캠프와 취소된 결제 대기 신청은 되돌아가지 않아요.
         </p>
         {error && (
           <div role="alert">

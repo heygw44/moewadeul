@@ -126,7 +126,7 @@ function SpotReview() {
         <EmptyState
           framed
           title={tab === 'PENDING_REVIEW' ? '검토를 기다리는 박지가 없어요' : '숨긴 박지가 없어요'}
-          description="신고가 쌓이거나 박지를 숨기면 여기에 보여요."
+          description={tab === 'PENDING_REVIEW' ? '신고가 쌓인 박지가 여기에 모여요.' : '숨긴 박지가 여기에 모여요.'}
         />
       )}
       {state !== null && state.items.length > 0 && (
@@ -217,7 +217,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       )}
       {error && (
         <div role="alert">
-          <Notice tone="danger" title="처리하지 못했어요">
+          <Notice tone="danger" title="상태를 바꾸지 못했어요">
             <p>{error}</p>
           </Notice>
         </div>
@@ -231,7 +231,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
         </Link>
         {tab === 'PENDING_REVIEW' && (
           <Button variant="danger" disabled={busy !== null} onClick={() => setConfirmHide(true)}>
-            숨김
+            숨기기
           </Button>
         )}
         <Button variant="secondary" loading={busy === 'restore'} disabled={busy === 'hide'} onClick={() => void run('restore')}>
@@ -242,7 +242,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
         <Dialog title="박지를 숨길까요?" onClose={() => busy === null && setConfirmHide(false)}>
           <div className="flex flex-col gap-4">
             <p className="text-base text-ink">
-              &apos;{item.name}&apos; 박지를 지도와 검색에서 숨겨요. 숨긴 박지는 숨김 탭에서 다시 복구할 수 있어요.
+              &apos;{item.name}&apos; 박지를 지도와 검색에서 숨겨요. 숨긴 박지는 숨김 탭에서 복구할 수 있어요.
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={busy !== null} onClick={() => setConfirmHide(false)}>

@@ -88,7 +88,7 @@ export function MyMemoriesPage() {
   } else if ('error' in current) {
     body = (
       <div role="alert" className="flex flex-col gap-3">
-        <Notice tone="danger" title="기록을 불러오지 못했어요">
+        <Notice tone="danger" title="발자국을 불러오지 못했어요">
           {toUserMessage(current.error)}
         </Notice>
         <div>
@@ -103,7 +103,7 @@ export function MyMemoriesPage() {
       <EmptyState
         framed
         title="아직 남긴 발자국이 없어요"
-        description="지도에서 다녀온 곳을 길게 누르거나 장소 상세에서 기록을 남길 수 있어요."
+        description="지도에서 다녀온 곳을 길게 누르거나(컴퓨터는 우클릭) 장소 상세에서 발자국을 남길 수 있어요."
         action={
           <Link to="/map" className={SECONDARY_LINK_CLASS}>
             지도에서 발자국 남기기

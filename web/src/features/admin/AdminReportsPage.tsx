@@ -21,7 +21,7 @@ const STATUS_OPTIONS = [
   { value: ALL, label: '전체' },
   { value: 'RECEIVED', label: '접수' },
   { value: 'IN_REVIEW', label: '검토 중' },
-  { value: 'ACTIONED', label: '조치' },
+  { value: 'ACTIONED', label: '조치 완료' },
   { value: 'DISMISSED', label: '기각' },
 ];
 
@@ -97,7 +97,7 @@ function ReportList() {
           onChange={(event) => changeFilter(() => setStatus(event.target.value))}
         />
         <Checkbox
-          label="긴급만"
+          label="긴급 신고만"
           checked={urgentOnly}
           onChange={(event) => changeFilter(() => setUrgentOnly(event.target.checked))}
         />
@@ -124,7 +124,7 @@ function ReportList() {
       )}
       {state === null && showSkeleton && <Skeleton className="h-40 w-full" />}
       {state !== null && state.items.length === 0 && !state.error && (
-        <EmptyState framed title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꾸면 다시 찾아요." />
+        <EmptyState framed title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꿔 주세요." />
       )}
       {state !== null && state.items.length > 0 && (
         <ul className="flex flex-col rounded-sheet border border-line bg-surface">

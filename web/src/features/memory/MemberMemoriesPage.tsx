@@ -102,13 +102,13 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
     if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
       return (
         <HubLayout title="회원을 찾을 수 없어요" width="narrow">
-          <EmptyState framed title="탈퇴했거나 없는 회원이에요" description="발자국에서 다른 기록을 볼 수 있어요." />
+          <EmptyState framed title="탈퇴했거나 주소가 잘못됐어요" description="발자국 메뉴에서 다른 회원의 발자국을 볼 수 있어요." />
         </HubLayout>
       );
     }
     body = (
       <div role="alert" className="flex flex-col gap-3">
-        <Notice tone="danger" title="기록을 불러오지 못했어요">
+        <Notice tone="danger" title="발자국을 불러오지 못했어요">
           {toUserMessage(current.error)}
         </Notice>
         <div>
@@ -119,11 +119,11 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
       </div>
     );
   } else if (items.length === 0) {
-    body = <EmptyState framed title="공개한 발자국이 아직 없어요" description="이 회원이 공개로 남긴 기록이 생기면 여기에 보여요." />;
+    body = <EmptyState framed title="공개한 발자국이 아직 없어요" description="이 회원이 발자국을 공개하면 여기에 보여요." />;
   } else {
     body = (
       <>
-        <p className="text-sm text-ink-muted">위치는 약 1km 범위로 줄여서 보여 줘요.</p>
+        <p className="text-sm text-ink-muted">위치는 정확한 곳 대신 약 1km 범위의 대략 위치만 보여요.</p>
         <MemoryMapGrid items={items} />
       </>
     );

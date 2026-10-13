@@ -173,7 +173,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                 onCancelEdit={() => setEditingId(null)}
                 onSaveEdit={async (id, content) => {
                   await updateComment(id, { content });
-                  await refreshAfterChange('댓글을 고쳤어요.');
+                  await refreshAfterChange('댓글을 수정했어요.');
                 }}
                 onDelete={setDeleting}
                 onReport={(id) => setReporting({ type: 'comment', id })}
@@ -206,7 +206,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                         onCancelEdit={() => setEditingId(null)}
                         onSaveEdit={async (id, content) => {
                           await updateComment(id, { content });
-                          await refreshAfterChange('답글을 고쳤어요.');
+                          await refreshAfterChange('답글을 수정했어요.');
                         }}
                         onDelete={setDeleting}
                         onReport={(id) => setReporting({ type: 'comment', id })}
@@ -239,7 +239,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
           onClose={() => setDeleting(null)}
           onDeleted={async () => {
             setDeleting(null);
-            await refreshAfterChange('댓글을 지웠어요.');
+            await refreshAfterChange('댓글을 삭제했어요.');
           }}
         />
       )}
@@ -263,7 +263,7 @@ function NewCommentArea({ onSubmit }: { onSubmit: (content: string) => Promise<v
     );
   }
   if (session.me.status === 'UNVERIFIED') {
-    return <UnverifiedNote action="좋아요, 댓글, 신고를 할 수 있어요." />;
+    return <UnverifiedNote action="좋아요를 누르고 댓글을 달거나 신고할 수 있어요." />;
   }
   return <CommentForm label="댓글" submitLabel="댓글 남기기" onSubmit={onSubmit} />;
 }

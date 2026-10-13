@@ -87,9 +87,9 @@ export function MemoryMap({
       <div className="flex flex-col gap-3">
         <Notice tone="info" title="지도를 볼 수 없어요">
           {failure.reason === 'NO_KEY' ? (
-            <p>지도 키가 설정되지 않았어요. 아래 목록에서 기록을 열어 볼 수 있어요.</p>
+            <p>아래 목록에서 발자국을 열어 볼 수 있어요.</p>
           ) : (
-            <p>{failure.message} 아래 목록에서는 기록을 열어 볼 수 있어요.</p>
+            <p>아래 목록에서 발자국을 열어 볼 수 있어요.</p>
           )}
         </Notice>
         {failure.reason !== 'NO_KEY' && (
