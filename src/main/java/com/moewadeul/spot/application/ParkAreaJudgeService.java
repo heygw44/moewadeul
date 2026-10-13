@@ -43,26 +43,37 @@ public class ParkAreaJudgeService {
     }
 
     /**
-     * 호출하면 상태와 상관없이 모든 박지를 지금 경계로 다시 판정하고, 판정한 박지 수를 돌려준다.
+     * 호출하면 상태와 상관없이 모든 박지를 지금 경계로 다시 판정하고, 판정한 박지 수와 경고가 새로 생기거나 풀린 박지 수를 돌려준다.
      *
      * <p>서비스는 박지 좌표를 한 번 읽고, 박지마다 공간 인덱스를 쓰는 점 조회로 경계를 찾는다. 겹친 경계에서는 ID가 가장 작은 경계를 근거로 고른다. 그다음
      * 같은 경계로 판정된 박지끼리 묶어서 {@value #UPDATE_CHUNK_SIZE}건씩 나눠 기록한다. 모든 박지의 판정 시각은 호출을 시작한 시각 하나로 같다.
      *
      * <p>예전에 경고를 받았더라도 지금 경계에 들어가지 않으면 서비스는 경고를 끄고 근거 경계를 비운다. 판정은 제보 내용을 고치는 일이 아니라서 updated_at은
      * 바꾸지 않는다.
+     *
+     * <p>서비스는 판정 전 경고 여부와 새 판정을 비교해서, 경고가 새로 생긴 박지와 경고가 풀린 박지를 센다. 경고를 유지하면서 근거 경계만 바뀐 박지는 어느 쪽에도
+     * 세지 않는다.
      */
     @Transactional
-    public int rejudgeBakjis() {
+    public BakjiRejudgeCounts rejudgeBakjis() {
         Instant now = clock.instant();
         List<BakjiPointRow> points = parkAreaJudgeMapper.selectBakjiPoints();
 
         // 경계 밖 박지는 null 키로 묶는다.
         Map<Long, List<Long>> spotIdsByAreaId = new HashMap<>();
+        int newlyWarned = 0;
+        int cleared = 0;
         for (BakjiPointRow point : points) {
             Long protectedAreaId = parkAreaJudgeMapper.selectContainingAreaId(point.lat(), point.lng());
             spotIdsByAreaId
                     .computeIfAbsent(protectedAreaId, key -> new ArrayList<>())
                     .add(point.id());
+            boolean warnedNow = protectedAreaId != null;
+            if (!point.parkWarning() && warnedNow) {
+                newlyWarned++;
+            } else if (point.parkWarning() && !warnedNow) {
+                cleared++;
+            }
         }
 
         for (Map.Entry<Long, List<Long>> entry : spotIdsByAreaId.entrySet()) {
@@ -72,6 +83,6 @@ public class ParkAreaJudgeService {
                 parkAreaJudgeMapper.updateJudgement(spotIds.subList(from, to), entry.getKey(), now);
             }
         }
-        return points.size();
+        return new BakjiRejudgeCounts(points.size(), newlyWarned, cleared);
     }
 }

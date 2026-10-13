@@ -17,7 +17,7 @@ public interface ParkAreaJudgeMapper {
     /** 호출하면 id인 공원 경계의 이름, 출처, 기준일을 돌려준다. 그런 경계가 없으면 null을 돌려준다. */
     ProtectedAreaEvidenceRow selectAreaEvidence(@Param("id") long id);
 
-    /** 호출하면 상태와 상관없이 모든 박지의 ID와 좌표를 ID 순서로 돌려준다. */
+    /** 호출하면 상태와 상관없이 모든 박지의 ID, 좌표, 판정 전 공원 경고 여부를 ID 순서로 돌려준다. */
     List<BakjiPointRow> selectBakjiPoints();
 
     /**

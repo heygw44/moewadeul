@@ -2,6 +2,7 @@ package com.moewadeul.publicdata.application;
 
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
 import com.moewadeul.publicdata.domain.SyncJobType;
+import com.moewadeul.spot.application.BakjiRejudgeCounts;
 import com.moewadeul.spot.application.ParkAreaJudgeService;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -44,10 +45,16 @@ public class BakjiRejudgeService {
         long runId = start.runId();
         try {
             log.info("bakji rejudge started runId={}", runId);
-            BakjiRejudgeResult result = new BakjiRejudgeResult(parkAreaJudgeService.rejudgeBakjis());
+            BakjiRejudgeCounts counts = parkAreaJudgeService.rejudgeBakjis();
+            BakjiRejudgeResult result = new BakjiRejudgeResult(counts.judged(), counts.newlyWarned(), counts.cleared());
             syncJobRunService.recordProgress(runId, null, result.judgedCount(), 0);
             syncJobRunService.complete(runId);
-            log.info("bakji rejudge completed runId={} judged={}", runId, result.judgedCount());
+            log.info(
+                    "bakji rejudge completed runId={} judged={} newlyWarned={} cleared={}",
+                    runId,
+                    result.judgedCount(),
+                    result.newlyWarnedCount(),
+                    result.clearedCount());
             return result;
         } catch (RuntimeException e) {
             recordFailure(runId, e);
