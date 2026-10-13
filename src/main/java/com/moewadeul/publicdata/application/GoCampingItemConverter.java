@@ -35,7 +35,7 @@ final class GoCampingItemConverter {
 
     /**
      * 호출하면 항목을 명령으로 바꾼다. ID·이름이 비었거나 좌표를 숫자로 읽을 수 없으면 WARN 로그를 남기고 빈 값을 돌려준다.
-     * 운영 상태와 휴장 기간은 읽을 수 없으면 null로 두고 항목은 그대로 적재한다.
+     * 운영 상태, 휴장 기간, 원천 수정일은 읽을 수 없으면 null로 두고 항목은 그대로 적재한다.
      */
     static Optional<PublicSpotCommand> convert(GoCampingItem item) {
         String externalId = blankToNull(item.contentId());
@@ -61,9 +61,9 @@ final class GoCampingItemConverter {
                 blankToNull(item.tel()),
                 blankToNull(item.homepage()),
                 operatingStatus(externalId, item.manageSttus()),
-                closedDate(externalId, "hvofBgnde", item.hvofBgnde()),
-                closedDate(externalId, "hvofEnddle", item.hvofEnddle()),
-                null));
+                parseDate(externalId, "hvofBgnde", item.hvofBgnde()),
+                parseDate(externalId, "hvofEnddle", item.hvofEnddle()),
+                parseDate(externalId, "modifiedtime", item.modifiedtime())));
     }
 
     /** 호출하면 원천에서 삭제된 항목인지 알려 준다. 동기화 목록의 syncStatus가 정확히 D일 때만 삭제로 본다. 다른 값이나 빈 값은 모두 살아 있는 항목이다. */
@@ -84,7 +84,8 @@ final class GoCampingItemConverter {
         return status;
     }
 
-    private static LocalDate closedDate(String externalId, String field, String value) {
+    // 원천이 준 날짜 문자열을 읽는다. 비어 있거나 형식이 맞지 않으면 null로 두고, 형식이 틀린 경우에만 WARN을 남긴다.
+    private static LocalDate parseDate(String externalId, String field, String value) {
         String trimmed = blankToNull(value);
         if (trimmed == null) {
             return null;
@@ -92,7 +93,7 @@ final class GoCampingItemConverter {
         try {
             return LocalDate.parse(trimmed);
         } catch (DateTimeParseException e) {
-            log.warn("gocamping item has unparseable closed date contentId={} field={}", externalId, field);
+            log.warn("gocamping item has unparseable date contentId={} field={}", externalId, field);
             return null;
         }
     }

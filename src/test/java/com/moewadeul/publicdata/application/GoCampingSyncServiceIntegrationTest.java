@@ -225,6 +225,32 @@ class GoCampingSyncServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-06] 원천 수정일(modifiedtime)을 상세의 기준일로 저장하고, 수정일만 바뀐 항목은 그 행만 갱신한다")
+    void syncStoresModifiedTimeAsSourceDateAndUpdatesOnlyChangedRow() {
+        // given
+        stubAllPages();
+        goCampingSyncService.sync();
+        assertThat(sourceDate("146")).isEqualTo("2026-10-02");
+        assertThat(sourceDate("2931")).isEqualTo("2026-10-02");
+        Map<String, Object> changedBefore = detailRow("146");
+        Map<String, Object> othersBefore = detailRow("2931");
+
+        // when: 146번 항목은 수정일만 바뀌고 나머지 값은 같다.
+        clock.advance(Duration.ofDays(1));
+        stubAllPages(Map.of("146", Map.of("modifiedtime", "2026-10-09")));
+        Optional<GoCampingSyncResult> second = goCampingSyncService.sync();
+
+        // then
+        assertThat(second).isPresent();
+        assertThat(second.get().updated()).isEqualTo(1);
+        assertThat(second.get().unchanged()).isEqualTo(LIVE_COUNT - 1);
+        Map<String, Object> changedAfter = detailRow("146");
+        assertThat(changedAfter.get("source_date")).isEqualTo("2026-10-09");
+        assertThat(changedAfter.get("synced_at")).isNotEqualTo(changedBefore.get("synced_at"));
+        assertThat(detailRow("2931")).isEqualTo(othersBefore);
+    }
+
+    @Test
     @DisplayName("[F-06] 같은 데이터를 두 번 적재해도 행이 늘지 않고, 바뀐 것이 없으면 수정 시각도 그대로다")
     void syncingSameDataTwiceKeepsRowsUnchanged() {
         // given
@@ -453,10 +479,21 @@ class GoCampingSyncServiceIntegrationTest {
                 + " weather_ny, park_warning, status, created_at, updated_at FROM spot ORDER BY id");
     }
 
+    private String sourceDate(String externalId) {
+        return (String) detailRow(externalId).get("source_date");
+    }
+
+    private Map<String, Object> detailRow(String externalId) {
+        return detailRows().stream()
+                .filter(row -> externalId.equals(row.get("external_id")))
+                .findFirst()
+                .orElseThrow();
+    }
+
     private List<Map<String, Object>> detailRows() {
         return jdbcTemplate.queryForList("SELECT spot_id, source, external_id, category, CAST(facilities AS CHAR)"
                 + " AS facilities, phone, homepage, operating_status, CAST(closed_from AS CHAR) AS closed_from,"
-                + " CAST(closed_until AS CHAR) AS closed_until, source_removed_at, synced_at, created_at, updated_at"
+                + " CAST(closed_until AS CHAR) AS closed_until, CAST(source_date AS CHAR) AS source_date, source_removed_at, synced_at, created_at, updated_at"
                 + " FROM public_spot_detail ORDER BY spot_id");
     }
 

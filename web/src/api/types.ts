@@ -180,8 +180,10 @@ export interface PublicDetail {
   facilities: PublicFacilities | null;
   phone: string | null;
   homepage: string | null;
-  // 고캠핑은 기준일을 주지 않아서 null이다.
+  // 원천의 정보 기준일(YYYY-MM-DD). 고캠핑은 원천 수정일, 휴양림은 파일 기준일이고 없으면 null이다.
   sourceDate: string | null;
+  // 서버가 이 원천의 동기화를 마지막으로 성공한 시각(UTC ISO). 성공한 동기화가 없으면 null이다.
+  checkedAt: string | null;
   operatingStatus: OperatingStatus | null;
   closedFrom: string | null;
   closedUntil: string | null;
