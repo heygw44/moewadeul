@@ -10,6 +10,8 @@ import type {
   AdminSpotSummary,
   Page,
   ReportStatus,
+  SyncJobRun,
+  SyncJobType,
 } from './types';
 
 export const ADMIN_PAGE_SIZE = 20;
@@ -85,4 +87,19 @@ export function hideMemory(memoryId: number): Promise<{ memoryId: number; status
 
 export function restoreMemory(memoryId: number): Promise<{ memoryId: number; status: string }> {
   return apiFetch(`/api/admin/memories/${memoryId}/restore`, { method: 'POST' });
+}
+
+export function fetchSyncJobRuns(
+  params: { jobType?: SyncJobType; page: number; size?: number },
+  signal?: AbortSignal,
+): Promise<Page<SyncJobRun>> {
+  return apiFetch<Page<SyncJobRun>>('/api/admin/sync-jobs', {
+    query: { jobType: params.jobType, page: params.page, size: params.size ?? ADMIN_PAGE_SIZE },
+    signal,
+  });
+}
+
+// 서버가 작업을 백그라운드에서 시작하고 바로 돌려준다. 끝났는지는 실행 기록으로 확인한다.
+export function startSyncJob(jobType: SyncJobType): Promise<{ jobRunId: number }> {
+  return apiFetch('/api/admin/sync-jobs', { method: 'POST', body: { jobType } });
 }

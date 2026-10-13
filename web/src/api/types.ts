@@ -1153,3 +1153,20 @@ export interface MemoryUpdateRequest {
   spotId?: number | null;
   imageIds?: number[];
 }
+
+// 데이터 적재 작업
+
+export type SyncJobType = 'GOCAMPING' | 'FOREST' | 'FOREST_STANDARD' | 'PARK_BOUNDARY' | 'BAKJI_REJUDGE';
+
+export type SyncJobStatus = 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export interface SyncJobRun {
+  jobRunId: number;
+  jobType: SyncJobType;
+  status: SyncJobStatus;
+  processedCount: number;
+  skippedCount: number;
+  errorMessage: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+}

@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: '/admin/reports', label: '신고 처리' },
   { to: '/admin/spots', label: '박지 검토' },
   { to: '/admin/memories', label: '발자국 검토' },
+  { to: '/admin/sync-jobs', label: '데이터 적재' },
 ] as const;
 
 // 관리자 화면의 공통 틀이다. 관리자가 아니면 안에 있는 화면을 그리지 않아서 관리자 API도 부르지 않는다. 권한은 서버도 검사한다.
