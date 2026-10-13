@@ -163,7 +163,7 @@ export function WarningPreview() {
       <span className="flex flex-col gap-2 border-t border-line pt-4">
         <span className="text-lg font-semibold text-ink">베이스캠프</span>
         <span className="inline-flex min-h-11 items-center justify-center self-start rounded-control bg-fill px-4 text-base font-semibold text-ink-muted">
-          이 장소로 베이스캠프 열기
+          이 장소에서 베이스캠프 열기
         </span>
         <span className="text-sm text-ink-muted">공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요.</span>
       </span>

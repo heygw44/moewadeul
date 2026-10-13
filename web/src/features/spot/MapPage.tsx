@@ -417,11 +417,11 @@ export function MapPage({
                   <div className="flex flex-col gap-3">
                     <p>{mapFailure.message}</p>
                     {mapFailure.reason === 'NO_KEY' ? (
-                      <p>저장소 루트의 .env에 VITE_KAKAO_JS_KEY를 넣고 개발 서버를 다시 켜 주세요.</p>
+                      import.meta.env.DEV && <p>저장소 루트의 .env에 VITE_KAKAO_JS_KEY를 넣고 개발 서버를 다시 켜 주세요.</p>
                     ) : (
                       <div>
                         <Button variant="secondary" onClick={retryMap}>
-                          다시 시도
+                          다시 불러오기
                         </Button>
                       </div>
                     )}
@@ -638,22 +638,21 @@ function SpotList({
         <div className="px-4 pt-4">
           {/* 머리의 장소 수가 지역 전체가 아니라 지금 화면의 수라는 것을 함께 적는다. 상태 안내라서 상자로 감싸지 않는다. */}
           <p className="text-sm text-ink-muted">
-            지금 지도에 보이는 곳에 장소가 모두 <span className="tabular-nums">{totalCount(area)}곳</span> 있어요. 지도를
-            확대하면 하나씩 볼 수 있어요.
+            장소가 많아서 지도에 묶어서 보여요. 지도를 확대하면 목록으로 볼 수 있어요.
           </p>
         </div>
       )}
 
       {area.status === 'ready' && area.markers.length === 0 && area.clusters.length === 0 && (
         filtered ? (
-          <EmptyState title="조건에 맞는 장소가 없어요" description="조건을 줄이거나 지도를 옮기면 다시 찾아요." />
+          <EmptyState title="조건에 맞는 장소가 없어요" description="조건을 줄이거나 지도를 다른 곳으로 옮겨 주세요." />
         ) : (
-          <EmptyState title="이 지역에는 장소가 없어요" description="지도를 옮기거나 축소하면 다시 찾아요." />
+          <EmptyState title="이 지역에는 장소가 없어요" description="지도를 옮기거나 축소해 주세요." />
         )
       )}
 
       {area.markers.length > 0 && (
-        <ul aria-label="이 지역 장소">
+        <ul aria-label="이 지역의 장소">
           {area.markers.map((marker) => (
             <SpotListRow key={marker.spotId} marker={marker} />
           ))}

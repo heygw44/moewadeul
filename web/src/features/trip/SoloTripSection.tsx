@@ -34,7 +34,7 @@ export function SoloTripSection({ spotId, onRegistered }: SoloTripSectionProps) 
         혼자 가는 일정
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
-        일정은 나만 봐요. 다른 사람에게는 예상 인원 1명으로만 보여요.
+        나만 보는 일정이에요. 다른 사람에게는 예상 인원 1명으로만 보여요.
       </p>
       {done && (
         <div role="status" className="mt-2">
@@ -112,7 +112,7 @@ function SoloTripForm({
   function validate(): TripFieldErrors {
     const errors: TripFieldErrors = {};
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) errors.startDate = '출발일을 골라 주세요.';
-    else if (startDate < minStart || startDate > maxStart) errors.startDate = '출발일은 내일부터 60일 안으로 골라 주세요.';
+    else if (startDate < minStart || startDate > maxStart) errors.startDate = '출발일은 내일부터 60일 안에서 골라 주세요.';
     if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) errors.endDate = '돌아오는 날을 골라 주세요.';
     else if (endDate <= startDate || endDate > addDaysToLocalDate(startDate, MAX_NIGHTS))
       errors.endDate = '일정은 1~3박으로 골라 주세요.';
@@ -164,7 +164,7 @@ function SoloTripForm({
         value={startDate}
         onChange={(event) => changeStart(event.target.value)}
         error={fieldErrors.startDate}
-        hint="내일부터 60일 안으로 고를 수 있어요."
+        hint="내일부터 60일 안에서 골라요."
       />
       <TextField
         label="돌아오는 날"
@@ -175,7 +175,7 @@ function SoloTripForm({
         value={endDate}
         onChange={(event) => setEndDate(event.target.value)}
         error={fieldErrors.endDate}
-        hint="1박부터 3박까지예요. 돌아오는 날 밤은 예상 인원에 세지 않아요."
+        hint="1~3박까지예요. 돌아오는 날 밤은 예상 인원에 세지 않아요."
       />
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="secondary" onClick={onCancel} disabled={submitting}>

@@ -33,7 +33,7 @@ export function AnnouncementBar() {
         >
           <Icon name="calendar" size={18} className="shrink-0" />
           <span className="truncate">
-            <span className="font-semibold">공식 행사</span> · {program.title} 신청을 받고 있어요
+            <span className="font-semibold">공식 행사</span> {program.title} 신청을 받고 있어요
           </span>
           <span className="shrink-0">
             남은 자리 <span className="font-mono tabular-nums">{program.remainingSeats}</span>

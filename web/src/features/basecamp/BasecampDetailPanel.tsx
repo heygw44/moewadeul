@@ -45,7 +45,7 @@ const ACTION_LINK_CLASS =
 
 const CONFIRMED_SAFETY_RULES = [
   '출발 전에 일정을 가족이나 지인에게 알려 주세요.',
-  '단독 행동은 되도록 하지 마세요.',
+  '되도록 일행과 떨어지지 마세요.',
   '야영한 자리에는 흔적을 남기지 마세요.',
 ];
 
@@ -93,7 +93,7 @@ export function BasecampDetailPanel({ basecampId, onBack }: BasecampDetailPanelP
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     body = (
       <div className="px-4 py-4">
-        <EmptyState title="베이스캠프를 찾을 수 없어요" description="삭제됐거나 없는 베이스캠프예요." />
+        <EmptyState title="베이스캠프를 찾을 수 없어요" description="삭제됐거나 주소가 잘못됐어요." />
       </div>
     );
   } else {
@@ -357,10 +357,10 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   const [dialog, setDialog] = useState<Pending>(null);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; message: string } | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
-  async function run(action: () => Promise<unknown>, successText: string) {
+  async function run(action: () => Promise<unknown>, successText: string, failTitle: string) {
     setSubmitting(true);
     setError(null);
     setDone(null);
@@ -368,7 +368,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
       await action();
       setDone(successText);
     } catch (caught) {
-      setError(toUserMessage(caught));
+      setError({ title: failTitle, message: toUserMessage(caught) });
     } finally {
       setSubmitting(false);
       setDialog(null);
@@ -398,7 +398,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
           to="/verify-email"
           className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted"
         >
-          이메일 인증하러 가기
+          이메일 인증하기
         </Link>
       </>
     );
@@ -439,7 +439,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   } else if (detail.myRelation === 'APPLICANT') {
     content = (
       <>
-        <p className="text-base text-ink">합류 신청을 보냈어요. 캠프 리더가 확인할 때까지 기다려 주세요.</p>
+        <p className="text-base text-ink">합류 신청을 보냈어요. 캠프 리더가 승인하거나 거절할 때까지 기다려 주세요.</p>
         <Button variant="secondary" onClick={() => setDialog('cancel')}>
           신청 취소
         </Button>
@@ -475,8 +475,8 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
       )}
       {error && (
         <div role="alert">
-          <Notice tone="danger" title="처리하지 못했어요">
-            <p>{error}</p>
+          <Notice tone="danger" title={error.title}>
+            <p>{error.message}</p>
           </Notice>
         </div>
       )}
@@ -502,7 +502,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
                   run(async () => {
                     await applyToBasecamp(detail.basecampId, message.trim() || undefined);
                     setMessage('');
-                  }, '합류 신청을 보냈어요.')
+                  }, '합류 신청을 보냈어요.', '합류 신청을 보내지 못했어요')
                 }
               >
                 신청하기
@@ -517,17 +517,17 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
             <p className="text-base text-ink">탈퇴하면 이 베이스캠프에 다시 신청할 수 없어요.</p>
             {isLateLeave(detail) && (
               <Notice tone="warning" title="출발이 얼마 남지 않았어요">
-                <p>출발 48시간 안에 탈퇴하면 임박 탈퇴로 기록돼요. 180일 안에 3번이면 신뢰 회원 단계에서 빠져요.</p>
+                <p>출발 48시간 안에 탈퇴하면 임박 탈퇴로 기록돼요. 임박 탈퇴가 180일 안에 3번 쌓이면 신뢰 단계 2에서 빠져요.</p>
               </Notice>
             )}
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={submitting} onClick={() => setDialog(null)}>
-                돌아가기
+                닫기
               </Button>
               <Button
                 variant="danger"
                 loading={submitting}
-                onClick={() => run(() => leaveBasecamp(detail.basecampId), '베이스캠프에서 탈퇴했어요.')}
+                onClick={() => run(() => leaveBasecamp(detail.basecampId), '베이스캠프에서 탈퇴했어요.', '탈퇴하지 못했어요')}
               >
                 탈퇴
               </Button>
@@ -541,12 +541,12 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
             <p className="text-base text-ink">합류 신청을 취소할까요? 취소해도 나중에 다시 신청할 수 있어요.</p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={submitting} onClick={() => setDialog(null)}>
-                돌아가기
+                닫기
               </Button>
               <Button
                 variant="danger"
                 loading={submitting}
-                onClick={() => run(() => cancelMyApplication(detail.basecampId), '합류 신청을 취소했어요.')}
+                onClick={() => run(() => cancelMyApplication(detail.basecampId), '합류 신청을 취소했어요.', '합류 신청을 취소하지 못했어요')}
               >
                 신청 취소
               </Button>

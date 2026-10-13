@@ -91,7 +91,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
       <>
         <p className="text-sm text-ink">로그인하면 베이스캠프를 열거나 발자국을 남길 수 있어요.</p>
         <Link to={withNext('/login', `${location.pathname}${location.search}`)} className={GUIDE_LINK_CLASS}>
-          로그인하러 가기
+          로그인
         </Link>
       </>
     );
@@ -99,19 +99,19 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
     body = (
       <>
         <p className="text-sm text-ink">
-          이메일 인증을 마치면 발자국을 남길 수 있고, 본인확인까지 하면 베이스캠프를 열 수 있어요.
+          이메일 인증을 마치면 발자국을 남길 수 있어요. 베이스캠프는 본인확인까지 마쳐야 열 수 있어요.
         </p>
         <Link to="/verify-email" className={GUIDE_LINK_CLASS}>
-          이메일 인증하러 가기
+          이메일 인증하기
         </Link>
       </>
     );
   } else if (session.me.trustLevel < 1) {
     body = (
       <>
-        <p className="text-sm text-ink">함께 가는 사람의 안전을 위해 본인확인을 마친 성인만 베이스캠프를 열 수 있어요.</p>
+        <p className="text-sm text-ink">베이스캠프는 본인확인을 마친 성인만 열 수 있어요.</p>
         <Link to="/identity-verification" className={GUIDE_LINK_CLASS}>
-          본인확인하러 가기
+          본인확인하기
         </Link>
         <MemoryLink position={position} />
       </>
@@ -122,7 +122,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
         <Button fullWidth loading={searching} onClick={search}>
           여기서 베이스캠프 열기
         </Button>
-        <p className="text-sm text-ink-muted">50m 안의 장소에서 골라요. 장소가 없으면 박지로 먼저 제보해요.</p>
+        <p className="text-sm text-ink-muted">50m 안의 장소 중에서 골라요. 장소가 없으면 박지로 먼저 제보해요.</p>
         {error && (
           <p role="alert" className="flex items-start gap-1 text-sm text-danger">
             <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
@@ -190,7 +190,7 @@ export function SpotPickDialog({ spots, onClose }: SpotPickDialogProps) {
             {spot.parkWarning ? (
               <div aria-disabled="true" className="flex min-h-11 flex-col gap-1 py-2">
                 <SpotPickLabel spot={spot} />
-                <p className="text-sm text-warning">공원 경계 안일 가능성이 있는 박지라서 베이스캠프를 열 수 없어요.</p>
+                <p className="text-sm text-warning">공원 경계 경고가 있는 박지라 베이스캠프를 열 수 없어요.</p>
               </div>
             ) : (
               <Link

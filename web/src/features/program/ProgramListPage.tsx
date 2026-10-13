@@ -41,11 +41,11 @@ export function ProgramListPage() {
     <HubLayout
       announcement
       title="공식 행사"
-      description="지자체와 브랜드가 여는 백패킹 행사를 선착순으로 신청해요."
+      description="지자체와 브랜드가 여는 백패킹 행사에 선착순으로 신청할 수 있어요."
       actions={
         signedIn ? (
           <Link to="/me/program-applications" className={SECONDARY_LINK_CLASS}>
-            내 신청 보기
+            내 행사 신청
           </Link>
         ) : null
       }
@@ -109,7 +109,7 @@ export function ProgramListPage() {
 function ProgramEmpty({ filtered, onReset }: { filtered: boolean; onReset: () => void }) {
   return (
     <EmptyState
-      title={filtered ? '이 상태의 행사가 없어요' : '지금 볼 수 있는 행사가 없어요'}
+      title={filtered ? '해당하는 행사가 없어요' : '지금 볼 수 있는 행사가 없어요'}
       description={filtered ? undefined : '행사가 열리면 이 목록에 올라와요.'}
       action={
         filtered ? (

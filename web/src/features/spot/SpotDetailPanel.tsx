@@ -84,7 +84,7 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
     body = (
       <EmptyState
         title="장소를 찾을 수 없어요"
-        description="삭제됐거나 숨김 처리된 장소예요."
+        description="삭제됐거나 숨겨진 장소예요."
       />
     );
   } else {
@@ -167,7 +167,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
       </header>
 
       <div className="mt-3">
-        <UnverifiedNote action="박지 확인, 혼자 가는 일정, 후기를 남길 수 있어요." />
+        <UnverifiedNote action="박지를 확인하고 혼자 가는 일정과 후기를 남길 수 있어요." />
       </div>
 
       {(publicDetail?.closedNow || warning.warned) && (
@@ -198,14 +198,14 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
               disabled
               disabledReason="공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요."
             >
-              이 장소로 베이스캠프 열기
+              이 장소에서 베이스캠프 열기
             </Button>
           ) : (
             <Link
               to={`/basecamps/new?spotId=${detail.spotId}`}
               className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
             >
-              이 장소로 베이스캠프 열기
+              이 장소에서 베이스캠프 열기
             </Link>
           )}
         </div>
@@ -220,7 +220,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
             to={`/community?spotId=${detail.spotId}`}
             className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
           >
-            이 장소 관련 글 보기
+            이 장소 글 보기
           </Link>
           <Link
             to={`/community/new?spotId=${detail.spotId}`}
@@ -235,7 +235,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <h3 id="spot-memory-title" className={SECTION_TITLE_CLASS}>
           발자국
         </h3>
-        <p className="mt-1 text-sm text-ink-muted">다녀온 날의 사진과 글을 남겨 두세요. 처음에는 나만 볼 수 있어요.</p>
+        <p className="mt-1 text-sm text-ink-muted">다녀온 날의 사진과 글을 남겨 두세요. 처음에는 나만 봐요.</p>
         <div className="mt-2">
           <Link
             to={newMemoryPath({ lat: detail.lat, lng: detail.lng }, detail.spotId)}
@@ -386,10 +386,10 @@ function ExpectedPeopleSection({ expectedPeople }: { expectedPeople: ExpectedPeo
         예상 인원
       </h3>
       {expectedPeople.length === 0 ? (
-        <p className="mt-2 text-sm text-ink-muted">아직 확정된 베이스캠프, 행사 참가자, 혼자 가는 일정이 없어요</p>
+        <p className="mt-2 text-sm text-ink-muted">아직 예상 인원이 없어요</p>
       ) : (
         <div className="mt-2 flex flex-col gap-2">
-          <p className="text-sm text-ink-muted">확정된 베이스캠프 멤버, 행사 참가자, 혼자 가는 일정을 밤마다 센 인원이에요.</p>
+          <p className="text-sm text-ink-muted">확정된 베이스캠프 멤버, 행사 참가자, 혼자 가는 일정을 합쳐 밤마다 센 인원이에요.</p>
           <Evidence
             items={expectedPeople.map((day) => ({ label: formatLocalDate(day.date), value: `${day.count}명` }))}
           />
