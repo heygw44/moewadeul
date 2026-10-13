@@ -1,8 +1,8 @@
 package com.moewadeul.memory.application;
 
 import com.moewadeul.common.storage.ImageStorage;
-import com.moewadeul.memory.infra.MemoryImageMapper;
-import com.moewadeul.memory.infra.MemoryImageRow;
+import com.moewadeul.memory.infra.image.MemoryImageMapper;
+import com.moewadeul.memory.infra.image.MemoryImageRow;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -15,20 +15,20 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
-class MemoryImageReader {
+public class MemoryImageReader {
 
     private final MemoryImageMapper memoryImageMapper;
     private final ImageStorage imageStorage;
 
     /** 호출하면 memoryId인 기록에 붙은 사진을 기록 안 순서대로 돌려준다. 사진이 없으면 빈 목록이다. */
-    List<MemoryPhoto> readByMemoryId(long memoryId) {
+    public List<MemoryPhoto> readByMemoryId(long memoryId) {
         return memoryImageMapper.selectByMemoryIds(List.of(memoryId)).stream()
                 .map(this::toPhoto)
                 .toList();
     }
 
     /** 호출하면 memoryIds인 기록들에 붙은 사진을 한 번에 읽어 기록 ID별로 모아 돌려준다. 사진이 없는 기록은 키가 없다. */
-    Map<Long, List<MemoryPhoto>> readByMemoryIds(Collection<Long> memoryIds) {
+    public Map<Long, List<MemoryPhoto>> readByMemoryIds(Collection<Long> memoryIds) {
         if (memoryIds.isEmpty()) {
             return Map.of();
         }
@@ -38,7 +38,7 @@ class MemoryImageReader {
     }
 
     /** 호출하면 objectKey인 사진의 조회 URL을 서명한다. */
-    String viewUrlOf(String objectKey) {
+    public String viewUrlOf(String objectKey) {
         return imageStorage.presignView(objectKey);
     }
 
