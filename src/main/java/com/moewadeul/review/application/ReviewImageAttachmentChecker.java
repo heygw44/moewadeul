@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 class ReviewImageAttachmentChecker {
 
     static final String FIELD = "imageIds";
-    static final String UNUSABLE_MESSAGE = "붙일 수 없는 이미지가 있습니다.";
+    static final String UNUSABLE_MESSAGE = "붙일 수 없는 이미지가 있어요.";
 
     private final ReviewImageRepository reviewImageRepository;
     private final ImageStorage imageStorage;
@@ -54,13 +54,13 @@ class ReviewImageAttachmentChecker {
 
     private static void requireValidShape(List<Long> imageIds) {
         if (imageIds.size() > ReviewImage.MAX_PER_REVIEW) {
-            throw invalid("이미지는 " + ReviewImage.MAX_PER_REVIEW + "장까지 붙일 수 있습니다.");
+            throw invalid("이미지는 " + ReviewImage.MAX_PER_REVIEW + "장까지 붙일 수 있어요.");
         }
         if (imageIds.stream().anyMatch(Objects::isNull)) {
             throw invalid(UNUSABLE_MESSAGE);
         }
         if (new HashSet<>(imageIds).size() != imageIds.size()) {
-            throw invalid("같은 이미지를 두 번 붙일 수 없습니다.");
+            throw invalid("같은 이미지를 두 번 붙일 수 없어요.");
         }
     }
 

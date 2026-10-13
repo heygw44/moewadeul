@@ -33,9 +33,9 @@ public class MemoryImageUploadService {
     @Transactional
     public MemoryImageUpload issue(long memberId, String contentType, long sizeBytes) {
         String extension = MemoryImage.extensionOf(contentType)
-                .orElseThrow(() -> new InvalidFieldException("contentType", "허용하지 않는 사진 형식입니다."));
+                .orElseThrow(() -> new InvalidFieldException("contentType", "허용하지 않는 사진 형식이에요."));
         if (!MemoryImage.isAllowedSize(sizeBytes)) {
-            throw new InvalidFieldException("sizeBytes", "사진 크기는 1바이트 이상 5MB 이하여야 합니다.");
+            throw new InvalidFieldException("sizeBytes", "사진 크기는 1바이트 이상 5MB 이하여야 해요.");
         }
         String key = "memory/" + memberId + "/" + UUID.randomUUID() + "." + extension;
         MemoryImage image = memoryImageRepository.saveAndFlush(

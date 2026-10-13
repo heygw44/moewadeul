@@ -16,13 +16,13 @@ public record SpotReviewCreateRequest(
         @Schema(description = "방문일(한국 날짜). 오늘보다 뒤일 수 없다.", example = "2026-10-05") @NotNull(message = "방문일을 입력해야 합니다.")
         LocalDate visitedDate,
 
-        @NotNull(message = "평점을 입력해야 합니다.")
-        @Min(value = SpotReview.MIN_RATING, message = "평점은 1 이상이어야 합니다.")
-        @Max(value = SpotReview.MAX_RATING, message = "평점은 5 이하여야 합니다.")
+        @NotNull(message = "평점을 입력해 주세요.")
+        @Min(value = SpotReview.MIN_RATING, message = "평점은 1 이상이어야 해요.")
+        @Max(value = SpotReview.MAX_RATING, message = "평점은 5 이하여야 해요.")
         Integer rating,
 
-        @NotBlank(message = "후기 내용을 입력해야 합니다.")
-        @Size(max = SpotReview.CONTENT_MAX_LENGTH, message = "후기 내용은 2000자 이하여야 합니다.")
+        @NotBlank(message = "후기 내용을 입력해 주세요.")
+        @Size(max = SpotReview.CONTENT_MAX_LENGTH, message = "후기 내용은 2000자 이하여야 해요.")
         String content,
 
         @Schema(description = "붙일 이미지 ID. 최대 3개이고 배열 순서가 후기 안 순서다. 없으면 이미지 없이 쓴다.")

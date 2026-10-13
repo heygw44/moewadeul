@@ -33,9 +33,9 @@ public class ReviewImageUploadService {
     @Transactional
     public ReviewImageUpload issue(long memberId, String contentType, long sizeBytes) {
         String extension = ReviewImage.extensionOf(contentType)
-                .orElseThrow(() -> new InvalidFieldException("contentType", "허용하지 않는 이미지 형식입니다."));
+                .orElseThrow(() -> new InvalidFieldException("contentType", "허용하지 않는 이미지 형식이에요."));
         if (!ReviewImage.isAllowedSize(sizeBytes)) {
-            throw new InvalidFieldException("sizeBytes", "이미지 크기는 1바이트 이상 5MB 이하여야 합니다.");
+            throw new InvalidFieldException("sizeBytes", "이미지 크기는 1바이트 이상 5MB 이하여야 해요.");
         }
         String key = "review/" + memberId + "/" + UUID.randomUUID() + "." + extension;
         ReviewImage image = reviewImageRepository.saveAndFlush(

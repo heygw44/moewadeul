@@ -166,7 +166,7 @@ class AdminMemoryControllerTest {
                 .thenThrow(new BusinessException(MemoryErrorCode.MEMORY_INVALID_STATE));
         when(queryService.list(eq("ACTIVE"), anyInt(), anyInt()))
                 .thenThrow(new BusinessException(
-                        CommonErrorCode.INVALID_INPUT, "status는 PENDING_REVIEW 또는 HIDDEN이어야 합니다."));
+                        CommonErrorCode.INVALID_INPUT, "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요."));
 
         // when
         MvcTestResult notFound = post(admin(), BASE + "/9/hide");

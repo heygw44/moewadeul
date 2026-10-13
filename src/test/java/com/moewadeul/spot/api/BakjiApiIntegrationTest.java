@@ -122,15 +122,15 @@ class BakjiApiIntegrationTest {
         assertThat(first)
                 .bodyJson()
                 .extractingPath("$.parkWarning.notice")
-                .isEqualTo("참고용 데이터입니다. 공식 경계는 고시 도면을 확인하세요.");
+                .isEqualTo("공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요.");
         assertThat(first)
                 .bodyJson()
                 .extractingPath("$.guide")
-                .isEqualTo("자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고, 어기면 과태료 대상입니다. 이곳에서 야영하지 말고 가까운 지정 야영장을 이용하세요.");
+                .isEqualTo("자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요.");
         assertThat(first)
                 .bodyJson()
                 .extractingPath("$.parkWarning.guide")
-                .isEqualTo("자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고, 어기면 과태료 대상입니다. 이곳에서 야영하지 말고 가까운 지정 야영장을 이용하세요.");
+                .isEqualTo("자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요.");
         assertThat(first)
                 .bodyJson()
                 .extractingPath("$.duplicateCandidates")

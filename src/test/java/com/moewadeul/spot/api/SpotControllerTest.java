@@ -71,8 +71,8 @@ class SpotControllerTest {
             "설악산 국립공원",
             "KDPA",
             LocalDate.of(2026, 1, 1),
-            "참고용 데이터입니다. 공식 경계는 고시 도면을 확인하세요.",
-            "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고, 어기면 과태료 대상입니다. 이곳에서 야영하지 말고 가까운 지정 야영장을 이용하세요.");
+            "공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요.",
+            "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요.");
     private static final SpotRating NO_RATING = new SpotRating(null, 0);
     private static final SpotParkWarning NOT_WARNED = new SpotParkWarning(false, null, null, null, null, null);
 
@@ -507,8 +507,8 @@ class SpotControllerTest {
                   "publicDetail": null,
                   "parkWarning": {
                     "warned": true, "areaName": "설악산 국립공원", "source": "KDPA", "sourceDate": "2026-01-01",
-                    "notice": "참고용 데이터입니다. 공식 경계는 고시 도면을 확인하세요.",
-                    "guide": "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고, 어기면 과태료 대상입니다. 이곳에서 야영하지 말고 가까운 지정 야영장을 이용하세요."
+                    "notice": "공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요.",
+                    "guide": "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요."
                   },
                   "rating": { "average": null, "count": 0 },
                   "recentReviews": [], "expectedPeople": [], "recruitingBasecamps": [], "weather": null
@@ -696,8 +696,8 @@ class SpotControllerTest {
                   "publicDetail": null,
                   "parkWarning": {
                     "warned": true, "areaName": "설악산 국립공원", "source": "KDPA", "sourceDate": "2026-01-01",
-                    "notice": "참고용 데이터입니다. 공식 경계는 고시 도면을 확인하세요.",
-                    "guide": "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고, 어기면 과태료 대상입니다. 이곳에서 야영하지 말고 가까운 지정 야영장을 이용하세요."
+                    "notice": "공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요.",
+                    "guide": "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요."
                   },
                   "rating": { "average": null, "count": 0 },
                   "recentReviews": [],

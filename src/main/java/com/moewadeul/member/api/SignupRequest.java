@@ -9,17 +9,17 @@ import jakarta.validation.constraints.Size;
 
 @PasswordsMatch
 public record SignupRequest(
-        @NotBlank(message = "이메일은 필수입니다.")
-        @Email(message = "이메일 형식이 올바르지 않습니다.")
+        @NotBlank(message = "이메일을 입력해 주세요.")
+        @Email(message = "이메일 형식이 맞지 않아요.")
         @MailableEmail
-        @Size(max = Member.EMAIL_MAX_LENGTH, message = "이메일은 " + Member.EMAIL_MAX_LENGTH + "자 이하여야 합니다.")
+        @Size(max = Member.EMAIL_MAX_LENGTH, message = "이메일은 " + Member.EMAIL_MAX_LENGTH + "자 이하여야 해요.")
         String email,
 
-        @NotNull(message = "비밀번호는 필수입니다.") String password,
+        @NotNull(message = "비밀번호를 입력해 주세요.") String password,
 
-        @NotNull(message = "비밀번호 확인은 필수입니다.") String passwordConfirm,
+        @NotNull(message = "비밀번호 확인을 입력해 주세요.") String passwordConfirm,
 
-        @NotBlank(message = "닉네임은 필수입니다.") @ValidNickname String nickname)
+        @NotBlank(message = "닉네임을 입력해 주세요.") @ValidNickname String nickname)
         implements ConfirmedPassword {
 
     public SignupCommand toCommand(String requestIp) {

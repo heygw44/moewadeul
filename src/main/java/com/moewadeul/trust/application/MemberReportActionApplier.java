@@ -83,10 +83,10 @@ public class MemberReportActionApplier {
     private static void requireConsistentRequest(
             MemberReport report, MemberReportActionCommand command, SanctionType sanctionType) {
         if (sanctionType == null && !command.hideReview()) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "제재를 내리거나 후기를 숨기는 요청이 하나는 있어야 합니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "제재를 내리거나 후기를 숨기는 요청이 하나는 있어야 해요.");
         }
         if (command.hideReview() && report.getKind() != ReportKind.REVIEW) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "후기 신고만 후기를 숨길 수 있습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "후기 신고만 후기를 숨길 수 있어요.");
         }
     }
 

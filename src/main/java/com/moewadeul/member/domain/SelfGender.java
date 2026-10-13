@@ -20,6 +20,6 @@ public enum SelfGender {
                 return value;
             }
         }
-        throw new BusinessException(CommonErrorCode.INVALID_INPUT, "성별은 %s 중 하나여야 합니다.".formatted(ALLOWED_NAMES));
+        throw new BusinessException(CommonErrorCode.INVALID_INPUT, "성별은 %s 중 하나여야 해요.".formatted(ALLOWED_NAMES));
     }
 }

@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 @Constraint(validatedBy = PasswordsMatch.Validator.class)
 @interface PasswordsMatch {
 
-    String message() default "비밀번호 확인이 비밀번호와 다릅니다.";
+    String message() default "비밀번호 확인이 비밀번호와 달라요.";
 
     Class<?>[] groups() default {};
 

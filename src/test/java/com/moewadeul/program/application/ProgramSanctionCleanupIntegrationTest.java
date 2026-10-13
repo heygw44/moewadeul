@@ -156,7 +156,7 @@ class ProgramSanctionCleanupIntegrationTest {
         Map<String, Object> notification = jdbc.queryForMap(
                 "SELECT body, link FROM notification WHERE member_id = ? AND type = 'PROGRAM_APPLICATION_CANCELED'",
                 target);
-        assertThat(notification.get("body")).isEqualTo("이용 제재로 행사 신청이 취소됐습니다.");
+        assertThat(notification.get("body")).isEqualTo("이용 제재로 행사 신청이 취소됐어요.");
         assertThat(notification.get("link")).isEqualTo("/programs/" + programId);
     }
 

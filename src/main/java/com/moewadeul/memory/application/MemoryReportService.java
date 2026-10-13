@@ -57,7 +57,7 @@ public class MemoryReportService {
         String content = command.content();
         if (content != null && content.length() > MemoryReport.CONTENT_MAX_LENGTH) {
             throw new BusinessException(
-                    CommonErrorCode.INVALID_INPUT, "신고 내용은 " + MemoryReport.CONTENT_MAX_LENGTH + "자 이하여야 합니다.");
+                    CommonErrorCode.INVALID_INPUT, "신고 내용은 " + MemoryReport.CONTENT_MAX_LENGTH + "자 이하여야 해요.");
         }
         if (memoryReportRepository.existsByMemoryIdAndReporterId(memoryId, memberId)) {
             throw alreadyReported();
@@ -78,7 +78,7 @@ public class MemoryReportService {
                 .filter(reason -> reason.name().equals(value))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(
-                        CommonErrorCode.INVALID_INPUT, "신고 사유는 " + allowedReasons() + " 중 하나여야 합니다."));
+                        CommonErrorCode.INVALID_INPUT, "신고 사유는 " + allowedReasons() + " 중 하나여야 해요."));
     }
 
     private static String allowedReasons() {

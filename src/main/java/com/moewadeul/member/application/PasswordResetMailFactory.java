@@ -9,15 +9,15 @@ final class PasswordResetMailFactory {
     static final String SUBJECT = "[뫼와들] 비밀번호 재설정 안내";
 
     private static final String BODY_TEMPLATE = """
-            안녕하세요, 뫼와들입니다.
+            안녕하세요, 뫼와들이에요.
 
             아래 링크에서 새 비밀번호를 설정해 주세요.
 
             %s
 
-            이 링크는 %d분 동안 유효하고 한 번만 사용할 수 있습니다.
+            이 링크는 %d분 동안 한 번만 쓸 수 있어요.
 
-            직접 요청하지 않으셨다면 이 메일을 무시해 주세요. 비밀번호는 바뀌지 않습니다.
+            직접 요청하지 않았다면 이 메일은 무시해 주세요. 비밀번호는 바뀌지 않아요.
             """;
 
     private PasswordResetMailFactory() {}

@@ -114,6 +114,6 @@ public class AdminCommunityQueryService {
                 return candidate;
             }
         }
-        throw new BusinessException(CommonErrorCode.INVALID_INPUT, "status는 PENDING_REVIEW 또는 HIDDEN이어야 합니다.");
+        throw new BusinessException(CommonErrorCode.INVALID_INPUT, "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요.");
     }
 }

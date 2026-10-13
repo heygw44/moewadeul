@@ -29,7 +29,7 @@ class NotificationTemplatesTest {
                         3L,
                         "BASECAMP_APPLIED",
                         "새 합류 신청",
-                        "베이스캠프에 합류 신청이 들어왔습니다. 신청자를 확인하고 승인하거나 거절해 주세요.",
+                        "베이스캠프에 합류 신청이 들어왔어요. 신청자를 보고 승인하거나 거절해 주세요.",
                         "/basecamps/30/manage"));
     }
 
@@ -46,14 +46,15 @@ class NotificationTemplatesTest {
         // then
         assertThat(approved)
                 .containsExactly(new NotificationDraft(
-                        2L, "BASECAMP_APPROVED", "합류 승인", "합류 신청이 승인되어 베이스캠프 멤버가 됐습니다.", "/basecamps/30"));
+                        2L, "BASECAMP_APPROVED", "합류 승인", "합류 신청이 승인돼 베이스캠프 멤버가 됐어요.", "/basecamps/30"));
         assertThat(rejected)
                 .containsExactly(
-                        new NotificationDraft(2L, "BASECAMP_REJECTED", "합류 거절", "합류 신청이 거절됐습니다.", "/basecamps/30"));
+                        new NotificationDraft(2L, "BASECAMP_REJECTED", "합류 거절", "합류 신청이 거절됐어요.", "/basecamps/30"));
     }
 
     @ParameterizedTest
-    @CsvSource({"NO_CONTACT, 연락 두절", "CONDITION_MISMATCH, 일정·조건 불일치", "INAPPROPRIATE_BEHAVIOR, 부적절한 언행", "OTHER, 기타"})
+    @CsvSource({"NO_CONTACT, 연락 두절", "CONDITION_MISMATCH, 일정이나 조건이 안 맞음", "INAPPROPRIATE_BEHAVIOR, 부적절한 언행", "OTHER, 기타"
+    })
     @DisplayName("[F-20][BC-07] 강퇴 알림 본문에는 사유 이름에 맞는 한글 사유와 재신청 불가 안내가 들어간다")
     void kickedBodyContainsReasonLabel(String reason, String label) {
         // given
@@ -68,7 +69,7 @@ class NotificationTemplatesTest {
         assertThat(draft.memberId()).isEqualTo(7L);
         assertThat(draft.type()).isEqualTo("BASECAMP_KICKED");
         assertThat(draft.title()).isEqualTo("베이스캠프에서 제외됨");
-        assertThat(draft.body()).contains("사유: " + label + ".").contains("같은 베이스캠프에는 다시 신청할 수 없습니다.");
+        assertThat(draft.body()).contains("사유: " + label + ".").contains("같은 베이스캠프에는 다시 신청할 수 없어요.");
         assertThat(draft.link()).isEqualTo("/basecamps/30");
     }
 
@@ -95,7 +96,7 @@ class NotificationTemplatesTest {
         assertThat(drafts).allSatisfy(draft -> {
             assertThat(draft.type()).isEqualTo("BASECAMP_CONFIRMED");
             assertThat(draft.title()).isEqualTo("베이스캠프 확정");
-            assertThat(draft.body()).contains("확정됐습니다").contains("안전 수칙");
+            assertThat(draft.body()).contains("확정됐어요").contains("안전 수칙");
             assertThat(draft.link()).isEqualTo("/basecamps/30");
         });
     }
@@ -168,8 +169,8 @@ class NotificationTemplatesTest {
         assertThat(actionedDraft.memberId()).isEqualTo(6L);
         assertThat(actionedDraft.type()).isEqualTo("MEMBER_REPORT_RESOLVED");
         assertThat(actionedDraft.title()).isEqualTo("신고 처리 완료");
-        assertThat(actionedDraft.body()).isEqualTo("신고하신 내용을 검토해 조치했습니다.");
-        assertThat(dismissedDraft.body()).isEqualTo("신고하신 내용을 검토했지만 조치 대상이 아니라고 판단했습니다.");
+        assertThat(actionedDraft.body()).isEqualTo("신고한 내용을 검토해 조치했어요.");
+        assertThat(dismissedDraft.body()).isEqualTo("신고한 내용을 검토했지만 조치할 일은 아니라고 판단했어요.");
         assertThat(List.of(actionedDraft, dismissedDraft)).allSatisfy(draft -> {
             assertThat(draft.link()).isNull();
             assertThat(draft.body()).doesNotContain("경고", "정지", "제재");
@@ -204,9 +205,9 @@ class NotificationTemplatesTest {
         assertThat(warningDraft.memberId()).isEqualTo(5L);
         assertThat(warningDraft.type()).isEqualTo("SANCTION_CONFIRMED");
         assertThat(warningDraft.title()).isEqualTo("이용 제재 안내");
-        assertThat(warningDraft.body()).isEqualTo("경고를 받았습니다.");
+        assertThat(warningDraft.body()).isEqualTo("경고를 받았어요.");
         assertThat(warningDraft.link()).isNull();
-        assertThat(permanentDraft.body()).isEqualTo("이용이 영구 정지됐습니다.");
+        assertThat(permanentDraft.body()).isEqualTo("이용이 영구 정지됐어요.");
     }
 
     @ParameterizedTest
@@ -222,7 +223,7 @@ class NotificationTemplatesTest {
                 NotificationTemplates.sanctionConfirmed(payload).get(0);
 
         // then
-        assertThat(draft.body()).isEqualTo("2026-10-12 12:00까지 이용이 정지됩니다.");
+        assertThat(draft.body()).isEqualTo("2026-10-12 12:00까지 이용이 정지돼요.");
     }
 
     @Test
@@ -247,16 +248,16 @@ class NotificationTemplatesTest {
 
         assertThat(drafts)
                 .containsExactly(new NotificationDraft(
-                        2L, "PROGRAM_APPLICATION_CONFIRMED", "행사 신청 확정", "결제가 끝나 행사 신청이 확정됐습니다.", "/programs/9"));
+                        2L, "PROGRAM_APPLICATION_CONFIRMED", "행사 신청 확정", "결제를 마쳐 행사 신청이 확정됐어요.", "/programs/9"));
     }
 
     @ParameterizedTest
     @CsvSource({
-        "USER, false, 행사 신청을 취소했습니다.",
-        "USER, true, 행사 신청을 취소했습니다. 결제한 금액은 환불됩니다.",
-        "PROGRAM_CANCELED, false, 행사가 취소되어 신청이 취소됐습니다.",
-        "PROGRAM_CANCELED, true, 행사가 취소되어 신청이 취소됐습니다. 결제한 금액은 환불됩니다.",
-        "SANCTIONED, false, 이용 제재로 행사 신청이 취소됐습니다."
+        "USER, false, 행사 신청을 취소했어요.",
+        "USER, true, 행사 신청을 취소했어요. 결제한 금액은 환불돼요.",
+        "PROGRAM_CANCELED, false, 행사가 취소돼 신청도 취소됐어요.",
+        "PROGRAM_CANCELED, true, 행사가 취소돼 신청도 취소됐어요. 결제한 금액은 환불돼요.",
+        "SANCTIONED, false, 이용 제재로 행사 신청이 취소됐어요."
     })
     @DisplayName("[F-19][F-20] 행사 신청 취소 알림 본문은 취소 사유로 나뉘고, 환불했으면 환불 문장이 붙는다")
     void programApplicationCanceledBodyDependsOnReasonAndRefund(String reason, boolean refunded, String body) {
@@ -284,7 +285,7 @@ class NotificationTemplatesTest {
 
         assertThat(drafts)
                 .containsExactly(new NotificationDraft(
-                        2L, "PROGRAM_APPLICATION_EXPIRED", "행사 신청 만료", "결제 기한이 지나 행사 신청이 취소됐습니다.", "/programs/9"));
+                        2L, "PROGRAM_APPLICATION_EXPIRED", "행사 신청 만료", "결제 기한이 지나 행사 신청이 취소됐어요.", "/programs/9"));
     }
 
     @Test
@@ -299,13 +300,13 @@ class NotificationTemplatesTest {
                                 2L,
                                 "PROGRAM_SEAT_RELEASED",
                                 "행사 빈자리 알림",
-                                "신청한 행사에 빈자리가 생겼습니다. 자리는 먼저 신청한 회원에게 돌아갑니다.",
+                                "빈자리 알림을 신청한 행사에 자리가 생겼어요. 먼저 신청한 회원이 자리를 가져가요.",
                                 "/programs/9"),
                         new NotificationDraft(
                                 3L,
                                 "PROGRAM_SEAT_RELEASED",
                                 "행사 빈자리 알림",
-                                "신청한 행사에 빈자리가 생겼습니다. 자리는 먼저 신청한 회원에게 돌아갑니다.",
+                                "빈자리 알림을 신청한 행사에 자리가 생겼어요. 먼저 신청한 회원이 자리를 가져가요.",
                                 "/programs/9"));
     }
 }

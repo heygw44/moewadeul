@@ -115,16 +115,16 @@ public class CommunityCommentCommandService {
                 .filter(parent -> parent.belongsTo(postId) && parent.isActive() && !parent.isReply())
                 .isPresent();
         if (!replyable) {
-            throw invalidInput("답글을 달 수 없는 댓글입니다.");
+            throw invalidInput("답글을 달 수 없는 댓글이에요.");
         }
     }
 
     private static void requireValidContent(String content) {
         if (content == null || content.isBlank()) {
-            throw invalidInput("댓글을 입력해야 합니다.");
+            throw invalidInput("댓글을 입력해 주세요.");
         }
         if (content.length() > CommunityComment.CONTENT_MAX_LENGTH) {
-            throw invalidInput("댓글은 " + CommunityComment.CONTENT_MAX_LENGTH + "자 이하여야 합니다.");
+            throw invalidInput("댓글은 " + CommunityComment.CONTENT_MAX_LENGTH + "자 이하여야 해요.");
         }
     }
 

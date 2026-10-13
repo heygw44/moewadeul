@@ -6,10 +6,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record PasswordResetRequest(
-        @NotBlank(message = "이메일은 필수입니다.")
-        @Email(message = "이메일 형식이 올바르지 않습니다.")
+        @NotBlank(message = "이메일을 입력해 주세요.")
+        @Email(message = "이메일 형식이 맞지 않아요.")
         @MailableEmail
-        @Size(max = Member.EMAIL_MAX_LENGTH, message = "이메일은 " + Member.EMAIL_MAX_LENGTH + "자 이하여야 합니다.")
+        @Size(max = Member.EMAIL_MAX_LENGTH, message = "이메일은 " + Member.EMAIL_MAX_LENGTH + "자 이하여야 해요.")
         String email) {
 
     // 레코드 기본 toString은 구성요소를 모두 찍는다. 이메일이 로그에 새지 않도록 재정의했다.

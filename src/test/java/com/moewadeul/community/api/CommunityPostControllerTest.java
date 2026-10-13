@@ -379,7 +379,7 @@ class CommunityPostControllerTest {
     void writeWithUnlinkableSpotIsBadRequest() {
         // given
         when(communityPostCommandService.write(anyLong(), any()))
-                .thenThrow(new BusinessException(CommonErrorCode.INVALID_INPUT, "연결할 수 없는 장소입니다."));
+                .thenThrow(new BusinessException(CommonErrorCode.INVALID_INPUT, "연결할 수 없는 장소예요."));
 
         // when
         MvcTestResult result = send(mvc.post().uri(POSTS), verified(), VALID_BODY);
@@ -650,7 +650,7 @@ class CommunityPostControllerTest {
     void imageIdsFieldErrorIsReportedAsFieldError() {
         // given
         when(communityPostCommandService.write(anyLong(), any()))
-                .thenThrow(new InvalidFieldException("imageIds", "붙일 수 없는 이미지가 있습니다."));
+                .thenThrow(new InvalidFieldException("imageIds", "붙일 수 없는 이미지가 있어요."));
 
         // when
         MvcTestResult result = send(mvc.post().uri(POSTS), verified(), VALID_BODY);

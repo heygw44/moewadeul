@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 @Constraint(validatedBy = MailableEmail.Validator.class)
 @interface MailableEmail {
 
-    String message() default "이메일 도메인에 점이 있어야 하고 IP 주소는 쓸 수 없습니다.";
+    String message() default "이메일 도메인에 점이 있어야 하고 IP 주소는 쓸 수 없어요.";
 
     Class<?>[] groups() default {};
 

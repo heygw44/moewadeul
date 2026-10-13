@@ -127,13 +127,13 @@ public class BakjiCommandService {
         PatchField<Double> lat = command.lat();
         PatchField<Double> lng = command.lng();
         if (lat.present() != lng.present()) {
-            throw invalidInput("위도와 경도는 함께 보내야 합니다.");
+            throw invalidInput("위도와 경도는 함께 보내 주세요.");
         }
         if (!lat.present()) {
             return;
         }
         if (lat.value() == null || lng.value() == null) {
-            throw invalidInput("위도와 경도는 지울 수 없습니다.");
+            throw invalidInput("위도와 경도는 지울 수 없어요.");
         }
         GeoPoint newLocation = toLocation(lat.value(), lng.value());
         if (newLocation.equals(spot.getLocation())) {
@@ -170,7 +170,7 @@ public class BakjiCommandService {
             return current;
         }
         if (field.value() == null) {
-            throw invalidInput(topic + " 지울 수 없습니다.");
+            throw invalidInput(topic + " 지울 수 없어요.");
         }
         return field.value();
     }
@@ -220,20 +220,20 @@ public class BakjiCommandService {
 
     private static String requireName(String name) {
         if (name == null) {
-            throw invalidInput("이름은 지울 수 없습니다.");
+            throw invalidInput("이름은 지울 수 없어요.");
         }
         if (name.isBlank()) {
-            throw invalidInput("이름은 비워 둘 수 없습니다.");
+            throw invalidInput("이름은 비워 둘 수 없어요.");
         }
         if (name.length() > Spot.NAME_MAX_LENGTH) {
-            throw invalidInput("이름은 " + Spot.NAME_MAX_LENGTH + "자 이하여야 합니다.");
+            throw invalidInput("이름은 " + Spot.NAME_MAX_LENGTH + "자 이하여야 해요.");
         }
         return name;
     }
 
     private static void requireValidDescription(String description) {
         if (description != null && description.length() > BakjiContent.DESCRIPTION_MAX_LENGTH) {
-            throw invalidInput("설명은 " + BakjiContent.DESCRIPTION_MAX_LENGTH + "자 이하여야 합니다.");
+            throw invalidInput("설명은 " + BakjiContent.DESCRIPTION_MAX_LENGTH + "자 이하여야 해요.");
         }
     }
 
@@ -248,7 +248,7 @@ public class BakjiCommandService {
 
     private static void requireInServiceArea(GeoPoint location) {
         if (!WeatherGrid.covers(location)) {
-            throw invalidInput("서비스 지역 밖 좌표입니다.");
+            throw invalidInput("서비스 지역 밖 좌표예요.");
         }
     }
 
@@ -259,7 +259,7 @@ public class BakjiCommandService {
         return Arrays.stream(type.getEnumConstants())
                 .filter(constant -> constant.name().equals(value))
                 .findFirst()
-                .orElseThrow(() -> invalidInput(topic + " " + allowedValues(type) + " 중 하나여야 합니다."));
+                .orElseThrow(() -> invalidInput(topic + " " + allowedValues(type) + " 중 하나여야 해요."));
     }
 
     private static String allowedValues(Class<? extends Enum<?>> type) {

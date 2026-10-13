@@ -12,7 +12,7 @@ public record BakjiProblemReportRequest(
         @Schema(implementation = BakjiReportReason.class, description = "신고 사유.") @NotNull(message = "신고 사유를 입력해야 합니다.")
         String reason,
 
-        @Size(max = BakjiReport.CONTENT_MAX_LENGTH, message = "신고 내용은 1000자 이하여야 합니다.")
+        @Size(max = BakjiReport.CONTENT_MAX_LENGTH, message = "신고 내용은 1000자 이하여야 해요.")
         String content) {
 
     BakjiProblemReportCommand toCommand() {

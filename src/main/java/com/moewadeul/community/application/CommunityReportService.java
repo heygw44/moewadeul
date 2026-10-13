@@ -93,7 +93,7 @@ public class CommunityReportService {
         String content = command.content();
         if (content != null && content.length() > CommunityReport.CONTENT_MAX_LENGTH) {
             throw new BusinessException(
-                    CommonErrorCode.INVALID_INPUT, "신고 내용은 " + CommunityReport.CONTENT_MAX_LENGTH + "자 이하여야 합니다.");
+                    CommonErrorCode.INVALID_INPUT, "신고 내용은 " + CommunityReport.CONTENT_MAX_LENGTH + "자 이하여야 해요.");
         }
         if (communityReportRepository.existsByTargetTypeAndTargetIdAndReporterId(targetType, targetId, memberId)) {
             throw alreadyReported();
@@ -114,7 +114,7 @@ public class CommunityReportService {
                 .filter(reason -> reason.name().equals(value))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(
-                        CommonErrorCode.INVALID_INPUT, "신고 사유는 " + allowedReasons() + " 중 하나여야 합니다."));
+                        CommonErrorCode.INVALID_INPUT, "신고 사유는 " + allowedReasons() + " 중 하나여야 해요."));
     }
 
     private static String allowedReasons() {

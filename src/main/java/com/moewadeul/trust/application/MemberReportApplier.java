@@ -82,14 +82,14 @@ public class MemberReportApplier {
 
     private static void requireConsistentKind(MemberReportCommand command) {
         if (command.kind() != command.type().kind()) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "신고 종류와 유형이 맞지 않습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "신고 종류와 유형이 맞지 않아요.");
         }
         boolean isReviewReport = command.kind() == ReportKind.REVIEW;
         if (isReviewReport && command.companionReviewId() == null) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "후기를 신고하려면 동행 후기 ID가 필요합니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "후기를 신고하려면 동행 후기 ID가 필요해요.");
         }
         if (!isReviewReport && command.companionReviewId() != null) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "회원 신고에는 동행 후기 ID를 넣을 수 없습니다.");
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "회원 신고에는 동행 후기 ID를 넣을 수 없어요.");
         }
     }
 

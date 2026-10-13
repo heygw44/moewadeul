@@ -42,7 +42,7 @@ public class MemoryCommandService {
             // 기록이 없거나 남의 기록이면 사진 검사보다 먼저 404나 403으로 거부한다.
             memoryWriter.requireOwnMemory(memberId, memoryId);
             if (imageIds.value() == null) {
-                throw MemoryImageAttachmentChecker.invalid("imageIds는 비울 수 없습니다. 사진을 모두 떼려면 빈 배열을 보내야 합니다.");
+                throw MemoryImageAttachmentChecker.invalid("imageIds는 비울 수 없어요. 사진을 모두 떼려면 빈 배열을 보내 주세요.");
             }
             memoryImageAttachmentChecker.verify(memberId, memoryId, imageIds.value());
         }
