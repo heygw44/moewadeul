@@ -8,19 +8,21 @@ import java.time.LocalDate;
  *
  * @param sourceDate 적재한 파일의 기준일
  * @param processedCount 파일에 있는 휴양림 수. 건너뛴 휴양림도 센다.
+ * @param removed 이번 적재로 새로 숨긴 휴양림 수. 파일에서 빠져서 원천 삭제로 숨긴 휴양림이다.
  * @param skipped 적재하지 않은 휴양림 수. 위경도를 숫자로 읽지 못한 휴양림과 장소 모듈이 거부한 휴양림을 합친다.
  */
 public record ForestLoadResult(
-        LocalDate sourceDate, int processedCount, int inserted, int updated, int unchanged, int skipped) {
+        LocalDate sourceDate, int processedCount, int inserted, int updated, int unchanged, int removed, int skipped) {
 
     static ForestLoadResult of(
-            LocalDate sourceDate, int processedCount, int parseSkipped, PublicSpotUpsertResult upserted) {
+            LocalDate sourceDate, int processedCount, int parseSkipped, PublicSpotUpsertResult upserted, int removed) {
         return new ForestLoadResult(
                 sourceDate,
                 processedCount,
                 upserted.inserted(),
                 upserted.updated(),
                 upserted.unchanged(),
+                removed,
                 parseSkipped + upserted.skipped());
     }
 }
