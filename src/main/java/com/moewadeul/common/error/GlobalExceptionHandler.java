@@ -9,6 +9,7 @@ import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -38,7 +39,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                     .body(ErrorResponse.ofInvalidInput(
                             List.of(new ErrorResponse.FieldError(invalidField.getField(), e.getMessage()))));
         }
-        if (errorCode.httpStatus().is5xxServerError()) {
+        if (errorCode.httpStatus().value() == HttpStatus.SERVICE_UNAVAILABLE.value()) {
+            // 503은 외부 서비스가 실패했거나 하루 한도를 넘어서 서버가 일부러 기능을 멈춘 응답이다. 서버 코드의 결함이 아니고
+            // 사람이 바로 고칠 일도 아니다. 그래서 ERROR와 스택 트레이스 대신 WARN 한 줄에 원인 예외의 종류와 메시지만 남긴다.
+            log.warn("business exception code={} cause={}", errorCode.name(), describeCause(e));
+        } else if (errorCode.httpStatus().is5xxServerError()) {
             log.error("business exception code={}", errorCode.name(), e);
         } else {
             log.debug("business exception code={} message={}", errorCode.name(), e.getMessage());
@@ -48,6 +53,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             response.header(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds(rateLimited.retryAfter())));
         }
         return response.body(ErrorResponse.of(errorCode, e.getMessage(), e.extraFields()));
+    }
+
+    private static String describeCause(BusinessException e) {
+        Throwable cause = e.getCause();
+        if (cause == null) {
+            return "none";
+        }
+        return cause.getClass().getSimpleName() + ": " + cause.getMessage();
     }
 
     // Retry-After는 정수 초만 받는다. 그래서 소수 초는 올리고, 0초 이하는 1초로 맞춰 클라이언트가 바로 재시도하지 않게 한다.

@@ -150,6 +150,55 @@
       ]
     },
     {
+      "uid": "moewadeul-ai-search-budget",
+      "title": "AI 검색 하루 예산 80% 도달",
+      "condition": "C",
+      "for": "0s",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "오늘 AI 검색에 쓴 OpenAI 비용이 하루 예산의 80%를 넘었다. 예산에 닿으면 그날은 AI 검색이 막힌다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "max(moewadeul_aisearch_budget_used_ratio{job=\"moewadeul-app\"})",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0.8
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "uid": "moewadeul-scheduled-job-failure",
       "title": "스케줄 작업 실패",
       "condition": "C",

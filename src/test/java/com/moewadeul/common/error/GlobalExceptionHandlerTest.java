@@ -12,10 +12,13 @@ import java.util.Map;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -37,6 +40,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @WebMvcTest(controllers = GlobalExceptionHandlerTest.TestController.class)
+@ExtendWith(OutputCaptureExtension.class)
 @Import({
     GlobalExceptionHandler.class,
     TraceIdFilter.class,
@@ -184,6 +188,33 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("503 BusinessException은 스택 트레이스 없이 WARN 한 줄과 원인 예외의 종류만 남긴다")
+    void serviceUnavailableBusinessExceptionLogsWarnWithoutStackTrace(CapturedOutput output) {
+        // when
+        MvcTestResult result = mvc.get().uri("/test/unavailable").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("SAMPLE_UNAVAILABLE");
+        assertThat(output.getOut())
+                .contains("WARN")
+                .contains("code=SAMPLE_UNAVAILABLE cause=IllegalStateException: upstream timeout")
+                .doesNotContain("ERROR")
+                .doesNotContain("\tat ");
+    }
+
+    @Test
+    @DisplayName("503이 아닌 5xx BusinessException은 지금처럼 ERROR와 스택 트레이스를 남긴다")
+    void otherServerErrorBusinessExceptionLogsError(CapturedOutput output) {
+        // when
+        MvcTestResult result = mvc.get().uri("/test/server-error").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(output.getOut()).contains("ERROR").contains("code=SAMPLE_SERVER_ERROR");
+    }
+
+    @Test
     @DisplayName("예상하지 못한 예외는 원인 메시지 없이 500으로 응답한다")
     void unexpectedExceptionHidesCause() {
         MvcTestResult result = mvc.get().uri("/test/unexpected").exchange();
@@ -247,7 +278,9 @@ class GlobalExceptionHandlerTest {
     }
 
     enum SampleErrorCode implements ErrorCode {
-        SAMPLE_CONFLICT(HttpStatus.CONFLICT, "샘플 충돌");
+        SAMPLE_CONFLICT(HttpStatus.CONFLICT, "샘플 충돌"),
+        SAMPLE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "샘플 기능을 잠시 쓸 수 없어요."),
+        SAMPLE_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "샘플 서버 오류");
 
         private final HttpStatus httpStatus;
         private final String message;
@@ -332,6 +365,18 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/search")
         String search(@Valid @ModelAttribute SampleSearch search) {
             return String.valueOf(search.page());
+        }
+
+        @GetMapping("/unavailable")
+        String unavailable() {
+            BusinessException exception = new BusinessException(SampleErrorCode.SAMPLE_UNAVAILABLE);
+            exception.initCause(new IllegalStateException("upstream timeout"));
+            throw exception;
+        }
+
+        @GetMapping("/server-error")
+        String serverError() {
+            throw new BusinessException(SampleErrorCode.SAMPLE_SERVER_ERROR);
         }
 
         @GetMapping("/unexpected")
