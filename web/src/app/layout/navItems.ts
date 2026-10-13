@@ -16,7 +16,7 @@ export type NavItem = {
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'map', label: '지도', icon: 'map', needsLogin: false, path: '/map' },
   { key: 'basecamps', label: '베이스캠프', icon: 'tent', needsLogin: false, path: '/basecamps' },
-  { key: 'footprints', label: '발자국', icon: 'footprints', needsLogin: false, path: '/memories' },
+  { key: 'footprints', label: '피드', icon: 'footprints', needsLogin: false, path: '/memories' },
   { key: 'community', label: '커뮤니티', icon: 'chat', needsLogin: false, path: '/community' },
   { key: 'programs', label: '행사', icon: 'calendar', needsLogin: false, path: '/programs' },
 ];
@@ -29,7 +29,7 @@ export function navTarget(item: NavItem, signedIn: boolean): string {
 export function activeNavKey(pathname: string): NavKey | null {
   if (pathname === '/map' || pathname.startsWith('/spots/') || pathname.startsWith('/bakjis/')) return 'map';
   if (pathname === '/basecamps' || pathname.startsWith('/basecamps/')) return 'basecamps';
-  // 발자국 피드, 기록 화면, 내 발자국 지도, 회원 발자국 지도는 모두 발자국 메뉴 아래로 본다.
+  // 피드, 기록 화면, 내 기록 지도, 회원 기록 지도는 모두 피드 메뉴 아래로 본다.
   if (
     pathname === '/memories' ||
     pathname.startsWith('/memories/') ||

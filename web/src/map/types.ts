@@ -68,7 +68,7 @@ export interface MapView {
   destroy(): void;
 }
 
-// 발자국 지도에 그리는 핀 하나다. 사진이 있으면 사진 칸, 없으면 핀 모양으로 그린다.
+// 기록 지도에 그리는 핀 하나다. 사진이 있으면 사진 칸, 없으면 핀 모양으로 그린다.
 export interface MemoryPinData {
   id: number;
   position: LatLng;

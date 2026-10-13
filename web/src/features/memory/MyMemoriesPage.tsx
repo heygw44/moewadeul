@@ -27,7 +27,7 @@ export function MyMemoriesPage() {
   const authenticated = session.status === 'authenticated';
 
   useEffect(() => {
-    document.title = '내 발자국 지도 · 뫼와들';
+    document.title = '내 기록 지도 · 뫼와들';
   }, []);
 
   // 내 기록은 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
@@ -70,7 +70,7 @@ export function MyMemoriesPage() {
   );
 
   if (!authenticated) {
-    return <HubLayout title="내 발자국 지도" width="narrow">{null}</HubLayout>;
+    return <HubLayout title="내 기록 지도" width="narrow">{null}</HubLayout>;
   }
 
   let body;
@@ -88,7 +88,7 @@ export function MyMemoriesPage() {
   } else if ('error' in current) {
     body = (
       <div role="alert" className="flex flex-col gap-3">
-        <Notice tone="danger" title="발자국을 불러오지 못했어요">
+        <Notice tone="danger" title="기록을 불러오지 못했어요">
           {toUserMessage(current.error)}
         </Notice>
         <div>
@@ -102,11 +102,11 @@ export function MyMemoriesPage() {
     body = (
       <EmptyState
         framed
-        title="아직 남긴 발자국이 없어요"
-        description="지도에서 다녀온 곳을 길게 누르거나(컴퓨터는 우클릭) 장소 상세에서 발자국을 남길 수 있어요."
+        title="아직 남긴 기록이 없어요"
+        description="지도에서 다녀온 곳을 길게 누르거나(컴퓨터는 우클릭) 장소 상세에서 기록을 남길 수 있어요."
         action={
           <Link to="/map" className={SECONDARY_LINK_CLASS}>
-            지도에서 발자국 남기기
+            지도에서 기록 남기기
           </Link>
         }
       />
@@ -117,11 +117,11 @@ export function MyMemoriesPage() {
 
   return (
     <HubLayout
-      title="내 발자국 지도"
+      title="내 기록 지도"
       width="narrow"
       actions={
         <Link to="/memories" className={SECONDARY_LINK_CLASS}>
-          발자국
+          피드
         </Link>
       }
     >

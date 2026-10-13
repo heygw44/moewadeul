@@ -87,8 +87,8 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   // 커뮤니티
   COMMUNITY_ALREADY_REPORTED: '이미 신고한 글이나 댓글이에요. 처리 결과를 기다려 주세요.',
-  // 발자국
-  MEMORY_ALREADY_REPORTED: '이미 신고한 발자국이에요. 처리 결과를 기다려 주세요.',
+  // 추억 기록
+  MEMORY_ALREADY_REPORTED: '이미 신고한 기록이에요. 처리 결과를 기다려 주세요.',
   // 개인 일정
   SOLO_TRIP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안에서, 일정은 1~3박으로 골라 주세요.',
   SOLO_TRIP_LIMIT: '앞으로 갈 혼자 가는 일정은 3개까지 등록할 수 있어요. 내 정보에서 필요 없는 일정을 삭제해 주세요.',

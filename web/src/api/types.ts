@@ -1139,7 +1139,7 @@ export interface MemoryFeedItem {
   createdAt: string;
 }
 
-// 다른 회원의 발자국 항목. 공개 기록만 오고 좌표는 약 1km로 줄인 값이다.
+// 다른 회원의 기록 항목. 공개 기록만 오고 좌표는 약 1km로 줄인 값이다.
 export interface MemberMemorySummary {
   memoryId: number;
   spot?: MemoryLinkedSpot;
