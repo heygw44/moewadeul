@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchSpotsInArea } from '../../api/spots';
 import { toUserMessage } from '../../api/errors';
-import type { SpotCluster, SpotMarker, SpotType } from '../../api/types';
+import type { SpotCluster, SpotMarker, SpotSetting, SpotType } from '../../api/types';
 import type { MapView } from '../../map/types';
 import { NO_SPOT_FILTERS } from './spotFilters';
 import type { SpotFilters } from './spotFilters';
@@ -39,14 +39,16 @@ export function useSpotsInView(
   const controllerRef = useRef<AbortController | null>(null);
   const loadRef = useRef<() => void>(() => {});
 
-  // 유형 목록은 렌더마다 새 배열일 수 있어서, 효과가 같은 조건으로 다시 돌지 않게 글자로 바꿔 비교한다.
+  // 유형·입지 목록은 렌더마다 새 배열일 수 있어서, 효과가 같은 조건으로 다시 돌지 않게 글자로 바꿔 비교한다.
   const typesKey = [...filters.types].sort().join(',');
+  const settingsKey = [...filters.settings].sort().join(',');
   const { hasWater, hasToilet, excludeWarning, hideClosed } = filters;
 
   useEffect(() => {
     if (!map || !enabled) return;
     const filterQuery = {
       types: typesKey === '' ? undefined : (typesKey.split(',') as SpotType[]),
+      settings: settingsKey === '' ? undefined : (settingsKey.split(',') as SpotSetting[]),
       hasWater: hasWater || undefined,
       hasToilet: hasToilet || undefined,
       excludeWarning: excludeWarning || undefined,
@@ -107,7 +109,7 @@ export function useSpotsInView(
       loadRef.current = () => {};
       setState(INITIAL_STATE);
     };
-  }, [map, enabled, typesKey, hasWater, hasToilet, excludeWarning, hideClosed]);
+  }, [map, enabled, typesKey, settingsKey, hasWater, hasToilet, excludeWarning, hideClosed]);
 
   const retry = useCallback(() => loadRef.current(), []);
 

@@ -11,6 +11,7 @@ export function fetchSpotsInArea(query: SpotAreaQuery, signal?: AbortSignal): Pr
       neLng: query.neLng,
       zoom: query.zoom,
       types: query.types,
+      settings: query.settings,
       hasWater: query.hasWater,
       hasToilet: query.hasToilet,
       excludeWarning: query.excludeWarning,

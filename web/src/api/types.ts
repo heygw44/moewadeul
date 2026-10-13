@@ -121,6 +121,8 @@ export interface SpotNearbyQuery {
   radiusKm: number;
 }
 
+export type SpotSetting = 'MOUNTAIN' | 'FOREST' | 'VALLEY' | 'BEACH' | 'ISLAND' | 'RIVER' | 'LAKE' | 'CITY';
+
 export interface SpotAreaQuery {
   swLat: number;
   swLng: number;
@@ -130,6 +132,8 @@ export interface SpotAreaQuery {
   zoom: number;
   // 비우면 서버가 모든 유형을 준다.
   types?: SpotType[];
+  // 고르면 입지가 하나라도 맞는 야영장만 온다. 박지와 휴양림은 빠진다.
+  settings?: SpotSetting[];
   hasWater?: boolean;
   hasToilet?: boolean;
   excludeWarning?: boolean;

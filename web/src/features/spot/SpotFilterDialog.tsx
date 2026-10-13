@@ -3,8 +3,8 @@ import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { Dialog } from '../../components/Dialog';
 import { ToggleChip } from '../../components/ToggleChip';
-import { SPOT_TYPE_META } from './spotLabels';
-import { NO_SPOT_FILTERS, SPOT_TYPE_ORDER } from './spotFilters';
+import { SPOT_SETTING_LABELS, SPOT_TYPE_META } from './spotLabels';
+import { NO_SPOT_FILTERS, SPOT_SETTING_ORDER, SPOT_TYPE_ORDER } from './spotFilters';
 import type { SpotFilters } from './spotFilters';
 
 type SpotFilterDialogProps = {
@@ -27,6 +27,15 @@ export function SpotFilterDialog({ initial, onApply, onClose }: SpotFilterDialog
     }));
   }
 
+  function toggleSetting(setting: (typeof SPOT_SETTING_ORDER)[number]) {
+    setDraft((previous) => ({
+      ...previous,
+      settings: previous.settings.includes(setting)
+        ? previous.settings.filter((value) => value !== setting)
+        : [...previous.settings, setting],
+    }));
+  }
+
   return (
     <Dialog title="장소 조건" onClose={onClose}>
       <form
@@ -46,6 +55,22 @@ export function SpotFilterDialog({ initial, onApply, onClose }: SpotFilterDialog
             ))}
           </div>
           <p className="text-sm text-ink-muted">고르지 않으면 모든 유형이 보여요.</p>
+        </fieldset>
+
+        <fieldset className="flex min-w-0 flex-col gap-1">
+          <legend className="mb-1 text-sm font-medium text-ink">입지</legend>
+          <div className="flex flex-wrap gap-2">
+            {SPOT_SETTING_ORDER.map((setting) => (
+              <ToggleChip
+                key={setting}
+                pressed={draft.settings.includes(setting)}
+                onToggle={() => toggleSetting(setting)}
+              >
+                {SPOT_SETTING_LABELS[setting]}
+              </ToggleChip>
+            ))}
+          </div>
+          <p className="text-sm text-ink-muted">고르면 입지 정보가 있는 공공 야영장만 보여요. 박지와 자연휴양림은 빠져요.</p>
         </fieldset>
 
         <fieldset className="flex min-w-0 flex-col">
