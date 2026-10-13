@@ -1,7 +1,7 @@
 package com.moewadeul.admin.api;
 
 import com.moewadeul.common.security.LoginMember;
-import com.moewadeul.trust.application.SanctionLiftService;
+import com.moewadeul.trust.application.sanction.SanctionLiftService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;

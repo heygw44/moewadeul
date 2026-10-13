@@ -48,6 +48,7 @@ spring:
 
 mybatis:
   # 우리는 매퍼 인터페이스를 com.moewadeul.{모듈}.infra에 @Mapper로, XML을 mapper/{모듈}/ 아래에 둔다.
+  # 하위 패키지가 있는 모듈은 인터페이스를 infra.{하위}에, XML을 mapper/{모듈}/{하위}/에 둔다.
   # classpath*:를 써야 Spring이 main과 test 리소스 루트를 모두 읽는다.
   mapper-locations: classpath*:mapper/**/*.xml
   configuration:

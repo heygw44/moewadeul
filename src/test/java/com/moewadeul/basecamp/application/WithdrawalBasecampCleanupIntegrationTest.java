@@ -9,7 +9,7 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.notification.application.OutboxPublisher;
 import com.moewadeul.trust.application.CompanionReviewFixture;
-import com.moewadeul.trust.application.WithdrawalService;
+import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

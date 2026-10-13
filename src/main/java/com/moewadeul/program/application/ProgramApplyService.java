@@ -9,7 +9,7 @@ import com.moewadeul.program.domain.ProgramException;
 import com.moewadeul.program.domain.ProgramRepository;
 import com.moewadeul.program.infra.ProgramApplicationMapper;
 import com.moewadeul.program.infra.SeatClaim;
-import com.moewadeul.trust.application.TrustSummaryService;
+import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;

@@ -7,7 +7,7 @@ import com.moewadeul.basecamp.domain.Capacity;
 import com.moewadeul.basecamp.domain.JoinCondition;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.trust.application.TrustSummaryService;
+import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

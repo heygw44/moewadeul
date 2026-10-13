@@ -4,7 +4,7 @@ import com.moewadeul.basecamp.domain.JoinCondition;
 import com.moewadeul.basecamp.domain.JoinGender;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.trust.application.TrustDetail;
+import com.moewadeul.trust.application.profile.TrustDetail;
 
 /** 합류 조건 요청을 도메인 값으로 바꾼다. 베이스캠프를 열 때와 고칠 때 같은 규칙을 쓰도록 한 곳에 둔다. */
 final class JoinConditions {

@@ -10,7 +10,7 @@ import com.moewadeul.basecamp.infra.BasecampSearchRow;
 import com.moewadeul.basecamp.infra.ConfirmedScheduleRow;
 import com.moewadeul.basecamp.infra.ViewerHistoryRow;
 import com.moewadeul.spot.application.SpotSearchBox;
-import com.moewadeul.trust.application.TrustSummaryService;
+import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
