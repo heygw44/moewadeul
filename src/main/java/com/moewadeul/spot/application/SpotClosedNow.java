@@ -1,6 +1,5 @@
 package com.moewadeul.spot.application;
 
-import com.moewadeul.spot.domain.SpotClosure;
 import com.moewadeul.spot.domain.SpotType;
 import java.time.LocalDate;
 
