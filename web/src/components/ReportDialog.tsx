@@ -66,7 +66,7 @@ export function ReportDialog({ targetLabel, reasonOptions, alreadyReportedCode, 
           <p role="status" className="text-base font-semibold text-accent-deep">
             신고를 접수했어요
           </p>
-          <p className="text-sm text-ink-muted">관리자가 검토한 뒤 조치해요. 알려 주셔서 고마워요.</p>
+          <p className="text-sm text-ink-muted">관리자가 검토한 뒤 조치해요.</p>
           <div className="flex justify-end">
             <Button onClick={onClose}>닫기</Button>
           </div>
@@ -105,7 +105,7 @@ export function ReportDialog({ targetLabel, reasonOptions, alreadyReportedCode, 
           value={content}
           disabled={submitting}
           error={contentError}
-          hint="필요하면 어떤 점이 문제인지 적어 주세요."
+          hint="어떤 점이 문제인지 적어 주세요."
           onChange={(event) => setContent(event.target.value)}
         />
         <div className="flex flex-wrap items-start justify-end gap-2">

@@ -107,7 +107,7 @@ export function LoginPage() {
         <>
           <span>아직 계정이 없나요?</span>
           <Link to={withNext('/signup', next)} className={FOOTER_LINK_CLASS}>
-            가입하기
+            회원가입
           </Link>
         </>
       }

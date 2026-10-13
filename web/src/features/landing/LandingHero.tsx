@@ -127,7 +127,7 @@ export function LandingHero() {
       <div className="flex flex-col">
         <h1 className="text-5xl font-bold tracking-tight text-ink lg:text-[4rem] lg:leading-none">뫼와들</h1>
         <p className="mt-5 text-[1.375rem] leading-snug font-medium text-ink">
-          자도 되는 곳을 찾고,
+          자도 되는 곳을 찾고
           <br />
           믿을 수 있는 사람과 함께 가요.
         </p>
@@ -162,7 +162,7 @@ export function LandingHero() {
               aria-live="polite"
               className="pointer-events-none absolute top-3 left-3 z-10 rounded-control bg-surface px-3 py-2 text-sm text-ink ring-1 ring-line lg:top-auto lg:bottom-4 lg:left-4"
             >
-              이 영역 장소 <span className="font-mono">{spotCount.toLocaleString('ko-KR')}</span>곳
+              이 지역의 장소 <span className="font-mono">{spotCount.toLocaleString('ko-KR')}</span>곳
             </p>
           )}
         </div>
@@ -197,7 +197,7 @@ function SpotSheet({ spot, detail }: { spot: SpotMarker; detail: SpotDetail | nu
               label: '공원 경계',
               value: spot.parkWarning ? (
                 <StatusText tone="warning" icon="alert">
-                  안일 가능성이 있어요
+                  안쪽일 수 있어요
                 </StatusText>
               ) : (
                 '경고 없음'
@@ -225,7 +225,7 @@ function SpotSheet({ spot, detail }: { spot: SpotMarker; detail: SpotDetail | nu
   );
 }
 
-const INTRO = '공원 경계 경고는 출처와 기준일까지, 동행은 본인확인과 서로 쓴 후기까지 보여 드려요.';
+const INTRO = '공원 경계 경고는 출처와 기준일까지 보여 줘요. 함께 갈 사람은 본인확인 여부와 동행 후기로 골라요.';
 const NO_SIGNUP_NOTE = '가입하지 않아도 지도와 장소 정보는 볼 수 있어요.';
 
 // 화면에서 가까운 장소를 고를 때만 쓰므로 위도·경도 차이의 제곱합으로 충분하다.

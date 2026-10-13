@@ -37,7 +37,7 @@ const COMPANION_TAG_LABELS: Record<string, string> = {
   CONSIDERATE: '배려',
   WELL_PREPARED: '준비성',
   LATE: '지각',
-  NO_SHOW: '약속 불참',
+  NO_SHOW: '무단 불참',
   LITTERING: '쓰레기 방치',
 };
 

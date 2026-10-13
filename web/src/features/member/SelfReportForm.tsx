@@ -11,8 +11,9 @@ import { Notice } from '../../components/Notice';
 import { PageCard } from '../../components/PageLayout';
 import { TextField } from '../../components/TextField';
 import { AGE_GROUP_LABELS, GENDER_LABELS } from './memberLabels';
+import { NICKNAME_REQUIRED } from './requiredMessages';
 
-// 자기 신고 값을 지우는 선택지. 서버에는 null로 보낸다.
+// 직접 입력한 값을 지우는 선택지. 서버에는 null로 보낸다.
 const NOT_SET = 'NOT_SET';
 type AgeChoice = SelfAgeGroup | typeof NOT_SET;
 type GenderChoice = SelfGender | typeof NOT_SET;
@@ -56,7 +57,7 @@ export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void })
 
     const trimmed = nickname.trim();
     if (trimmed === '') {
-      setFieldErrors({ nickname: '닉네임을 적어 주세요.' });
+      setFieldErrors({ nickname: NICKNAME_REQUIRED });
       return;
     }
     const request: { nickname?: string; selfAgeGroup?: SelfAgeGroup | null; selfGender?: SelfGender | null } = {};
@@ -105,7 +106,7 @@ export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void })
     <PageCard title="프로필 정보">
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
         <p className="text-sm text-ink-muted">
-          연령대와 성별은 스스로 밝히는 값이에요. 다른 회원에게 "자기 신고"로 보이고, 베이스캠프의 연령·동성 조건에는 본인확인 값만 쓰여요.
+          연령대와 성별은 직접 고르는 정보예요. 다른 회원에게는 '직접 입력'으로 표시돼요. 베이스캠프의 연령·성별 조건은 본인확인한 정보로만 따져요.
         </p>
         {formError && (
           <div role="alert">
@@ -122,7 +123,7 @@ export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void })
           disabled={unverified}
           onChange={(event) => setNickname(event.target.value)}
           error={fieldErrors.nickname}
-          hint="2~20자. 앞뒤 공백과 연속 공백은 쓸 수 없어요."
+          hint="2~20자로 정해 주세요. 앞뒤 공백이나 두 칸 이어진 공백은 쓸 수 없어요."
         />
         <ChoiceGroup
           legend="연령대"

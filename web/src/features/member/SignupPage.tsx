@@ -55,7 +55,7 @@ export function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    document.title = '가입 · 뫼와들';
+    document.title = '회원가입 · 뫼와들';
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -144,7 +144,7 @@ export function SignupPage() {
         <>
           <span>이미 계정이 있나요?</span>
           <Link to={withNext('/login', next)} className={FOOTER_LINK_CLASS}>
-            로그인하기
+            로그인
           </Link>
         </>
       }
@@ -155,7 +155,7 @@ export function SignupPage() {
           label="비밀번호"
           name="password"
           autoComplete="new-password"
-          hint="10~64자, 영문·숫자·특수문자를 각각 1자 이상. 공백은 쓸 수 없어요."
+          hint="10~64자로, 영문·숫자·특수문자를 하나 이상씩 넣어 주세요. 공백은 쓸 수 없어요."
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           error={fieldErrors.password}
@@ -174,7 +174,7 @@ export function SignupPage() {
           type="text"
           name="nickname"
           autoComplete="nickname"
-          hint="2~20자. 앞뒤 공백과 연속 공백은 쓸 수 없어요."
+          hint="2~20자로 정해 주세요. 앞뒤 공백이나 두 칸 이어진 공백은 쓸 수 없어요."
           value={nickname}
           onChange={(event) => setNickname(event.target.value)}
           error={fieldErrors.nickname}

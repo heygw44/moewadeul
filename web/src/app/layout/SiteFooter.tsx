@@ -29,7 +29,7 @@ export function SiteFooter() {
             <BrandMark className="text-lg" />
           </Link>
           <p className="max-w-xs text-sm text-brand-ink">
-            자도 되는 곳을 찾고, 믿을 수 있는 사람과 함께 가는 백패킹 서비스예요.
+            자도 되는 곳을 찾고 믿을 수 있는 사람과 함께 가는 백패킹 서비스예요.
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export function SiteFooter() {
                 로그인
               </Link>
               <Link to="/signup" className={LINK_CLASS}>
-                가입하기
+                회원가입
               </Link>
             </>
           )}
@@ -84,7 +84,7 @@ export function SiteFooter() {
 
       <div className="border-t border-white/15">
         <div className="mx-auto flex max-w-screen-xl flex-col gap-2 px-4 py-5 text-xs text-brand-ink md:flex-row md:items-center md:justify-between">
-          <p>공원 경계는 법적 효력이 없는 참고 자료예요. 공식 경계는 고시 도면을 확인해 주세요.</p>
+          <p>공원 경계는 법적 효력이 없는 참고 자료예요. 공식 경계는 고시 도면에서 확인해 주세요.</p>
           <p className="flex items-center gap-3">
             <span>© 2026 뫼와들</span>
             <a

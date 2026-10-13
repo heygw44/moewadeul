@@ -135,7 +135,7 @@ export function VerifyEmailPage() {
           replace
           className="inline-flex min-h-11 w-full items-center justify-center rounded-control border border-ink bg-ink px-4 font-semibold text-white hover:border-ink-muted hover:bg-ink-muted"
         >
-          {next ? '보던 화면으로 가기' : '지도로 가기'}
+          {next ? '보던 화면으로 돌아가기' : '지도로 가기'}
         </Link>
       </AuthLayout>
     );
@@ -149,7 +149,7 @@ export function VerifyEmailPage() {
       description={
         <p>
           <span className="font-mono break-all text-ink">{session.me.email}</span>로 보낸 6자리 코드를 입력해 주세요.
-          코드는 10분 동안 쓸 수 있고, 5번 틀리면 새 코드를 받아야 해요.
+          코드는 10분 동안 쓸 수 있고 5번 틀리면 새 코드를 받아야 해요.
         </p>
       }
       footer={footer}

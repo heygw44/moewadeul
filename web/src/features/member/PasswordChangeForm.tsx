@@ -111,7 +111,7 @@ export function PasswordChangeForm() {
   return (
     <PageCard title="비밀번호 변경">
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <p className="text-sm text-ink-muted">비밀번호를 바꾸면 이 기기를 뺀 다른 기기에서는 로그아웃돼요.</p>
+        <p className="text-sm text-ink-muted">비밀번호를 바꾸면 이 기기 말고 다른 기기에서는 모두 로그아웃돼요.</p>
         {formError && (
           <div role="alert">
             <Notice tone="danger" title="비밀번호를 바꾸지 못했어요">
@@ -134,7 +134,7 @@ export function PasswordChangeForm() {
           value={newPassword}
           onChange={(event) => setNewPassword(event.target.value)}
           error={fieldErrors.newPassword}
-          hint="10~64자, 영문·숫자·특수문자를 각각 1자 이상. 공백은 쓸 수 없어요."
+          hint="10~64자로, 영문·숫자·특수문자를 하나 이상씩 넣어 주세요. 공백은 쓸 수 없어요."
         />
         <PasswordField
           label="새 비밀번호 확인"

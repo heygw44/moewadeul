@@ -74,7 +74,7 @@ export function IdentityVerificationPage() {
     const year = Number(birthYear.trim());
     const currentYear = new Date().getFullYear();
     if (!/^\d{4}$/.test(birthYear.trim()) || year < MIN_BIRTH_YEAR || year > currentYear) {
-      errors.birthYear = `출생연도를 ${MIN_BIRTH_YEAR}년부터 ${currentYear}년 사이의 숫자 4자리로 입력해 주세요.`;
+      errors.birthYear = `출생연도는 ${MIN_BIRTH_YEAR}~${currentYear}년 사이 4자리 숫자로 입력해 주세요.`;
     }
     if (gender === null) {
       errors.gender = '성별을 골라 주세요.';
@@ -155,9 +155,9 @@ export function IdentityVerificationPage() {
   if (session.me.status === 'UNVERIFIED') {
     return (
       <AuthLayout title="이메일 인증이 먼저 필요해요" footer={footer}>
-        <p className="text-ink-muted">메일로 받은 인증 코드를 입력하면 바로 본인확인을 할 수 있어요.</p>
+        <p className="text-ink-muted">메일로 받은 인증 코드를 입력하면 바로 본인확인으로 넘어가요.</p>
         <Link to="/verify-email" className={linkButtonClass}>
-          이메일 인증하러 가기
+          이메일 인증하기
         </Link>
       </AuthLayout>
     );
@@ -169,15 +169,15 @@ export function IdentityVerificationPage() {
       <AuthLayout title="본인확인을 마쳤어요" footer={footer}>
         {adult ? (
           <p className="text-ink-muted">
-            성인으로 확인돼서 신뢰 단계 1이 됐어요. 베이스캠프를 열거나 합류하려면 이 단계가 필요해요.
+            성인으로 확인돼 신뢰 단계 1이 됐어요. 이제 베이스캠프를 열거나 합류할 수 있어요.
           </p>
         ) : (
-          <Notice tone="warning" title="성인 기준에 못 미쳐요">
+          <Notice tone="warning" title="아직 성인 기준에 맞지 않아요">
             <p>만 19세가 되는 해의 1월 1일부터 성인으로 봐요. 그때까지는 신뢰 단계가 0이에요.</p>
           </Notice>
         )}
         <Link to={next ?? '/map'} replace className={linkButtonClass}>
-          {next ? '보던 화면으로 가기' : '지도로 가기'}
+          {next ? '보던 화면으로 돌아가기' : '지도로 가기'}
         </Link>
       </AuthLayout>
     );
@@ -191,8 +191,8 @@ export function IdentityVerificationPage() {
     >
       <Notice tone="info" title="시연용 본인확인">
         <p>
-          실제 본인확인기관과 연동하지 않아요. 입력한 값을 그대로 믿고, 같은 식별 문자열을 쓰면 같은 사람으로 봐요.
-          그래서 한 사람이 계정을 둘 이상 만들 수 없는 규칙을 시연할 수 있어요.
+          실제 본인확인기관과 연결하지 않고 입력한 내용을 그대로 써요. 식별 문자열이 같으면 같은 사람으로 봐요. 한
+          사람은 계정 하나에서만 본인확인할 수 있어요.
         </p>
       </Notice>
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -221,7 +221,7 @@ export function IdentityVerificationPage() {
           name="demoIdentityKey"
           autoComplete="off"
           maxLength={DEMO_KEY_MAX_LENGTH}
-          hint="아무 문자열이나 정할 수 있어요. 다른 계정에서 같은 문자열을 쓰면 중복으로 막혀요."
+          hint="아무 문자열이나 정해 주세요. 다른 계정에서 쓴 문자열은 쓸 수 없어요."
           value={demoIdentityKey}
           onChange={(event) => setDemoIdentityKey(event.target.value)}
           error={fieldErrors.demoIdentityKey}

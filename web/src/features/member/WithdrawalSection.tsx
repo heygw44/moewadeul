@@ -12,7 +12,7 @@ import { PasswordField } from '../../components/PasswordField';
 import { PASSWORD_REQUIRED } from './requiredMessages';
 import { useSession } from './session';
 
-const WRONG_PASSWORD = '비밀번호가 맞지 않아요. 다시 확인해 주세요.';
+const WRONG_PASSWORD = '비밀번호가 맞지 않아요. 다시 입력해 주세요.';
 
 // 탈퇴는 되돌릴 수 없어서 첫 버튼은 테두리만 있는 위험 버튼으로 두고, 비밀번호를 다시 받는 다이얼로그에서 확정한다.
 export function WithdrawalSection() {
@@ -87,8 +87,8 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Notice tone="warning" title="탈퇴하기 전에 확인해 주세요">
           <ul className="list-disc pl-5">
-            <li>닉네임과 이메일 같은 계정 정보가 지워지고 되돌릴 수 없어요.</li>
-            <li>참여 중인 베이스캠프에서 빠지고, 캠프 리더라면 그 베이스캠프는 취소돼요.</li>
+            <li>닉네임과 이메일이 지워지고 되돌릴 수 없어요.</li>
+            <li>합류한 베이스캠프에서 빠지고 캠프 리더라면 그 베이스캠프는 취소돼요.</li>
             <li>결제를 기다리는 행사 신청은 취소돼요.</li>
           </ul>
         </Notice>

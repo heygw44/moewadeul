@@ -7,7 +7,7 @@ export const REPORT_KIND_LABELS: Record<ReportKind, string> = {
 };
 
 export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
-  NO_SHOW: '약속 불이행',
+  NO_SHOW: '무단 불참',
   MONEY_REQUEST: '금전 요구',
   HARASSMENT_OR_THREAT: '성희롱·위협',
   OFFENSIVE_BEHAVIOR: '불쾌한 행동',
@@ -19,7 +19,7 @@ export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
 export const REPORT_STATUS_META: Record<ReportStatus, { label: string; tone: StatusTone }> = {
   RECEIVED: { label: '접수', tone: 'neutral' },
   IN_REVIEW: { label: '검토 중', tone: 'info' },
-  ACTIONED: { label: '조치', tone: 'accent' },
+  ACTIONED: { label: '조치 완료', tone: 'accent' },
   DISMISSED: { label: '기각', tone: 'neutral' },
 };
 
@@ -34,5 +34,5 @@ export const SANCTION_TYPE_LABELS: Record<SanctionType, string> = {
 export const SANCTION_STATUS_LABELS: Record<SanctionStatus, string> = {
   ACTIVE: '적용 중',
   LIFTED: '해제됨',
-  EXPIRED: '끝남',
+  EXPIRED: '기간 끝남',
 };

@@ -4,7 +4,7 @@ const LOAD_TIMEOUT_MS = 15_000;
 export type MapLoadErrorReason = 'NO_KEY' | 'LOAD_FAILED';
 
 const MESSAGES: Record<MapLoadErrorReason, string> = {
-  NO_KEY: '지도 키가 설정되지 않았어요.',
+  NO_KEY: '지금은 지도를 볼 수 없어요.',
   LOAD_FAILED: '지도를 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.',
 };
 

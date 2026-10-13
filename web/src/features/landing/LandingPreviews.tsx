@@ -132,7 +132,7 @@ export function HeroPreview() {
           <span className="h-1 w-9 rounded-control bg-ink-subtle" />
         </span>
         <span className="border-b border-line px-4 pb-2 text-lg font-semibold text-ink">
-          이 지역 장소 <span className="tabular-nums">17곳</span>
+          이 지역의 장소 <span className="tabular-nums">17곳</span>
         </span>
         <PreviewSpotRow name="물소리 계곡 위 평지" kind="BAKJI" />
         <PreviewSpotRow name="능선 끝 바위 쉼터" kind="BAKJI" warning />
@@ -193,7 +193,7 @@ export function TrustPreview() {
         <span className="text-sm text-ink">시간 약속 · 흔적 남기지 않기 실천</span>
       </span>
       <Notice tone="info" title="내 후기를 쓰면 상대 후기를 볼 수 있어요">
-        동행 후기는 서로 쓰기 전까지 가려 둬요.
+        후기를 쓰지 않아도 작성 기한이 끝나면 보여요.
       </Notice>
     </PreviewFrame>
   );
