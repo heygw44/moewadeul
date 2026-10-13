@@ -1,7 +1,7 @@
-package com.moewadeul.notification.application.outbox;
+package com.moewadeul.outbox.application;
 
-import com.moewadeul.notification.infra.outbox.OutboxBacklogRow;
-import com.moewadeul.notification.infra.outbox.OutboxEventMapper;
+import com.moewadeul.outbox.infra.OutboxBacklogRow;
+import com.moewadeul.outbox.infra.OutboxEventMapper;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;

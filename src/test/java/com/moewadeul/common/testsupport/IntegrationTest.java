@@ -1,7 +1,7 @@
 package com.moewadeul.common.testsupport;
 
 import com.moewadeul.common.mail.TestMailSenderConfig;
-import com.moewadeul.notification.application.outbox.RecordingOutboxEventHandler;
+import com.moewadeul.outbox.application.RecordingOutboxEventHandler;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
