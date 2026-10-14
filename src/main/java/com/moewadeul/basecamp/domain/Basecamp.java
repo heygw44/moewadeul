@@ -2,6 +2,7 @@ package com.moewadeul.basecamp.domain;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.time.KoreaTime;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -16,7 +17,6 @@ import jakarta.persistence.Table;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -55,9 +55,6 @@ public class Basecamp {
 
     /** 완료된 뒤 이 기간이 지나면 연락 수단을 더 보여 주지 않는다. */
     public static final Duration CONTACT_VISIBLE_AFTER_COMPLETION = Duration.ofDays(7);
-
-    /** 출발일 0시를 출발 시각으로 볼 때 쓰는 시간대다. */
-    public static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
 
     private static final Set<BasecampStatus> RECRUITING_ONLY = Set.of(BasecampStatus.RECRUITING);
     private static final Set<BasecampStatus> BEFORE_CONFIRM = Set.of(BasecampStatus.RECRUITING, BasecampStatus.CLOSED);
@@ -554,7 +551,7 @@ public class Basecamp {
         if (status != BasecampStatus.CONFIRMED) {
             return false;
         }
-        Instant departure = startDate.atStartOfDay(KOREA).toInstant();
+        Instant departure = startDate.atStartOfDay(KoreaTime.ZONE).toInstant();
         return !now.isBefore(departure.minus(EARLY_LEAVE_WINDOW));
     }
 

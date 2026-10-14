@@ -2,6 +2,7 @@ package com.moewadeul.review.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.review.domain.ReviewErrorCode;
 import com.moewadeul.review.domain.SpotReview;
 import com.moewadeul.review.domain.SpotReviewRepository;
@@ -10,7 +11,6 @@ import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,8 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 class SpotReviewWriter {
-
-    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
 
     private final ActiveSpotChecker activeSpotChecker;
     private final SpotReviewRepository spotReviewRepository;
@@ -106,7 +104,7 @@ class SpotReviewWriter {
         if (visitedDate == null) {
             throw invalidInput("방문일을 입력해 주세요.");
         }
-        if (visitedDate.isAfter(LocalDate.ofInstant(now, KOREA))) {
+        if (visitedDate.isAfter(LocalDate.ofInstant(now, KoreaTime.ZONE))) {
             throw invalidInput("방문일은 오늘(한국 날짜)보다 뒤일 수 없어요.");
         }
     }

@@ -1,5 +1,6 @@
 package com.moewadeul.trust.application.profile;
 
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.trust.domain.CompanionReviewPolicy;
 import com.moewadeul.trust.domain.companion.CompanionReviewTag;
 import com.moewadeul.trust.domain.identity.IdentityVerification;
@@ -12,7 +13,6 @@ import com.moewadeul.trust.infra.profile.TrustRecordRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.Year;
-import java.time.ZoneId;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TrustSummaryService {
 
-    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
     private static final TrustSummary NOT_VERIFIED_LEVEL_ZERO = new TrustSummary(false, 0);
 
     private final IdentityVerificationRepository identityVerificationRepository;
@@ -109,6 +108,6 @@ public class TrustSummaryService {
     }
 
     private static Year currentYear(Instant now) {
-        return Year.from(now.atZone(KOREA));
+        return Year.from(now.atZone(KoreaTime.ZONE));
     }
 }

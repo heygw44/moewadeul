@@ -1,6 +1,7 @@
 package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.time.KoreaTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,7 +30,7 @@ public class ReportContentCleanupScheduler {
         scheduledJobMetrics.register(JOB_NAME);
     }
 
-    @Scheduled(cron = "${moewadeul.trust.report-content-cleanup.cron:0 50 4 * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "${moewadeul.trust.report-content-cleanup.cron:0 50 4 * * *}", zone = KoreaTime.ZONE_ID)
     public void cleanUp() {
         try {
             cleanupService.clearExpiredContent();

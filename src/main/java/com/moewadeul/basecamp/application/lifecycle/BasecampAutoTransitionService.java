@@ -1,7 +1,7 @@
 package com.moewadeul.basecamp.application.lifecycle;
 
-import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.infra.lifecycle.BasecampAutoTransitionMapper;
+import com.moewadeul.common.time.KoreaTime;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -35,7 +35,7 @@ public class BasecampAutoTransitionService {
      */
     public Result run() {
         Instant now = clock.instant();
-        LocalDate today = LocalDate.ofInstant(now, Basecamp.KOREA);
+        LocalDate today = LocalDate.ofInstant(now, KoreaTime.ZONE);
         int completed = processAll(
                 (afterId, limit) -> autoTransitionMapper.selectDueForCompletionIds(today, afterId, limit),
                 basecampId -> applier.complete(basecampId, today, now));

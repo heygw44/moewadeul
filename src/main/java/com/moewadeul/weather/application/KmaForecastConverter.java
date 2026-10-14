@@ -1,5 +1,6 @@
 package com.moewadeul.weather.application;
 
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.weather.application.WeatherForecast.MidTermForecast;
 import com.moewadeul.weather.application.WeatherForecast.ShortTermForecast;
 import com.moewadeul.weather.infra.KmaApiException;
@@ -8,7 +9,6 @@ import com.moewadeul.weather.infra.KmaShortTermItem;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -21,7 +21,6 @@ import java.util.TreeMap;
  */
 final class KmaForecastConverter {
 
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter FCST_DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
     private static final String TEMPERATURE = "TMP";
     private static final String PRECIPITATION_PROBABILITY = "POP";
@@ -97,7 +96,7 @@ final class KmaForecastConverter {
     private static Instant parseInstant(KmaShortTermItem item) {
         try {
             return LocalDateTime.parse(item.fcstDate() + item.fcstTime(), FCST_DATE_TIME)
-                    .atZone(KST)
+                    .atZone(KoreaTime.ZONE)
                     .toInstant();
         } catch (DateTimeParseException e) {
             throw new KmaApiException("기상청 단기예보의 예보 시각을 해석하지 못했다", e);

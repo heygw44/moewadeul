@@ -5,6 +5,7 @@ import static com.moewadeul.basecamp.domain.BasecampBuilder.MEMBER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.aBasecamp;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.time.KoreaTime;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -13,7 +14,7 @@ import org.junit.jupiter.api.Test;
 class EarlyLeaveTest {
 
     private static final Instant DEPARTURE =
-            DEFAULT_START_DATE.atStartOfDay(Basecamp.KOREA).toInstant();
+            DEFAULT_START_DATE.atStartOfDay(KoreaTime.ZONE).toInstant();
     private static final Instant WINDOW_START = DEPARTURE.minus(Duration.ofHours(48));
 
     private static boolean leaveConfirmedAt(Instant leaveTime) {

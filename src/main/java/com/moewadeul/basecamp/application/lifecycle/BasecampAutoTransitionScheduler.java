@@ -1,6 +1,7 @@
 package com.moewadeul.basecamp.application.lifecycle;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.time.KoreaTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,7 +30,7 @@ public class BasecampAutoTransitionScheduler {
         scheduledJobMetrics.register(JOB_NAME);
     }
 
-    @Scheduled(cron = "${moewadeul.basecamp.auto-transition.cron:0 0 0 * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "${moewadeul.basecamp.auto-transition.cron:0 0 0 * * *}", zone = KoreaTime.ZONE_ID)
     public void transition() {
         try {
             autoTransitionService.run();

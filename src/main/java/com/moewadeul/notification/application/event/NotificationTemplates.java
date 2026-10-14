@@ -1,7 +1,7 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.notification.application.NotificationEventTypes;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -12,7 +12,7 @@ import java.util.List;
 final class NotificationTemplates {
 
     private static final DateTimeFormatter SUSPENSION_END_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("Asia/Seoul"));
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(KoreaTime.ZONE);
 
     private NotificationTemplates() {}
 

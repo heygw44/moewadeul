@@ -2,6 +2,7 @@ package com.moewadeul.memory.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryDetails;
 import com.moewadeul.memory.domain.MemoryRepository;
@@ -10,7 +11,6 @@ import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,8 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 class MemoryWriter {
-
-    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
 
     private final ActiveSpotChecker activeSpotChecker;
     private final MemoryRepository memoryRepository;
@@ -105,6 +103,6 @@ class MemoryWriter {
 
     // 방문일은 한국 날짜로 받으므로, 오늘도 한국 날짜로 계산해서 비교한다. 오늘 다녀온 곳의 기록은 쓸 수 있다.
     private static LocalDate today(Instant now) {
-        return LocalDate.ofInstant(now, KOREA);
+        return LocalDate.ofInstant(now, KoreaTime.ZONE);
     }
 }

@@ -1,5 +1,6 @@
 package com.moewadeul.spot.application.map;
 
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.SpotClosedNow;
 import com.moewadeul.spot.application.SpotSearchBox;
 import com.moewadeul.spot.infra.map.SpotNearbyCondition;
@@ -7,7 +8,6 @@ import com.moewadeul.spot.infra.map.SpotNearbyMapper;
 import com.moewadeul.spot.infra.map.SpotNearbyRow;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,8 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SpotNearbyQueryService {
 
-    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
-
     private final SpotNearbyMapper spotNearbyMapper;
     private final Clock clock;
 
@@ -36,7 +34,7 @@ public class SpotNearbyQueryService {
     @Transactional(readOnly = true)
     public SpotNearbyPage findNearby(SpotNearbyQuery query) {
         long offset = (long) query.page() * query.size();
-        LocalDate today = LocalDate.now(clock.withZone(KOREA));
+        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
         List<SpotNearbyRow> rows = spotNearbyMapper.selectNearby(toCondition(query, today), offset, query.size() + 1);
         boolean hasNext = rows.size() > query.size();
         List<SpotNearbyItem> content =
