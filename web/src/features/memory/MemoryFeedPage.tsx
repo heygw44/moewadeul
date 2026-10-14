@@ -15,6 +15,8 @@ import { useSession } from '../member/session';
 import { usePagedList } from '../program/usePagedList';
 
 const FEED_PAGE_SIZE = 24;
+// 커뮤니티·행사와 같은 넓은 열을 써서, 넓은 화면에서는 칸이 지나치게 커지지 않게 열 수를 늘린다.
+const FEED_GRID_CLASS = 'grid grid-cols-3 gap-0.5 md:grid-cols-4 lg:grid-cols-5';
 
 // 모두에게 공개된 기록을 최신순으로 이어서 보여 준다. 좋아요 상태가 로그인에 따라 달라서 세션을 확인한 뒤에 받는다.
 export function MemoryFeedPage() {
@@ -27,7 +29,7 @@ export function MemoryFeedPage() {
   const showSkeleton = useDelayedFlag(current === null);
 
   useEffect(() => {
-    document.title = '발자국 · 뫼와들';
+    document.title = '피드 · 뫼와들';
   }, []);
 
   let body;
@@ -35,8 +37,8 @@ export function MemoryFeedPage() {
     body = (
       <div aria-busy="true">
         {showSkeleton && (
-          <div className="grid grid-cols-3 gap-0.5">
-            {Array.from({ length: 9 }, (_, index) => (
+          <div className={FEED_GRID_CLASS}>
+            {Array.from({ length: 15 }, (_, index) => (
               <Skeleton key={index} className="aspect-square w-full" />
             ))}
           </div>
@@ -46,7 +48,7 @@ export function MemoryFeedPage() {
   } else if (current.error !== null && current.items.length === 0) {
     body = (
       <div role="alert" className="flex flex-col gap-3">
-        <Notice tone="danger" title="발자국을 불러오지 못했어요">
+        <Notice tone="danger" title="기록을 불러오지 못했어요">
           {current.error}
         </Notice>
         <div>
@@ -60,11 +62,11 @@ export function MemoryFeedPage() {
     body = (
       <EmptyState
         framed
-        title="공개된 발자국이 아직 없어요"
-        description="다녀온 곳을 발자국으로 남기고 공개하면 여기에 보여요."
+        title="공개된 기록이 아직 없어요"
+        description="다녀온 곳을 기록으로 남기고 공개하면 여기에 보여요."
         action={
           <Link to="/me/memories" className={SECONDARY_LINK_CLASS}>
-            내 발자국 지도
+            내 기록 지도
           </Link>
         }
       />
@@ -72,7 +74,7 @@ export function MemoryFeedPage() {
   } else {
     body = (
       <>
-        <ul className="grid grid-cols-3 gap-0.5">
+        <ul className={FEED_GRID_CLASS}>
           {current.items.map((item) => (
             <li key={item.memoryId}>
               <MemoryFeedCell item={item} />
@@ -97,11 +99,10 @@ export function MemoryFeedPage() {
 
   return (
     <HubLayout
-      title="발자국"
-      width="narrow"
+      title="피드"
       actions={
         <Link to="/me/memories" className={SECONDARY_LINK_CLASS}>
-          내 발자국 지도
+          내 기록 지도
         </Link>
       }
     >
@@ -118,7 +119,7 @@ function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
   const photoCount = item.images.length;
   const cover = imageFailed ? undefined : item.images[0];
   const label = [
-    `${item.author.nickname}님의 발자국`,
+    `${item.author.nickname}님의 기록`,
     formatLocalDate(item.visitedDate),
     photoCount > 0 ? `사진 ${photoCount}장` : null,
     `좋아요 ${item.likeCount}개`,

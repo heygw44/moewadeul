@@ -6,10 +6,12 @@ import { SPOT_TYPE_META } from './spotLabels';
 
 type SpotListRowProps = {
   marker: SpotMarker;
+  // 반경 검색 결과에서만 넘긴다. 기준점에서 떨어진 거리(km)를 메타 줄 맨 앞에 적는다.
+  distanceKm?: number;
 };
 
 // 지도 마커를 누르지 못하는 사람도 같은 장소를 고를 수 있도록, 목록 행 하나가 마커 하나와 짝을 이룬다.
-export function SpotListRow({ marker }: SpotListRowProps) {
+export function SpotListRow({ marker, distanceKm }: SpotListRowProps) {
   const meta = SPOT_TYPE_META[marker.type];
 
   return (
@@ -26,6 +28,7 @@ export function SpotListRow({ marker }: SpotListRowProps) {
           {/* 장소 유형은 왼쪽 아이콘이 이미 알린다. 그래서 판단에 필요한 경고와 휴장만 글로 적는다. */}
           <MetaLine
             items={[
+              distanceKm !== undefined && <span className="font-mono">{distanceKm}km</span>,
               marker.parkWarning && (
                 <StatusText tone="warning" icon="alert">
                   공원 경계 경고

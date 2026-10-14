@@ -90,15 +90,17 @@ class ArchitectureRulesTest {
     }
 
     @Test
-    @DisplayName("[ADR-005] domain이 같은 모듈의 api·infra에 의존하면 R3 위반이다")
-    void domainIndependenceRuleRejectsApiAndInfraDependency() {
+    @DisplayName("[ADR-005] domain이 같은 모듈의 api·application·infra에 의존하면 R3 위반이다")
+    void domainIndependenceRuleRejectsOutwardDependency() {
         assertOnlyRuleFails(
                 Rule.DOMAIN_INDEPENDENCE,
                 "violation.r3.outward",
                 "member.domain.Member",
                 "member.infra.MemberPersistence",
                 "member.domain.Address",
-                "member.api.MemberController");
+                "member.api.MemberController",
+                "member.domain.Profile",
+                "member.application.MemberService");
     }
 
     @Test

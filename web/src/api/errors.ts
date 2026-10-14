@@ -57,6 +57,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   BAKJI_ALREADY_CONFIRMED: '이 박지는 이미 확인했어요. 박지마다 한 번만 할 수 있어요.',
   BAKJI_ALREADY_REPORTED: '이미 이 박지를 신고했어요. 처리 결과를 기다려 주세요.',
   SPOT_INVALID_STATE: STATE_CHANGED,
+  AI_SEARCH_LIMITED: '오늘 AI 검색을 모두 썼어요. 내일 다시 쓰거나 지역 이름으로 검색해 주세요.',
+  AI_SEARCH_UNAVAILABLE: '지금은 AI 검색을 쓸 수 없어요. 지역 이름으로 검색해 주세요.',
   SPOT_REVIEW_DUPLICATED: '이 방문일로 쓴 후기가 이미 있어요. 방문일을 바꿔 주세요.',
 
   // 베이스캠프
@@ -85,8 +87,8 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   // 커뮤니티
   COMMUNITY_ALREADY_REPORTED: '이미 신고한 글이나 댓글이에요. 처리 결과를 기다려 주세요.',
-  // 발자국
-  MEMORY_ALREADY_REPORTED: '이미 신고한 발자국이에요. 처리 결과를 기다려 주세요.',
+  // 추억 기록
+  MEMORY_ALREADY_REPORTED: '이미 신고한 기록이에요. 처리 결과를 기다려 주세요.',
   // 개인 일정
   SOLO_TRIP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안에서, 일정은 1~3박으로 골라 주세요.',
   SOLO_TRIP_LIMIT: '앞으로 갈 혼자 가는 일정은 3개까지 등록할 수 있어요. 내 정보에서 필요 없는 일정을 삭제해 주세요.',

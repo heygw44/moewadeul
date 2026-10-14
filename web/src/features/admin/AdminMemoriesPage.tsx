@@ -32,13 +32,13 @@ type ListState = { items: AdminMemorySummary[]; page: number; hasNext: boolean; 
 
 export function AdminMemoriesPage() {
   return (
-    <AdminPage title="발자국 검토" current="/admin/memories">
+    <AdminPage title="기록 검토" current="/admin/memories">
       <MemoryReview />
     </AdminPage>
   );
 }
 
-// 관리자도 비공개 발자국은 보지 못해서, 서버가 공개 발자국만 준다. 위치도 대략 위치만 온다.
+// 관리자도 비공개 기록은 보지 못해서, 서버가 공개 기록만 준다. 위치도 대략 위치만 온다.
 function MemoryReview() {
   const [tab, setTab] = useState<AdminMemoryStatus>('PENDING_REVIEW');
   const [attempt, setAttempt] = useState(0);
@@ -87,7 +87,7 @@ function MemoryReview() {
   }
 
   return (
-    <section className="flex flex-col gap-4" aria-label="발자국 검토 목록">
+    <section className="flex flex-col gap-4" aria-label="기록 검토 목록">
       <div role="group" aria-label="목록 종류" className="flex flex-wrap gap-2">
         {TABS.map((item) => (
           <button
@@ -111,7 +111,7 @@ function MemoryReview() {
       </div>
       {state?.error && (
         <div role="alert" className="flex flex-col gap-3">
-          <Notice tone="danger" title="발자국을 불러오지 못했어요">
+          <Notice tone="danger" title="기록을 불러오지 못했어요">
             <p>{state.error}</p>
           </Notice>
           {state.items.length === 0 && (
@@ -133,8 +133,8 @@ function MemoryReview() {
       {state !== null && state.items.length === 0 && !state.error && (
         <EmptyState
           framed
-          title={tab === 'PENDING_REVIEW' ? '검토를 기다리는 발자국이 없어요' : '숨긴 발자국이 없어요'}
-          description={tab === 'PENDING_REVIEW' ? '신고가 쌓인 발자국이 여기에 모여요.' : '숨긴 발자국이 여기에 모여요.'}
+          title={tab === 'PENDING_REVIEW' ? '검토를 기다리는 기록이 없어요' : '숨긴 기록이 없어요'}
+          description={tab === 'PENDING_REVIEW' ? '신고가 쌓인 기록이 여기에 모여요.' : '숨긴 기록이 여기에 모여요.'}
         />
       )}
       {state !== null && state.items.length > 0 && (
@@ -181,7 +181,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
   return (
     <li className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.author.nickname}님의 발자국</h3>
+        <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.author.nickname}님의 기록</h3>
         <StatusText tone="neutral">{item.status === 'HIDDEN' ? '숨김' : '검토 대기'}</StatusText>
       </div>
       {thumbnails.length > 0 && (
@@ -257,10 +257,10 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
         </Button>
       </div>
       {confirmHide && (
-        <Dialog title="발자국을 숨길까요?" onClose={() => busy === null && setConfirmHide(false)}>
+        <Dialog title="기록을 숨길까요?" onClose={() => busy === null && setConfirmHide(false)}>
           <div className="flex flex-col gap-4">
             <p className="text-base text-ink">
-              {item.author.nickname}님의 발자국을 작성자만 볼 수 있게 숨겨요. 숨긴 발자국은 숨김 탭에서 복구할 수 있어요.
+              {item.author.nickname}님의 기록을 작성자만 볼 수 있게 숨겨요. 숨긴 기록은 숨김 탭에서 복구할 수 있어요.
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={busy !== null} onClick={() => setConfirmHide(false)}>

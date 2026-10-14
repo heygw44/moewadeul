@@ -1,6 +1,7 @@
 package com.moewadeul.memory.domain;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.memory.domain.image.MemoryImage;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

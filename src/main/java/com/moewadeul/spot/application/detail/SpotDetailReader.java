@@ -1,0 +1,234 @@
+package com.moewadeul.spot.application.detail;
+
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.storage.ImageStorage;
+import com.moewadeul.common.time.KoreaTime;
+import com.moewadeul.spot.application.PublicSpotOperatingStatus;
+import com.moewadeul.spot.application.SpotClosedNow;
+import com.moewadeul.spot.application.SpotParkWarning;
+import com.moewadeul.spot.application.publicspot.PublicSpotSource;
+import com.moewadeul.spot.domain.SpotType;
+import com.moewadeul.spot.infra.detail.SpotConfirmedProgramRow;
+import com.moewadeul.spot.infra.detail.SpotConfirmedStayRow;
+import com.moewadeul.spot.infra.detail.SpotDetailMapper;
+import com.moewadeul.spot.infra.detail.SpotDetailRow;
+import com.moewadeul.spot.infra.detail.SpotRatingRow;
+import com.moewadeul.spot.infra.detail.SpotRecentReviewRow;
+import com.moewadeul.spot.infra.detail.SpotRecruitingBasecampRow;
+import com.moewadeul.spot.infra.detail.SpotReviewImageRow;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
+
+/**
+ * 장소 한 곳의 상세를 DB에서 읽는다. 박지는 박지 상세를, 야영장과 자연휴양림은 공공데이터 상세를 채운다. 날씨는 채우지 않는다.
+ *
+ * <p>공공데이터 장소의 휴장 여부는 조회한 날의 한국 날짜로 계산한다. 읽기 트랜잭션은 이 빈에만 있다. 장소 상세 서비스가 외부 API를 트랜잭션 밖에서
+ * 부르려고, DB 조회를 이 빈으로 나눴다.
+ */
+@Component
+@RequiredArgsConstructor
+class SpotDetailReader {
+
+    private static final int RECENT_REVIEW_COUNT = 3;
+
+    private static final TypeReference<Map<String, String>> FACILITIES_TYPE = new TypeReference<>() {};
+
+    private final SpotDetailMapper spotDetailMapper;
+    private final ImageStorage imageStorage;
+    private final JsonMapper jsonMapper;
+    private final Clock clock;
+
+    /** 날씨를 뺀 상세와, 날씨 조회에 쓸 기상청 격자 좌표. */
+    record Read(SpotDetail detail, int weatherNx, int weatherNy) {}
+
+    /**
+     * 호출하면 spotId인 장소의 상세를 돌려준다.
+     *
+     * <p>장소가 없거나 숨김, 삭제, 검토 대기처럼 ACTIVE가 아니면 NOT_FOUND로 거부한다. 숨긴 장소가 있는지조차 드러내지 않으려고 두 경우를
+     * 구분하지 않는다.
+     */
+    @Transactional(readOnly = true)
+    public Read read(long spotId) {
+        SpotDetailRow row = spotDetailMapper
+                .selectActiveDetail(spotId)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
+        SpotDetail detail = new SpotDetail(
+                row.spotId(),
+                row.type(),
+                row.name(),
+                row.lat(),
+                row.lng(),
+                row.address(),
+                toParkWarning(row),
+                toBakjiDetail(row),
+                toPublicDetail(row, today),
+                toRating(spotDetailMapper.selectRating(spotId)),
+                readRecentReviews(spotId),
+                toExpectedPeople(readStays(spotId, today), today),
+                spotDetailMapper.selectRecruitingBasecamps(spotId).stream()
+                        .map(SpotDetailReader::toRecruitingBasecamp)
+                        .toList(),
+                null);
+        return new Read(detail, row.weatherNx(), row.weatherNy());
+    }
+
+    // 확정 베이스캠프, 이 장소에 연결된 숙박 공식 행사의 확정 참가자, 혼자 가는 개인 일정을 같은 모양의 야영 기간으로 모은다.
+    // 행사는 시작·종료를 UTC 시각으로 저장하므로, 각 시각의 한국 날짜를 출발일과 종료일로 본다.
+    private List<SpotConfirmedStayRow> readStays(long spotId, LocalDate today) {
+        List<SpotConfirmedStayRow> stays = new ArrayList<>(spotDetailMapper.selectConfirmedStays(spotId, today));
+        stays.addAll(spotDetailMapper.selectSoloTrips(spotId, today));
+        Instant startOfToday = today.atStartOfDay(KoreaTime.ZONE).toInstant();
+        for (SpotConfirmedProgramRow program : spotDetailMapper.selectConfirmedPrograms(spotId, startOfToday)) {
+            stays.add(new SpotConfirmedStayRow(
+                    LocalDate.ofInstant(program.startAt(), KoreaTime.ZONE),
+                    LocalDate.ofInstant(program.endAt(), KoreaTime.ZONE),
+                    program.headcount()));
+        }
+        return stays;
+    }
+
+    // 야영 기간마다 시작일부터 종료일 전날까지 밤마다 인원을 더한다. 종료일은 이미 집으로 돌아간 날이라 세지 않는다.
+    // 겹치는 기간은 같은 날짜에 합산한다. 이미 지난 밤은 건너뛴다. 날짜 순서는 TreeMap이 맞춘다.
+    private static List<SpotExpectedPeople> toExpectedPeople(List<SpotConfirmedStayRow> stays, LocalDate today) {
+        Map<LocalDate, Integer> countByNight = new TreeMap<>();
+        for (SpotConfirmedStayRow stay : stays) {
+            LocalDate firstNight = stay.startDate().isBefore(today) ? today : stay.startDate();
+            for (LocalDate night = firstNight; night.isBefore(stay.endDate()); night = night.plusDays(1)) {
+                countByNight.merge(night, stay.headcount(), Integer::sum);
+            }
+        }
+        return countByNight.entrySet().stream()
+                .filter(entry -> entry.getValue() > 0)
+                .map(entry -> new SpotExpectedPeople(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    private static SpotRecruitingBasecamp toRecruitingBasecamp(SpotRecruitingBasecampRow row) {
+        return new SpotRecruitingBasecamp(
+                row.basecampId(),
+                row.title(),
+                row.startDate(),
+                row.endDate(),
+                row.capacity(),
+                row.headcount(),
+                new SpotJoinCondition(row.minTrustLevel(), row.ageGroupMin(), row.ageGroupMax(), row.sameGenderOnly()));
+    }
+
+    private static SpotRating toRating(SpotRatingRow row) {
+        return new SpotRating(row.average(), row.count());
+    }
+
+    // 최근 후기의 이미지는 쿼리 한 번으로 읽고, 조회 URL은 서버 안에서 서명을 계산해 붙인다. 저장소는 부르지 않는다.
+    private List<SpotRecentReview> readRecentReviews(long spotId) {
+        List<SpotRecentReviewRow> rows = spotDetailMapper.selectRecentReviews(spotId, RECENT_REVIEW_COUNT);
+        Map<Long, List<SpotRecentReview.Image>> images = new HashMap<>();
+        if (!rows.isEmpty()) {
+            List<Long> reviewIds =
+                    rows.stream().map(SpotRecentReviewRow::reviewId).toList();
+            for (SpotReviewImageRow image : spotDetailMapper.selectReviewImages(reviewIds)) {
+                images.computeIfAbsent(image.reviewId(), id -> new ArrayList<>())
+                        .add(new SpotRecentReview.Image(image.imageId(), imageStorage.presignView(image.objectKey())));
+            }
+        }
+        return rows.stream()
+                .map(row -> toRecentReview(row, images.getOrDefault(row.reviewId(), List.of())))
+                .toList();
+    }
+
+    private static SpotRecentReview toRecentReview(SpotRecentReviewRow row, List<SpotRecentReview.Image> images) {
+        return new SpotRecentReview(
+                row.reviewId(),
+                row.authorId(),
+                row.authorNickname(),
+                row.visitedDate(),
+                row.rating(),
+                row.content(),
+                List.copyOf(images),
+                row.createdAt());
+    }
+
+    // 경고인데 경계 행이 없으면 경계 이름·출처·기준일만 null로 두고, 안내 문구는 채운다.
+    private static SpotParkWarning toParkWarning(SpotDetailRow row) {
+        if (!row.parkWarning()) {
+            return SpotParkWarning.notWarned();
+        }
+        return SpotParkWarning.warned(row.areaName(), row.areaSource(), row.areaSourceDate());
+    }
+
+    // 박지 상세 행이 없는 박지는 데이터가 어긋난 경우라서, 서비스는 상세 없이 장소 정보만 돌려준다.
+    private static SpotBakjiDetail toBakjiDetail(SpotDetailRow row) {
+        if (row.type() != SpotType.BAKJI || row.reporterId() == null) {
+            return null;
+        }
+        return new SpotBakjiDetail(
+                row.description(),
+                row.hasWater(),
+                row.hasToilet(),
+                row.signalLevel(),
+                row.confirmationCount(),
+                row.reporterId(),
+                row.reporterNickname());
+    }
+
+    // 공공데이터 상세 행이 없는 야영장이나 휴양림도 데이터가 어긋난 경우라서, 서비스는 상세 없이 장소 정보만 돌려준다.
+    private SpotPublicDetail toPublicDetail(SpotDetailRow row, LocalDate today) {
+        if (row.type() == SpotType.BAKJI || row.source() == null) {
+            return null;
+        }
+        boolean closedNow =
+                SpotClosedNow.isClosedOn(row.type(), row.operatingStatus(), row.closedFrom(), row.closedUntil(), today);
+        return new SpotPublicDetail(
+                PublicSpotSource.valueOf(row.source()),
+                row.category(),
+                toFacilities(row.facilities()),
+                row.phone(),
+                row.homepage(),
+                row.sourceDate(),
+                row.checkedAt(),
+                toOperatingStatus(row.operatingStatus()),
+                row.closedFrom(),
+                row.closedUntil(),
+                closedNow);
+    }
+
+    // 동기화는 고캠핑 원천 항목 이름을 키로 시설 정보를 저장한다. 서비스는 그 키를 응답 필드 이름으로 옮기고, 없는 키는 null로 둔다.
+    private SpotFacilities toFacilities(String facilitiesJson) {
+        if (facilitiesJson == null) {
+            return null;
+        }
+        Map<String, String> source = jsonMapper.readValue(facilitiesJson, FACILITIES_TYPE);
+        if (source == null || source.isEmpty()) {
+            return null;
+        }
+        return new SpotFacilities(
+                source.get("toiletCo"),
+                source.get("swrmCo"),
+                source.get("wtrplCo"),
+                source.get("brazierCl"),
+                source.get("sbrsCl"),
+                source.get("sbrsEtc"),
+                source.get("posblFcltyCl"),
+                source.get("posblFcltyEtc"),
+                source.get("animalCmgCl"));
+    }
+
+    private static PublicSpotOperatingStatus toOperatingStatus(String operatingStatus) {
+        if (operatingStatus == null) {
+            return null;
+        }
+        return PublicSpotOperatingStatus.valueOf(operatingStatus);
+    }
+}

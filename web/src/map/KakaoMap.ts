@@ -35,6 +35,11 @@ const DIMMED_OPACITY = '0.35';
 
 const MAX_ANIMATED_LEVEL_STEP = 2;
 
+// 영역에 맞출 때 장소가 화면 가장자리에 붙지 않도록 둘레에 두는 여백(px)이다.
+const FIT_PADDING_PX = 48;
+// 반경 원의 색이다. 정보 색 토큰(info)과 같은 값이고, 지도 SDK에는 CSS 변수를 넘길 수 없어서 값을 적는다.
+const RADIUS_COLOR = '#1d4fc4';
+
 interface DrawnPin {
   overlay: kakao.maps.CustomOverlay;
   pin: SpotPin;
@@ -185,6 +190,7 @@ export async function createMapView(
   let searchOverlay: kakao.maps.CustomOverlay | null = null;
   let menuOverlay: kakao.maps.CustomOverlay | null = null;
   let selectedId: number | null = null;
+  let radiusCircle: kakao.maps.Circle | null = null;
   let terrainOn = false;
   let destroyed = false;
 
@@ -494,6 +500,39 @@ export async function createMapView(
       searchOverlay.setMap(map);
     },
 
+    fitBounds(bounds: Bounds) {
+      if (destroyed) return;
+      const area = new kakao.maps.LatLngBounds(toKakaoLatLng(bounds.sw), toKakaoLatLng(bounds.ne));
+      map.setBounds(area, FIT_PADDING_PX, FIT_PADDING_PX, FIT_PADDING_PX, FIT_PADDING_PX);
+    },
+
+    // 원은 하나만 만들어 두고 중심과 반지름만 바꾼다.
+    showRadius(area: { center: LatLng; radiusKm: number } | null) {
+      if (destroyed) return;
+      if (area === null) {
+        radiusCircle?.setMap(null);
+        return;
+      }
+      const options = { center: toKakaoLatLng(area.center), radius: area.radiusKm * 1000 };
+      if (radiusCircle === null) {
+        radiusCircle = new kakao.maps.Circle({
+          ...options,
+          strokeWeight: 1,
+          strokeColor: RADIUS_COLOR,
+          strokeOpacity: 0.8,
+          fillColor: RADIUS_COLOR,
+          fillOpacity: 0.08,
+          zIndex: 0,
+        });
+        // 원은 눌림을 가로채므로, 원 안을 누르거나 우클릭해도 지도를 누른 것과 같게 넘긴다.
+        kakao.maps.event.addListener(radiusCircle, 'click', handleMapClick);
+        kakao.maps.event.addListener(radiusCircle, 'rightclick', handleRightClick);
+      } else {
+        radiusCircle.setOptions(options);
+      }
+      radiusCircle.setMap(map);
+    },
+
     // 지형도는 기본 지도 위에 겹치는 타일이다. 이미 켜져 있으면 다시 겹치지 않는다.
     setTerrain(on: boolean) {
       if (destroyed || on === terrainOn) return;
@@ -533,6 +572,8 @@ export async function createMapView(
       draftOverlay = null;
       searchOverlay?.setMap(null);
       searchOverlay = null;
+      radiusCircle?.setMap(null);
+      radiusCircle = null;
       menuOverlay?.setMap(null);
       menuOverlay = null;
       idleListeners.clear();

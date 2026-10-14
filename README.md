@@ -3,6 +3,18 @@
 백패커가 합법적인 박지를 찾고 믿을 수 있는 동행과 함께 가는 서비스.
 '뫼와들'은 순우리말 '뫼(산)'와 '들'에서 따온 이름이다. 예전 이름은 '피치맵(pitchmap)'이었다.
 
+## 폴더 구조
+
+| 폴더 | 내용 |
+|---|---|
+| `src/` | 스프링 부트 백엔드. 저장소 루트가 곧 Gradle 프로젝트다 |
+| `web/` | React·Vite 화면. 따로 npm 프로젝트로 빌드한다 |
+| `deploy/` | 운영 배포 설정(Docker Compose, Caddy, 백업, Grafana 대시보드·알림) |
+| `load-test/` | k6 부하 테스트 스크립트와 시드 데이터 |
+| `scripts/` | 공공데이터 표본 수집과 공원 경계 전처리 스크립트 |
+
+백엔드는 도메인별 모듈(`com.moewadeul.{모듈}`) 안을 `api`·`application`·`domain`·`infra` 네 계층으로 나눈다. 하위 도메인이 여러 개인 큰 모듈은 계층 아래를 다시 하위 패키지로 나눈다(예: `trust.application.sanction`). 모듈 사이 의존 방향과 계층 규칙은 ArchUnit 테스트(`common.architecture`)가 검사한다.
+
 ## 로컬 개발 환경
 
 ### 준비물

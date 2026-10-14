@@ -38,9 +38,11 @@ public final class ArchitectureRules {
             "basecamp",
             "program",
             "notification",
+            "outbox",
             "community",
             "trip",
             "memory",
+            "aisearch",
             "admin",
             COMMON);
 
@@ -104,20 +106,21 @@ public final class ArchitectureRules {
                 .allowEmptyShould(true);
     }
 
-    /** R3: 같은 모듈의 {@code domain}은 {@code api}·{@code infra}에 의존하지 않는다. */
+    /** R3: 같은 모듈의 {@code domain}은 {@code api}·{@code application}·{@code infra}에 의존하지 않는다. */
     public static ArchRule domainIndependenceRule(String rootPackage) {
         Scope scope = new Scope(rootPackage);
         return scope.moduleClasses()
-                .should(noDependency(scope, "keep domain independent of api and infra", (source, dep) -> {
+                .should(noDependency(scope, "keep domain independent of api, application and infra", (source, dep) -> {
                     if (!DOMAIN.equals(source.layer())) {
                         return Optional.empty();
                     }
                     return scope.locate(dep.getTargetClass())
                             .filter(t -> t.module().equals(source.module()))
-                            .filter(t -> API.equals(t.layer()) || INFRA.equals(t.layer()))
+                            .filter(t ->
+                                    API.equals(t.layer()) || APPLICATION.equals(t.layer()) || INFRA.equals(t.layer()))
                             .map(t -> "domain 은(는) 같은 모듈의 " + t.layer() + " 에 의존할 수 없다");
                 }))
-                .as("domain 패키지는 api·infra 패키지에 의존하지 않는다")
+                .as("domain 패키지는 api·application·infra 패키지에 의존하지 않는다")
                 .allowEmptyShould(true);
     }
 

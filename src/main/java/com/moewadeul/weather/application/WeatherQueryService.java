@@ -1,6 +1,7 @@
 package com.moewadeul.weather.application;
 
 import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.weather.application.WeatherForecast.MidTermForecast;
 import com.moewadeul.weather.application.WeatherForecast.ShortTermForecast;
 import com.moewadeul.weather.domain.KmaBaseTimes;
@@ -14,7 +15,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,6 @@ import org.springframework.stereotype.Service;
 public class WeatherQueryService {
 
     private static final String API = "kma";
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final KmaClient kmaClient;
     private final MidTermRegions midTermRegions;
@@ -70,7 +69,7 @@ public class WeatherQueryService {
         Optional<KmaMidTermItem> land = kmaClient.getMidLandFcst(region.landRegId(), tmFc);
         Optional<KmaMidTermItem> ta = kmaClient.getMidTa(region.taRegId(), tmFc);
         List<MidTermForecast> midTerm =
-                KmaForecastConverter.toMidTerm(land, ta, tmFc.toLocalDate(), LocalDate.ofInstant(now, KST));
+                KmaForecastConverter.toMidTerm(land, ta, tmFc.toLocalDate(), LocalDate.ofInstant(now, KoreaTime.ZONE));
 
         return new WeatherForecast(WeatherForecast.KMA_SOURCE, shortTerm, midTerm);
     }

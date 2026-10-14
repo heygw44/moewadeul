@@ -3,7 +3,7 @@ package com.moewadeul.member.api;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /** 비밀번호와 그 확인 값을 함께 받는 요청이 {@link PasswordsMatch} 검사를 받으려고 구현하는 인터페이스. */
-interface ConfirmedPassword {
+public interface ConfirmedPassword {
 
     @JsonIgnore
     String passwordToConfirm();

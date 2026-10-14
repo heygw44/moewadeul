@@ -12,7 +12,7 @@ import java.time.LocalDate;
 public record ParkWarningResponse(
         boolean warned, String areaName, String source, LocalDate sourceDate, String notice, String guide) {
 
-    static ParkWarningResponse from(SpotParkWarning warning) {
+    public static ParkWarningResponse from(SpotParkWarning warning) {
         return new ParkWarningResponse(
                 warning.warned(),
                 warning.areaName(),

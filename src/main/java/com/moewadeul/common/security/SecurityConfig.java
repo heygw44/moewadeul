@@ -56,6 +56,7 @@ public class SecurityConfig {
     private static final String[] VERIFIED_POST_PATTERNS = {
         "/api/me/identity-verification",
         "/api/bakjis",
+        "/api/spots/ai-interpret",
         "/api/bakjis/*/confirmations",
         "/api/bakjis/*/reports",
         "/api/spots/*/reviews",

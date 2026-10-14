@@ -87,9 +87,9 @@ export function MemoryMap({
       <div className="flex flex-col gap-3">
         <Notice tone="info" title="지도를 볼 수 없어요">
           {failure.reason === 'NO_KEY' ? (
-            <p>아래 목록에서 발자국을 열어 볼 수 있어요.</p>
+            <p>아래 목록에서 기록을 열어 볼 수 있어요.</p>
           ) : (
-            <p>아래 목록에서 발자국을 열어 볼 수 있어요.</p>
+            <p>아래 목록에서 기록을 열어 볼 수 있어요.</p>
           )}
         </Notice>
         {failure.reason !== 'NO_KEY' && (
@@ -107,7 +107,7 @@ export function MemoryMap({
     <div
       ref={hostRef}
       role="region"
-      aria-label="발자국 지도"
+      aria-label="기록 지도"
       className="relative h-72 w-full overflow-hidden rounded-control border border-line bg-fill sm:h-96"
     />
   );

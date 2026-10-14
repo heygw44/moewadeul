@@ -1,4 +1,4 @@
-import type { BakjiReportReason, GroundType, PublicFacilities, SignalLevel, SpotType } from '../../api/types';
+import type { BakjiReportReason, GroundType, PublicFacilities, SignalLevel, SpotSetting, SpotType } from '../../api/types';
 import type { IconName } from '../../components/iconPaths';
 
 type SpotTypeTone = 'info' | 'accent' | 'bakji';
@@ -61,4 +61,15 @@ export const REPORT_REASON_LABELS: Record<BakjiReportReason, string> = {
   ILLEGAL_AREA: '야영이 금지된 곳',
   CLOSED: '더는 야영할 수 없는 곳',
   FALSE_INFO: '정보가 사실과 다른 곳',
+};
+
+export const SPOT_SETTING_LABELS: Record<SpotSetting, string> = {
+  MOUNTAIN: '산',
+  FOREST: '숲',
+  VALLEY: '계곡',
+  BEACH: '해변',
+  ISLAND: '섬',
+  RIVER: '강',
+  LAKE: '호수',
+  CITY: '도심',
 };

@@ -2,15 +2,15 @@ package com.moewadeul.basecamp.application;
 
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.basecamp.domain.JoinGender;
-import com.moewadeul.trust.application.TrustDetail;
+import com.moewadeul.trust.application.profile.TrustDetail;
 
 /** 신뢰 모듈이 준 회원 정보를 합류 자격 판정이 쓰는 {@link Applicant}로 바꾼다. 검색과 합류 신청이 같은 변환을 쓴다. */
-final class JoinApplicants {
+public final class JoinApplicants {
 
     private JoinApplicants() {}
 
     // 신뢰 모듈의 연령대는 이름 문자열로 오고, 그 모듈의 enum을 참조할 수 없다. 그래서 합류 조건이 쓰는 십 단위 숫자로 여기서 바꾼다.
-    static Applicant from(TrustDetail trust) {
+    public static Applicant from(TrustDetail trust) {
         Integer ageGroup = trust.verifiedAgeGroup() == null ? null : toAgeGroupNumber(trust.verifiedAgeGroup());
         JoinGender gender = trust.verifiedGender() == null ? null : JoinGender.valueOf(trust.verifiedGender());
         return new Applicant(trust.trustLevel(), ageGroup, gender);

@@ -35,9 +35,9 @@ type MapOpenMenuProps = {
   onCandidates: (spots: NearbySpot[]) => void;
 };
 
-// 지도를 우클릭하거나 길게 누른 곳에 뜨는 메뉴다. 그 자리에서 베이스캠프를 열거나 발자국을 남긴다.
+// 지도를 우클릭하거나 길게 누른 곳에 뜨는 메뉴다. 그 자리에서 베이스캠프를 열거나 기록을 남긴다.
 // 자격이 없으면 무엇을 하면 되는지 안내만 한다. 화면의 자격 안내는 편의일 뿐이고, 폼과 서버가 다시 판정한다.
-// 발자국은 이메일 인증만 마치면 남길 수 있어서, 본인확인 전 회원에게도 발자국 링크를 보여 준다.
+// 기록은 이메일 인증만 마치면 남길 수 있어서, 본인확인 전 회원에게도 기록 링크를 보여 준다.
 export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProps) {
   const session = useSession();
   const location = useLocation();
@@ -89,7 +89,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
   } else if (session.status === 'anonymous' || session.me === null) {
     body = (
       <>
-        <p className="text-sm text-ink">로그인하면 베이스캠프를 열거나 발자국을 남길 수 있어요.</p>
+        <p className="text-sm text-ink">로그인하면 베이스캠프를 열거나 기록을 남길 수 있어요.</p>
         <Link to={withNext('/login', `${location.pathname}${location.search}`)} className={GUIDE_LINK_CLASS}>
           로그인
         </Link>
@@ -99,7 +99,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
     body = (
       <>
         <p className="text-sm text-ink">
-          이메일 인증을 마치면 발자국을 남길 수 있어요. 베이스캠프는 본인확인까지 마쳐야 열 수 있어요.
+          이메일 인증을 마치면 기록을 남길 수 있어요. 베이스캠프는 본인확인까지 마쳐야 열 수 있어요.
         </p>
         <Link to="/verify-email" className={GUIDE_LINK_CLASS}>
           이메일 인증하기
@@ -169,7 +169,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
 function MemoryLink({ position }: { position: LatLng }) {
   return (
     <Link to={newMemoryPath(position)} className={MEMORY_LINK_CLASS}>
-      여기에 발자국 남기기
+      여기에 기록 남기기
     </Link>
   );
 }

@@ -52,26 +52,26 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
 
   const current = result?.memoryId === memoryId ? result : null;
   const showSkeleton = useDelayedFlag(current === null);
-  const title = current !== null && 'memory' in current ? titleOf(current.memory) : '발자국';
+  const title = current !== null && 'memory' in current ? titleOf(current.memory) : '기록';
 
   useEffect(() => {
     document.title = `${title} · 뫼와들`;
   }, [title]);
 
   const reload = () => setAttempt((value) => value + 1);
-  // 작성자는 내 발자국 지도로, 그 밖의 사람은 발자국으로 돌아간다. 아직 모르거나 기록을 못 받았을 때는 발자국으로 둔다.
+  // 작성자는 내 기록 지도로, 그 밖의 사람은 피드로 돌아간다. 아직 모르거나 기록을 못 받았을 때는 피드로 둔다.
   const authorId = current !== null && 'memory' in current ? current.memory.author.memberId : null;
   const viewerIsAuthor = authorId !== null && session.status === 'authenticated' && session.me?.memberId === authorId;
   const breadcrumb = (
     <Link to={viewerIsAuthor ? '/me/memories' : '/memories'} className={CRUMB_LINK}>
       <Icon name="chevronLeft" size={16} />
-      {viewerIsAuthor ? '내 발자국 지도' : '발자국'}
+      {viewerIsAuthor ? '내 기록 지도' : '피드'}
     </Link>
   );
 
   if (current === null) {
     return (
-      <HubLayout title="발자국" breadcrumb={breadcrumb} width="narrow">
+      <HubLayout title="기록" breadcrumb={breadcrumb} width="narrow">
         <div aria-busy="true">
           {showSkeleton && (
             <div className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
@@ -109,16 +109,16 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
 
   if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     return (
-      <HubLayout title="발자국을 찾을 수 없어요" breadcrumb={breadcrumb} width="narrow">
-        <EmptyState framed title="삭제됐거나 볼 수 없는 발자국이에요" description="나만 보기 발자국은 남긴 사람만 열 수 있어요." />
+      <HubLayout title="기록을 찾을 수 없어요" breadcrumb={breadcrumb} width="narrow">
+        <EmptyState framed title="삭제됐거나 볼 수 없는 기록이에요" description="나만 보기 기록은 남긴 사람만 열 수 있어요." />
       </HubLayout>
     );
   }
 
   return (
-    <HubLayout title="발자국" breadcrumb={breadcrumb} width="narrow">
+    <HubLayout title="기록" breadcrumb={breadcrumb} width="narrow">
       <div className="flex flex-col gap-3">
-        <Notice tone="danger" title="발자국을 불러오지 못했어요">
+        <Notice tone="danger" title="기록을 불러오지 못했어요">
           {toUserMessage(current.error)}
         </Notice>
         <div>
@@ -132,7 +132,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
 }
 
 function titleOf(memory: MemoryDetail): string {
-  return memory.spot ? memory.spot.name : `${formatLocalDate(memory.visitedDate)} 발자국`;
+  return memory.spot ? memory.spot.name : `${formatLocalDate(memory.visitedDate)} 기록`;
 }
 
 function MemoryMeta({ memory }: { memory: MemoryDetail }) {
@@ -207,7 +207,7 @@ function HiddenStatusNotice({ status }: { status: MemoryDetail['status'] }) {
   if (status === undefined || status === 'ACTIVE') return null;
   const reviewing = status === 'PENDING_REVIEW';
   return (
-    <Notice tone="warning" title={reviewing ? '신고가 쌓여 검토 중인 발자국이에요' : '관리자가 숨긴 발자국이에요'}>
+    <Notice tone="warning" title={reviewing ? '신고가 쌓여 검토 중인 기록이에요' : '관리자가 숨긴 기록이에요'}>
       <p>
         {reviewing
           ? '관리자가 검토하는 동안 다른 사람에게 보이지 않아요. 수정과 삭제는 할 수 있어요.'
@@ -251,7 +251,7 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
           </div>
         )}
         {!memory.content && memory.images.length === 0 && (
-          <p className="px-5 py-5 text-sm text-ink-muted">사진도 글도 없는 발자국이에요.</p>
+          <p className="px-5 py-5 text-sm text-ink-muted">사진도 글도 없는 기록이에요.</p>
         )}
         {likeable && (
           <div className="px-5 py-4">
@@ -281,9 +281,9 @@ function DeleteMemoryDialog({ memoryId, onClose }: { memoryId: number; onClose: 
   }
 
   return (
-    <Dialog title="발자국을 삭제할까요?" onClose={() => !submitting && onClose()}>
+    <Dialog title="기록을 삭제할까요?" onClose={() => !submitting && onClose()}>
       <div className="flex flex-col gap-4">
-        <p className="text-base text-ink">삭제한 발자국은 되돌릴 수 없어요. 사진도 함께 사라져요.</p>
+        <p className="text-base text-ink">삭제한 기록은 되돌릴 수 없어요. 사진도 함께 사라져요.</p>
         {error && (
           <div role="alert">
             <Notice tone="danger" title="삭제하지 못했어요">

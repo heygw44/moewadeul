@@ -5,6 +5,10 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.member.application.password.PasswordResetThrottleCleanupScheduler;
+import com.moewadeul.member.application.password.PasswordResetThrottleCleanupService;
+import com.moewadeul.member.application.verification.UnverifiedMemberCleanupScheduler;
+import com.moewadeul.member.application.verification.UnverifiedMemberCleanupService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -8,6 +8,7 @@ import static com.moewadeul.basecamp.domain.BasecampBuilder.OUTSIDER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.aBasecamp;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.time.KoreaTime;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -47,7 +48,7 @@ class MemberRemovalTest {
     @DisplayName("[SN-13] 멤버가 제재를 받으면 LEFT가 되고, 임박 탈퇴 시간대여도 임박 탈퇴로 세지 않는다")
     void sanctionedMemberLeavesWithoutEarlyLeave() {
         Basecamp basecamp = aBasecamp().inState(BasecampStatus.CONFIRMED);
-        Instant withinWindow = DEFAULT_START_DATE.atStartOfDay(Basecamp.KOREA).toInstant();
+        Instant withinWindow = DEFAULT_START_DATE.atStartOfDay(KoreaTime.ZONE).toInstant();
 
         MemberRemoval removal = basecamp.removeMember(MEMBER_ID, RemovalCause.SANCTION, withinWindow);
 
@@ -132,7 +133,7 @@ class MemberRemovalTest {
     @DisplayName("[PV-02] 멤버가 탈퇴하면 LEFT가 되고 임박 탈퇴로 세지 않으며, 자동 마감한 베이스캠프는 다시 모집한다")
     void withdrawnMemberLeavesWithoutEarlyLeave() {
         Basecamp confirmed = aBasecamp().inState(BasecampStatus.CONFIRMED);
-        Instant withinWindow = DEFAULT_START_DATE.atStartOfDay(Basecamp.KOREA).toInstant();
+        Instant withinWindow = DEFAULT_START_DATE.atStartOfDay(KoreaTime.ZONE).toInstant();
         Basecamp autoClosed = aBasecamp().autoClosed();
 
         MemberRemoval removal = confirmed.removeMember(MEMBER_ID, RemovalCause.WITHDRAWAL, withinWindow);

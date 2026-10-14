@@ -1,7 +1,7 @@
 package com.moewadeul.memory.application;
 
-import com.moewadeul.memory.domain.MemoryImage;
-import com.moewadeul.memory.domain.MemoryImageRepository;
+import com.moewadeul.memory.domain.image.MemoryImage;
+import com.moewadeul.memory.domain.image.MemoryImageRepository;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;

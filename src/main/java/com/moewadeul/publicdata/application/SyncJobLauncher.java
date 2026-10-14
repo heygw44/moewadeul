@@ -2,6 +2,16 @@ package com.moewadeul.publicdata.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
+import com.moewadeul.publicdata.application.forest.ForestLoadProperties;
+import com.moewadeul.publicdata.application.forest.ForestLoadService;
+import com.moewadeul.publicdata.application.forest.ForestStandardLoadProperties;
+import com.moewadeul.publicdata.application.forest.ForestStandardLoadService;
+import com.moewadeul.publicdata.application.gocamping.GoCampingSyncProperties;
+import com.moewadeul.publicdata.application.gocamping.GoCampingSyncService;
+import com.moewadeul.publicdata.application.park.ParkBoundaryLoadProperties;
+import com.moewadeul.publicdata.application.park.ParkBoundaryLoadService;
+import com.moewadeul.publicdata.application.rejudge.BakjiRejudgeProperties;
+import com.moewadeul.publicdata.application.rejudge.BakjiRejudgeService;
 import com.moewadeul.publicdata.domain.PublicDataErrorCode;
 import com.moewadeul.publicdata.domain.SyncJobType;
 import java.time.Duration;

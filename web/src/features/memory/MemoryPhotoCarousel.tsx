@@ -40,7 +40,7 @@ export function MemoryPhotoCarousel({
         ref={scrollerRef}
         onScroll={handleScroll}
         tabIndex={total > 1 ? 0 : undefined}
-        aria-label={`${owner}님의 발자국 사진 ${total}장`}
+        aria-label={`${owner}님의 기록 사진 ${total}장`}
         className="flex snap-x snap-mandatory overflow-x-auto rounded-control border border-line bg-fill [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onKeyDown={(event) => {
           if (total < 2) return;
@@ -57,7 +57,7 @@ export function MemoryPhotoCarousel({
           <li key={image.imageId} className="aspect-square w-full shrink-0 snap-center">
             <img
               src={image.url}
-              alt={`${owner}님의 발자국 사진 ${total}장 중 ${position + 1}번째`}
+              alt={`${owner}님의 기록 사진 ${total}장 중 ${position + 1}번째`}
               loading={position === 0 ? 'eager' : 'lazy'}
               onError={onImageError}
               className="h-full w-full object-cover"
