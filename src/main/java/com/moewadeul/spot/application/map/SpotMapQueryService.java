@@ -1,5 +1,6 @@
 package com.moewadeul.spot.application.map;
 
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.SpotClosedNow;
 import com.moewadeul.spot.infra.map.SpotAreaCondition;
 import com.moewadeul.spot.infra.map.SpotAreaMapper;
@@ -9,7 +10,6 @@ import com.moewadeul.spot.infra.map.SpotGridCells;
 import com.moewadeul.spot.infra.map.SpotMarkerRow;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,8 +32,6 @@ public class SpotMapQueryService {
     static final int MAX_ITEMS = 500;
     static final int GRID_SIZE = 20;
 
-    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
-
     private final SpotAreaMapper spotAreaMapper;
     private final Clock clock;
 
@@ -53,7 +51,7 @@ public class SpotMapQueryService {
      */
     @Transactional(readOnly = true)
     public SpotAreaResult findInArea(SpotAreaQuery query) {
-        LocalDate today = LocalDate.now(clock.withZone(KOREA));
+        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
         SpotAreaCondition condition = toCondition(query, today);
         SpotClusterGrid grid = toGrid(query);
         SpotGridCells cells = SpotGridCells.covering(

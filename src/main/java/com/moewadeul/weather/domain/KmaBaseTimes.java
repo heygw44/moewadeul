@@ -1,11 +1,11 @@
 package com.moewadeul.weather.domain;
 
+import com.moewadeul.common.time.KoreaTime;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 
@@ -17,7 +17,6 @@ import java.util.List;
  */
 public final class KmaBaseTimes {
 
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final Duration PUBLISH_DELAY = Duration.ofMinutes(10);
     private static final List<LocalTime> SHORT_TERM_TIMES = hours(2, 5, 8, 11, 14, 17, 20, 23);
     private static final List<LocalTime> MID_TERM_TIMES = hours(6, 18);
@@ -35,7 +34,7 @@ public final class KmaBaseTimes {
     }
 
     private static LocalDateTime latestAvailable(Instant now, List<LocalTime> publishTimes) {
-        LocalDateTime kst = LocalDateTime.ofInstant(now, KST);
+        LocalDateTime kst = LocalDateTime.ofInstant(now, KoreaTime.ZONE);
         LocalDate date = kst.toLocalDate();
         for (int i = publishTimes.size() - 1; i >= 0; i--) {
             LocalDateTime publishedAt = date.atTime(publishTimes.get(i));

@@ -1,12 +1,12 @@
 package com.moewadeul.spot.application.detail;
 
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.weather.application.SunQueryService;
 import com.moewadeul.weather.application.SunTimes;
 import com.moewadeul.weather.application.WeatherForecast;
 import com.moewadeul.weather.application.WeatherQueryService;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,8 +20,6 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class SpotDetailQueryService {
-
-    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
 
     private final SpotDetailReader spotDetailReader;
     private final WeatherQueryService weatherQueryService;
@@ -42,7 +40,7 @@ public class SpotDetailQueryService {
         if (forecast.isEmpty()) {
             return detail;
         }
-        LocalDate today = LocalDate.now(clock.withZone(KOREA));
+        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
         SunTimes sun =
                 sunQueryService.sunTimes(detail.lat(), detail.lng(), today).orElse(null);
         return detail.withWeather(new SpotWeather(forecast.get(), sun));

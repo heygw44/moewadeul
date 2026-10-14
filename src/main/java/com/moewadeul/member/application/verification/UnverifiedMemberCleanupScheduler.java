@@ -1,6 +1,7 @@
 package com.moewadeul.member.application.verification;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.time.KoreaTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,7 +30,7 @@ public class UnverifiedMemberCleanupScheduler {
         scheduledJobMetrics.register(JOB_NAME);
     }
 
-    @Scheduled(cron = "${moewadeul.member.unverified-cleanup.cron:0 0 4 * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "${moewadeul.member.unverified-cleanup.cron:0 0 4 * * *}", zone = KoreaTime.ZONE_ID)
     public void cleanUp() {
         try {
             cleanupService.deleteExpiredUnverifiedMembers();

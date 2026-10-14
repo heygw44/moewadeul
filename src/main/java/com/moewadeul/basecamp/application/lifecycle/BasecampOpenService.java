@@ -10,6 +10,7 @@ import com.moewadeul.basecamp.domain.Capacity;
 import com.moewadeul.basecamp.domain.JoinCondition;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import com.moewadeul.trust.application.profile.TrustDetail;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
@@ -61,7 +62,7 @@ public class BasecampOpenService {
     public BasecampOpenResult open(long leaderId, BasecampOpenCommand command) {
         Instant now = clock.instant();
         BasecampOpenPolicy.requireSchedule(
-                command.startDate(), command.endDate(), LocalDate.ofInstant(now, Basecamp.KOREA));
+                command.startDate(), command.endDate(), LocalDate.ofInstant(now, KoreaTime.ZONE));
         Capacity capacity = Capacity.of(command.capacity());
         TrustDetail trust = trustSummaryService.detail(leaderId);
         requireTrustLevel(trust);

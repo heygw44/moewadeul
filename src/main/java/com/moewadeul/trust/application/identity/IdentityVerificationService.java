@@ -1,6 +1,5 @@
 package com.moewadeul.trust.application.identity;
 
-import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.CannotAcquireLockException;
@@ -20,8 +19,6 @@ public class IdentityVerificationService {
 
     /** 이 해보다 이른 출생연도는 입력 실수로 보고 거부한다. */
     static final int MIN_BIRTH_YEAR = 1900;
-
-    static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
 
     private final IdentityVerificationApplier identityVerificationApplier;
 

@@ -2,13 +2,13 @@ package com.moewadeul.trip.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import com.moewadeul.trip.domain.SoloTrip;
 import com.moewadeul.trip.domain.SoloTripRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,8 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SoloTripCommandService {
 
-    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
-
     private final ActiveSpotChecker activeSpotChecker;
     private final SoloTripRepository soloTripRepository;
     private final Clock clock;
@@ -41,7 +39,7 @@ public class SoloTripCommandService {
     @Transactional
     public long register(long memberId, SoloTripRegisterCommand command) {
         Instant now = clock.instant();
-        LocalDate today = LocalDate.ofInstant(now, KOREA);
+        LocalDate today = LocalDate.ofInstant(now, KoreaTime.ZONE);
         activeSpotChecker.requireActive(command.spotId());
         SoloTrip trip = SoloTrip.register(
                 memberId,

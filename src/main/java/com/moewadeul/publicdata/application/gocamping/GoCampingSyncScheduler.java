@@ -1,6 +1,7 @@
 package com.moewadeul.publicdata.application.gocamping;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.time.KoreaTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,7 +31,7 @@ public class GoCampingSyncScheduler {
         scheduledJobMetrics.register(JOB_NAME);
     }
 
-    @Scheduled(cron = "${moewadeul.publicdata.gocamping.sync.cron:0 0 3 * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "${moewadeul.publicdata.gocamping.sync.cron:0 0 3 * * *}", zone = KoreaTime.ZONE_ID)
     public void sync() {
         try {
             goCampingSyncService.sync();

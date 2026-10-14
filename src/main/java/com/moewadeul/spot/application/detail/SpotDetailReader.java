@@ -3,6 +3,7 @@ package com.moewadeul.spot.application.detail;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.storage.ImageStorage;
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.SpotClosedNow;
 import com.moewadeul.spot.application.SpotParkWarning;
@@ -19,7 +20,6 @@ import com.moewadeul.spot.infra.detail.SpotReviewImageRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,8 +43,6 @@ class SpotDetailReader {
 
     private static final int RECENT_REVIEW_COUNT = 3;
 
-    private static final ZoneId KOREA = ZoneId.of("Asia/Seoul");
-
     private static final TypeReference<Map<String, String>> FACILITIES_TYPE = new TypeReference<>() {};
 
     private final SpotDetailMapper spotDetailMapper;
@@ -66,7 +64,7 @@ class SpotDetailReader {
         SpotDetailRow row = spotDetailMapper
                 .selectActiveDetail(spotId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        LocalDate today = LocalDate.now(clock.withZone(KOREA));
+        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
         SpotDetail detail = new SpotDetail(
                 row.spotId(),
                 row.type(),
@@ -92,11 +90,11 @@ class SpotDetailReader {
     private List<SpotConfirmedStayRow> readStays(long spotId, LocalDate today) {
         List<SpotConfirmedStayRow> stays = new ArrayList<>(spotDetailMapper.selectConfirmedStays(spotId, today));
         stays.addAll(spotDetailMapper.selectSoloTrips(spotId, today));
-        Instant startOfToday = today.atStartOfDay(KOREA).toInstant();
+        Instant startOfToday = today.atStartOfDay(KoreaTime.ZONE).toInstant();
         for (SpotConfirmedProgramRow program : spotDetailMapper.selectConfirmedPrograms(spotId, startOfToday)) {
             stays.add(new SpotConfirmedStayRow(
-                    LocalDate.ofInstant(program.startAt(), KOREA),
-                    LocalDate.ofInstant(program.endAt(), KOREA),
+                    LocalDate.ofInstant(program.startAt(), KoreaTime.ZONE),
+                    LocalDate.ofInstant(program.endAt(), KoreaTime.ZONE),
                     program.headcount()));
         }
         return stays;

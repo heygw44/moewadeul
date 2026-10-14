@@ -1,6 +1,7 @@
 package com.moewadeul.outbox.application;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.time.KoreaTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -28,7 +29,7 @@ public class OutboxEventCleanupScheduler {
         scheduledJobMetrics.register(JOB_NAME);
     }
 
-    @Scheduled(cron = "${moewadeul.outbox.cleanup.cron:0 0 5 * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "${moewadeul.outbox.cleanup.cron:0 0 5 * * *}", zone = KoreaTime.ZONE_ID)
     public void cleanUp() {
         try {
             cleaner.deletePublished();

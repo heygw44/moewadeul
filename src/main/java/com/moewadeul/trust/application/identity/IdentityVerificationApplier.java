@@ -2,6 +2,7 @@ package com.moewadeul.trust.application.identity;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.trust.application.profile.TrustSummary;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.TrustErrorCode;
@@ -46,7 +47,7 @@ public class IdentityVerificationApplier {
     @Transactional
     public IdentityVerificationResult apply(long memberId, IdentityVerifyCommand command) {
         Instant now = clock.instant();
-        Year currentYear = Year.from(now.atZone(IdentityVerificationService.KOREA));
+        Year currentYear = Year.from(now.atZone(KoreaTime.ZONE));
         requireBirthYearInRange(command.birthYear(), currentYear);
         if (identityVerificationRepository.existsByMemberId(memberId)) {
             throw new BusinessException(TrustErrorCode.IDENTITY_ALREADY_VERIFIED);
