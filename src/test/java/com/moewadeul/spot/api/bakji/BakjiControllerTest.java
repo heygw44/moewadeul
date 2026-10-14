@@ -62,7 +62,8 @@ class BakjiControllerTest {
     private BakjiFeedbackService bakjiFeedbackService;
 
     @Test
-    @DisplayName("[F-07] 경고 박지를 제보하면 201과 함께 경고, 공원 이름, 경계 데이터 출처·기준일, 참고용 고지, 안내 문구, 중복 후보를 응답한다")
+    @DisplayName(
+            "[F-07][SF-06] 경고 박지를 제보하면 201과 함께 경고, 공원 이름, 경계 데이터 출처·기준일, 참고용 고지, 안내 문구, 중복 후보를 응답하고 확인 안내 notice는 뺀다")
     void warnedReportReturnsCreatedWithAreaName() {
         // given
         when(bakjiCommandService.report(eq(MEMBER_ID), any()))
@@ -70,6 +71,7 @@ class BakjiControllerTest {
                         205L,
                         new SpotParkWarning(true, "설악산국립공원", "KDPA", LocalDate.of(2026, 1, 1), "참고용 고지", "경고 문구"),
                         "경고 문구",
+                        null,
                         List.of(new BakjiDuplicateCandidate(101L, "능선 끝 평지", 32))));
 
         // when
@@ -95,11 +97,11 @@ class BakjiControllerTest {
     }
 
     @Test
-    @DisplayName("[F-07] 경고가 아닌 박지를 제보하면 parkWarning에 warned만 있고 공원 이름·출처·기준일·고지·안내 필드는 없다")
+    @DisplayName("[F-07][SF-06] 경고가 아닌 박지를 제보하면 parkWarning에 warned만 있고, 최상위에 관할 기관 확인 안내 notice를 응답한다")
     void notWarnedReportOmitsAreaName() {
         // given
         when(bakjiCommandService.report(eq(MEMBER_ID), any()))
-                .thenReturn(new BakjiSubmission(205L, NOT_WARNED, "일반 문구", List.of()));
+                .thenReturn(new BakjiSubmission(205L, NOT_WARNED, "일반 문구", "확인 안내", List.of()));
 
         // when
         MvcTestResult result = post(verified(), VALID_BODY);
@@ -111,6 +113,7 @@ class BakjiControllerTest {
                   "spotId": 205,
                   "parkWarning": { "warned": false },
                   "guide": "일반 문구",
+                  "notice": "확인 안내",
                   "duplicateCandidates": []
                 }
                 """);
@@ -121,7 +124,7 @@ class BakjiControllerTest {
     void reportPassesRequestToService() {
         // given
         when(bakjiCommandService.report(anyLong(), any()))
-                .thenReturn(new BakjiSubmission(205L, NOT_WARNED, "g", List.of()));
+                .thenReturn(new BakjiSubmission(205L, NOT_WARNED, "g", "n", List.of()));
 
         // when
         post(
@@ -208,7 +211,7 @@ class BakjiControllerTest {
     void updateDistinguishesAbsentAndNullFields() {
         // given
         when(bakjiCommandService.update(eq(MEMBER_ID), eq(205L), any()))
-                .thenReturn(new BakjiSubmission(205L, NOT_WARNED, "일반 문구", List.of()));
+                .thenReturn(new BakjiSubmission(205L, NOT_WARNED, "일반 문구", "확인 안내", List.of()));
 
         // when
         MvcTestResult result = patch(verified(), 205L, "{\"name\":\"새 이름\",\"description\":null}");

@@ -18,6 +18,7 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.SpotParkWarning;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
@@ -61,7 +62,7 @@ class SpotDetailQueryServiceIntegrationTest {
     private WireMockServer wireMock;
 
     @Test
-    @DisplayName("[F-05] 박지 상세는 박지 정보, 제보자 닉네임, 확인 수를 채우고 공공데이터 상세는 비운다")
+    @DisplayName("[F-05][SF-06] 박지 상세는 박지 정보, 제보자 닉네임, 확인 수를 채우고 공공데이터 상세는 비우며, 경고 박지라 확인 안내는 없다")
     void findsBakjiDetail() {
         // given: 제보자와 다른 회원 두 명이 박지를 확인했다.
         long reporterId = insertMember("새벽능선");
@@ -88,11 +89,11 @@ class SpotDetailQueryServiceIntegrationTest {
         assertThat(detail.parkWarning().warned()).isTrue();
         assertThat(detail.publicDetail()).isNull();
         assertThat(detail.bakji())
-                .isEqualTo(new SpotBakjiDetail("바람이 덜한 안쪽 평지", true, false, "WEAK", 2, reporterId, "새벽능선"));
+                .isEqualTo(new SpotBakjiDetail("바람이 덜한 안쪽 평지", true, false, "WEAK", 2, reporterId, "새벽능선", null));
     }
 
     @Test
-    @DisplayName("[F-05] 확인이 없는 박지는 확인 수가 0이다")
+    @DisplayName("[F-05][SF-06] 확인이 없는 박지는 확인 수가 0이고, 경고가 아니라 관할 기관 확인 안내를 담는다")
     void reportsZeroConfirmationsForUnconfirmedBakji() {
         // given
         long reporterId = insertMember(TestSequence.nickname());
@@ -113,6 +114,7 @@ class SpotDetailQueryServiceIntegrationTest {
         assertThat(detail.bakji().description()).isNull();
         assertThat(detail.bakji().signalLevel()).isNull();
         assertThat(detail.bakji().hasToilet()).isTrue();
+        assertThat(detail.bakji().notice()).isEqualTo(ParkWarningTexts.BAKJI_CHECK_NOTICE);
         assertThat(detail.rating()).isEqualTo(new SpotRating(null, 0));
         assertThat(detail.recentReviews()).isEmpty();
     }
