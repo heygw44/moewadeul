@@ -4,6 +4,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.common.time.KoreaTime;
+import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.SpotClosedNow;
 import com.moewadeul.spot.application.SpotParkWarning;
@@ -180,7 +181,8 @@ class SpotDetailReader {
                 row.signalLevel(),
                 row.confirmationCount(),
                 row.reporterId(),
-                row.reporterNickname());
+                row.reporterNickname(),
+                ParkWarningTexts.bakjiCheckNoticeOf(row.parkWarning()));
     }
 
     // 공공데이터 상세 행이 없는 야영장이나 휴양림도 데이터가 어긋난 경우라서, 서비스는 상세 없이 장소 정보만 돌려준다.

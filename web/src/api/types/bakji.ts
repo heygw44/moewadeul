@@ -16,6 +16,8 @@ export interface BakjiDetail {
   signalLevel: SignalLevel | null;
   confirmationCount: number;
   reporter: BakjiReporter;
+  // 관할 기관에 야영 가능 여부를 확인하라는 안내. 공원 경계 경고 박지에는 서버가 주지 않는다.
+  notice?: string;
 }
 
 export type GroundType = 'SOIL' | 'GRASS' | 'GRAVEL' | 'SAND' | 'ROCK' | 'DECK';
@@ -42,6 +44,8 @@ export interface BakjiSubmissionResponse {
   spotId: number;
   parkWarning: ParkWarning;
   guide: string;
+  // 장소 상세의 bakji.notice와 같은 안내. 경고 박지에는 서버가 주지 않는다.
+  notice?: string;
   duplicateCandidates: DuplicateCandidate[];
 }
 

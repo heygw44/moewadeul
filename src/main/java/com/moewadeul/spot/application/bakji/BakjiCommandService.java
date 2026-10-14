@@ -185,7 +185,12 @@ public class BakjiCommandService {
         boolean warned = spot.isParkWarning();
         SpotParkWarning parkWarning = warned ? warningOf(spot) : SpotParkWarning.notWarned();
         String guide = warned ? ParkWarningTexts.WARNED_GUIDE : ParkWarningTexts.NORMAL_GUIDE;
-        return new BakjiSubmission(spot.getId(), parkWarning, guide, findDuplicateCandidates(spot));
+        return new BakjiSubmission(
+                spot.getId(),
+                parkWarning,
+                guide,
+                ParkWarningTexts.bakjiCheckNoticeOf(warned),
+                findDuplicateCandidates(spot));
     }
 
     // 장소 상세와 같이, 가리키는 경계 행이 없으면 근거 없이 경고와 고지·안내만 준다.

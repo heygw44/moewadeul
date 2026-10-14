@@ -136,6 +136,7 @@ class BakjiApiIntegrationTest {
                 .extractingPath("$.duplicateCandidates")
                 .asList()
                 .isEmpty();
+        assertThat(first).bodyJson().doesNotHavePath("$.notice");
 
         // when: 위도를 약 30m 북쪽으로 옮긴 좌표다(0.00027도).
         MvcTestResult second = send(

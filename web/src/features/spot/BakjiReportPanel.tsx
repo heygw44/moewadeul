@@ -344,7 +344,7 @@ function ReportForm({
 }
 
 function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionResponse; nextBasecamp: boolean }) {
-  const { parkWarning, guide, duplicateCandidates } = result;
+  const { parkWarning, guide, notice, duplicateCandidates } = result;
 
   return (
     <div role="status" className="flex flex-col gap-4">
@@ -359,7 +359,10 @@ function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionRespon
           )}
         </>
       ) : (
-        <p className="text-base text-ink">{guide}</p>
+        <>
+          <p className="text-base text-ink">{guide}</p>
+          {notice && <p className="text-sm text-ink-muted">{notice}</p>}
+        </>
       )}
 
       {duplicateCandidates.length > 0 && (
