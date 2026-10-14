@@ -17,5 +17,7 @@ COPY --from=extract /work/extracted/snapshot-dependencies/ ./
 COPY --from=extract /work/extracted/application/ ./
 USER app
 EXPOSE 8080
-# 컨테이너 메모리 한도의 75%까지만 힙으로 쓴다. 나머지는 메타스페이스, 스레드 스택, 네이티브 메모리 몫이다.
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
+# 컨테이너 메모리 한도의 40%까지만 힙으로 쓴다. 한도 768MB면 힙 최대는 약 308MB다.
+# 힙 밖(메타스페이스, 코드 캐시, 스레드 스택, 네이티브 메모리)이 부하 때 약 420MB까지 커져서,
+# 75%(약 576MB)로 두면 힙이 다 자랐을 때 합이 한도를 넘는다. 부하 중 힙 사용은 약 320MB에서 멈췄다.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=40", "-jar", "app.jar"]
