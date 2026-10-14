@@ -1,4 +1,4 @@
-package com.moewadeul.trust.api.sanction;
+package com.moewadeul.trust.application.sanction;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,8 +9,6 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.CompanionReviewFixture;
-import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
-import com.moewadeul.trust.application.sanction.SanctionConfirmService;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
