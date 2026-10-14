@@ -19,7 +19,9 @@ services:
       - caddy-config:/config
     depends_on:
       - app
-    mem_limit: 128m
+    # 행사 신청이 열리는 순간처럼 요청 2,000개가 동시에 앱 응답을 기다리면 Caddy는 약 200MB를 쓴다(연결 하나에 약 0.1MB).
+    # 128MB에서는 메모리 한도로 종료돼 응답이 전달되지 않았다.
+    mem_limit: 256m
 
   app:
     image: ${APP_IMAGE:?}
