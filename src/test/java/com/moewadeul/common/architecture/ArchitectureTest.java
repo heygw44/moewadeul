@@ -33,7 +33,7 @@ class ArchitectureTest {
     }
 
     @Test
-    @DisplayName("[ADR-005] domain 패키지는 api·infra 패키지에 의존하지 않는다")
+    @DisplayName("[ADR-005] domain 패키지는 api·application·infra 패키지에 의존하지 않는다")
     void domainDoesNotDependOnApiOrInfra() {
         ArchitectureRules.domainIndependenceRule(ROOT_PACKAGE).check(productionClasses);
     }
