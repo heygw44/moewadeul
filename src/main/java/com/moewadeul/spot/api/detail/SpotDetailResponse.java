@@ -1,6 +1,7 @@
 package com.moewadeul.spot.api.detail;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.moewadeul.spot.api.ParkWarningResponse;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.detail.SpotBakjiDetail;
@@ -24,7 +25,8 @@ import java.util.List;
 
 // expectedPeople은 오늘부터 야영하는 밤별 인원이고, 인원이 있는 날짜만 날짜 순으로 준다. recruitingBasecamps는 모집 중인 베이스캠프만 출발일 순으로 준다.
 // 둘 다 없으면 빈 배열이다.
-// parkWarning은 경고가 아니면 warned만 내보낸다. weather는 기상청 호출이 실패하면 null이고, 천문연만 실패하면 weather 안의 sun이 null이다.
+// bakji.notice는 경고가 아닌 박지에만 내보낸다. parkWarning은 경고가 아니면 warned만 내보낸다. weather는 기상청 호출이 실패하면 null이고, 천문연만 실패하면 weather 안의
+// sun이 null이다.
 public record SpotDetailResponse(
         long spotId,
         SpotType type,
@@ -108,7 +110,8 @@ public record SpotDetailResponse(
             boolean hasToilet,
             String signalLevel,
             long confirmationCount,
-            Reporter reporter) {
+            Reporter reporter,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String notice) {
 
         static Bakji from(SpotBakjiDetail bakji) {
             return new Bakji(
@@ -117,7 +120,8 @@ public record SpotDetailResponse(
                     bakji.hasToilet(),
                     bakji.signalLevel(),
                     bakji.confirmationCount(),
-                    new Reporter(bakji.reporterId(), bakji.reporterNickname()));
+                    new Reporter(bakji.reporterId(), bakji.reporterNickname()),
+                    bakji.notice());
         }
     }
 

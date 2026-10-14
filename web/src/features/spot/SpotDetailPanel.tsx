@@ -289,6 +289,7 @@ function BakjiSection({
       <h3 id="spot-bakji-title" className={SECTION_TITLE_CLASS}>
         박지 정보
       </h3>
+      {bakji.notice && <p className="mt-2 text-sm text-ink-muted">{bakji.notice}</p>}
       {bakji.description && <p className="mt-2 whitespace-pre-line text-base text-ink">{bakji.description}</p>}
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
         <dt className="text-ink-muted">식수</dt>

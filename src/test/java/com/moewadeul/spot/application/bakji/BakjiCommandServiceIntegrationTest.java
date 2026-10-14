@@ -45,6 +45,9 @@ class BakjiCommandServiceIntegrationTest {
     private static final String AREA_SOURCE = "KDPA";
     private static final LocalDate AREA_SOURCE_DATE = LocalDate.of(2026, 1, 1);
     private static final String NORMAL_GUIDE = "머문 자리에 흔적을 남기지 마세요. 쓰레기는 모두 가져가 주세요.";
+    private static final String CHECK_NOTICE =
+            "뫼와들은 이곳에서 야영해도 되는지 확인하지 않았어요. 가기 전에 관할 시군청 산림과나 국유림관리소, 공원 사무소에 야영할 수 있는지 물어봐 주세요."
+                    + " 뫼와들은 제보된 정보를 보여 줄 뿐이고, 야영하다 생긴 일에 책임지지 않아요.";
 
     @Autowired
     private BakjiCommandService bakjiCommandService;
@@ -62,7 +65,7 @@ class BakjiCommandServiceIntegrationTest {
     private MutableClock clock;
 
     @Test
-    @DisplayName("[F-07] 박지를 제보하면 ACTIVE 박지와 제보자, 입력한 내용이 저장되고 경고 없는 안내 문구를 돌려준다")
+    @DisplayName("[F-07][SF-06] 박지를 제보하면 ACTIVE 박지와 제보자, 입력한 내용이 저장되고 경고 없는 안내 문구와 관할 기관 확인 안내를 돌려준다")
     void reportSavesBakjiWithReporter() {
         // given
         long reporterId = saveMember();
@@ -87,11 +90,13 @@ class BakjiCommandServiceIntegrationTest {
         assertThat(detail.groundType()).isEqualTo("GRASS");
         assertThat(submission.parkWarning()).isEqualTo(SpotParkWarning.notWarned());
         assertThat(submission.guide()).isEqualTo(NORMAL_GUIDE);
+        assertThat(submission.notice()).isEqualTo(CHECK_NOTICE);
         assertThat(submission.duplicateCandidates()).isEmpty();
     }
 
     @Test
-    @DisplayName("[F-07] 공원 경계 안 좌표로 제보하면 경고, 공원 이름, 경계 데이터 출처·기준일, 참고용 고지, 야영 금지 안내를 돌려주고 판정 결과를 저장한다")
+    @DisplayName(
+            "[F-07][SF-06] 공원 경계 안 좌표로 제보하면 경고, 공원 이름, 경계 데이터 출처·기준일, 참고용 고지, 야영 금지 안내를 돌려주고 확인 안내는 빼며 판정 결과를 저장한다")
     void reportInsideBoundaryWarnsWithAreaName() {
         // given
         String areaName = TestSequence.unique("설악산");
@@ -107,6 +112,7 @@ class BakjiCommandServiceIntegrationTest {
                 .isEqualTo(new SpotParkWarning(
                         true, areaName, AREA_SOURCE, AREA_SOURCE_DATE, ParkWarningTexts.NOTICE, WARNED_GUIDE));
         assertThat(submission.guide()).isEqualTo(WARNED_GUIDE);
+        assertThat(submission.notice()).isNull();
         SpotRow spot = spotRow(submission.spotId());
         assertThat(spot.parkWarning()).isTrue();
         assertThat(spot.protectedAreaId()).isEqualTo(areaId);
@@ -300,6 +306,7 @@ class BakjiCommandServiceIntegrationTest {
         // then
         assertThat(moved.parkWarning()).isEqualTo(SpotParkWarning.notWarned());
         assertThat(moved.guide()).isEqualTo(NORMAL_GUIDE);
+        assertThat(moved.notice()).isEqualTo(CHECK_NOTICE);
         SpotRow spot = spotRow(spotId);
         assertThat(spot.parkWarning()).isFalse();
         assertThat(spot.protectedAreaId()).isNull();

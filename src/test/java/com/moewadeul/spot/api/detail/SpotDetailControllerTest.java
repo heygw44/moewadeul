@@ -64,10 +64,11 @@ class SpotDetailControllerTest {
     private SpotDetailQueryService spotDetailQueryService;
 
     @Test
-    @DisplayName("[F-05] 로그인하지 않은 사용자가 박지 상세를 조회하면 박지 상세와 제보자를 받고, publicDetail은 null이며 아직 채우지 않는 항목은 빈 값이다")
+    @DisplayName(
+            "[F-05][SF-06] 로그인하지 않은 사용자가 경고 박지 상세를 조회하면 박지 상세와 제보자를 받고 확인 안내 notice는 없으며, publicDetail은 null이고 아직 채우지 않는 항목은 빈 값이다")
     void anonymousReadsBakjiDetail() {
         // given
-        SpotBakjiDetail bakji = new SpotBakjiDetail("능선 끝 평지", false, true, "WEAK", 12L, 31L, "새벽능선");
+        SpotBakjiDetail bakji = new SpotBakjiDetail("능선 끝 평지", false, true, "WEAK", 12L, 31L, "새벽능선", null);
         when(spotDetailQueryService.findDetail(101L))
                 .thenReturn(new SpotDetail(
                         101L,
@@ -108,6 +109,37 @@ class SpotDetailControllerTest {
                   "recentReviews": [], "expectedPeople": [], "recruitingBasecamps": [], "weather": null
                 }
                 """);
+    }
+
+    @Test
+    @DisplayName("[F-05][SF-06] 경고가 아닌 박지의 상세는 bakji에 관할 기관 확인 안내 notice를 담는다")
+    void notWarnedBakjiDetailHasCheckNotice() {
+        // given
+        SpotBakjiDetail bakji = new SpotBakjiDetail("해변 솔숲", true, true, null, 0L, 31L, "새벽능선", "확인 안내");
+        when(spotDetailQueryService.findDetail(102L))
+                .thenReturn(new SpotDetail(
+                        102L,
+                        SpotType.BAKJI,
+                        "해변 솔숲",
+                        37.25,
+                        126.31,
+                        "인천 옹진군",
+                        NOT_WARNED,
+                        bakji,
+                        null,
+                        NO_RATING,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        null));
+
+        // when
+        MvcTestResult result = mvc.get().uri(PATH + "/102").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().extractingPath("$.bakji.notice").isEqualTo("확인 안내");
+        assertThat(result).bodyJson().extractingPath("$.parkWarning").isEqualTo(Map.of("warned", false));
     }
 
     @Test
@@ -234,7 +266,7 @@ class SpotDetailControllerTest {
     @DisplayName("[F-05][F-09][SF-05] 경고 박지에 날씨가 있으면 경고 필드 전체와 단기·중기 예보, 출몰시각을 응답한다")
     void readsWarnedBakjiDetailWithWeather() {
         // given
-        SpotBakjiDetail bakji = new SpotBakjiDetail("능선 끝 평지", false, true, "WEAK", 12L, 31L, "새벽능선");
+        SpotBakjiDetail bakji = new SpotBakjiDetail("능선 끝 평지", false, true, "WEAK", 12L, 31L, "새벽능선", null);
         WeatherForecast forecast = new WeatherForecast(
                 "기상청",
                 List.of(new WeatherForecast.ShortTermForecast(Instant.parse("2026-10-04T05:00:00Z"), 18, 30, 2.5)),

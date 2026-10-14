@@ -85,7 +85,10 @@ export function SiteFooter() {
 
       <div className="border-t border-white/15">
         <div className="mx-auto flex max-w-screen-xl flex-col gap-2 px-4 py-5 text-xs text-brand-ink md:flex-row md:items-center md:justify-between">
-          <p>공원 경계는 법적 효력이 없는 참고 자료예요. 공식 경계는 고시 도면에서 확인해 주세요.</p>
+          <p>
+            공원 경계는 법적 효력이 없는 참고 자료예요. 공식 경계는 고시 도면에서 확인해 주세요. 뫼와들은 장소 정보를
+            안내만 하고, 야영하다 생긴 일에 책임지지 않아요.
+          </p>
           <p className="flex items-center gap-3">
             <span>© 2026 뫼와들</span>
             <a
