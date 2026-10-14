@@ -12,7 +12,7 @@ const FALLBACK_GUIDE =
 export function ParkWarningNotice({ warning }: { warning: ParkWarning }) {
   if (!warning.warned) return null;
   return (
-    <Notice tone="warning" title="공원 경계 안일 수 있어요">
+    <Notice tone="warning" title="공원 영역 내로 예상돼요">
       <div className="flex flex-col gap-2">
         {warning.areaName && <p className="font-semibold">{warning.areaName}</p>}
         <p>{warning.notice ?? FALLBACK_NOTICE}</p>

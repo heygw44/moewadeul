@@ -127,7 +127,7 @@ export function LandingHero() {
       <div className="flex flex-col">
         <h1 className="text-5xl font-bold tracking-tight text-ink lg:text-[4rem] lg:leading-none">뫼와들</h1>
         <p className="mt-5 text-[1.375rem] leading-snug font-medium text-ink">
-          자도 되는 곳을 찾고
+          잘 수 있는 곳을 찾고
           <br />
           믿을 수 있는 사람과 함께 가요.
         </p>

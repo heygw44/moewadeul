@@ -47,7 +47,7 @@ class BakjiCommandServiceIntegrationTest {
     private static final String NORMAL_GUIDE = "머문 자리에 흔적을 남기지 마세요. 쓰레기는 모두 가져가 주세요.";
     private static final String CHECK_NOTICE =
             "뫼와들은 이곳에서 야영해도 되는지 확인하지 않았어요. 가기 전에 관할 시군청 산림과나 국유림관리소, 공원 사무소에 야영할 수 있는지 물어봐 주세요."
-                    + " 뫼와들은 제보된 정보를 보여 줄 뿐이고, 야영하다 생긴 일에 책임지지 않아요.";
+                    + " 뫼와들은 제보된 정보를 보여 줄 뿐이고, 야영 중에 생긴 일에는 책임지지 않아요.";
 
     @Autowired
     private BakjiCommandService bakjiCommandService;
