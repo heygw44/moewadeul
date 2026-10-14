@@ -21,17 +21,17 @@ const TRUST_LEVEL_MEANINGS = [
 
 // 장소 상세에서 근거로 보여 주는 것들이다. 예시 화면 옆에 한 줄씩 적는다.
 const EVIDENCE_FACTS = [
-  { title: '공원 경계 경고', body: '국립공원 같은 자연공원 안일 수 있으면 경고해요. 어느 기관의 언제 기준 자료인지도 함께 적어요.' },
+  { title: '공원 경계 경고', body: '국립공원 같은 자연공원 영역 내로 예상된다면 경고해요. 어느 기관의 언제 기준 자료인지도 함께 적어요.' },
   { title: '베이스캠프 제한', body: '공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요.' },
   { title: '휴장 표시', body: '공공 야영장, 자연휴양림, 회원이 제보한 박지를 한 지도에 모았어요. 휴장한 곳도 숨기지 않고 표시해요.' },
-  { title: '날씨와 일몰', body: '기상청과 한국천문연구원 자료를 써요. 날씨를 불러오지 못해도 나머지 정보는 그대로 볼 수 있어요.' },
+  { title: '날씨와 일몰', body: '기상청과 한국천문연구원 자료를 활용해요. 날씨를 불러오지 못해도 나머지 정보는 그대로 볼 수 있어요.' },
 ];
 
 // 처음 온 사람에게 뫼와들이 무엇을 하는지 보여 주는 첫 화면이다.
 // 첫 화면은 실제 지도와 근거 시트이고, 아래 섹션은 차별점(판단 근거, 동행 신뢰, 장소에서 동행·행사로 이어지는 흐름)을 차례로 설명한다.
 export function LandingPage() {
   useEffect(() => {
-    document.title = '뫼와들 · 자도 되는 박지와 믿을 수 있는 동행';
+    document.title = '뫼와들 · 잘 수 있는 박지와 믿을 수 있는 동행';
   }, []);
 
   return (
@@ -45,7 +45,7 @@ export function LandingPage() {
         <section aria-labelledby="landing-evidence" className="border-t border-line">
           <div className="mx-auto max-w-screen-xl px-4 py-16 lg:py-28">
             <h2 id="landing-evidence" className={SECTION_TITLE_CLASS}>
-              여기서 자도 되는지
+              여기서 잘 수 있는지
               <br />
               근거를 보고 판단해요
             </h2>
@@ -106,8 +106,8 @@ export function LandingPage() {
             </ol>
             <p className="mt-6 max-w-3xl text-lg leading-relaxed text-ink-muted">
               지도에서 갈 곳을 고르면 시설, 후기, 날씨와 그곳으로 가는 베이스캠프가 한 화면에 모여요. 같은 날 같은 곳으로
-              가는 베이스캠프에 합류 신청을 보내요. 베이스캠프가 확정되면 멤버끼리만 연락 수단이 보여요. 혼자 가기
-              망설여지면 공식 행사를 신청해 주세요.
+              가는 베이스캠프에 합류 신청을 보내요. 베이스캠프가 확정되면 멤버끼리 연락 수단을 볼 수 있어요. 혼자 가기
+              자신 없다면 공식 행사를 신청해 보세요.
             </p>
           </div>
         </section>

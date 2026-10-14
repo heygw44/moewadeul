@@ -238,8 +238,8 @@ function PostAside({ post }: { post: CommunityPostDetail | null }) {
             </Link>
             에서 구해요.
           </li>
-          <li>돈을 보내 달라는 글은 신고해 주세요.</li>
-          <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
+          <li>금전을 요구하는 글은 신고해 주세요.</li>
+          <li>공원 내에서 야영을 권하는 글은 신고 대상이에요.</li>
         </ul>
       </AsideSection>
     </>
