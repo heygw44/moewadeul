@@ -13,8 +13,8 @@ import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { EmptyState } from '../../components/EmptyState';
 import { Notice } from '../../components/Notice';
-import { AsideSection, ListPanel } from '../../components/HubLayout';
-import { PageLayout } from '../../components/PageLayout';
+import { ListPanel } from '../../components/HubLayout';
+import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatRelativeKst } from '../../lib/datetime';
@@ -155,8 +155,9 @@ function NotificationList() {
 
   if (state === null) {
     return (
-      <PageLayout title="알림" aside={<EmailSettingsCard />}>
+      <PageLayout title="알림">
         {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
+        <EmailSettingsCard />
       </PageLayout>
     );
   }
@@ -166,9 +167,6 @@ function NotificationList() {
   return (
     <PageLayout
       title="알림"
-     
-      wide
-      aside={<EmailSettingsCard />}
       actions={
         hasUnread ? (
           <Button variant="secondary" loading={markingAll} onClick={() => void readAll()}>
@@ -209,6 +207,7 @@ function NotificationList() {
         </div>
       )}
     </section>
+    <EmailSettingsCard />
     </PageLayout>
   );
 }
@@ -221,18 +220,18 @@ function NotificationRow({ item, onOpen }: { item: NotificationItem; onOpen: () 
       <button
         type="button"
         onClick={onOpen}
-        className={`flex min-h-11 w-full items-start gap-3 px-4 py-3 text-left ${unread ? 'bg-accent-soft' : 'bg-surface hover:bg-fill'}`}
+        className="flex min-h-11 w-full items-start gap-3 bg-surface px-4 py-3 text-left hover:bg-fill"
       >
         <span className="flex w-2 shrink-0 justify-center pt-2">
           {unread && (
             <>
-              <span aria-hidden="true" className="size-2 rounded-control bg-accent" />
+              <span aria-hidden="true" className="size-2 rounded-full bg-brand" />
               <span className="sr-only">안 읽음</span>
             </>
           )}
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className={`text-base text-ink ${unread ? 'font-semibold' : ''}`}>{item.title}</span>
+          <span className={`text-base text-ink ${unread ? 'font-bold' : ''}`}>{item.title}</span>
           <span className="whitespace-pre-line break-words text-sm text-ink">{item.body}</span>
           <span className="font-mono text-sm tabular-nums text-ink-muted">{formatRelativeKst(item.createdAt)}</span>
         </span>
@@ -301,7 +300,7 @@ function EmailSettingsCard() {
   }
 
   return (
-    <AsideSection title="이메일 수신 설정">
+    <PageCard title="이메일 수신 설정">
       <p className="text-sm text-ink-muted">꺼도 알림함에는 알림이 계속 쌓여요.</p>
       {state.status === 'loading' && <Skeleton className="h-40 w-full" />}
       {state.status === 'error' && (
@@ -327,6 +326,7 @@ function EmailSettingsCard() {
                 checked={state.enabled[type]}
                 disabled={saving}
                 onChange={(event) => toggle(type, event.target.checked)}
+                className="border-t border-line first:border-t-0"
               />
             ))}
           </fieldset>
@@ -349,6 +349,6 @@ function EmailSettingsCard() {
           </div>
         </>
       )}
-    </AsideSection>
+    </PageCard>
   );
 }

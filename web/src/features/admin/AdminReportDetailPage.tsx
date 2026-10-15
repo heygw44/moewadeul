@@ -25,6 +25,7 @@ import {
 import { BASECAMP_STATUS_META } from '../basecamp/basecampLabels';
 import { AdminPage } from './AdminGate';
 import { adminErrorMessage } from './adminErrors';
+import { buttonClassName } from '../../components/buttonClass';
 
 const REASON_MAX = 500;
 const NOTE_MAX = 1000;
@@ -94,7 +95,7 @@ function ReportDetail({ reportId }: { reportId: number }) {
           </Button>
           <Link
             to="/admin/reports"
-            className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
+            className={buttonClassName('secondary')}
           >
             신고 목록
           </Link>
@@ -124,22 +125,27 @@ function SummaryCard({ detail }: { detail: AdminReportDetail }) {
         {detail.urgent && <StatusText tone="danger">긴급</StatusText>}
         <StatusText tone={status.tone}>{status.label}</StatusText>
       </div>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-base">
-        <dt className="text-sm text-ink-muted">신고자</dt>
-        <dd className="break-words text-ink">
-          <Link to={`/members/${detail.reporter.memberId}`} className="font-semibold text-accent">
-            {detail.reporter.nickname}
-          </Link>
-        </dd>
-        <dt className="text-sm text-ink-muted">신고 대상</dt>
-        <dd className="break-words text-ink">
-          <Link to={`/members/${detail.target.memberId}`} className="font-semibold text-accent">
-            {detail.target.nickname}
-          </Link>
-        </dd>
-        <dt className="text-sm text-ink-muted">접수 시각</dt>
-        <dd className="font-mono text-sm tabular-nums text-ink">{formatKstDateTime(detail.createdAt)}</dd>
-      </dl>
+      <Evidence
+        items={[
+          {
+            label: '신고자',
+            value: (
+              <Link to={`/members/${detail.reporter.memberId}`} className="font-semibold text-accent">
+                {detail.reporter.nickname}
+              </Link>
+            ),
+          },
+          {
+            label: '신고 대상',
+            value: (
+              <Link to={`/members/${detail.target.memberId}`} className="font-semibold text-accent">
+                {detail.target.nickname}
+              </Link>
+            ),
+          },
+          { label: '접수 시각', value: formatKstDateTime(detail.createdAt) },
+        ]}
+      />
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium text-ink">신고 내용</p>
         {/* 신고자가 쓴 글이라 HTML로 넣지 않고 글자로만 그린다. */}
@@ -477,9 +483,9 @@ function SanctionHistoryCard({ items, onChanged }: { items: AdminSanctionHistory
       {items.length === 0 ? (
         <p className="text-sm text-ink-muted">제재 이력이 없어요.</p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col divide-y divide-line">
           {items.map((item) => (
-            <li key={item.sanctionId} className="flex flex-col gap-2 rounded-control bg-fill p-3">
+            <li key={item.sanctionId} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-base font-semibold text-ink">{SANCTION_TYPE_LABELS[item.type]}</span>
                 {item.level !== null && <span className="font-mono text-sm tabular-nums text-ink-muted">{item.level}단계</span>}
