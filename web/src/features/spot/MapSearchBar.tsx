@@ -291,7 +291,7 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, i
                 className={
                   floating || inPanel
                     ? 'inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted'
-                    : 'mr-1.5 inline-flex h-10 items-center justify-center rounded-[0.5rem] bg-ink px-4 font-semibold text-white hover:bg-ink-muted disabled:bg-ink-muted'
+                    : 'mr-1.5 inline-flex h-10 items-center justify-center rounded-control bg-brand px-4 font-bold text-white hover:bg-brand-strong disabled:bg-ink-muted'
                 }
               >
                 {floating || inPanel ? <Icon name="search" size={20} /> : '찾기'}
