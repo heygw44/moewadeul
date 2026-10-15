@@ -107,11 +107,11 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
       <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
         <button
           type="button"
-          aria-label="목록으로"
           onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
+          className="inline-flex min-h-11 items-center gap-1 rounded-control pr-3 pl-1 text-sm font-semibold text-ink hover:bg-fill"
         >
-          <Icon name="chevronLeft" size={24} />
+          <Icon name="chevronLeft" size={22} />
+          목록
         </button>
       </div>
       <div aria-busy={current === null} className="px-4 py-4 lg:px-5">

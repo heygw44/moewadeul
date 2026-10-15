@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import { fetchMyBasecamps } from '../../api/basecamps';
 import { toUserMessage } from '../../api/errors';
 import type { MyBasecampItem, MyBasecampRelation } from '../../api/types';
@@ -131,7 +132,7 @@ export function MyBasecampsPage() {
                   filter === 'ALL' && (
                     <Link
                       to="/basecamps"
-                      className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
+                      className={buttonClassName('secondary')}
                     >
                       베이스캠프 찾기
                     </Link>

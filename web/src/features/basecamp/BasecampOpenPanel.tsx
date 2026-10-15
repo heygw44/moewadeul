@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import type { FormEvent, ReactNode } from 'react';
 import { openBasecamp } from '../../api/basecamps';
 import { ApiError } from '../../api/client';
@@ -81,8 +82,7 @@ const SERVER_FIELD_MAP: Record<string, FormField> = {
   'joinCondition.sameGenderOnly': 'sameGenderOnly',
 };
 
-const PRIMARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
+const PRIMARY_LINK_CLASS = buttonClassName('primary');
 
 // 서버가 같은 필드의 오류를 여러 개 알려 줘도 한 곳에 중복 없이 모아 보여 준다.
 function mergeReasons(reasons: string[]): string {

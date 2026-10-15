@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import type { FormEvent, ReactNode } from 'react';
 import {
   approveApplication,
@@ -44,8 +45,7 @@ const KICK_OPTIONS: ReadonlyArray<ChoiceOption<KickReason>> = [
   { value: 'OTHER', label: '기타' },
 ];
 
-const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
+const LINK_BUTTON_CLASS = buttonClassName('secondary');
 
 type DetailResult = { basecampId: number; attempt: number; detail: BasecampDetail } | { basecampId: number; attempt: number; error: unknown };
 
@@ -212,7 +212,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
     body = (
       <>
         {done && (
-          <p role="status" className="text-sm font-semibold text-accent-deep">
+          <p role="status" className="text-sm font-semibold text-accent">
             {done}
           </p>
         )}
@@ -382,11 +382,11 @@ function DialogButtons({
 function HeaderCard({ detail }: { detail: BasecampDetail }) {
   const status = BASECAMP_STATUS_META[detail.status];
   return (
-    <section className="flex flex-col gap-2 border-t border-ink pt-5">
-      <h2 className="text-lg font-semibold text-ink">{detail.title}</h2>
+    <section className="flex flex-col gap-2 rounded-sheet bg-brand p-5 text-white [&_:focus-visible]:outline-white">
+      <h2 className="text-xl font-extrabold tracking-[-0.02em]">{detail.title}</h2>
       <div className="flex flex-wrap items-center gap-2">
-        <StatusText tone={status.tone}>{status.label}</StatusText>
-        <span className="font-mono text-sm tabular-nums text-ink-muted">
+        <span className="text-sm font-bold">{status.label}</span>
+        <span className="font-mono text-sm tabular-nums text-brand-ink">
           {headcountText(detail.headcount, detail.capacity)}명
         </span>
       </div>
