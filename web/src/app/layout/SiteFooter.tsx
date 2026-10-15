@@ -17,6 +17,7 @@ const DATA_SOURCES = [
 const LINK_CLASS = 'inline-flex min-h-11 items-center text-sm text-brand-ink hover:text-white hover:underline lg:min-h-8';
 
 // 랜딩과 지도가 없는 화면 맨 아래에 둔다. 지도 화면은 화면 전체를 지도가 쓰므로 바닥글이 없다.
+// 위에서부터 글자 열 셋, 데이터 출처 한 줄, 고지 줄, 아래 끝에서 잘리는 큰 워드마크 순서다.
 export function SiteFooter() {
   const session = useSession();
   const signedIn = session.status === 'authenticated' && session.me !== null;
@@ -24,7 +25,7 @@ export function SiteFooter() {
   return (
     // 바닥글은 포인트 면(깊은 숲) 전체 띠다. 짙은 바탕이라 글자는 흰색과 옅은 숲색이고, 포커스 링도 흰색으로 바꾼다.
     <footer className="bg-brand text-white [&_:focus-visible]:outline-white">
-      <div className="mx-auto grid max-w-screen-xl gap-8 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr_1.4fr]">
+      <div className="mx-auto grid max-w-screen-xl gap-8 px-4 py-10 md:grid-cols-[2fr_1fr_1fr]">
         <div className="flex flex-col gap-2">
           <Link to="/" className="self-start text-white">
             <BrandMark className="text-lg" />
@@ -74,17 +75,14 @@ export function SiteFooter() {
           )}
         </FooterColumn>
 
-        <FooterColumn title="데이터 출처">
-          {DATA_SOURCES.map((source) => (
-            <span key={source} className="text-sm text-brand-ink">
-              {source}
-            </span>
-          ))}
-        </FooterColumn>
       </div>
 
       <div className="border-t border-white/15">
-        <div className="mx-auto flex max-w-screen-xl flex-col gap-2 px-4 py-5 text-xs text-brand-ink md:flex-row md:items-center md:justify-between">
+        {/* 출처는 판단 근거라서 지우지 않고, 열 하나를 차지하지 않게 한 줄로 모은다. */}
+        <p className="mx-auto max-w-screen-xl px-4 pt-5 text-xs leading-relaxed text-brand-ink">
+          데이터 · {DATA_SOURCES.join(' · ')}
+        </p>
+        <div className="mx-auto flex max-w-screen-xl flex-col gap-2 px-4 pt-3 pb-5 text-xs text-brand-ink md:flex-row md:items-center md:justify-between">
           <p>
             공원 경계는 법적 효력이 없는 참고 자료예요. 공식 경계는 고시 도면에서 확인해 주세요. 뫼와들은 장소 정보만
             안내하고, 야영 중에 생긴 일에는 책임지지 않아요.
@@ -102,6 +100,12 @@ export function SiteFooter() {
           </p>
         </div>
       </div>
+
+      {/* 화면 폭만 한 워드마크를 아래 끝에서 잘리게 깐다. 장식이라 스크린 리더와 선택에서 뺀다.
+          글자 크기를 화면 폭에 맞추고, 높이를 글자보다 낮게 잡아 아래쪽을 잘라 낸다. */}
+      <div aria-hidden="true" className="mx-auto h-[0.62em] max-w-screen-xl overflow-hidden px-4 text-[30vw] select-none xl:text-[26rem]">
+        <span className="block leading-[0.8] font-bold tracking-tight text-white/10">뫼와들</span>
+      </div>
     </footer>
   );
 }
@@ -109,7 +113,7 @@ export function SiteFooter() {
 function FooterColumn({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <h2 className="mb-1 text-sm font-semibold text-white">{title}</h2>
+      <h2 className="mb-1 text-sm text-white">{title}</h2>
       {children}
     </div>
   );

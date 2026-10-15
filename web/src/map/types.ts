@@ -36,6 +36,8 @@ export interface MapView {
   getCenter(): LatLng;
   // level을 넘기면 그 확대 수준으로 바꾼다. 두 단계 이하로 바꿀 때만 확대·축소를 애니메이션으로 보여 준다.
   setCenter(position: LatLng, level?: number): void;
+  // setCenter와 같지만 중심을 부드럽게 옮긴다. 화면 밖 먼 곳이면 카카오맵이 바로 옮긴다.
+  panTo(position: LatLng, level?: number): void;
   // 지금 그려진 마커와 묶음을 모두 지우고 새로 그린다.
   showMarkers(markers: SpotMarkerData[], clusters: ClusterData[]): void;
   // 선택한 id는 showMarkers를 다시 불러도 유지된다.

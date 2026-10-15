@@ -49,6 +49,7 @@ declare namespace kakao.maps {
     center: LatLng;
     level?: number;
     scrollwheel?: boolean;
+    draggable?: boolean;
   }
 
   interface SetLevelOptions {
@@ -59,6 +60,8 @@ declare namespace kakao.maps {
   class Map {
     constructor(container: HTMLElement, options: MapOptions);
     setCenter(latlng: LatLng): void;
+    panTo(latlng: LatLng): void;
+    setDraggable(draggable: boolean): void;
     getCenter(): LatLng;
     setLevel(level: number, options?: SetLevelOptions): void;
     setBounds(bounds: LatLngBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number): void;

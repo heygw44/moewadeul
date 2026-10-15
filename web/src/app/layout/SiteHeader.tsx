@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { BrandMark } from '../../components/BrandMark';
+import { buttonClassName } from '../../components/buttonClass';
 import { Icon } from '../../components/icons';
 import { AccountChip } from '../../features/member/AccountChip';
 import { withNext } from '../../features/member/nextPath';
@@ -15,6 +16,8 @@ type SiteHeaderProps = {
   mobileAccount?: boolean;
   // 로그인·가입 화면처럼 계정 표시가 그 화면의 할 일과 겹치는 곳에서 켠다. 알림·계정 자리를 비운다.
   minimal?: boolean;
+  // 랜딩에서 켠다. 맨 위에서는 아래 선을 숨겨 머리글과 첫 화면을 한 면으로 잇고, 스크롤하면 선을 보인다.
+  lineOnScroll?: boolean;
   className?: string;
 };
 
@@ -25,7 +28,7 @@ const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
 // 지도 화면을 포함한 모든 화면에서 가운데 최대 폭(max-w-screen-xl) 안에 둔다. 그래서 메뉴로 화면을 오가도 로고와 메뉴 자리가 움직이지 않는다.
 // 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 메뉴 버튼은 하단 탭이 없는 랜딩·404(mobileAccount)에만 둔다.
 // 하단 탭이 있는 화면에서 메뉴 버튼까지 두면 같은 다섯 메뉴가 한 화면에 두 번 있게 된다.
-export function SiteHeader({ mobileAccount = false, minimal = false, className = '' }: SiteHeaderProps) {
+export function SiteHeader({ mobileAccount = false, minimal = false, lineOnScroll = false, className = '' }: SiteHeaderProps) {
   const { pathname, search } = useLocation();
   const session = useSession();
   const count = useUnreadCount();
@@ -34,6 +37,9 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
   // 메뉴를 펼친 경로를 기억한다. 메뉴를 눌러 다른 화면으로 가면 경로가 달라지므로 메뉴가 닫힌 것으로 본다.
   const [openedAt, setOpenedAt] = useState<string | null>(null);
   const menuOpen = openedAt === pathname;
+  const scrolled = useScrolled(lineOnScroll);
+  // 메뉴를 펼치면 목록과 머리글을 나누려고 선을 보인다.
+  const showLine = !lineOnScroll || scrolled || menuOpen;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -45,13 +51,14 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
   }, [menuOpen]);
 
   return (
-    <header className={`sticky top-0 z-20 border-b border-line bg-canvas ${className}`}>
+    <header className={`sticky top-0 z-20 border-b bg-canvas ${showLine ? 'border-line' : 'border-transparent'} ${className}`}>
       <div className="mx-auto flex min-h-13 max-w-screen-xl items-center gap-3 px-4 lg:gap-10">
         <Link to="/" className="shrink-0 text-ink">
           <BrandMark className="text-lg" />
         </Link>
 
-        {/* 데스크톱 메뉴는 서비스 이름 바로 옆에 둔다. 지금 메뉴는 먹색 굵은 글자, 나머지는 보조 글자색이다. */}
+        {/* 데스크톱 메뉴는 서비스 이름 바로 옆에 둔다. 지금 메뉴는 먹색 글자와 밑줄, 나머지는 보조 글자색이다.
+            굵기는 모두 같게 둔다. 지금 메뉴만 굵게 하면 메뉴를 옮길 때 글자 폭이 바뀌어 옆 메뉴가 밀린다. */}
         {!minimal && (
           <nav aria-label="주 메뉴" className="hidden items-center gap-7 lg:flex">
             {PRIMARY_ITEMS.map((item) => {
@@ -62,8 +69,10 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                   to={item.path}
                   aria-current={current ? 'page' : undefined}
                   className={[
-                    'inline-flex min-h-11 items-center text-sm',
-                    current ? 'font-semibold text-ink' : 'text-ink-muted hover:text-ink',
+                    'relative inline-flex min-h-11 items-center text-sm font-medium',
+                    current
+                      ? 'text-ink after:absolute after:inset-x-0 after:bottom-2 after:h-0.5 after:bg-ink'
+                      : 'text-ink-muted hover:text-ink',
                   ].join(' ')}
                 >
                   {item.label}
@@ -101,17 +110,14 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
               <AccountChip />
             </div>
             {!mobileAccount && !signedIn && session.status !== 'loading' && (
-              <div className="inline-flex items-center lg:hidden">
+              <div className="inline-flex items-center gap-1 lg:hidden">
                 <Link
                   to={withNext('/login', pathname + search)}
                   className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-accent"
                 >
                   로그인
                 </Link>
-                <Link
-                  to={withNext('/signup', pathname + search)}
-                  className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-ink"
-                >
+                <Link to={withNext('/signup', pathname + search)} className={`${buttonClassName('signup')} whitespace-nowrap`}>
                   회원가입
                 </Link>
               </div>
@@ -135,7 +141,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
 
       {!minimal && menuOpen && (
         <nav id="mobile-nav" aria-label="주 메뉴" className="border-t border-line bg-canvas lg:hidden">
-          <ul className="mx-auto flex max-w-screen-xl flex-col py-1">
+          <ul className="mx-auto flex max-w-screen-xl flex-col py-3">
             {PRIMARY_ITEMS.map((item) => {
               const current = active === item.key;
               return (
@@ -144,11 +150,10 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                     to={item.path}
                     aria-current={current ? 'page' : undefined}
                     className={[
-                      'flex min-h-12 items-center gap-3 px-4 text-lg',
-                      current ? 'font-semibold text-ink' : 'text-ink-muted hover:bg-fill hover:text-ink',
+                      'flex min-h-14 items-center px-4 text-2xl font-bold tracking-tight',
+                      current ? 'text-ink' : 'text-ink-muted hover:bg-fill hover:text-ink',
                     ].join(' ')}
                   >
-                    <Icon name={item.icon} size={20} />
                     {item.label}
                   </Link>
                 </li>
@@ -159,4 +164,19 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
       )}
     </header>
   );
+}
+
+// 창이 맨 위에서 내려왔는지 알려 준다. enabled가 거짓이면 스크롤을 듣지 않는다.
+function useScrolled(enabled: boolean): boolean {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const onScroll = () => setScrolled(window.scrollY > 0);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [enabled]);
+
+  return enabled && scrolled;
 }
