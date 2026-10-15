@@ -3,13 +3,13 @@ import { Icon } from '../../components/icons';
 import { useSession } from '../member/session';
 import { notificationLabel, useUnreadCount } from './unreadCount';
 
-// 안 읽은 알림 수 배지. 100개부터는 99+로 줄여 적는다.
+// 안 읽은 알림 수 배지. 100개부터는 99+로 줄여 적는다. 숲색 머리글과 흰 판 어디서나 보이게 위험색으로 칠한다.
 export function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <span
       aria-hidden="true"
-      className="rounded-control bg-accent px-1.5 font-mono text-xs font-semibold tabular-nums text-white"
+      className="rounded-control bg-danger px-1.5 font-mono text-xs font-semibold tabular-nums text-white"
     >
       {count > 99 ? '99+' : count}
     </span>
