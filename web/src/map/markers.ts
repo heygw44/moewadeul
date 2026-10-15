@@ -5,9 +5,9 @@ import type { IconName } from '../components/iconPaths';
 import type { Offset } from './stackPins';
 import type { ClusterData, MarkerKind, SpotMarkerData } from './types';
 
-// 세 유형은 색(야영장 청록, 휴양림 녹색, 박지 흙색)과 아이콘 모양으로 함께 구분한다. 세 색 모두 흰 아이콘과 대비가 4.5:1 이상이다.
+// 세 유형은 색(야영장 먹색, 휴양림 숲색, 박지 흙색)과 아이콘 모양으로 함께 구분한다. 세 색 모두 흰 아이콘과 대비가 4.5:1 이상이다.
 export const KIND_STYLE: Record<MarkerKind, { label: string; icon: IconName; fill: string }> = {
-  CAMPSITE: { label: '공공 야영장', icon: 'tent', fill: 'fill-info' },
+  CAMPSITE: { label: '공공 야영장', icon: 'tent', fill: 'fill-ink' },
   FOREST: { label: '자연휴양림', icon: 'tree', fill: 'fill-accent' },
   BAKJI: { label: '박지', icon: 'backpack', fill: 'fill-bakji' },
 };
@@ -23,7 +23,7 @@ const WARNING_OUTLINE_WIDTH = 4;
 const SELECTED_EXTRA_WIDTH = 4;
 
 const FOCUS_RING =
-  'outline-none focus-visible:ring-2 focus-visible:ring-info focus-visible:ring-offset-2 focus-visible:ring-offset-canvas';
+  'outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas';
 
 function iconMarkup(name: IconName, attributes: string): string {
   return (
@@ -56,9 +56,9 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
   if (stackedCount > 0) labelParts.push(`겹친 장소 ${stackedCount}곳 더, 눌러서 펼치기`);
   button.setAttribute('aria-label', labelParts.join(', '));
 
-  // 경고 핀은 몸통에 황토 테두리를 두르고, 그 밖을 흰 윤곽선이 한 번 더 감싼다.
+  // 경고 핀은 몸통에 굵은 주황 고리를 두르고, 그 밖을 흰 윤곽선이 한 번 더 감싼다. 주황은 경고에만 쓰는 색이다.
   const bodyAttributes = data.warning
-    ? `class="${style.fill} stroke-warning-line" stroke-width="2"`
+    ? `class="${style.fill} stroke-warning-line" stroke-width="3"`
     : `class="${style.fill}"`;
   let markup =
     '<svg class="block overflow-visible" width="36" height="44" viewBox="0 0 36 44" aria-hidden="true">' +
@@ -83,12 +83,12 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
   // 베이스캠프 수는 몸통 오른쪽 아래에 걸친다. 휴장 배지는 오른쪽 위라서 겹치지 않는다.
   if (data.count !== undefined) {
     markup +=
-      '<span data-pin-count class="pointer-events-none absolute bottom-2 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-ink px-1 font-mono text-xs tabular-nums text-white"></span>';
+      '<span data-pin-count class="pointer-events-none absolute bottom-2 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-ink px-1 text-xs font-semibold tabular-nums text-white"></span>';
   }
   // 겹친 장소 수는 몸통 왼쪽 아래에 걸친다. 먹 바탕인 베이스캠프 수와 헷갈리지 않게 흰 바탕에 먹 글자로 그린다.
   if (stackedCount > 0) {
     markup +=
-      '<span data-pin-stacked class="pointer-events-none absolute bottom-2 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-ink bg-surface px-1 font-mono text-xs tabular-nums text-ink"></span>';
+      '<span data-pin-stacked class="pointer-events-none absolute bottom-2 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-ink bg-surface px-1 text-xs font-semibold tabular-nums text-ink"></span>';
   }
   button.innerHTML = markup;
   const countBadge = button.querySelector('[data-pin-count]');
@@ -211,7 +211,7 @@ export function createClusterButton(
   button.type = 'button';
   button.className =
     'flex h-11 min-w-11 cursor-pointer items-center justify-center rounded-full bg-ink px-2 shadow-raise ' +
-    'font-mono text-sm font-semibold tabular-nums text-white ring-2 ring-white ' +
+    'text-sm font-bold tabular-nums text-white ring-2 ring-white ' +
     FOCUS_RING;
   button.textContent = cluster.count.toLocaleString('ko-KR');
   button.setAttribute('aria-label', `장소 ${cluster.count}곳, 눌러서 확대`);

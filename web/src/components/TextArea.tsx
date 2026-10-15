@@ -12,7 +12,7 @@ type TextAreaProps = Omit<ComponentPropsWithRef<'textarea'>, 'value'> & {
 
 // 입력란 글자는 16px 아래로 내리지 않는다. iOS가 작은 입력란에 포커스하면 화면을 확대하기 때문이다.
 const AREA_BASE =
-  'min-h-24 w-full resize-y rounded-control border bg-fill px-3 py-2 text-base text-ink focus:bg-surface focus:border-info disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-subtle';
+  'min-h-24 w-full resize-y rounded-control border bg-surface px-3.5 py-2.5 text-base text-ink focus:border-ink focus:outline-none disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-subtle';
 
 export function TextArea({
   label,
@@ -35,7 +35,7 @@ export function TextArea({
 
   return (
     <div className={['flex flex-col gap-1', className ?? ''].filter(Boolean).join(' ')}>
-      <label htmlFor={areaId} className="text-sm font-medium text-ink">
+      <label htmlFor={areaId} className="text-sm font-semibold text-ink">
         {label}
       </label>
       <textarea
@@ -44,7 +44,7 @@ export function TextArea({
         maxLength={maxLength}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedByIds}
-        className={`${AREA_BASE} ${error ? 'border-danger' : 'border-line'}`}
+        className={`${AREA_BASE} ${error ? 'border-danger' : 'border-fill-strong'}`}
         {...rest}
       />
       <div className="flex items-start justify-between gap-2">
@@ -62,7 +62,7 @@ export function TextArea({
           )}
         </div>
         {maxLength !== undefined && (
-          <p className="ml-auto shrink-0 font-mono text-sm tabular-nums text-ink-muted">
+          <p className="ml-auto shrink-0 text-sm tabular-nums text-ink-muted">
             {value.length}/{maxLength}
           </p>
         )}

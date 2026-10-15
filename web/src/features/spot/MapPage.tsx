@@ -519,7 +519,7 @@ export function MapPage({
                 <BrandMark className="text-lg" />
               </Link>
               <div className="flex flex-wrap justify-end gap-2">
-                <NotificationBellLink className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-ink hover:bg-fill lg:hidden" />
+                <NotificationBellLink className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control bg-surface px-3 text-ink shadow-raise hover:bg-fill lg:hidden" />
                 {map && (
                   <>
                     {!reporting && !basecampMode && !opening && <ReportButton />}
@@ -529,8 +529,8 @@ export function MapPage({
                       onClick={() => setTerrainOn((value) => !value)}
                       className={
                         terrainOn
-                          ? 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-accent-deep'
-                          : 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-base font-semibold text-ink hover:bg-fill'
+                          ? 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control bg-ink px-3 text-[15px] font-semibold text-surface shadow-raise'
+                          : 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control bg-surface px-3 text-[15px] font-semibold text-ink shadow-raise hover:bg-fill'
                       }
                     >
                       <Icon name="terrain" size={20} />
@@ -546,7 +546,7 @@ export function MapPage({
                   onSearch={() => setSearchPin(null)}
                   onSelect={selectRegion}
                   mapMoving={mapMoving.moving}
-                  ai={browsing ? { onResult: applyAiResult } : undefined}
+                  ai={browsing ? { onResult: applyAiResult, onOpenFilters: () => setFilterDialogOpen(true) } : undefined}
                 />
                 {(browsing || basecampMode) && (
                   <FilterButton
@@ -556,8 +556,12 @@ export function MapPage({
                 )}
               </div>
             )}
-            <ActiveFilterChips chips={filterChipList} onReset={resetFilters} className="lg:max-w-md" />
-            {aiSummary && <AiInterpretSummary summary={aiSummary} className="w-fit max-w-full lg:max-w-md" />}
+            {/* AI 결과가 떠 있으면 같은 조건을 그 카드의 칩으로 보여 주므로, 위 칩 줄은 그리지 않는다. */}
+            {aiSummary ? (
+              <AiInterpretSummary summary={aiSummary} chips={filterChipList} className="w-full max-w-[520px]" />
+            ) : (
+              <ActiveFilterChips chips={filterChipList} onReset={resetFilters} className="lg:max-w-md" />
+            )}
             <MapSafetyNotice />
           </div>
         </div>
@@ -625,7 +629,7 @@ function ListHeader({
 }) {
   const counted = area.status === 'ready' || area.markers.length > 0 || area.clusters.length > 0;
   return (
-    <h2 className="truncate text-lg font-semibold text-ink">
+    <h2 className="truncate text-[22px] font-extrabold tracking-[-0.02em] text-ink">
       {regionPhrase(regionName)} 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
     </h2>
   );
@@ -634,7 +638,7 @@ function ListHeader({
 function NearbyListHeader({ nearby, radius }: { nearby: SpotsNearby; radius: RadiusSearch }) {
   const counted = nearby.status === 'ready' || nearby.items.length > 0;
   return (
-    <h2 className="truncate text-lg font-semibold text-ink">
+    <h2 className="truncate text-[22px] font-extrabold tracking-[-0.02em] text-ink">
       {radius.label}에서 {radius.radiusKm}km 안 장소
       {counted && (
         <span className="tabular-nums">
@@ -658,8 +662,8 @@ function FilterButton({ count, onClick }: { count: number; onClick: () => void }
       aria-label={active ? `조건 ${count}개 켜짐, 조건 바꾸기` : '조건 고르기'}
       className={
         active
-          ? 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-accent-deep'
-          : 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-base font-semibold text-ink hover:bg-fill'
+          ? 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control bg-ink px-3 text-[15px] font-semibold text-surface shadow-raise'
+          : 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control bg-surface px-3 text-[15px] font-semibold text-ink shadow-raise hover:bg-fill'
       }
     >
       <Icon name="sliders" size={20} />
@@ -677,7 +681,7 @@ function BasecampListHeader({
 }) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
-    <h2 className="truncate text-lg font-semibold text-ink">
+    <h2 className="truncate text-[22px] font-extrabold tracking-[-0.02em] text-ink">
       {regionPhrase(regionName)} 베이스캠프
       {counted && (
         <span className="tabular-nums">
@@ -703,14 +707,11 @@ function SpotList({
 
   if (showSkeleton) {
     return (
-      <div aria-busy="true" className="flex flex-col">
+      <div aria-busy="true" className="flex flex-col gap-1 px-4 pb-6 lg:px-5">
         {[0, 1, 2].map((index) => (
-          <div key={index} className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-3">
-            <Skeleton className="size-8 shrink-0" />
-            <div className="flex flex-1 flex-col gap-2">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-3 w-1/3" />
-            </div>
+          <div key={index} className="flex flex-col gap-2 rounded-control bg-surface px-4 py-4">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
           </div>
         ))}
       </div>
@@ -720,7 +721,7 @@ function SpotList({
   return (
     <div className="flex flex-col">
       {area.status === 'error' && area.error && (
-        <div className="flex flex-col gap-3 px-4 pt-4">
+        <div className="flex flex-col gap-3 px-4 pt-4 lg:px-5">
           <Notice tone="danger" title="장소를 불러오지 못했어요">
             {area.error}
           </Notice>
@@ -733,7 +734,7 @@ function SpotList({
       )}
 
       {area.status === 'ready' && area.markers.length === 0 && area.clusters.length > 0 && (
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-1 lg:px-5">
           {/* 머리의 장소 수가 지역 전체가 아니라 지금 화면의 수라는 것을 함께 적는다. 상태 안내라서 상자로 감싸지 않는다. */}
           <p className="text-sm text-ink-muted">
             장소가 많아서 지도에 묶어서 보여요. 지도를 확대하면 목록으로 볼 수 있어요.
@@ -750,7 +751,7 @@ function SpotList({
       )}
 
       {area.markers.length > 0 && (
-        <ul aria-label="이 지역의 장소">
+        <ul aria-label="이 지역의 장소" className="flex flex-col gap-1 px-4 pb-6 lg:px-5">
           {area.markers.map((marker) => (
             <SpotListRow key={marker.spotId} marker={marker} />
           ))}
@@ -766,14 +767,11 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
 
   if (showSkeleton) {
     return (
-      <div aria-busy="true" className="flex flex-col">
+      <div aria-busy="true" className="flex flex-col gap-1 px-4 pb-6 lg:px-5">
         {[0, 1, 2].map((index) => (
-          <div key={index} className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-3">
-            <Skeleton className="size-8 shrink-0" />
-            <div className="flex flex-1 flex-col gap-2">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-3 w-1/3" />
-            </div>
+          <div key={index} className="flex flex-col gap-2 rounded-control bg-surface px-4 py-4">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
           </div>
         ))}
       </div>
@@ -783,7 +781,7 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
   return (
     <div className="flex flex-col">
       {nearby.status === 'error' && nearby.error && (
-        <div className="flex flex-col gap-3 px-4 pt-4">
+        <div className="flex flex-col gap-3 px-4 pt-4 lg:px-5">
           <Notice tone="danger" title="장소를 불러오지 못했어요">
             {nearby.error}
           </Notice>
@@ -800,7 +798,7 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
       )}
 
       {nearby.items.length > 0 && (
-        <ul aria-label="반경 안의 장소">
+        <ul aria-label="반경 안의 장소" className="flex flex-col gap-1 px-4 pb-2 lg:px-5">
           {nearby.items.map((item) => (
             <SpotListRow key={item.spotId} marker={item} distanceKm={item.distanceKm} />
           ))}
@@ -832,7 +830,7 @@ function ReportButton() {
   return (
     <Link
       to={target}
-      className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-base font-semibold text-ink hover:bg-fill"
+      className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control bg-surface px-3 text-[15px] font-semibold text-ink shadow-raise hover:bg-fill"
     >
       <Icon name="backpack" size={20} />
       박지 제보

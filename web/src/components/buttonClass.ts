@@ -32,7 +32,15 @@ export const DISABLED_CLASSES = 'bg-fill text-ink-muted border border-fill curso
 export const BASE_CLASSES =
   'inline-flex min-h-12 items-center justify-center gap-2 rounded-control px-5 text-[15px] font-semibold transition-[transform,background-color] duration-150 active:scale-[0.97]';
 
+// 지도 위 안내 카드처럼 좁은 곳에 두는 작은 버튼이다. 손가락으로 누를 수 있게 높이는 44px 아래로 줄이지 않는다.
+export const SMALL_BASE_CLASSES =
+  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control px-4 text-sm font-semibold transition-[transform,background-color] duration-150 active:scale-[0.97]';
+
+export type ButtonSize = 'md' | 'sm';
+
 // 버튼처럼 보이는 링크에 쓴다. 로그인이 필요한 행동을 비회원에게 같은 모양으로 보여 줄 때처럼, 버튼과 모양을 맞춰야 할 때 부른다.
-export function buttonClassName(variant: ButtonVariant = 'primary'): string {
-  return [BASE_CLASSES, VARIANT_CLASSES[variant], HOVER_CLASSES[variant]].filter(Boolean).join(' ');
+export function buttonClassName(variant: ButtonVariant = 'primary', size: ButtonSize = 'md'): string {
+  return [size === 'sm' ? SMALL_BASE_CLASSES : BASE_CLASSES, VARIANT_CLASSES[variant], HOVER_CLASSES[variant]]
+    .filter(Boolean)
+    .join(' ');
 }

@@ -7,12 +7,13 @@ import { fetchSpotDetail } from '../../api/spots';
 import type { BasecampOpenRequest, JoinCondition, SpotDetail } from '../../api/types';
 import { Link, navigate } from '../../app/router';
 import { Button } from '../../components/Button';
+import { buttonClassName } from '../../components/buttonClass';
 import { Checkbox } from '../../components/Checkbox';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { EmptyState } from '../../components/EmptyState';
-import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
+import { PanelBackBar } from '../../components/PanelBackBar';
 import { SelectField } from '../../components/SelectField';
 import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
@@ -81,8 +82,7 @@ const SERVER_FIELD_MAP: Record<string, FormField> = {
   'joinCondition.sameGenderOnly': 'sameGenderOnly',
 };
 
-const PRIMARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
+const PRIMARY_LINK_CLASS = buttonClassName('primary');
 
 // 서버가 같은 필드의 오류를 여러 개 알려 줘도 한 곳에 중복 없이 모아 보여 준다.
 function mergeReasons(reasons: string[]): string {
@@ -126,7 +126,7 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
   } else if (current.detail.parkWarning.warned) {
     body = (
       <div className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold tracking-tight text-ink">{current.detail.name}에서 베이스캠프 열기</h2>
+        <h2 className="text-[22px] leading-snug font-extrabold tracking-[-0.02em] text-ink">{current.detail.name}에서 베이스캠프 열기</h2>
         <ParkWarningNotice warning={current.detail.parkWarning} />
         <p className="text-base font-semibold text-danger">이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
       </div>
@@ -169,17 +169,8 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
-        <button
-          type="button"
-          aria-label="장소로 돌아가기"
-          onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
-        >
-          <Icon name="chevronLeft" size={24} />
-        </button>
-      </div>
-      <div aria-busy={body === null} className="px-4 py-4">
+      <PanelBackBar label="장소로" onBack={onBack} />
+      <div aria-busy={body === null} className="px-4 pt-2 pb-8 lg:px-5">
         {body}
       </div>
     </div>
@@ -304,9 +295,9 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
   }
 
   return (
-    <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-5 rounded-sheet bg-surface p-5">
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-bold tracking-tight text-ink">베이스캠프 열기</h2>
+        <h2 className="text-[22px] font-extrabold tracking-[-0.02em] text-ink">베이스캠프 열기</h2>
         <p className="text-sm text-ink-muted">장소: {spotName}</p>
       </div>
 
@@ -366,8 +357,8 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
         error={fieldErrors.capacity}
       />
 
-      <fieldset className="flex min-w-0 flex-col gap-3 rounded-control border border-line p-3">
-        <legend className="px-1 text-sm font-medium text-ink">합류 조건 (선택)</legend>
+      <fieldset className="flex min-w-0 flex-col gap-3 rounded-control bg-canvas p-4">
+        <legend className="float-left mb-1 w-full text-[15px] font-bold text-ink">합류 조건 (선택)</legend>
         <ChoiceGroup
           legend="최소 신뢰 단계"
           name="minTrustLevel"

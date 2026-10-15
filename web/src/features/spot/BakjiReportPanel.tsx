@@ -11,6 +11,7 @@ import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
+import { PanelBackBar } from '../../components/PanelBackBar';
 import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
@@ -128,17 +129,8 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = 
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
-        <button
-          type="button"
-          aria-label="지도로 돌아가기"
-          onClick={onCancel}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
-        >
-          <Icon name="chevronLeft" size={24} />
-        </button>
-      </div>
-      <div className="px-4 py-4">{body}</div>
+      <PanelBackBar label="지도로" onBack={onCancel} />
+      <div className="px-4 pt-2 pb-8 lg:px-5">{body}</div>
     </div>
   );
 }

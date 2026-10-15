@@ -6,10 +6,12 @@ import { fetchSpotDetail } from '../../api/spots';
 import type { BakjiDetail, ExpectedPeople, MidTermForecast, PublicDetail, SpotDetail, Weather } from '../../api/types';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
+import { buttonClassName } from '../../components/buttonClass';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
+import { PanelBackBar } from '../../components/PanelBackBar';
 import { Skeleton } from '../../components/Skeleton';
 import { MetaLine } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
@@ -32,8 +34,9 @@ type DetailResult =
   | { spotId: number; attempt: number; detail: SpotDetail }
   | { spotId: number; attempt: number; error: unknown };
 
-const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
-const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
+// 섹션은 선 없이 간격으로 나눈다.
+const SECTION_CLASS = 'mt-8';
+const SECTION_TITLE_CLASS = 'text-[15px] font-bold text-ink';
 
 // 단기 예보는 앞에서부터 이만큼만 보여 준다.
 const SHORT_TERM_LIMIT = 4;
@@ -104,17 +107,8 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
-        <button
-          type="button"
-          aria-label="목록으로"
-          onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
-        >
-          <Icon name="chevronLeft" size={24} />
-        </button>
-      </div>
-      <div aria-busy={current === null} className="px-4 py-4">
+      <PanelBackBar label="목록" onBack={onBack} />
+      <div aria-busy={current === null} className="px-4 pt-2 pb-8 lg:px-5">
         {body}
       </div>
     </div>
@@ -153,7 +147,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
   return (
     <article>
       <header className="flex flex-col gap-2">
-        <h2 className="text-xl font-bold tracking-tight text-ink">{detail.name}</h2>
+        <h2 className="text-[22px] leading-snug font-extrabold tracking-[-0.02em] text-ink">{detail.name}</h2>
         {/* 휴장과 공원 경계 경고는 바로 아래 안내 상자가 기간·근거와 함께 알리므로, 제목 아래에는 장소 유형과 주소만 둔다. */}
         <MetaLine
           items={[
@@ -165,6 +159,8 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
           ]}
         />
       </header>
+
+      <SummaryCells weather={detail.weather} expectedPeople={expectedPeople} />
 
       <div className="mt-3">
         <UnverifiedNote action="박지를 확인하고 혼자 가는 일정과 후기를 남길 수 있어요." />
@@ -203,7 +199,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
           ) : (
             <Link
               to={`/basecamps/new?spotId=${detail.spotId}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
+              className={buttonClassName('secondary')}
             >
               이 장소에서 베이스캠프 열기
             </Link>
@@ -218,13 +214,13 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <div className="mt-2 flex flex-wrap gap-2">
           <Link
             to={`/community?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
+            className={buttonClassName('secondary')}
           >
             이 장소 글 보기
           </Link>
           <Link
             to={`/community/new?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
+            className={buttonClassName('secondary')}
           >
             이 장소로 글쓰기
           </Link>
@@ -239,7 +235,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <div className="mt-2">
           <Link
             to={newMemoryPath({ lat: detail.lat, lng: detail.lng }, detail.spotId)}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
+            className={buttonClassName('secondary')}
           >
             기록 남기기
           </Link>
@@ -250,6 +246,34 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
 
       <WeatherSection weather={detail.weather} />
     </article>
+  );
+}
+
+// 상세 머리 바로 아래의 세 칸 요약이다. 가장 가까운 예보 기온, 오늘 일몰, 가장 가까운 밤의 예상 인원을 보여 준다.
+// 날씨나 일몰을 받지 못하면 그 칸에 "정보 없음"을 쓴다. 자세한 표는 아래 날씨·예상 인원 섹션에 그대로 있다.
+function SummaryCells({ weather, expectedPeople }: { weather: Weather | null; expectedPeople: ExpectedPeople[] }) {
+  const next = weather?.shortTerm[0];
+  const nextNight = expectedPeople[0];
+  const cells = [
+    {
+      label: next ? `${formatKstTime(next.at)} 기온` : '기온',
+      value: next ? formatValue(next.temperature, '°C') : '정보 없음',
+    },
+    { label: '일몰', value: weather?.sun?.sunset ?? '정보 없음' },
+    {
+      label: nextNight ? `${formatLocalDate(nextNight.date)} 예상 인원` : '예상 인원',
+      value: nextNight ? `${nextNight.count}명` : '아직 없음',
+    },
+  ];
+  return (
+    <dl className="mt-4 grid grid-cols-3 gap-1">
+      {cells.map((cell) => (
+        <div key={cell.label} className="flex min-w-0 flex-col gap-0.5 rounded-control bg-surface px-3.5 py-3">
+          <dt className="text-[13px] text-ink-muted">{cell.label}</dt>
+          <dd className="text-[17px] font-bold text-ink tabular-nums">{cell.value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -436,9 +460,9 @@ function WeatherSection({ weather }: { weather: Weather | null }) {
                   </th>
                 </tr>
               </thead>
-              <tbody className="font-mono tabular-nums text-ink">
+              <tbody className="tabular-nums text-ink">
                 {weather.shortTerm.slice(0, SHORT_TERM_LIMIT).map((forecast) => (
-                  <tr key={forecast.at} className="border-t border-line">
+                  <tr key={forecast.at}>
                     <td className="py-2">{formatKstTime(forecast.at)}</td>
                     <td className="py-2 text-right">{formatValue(forecast.temperature, '°C')}</td>
                     <td className="py-2 text-right">{formatValue(forecast.precipitationProbability, '%')}</td>
@@ -488,9 +512,9 @@ function MidTermTable({ forecasts }: { forecasts: MidTermForecast[] }) {
       </thead>
       <tbody className="tabular-nums text-ink">
         {forecasts.map((forecast) => (
-          <tr key={forecast.date} className="border-t border-line">
+          <tr key={forecast.date}>
             <td className="py-2">{formatLocalDate(forecast.date)}</td>
-            <td className="py-2 text-right font-mono">
+            <td className="py-2 text-right">
               {formatValue(forecast.minTemperature, '°')}/{formatValue(forecast.maxTemperature, '°')}
             </td>
             <td className="py-2 text-right">{forecast.amSky ?? '-'}</td>

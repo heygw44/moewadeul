@@ -6,8 +6,9 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { formatLocalDate } from '../../lib/datetime';
+import { localDateBlock, nightsBetween } from '../../lib/datetime';
 import { useSession } from '../member/session';
+import { SeatDots } from './SeatDots';
 import { BASECAMP_STATUS_META, headcountText, joinConditionSummary, unmetReasonText } from './basecampLabels';
 import type { BasecampsInView } from './useBasecampsInView';
 
@@ -36,7 +37,7 @@ export function BasecampListPanel({
   return (
     <div className="flex flex-col">
       {spotFilterId !== null && (
-        <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas px-4 py-1">
+        <div className="mx-4 mb-1 flex items-center justify-between gap-2 rounded-control bg-fill py-1 pr-1 pl-4 lg:mx-5">
           <p className="min-w-0 truncate text-sm text-ink">{filteredSpotName ?? '고른 장소'} 베이스캠프만 보여요</p>
           <Button variant="ghost" onClick={onClearSpotFilter} className="shrink-0 px-3">
             모든 장소 보기
@@ -45,9 +46,9 @@ export function BasecampListPanel({
       )}
 
       {showSkeleton && result.items.length === 0 ? (
-        <div aria-busy="true" className="flex flex-col">
+        <div aria-busy="true" className="flex flex-col gap-1 px-4 lg:px-5">
           {[0, 1, 2].map((index) => (
-            <div key={index} className="flex min-h-14 flex-col gap-2 border-b border-line px-4 py-3">
+            <div key={index} className="flex flex-col gap-2 rounded-control bg-surface px-4 py-4">
               <Skeleton className="h-4 w-2/3" />
               <Skeleton className="h-3 w-1/2" />
             </div>
@@ -86,7 +87,7 @@ export function BasecampListPanel({
           )}
 
           {visible.length > 0 && (
-            <ul aria-label="이 지역의 베이스캠프">
+            <ul aria-label="이 지역의 베이스캠프" className="flex flex-col gap-1 px-4 pb-6 lg:px-5">
               {visible.map((item) => (
                 <BasecampRow key={item.basecampId} item={item} />
               ))}
@@ -111,34 +112,48 @@ export function BasecampListPanel({
   );
 }
 
+// 왼쪽에 출발 날짜 칸, 오른쪽에 제목과 장소·박 수, 자리 점과 합류 조건을 둔다. 내 조건으로 신청할 수 없으면 이유를 경고 색으로 한 줄 더한다.
 function BasecampRow({ item }: { item: BasecampSearchItem }) {
   const session = useSession();
   const status = BASECAMP_STATUS_META[item.status];
   const trustLevel = session.me?.trustLevel ?? null;
   const unmet = item.canApply === false ? (item.unmetReasons ?? []) : [];
+  const block = localDateBlock(item.startDate);
+  const nights = nightsBetween(item.startDate, item.endDate);
 
   return (
     <li>
       <Link
         to={`/basecamps/${item.basecampId}`}
-        className="flex min-h-14 flex-col gap-1 border-b border-line px-4 py-3 hover:bg-fill focus-visible:-outline-offset-2"
+        className="grid grid-cols-[52px_1fr] gap-3.5 rounded-control bg-surface p-4 transition-colors hover:bg-fill focus-visible:-outline-offset-2"
       >
-        <span className="min-w-0 break-words text-base font-semibold text-ink">{item.title}</span>
-        <MetaLine
-          items={[<StatusText tone={status.tone}>{status.label}</StatusText>, <span className="truncate">{item.spot.name}</span>]}
-        />
-        <span className="flex items-center justify-between gap-2 text-sm text-ink">
-          <span className="tabular-nums">
-            {formatLocalDate(item.startDate)} ~ {formatLocalDate(item.endDate)}
+        <span className="flex flex-col items-center pt-0.5 text-center" aria-hidden="true">
+          <b className="text-[26px] leading-none font-extrabold tracking-[-0.03em] text-ink tabular-nums">{block?.day}</b>
+          <span className="mt-1 text-[13px] text-ink-muted">
+            {block?.month} {block?.weekday}
           </span>
-          <span className="shrink-0 font-mono tabular-nums">{headcountText(item.headcount, item.capacity)}명</span>
         </span>
-        <span className="text-sm text-ink-muted">합류 조건: {joinConditionSummary(item.joinCondition)}</span>
-        {unmet.length > 0 && (
-          <span className="text-sm text-warning">
-            신청할 수 없어요. {unmet.map((reason) => unmetReasonText(reason, trustLevel).reason).join(' ')}
+        <span className="flex min-w-0 flex-col">
+          <span className="min-w-0 break-words text-[17px] leading-snug font-bold text-ink">{item.title}</span>
+          <MetaLine
+            className="mt-1"
+            items={[
+              <StatusText tone={status.tone}>{status.label}</StatusText>,
+              <span className="truncate">{item.spot.name}</span>,
+              nights !== null && nights > 0 && <span className="tabular-nums">{nights}박</span>,
+            ]}
+          />
+          <span className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-ink">
+            <SeatDots headcount={item.headcount} capacity={item.capacity} />
+            <span className="tabular-nums">{headcountText(item.headcount, item.capacity)}명</span>
+            <span className="text-ink-muted">{joinConditionSummary(item.joinCondition)}</span>
           </span>
-        )}
+          {unmet.length > 0 && (
+            <span className="mt-2 text-sm font-semibold text-warning">
+              신청할 수 없어요. {unmet.map((reason) => unmetReasonText(reason, trustLevel).reason).join(' ')}
+            </span>
+          )}
+        </span>
       </Link>
     </li>
   );

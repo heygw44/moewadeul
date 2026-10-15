@@ -50,6 +50,25 @@ export function formatLocalDate(date: string): string {
   return `${month}월 ${day}일 (${weekday})`;
 }
 
+// 한국 날짜(YYYY-MM-DD)를 목록 왼쪽 날짜 칸에 쓰는 조각으로 나눈다. 예: { month: '11월', day: '7', weekday: '토' }
+export function localDateBlock(date: string): { month: string; day: string; weekday: string } | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const weekday = WEEKDAYS[new Date(Date.UTC(year, month - 1, day)).getUTCDay()] ?? '';
+  return { month: `${month}월`, day: String(day), weekday };
+}
+
+// 두 한국 날짜(YYYY-MM-DD) 사이의 밤 수다. 형식이 맞지 않으면 null이다.
+export function nightsBetween(start: string, end: string): number | null {
+  const from = Date.parse(`${start}T00:00:00Z`);
+  const to = Date.parse(`${end}T00:00:00Z`);
+  if (Number.isNaN(from) || Number.isNaN(to)) return null;
+  return Math.round((to - from) / 86_400_000);
+}
+
 const KST_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });
 
 // 시각을 한국 시간 기준 MM-DD로 돌려준다. 예: 2026-10-12T18:04:11Z -> 10-13

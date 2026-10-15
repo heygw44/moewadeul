@@ -12,7 +12,7 @@ type SpotTypeMeta = {
 };
 
 export const SPOT_TYPE_META: Record<SpotType, SpotTypeMeta> = {
-  CAMPSITE: { label: '공공 야영장', icon: 'tent', tone: 'info', tileClass: 'bg-info-soft text-info' },
+  CAMPSITE: { label: '공공 야영장', icon: 'tent', tone: 'info', tileClass: 'bg-fill-strong text-ink' },
   FOREST: { label: '자연휴양림', icon: 'tree', tone: 'accent', tileClass: 'bg-accent-soft text-accent-deep' },
   BAKJI: { label: '박지', icon: 'backpack', tone: 'bakji', tileClass: 'bg-bakji-soft text-bakji-strong' },
 };

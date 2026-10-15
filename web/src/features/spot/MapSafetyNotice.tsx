@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import { Icon } from '../../components/icons';
 import { readStored, writeStored } from '../../lib/storage';
 
@@ -19,12 +20,12 @@ export function MapSafetyNotice() {
   return (
     <div
       role="note"
-      className="pointer-events-auto flex max-w-md gap-3 rounded-control border border-info bg-info-soft p-3 shadow-raise"
+      className="pointer-events-auto flex max-w-md gap-3 rounded-control bg-surface px-4 py-3.5 shadow-raise"
     >
-      <Icon name="info" size={20} className="mt-0.5 shrink-0 text-info" />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="font-semibold text-info">야영하기 전에 알아 두세요</p>
-        <p className="text-sm text-ink">
+      <Icon name="info" size={20} className="mt-0.5 shrink-0 text-ink" />
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+        <p className="text-[15px] font-bold text-ink">야영하기 전에 알아 두세요</p>
+        <p className="text-sm text-ink-muted">
           공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요. 자연공원 안에서는 지정된 야영장
           밖의 야영과 취사가 금지돼 있어요. 박지는 회원이 제보한 곳이에요. 야영해도 되는지는 관할 기관에 직접 확인해
           주세요.
@@ -32,7 +33,7 @@ export function MapSafetyNotice() {
         <button
           type="button"
           onClick={confirm}
-          className="mt-1 inline-flex min-h-11 items-center self-start rounded-control border border-info px-3 text-sm font-semibold text-info hover:bg-surface"
+          className={buttonClassName('primary', 'sm')}
         >
           확인했어요
         </button>

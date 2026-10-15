@@ -29,7 +29,7 @@ export function MapLegend() {
 
   // 둥근 모서리 밖으로 버튼 hover 바탕이 삐져나가지 않게 상자에서 자른다. 그래서 포커스 링은 버튼 안쪽에 그린다.
   return (
-    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col overflow-hidden rounded-control border border-transparent bg-surface shadow-raise text-ink lg:bottom-4">
+    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col overflow-hidden rounded-control bg-surface text-ink shadow-raise lg:bottom-4">
       <button
         type="button"
         onClick={toggle}
@@ -41,7 +41,7 @@ export function MapLegend() {
         <Icon name={open ? 'chevronLeft' : 'chevronRight'} size={16} className="shrink-0 text-ink-muted" />
       </button>
       {open && (
-        <ul id={listId} className="flex flex-col gap-1.5 border-t border-line px-3 pb-2.5 pt-2">
+        <ul id={listId} className="flex flex-col gap-1.5 px-3 pb-3 pt-0.5">
           {LEGEND_KINDS.map((kind) => {
             const style = KIND_STYLE[kind];
             return (
@@ -54,6 +54,13 @@ export function MapLegend() {
               </li>
             );
           })}
+          {/* 경고 핀은 유형 색 위에 주황 고리를 두른다. 고리만 보여 주려고 몸통은 바탕색으로 그린다. */}
+          <li className="flex items-center gap-2 text-sm">
+            <svg className="block shrink-0 overflow-visible" width="18" height="22" viewBox="0 0 36 44" aria-hidden="true">
+              <path className="fill-surface stroke-warning-line" strokeWidth="5" strokeLinejoin="round" d={PIN_PATH} />
+            </svg>
+            공원 경계 경고
+          </li>
         </ul>
       )}
     </div>
