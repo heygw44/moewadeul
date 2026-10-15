@@ -11,6 +11,7 @@ type PageLayoutProps = {
   actions?: ReactNode;
   tabs?: ReactNode;
   aside?: ReactNode;
+  titleInContent?: boolean;
   children: ReactNode;
 };
 

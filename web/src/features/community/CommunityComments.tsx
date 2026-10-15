@@ -110,11 +110,11 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
     <section
       id="comments"
       aria-labelledby="community-comments-title"
-      className="scroll-mt-20 border-t border-ink"
+      className="scroll-mt-20 overflow-hidden rounded-sheet border border-line bg-surface"
     >
       <h2
         id="community-comments-title"
-        className="border-b border-line px-4 py-3 text-base font-semibold text-ink"
+        className="border-b border-line px-4 py-3 text-base font-extrabold text-ink sm:px-5"
       >
         댓글 <span className="font-mono tabular-nums">{count}</span>
       </h2>
@@ -127,7 +127,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
           }}
         />
         {status && (
-          <p role="status" className="mt-2 text-sm text-accent-deep">
+          <p role="status" className="mt-2 text-sm text-accent">
             {status}
           </p>
         )}
@@ -191,7 +191,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                 }}
               />
               {comment.replies.length > 0 && (
-                <ul className="mt-2 ml-4 flex flex-col gap-3 border-l-2 border-line pl-3">
+                <ul className="mt-2 ml-4 flex flex-col gap-3 border-l border-line pl-3">
                   {comment.replies.map((reply) => (
                     <li key={reply.commentId}>
                       <CommentItem

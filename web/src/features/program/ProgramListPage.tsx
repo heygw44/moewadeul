@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import { listPrograms } from '../../api/programs';
 import type { ProgramListStatus } from '../../api/programs';
 import type { ProgramSummary } from '../../api/types';
@@ -19,8 +20,7 @@ import { usePagedList } from './usePagedList';
 
 type ProgramFilter = ProgramListStatus | 'ALL';
 
-const SECONDARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
+const SECONDARY_LINK_CLASS = buttonClassName('secondary');
 
 function fetchPrograms(filter: ProgramFilter, page: number, signal?: AbortSignal) {
   return listPrograms(filter === 'ALL' ? undefined : filter, page, signal);
@@ -137,13 +137,13 @@ function ProgramRow({ item }: { item: ProgramSummary }) {
   return (
     <li>
       <Link to={`/programs/${item.programId}`} className="flex min-h-11 gap-4 px-4 py-4 hover:bg-fill">
-        <span className="flex w-14 shrink-0 flex-col items-center border-r border-line pr-3 text-center">
-          <span className="text-xs text-ink-muted">{date.month}</span>
-          <span className="font-mono text-xl tabular-nums text-ink">{date.day}</span>
-          <span className="text-xs text-ink-muted">{date.weekday}</span>
+        <span className="flex w-14 shrink-0 flex-col items-center self-start rounded-control border border-line py-1.5 text-center">
+          <span className="text-[0.6875rem] text-ink-muted">{date.month}</span>
+          <span className="font-mono text-xl leading-tight font-extrabold tabular-nums text-ink">{date.day}</span>
+          <span className="text-[0.6875rem] text-ink-muted">{date.weekday}</span>
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="break-words text-lg font-semibold text-ink">{item.title}</span>
+          <span className="break-words text-lg font-bold tracking-[-0.015em] text-ink">{item.title}</span>
           <MetaLine
             items={[<StatusText tone={status.tone}>{status.label}</StatusText>, item.overnight && '숙박', item.locationText]}
           />

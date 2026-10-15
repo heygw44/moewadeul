@@ -16,7 +16,7 @@ import { usePagedList } from '../program/usePagedList';
 
 const FEED_PAGE_SIZE = 24;
 // 커뮤니티·행사와 같은 넓은 열을 써서, 넓은 화면에서는 칸이 지나치게 커지지 않게 열 수를 늘린다.
-const FEED_GRID_CLASS = 'grid grid-cols-3 gap-0.5 md:grid-cols-4 lg:grid-cols-5';
+const FEED_GRID_CLASS = 'grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
 
 // 모두에게 공개된 기록을 최신순으로 이어서 보여 준다. 좋아요 상태가 로그인에 따라 달라서 세션을 확인한 뒤에 받는다.
 export function MemoryFeedPage() {
@@ -131,7 +131,7 @@ function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
     <Link
       to={`/memories/${item.memoryId}`}
       aria-label={label}
-      className="group relative block aspect-square overflow-hidden bg-fill focus-visible:outline-offset-[-2px]"
+      className="group relative block aspect-square overflow-hidden rounded-sheet bg-fill focus-visible:outline-offset-[-2px]"
     >
       {cover ? (
         <img
@@ -142,7 +142,7 @@ function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
           className="h-full w-full object-cover"
         />
       ) : (
-        <div className="flex h-full w-full flex-col gap-1 border border-line bg-surface p-2">
+        <div className="flex h-full w-full flex-col gap-1 rounded-sheet border border-line bg-surface p-3 pr-9">
           {item.excerpt && <p className="line-clamp-4 break-keep text-sm text-ink">{item.excerpt}</p>}
           <p className="mt-auto text-xs text-ink-muted">{formatLocalDate(item.visitedDate)}</p>
         </div>

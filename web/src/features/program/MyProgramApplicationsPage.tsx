@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import { listMyProgramApplications } from '../../api/programs';
 import type { MyProgramApplicationItem, ProgramApplicationStatus } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
@@ -77,7 +78,7 @@ export function MyProgramApplicationsPage() {
                   filter === 'ALL' && (
                     <Link
                       to="/programs"
-                      className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
+                      className={buttonClassName('secondary')}
                     >
                       공식 행사 보기
                     </Link>
