@@ -76,11 +76,36 @@
         </if>
     </sql>
 
+    <!-- resultType으로 record를 읽고 생성자 인자 이름 기반 자동 매핑이 켜져 있으면, MyBatis가 행마다 생성자 매개변수 이름을 다시 찾는다.
+         묶음 조회는 한 요청에 수백 행을 돌려주므로 이 비용이 CPU의 큰 몫을 차지했다. resultMap에 생성자 인자를 적어 두면 매퍼를 불러올 때 매핑이 한 번 정해진다.
+         인자 순서와 타입은 각 record의 생성자와 같아야 한다. -->
+    <resultMap id="spotMarkerRowMap" type="com.moewadeul.spot.infra.map.SpotMarkerRow">
+        <constructor>
+            <arg column="spot_id" javaType="_long" name="spotId"/>
+            <arg column="type" javaType="com.moewadeul.spot.domain.SpotType" name="type"/>
+            <arg column="name" javaType="string" name="name"/>
+            <arg column="lat" javaType="_double" name="lat"/>
+            <arg column="lng" javaType="_double" name="lng"/>
+            <arg column="park_warning" javaType="_boolean" name="parkWarning"/>
+            <arg column="operating_status" javaType="string" name="operatingStatus"/>
+            <arg column="closed_from" javaType="java.time.LocalDate" name="closedFrom"/>
+            <arg column="closed_until" javaType="java.time.LocalDate" name="closedUntil"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="spotClusterRowMap" type="com.moewadeul.spot.infra.map.SpotClusterRow">
+        <constructor>
+            <arg column="lat" javaType="_double" name="lat"/>
+            <arg column="lng" javaType="_double" name="lng"/>
+            <arg column="spot_count" javaType="_long" name="spotCount"/>
+        </constructor>
+    </resultMap>
+
     <!-- 힌트는 MySQL이 ORDER BY s.id LIMIT를 맞추려고 기본 키 순서로 훑는 계획을 우선하지 않게 한다. 그 계획은 장소가 빽빽한 넓은 영역에서는
          빠르지만, 좁은 영역에서는 영역 밖 장소까지 테이블 전체를 훑는다(장소 100만 건, 동네 크기 영역에서 240ms). 힌트를 걸어도 MySQL은 비용을
          비교해서, 넓은 영역에는 여전히 기본 키 순서를, 좁은 영역에는 위도·경도 인덱스를 고른다.
          휴장 표시에 쓰는 운영 상태와 휴장 기간은 마커로 고른 행에만 붙인다. 그래서 바깥 조회에서 public_spot_detail을 한 번 더 조인한다. -->
-    <select id="selectMarkers" resultType="com.moewadeul.spot.infra.map.SpotMarkerRow">
+    <select id="selectMarkers" resultMap="spotMarkerRowMap">
         SELECT /*+ SET_VAR(optimizer_switch = 'prefer_ordering_index=off') */
                m.spot_id AS spot_id,
                m.type AS type,
@@ -172,7 +197,7 @@
          휴장 제외를 켜면 오늘 휴장인 장소를 같은 격자 칸에 음수로 더해서 뺀다. 그래서 휴장 장소의 칸 번호도 V33 프로시저와 같은 식으로 계산한다.
          화면 칸 번호는 격자 칸 중심이 남서 꼭짓점에서 떨어진 거리를 화면 칸 폭으로 나눈 몫이다. 북쪽·동쪽 경계선 위의 중심은 몫이 칸 수와 같아지므로
          LEAST로 마지막 칸에 넣는다. 결과는 남쪽 행부터, 같은 행에서는 서쪽 칸부터 나온다. -->
-    <select id="selectClusters" resultType="com.moewadeul.spot.infra.map.SpotClusterRow">
+    <select id="selectClusters" resultMap="spotClusterRowMap">
         SELECT SUM(v.lat_sum) / SUM(v.spot_count) AS lat,
                SUM(v.lng_sum) / SUM(v.spot_count) AS lng,
                SUM(v.spot_count) AS spot_count
@@ -217,7 +242,7 @@
     <!-- 격자 집계 표에는 입지 축이 없다. 입지가 있는 장소는 고캠핑 야영장(약 3,100곳)뿐이라서, 입지 필터를 켜면 집계 표를 쓰지 않고 장소를 직접 센다.
          장소 자기 좌표로 화면 칸을 정하므로, 북쪽·동쪽 경계선 위의 장소는 칸 번호가 칸 수와 같아진다. 그래서 LEAST로 마지막 칸에 넣는다.
          결과는 남쪽 행부터, 같은 행에서는 서쪽 칸부터 나온다. -->
-    <select id="selectSettingClusters" resultType="com.moewadeul.spot.infra.map.SpotClusterRow">
+    <select id="selectSettingClusters" resultMap="spotClusterRowMap">
         SELECT AVG(v.lat) AS lat,
                AVG(v.lng) AS lng,
                COUNT(*) AS spot_count
