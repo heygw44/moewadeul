@@ -132,7 +132,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
 function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged: () => void }) {
   return (
     <div className="flex flex-col gap-4">
-      <article className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
+      <article className="flex flex-col gap-3 border-t border-ink pt-5">
         {detail.status === 'CANCELED' && (
           <Notice tone="danger" title="관리자가 행사를 취소했어요">
             <p>신청한 회원에게 취소 알림을 보냈어요. 결제한 금액은 환불돼요.</p>
