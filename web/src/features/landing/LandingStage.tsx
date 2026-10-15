@@ -332,7 +332,7 @@ function TrustSection() {
             같은 날 같은 장소로 가는 2~6명 모임이에요. 확정된 멤버에게만 연락 수단이 열려요.
           </TrailStop>
           <TrailStop
-            title="공식 행사에 신청해요"
+            title="공식 행사에 참여해요"
             to={program ? `/programs/${program.programId}` : '/programs'}
             linkText={program ? '이 행사 보기' : '행사 보기'}
           >
@@ -341,7 +341,7 @@ function TrustSection() {
                 {program.title} · 남은 자리 {seatsText(program.remainingSeats, program.capacity)}
               </>
             ) : (
-              '관리자가 여는 백패킹 행사에 선착순으로 신청해요. 자리가 나면 알림으로 알려 줘요.'
+              '지자체와 브랜드가 여는 백패킹 행사에 참여해요. 자리가 나면 알림으로 알려 줘요.'
             )}
           </TrailStop>
         </ol>

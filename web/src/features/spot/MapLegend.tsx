@@ -32,7 +32,7 @@ export function MapLegend() {
 
   // 둥근 모서리 밖으로 버튼 hover 바탕이 삐져나가지 않게 상자에서 자른다. 그래서 포커스 링은 버튼 안쪽에 그린다.
   return (
-    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col overflow-hidden rounded-control border border-transparent bg-surface text-ink shadow-raise lg:bottom-4 lg:flex-row lg:items-center">
+    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col overflow-hidden rounded-control border border-transparent bg-surface text-ink shadow-raise lg:bottom-[3.75rem] lg:flex-row lg:items-center">
       <button
         type="button"
         onClick={toggle}
