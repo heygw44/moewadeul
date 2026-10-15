@@ -341,7 +341,7 @@ function TrustSection() {
                 {program.title} · 남은 자리 {seatsText(program.remainingSeats, program.capacity)}
               </>
             ) : (
-              '지자체와 브랜드가 여는 백패킹 행사에 선착순으로 신청해요. 자리가 나면 알림으로 알려 줘요.'
+              '지자체와 브랜드가 여는 백패킹 행사에 신청해요. 자리가 나면 알림으로 알려 줘요.'
             )}
           </TrailStop>
         </ol>
