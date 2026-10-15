@@ -7,6 +7,13 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
+server:
+  tomcat:
+    threads:
+      # DB 커넥션 풀이 10개라 요청 스레드가 그보다 많으면 나머지는 커넥션을 기다리며 메모리만 쓴다.
+      # 운영 서버(메모리 2GB)에서는 기본값 200 대신 50으로 둔다. 넘치는 요청은 Tomcat 연결 대기열에서 기다린다.
+      max: 50
+
 logging:
   structured:
     format:
