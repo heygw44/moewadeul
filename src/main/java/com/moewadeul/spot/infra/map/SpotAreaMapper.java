@@ -41,4 +41,10 @@ public interface SpotAreaMapper {
             @Param("area") SpotAreaCondition area,
             @Param("grid") SpotClusterGrid grid,
             @Param("cells") SpotGridCells cells);
+
+    /**
+     * 호출하면 미리 세어 둔 cells의 격자 칸을 그대로 묶음으로 읽는다. 칸마다 평균 좌표와 장소 수를 주고, 장소가 없는 칸은 나오지 않는다. cells는
+     * 중심이 영역 안인 칸만 가리켜야 하고, 비어 있으면 안 된다. 결과는 남쪽 행부터, 같은 행에서는 서쪽 칸부터 나온다.
+     */
+    List<SpotClusterRow> selectGridClusters(@Param("area") SpotAreaCondition area, @Param("cells") SpotGridCells cells);
 }
