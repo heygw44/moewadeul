@@ -26,6 +26,11 @@ const GUIDE_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2 hover:text-accent-deep';
 const MODE_BUTTON_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2 hover:text-accent';
+// 검색 칸 옆의 AI 검색 버튼이다. 켜면 숲색 판으로 채워 지금 문장으로 찾는 중임을 알린다.
+const AI_TOGGLE_ON = 'border border-brand bg-brand text-white hover:bg-brand-strong';
+const AI_TOGGLE_FLOATING = 'border border-transparent bg-surface text-ink shadow-raise hover:bg-fill';
+const AI_TOGGLE_PANEL = 'border-[1.5px] border-ink-subtle bg-surface text-ink hover:bg-fill';
+const PANEL_BOX_CLASS = 'rounded-sheet border border-line bg-surface px-3 py-3 text-sm text-ink';
 
 // AI 검색이 실패했을 때 입력란 아래에 띄울 안내의 종류다. 하루 횟수를 다 썼을 때는 남은 시간을 알 때만 시간을 적는다.
 type AiError = { kind: 'limited'; timed: boolean } | { kind: 'unavailable' } | { kind: 'message'; text: string };
@@ -47,11 +52,13 @@ type MapSearchBarProps = {
   mapMoving: boolean;
   // 지도 위에 띄울 때 켠다. 랜딩처럼 지도 밖 흰 바탕에 둘 때는 끈다.
   floating?: boolean;
+  // 데스크톱 지도 화면의 왼쪽 패널 안에 둘 때 켠다. 지도 위가 아니라서 그림자 없이 테두리로 입력란을 알린다.
+  inPanel?: boolean;
   // 넘기면 입력란에서 문장으로 찾는 AI 모드로 바꿀 수 있다. 읽어 낸 조건과, 그 조건의 지역으로 정한 후보(없으면 null)를 넘겨 준다.
   ai?: { onResult: (result: AiInterpretResponse, candidate: RegionCandidate | null) => void };
 };
 
-export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, ai }: MapSearchBarProps) {
+export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, inPanel = false, ai }: MapSearchBarProps) {
   const session = useSession();
   const { pathname, search } = useLocation();
   const countdown = useRetryCountdown();
@@ -207,19 +214,27 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, a
     }
   }
 
+  const boxClass = inPanel ? PANEL_BOX_CLASS : GUIDE_BOX_CLASS;
+  const floatingField = floating && !inPanel;
+
+  // 켜고 끄는 버튼이라 이름은 그대로 두고 눌림 상태(aria-pressed)로 지금 모드를 알린다.
+  // 패널 안에서는 "AI 검색"으로, 좁은 지도 위에서는 "AI"로 줄여 적는다.
   const modeButton = aiAvailable && (
     <button
       type="button"
       aria-pressed={aiActive}
-      aria-label={aiActive ? '지역 검색으로 바꾸기' : 'AI 검색으로 바꾸기'}
+      aria-label="AI 검색"
       onClick={toggleMode}
-      className={`inline-flex size-11 items-center justify-center text-sm font-semibold ${aiActive ? 'text-accent' : 'text-ink hover:text-accent'}`}
+      className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-control px-3 text-base font-bold whitespace-nowrap ${
+        aiActive ? AI_TOGGLE_ON : floatingField ? AI_TOGGLE_FLOATING : AI_TOGGLE_PANEL
+      }`}
     >
-      AI
+      {inPanel ? 'AI 검색' : 'AI'}
     </button>
   );
 
   // 지도 위에서는 입력란이 옅은 면이면 지도에 묻힌다. 흰 면과 그림자로 띄우고, 오류일 때는 위험색 테두리를 남긴다.
+  // 패널 안에서는 공통 입력란 모양(흰 바탕 + 테두리)을 그대로 쓴다.
   // 지도 밖(랜딩)에서는 첫 화면의 주 입력이라 52px로 키우고, 아이콘 대신 '찾기' 글자 버튼을 둔다.
   return (
     <form
@@ -228,13 +243,17 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, a
       onSubmit={handleSubmit}
       onKeyDown={handleKeyDown}
       className={
-        floating
-          ? `pointer-events-auto relative min-w-0 flex-1 [&_input]:bg-surface [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent${aiAvailable ? ' [&_input]:pr-24' : ''}`
-          : 'relative min-w-0 flex-1 [&_input]:min-h-13 [&_input]:pr-24'
+        inPanel
+          ? 'relative min-w-0 flex-1'
+          : floating
+            ? 'pointer-events-auto relative min-w-0 flex-1 [&_input]:bg-surface [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent'
+            : 'relative min-w-0 flex-1 [&_input]:min-h-13 [&_input]:pr-24'
       }
     >
+      <div className="flex items-start gap-2">
+      <div className="min-w-0 flex-1">
       {aiGuide ? (
-        <div className={`${GUIDE_BOX_CLASS} flex flex-col items-start gap-1`}>
+        <div className={`${boxClass} flex flex-col items-start gap-1`}>
           <p>{anonymous ? 'AI 검색은 로그인한 회원이 쓸 수 있어요.' : '이메일 인증을 마친 뒤에 쓸 수 있어요.'}</p>
           <Link
             to={anonymous ? withNext('/login', pathname + search) : '/verify-email'}
@@ -264,31 +283,35 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, a
           }}
           trailing={
             <>
-              {modeButton}
               <button
                 type="submit"
                 aria-label={aiActive ? 'AI 검색' : '지역 검색'}
                 aria-busy={loading || undefined}
                 disabled={loading || waiting}
                 className={
-                  floating
+                  floating || inPanel
                     ? 'inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted'
                     : 'mr-1.5 inline-flex h-10 items-center justify-center rounded-[0.5rem] bg-ink px-4 font-semibold text-white hover:bg-ink-muted disabled:bg-ink-muted'
                 }
               >
-                {floating ? <Icon name="search" size={20} /> : '찾기'}
+                {floating || inPanel ? <Icon name="search" size={20} /> : '찾기'}
               </button>
             </>
           }
         />
       )}
+      </div>
+      {modeButton}
+      </div>
 
       {aiActive && !aiGuide && !aiResolved && (
-        <p className="mt-1 rounded-control bg-surface px-3 py-2 text-sm text-ink-muted shadow-raise">{AI_NOTICE}</p>
+        <p className={inPanel ? 'mt-2 text-[0.8125rem] text-ink-muted' : 'mt-1 rounded-control bg-surface px-3 py-2 text-sm text-ink-muted shadow-raise'}>
+          {AI_NOTICE}
+        </p>
       )}
 
       {aiActive && limitedShown && (
-        <p role="alert" className={`${GUIDE_BOX_CLASS} mt-1`}>
+        <p role="alert" className={`${boxClass} mt-1`}>
           오늘 AI 검색 20번을 모두 썼어요.{' '}
           {aiError.timed ? `${formatRemaining(countdown.secondsLeft)} 뒤에 다시 쓸 수 있어요.` : '내일 다시 쓸 수 있어요.'}{' '}
           지역 이름 검색은 지금도 쓸 수 있어요.
@@ -296,7 +319,7 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, a
       )}
 
       {aiActive && aiError?.kind === 'unavailable' && (
-        <div role="alert" className={`${GUIDE_BOX_CLASS} mt-1 flex flex-col items-start gap-1`}>
+        <div role="alert" className={`${boxClass} mt-1 flex flex-col items-start gap-1`}>
           <p>지금은 AI 검색을 쓸 수 없어요. 지역 이름으로 검색해 주세요.</p>
           <button type="button" onClick={toggleMode} className={MODE_BUTTON_CLASS}>
             지역 검색으로 바꾸기
@@ -305,7 +328,7 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, a
       )}
 
       {aiActive && aiError?.kind === 'message' && (
-        <p role="alert" className={`${GUIDE_BOX_CLASS} mt-1`}>
+        <p role="alert" className={`${boxClass} mt-1`}>
           {aiError.text}
         </p>
       )}

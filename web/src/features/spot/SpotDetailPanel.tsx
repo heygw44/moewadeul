@@ -6,12 +6,12 @@ import { fetchSpotDetail } from '../../api/spots';
 import type { BakjiDetail, ExpectedPeople, MidTermForecast, PublicDetail, SpotDetail, Weather } from '../../api/types';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
+import { buttonClassName } from '../../components/buttonClass';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
-import { MetaLine } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstMonthDay, formatKstTime, formatLocalDate } from '../../lib/datetime';
 import { newMemoryPath } from '../memory/memoryLabels';
@@ -33,7 +33,7 @@ type DetailResult =
   | { spotId: number; attempt: number; error: unknown };
 
 const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
-const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
+const SECTION_TITLE_CLASS = 'text-[0.9375rem] font-bold text-ink';
 
 // 단기 예보는 앞에서부터 이만큼만 보여 준다.
 const SHORT_TERM_LIMIT = 4;
@@ -114,7 +114,7 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
           <Icon name="chevronLeft" size={24} />
         </button>
       </div>
-      <div aria-busy={current === null} className="px-4 py-4">
+      <div aria-busy={current === null} className="px-4 py-4 lg:px-5">
         {body}
       </div>
     </div>
@@ -152,18 +152,14 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
 
   return (
     <article>
-      <header className="flex flex-col gap-2">
-        <h2 className="text-xl font-bold tracking-tight text-ink">{detail.name}</h2>
-        {/* 휴장과 공원 경계 경고는 바로 아래 안내 상자가 기간·근거와 함께 알리므로, 제목 아래에는 장소 유형과 주소만 둔다. */}
-        <MetaLine
-          items={[
-            <span className="inline-flex items-center gap-1">
-              <Icon name={meta.icon} size={16} className="shrink-0" />
-              {meta.label}
-            </span>,
-            detail.address,
-          ]}
-        />
+      {/* 패널 머리는 탐방로 안내판처럼 숲색 판에 흰 이름을 적는다.
+          휴장과 공원 경계 경고는 바로 아래 안내 상자가 기간·근거와 함께 알리므로, 이름 아래에는 장소 유형과 주소만 둔다. */}
+      <header className="-mx-4 -mt-4 flex flex-col gap-1 bg-brand px-4 py-4 text-white lg:-mx-5 lg:px-5">
+        <h2 className="text-2xl leading-tight font-extrabold tracking-[-0.025em]">{detail.name}</h2>
+        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-brand-ink">
+          <Icon name={meta.icon} size={16} className="shrink-0" />
+          {[meta.label, detail.address].filter(Boolean).join(' · ')}
+        </p>
       </header>
 
       <div className="mt-3">
@@ -203,7 +199,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
           ) : (
             <Link
               to={`/basecamps/new?spotId=${detail.spotId}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
+              className={buttonClassName('secondary')}
             >
               이 장소에서 베이스캠프 열기
             </Link>
@@ -218,13 +214,13 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <div className="mt-2 flex flex-wrap gap-2">
           <Link
             to={`/community?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
+            className={buttonClassName('secondary')}
           >
             이 장소 글 보기
           </Link>
           <Link
             to={`/community/new?spotId=${detail.spotId}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
+            className={buttonClassName('secondary')}
           >
             이 장소로 글쓰기
           </Link>
@@ -239,7 +235,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
         <div className="mt-2">
           <Link
             to={newMemoryPath({ lat: detail.lat, lng: detail.lng }, detail.spotId)}
-            className="inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong"
+            className={buttonClassName('secondary')}
           >
             기록 남기기
           </Link>
