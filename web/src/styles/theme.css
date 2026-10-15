@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Pretendard Variable과 Gowun Batang의 @font-face는 index.html의 <link>로 불러오는 CSS에 들어 있다 */
+/* Pretendard Variable의 @font-face는 index.html의 <link>로 불러오는 CSS에 들어 있다 */
 
 @theme {
   /* Tailwind 기본 팔레트(stone, slate, blue 등)를 지워서 프로젝트 토큰만 쓰게 한다 */
@@ -11,8 +11,6 @@
   /* 좌표·기준일·거리 같은 데이터 값에 쓴다. 고정폭 글꼴 대신 같은 Pretendard에 숫자 폭만 맞춰서, 표처럼 줄이 맞으면서도 글자 모양이 본문과 같다 */
   --font-mono: var(--font-sans);
   --font-mono--font-feature-settings: "tnum";
-  /* 랜딩 첫 제목과 섹션 제목에만 쓰는 세리프다. 앱 화면 제목은 Pretendard로 둔다 */
-  --font-serif: "Gowun Batang", AppleMyungjo, "Noto Serif KR", serif;
 
   /* 바탕과 면: 바탕은 햇빛 아래에서도 눈이 덜 피곤한 옅은 미색이고, 목록판·패널·입력란은 흰 판이라 바탕 위에서 판처럼 읽힌다 */
   --color-canvas: #f6f5f1;        /* 화면 바탕. 먹 16.2:1, 보조 글자 6.8:1 */
