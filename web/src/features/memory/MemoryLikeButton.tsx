@@ -32,7 +32,7 @@ export function MemoryLikeButton({
     <>
       <Icon name="heart" size={20} fill={liked ? 'currentColor' : 'none'} />
       <span>좋아요</span>
-      <span className="font-mono tabular-nums">{count}</span>
+      <span className="tabular-nums">{count}</span>
     </>
   );
 

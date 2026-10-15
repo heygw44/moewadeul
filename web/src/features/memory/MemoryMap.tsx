@@ -13,10 +13,13 @@ export function MemoryMap({
   pins,
   selectedId,
   onSelect,
+  heightClass = 'h-72 sm:h-96',
 }: {
   pins: MemoryPinData[];
   selectedId: number | null;
   onSelect: (id: number) => void;
+  // 지도 높이 클래스다. 기록 상세 옆 칸처럼 작은 지도로 쓸 때 줄인다.
+  heightClass?: string;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<MemoryMapView | null>(null);
@@ -108,7 +111,7 @@ export function MemoryMap({
       ref={hostRef}
       role="region"
       aria-label="기록 지도"
-      className="relative h-72 w-full overflow-hidden rounded-control border border-line bg-fill sm:h-96"
+      className={`relative w-full overflow-hidden rounded-sheet bg-fill ${heightClass}`}
     />
   );
 }

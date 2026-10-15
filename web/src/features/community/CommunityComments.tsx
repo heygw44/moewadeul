@@ -110,16 +110,16 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
     <section
       id="comments"
       aria-labelledby="community-comments-title"
-      className="scroll-mt-20 border-t border-ink"
+      className="flex scroll-mt-20 flex-col gap-3"
     >
       <h2
         id="community-comments-title"
-        className="border-b border-line px-4 py-3 text-base font-semibold text-ink"
+        className="text-[17px] font-bold text-ink"
       >
-        댓글 <span className="font-mono tabular-nums">{count}</span>
+        댓글 <span className="tabular-nums">{count}</span>
       </h2>
 
-      <div className="border-b border-line px-4 py-3">
+      <div>
         <NewCommentArea
           onSubmit={async (content) => {
             await createComment(postId, { content });
@@ -134,7 +134,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
       </div>
 
       {listError && (
-        <div role="alert" className="flex flex-col gap-2 px-4 py-3">
+        <div role="alert" className="flex flex-col gap-2">
           <Notice tone="danger" title="댓글을 불러오지 못했어요">
             <p>{listError}</p>
           </Notice>
@@ -147,53 +147,56 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
       )}
 
       {showSkeleton && (
-        <div className="flex flex-col gap-2 px-4 py-3">
+        <div className="flex flex-col gap-2 rounded-control bg-surface px-4 py-4">
           <Skeleton className="h-5 w-1/2" />
           <Skeleton className="h-12 w-full" />
         </div>
       )}
 
       {list && list.comments.length === 0 && !listError && (
-        <p className="px-4 py-3 text-base text-ink-muted">아직 댓글이 없어요.</p>
+        <p className="text-base text-ink-muted">아직 댓글이 없어요.</p>
       )}
 
       {list && (list.comments.length > 0 || list.hasNext) && (
-        <ul className="divide-y divide-line">
+        // 댓글은 흰 면 한 장씩이고, 답글은 한 칸 들여 옅은 면으로 둔다.
+        <ul className="flex flex-col gap-1">
           {list.comments.map((comment) => (
-            <li key={comment.commentId} className="px-4 py-3">
-              <CommentItem
-                comment={comment}
-                myMemberId={myMemberId}
-                editingId={editingId}
-                onEdit={(id) => {
-                  setStatus(null);
-                  setReplyingId(null);
-                  setEditingId(id);
-                }}
-                onCancelEdit={() => setEditingId(null)}
-                onSaveEdit={async (id, content) => {
-                  await updateComment(id, { content });
-                  await refreshAfterChange('댓글을 수정했어요.');
-                }}
-                onDelete={setDeleting}
-                onReport={(id) => setReporting({ type: 'comment', id })}
-                topLevel
-                replying={replyingId === comment.commentId}
-                onReply={() => {
-                  setStatus(null);
-                  setEditingId(null);
-                  setReplyingId(comment.commentId);
-                }}
-                onCancelReply={() => setReplyingId(null)}
-                onSubmitReply={async (content) => {
-                  await createComment(postId, { content, parentId: comment.commentId });
-                  await refreshAfterChange('답글을 남겼어요.');
-                }}
-              />
+            <li key={comment.commentId} className="flex flex-col gap-1">
+              <div className="rounded-control bg-surface px-[18px] py-4">
+                <CommentItem
+                  comment={comment}
+                  myMemberId={myMemberId}
+                  editingId={editingId}
+                  onEdit={(id) => {
+                    setStatus(null);
+                    setReplyingId(null);
+                    setEditingId(id);
+                  }}
+                  onCancelEdit={() => setEditingId(null)}
+                  onSaveEdit={async (id, content) => {
+                    await updateComment(id, { content });
+                    await refreshAfterChange('댓글을 수정했어요.');
+                  }}
+                  onDelete={setDeleting}
+                  onReport={(id) => setReporting({ type: 'comment', id })}
+                  topLevel
+                  replying={replyingId === comment.commentId}
+                  onReply={() => {
+                    setStatus(null);
+                    setEditingId(null);
+                    setReplyingId(comment.commentId);
+                  }}
+                  onCancelReply={() => setReplyingId(null)}
+                  onSubmitReply={async (content) => {
+                    await createComment(postId, { content, parentId: comment.commentId });
+                    await refreshAfterChange('답글을 남겼어요.');
+                  }}
+                />
+              </div>
               {comment.replies.length > 0 && (
-                <ul className="mt-2 ml-4 flex flex-col gap-3 border-l-2 border-line pl-3">
+                <ul aria-label="답글" className="ml-6 flex flex-col gap-1 sm:ml-10">
                   {comment.replies.map((reply) => (
-                    <li key={reply.commentId}>
+                    <li key={reply.commentId} className="rounded-control bg-fill px-[18px] py-4">
                       <CommentItem
                         comment={reply}
                         myMemberId={myMemberId}

@@ -53,7 +53,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
       breadcrumb={
         <Link
           to={editPostId === null ? '/community' : `/community/${editPostId}`}
-          className="inline-flex min-h-11 items-center gap-1 text-accent underline underline-offset-2"
+          className="inline-flex min-h-11 items-center gap-1 text-ink underline underline-offset-2"
         >
           <Icon name="chevronLeft" size={16} />
           {editPostId === null ? '커뮤니티' : '글로 돌아가기'}
@@ -103,7 +103,7 @@ function WriteAside() {
         <ul className="list-disc pl-5">
           <li>
             동행은{' '}
-            <Link to="/basecamps" className="font-semibold text-accent underline underline-offset-2">
+            <Link to="/basecamps" className="font-semibold text-ink underline underline-offset-2">
               베이스캠프
             </Link>
             에서 구해요.
@@ -333,7 +333,7 @@ function PostForm(props: PostFormProps) {
             onChange={(event) => setTitle(event.target.value)}
             error={fieldErrors.title}
           />
-          <p className="text-right font-mono text-xs tabular-nums text-ink-muted">
+          <p className="text-right text-xs tabular-nums text-ink-muted">
             {title.length}/{TITLE_MAX}
           </p>
         </div>

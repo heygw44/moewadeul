@@ -81,7 +81,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
       <HubLayout title="커뮤니티" breadcrumb={<BackToCommunity />} aside={asideNode}>
         <div aria-busy="true">
           {showSkeleton && (
-            <div className="flex flex-col gap-3 border-t border-ink pt-5">
+            <div className="flex flex-col gap-3">
               <Skeleton className="h-8 w-2/3" />
               <Skeleton className="h-40 w-full" />
             </div>
@@ -136,7 +136,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   );
 }
 
-const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-accent underline underline-offset-2';
+const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-ink underline underline-offset-2';
 
 function BackToCommunity() {
   return (
@@ -171,7 +171,7 @@ function PostMeta({ post }: { post: CommunityPostDetail }) {
           <span aria-hidden="true">·</span>
           <Link
             to={`/spots/${post.spot.spotId}`}
-            className="inline-flex items-center gap-1 text-accent underline underline-offset-2"
+            className="inline-flex items-center gap-1 text-ink underline underline-offset-2"
           >
             <Icon name="map" size={14} />
             {post.spot.name}
@@ -233,7 +233,7 @@ function PostAside({ post }: { post: CommunityPostDetail | null }) {
         <ul className="list-disc pl-5">
           <li>
             동행은{' '}
-            <Link to="/basecamps" className="font-semibold text-accent underline underline-offset-2">
+            <Link to="/basecamps" className="font-semibold text-ink underline underline-offset-2">
               베이스캠프
             </Link>
             에서 구해요.
@@ -246,7 +246,7 @@ function PostAside({ post }: { post: CommunityPostDetail | null }) {
   );
 }
 
-const ASIDE_LINK = 'inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2';
+const ASIDE_LINK = 'inline-flex min-h-11 items-center text-base font-semibold text-ink underline underline-offset-2';
 
 type PostContentProps = {
   post: CommunityPostDetail;
@@ -256,11 +256,11 @@ type PostContentProps = {
 
 function PostContent({ post, onLikeChanged, onImageError }: PostContentProps) {
   return (
-    <article className="border-t border-ink">
-      <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink">{post.content}</p>
+    <article className="flex flex-col gap-6">
+      <p className="max-w-[40em] whitespace-pre-wrap break-words text-[18px] leading-[1.75] text-ink">{post.content}</p>
 
       {post.images.length > 0 && (
-        <ul className="flex flex-col gap-3 px-5 pb-5">
+        <ul className="flex flex-col gap-3">
           {post.images.map((image, index) => (
             <li key={image.imageId}>
               <img
@@ -268,18 +268,18 @@ function PostContent({ post, onLikeChanged, onImageError }: PostContentProps) {
                 alt={`글 사진 ${post.images.length}장 중 ${index + 1}번째`}
                 loading="lazy"
                 onError={onImageError}
-                className="max-h-[32rem] w-full rounded-control border border-line bg-fill object-contain"
+                className="max-h-[32rem] w-full rounded-sheet bg-fill object-contain"
               />
             </li>
           ))}
         </ul>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-3">
+      <div className="flex flex-wrap items-center gap-2">
         <LikeButton post={post} onChanged={onLikeChanged} />
         <a href="#comments" className="inline-flex min-h-11 items-center gap-1 text-base text-ink-muted hover:text-ink">
           <Icon name="chat" size={18} />
-          댓글 <span className="font-mono tabular-nums">{post.commentCount}</span>
+          댓글 <span className="tabular-nums">{post.commentCount}</span>
         </a>
       </div>
     </article>
@@ -297,7 +297,7 @@ function LikeButton({ post, onChanged }: { post: CommunityPostDetail; onChanged:
     <>
       <Icon name="heart" size={20} fill={liked ? 'currentColor' : 'none'} />
       <span>좋아요</span>
-      <span className="font-mono tabular-nums">{post.likeCount}</span>
+      <span className="tabular-nums">{post.likeCount}</span>
     </>
   );
 

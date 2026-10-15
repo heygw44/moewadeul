@@ -36,7 +36,7 @@ import {
 
 type MemoryFormPageProps = { mode: 'create' } | { mode: 'edit'; memoryId: number };
 
-const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-accent underline underline-offset-2';
+const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-ink underline underline-offset-2';
 
 export function MemoryFormPage(props: MemoryFormPageProps) {
   const session = useSession();

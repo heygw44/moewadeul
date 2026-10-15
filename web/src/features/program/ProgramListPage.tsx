@@ -4,14 +4,15 @@ import type { ProgramListStatus } from '../../api/programs';
 import type { ProgramSummary } from '../../api/types';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
-import { HubLayout, ListPanel } from '../../components/HubLayout';
+import { buttonClassName } from '../../components/buttonClass';
+import { HubLayout } from '../../components/HubLayout';
 import { EmptyState } from '../../components/EmptyState';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
-import { MetaLine, StatusText } from '../../components/StatusText';
+import { StatusText } from '../../components/StatusText';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { formatKstDateTime, kstDateBlock } from '../../lib/datetime';
+import { formatKstTime, kstDateBlock } from '../../lib/datetime';
 import { useSession } from '../member/session';
 import { feeText, PROGRAM_FILTERS, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { ProgramAside } from './ProgramAside';
@@ -19,8 +20,8 @@ import { usePagedList } from './usePagedList';
 
 type ProgramFilter = ProgramListStatus | 'ALL';
 
-const SECONDARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
+const SECONDARY_LINK_CLASS = buttonClassName('secondary');
+const KST_MONTH = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit' });
 
 function fetchPrograms(filter: ProgramFilter, page: number, signal?: AbortSignal) {
   return listPrograms(filter === 'ALL' ? undefined : filter, page, signal);
@@ -67,40 +68,52 @@ export function ProgramListPage() {
         </div>
       )}
       <div aria-busy={current === null}>
-        <ListPanel header="시작일 빠른 순">
-          {current === null ? (
-            showSkeleton ? (
-              Array.from({ length: 3 }, (_, index) => (
-                <li key={index} className="flex gap-4 px-4 py-4">
-                  <Skeleton className="h-16 w-14 shrink-0" />
-                  <div className="flex flex-1 flex-col gap-2">
-                    <Skeleton className="h-5 w-1/2" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </div>
+        {current === null ? (
+          showSkeleton ? (
+            <ul className="flex flex-col gap-1">
+              {Array.from({ length: 3 }, (_, index) => (
+                <li key={index} className="flex flex-col gap-2 rounded-control bg-surface px-5 py-5">
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-4 w-2/3" />
                 </li>
-              ))
-            ) : null
-          ) : current.items.length === 0 ? (
-            current.error ? null : (
-              <li>
-                <ProgramEmpty filtered={filter !== 'ALL'} onReset={() => setFilter('ALL')} />
-              </li>
-            )
-          ) : (
-            <>
-              {current.items.map((item) => (
-                <ProgramRow key={item.programId} item={item} />
               ))}
-              {current.hasNext && (
-                <li className="p-2">
-                  <Button variant="ghost" fullWidth loading={loadingMore} onClick={() => void loadMore()}>
-                    더 보기
-                  </Button>
-                </li>
-              )}
-            </>
-          )}
-        </ListPanel>
+            </ul>
+          ) : null
+        ) : current.items.length === 0 ? (
+          current.error ? null : <ProgramEmpty filtered={filter !== 'ALL'} onReset={() => setFilter('ALL')} />
+        ) : (
+          <>
+            {groupByMonth(current.items).map((group) => (
+              <section
+                key={group.key}
+                aria-labelledby={`programs-${group.key}`}
+                className="grid gap-3 py-5 first:pt-0 lg:grid-cols-[120px_1fr] lg:gap-8"
+              >
+                <h2
+                  id={`programs-${group.key}`}
+                  className="text-[26px] leading-none font-extrabold tracking-[-0.03em] text-ink lg:text-[32px]"
+                >
+                  {group.label}
+                  <span className="mt-2 block text-sm font-normal tracking-normal text-ink-muted">
+                    행사 {group.items.length}개
+                  </span>
+                </h2>
+                <ul className="flex flex-col gap-1">
+                  {group.items.map((item, index) => (
+                    <ProgramRow key={item.programId} item={item} shaded={index % 2 === 1} />
+                  ))}
+                </ul>
+              </section>
+            ))}
+            {current.hasNext && (
+              <div className="pt-2">
+                <Button variant="secondary" fullWidth loading={loadingMore} onClick={() => void loadMore()}>
+                  더 보기
+                </Button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </HubLayout>
   );
@@ -123,39 +136,55 @@ function ProgramEmpty({ filtered, onReset }: { filtered: boolean; onReset: () =>
 }
 
 
-function ProgramRow({ item }: { item: ProgramSummary }) {
+// 받은 행사를 시작일의 한국 달로 묶는다. 서버가 시작일 빠른 순으로 주므로 순서는 그대로 둔다.
+function groupByMonth(items: ProgramSummary[]): { key: string; label: string; items: ProgramSummary[] }[] {
+  const groups: { key: string; label: string; items: ProgramSummary[] }[] = [];
+  for (const item of items) {
+    const key = KST_MONTH.format(new Date(item.startAt));
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) last.items.push(item);
+    else groups.push({ key, label: kstDateBlock(item.startAt).month, items: [item] });
+  }
+  return groups;
+}
+
+// 행사 하나를 띠 한 줄로 보여 준다. 왼쪽부터 시작 날짜·요일·시각, 제목과 장소, 상태, 남은 자리와 참가비다.
+// 이웃한 띠는 면 색을 번갈아 칠해 선 없이 나눈다.
+function ProgramRow({ item, shaded }: { item: ProgramSummary; shaded: boolean }) {
   const status = PROGRAM_STATUS_META[item.status];
   const date = kstDateBlock(item.startAt);
-  const seats = (
-    <>
-      <span className="text-sm text-ink">
-        남은 자리 <span className="font-mono tabular-nums">{seatsText(item.remainingSeats, item.capacity)}</span>
-      </span>
-      <span className="font-mono text-sm tabular-nums text-ink">{feeText(item.fee)}</span>
-    </>
-  );
+  const monthNumber = date.month.replace('월', '').padStart(2, '0');
   return (
     <li>
-      <Link to={`/programs/${item.programId}`} className="flex min-h-11 gap-4 px-4 py-4 hover:bg-fill">
-        <span className="flex w-14 shrink-0 flex-col items-center border-r border-line pr-3 text-center">
-          <span className="text-xs text-ink-muted">{date.month}</span>
-          <span className="font-mono text-xl tabular-nums text-ink">{date.day}</span>
-          <span className="text-xs text-ink-muted">{date.weekday}</span>
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="break-words text-lg font-semibold text-ink">{item.title}</span>
-          <MetaLine
-            items={[<StatusText tone={status.tone}>{status.label}</StatusText>, item.overnight && '숙박', item.locationText]}
-          />
-          <span className="font-mono text-sm tabular-nums text-ink-muted">
-            {formatKstDateTime(item.startAt)} ~ {formatKstDateTime(item.endAt)}
+      <Link
+        to={`/programs/${item.programId}`}
+        className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-control px-4 py-3.5 transition-colors hover:bg-fill-strong lg:min-h-22 lg:grid-cols-[88px_1fr_auto_96px] lg:gap-x-5 lg:px-5 ${shaded ? 'bg-fill' : 'bg-surface'}`}
+      >
+        <span className="col-span-2 flex items-baseline gap-2 lg:col-span-1 lg:flex-col lg:gap-0">
+          <b className="text-lg font-extrabold tracking-[-0.03em] text-ink tabular-nums lg:text-2xl">
+            {monthNumber}.{date.day.padStart(2, '0')}
+          </b>
+          <span className="text-[13px] text-ink-muted tabular-nums">
+            {date.weekday}요일 {formatKstTime(item.startAt)}
           </span>
+        </span>
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <b className="break-words text-lg leading-snug font-bold text-ink">{item.title}</b>
           <span className="text-sm text-ink-muted">
-            신청 {formatKstDateTime(item.applyOpenAt)} ~ {formatKstDateTime(item.applyCloseAt)}
+            {item.locationText}
+            {item.overnight ? ' · 숙박' : ' · 당일'}
           </span>
-          <span className="mt-1 flex flex-col gap-1 md:hidden">{seats}</span>
         </span>
-        <span className="hidden w-32 shrink-0 flex-col gap-1 text-right md:flex">{seats}</span>
+        <span className="col-start-1 row-start-3 lg:col-start-auto lg:row-start-auto">
+          <StatusText tone={status.tone}>{status.label}</StatusText>
+        </span>
+        <span className="col-start-2 row-span-2 row-start-2 flex flex-col text-right tabular-nums lg:col-start-auto lg:row-span-1 lg:row-start-auto">
+          <b className="text-[17px] text-ink">
+            <span className="sr-only">남은 자리 </span>
+            {seatsText(item.remainingSeats, item.capacity)}
+          </b>
+          <span className="text-sm text-ink-muted">{feeText(item.fee)}</span>
+        </span>
       </Link>
     </li>
   );

@@ -4,6 +4,7 @@ import type { MyProgramApplicationItem, ProgramApplicationStatus } from '../../a
 import { Link, navigate, useLocation } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
+import { buttonClassName } from '../../components/buttonClass';
 import { EmptyState } from '../../components/EmptyState';
 import { ListPanel } from '../../components/HubLayout';
 import { Notice } from '../../components/Notice';
@@ -77,7 +78,7 @@ export function MyProgramApplicationsPage() {
                   filter === 'ALL' && (
                     <Link
                       to="/programs"
-                      className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
+                      className={buttonClassName('secondary')}
                     >
                       공식 행사 보기
                     </Link>
@@ -127,14 +128,14 @@ function ApplicationCard({ item, now }: { item: MyProgramApplicationItem; now: n
             pending && item.paymentDueAt && (
               <span className="text-warning">
                 남은 시간{' '}
-                <span className="font-mono tabular-nums">
+                <span className="tabular-nums">
                   {countdownText(item.paymentDueAt, now, paymentWindowSeconds(item.createdAt, item.paymentDueAt))}
                 </span>
               </span>
             ),
           ]}
         />
-        <span className="font-mono text-sm tabular-nums text-ink-muted">{formatKstDateTime(item.program.startAt)}</span>
+        <span className="text-sm tabular-nums text-ink-muted">{formatKstDateTime(item.program.startAt)}</span>
         {item.status === 'CANCELED' && item.cancelReason && (
           <span className="text-sm text-ink-muted">취소 사유: {CANCEL_REASON_LABELS[item.cancelReason]}</span>
         )}

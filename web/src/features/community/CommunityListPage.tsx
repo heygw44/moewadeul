@@ -118,7 +118,6 @@ function usePostPage(query: ListQuery) {
 }
 
 // 넓은 화면에서 머리 줄과 행이 같은 열 너비를 쓴다.
-const ROW_COLUMNS = 'md:grid md:grid-cols-[minmax(0,1fr)_8rem_6rem_3.5rem_3.5rem] md:items-center md:gap-3';
 
 export function CommunityListPage() {
   const { search } = useLocation();
@@ -208,18 +207,7 @@ export function CommunityListPage() {
 }
 
 function ListHeader() {
-  return (
-    <div className="w-full">
-      <span className="md:hidden">최신순</span>
-      <div aria-hidden="true" className={`hidden ${ROW_COLUMNS}`}>
-        <span>제목</span>
-        <span>글쓴이</span>
-        <span>작성일</span>
-        <span className="text-right">조회</span>
-        <span className="text-right">좋아요</span>
-      </div>
-    </div>
-  );
+  return <span>최신순</span>;
 }
 
 function PageOutOfRange({ onFirst }: { onFirst: () => void }) {
@@ -334,7 +322,7 @@ function CommunityAside() {
         <ul className="list-disc pl-5">
           <li>
             동행은{' '}
-            <Link to="/basecamps" className="font-semibold text-accent underline underline-offset-2">
+            <Link to="/basecamps" className="font-semibold text-ink underline underline-offset-2">
               베이스캠프
             </Link>
             에서 구해요.
@@ -386,12 +374,12 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
 
   const label = name === null ? '이 장소 글' : `${name} 글`;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 border-y border-line py-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 rounded-control bg-fill py-1 pr-1 pl-4">
       <p className="text-base font-semibold text-ink">{label}</p>
       <button
         type="button"
         onClick={onRemove}
-        className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
+        className="inline-flex min-h-11 items-center text-base font-semibold text-ink underline underline-offset-2"
       >
         전체 글 보기
       </button>
@@ -399,48 +387,47 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
   );
 }
 
-// 좁은 화면에서는 제목 한 줄과 정보 한 줄(글쓴이 · 작성일 · 조회 · 좋아요)로, 넓은 화면에서는 머리 줄과 같은 열로 보여 준다.
+// 글 하나는 흰 면 한 장이다. 왼쪽에 제목, 발췌 한 줄, 글쓴이·작성일·조회·좋아요를 두고,
+// 오른쪽에는 사진이 있으면 작은 사진을, 없으면 댓글 수를 크게 둔다. 사진이 있을 때 댓글 수는 아래 정보 줄로 옮긴다.
 function PostRow({ item }: { item: CommunityPostSummary }) {
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const thumb = item.thumbnailUrl && !thumbFailed ? item.thumbnailUrl : null;
   return (
     <li>
       <Link
         to={`/community/${item.postId}`}
-        className={`flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-fill ${ROW_COLUMNS}`}
+        className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-1.5 px-5 py-4 transition-colors hover:bg-fill lg:px-[22px] lg:py-5"
       >
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-base font-semibold text-ink">{item.title}</span>
-          {item.commentCount > 0 && (
-            <span className="shrink-0 font-mono text-sm tabular-nums text-accent-deep">
-              [<span className="sr-only">댓글 </span>
-              {item.commentCount}
-              <span className="sr-only">개</span>]
-            </span>
-          )}
-          {item.imageCount > 0 && <Icon name="image" size={16} title="사진 있음" className="shrink-0 text-ink-muted" />}
-        </span>
-        <span className="flex flex-wrap items-center gap-x-1 text-xs text-ink-muted md:contents md:text-sm">
-          <span className="min-w-0 truncate">{item.author.nickname}</span>
-          <span aria-hidden="true" className="md:hidden">
-            ·
+        <span className="flex min-w-0 flex-col gap-1.5">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-lg font-bold text-ink">{item.title}</span>
+            {item.imageCount > 0 && !thumb && (
+              <Icon name="image" size={16} title="사진 있음" className="shrink-0 text-ink-muted" />
+            )}
           </span>
-          <time dateTime={item.createdAt} className="tabular-nums">
-            {formatRelativeKst(item.createdAt)}
-          </time>
-          <span aria-hidden="true" className="md:hidden">
-            ·
-          </span>
-          <span className="tabular-nums md:text-right">
-            <span className="md:sr-only">조회 </span>
-            {item.viewCount}
-          </span>
-          <span aria-hidden="true" className="md:hidden">
-            ·
-          </span>
-          <span className="tabular-nums md:text-right">
-            <span className="md:sr-only">좋아요 </span>
-            {item.likeCount}
+          {item.excerpt && <span className="line-clamp-1 text-[15px] text-ink-muted">{item.excerpt}</span>}
+          <span className="flex flex-wrap items-center gap-x-3.5 gap-y-0.5 text-sm text-ink-muted tabular-nums">
+            <span className="min-w-0 truncate">{item.author.nickname}</span>
+            <time dateTime={item.createdAt}>{formatRelativeKst(item.createdAt)}</time>
+            <span>조회 {item.viewCount}</span>
+            <span>좋아요 {item.likeCount}</span>
+            {thumb && <span>댓글 {item.commentCount}</span>}
           </span>
         </span>
+        {thumb ? (
+          <img
+            src={thumb}
+            alt=""
+            loading="lazy"
+            onError={() => setThumbFailed(true)}
+            className="size-[72px] shrink-0 rounded-control bg-fill object-cover"
+          />
+        ) : (
+          <span className="flex shrink-0 flex-col items-end text-sm text-ink-muted tabular-nums">
+            <b className="text-xl text-ink">{item.commentCount}</b>
+            댓글
+          </span>
+        )}
       </Link>
     </li>
   );

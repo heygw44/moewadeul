@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import { deleteMemory, getMemory } from '../../api/memories';
@@ -14,18 +14,20 @@ import { Skeleton } from '../../components/Skeleton';
 import { StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
+import type { LatLng } from '../../map/types';
 import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { useSession } from '../member/session';
 import { LocationLabel } from '../spot/LocationLabel';
 import { ApproxLocationLabel } from './ApproxLocationLabel';
 import { MEMORY_STATUS_LABEL, nightsLabel, VISIBILITY_LABEL } from './memoryLabels';
 import { MemoryLikeButton } from './MemoryLikeButton';
+import { MemoryMap } from './MemoryMap';
 import { MemoryPhotoCarousel } from './MemoryPhotoCarousel';
 import { MemoryReportDialog } from './MemoryReportDialog';
 
 type LoadResult = { memoryId: number; memory: MemoryDetail } | { memoryId: number; error: unknown };
 
-const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-accent underline underline-offset-2';
+const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-ink underline underline-offset-2';
 
 export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   const session = useSession();
@@ -74,7 +76,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
       <HubLayout title="기록" breadcrumb={breadcrumb} width="narrow">
         <div aria-busy="true">
           {showSkeleton && (
-            <div className="flex flex-col gap-3 border-t border-ink pt-5">
+            <div className="flex flex-col gap-3">
               <Skeleton className="h-8 w-2/3" />
               <Skeleton className="h-40 w-full" />
             </div>
@@ -93,7 +95,6 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
         breadcrumb={breadcrumb}
         meta={<MemoryMeta memory={memory} />}
         actions={mine ? <MemoryActions memoryId={memory.memoryId} /> : <ReportAction memory={memory} />}
-        width="narrow"
       >
         <MemoryContent
           memory={memory}
@@ -158,7 +159,7 @@ function MemoryMeta({ memory }: { memory: MemoryDetail }) {
           <span aria-hidden="true">·</span>
           <Link
             to={`/spots/${memory.spot.spotId}`}
-            className="inline-flex items-center gap-1 text-accent underline underline-offset-2"
+            className="inline-flex items-center gap-1 text-ink underline underline-offset-2"
           >
             <Icon name="map" size={14} />
             장소 보기
@@ -217,6 +218,7 @@ function HiddenStatusNotice({ status }: { status: MemoryDetail['status'] }) {
   );
 }
 
+// 데스크톱은 왼쪽에 글·사진·좋아요, 오른쪽에 따라 내려오는 위치 칸을 둔다. 폰에서는 위치 칸이 아래로 간다.
 function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImageError: () => void }) {
   const position = memory.lat !== undefined && memory.lng !== undefined ? { lat: memory.lat, lng: memory.lng } : null;
   // 작성자가 아닌 사람에게는 정확한 좌표 대신 약 1km로 줄인 좌표만 온다.
@@ -227,39 +229,66 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
   // 검토 중이거나 숨긴 기록은 서버가 좋아요를 받지 않는다.
   const likeable = memory.visibility === 'PUBLIC' && (memory.status === undefined || memory.status === 'ACTIVE');
   return (
-    <div className="flex flex-col gap-4">
-      <HiddenStatusNotice status={memory.status} />
-      <article className="divide-y divide-line border-y border-t-ink border-b-line">
-        {position !== null && (
-          <div className="flex flex-col gap-1 px-5 py-4">
-            <p className="text-sm text-ink-muted">다녀온 곳 (정확한 위치, 나만 봐요)</p>
-            <LocationLabel position={position} />
-          </div>
-        )}
-        {position === null && approxPosition !== null && (
-          <div className="flex flex-col gap-1 px-5 py-4">
-            <p className="text-sm text-ink-muted">다녀온 곳 (대략 위치)</p>
-            <ApproxLocationLabel position={approxPosition} />
-          </div>
+    <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[7fr_4fr] lg:items-start lg:gap-16">
+      <article className="flex min-w-0 flex-col gap-8">
+        <HiddenStatusNotice status={memory.status} />
+        {memory.images.length > 0 && (
+          <MemoryPhotoCarousel images={memory.images} owner={memory.author.nickname} onImageError={onImageError} />
         )}
         {memory.content && (
-          <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink">{memory.content}</p>
-        )}
-        {memory.images.length > 0 && (
-          <div className="px-5 py-5">
-            <MemoryPhotoCarousel images={memory.images} owner={memory.author.nickname} onImageError={onImageError} />
-          </div>
+          <p className="max-w-[40em] whitespace-pre-wrap break-words text-[18px] leading-[1.75] text-ink">{memory.content}</p>
         )}
         {!memory.content && memory.images.length === 0 && (
-          <p className="px-5 py-5 text-sm text-ink-muted">사진도 글도 없는 기록이에요.</p>
+          <p className="text-sm text-ink-muted">사진도 글도 없는 기록이에요.</p>
         )}
         {likeable && (
-          <div className="px-5 py-4">
+          <div>
             <MemoryLikeButton memoryId={memory.memoryId} likedByMe={memory.likedByMe === true} likeCount={memory.likeCount} />
           </div>
         )}
       </article>
+      {(position !== null || approxPosition !== null) && (
+        <LocationAside memory={memory} position={position} approxPosition={approxPosition} />
+      )}
     </div>
+  );
+}
+
+// 다녀온 곳을 작은 지도와 근거 표로 보여 준다. 작성자는 정확한 위치를, 다른 사람은 약 1km로 줄인 위치를 본다.
+function LocationAside({
+  memory,
+  position,
+  approxPosition,
+}: {
+  memory: MemoryDetail;
+  position: LatLng | null;
+  approxPosition: LatLng | null;
+}) {
+  const shown = position ?? approxPosition;
+  const pins = useMemo(
+    () => (shown ? [{ id: memory.memoryId, position: shown, thumbnailUrl: memory.images[0]?.url, label: titleOf(memory) }] : []),
+    [memory, shown],
+  );
+  return (
+    <aside aria-label="다녀온 곳" className="flex flex-col gap-4 lg:sticky lg:top-24">
+      <MemoryMap pins={pins} selectedId={null} onSelect={() => {}} heightClass="h-56" />
+      {position !== null ? (
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-ink-muted">다녀온 곳 (정확한 위치, 나만 봐요)</p>
+          <LocationLabel position={position} />
+        </div>
+      ) : (
+        approxPosition !== null && (
+          <>
+            <div className="flex flex-col gap-1">
+              <p className="text-sm text-ink-muted">다녀온 곳 (대략 위치)</p>
+              <ApproxLocationLabel position={approxPosition} />
+            </div>
+            <p className="text-sm text-ink-muted">공개 기록은 위치를 약 1km 범위로만 보여 줘요. 정확한 자리는 쓴 사람만 봐요.</p>
+          </>
+        )
+      )}
+    </aside>
   );
 }
 

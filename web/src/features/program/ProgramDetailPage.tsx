@@ -14,6 +14,7 @@ import type { ProgramDetail } from '../../api/types';
 import { Link } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
+import { buttonClassName } from '../../components/buttonClass';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
@@ -22,7 +23,7 @@ import { PageLayout } from '../../components/PageLayout';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { formatKstDateTime } from '../../lib/datetime';
+import { formatKstDateTime, formatKstTime, kstDateBlock } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
@@ -30,10 +31,8 @@ import { useNow } from './useNow';
 
 type LoadResult = { programId: number; detail: ProgramDetail } | { programId: number; error: unknown };
 
-const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:bg-ink-muted hover:border-ink-muted';
-const SECONDARY_LINK_CLASS =
-  'inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong';
+const LINK_BUTTON_CLASS = buttonClassName('primary');
+const SECONDARY_LINK_CLASS = buttonClassName('secondary');
 
 export function ProgramDetailPage({ programId }: { programId: number }) {
   const session = useSession();
@@ -120,6 +119,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
 
   return (
     <PageLayout
+      wide
       title={detail?.title ?? '공식 행사'}
       breadcrumb={<BackLink to="/programs">공식 행사</BackLink>}
       meta={meta}
@@ -131,13 +131,16 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
 
 function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged: () => void }) {
   return (
-    <div className="flex flex-col gap-4">
-      <article className="flex flex-col gap-3 border-t border-ink pt-5">
+    // 데스크톱은 왼쪽에 행사 내용, 오른쪽에 따라 내려오는 신청 상자를 둔다. 폰에서는 신청 상자가 화면 아래에 붙는다.
+    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[7fr_4fr] lg:items-start lg:gap-16">
+      <article className="flex flex-col gap-5">
         {detail.status === 'CANCELED' && (
           <Notice tone="danger" title="관리자가 행사를 취소했어요">
             <p>신청한 회원에게 취소 알림을 보냈어요. 결제한 금액은 환불돼요.</p>
           </Notice>
         )}
+
+        <SummaryCells detail={detail} />
 
         <Evidence
           items={[
@@ -146,7 +149,7 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
               label: '장소',
               value:
                 detail.spotId !== null ? (
-                  <Link to={`/spots/${detail.spotId}`} className="font-sans text-accent underline underline-offset-2">
+                  <Link to={`/spots/${detail.spotId}`} className="font-sans text-ink underline underline-offset-2">
                     {detail.locationText}
                   </Link>
                 ) : (
@@ -167,10 +170,74 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
           <p className="text-sm text-ink-muted">숙박 행사는 본인확인을 마친 회원만 신청할 수 있어요.</p>
         )}
 
-        <p className="whitespace-pre-line text-base text-ink">{detail.description}</p>
+        <p className="mt-2 max-w-[40em] whitespace-pre-line text-[17px] leading-[1.75] text-ink">{detail.description}</p>
       </article>
 
       {detail.status !== 'CANCELED' && <ActionArea detail={detail} onChanged={onChanged} />}
+    </div>
+  );
+}
+
+// 제목 아래 네 칸 요약이다. 날짜, 시작 시각, 참가비, 남은 자리를 크게 보여 준다. 자세한 값은 아래 근거 표에 있다.
+function SummaryCells({ detail }: { detail: ProgramDetail }) {
+  const start = kstDateBlock(detail.startAt);
+  const cells = [
+    { label: '날짜', value: `${start.month} ${start.day}일 (${start.weekday})` },
+    { label: '시작 시각', value: formatKstTime(detail.startAt) },
+    { label: '참가비', value: feeText(detail.fee) },
+    { label: '남은 자리', value: seatsText(detail.remainingSeats, detail.capacity) },
+  ];
+  return (
+    <dl className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+      {cells.map((cell) => (
+        <div key={cell.label} className="flex flex-col gap-0.5 rounded-control bg-surface px-3.5 py-3">
+          <dt className="text-[13px] text-ink-muted">{cell.label}</dt>
+          <dd className="text-[17px] font-bold text-ink tabular-nums">{cell.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+// 결제 대기 중의 남은 시간이다. 큰 숫자와 함께, 결제 기한 전체에서 남은 비율을 막대로 보여 준다.
+// 막대는 숫자와 같은 정보라서 스크린 리더에는 숨기고, 움직임을 줄인 설정에서도 숫자로 같은 내용을 읽을 수 있다.
+function PaymentTimer({
+  dueAt,
+  now,
+  maxSeconds,
+  expired,
+}: {
+  dueAt: string | null;
+  now: number;
+  maxSeconds: number;
+  expired: boolean;
+}) {
+  const leftSeconds = dueAt === null ? 0 : Math.min(maxSeconds, Math.max(0, (Date.parse(dueAt) - now) / 1000));
+  const ratio = maxSeconds > 0 ? leftSeconds / maxSeconds : 0;
+  return (
+    <div className="flex flex-col">
+      <StatusText tone="warning" icon="alert">
+        결제를 기다리는 중
+      </StatusText>
+      <p className="mt-1 text-sm text-ink-muted">결제를 마치면 신청이 확정돼요.</p>
+      {dueAt !== null &&
+        (expired ? (
+          <p className="mt-4 text-base font-semibold text-ink">결제 기한이 지났어요. 곧 이 자리가 다시 열려요.</p>
+        ) : (
+          <>
+            <p className="mt-3 text-[36px] leading-none font-extrabold tracking-[-0.04em] text-ink tabular-nums lg:text-[56px]">
+              <span className="sr-only">남은 시간 </span>
+              {countdownText(dueAt, now, maxSeconds)}
+            </p>
+            <span aria-hidden="true" className="mt-3 block h-1.5 overflow-hidden rounded-full bg-fill">
+              <i
+                className="block h-full rounded-full bg-warning-line transition-[width] duration-1000 ease-linear motion-reduce:transition-none"
+                style={{ width: `${ratio * 100}%` }}
+              />
+            </span>
+            <p className="mt-2 text-sm text-ink-muted">남은 시간이 지나면 자리는 다음 사람에게 넘어가요.</p>
+          </>
+        ))}
     </div>
   );
 }
@@ -299,7 +366,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   return (
     <section
       aria-label="신청"
-      className="sticky bottom-(--bottom-nav-h) z-10 flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4 shadow-raise"
+      className="sticky bottom-(--bottom-nav-h) z-10 flex flex-col gap-4 rounded-sheet bg-surface p-4 shadow-raise lg:top-24 lg:bottom-auto lg:p-6 lg:shadow-none"
     >
       {notice && (
         <p role="status" className="text-sm font-semibold text-accent-deep">
@@ -310,24 +377,16 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
       {pending && (
         <>
-          <Notice tone="warning" title="결제를 기다리고 있어요">
-            {dueAt && (
-              <p>
-                {payExpired ? (
-                  '결제 기한이 지났어요. 곧 이 자리가 다시 열려요.'
-                ) : (
-                  <>
-                    남은 시간{' '}
-                    <span className="font-mono text-base tabular-nums">{countdownText(dueAt, now, detail.paymentDeadlineMinutes * 60)}</span>
-                  </>
-                )}
-              </p>
-            )}
-            <p className="mt-1">
-              {detail.fee === 0 ? '참가비가 없는 행사예요.' : `참가비는 ${feeText(detail.fee)}이에요.`} 시연용 결제라서 실제로 돈이
-              나가지 않아요.
-            </p>
-          </Notice>
+          <PaymentTimer
+            dueAt={dueAt}
+            now={now}
+            maxSeconds={detail.paymentDeadlineMinutes * 60}
+            expired={payExpired}
+          />
+          <p className="text-sm text-ink-muted">
+            {detail.fee === 0 ? '참가비가 없는 행사예요.' : `참가비는 ${feeText(detail.fee)}이에요.`} 시연용 결제라서 실제로 돈이
+            나가지 않아요.
+          </p>
           <Button
             fullWidth
             loading={busy === 'pay'}
@@ -447,7 +506,7 @@ function ActionError({ title, error }: { title: string; error: ApiError }) {
       <p>{error.message}</p>
       {error.code === 'TRUST_LEVEL_INSUFFICIENT' && (
         <p className="mt-2">
-          <Link to="/identity-verification" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
+          <Link to="/identity-verification" className="inline-flex min-h-11 items-center text-ink underline underline-offset-2">
             본인확인하기
           </Link>
         </p>

@@ -29,7 +29,7 @@ export function MemoryGrid({ items, selectedId }: { items: MemoryCellItem[]; sel
                 />
               ) : (
                 <span className="flex h-full w-full flex-col justify-between p-2 text-left">
-                  <span aria-hidden="true" className="font-mono text-xs tabular-nums text-ink">{formatLocalDate(item.visitedDate)}</span>
+                  <span aria-hidden="true" className="text-xs tabular-nums text-ink">{formatLocalDate(item.visitedDate)}</span>
                   <span className="text-sm font-semibold text-ink">
                     <span className="sr-only">{memoryCellLabel(item)}. </span>
                     <span aria-hidden="true">{nightsLabel(item.nights)}</span>

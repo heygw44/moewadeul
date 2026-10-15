@@ -13,7 +13,7 @@ export function ApproxLocationLabel({ position }: { position: LatLng }) {
     return <p className="break-keep wrap-break-word text-base text-ink">{lookup.name}</p>;
   }
   return (
-    <p className="font-mono text-sm tabular-nums text-ink">
+    <p className="text-sm tabular-nums text-ink">
       {position.lat.toFixed(2)}, {position.lng.toFixed(2)}
     </p>
   );
