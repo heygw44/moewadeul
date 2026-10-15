@@ -3,20 +3,16 @@ import { toUserMessage } from '../../api/errors';
 import { fetchMyTrust } from '../../api/trust';
 import type { Me, MyTrust } from '../../api/types';
 import { Link, navigate } from '../../app/router';
-import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
-import { Evidence } from '../../components/Evidence';
-import { AsideSection } from '../../components/HubLayout';
+import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
-import { PageCard, PageLayout } from '../../components/PageLayout';
+import { BoardSection, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { MySoloTripsCard } from '../trip/MySoloTripsCard';
-import { trustLevelBadge } from './memberLabels';
+import { MemberBoard, MemberBoardTag, MEMBER_BOARD_LINK_CLASS } from './MemberBoard';
 import { withNext } from './nextPath';
 import { useSession } from './session';
-
-const SHORTCUT_LINK_CLASS = 'inline-flex min-h-11 items-center text-base font-semibold text-accent hover:text-accent-strong';
 
 export function MyPage() {
   const session = useSession();
@@ -41,89 +37,74 @@ export function MyPage() {
 
   const me = session.me;
   return (
-    <PageLayout title="내 정보" aside={<ShortcutAside me={me} onLogout={() => void session.logout()} />}>
-      <AccountCard me={me} />
+    <PageLayout title="내 정보" titleInContent aside={<ShortcutAside me={me} onLogout={() => void session.logout()} />}>
       <TrustCard me={me} />
+      <AccountCard me={me} />
       <MySoloTripsCard />
     </PageLayout>
   );
 }
 
+const SHORTCUT_ROW_CLASS =
+  'flex min-h-14 w-full items-center justify-between gap-3 border-t border-line px-5 text-left text-base font-bold text-ink first:border-t-0 hover:bg-fill';
+
 function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
+  const links = [
+    { to: '/me/settings', label: '계정 설정' },
+    { to: '/me/basecamps', label: '내 베이스캠프' },
+    { to: '/me/memories', label: '내 기록 지도' },
+    { to: '/me/program-applications', label: '내 행사 신청' },
+    { to: '/me/companion-reviews', label: '동행 후기' },
+    ...(me.role === 'ADMIN' ? [{ to: '/admin/reports', label: '관리자' }] : []),
+    { to: `/members/${me.memberId}`, label: '다른 회원에게 보이는 내 프로필' },
+  ];
   return (
-    <AsideSection title="바로 가기">
-      <ul>
-        <li>
-          <Link to="/me/settings" className={SHORTCUT_LINK_CLASS}>
-            계정 설정
+    <BoardSection title="바로 가기">
+      {/* 안내판의 행처럼 링크마다 한 줄을 차지하고 오른쪽에 화살표를 둔다. */}
+      <nav aria-label="바로 가기" className="flex flex-col">
+        {links.map((link) => (
+          <Link key={link.to} to={link.to} className={SHORTCUT_ROW_CLASS}>
+            <span className="min-w-0 break-words">{link.label}</span>
+            <Icon name="chevronRight" size={18} className="shrink-0 text-ink-muted" />
           </Link>
-        </li>
-        <li>
-          <Link to="/me/basecamps" className={SHORTCUT_LINK_CLASS}>
-            내 베이스캠프
-          </Link>
-        </li>
-        <li>
-          <Link to="/me/memories" className={SHORTCUT_LINK_CLASS}>
-            내 기록 지도
-          </Link>
-        </li>
-        <li>
-          <Link to="/me/program-applications" className={SHORTCUT_LINK_CLASS}>
-            내 행사 신청
-          </Link>
-        </li>
-        <li>
-          <Link to="/me/companion-reviews" className={SHORTCUT_LINK_CLASS}>
-            동행 후기
-          </Link>
-        </li>
-        {me.role === 'ADMIN' && (
-          <li>
-            <Link to="/admin/reports" className={SHORTCUT_LINK_CLASS}>
-              관리자
-            </Link>
-          </li>
-        )}
-        <li>
-          <Link to={`/members/${me.memberId}`} className={SHORTCUT_LINK_CLASS}>
-            다른 회원에게 보이는 내 프로필
-          </Link>
-        </li>
-      </ul>
-      {/* 데스크톱 머리글에는 로그아웃이 있어서 여기서는 모바일에만 둔다. 모바일 머리글에는 계정 자리가 없다. */}
-      <div className="lg:hidden">
-        <button
-          type="button"
-          onClick={onLogout}
-          className="inline-flex min-h-11 items-center text-base font-semibold text-accent hover:underline"
-        >
+        ))}
+        {/* 데스크톱 머리글에는 로그아웃이 있어서 여기서는 모바일에만 둔다. 모바일 머리글에는 계정 자리가 없다. */}
+        <button type="button" onClick={onLogout} className={`${SHORTCUT_ROW_CLASS} lg:hidden`}>
           로그아웃
         </button>
-      </div>
-    </AsideSection>
+      </nav>
+    </BoardSection>
   );
 }
 
 function AccountCard({ me }: { me: Me }) {
   return (
-    <PageCard title="계정">
-      <Evidence
-        items={[
-          { label: '닉네임', value: me.nickname },
-          { label: '이메일', value: me.email },
-        ]}
-      />
-      <p className="text-sm text-ink-muted">이메일은 나만 볼 수 있어요.</p>
+    <BoardSection title="계정">
+      <dl className="flex flex-col">
+        <BoardRow label="닉네임" value={me.nickname} />
+        <BoardRow label="이메일 · 나만 볼 수 있어요" value={me.email} />
+      </dl>
       {me.status === 'UNVERIFIED' && (
-        <Notice tone="warning" title="이메일 인증이 필요해요">
-          <p>인증을 마치면 후기를 쓰고 박지를 제보할 수 있어요.</p>
-          <Link to="/verify-email" className="mt-1 inline-flex min-h-11 items-center font-semibold text-accent">
-            이메일 인증하기
-          </Link>
-        </Notice>
+        <div className="border-t border-line p-4">
+          <Notice tone="warning" title="이메일 인증이 필요해요">
+            <p>인증을 마치면 후기를 쓰고 박지를 제보할 수 있어요.</p>
+            <Link to="/verify-email" className="mt-1 inline-flex min-h-11 items-center font-semibold text-accent">
+              이메일 인증하기
+            </Link>
+          </Notice>
+        </div>
       )}
-    </PageCard>
+    </BoardSection>
+  );
+}
+
+// 판 안의 "라벨 — 굵은 값" 한 줄이다. 값이 길면 라벨 아래로 내려간다.
+function BoardRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line px-5 py-4 first:border-t-0">
+      <dt className="text-base text-ink-muted">{label}</dt>
+      <dd className="min-w-0 break-all text-base font-bold text-ink">{value}</dd>
+    </div>
   );
 }
 
@@ -151,23 +132,32 @@ function TrustCard({ me }: { me: Me }) {
   const current = result?.key === key ? result : null;
   const trust = current && 'trust' in current ? current.trust : null;
   const error = current && 'error' in current ? current.error : null;
-  const badge = trustLevelBadge(trust?.trustLevel ?? me.trustLevel);
+  const level = trust?.trustLevel ?? me.trustLevel;
   const next = trust?.nextLevel;
 
   return (
-    <PageCard title="신뢰 단계">
-      <StatusText tone={badge.tone} icon={badge.icon}>
-        {badge.label}
-      </StatusText>
+    <>
+      <MemberBoard
+        nickname={me.nickname}
+        trustLevel={level}
+        caption={me.status === 'UNVERIFIED' ? '이메일 인증 전' : undefined}
+        aside={
+          me.identityVerified ? (
+            <MemberBoardTag>
+              <Icon name="check" size={16} />
+              본인확인됨
+            </MemberBoardTag>
+          ) : (
+            <Link to="/identity-verification" className={MEMBER_BOARD_LINK_CLASS}>
+              본인확인하기
+            </Link>
+          )
+        }
+      />
       {!me.identityVerified && (
-        <div className="flex flex-col items-start gap-1">
-          <p className="text-sm text-ink">
-            본인확인을 마치면 베이스캠프를 열거나 합류할 수 있어요. 성인만 할 수 있고 출생연도와 성별만 확인해요.
-          </p>
-          <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2">
-            본인확인하기
-          </Link>
-        </div>
+        <p className="text-sm text-ink-muted">
+          본인확인을 마치면 베이스캠프를 열거나 합류할 수 있어요. 성인만 할 수 있고 출생연도와 성별만 확인해요.
+        </p>
       )}
       {error && (
         <div className="flex flex-col gap-2">
@@ -182,26 +172,45 @@ function TrustCard({ me }: { me: Me }) {
         </div>
       )}
       {next && (
-        <div className="flex flex-col gap-2">
-          <p className="text-sm text-ink-muted">신뢰 단계 {next.level} 조건</p>
-          <Evidence
-            items={[
-              {
-                label: '완료한 동행',
-                value: `${next.completedCompanions.current ?? 0} / ${next.completedCompanions.required}회`,
-              },
-              {
-                label: '"다시 동행하고 싶어요"',
-                value:
-                  next.rejoinRate.current === null
-                    ? `받은 후기 없음 / ${next.rejoinRate.required}% 이상`
-                    : `${next.rejoinRate.current}% / ${next.rejoinRate.required}% 이상`,
-              },
-              { label: '최근 180일 제재', value: next.noRecentSanction ? '없음' : '있음' },
-            ]}
-          />
-        </div>
+        <BoardSection title={`신뢰 단계 ${next.level}까지`}>
+          <dl className="flex flex-col">
+            <ProgressRow
+              label="완료한 동행"
+              ratio={(next.completedCompanions.current ?? 0) / next.completedCompanions.required}
+              value={`${next.completedCompanions.current ?? 0} / ${next.completedCompanions.required}회`}
+            />
+            <ProgressRow
+              label={'"다시 동행하고 싶어요"'}
+              ratio={next.rejoinRate.current === null ? 0 : next.rejoinRate.current / next.rejoinRate.required}
+              value={
+                next.rejoinRate.current === null
+                  ? `받은 후기 없음 · ${next.rejoinRate.required}% 이상`
+                  : `${next.rejoinRate.current}% / ${next.rejoinRate.required}% 이상`
+              }
+            />
+            <ProgressRow label="최근 180일 확정 제재" value={next.noRecentSanction ? '없음' : '있음'} />
+          </dl>
+        </BoardSection>
       )}
-    </PageCard>
+    </>
+  );
+}
+
+// 다음 단계 조건 한 줄이다. 막대는 채운 정도를 눈으로 빨리 보게 하는 장식이고, 값은 글로 함께 적는다.
+// 좁은 화면에서는 막대를 라벨 아래 한 줄로 내린다.
+function ProgressRow({ label, value, ratio }: { label: string; value: string; ratio?: number }) {
+  const percent = ratio === undefined ? null : Math.round(Math.min(Math.max(ratio, 0), 1) * 100);
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 border-t border-line px-5 py-4 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_8.75rem_auto]">
+      <dt className="text-base text-ink">{label}</dt>
+      <dd className="text-right text-base font-bold tabular-nums text-ink sm:order-last">{value}</dd>
+      {percent !== null ? (
+        <dd aria-hidden="true" className="col-span-2 h-1.5 overflow-hidden rounded-control bg-fill sm:col-span-1">
+          <span className="block h-full bg-brand" style={{ width: `${percent}%` }} />
+        </dd>
+      ) : (
+        <dd aria-hidden="true" className="hidden sm:block" />
+      )}
+    </div>
   );
 }

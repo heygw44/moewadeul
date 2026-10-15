@@ -50,6 +50,7 @@ export function AdminPage({ title, current, children }: { title: string; current
   return (
     <PageLayout
       title={title}
+      description="모든 조치는 감사 로그에 남아요."
       wide
       tabs={
         <UnderlineNav label="관리자 메뉴">
@@ -61,8 +62,8 @@ export function AdminPage({ title, current, children }: { title: string; current
         </UnderlineNav>
       }
     >
-      {/* 필터와 표도 테두리 있는 카드 바탕 위에 둔다. */}
-      <div className="flex min-w-0 flex-col gap-4 rounded-sheet border border-line bg-surface p-4">{children}</div>
+      {/* 선택 칸은 바탕 위에 두고, 목록과 묶음만 흰 판으로 올린다. 화면 전체를 판 하나로 감싸면 안쪽 판이 겹쳐 보인다. */}
+      <div className="flex min-w-0 flex-col gap-4">{children}</div>
     </PageLayout>
   );
 }

@@ -31,6 +31,7 @@ import { companionTagLabel, NEGATIVE_COMPANION_TAGS, POSITIVE_COMPANION_TAGS } f
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { MemberReportDialog } from '../report/MemberReportDialog';
+import { buttonClassName } from '../../components/buttonClass';
 
 const COMMENT_MAX = 300;
 
@@ -46,8 +47,7 @@ const REJOIN_OPTIONS: ReadonlyArray<ChoiceOption<'YES' | 'NO'>> = [
   { value: 'NO', label: '아니요' },
 ];
 
-const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
+const LINK_BUTTON_CLASS = buttonClassName('secondary');
 
 function tabFromSearch(search: string): Tab {
   return new URLSearchParams(search).get('tab') === 'received' ? 'received' : 'pending';
@@ -405,7 +405,7 @@ function ReceivedTab() {
             <section
               // 공개 전 후기는 ID가 없고, 한 베이스캠프에서 여러 개가 올 수 있어서 순서로 구분한다.
               key={`sealed-${item.basecampId}-${index}`}
-              className="flex flex-col gap-2 border-t border-ink pt-5"
+              className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4 lg:p-5"
             >
               <p className="text-base text-ink">내 후기를 남기면 상대가 쓴 후기를 볼 수 있어요.</p>
               <Link to={`/basecamps/${item.basecampId}`} className={`${LINK_BUTTON_CLASS} self-start`}>

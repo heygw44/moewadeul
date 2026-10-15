@@ -6,7 +6,7 @@ import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { Notice } from '../../components/Notice';
-import { PageCard } from '../../components/PageLayout';
+import { BoardSection } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
@@ -37,64 +37,66 @@ export function MySoloTripsCard() {
   const reload = () => setAttempt((value) => value + 1);
 
   return (
-    <PageCard title="혼자 가는 일정">
-      <p className="text-sm text-ink-muted">
-        나만 보는 일정이에요. 다른 사람에게는 예상 인원 1명으로만 보여요.
-      </p>
-      {current === null ? (
-        showSkeleton && <Skeleton className="h-16 w-full" />
-      ) : 'error' in current ? (
-        <div className="flex flex-col gap-2">
-          <Notice tone="danger" title="일정을 불러오지 못했어요">
-            <p>{current.error}</p>
-          </Notice>
-          <div>
-            <Button variant="secondary" onClick={reload}>
-              다시 불러오기
-            </Button>
-          </div>
-        </div>
-      ) : current.trips.length === 0 ? (
+    <BoardSection title="혼자 가는 일정">
+      <div className="flex flex-col gap-3 px-5 py-4">
         <p className="text-sm text-ink-muted">
-          다가오는 일정이 없어요. 혼자 가는 일정은{' '}
-          <Link to="/map" className="font-semibold text-accent underline underline-offset-2">
-            지도
-          </Link>
-          에서 장소를 고른 뒤 등록할 수 있어요.
+          나만 보는 일정이에요. 다른 사람에게는 예상 인원 1명으로만 보여요.
         </p>
-      ) : (
-        <ul className="flex flex-col">
-          {current.trips.map((trip) => (
-            <li
-              key={trip.soloTripId}
-              className="flex items-center justify-between gap-3 border-t border-line py-3 first:border-t-0"
-            >
-              <div className="flex min-w-0 flex-col">
-                <Link to={`/spots/${trip.spot.spotId}`} className="truncate font-semibold text-ink hover:underline">
-                  {trip.spot.name}
-                </Link>
-                <span className="text-sm text-ink-muted">
-                  {formatLocalDate(trip.startDate)} ~ {formatLocalDate(trip.endDate)}
-                </span>
-              </div>
-              <Button variant="danger-outline" onClick={() => setDeleting(trip)}>
-                삭제
+        {current === null ? (
+          showSkeleton && <Skeleton className="h-16 w-full" />
+        ) : 'error' in current ? (
+          <div className="flex flex-col gap-2">
+            <Notice tone="danger" title="일정을 불러오지 못했어요">
+              <p>{current.error}</p>
+            </Notice>
+            <div>
+              <Button variant="secondary" onClick={reload}>
+                다시 불러오기
               </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {deleting && (
-        <DeleteTripDialog
-          trip={deleting}
-          onClose={() => setDeleting(null)}
-          onDeleted={() => {
-            setDeleting(null);
-            reload();
-          }}
-        />
-      )}
-    </PageCard>
+            </div>
+          </div>
+        ) : current.trips.length === 0 ? (
+          <p className="text-sm text-ink-muted">
+            다가오는 일정이 없어요. 혼자 가는 일정은{' '}
+            <Link to="/map" className="font-semibold text-accent underline underline-offset-2">
+              지도
+            </Link>
+            에서 장소를 고른 뒤 등록할 수 있어요.
+          </p>
+        ) : (
+          <ul className="flex flex-col">
+            {current.trips.map((trip) => (
+              <li
+                key={trip.soloTripId}
+                className="flex items-center justify-between gap-3 border-t border-line py-3 first:border-t-0"
+              >
+                <div className="flex min-w-0 flex-col">
+                  <Link to={`/spots/${trip.spot.spotId}`} className="truncate font-semibold text-ink hover:underline">
+                    {trip.spot.name}
+                  </Link>
+                  <span className="text-sm text-ink-muted">
+                    {formatLocalDate(trip.startDate)} ~ {formatLocalDate(trip.endDate)}
+                  </span>
+                </div>
+                <Button variant="danger-outline" onClick={() => setDeleting(trip)}>
+                  삭제
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {deleting && (
+          <DeleteTripDialog
+            trip={deleting}
+            onClose={() => setDeleting(null)}
+            onDeleted={() => {
+              setDeleting(null);
+              reload();
+            }}
+          />
+        )}
+      </div>
+    </BoardSection>
   );
 }
 

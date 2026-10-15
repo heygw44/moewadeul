@@ -15,6 +15,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { AuthLayout } from '../member/AuthLayout';
 import { safeNextPath, withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
+import { buttonClassName } from '../../components/buttonClass';
 
 // 서버가 받는 출생연도 하한이다.
 const MIN_BIRTH_YEAR = 1900;
@@ -32,8 +33,7 @@ function isFieldName(field: string): field is FieldName {
   return field === 'birthYear' || field === 'gender' || field === 'demoIdentityKey';
 }
 
-const linkButtonClass =
-  'inline-flex min-h-11 w-full items-center justify-center rounded-control border border-ink bg-ink px-4 font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
+const linkButtonClass = `${buttonClassName('primary')} w-full`;
 
 export function IdentityVerificationPage() {
   const { search } = useLocation();
@@ -132,10 +132,15 @@ export function IdentityVerificationPage() {
     setFormError(toUserMessage(error));
   }
 
+  // 다른 인증 화면의 아래 줄 링크와 같은 모양으로 두어 판 왼쪽 끝과 맞춘다.
   const footer = (
-    <Button variant="ghost" onClick={() => void session.logout()}>
+    <button
+      type="button"
+      onClick={() => void session.logout()}
+      className="inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2 hover:text-accent-strong"
+    >
       로그아웃
-    </Button>
+    </button>
   );
 
   if (session.status !== 'authenticated' || !session.me) {

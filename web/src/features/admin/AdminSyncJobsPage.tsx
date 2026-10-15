@@ -11,7 +11,11 @@ import type { StatusTone } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
 import { AdminPage } from './AdminGate';
+import { AdminSegments } from './AdminSegments';
 import { adminErrorMessage } from './adminErrors';
+
+// 실행 기록에서 종류를 가리지 않는 칸의 값이다.
+const ALL_JOBS = 'ALL';
 
 const JOB_TYPES: readonly SyncJobType[] = ['GOCAMPING', 'FOREST', 'FOREST_STANDARD', 'PARK_BOUNDARY', 'BAKJI_REJUDGE'];
 
@@ -202,27 +206,18 @@ function SyncJobs() {
 
       <section className="flex flex-col gap-4" aria-label="실행 기록">
         <h2 className="text-lg font-semibold text-ink">실행 기록</h2>
-        <div role="group" aria-label="작업 종류" className="flex flex-wrap gap-2">
-          {[null, ...JOB_TYPES].map((jobType) => (
-            <button
-              key={jobType ?? 'ALL'}
-              type="button"
-              aria-pressed={jobType === filter}
-              onClick={() => {
-                if (jobType === filter) return;
-                setHistory(null);
-                setFilter(jobType);
-              }}
-              className={`inline-flex min-h-11 items-center rounded-control border px-4 font-semibold ${
-                jobType === filter
-                  ? 'border-accent bg-accent-soft text-accent-deep'
-                  : 'border-line bg-surface text-ink hover:bg-fill'
-              }`}
-            >
-              {jobType === null ? '전체' : JOB_LABELS[jobType]}
-            </button>
-          ))}
-        </div>
+        <AdminSegments
+          label="작업 종류"
+          segments={[
+            { value: ALL_JOBS, label: '전체' },
+            ...JOB_TYPES.map((jobType) => ({ value: jobType, label: JOB_LABELS[jobType] })),
+          ]}
+          value={filter ?? ALL_JOBS}
+          onChange={(value) => {
+            setHistory(null);
+            setFilter(value === ALL_JOBS ? null : value);
+          }}
+        />
         {history?.error && (
           <div role="alert" className="flex flex-col gap-3">
             <Notice tone="danger" title="실행 기록을 불러오지 못했어요">
@@ -242,7 +237,7 @@ function SyncJobs() {
           <EmptyState framed title="실행 기록이 없어요" description="작업을 실행하면 여기에 기록이 쌓여요." />
         )}
         {history !== null && history.items.length > 0 && (
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface">
             {history.items.map((run) => (
               <HistoryRow key={run.jobRunId} run={run} />
             ))}
@@ -331,13 +326,17 @@ function JobCard({
             {latest.finishedAt ? formatKstDateTime(latest.finishedAt) : '-'}
           </dd>
           <dt className="text-ink-muted">처리</dt>
-          <dd className="font-mono tabular-nums text-ink">{formatCount(latest.processedCount)}건</dd>
+          <dd className="text-ink-muted">
+            <Count value={latest.processedCount} />
+          </dd>
           <dt className="text-ink-muted">건너뜀</dt>
-          <dd className="font-mono tabular-nums text-ink">{formatCount(latest.skippedCount)}건</dd>
+          <dd className="text-ink-muted">
+            <Count value={latest.skippedCount} />
+          </dd>
         </dl>
       )}
       {latest?.status === 'FAILED' && latest.errorMessage && (
-        <p className="break-words rounded-control bg-fill px-3 py-2 text-sm text-ink">{latest.errorMessage}</p>
+        <p className="break-words border-l-2 border-danger pl-3 text-sm text-ink">{latest.errorMessage}</p>
       )}
       {jobType === 'PARK_BOUNDARY' && (
         <p className="text-sm text-ink-muted">성공하면 박지 재판정이 이어서 실행돼요</p>
@@ -381,31 +380,37 @@ function JobCard({
   );
 }
 
+// 실행 한 번을 목록판의 한 행으로 적는다. 작업과 상태를 앞에 두고, 시각과 건수를 한 줄로 잇는다.
 function HistoryRow({ run }: { run: SyncJobRun }) {
   return (
-    <li className="flex min-w-0 flex-col gap-2 rounded-sheet border border-line bg-surface p-4">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-ink-muted">작업</dt>
-        <dd className="font-semibold text-ink">{JOB_LABELS[run.jobType]}</dd>
-        <dt className="text-ink-muted">상태</dt>
-        <dd>
-          <RunStatus status={run.status} />
-        </dd>
-        <dt className="text-ink-muted">시작</dt>
-        <dd className="font-mono tabular-nums text-ink">{formatKstDateTime(run.startedAt)}</dd>
-        <dt className="text-ink-muted">끝남</dt>
-        <dd className="font-mono tabular-nums text-ink">{run.finishedAt ? formatKstDateTime(run.finishedAt) : '-'}</dd>
-        <dt className="text-ink-muted">처리</dt>
-        <dd className="font-mono tabular-nums text-ink">{formatCount(run.processedCount)}건</dd>
-        <dt className="text-ink-muted">건너뜀</dt>
-        <dd className="font-mono tabular-nums text-ink">{formatCount(run.skippedCount)}건</dd>
-        {run.errorMessage && (
-          <>
-            <dt className="text-ink-muted">오류</dt>
-            <dd className="min-w-0 break-words text-ink">{run.errorMessage}</dd>
-          </>
-        )}
-      </dl>
+    <li className="flex min-w-0 flex-col gap-1 px-4 py-3">
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-base font-bold text-ink">{JOB_LABELS[run.jobType]}</span>
+        <RunStatus status={run.status} />
+      </p>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-muted">
+        <span className="font-mono tabular-nums">
+          {formatKstDateTime(run.startedAt)}
+          {run.finishedAt && ` ~ ${formatKstDateTime(run.finishedAt)}`}
+        </span>
+        <span>
+          처리 <Count value={run.processedCount} />
+        </span>
+        <span>
+          건너뜀 <Count value={run.skippedCount} />
+        </span>
+      </p>
+      {run.errorMessage && <p className="min-w-0 break-words border-l-2 border-danger pl-3 text-sm text-ink">{run.errorMessage}</p>}
     </li>
+  );
+}
+
+// 건수는 굵은 숫자에 작은 단위를 붙인다.
+function Count({ value }: { value: number }) {
+  return (
+    <span className="whitespace-nowrap">
+      <b className="font-mono font-extrabold tabular-nums text-ink">{formatCount(value)}</b>
+      <span className="text-xs font-semibold">건</span>
+    </span>
   );
 }

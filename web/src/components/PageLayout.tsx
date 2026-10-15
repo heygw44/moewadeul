@@ -33,3 +33,14 @@ export function PageCard({ title, children }: { title: string; children: ReactNo
     </section>
   );
 }
+
+// 안내판의 행 목록이다. 제목은 판 바깥 위에 작은 글자로 두고, 판 안의 행은 끝에서 끝까지 1px 선으로 나눈다.
+// 판 안쪽 여백은 행마다 준다. 판에 여백을 주면 행 사이 선이 판 끝까지 닿지 않는다.
+export function BoardSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-sm font-bold text-ink-muted">{title}</h2>
+      <div className="overflow-hidden rounded-sheet border border-line bg-surface">{children}</div>
+    </section>
+  );
+}
