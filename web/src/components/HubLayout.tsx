@@ -49,7 +49,7 @@ export function HubLayout({
             {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3">
               <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="break-words text-3xl font-bold tracking-tight text-ink lg:text-4xl">{title}</h1>
+                <h1 className="break-words text-3xl font-extrabold tracking-tight text-ink lg:text-4xl">{title}</h1>
                 {description && <p className="text-base text-ink">{description}</p>}
                 {meta}
               </div>
