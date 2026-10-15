@@ -9,7 +9,7 @@ type UnderlineTabsProps<T extends string> = {
 // 탭 안쪽 여백(px-3)만큼 줄을 왼쪽으로 당겨서 첫 탭 글자가 제목과 같은 가장자리에서 시작하게 한다.
 export function UnderlineTabs<T extends string>({ label, options, value, onChange }: UnderlineTabsProps<T>) {
   return (
-    <div role="group" aria-label={label} className="-mx-3 flex gap-1 overflow-x-auto">
+    <div role="group" aria-label={label} className="flex gap-1 overflow-x-auto">
       {options.map((item) => (
         <button
           key={item.value}

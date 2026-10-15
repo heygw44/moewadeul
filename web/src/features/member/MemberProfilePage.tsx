@@ -146,10 +146,15 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
       <PageCard title="동행 기록">
         <Evidence
           items={[
-            { label: '완료한 동행', value: `${profile.completedCompanions ?? 0}회` },
+            { label: '완료한 동행', value: <Figure value={profile.completedCompanions ?? 0} unit="회" /> },
             {
               label: '"다시 동행하고 싶어요"',
-              value: summary?.rejoinRate === null || summary === undefined ? '받은 후기 없음' : `${summary.rejoinRate}%`,
+              value:
+                summary?.rejoinRate === null || summary === undefined ? (
+                  '받은 후기 없음'
+                ) : (
+                  <Figure value={summary.rejoinRate} unit="%" />
+                ),
             },
           ]}
         />
@@ -168,4 +173,14 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
 function verifiedValue(label: string | null, verified: boolean | undefined): string {
   if (label === null) return '밝히지 않음';
   return `${label} · ${verified ? '본인확인됨' : '직접 입력'}`;
+}
+
+// 동행 기록 숫자는 굵은 숫자에 작은 단위를 붙인다. 숫자를 먼저 읽게 하기 위해서다.
+function Figure({ value, unit }: { value: number; unit: string }) {
+  return (
+    <span className="whitespace-nowrap">
+      <b className="text-base font-extrabold tabular-nums text-ink">{value}</b>
+      <span className="text-xs font-semibold text-ink-muted">{unit}</span>
+    </span>
+  );
 }
