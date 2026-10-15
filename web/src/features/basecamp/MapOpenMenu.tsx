@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import type { ReactNode } from 'react';
 import { toUserMessage } from '../../api/errors';
 import { fetchSpotsNearby } from '../../api/spots';
@@ -20,8 +21,7 @@ const SAME_PLACE_RADIUS_KM = 0.05;
 
 const GUIDE_LINK_CLASS = 'inline-flex min-h-11 items-center text-accent underline underline-offset-2';
 
-const MEMORY_LINK_CLASS =
-  'inline-flex min-h-11 w-full items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
+const MEMORY_LINK_CLASS = `${buttonClassName('secondary')} w-full`;
 
 // 제보 폼이 서버에 보내는 좌표와 같은 정밀도로 줄인다.
 function roundCoordinate(value: number): number {
@@ -142,7 +142,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
       onKeyDown={(event) => {
         if (event.key === 'Escape') onClose();
       }}
-      className="m-1 flex w-64 break-keep whitespace-normal max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-control border border-line bg-surface py-2 pr-1 pl-3 text-ink shadow-raise"
+      className="m-1 flex w-64 break-keep whitespace-normal max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-sheet border border-line bg-surface py-2 pr-1 pl-3 text-ink shadow-raise"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-1 pt-1">

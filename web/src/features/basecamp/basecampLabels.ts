@@ -79,6 +79,13 @@ export function unmetReasonText(reason: JoinUnmetReason, myTrustLevel: number | 
 }
 
 // 인원 표시. 예: "3/4"
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// 출발일과 돌아오는 날(YYYY-MM-DD, 한국 날짜)로 박 수를 센다.
+export function nightsBetween(startDate: string, endDate: string): number {
+  return Math.round((Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / DAY_MS);
+}
+
 export function headcountText(headcount: number, capacity: number): string {
   return `${headcount}/${capacity}`;
 }

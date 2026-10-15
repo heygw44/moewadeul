@@ -671,13 +671,6 @@ function totalCount(area: SpotsInView): number {
   return area.clusters.reduce((sum, cluster) => sum + cluster.count, 0);
 }
 
-// 목록 머리 앞에 붙는 지역 이름이다. 화면에 시·도가 여럿 걸치면 "지도에 보이는"으로 적어 개수가 화면 전체의 수임을 드러낸다.
-// 지역 이름을 아직 모르거나 바다처럼 행정구역이 없는 곳에서는 "이 지역"으로 적는다.
-function regionPhrase(label: RegionLabel | null): string {
-  if (label?.kind === 'named') return label.name;
-  if (label?.kind === 'wide') return '지도에 보이는';
-  return '이 지역';
-}
 
 // 목록 머리 띠의 제목이다. 장소 수는 띠 오른쪽에 따로 적으므로 지역 이름만 쓴다.
 function regionTitle(label: RegionLabel | null): string {
@@ -783,12 +776,14 @@ function BasecampListHeader({
 }) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
-    <h2 className="truncate text-lg font-extrabold tracking-[-0.02em]">
-      {regionPhrase(regionName)} 베이스캠프
+    <h2 className="flex items-baseline justify-between gap-3">
+      <span className="truncate text-lg font-extrabold tracking-[-0.02em] lg:text-[1.375rem]">
+        {regionTitle(regionName)}
+        <span className="sr-only"> 베이스캠프</span>
+      </span>
       {counted && (
-        <span className="tabular-nums">
-          {' '}
-          {result.items.length}
+        <span className="shrink-0 text-sm tabular-nums text-ink-muted lg:text-brand-ink">
+          베이스캠프 {result.items.length}
           {result.hasNext ? '개 이상' : '개'}
         </span>
       )}

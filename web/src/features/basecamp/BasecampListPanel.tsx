@@ -8,7 +8,7 @@ import { MetaLine, StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
 import { useSession } from '../member/session';
-import { BASECAMP_STATUS_META, headcountText, joinConditionSummary, unmetReasonText } from './basecampLabels';
+import { BASECAMP_STATUS_META, headcountText, joinConditionSummary, nightsBetween, unmetReasonText } from './basecampLabels';
 import type { BasecampsInView } from './useBasecampsInView';
 
 type BasecampListPanelProps = {
@@ -36,7 +36,7 @@ export function BasecampListPanel({
   return (
     <div className="flex flex-col">
       {spotFilterId !== null && (
-        <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas px-4 py-1">
+        <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas px-4 py-1 lg:px-5">
           <p className="min-w-0 truncate text-sm text-ink">{filteredSpotName ?? '고른 장소'} 베이스캠프만 보여요</p>
           <Button variant="ghost" onClick={onClearSpotFilter} className="shrink-0 px-3">
             모든 장소 보기
@@ -47,7 +47,7 @@ export function BasecampListPanel({
       {showSkeleton && result.items.length === 0 ? (
         <div aria-busy="true" className="flex flex-col">
           {[0, 1, 2].map((index) => (
-            <div key={index} className="flex min-h-14 flex-col gap-2 border-b border-line px-4 py-3">
+            <div key={index} className="flex min-h-16 flex-col gap-2 border-b border-line px-4 py-3 lg:px-5">
               <Skeleton className="h-4 w-2/3" />
               <Skeleton className="h-3 w-1/2" />
             </div>
@@ -86,7 +86,10 @@ export function BasecampListPanel({
           )}
 
           {visible.length > 0 && (
-            <ul aria-label="이 지역의 베이스캠프">
+            <ul
+              aria-label="이 지역의 베이스캠프"
+              className="mx-3 my-3 divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface lg:mx-5"
+            >
               {visible.map((item) => (
                 <BasecampRow key={item.basecampId} item={item} />
               ))}
@@ -117,28 +120,44 @@ function BasecampRow({ item }: { item: BasecampSearchItem }) {
   const trustLevel = session.me?.trustLevel ?? null;
   const unmet = item.canApply === false ? (item.unmetReasons ?? []) : [];
 
+  const [, month, day] = item.startDate.split('-');
+  const weekday = formatLocalDate(item.startDate).match(/\((.)\)/)?.[1] ?? '';
+
+  // 왼쪽에 출발 날짜 칸, 가운데 제목과 상태·장소·박 수, 오른쪽에 자리 수를 둔다.
+  // 날짜를 칸으로 세워서 목록을 위아래로 훑으면 출발일 순서가 먼저 읽힌다.
   return (
     <li>
       <Link
         to={`/basecamps/${item.basecampId}`}
-        className="flex min-h-14 flex-col gap-1 border-b border-line px-4 py-3 hover:bg-fill focus-visible:-outline-offset-2"
+        className="grid min-h-16 grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3 hover:bg-fill focus-visible:-outline-offset-2"
       >
-        <span className="min-w-0 break-words text-base font-semibold text-ink">{item.title}</span>
-        <MetaLine
-          items={[<StatusText tone={status.tone}>{status.label}</StatusText>, <span className="truncate">{item.spot.name}</span>]}
-        />
-        <span className="flex items-center justify-between gap-2 text-sm text-ink">
-          <span className="tabular-nums">
-            {formatLocalDate(item.startDate)} ~ {formatLocalDate(item.endDate)}
+        <span className="flex flex-col items-center rounded-control border border-line py-1.5 text-center">
+          <span className="font-mono text-xl leading-none font-extrabold tabular-nums text-ink">{Number(day)}</span>
+          <span className="mt-1 text-[0.6875rem] text-ink-muted">
+            {Number(month)}월 {weekday}
           </span>
-          <span className="shrink-0 font-mono tabular-nums">{headcountText(item.headcount, item.capacity)}명</span>
         </span>
-        <span className="text-sm text-ink-muted">합류 조건: {joinConditionSummary(item.joinCondition)}</span>
-        {unmet.length > 0 && (
-          <span className="text-sm text-warning">
-            신청할 수 없어요. {unmet.map((reason) => unmetReasonText(reason, trustLevel).reason).join(' ')}
-          </span>
-        )}
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="min-w-0 break-words text-base font-bold tracking-[-0.01em] text-ink">{item.title}</span>
+          <MetaLine
+            className="text-[0.8125rem]"
+            items={[
+              <StatusText tone={status.tone}>{status.label}</StatusText>,
+              `${nightsBetween(item.startDate, item.endDate)}박`,
+            ]}
+          />
+          <span className="truncate text-[0.8125rem] text-ink">{item.spot.name}</span>
+          <span className="text-[0.8125rem] text-ink-muted">합류 조건: {joinConditionSummary(item.joinCondition)}</span>
+          {unmet.length > 0 && (
+            <span className="text-[0.8125rem] font-semibold text-warning">
+              신청할 수 없어요. {unmet.map((reason) => unmetReasonText(reason, trustLevel).reason).join(' ')}
+            </span>
+          )}
+        </span>
+        <span className="pt-0.5 font-mono text-base font-extrabold tabular-nums text-ink">
+          {headcountText(item.headcount, item.capacity)}
+          <span className="ml-0.5 text-xs font-semibold text-ink-muted">명</span>
+        </span>
       </Link>
     </li>
   );
