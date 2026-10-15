@@ -53,8 +53,8 @@
   --color-danger: #c0331b;        /* 오류·위험 행동. 흰 글자 5.6:1, soft 위 4.9:1 */
   --color-danger-soft: #fdecea;
 
-  --radius-control: 0.625rem;     /* 버튼·입력·칩·카드 10px */
-  --radius-sheet: 1rem;           /* 시트·다이얼로그·지도 화면 16px. 시트는 윗모서리에만 */
+  --radius-control: 0.375rem;     /* 버튼·입력·칩 6px. 둥글수록 UI 키트처럼 보여서 작게 둔다 */
+  --radius-sheet: 0.75rem;        /* 시트·다이얼로그·지도 위 패널 12px. 시트는 윗모서리에만 */
   /* 떠 있는 층(시트·다이얼로그·토스트·검색 후보)에만 쓴다. 가까운 그림자와 넓은 그림자를 겹쳐 종이처럼 살짝 뜨게 한다 */
   --shadow-raise: 0 1px 2px rgb(0 0 0 / 0.08), 0 8px 28px rgb(0 0 0 / 0.1);
 }

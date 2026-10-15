@@ -23,10 +23,10 @@ export function PageLayout({ wide = false, children, ...rest }: PageLayoutProps)
   );
 }
 
-// 화면 안의 한 묶음. 테두리 있는 카드 바탕 위에 글자를 둔다.
+// 화면 안의 한 묶음. 지도가 없는 화면이라 상자로 감싸지 않고, 위에 먹색 선을 그어 묶음을 나눈다.
 export function PageCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
+    <section className="flex flex-col gap-3 border-t border-ink pt-4">
       <h2 className="text-lg font-semibold text-ink">{title}</h2>
       {children}
     </section>

@@ -54,7 +54,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   let body: ReactNode;
   if (current === null) {
     body = showSkeleton ? (
-      <div className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
+      <div className="flex flex-col gap-3 border-t border-ink pt-5">
         <Skeleton className="h-6 w-1/2" />
         <Skeleton className="h-16 w-full" />
       </div>

@@ -68,7 +68,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   if (session.status !== 'authenticated' || !session.me) {
     return layout(
       showSkeleton ? (
-        <div className="rounded-sheet border border-line bg-surface p-5">
+        <div className="border-t border-ink pt-5">
           <Skeleton className="h-40 w-full" />
         </div>
       ) : null,
@@ -76,7 +76,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   }
   if (session.me.status === 'UNVERIFIED') {
     return layout(
-      <div className="rounded-sheet border border-line bg-surface p-5">
+      <div className="border-t border-ink pt-5">
         <Notice tone="warning" title="이메일 인증을 마치면 글을 쓸 수 있어요">
           <div className="flex flex-col gap-3">
             <p>메일로 받은 인증 코드만 입력하면 돼요.</p>
@@ -157,7 +157,7 @@ function EditLoader({ postId, myMemberId }: { postId: number; myMemberId: number
 
   if (result === null || notMine) {
     return showSkeleton ? (
-      <div className="rounded-sheet border border-line bg-surface p-5">
+      <div className="border-t border-ink pt-5">
         <Skeleton className="h-64 w-full" />
       </div>
     ) : null;
@@ -309,7 +309,7 @@ function PostForm(props: PostFormProps) {
       noValidate
       onSubmit={handleSubmit}
       aria-label={mode === 'create' ? '글쓰기' : '글 수정'}
-      className="divide-y divide-line rounded-sheet border border-line bg-surface"
+      className="divide-y divide-line border-y border-t-ink border-b-line"
     >
       {formError && (
         <div role="alert" className="px-5 py-5">

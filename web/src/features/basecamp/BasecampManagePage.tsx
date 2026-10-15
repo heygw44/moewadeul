@@ -382,7 +382,7 @@ function DialogButtons({
 function HeaderCard({ detail }: { detail: BasecampDetail }) {
   const status = BASECAMP_STATUS_META[detail.status];
   return (
-    <section className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-5">
+    <section className="flex flex-col gap-2 border-t border-ink pt-5">
       <h2 className="text-lg font-semibold text-ink">{detail.title}</h2>
       <div className="flex flex-wrap items-center gap-2">
         <StatusText tone={status.tone}>{status.label}</StatusText>

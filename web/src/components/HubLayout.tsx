@@ -49,8 +49,8 @@ export function HubLayout({
             {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3">
               <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="break-words text-2xl font-bold tracking-tight text-ink">{title}</h1>
-                {description && <p className="text-sm text-ink-muted">{description}</p>}
+                <h1 className="break-words text-3xl font-bold tracking-tight text-ink lg:text-4xl">{title}</h1>
+                {description && <p className="text-base text-ink">{description}</p>}
                 {meta}
               </div>
               {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -62,7 +62,7 @@ export function HubLayout({
       <div className="flex-1 bg-canvas">
         {/* 안내 열이 없으면 두 열 격자를 쓰지 않는다. 쓰면 빈 오른쪽 열 폭만큼 본문이 머리 띠보다 좁아진다. */}
         <main
-          className={`mx-auto max-w-screen-xl px-4 py-6 ${aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-6' : ''}`}
+          className={`mx-auto max-w-screen-xl px-4 py-6 ${aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-10' : ''}`}
         >
           <div className={`flex min-w-0 flex-col gap-4 ${column}`}>{children}</div>
           {aside && <aside className="mt-6 flex flex-col gap-4 lg:mt-0">{aside}</aside>}
@@ -74,20 +74,22 @@ export function HubLayout({
   );
 }
 
-// 안내 열의 한 묶음이다. 본문 목록은 text-sm이고 항목 사이를 띄운다.
+// 안내 열의 한 묶음이다. 지도가 없는 화면이라 상자로 감싸지 않고, 위에 먹색 선을 그어 묶음을 나눈다.
+// 본문 목록은 text-sm이고 항목 사이를 띄운다.
 export function AsideSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-4">
+    <section className="flex flex-col gap-2 border-t border-ink pt-3">
       <h2 className="text-base font-semibold text-ink">{title}</h2>
-      <div className="flex flex-col gap-2 text-sm text-ink-muted [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2">{children}</div>
+      <div className="flex flex-col gap-2 text-sm text-ink [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2">{children}</div>
     </section>
   );
 }
 
-// 목록을 감싸는 패널이다. header가 있으면 위에 한 줄 머리를 두고, 항목 사이에는 선을 긋는다.
+// 목록을 감싸는 패널이다. 상자로 감싸지 않고 위에 먹색 선, 항목 사이와 끝에 옅은 선을 긋는다.
+// 항목은 안쪽 여백(px-4)을 갖고 있어서, 패널을 양옆으로 그만큼 넓혀 항목 글자가 제목과 같은 가장자리에서 시작하게 한다.
 export function ListPanel({ header, children }: { header?: ReactNode; children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-sheet border border-line bg-surface">
+    <div className="-mx-4 border-y border-t-ink border-b-line">
       {header && (
         <div className="flex items-center justify-between border-b border-line px-4 py-2 text-sm text-ink-muted">
           {header}

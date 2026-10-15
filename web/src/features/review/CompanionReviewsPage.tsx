@@ -405,7 +405,7 @@ function ReceivedTab() {
             <section
               // 공개 전 후기는 ID가 없고, 한 베이스캠프에서 여러 개가 올 수 있어서 순서로 구분한다.
               key={`sealed-${item.basecampId}-${index}`}
-              className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-5"
+              className="flex flex-col gap-2 border-t border-ink pt-5"
             >
               <p className="text-base text-ink">내 후기를 남기면 상대가 쓴 후기를 볼 수 있어요.</p>
               <Link to={`/basecamps/${item.basecampId}`} className={`${LINK_BUTTON_CLASS} self-start`}>
