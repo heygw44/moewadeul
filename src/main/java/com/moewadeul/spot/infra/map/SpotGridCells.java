@@ -1,6 +1,7 @@
 package com.moewadeul.spot.infra.map;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 /**
@@ -35,6 +36,62 @@ public record SpotGridCells(int level, List<Integer> rows, int fromColumn, int t
                 .boxed()
                 .toList();
         return new SpotGridCells(level, rows, cellIndex(swLng, size) - 1, cellIndex(neLng, size) + 1);
+    }
+
+    /**
+     * 호출하면 중심이 영역(경계선 포함) 안에 드는 격자 칸이 maxCells개 이하인 단계 가운데 가장 작은 단계를 골라, 그 칸을 정확히 덮는 범위를 돌려준다.
+     * 가장 큰 단계로도 maxCells개를 넘으면 빈 값을 돌려준다. rows와 열 범위는 {@link #covering}과 달리 여유 칸 없이 중심이 영역 안인 칸만 가리킨다.
+     * 영역 안에 중심이 든 칸이 없으면 rows가 비어 있다.
+     *
+     * <p>중심 판정은 매퍼의 SQL과 같은 식, {@code (번호 + 0.5) × 칸 크기}다. 실수 오차로 Java와 SQL의 판정이 갈리지 않게, 나눗셈으로 구한 번호를 같은 식으로 다시
+     * 확인해서 맞춘다.
+     */
+    public static Optional<SpotGridCells> fixedClusterCells(
+            double swLat, double swLng, double neLat, double neLng, int maxCells) {
+        for (int level = 0; level < LEVEL_COUNT; level++) {
+            double size = cellSize(level);
+            int firstRow = firstCenterInside(swLat, size);
+            int lastRow = lastCenterInside(neLat, size);
+            int firstColumn = firstCenterInside(swLng, size);
+            int lastColumn = lastCenterInside(neLng, size);
+            long rowCount = Math.max(0, (long) lastRow - firstRow + 1);
+            long columnCount = Math.max(0, (long) lastColumn - firstColumn + 1);
+            if (rowCount * columnCount <= maxCells) {
+                List<Integer> rows =
+                        IntStream.rangeClosed(firstRow, lastRow).boxed().toList();
+                return Optional.of(new SpotGridCells(level, rows, firstColumn, lastColumn));
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** 호출하면 영역 안에 읽을 칸이 하나도 없는지 돌려준다. 이때 매퍼에 넘기면 안 되고, 묶음은 빈 목록이다. */
+    public boolean isEmpty() {
+        return rows.isEmpty() || fromColumn > toColumn;
+    }
+
+    // 중심이 low 이상인 가장 작은 칸 번호
+    private static int firstCenterInside(double low, double size) {
+        int index = (int) Math.ceil(low / size - 0.5);
+        while ((index - 1 + 0.5) * size >= low) {
+            index--;
+        }
+        while ((index + 0.5) * size < low) {
+            index++;
+        }
+        return index;
+    }
+
+    // 중심이 high 이하인 가장 큰 칸 번호
+    private static int lastCenterInside(double high, double size) {
+        int index = (int) Math.floor(high / size - 0.5);
+        while ((index + 1 + 0.5) * size <= high) {
+            index++;
+        }
+        while ((index + 0.5) * size > high) {
+            index--;
+        }
+        return index;
     }
 
     static double cellSize(int level) {

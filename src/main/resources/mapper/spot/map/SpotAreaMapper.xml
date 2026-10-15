@@ -193,7 +193,7 @@
           AND <include refid="closedToday"/>
     </select>
 
-    <!-- 격자 칸 하나의 장소는 모두, 그 격자 칸 중심이 속한 화면 칸에 들어간다. 중심이 영역 밖인 격자 칸은 세지 않는다.
+    <!-- 아주 넓은 영역에서만 쓴다(격자 칸을 그대로 묶음으로 쓰면 400칸을 넘는 경우). 격자 칸 하나의 장소는 모두, 그 격자 칸 중심이 속한 화면 칸에 들어간다. 중심이 영역 밖인 격자 칸은 세지 않는다.
          휴장 제외를 켜면 오늘 휴장인 장소를 같은 격자 칸에 음수로 더해서 뺀다. 그래서 휴장 장소의 칸 번호도 V33 프로시저와 같은 식으로 계산한다.
          화면 칸 번호는 격자 칸 중심이 남서 꼭짓점에서 떨어진 거리를 화면 칸 폭으로 나눈 몫이다. 북쪽·동쪽 경계선 위의 중심은 몫이 칸 수와 같아지므로
          LEAST로 마지막 칸에 넣는다. 결과는 남쪽 행부터, 같은 행에서는 서쪽 칸부터 나온다. -->
@@ -237,6 +237,43 @@
         GROUP BY v.view_row, v.view_column
         HAVING SUM(v.spot_count) &gt; 0
         ORDER BY v.view_row, v.view_column
+    </select>
+
+    <!-- 격자 칸을 그대로 묶음으로 쓴다. 그래서 화면 칸으로 다시 합치지 않고, 필요한 칸만 기본 키(단계, 행, 열) 순서로 읽어 칸 번호 순서대로 내보낸다.
+         칸 범위(cells)는 중심이 영역 안인 칸만 가리킨다. 필터나 휴장 제외를 켜면 한 칸이 여러 행(조합별 행, 휴장 장소를 빼는 음수 행)이 될 수 있어서
+         칸 번호로 합계를 낸다. 휴장 제외의 음수 행은 selectClusters와 같은 식으로, 휴장 장소의 칸 번호를 V33 프로시저와 같은 식으로 계산한다.
+         바깥 WHERE는 음수 행도 중심이 영역 안인 칸에만 더하게 한다. 결과는 남쪽 행부터, 같은 행에서는 서쪽 칸부터 나온다. -->
+    <select id="selectGridClusters" resultMap="spotClusterRowMap">
+        SELECT SUM(g.lat_sum) / SUM(g.spot_count) AS lat,
+               SUM(g.lng_sum) / SUM(g.spot_count) AS lng,
+               SUM(g.spot_count) AS spot_count
+        FROM (
+            SELECT c.cell_row, c.cell_col, c.spot_count, c.lat_sum, c.lng_sum
+            <include refid="clusterCellsInGrid"/>
+            <if test="area.hideClosed">
+            UNION ALL
+            SELECT FLOOR(s.latitude / <include refid="cellSize"/>),
+                   FLOOR(s.longitude / <include refid="cellSize"/>),
+                   -1,
+                   -s.latitude,
+                   -s.longitude
+            FROM public_spot_detail d
+            JOIN spot s ON s.id = d.spot_id
+            WHERE d.closure_candidate = TRUE
+              AND s.status = 'ACTIVE'
+              AND s.latitude BETWEEN #{area.swLat} - <include refid="cellSize"/>
+                                 AND #{area.neLat} + <include refid="cellSize"/>
+              AND s.longitude BETWEEN #{area.swLng} - <include refid="cellSize"/>
+                                  AND #{area.neLng} + <include refid="cellSize"/>
+              <include refid="spotTypeAndWarningCondition"/>
+              AND <include refid="closedToday"/>
+            </if>
+        ) g
+        WHERE (g.cell_row + 0.5) * <include refid="cellSize"/> BETWEEN #{area.swLat} AND #{area.neLat}
+          AND (g.cell_col + 0.5) * <include refid="cellSize"/> BETWEEN #{area.swLng} AND #{area.neLng}
+        GROUP BY g.cell_row, g.cell_col
+        HAVING SUM(g.spot_count) &gt; 0
+        ORDER BY g.cell_row, g.cell_col
     </select>
 
     <!-- 격자 집계 표에는 입지 축이 없다. 입지가 있는 장소는 고캠핑 야영장(약 3,100곳)뿐이라서, 입지 필터를 켜면 집계 표를 쓰지 않고 장소를 직접 센다.
