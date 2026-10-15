@@ -74,7 +74,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
       <HubLayout title="기록" breadcrumb={breadcrumb} width="narrow">
         <div aria-busy="true">
           {showSkeleton && (
-            <div className="flex flex-col gap-3 border-t border-ink pt-5">
+            <div className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
               <Skeleton className="h-8 w-2/3" />
               <Skeleton className="h-40 w-full" />
             </div>
@@ -229,7 +229,7 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
   return (
     <div className="flex flex-col gap-4">
       <HiddenStatusNotice status={memory.status} />
-      <article className="divide-y divide-line border-y border-t-ink border-b-line">
+      <article className="divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface">
         {position !== null && (
           <div className="flex flex-col gap-1 px-5 py-4">
             <p className="text-sm text-ink-muted">다녀온 곳 (정확한 위치, 나만 봐요)</p>

@@ -410,7 +410,7 @@ function PostRow({ item }: { item: CommunityPostSummary }) {
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-base font-semibold text-ink">{item.title}</span>
           {item.commentCount > 0 && (
-            <span className="shrink-0 font-mono text-sm tabular-nums text-accent-deep">
+            <span className="shrink-0 font-mono text-sm tabular-nums text-accent">
               [<span className="sr-only">댓글 </span>
               {item.commentCount}
               <span className="sr-only">개</span>]

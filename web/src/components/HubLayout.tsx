@@ -19,6 +19,8 @@ type HubLayoutProps = {
   // 공식 행사 알림 띠를 맨 위에 둘지 정한다. 행사 목록처럼 행사를 찾는 화면에서만 켠다.
   // 작업하는 화면(내 정보, 알림, 커뮤니티 등)에 두면 할 일과 상관없는 홍보가 맨 위를 차지한다.
   announcement?: boolean;
+  // 본문 첫 판이 제목을 크게 보여 줄 때 켠다. 머리 띠에는 이동 경로만 남기고 제목(h1)은 스크린 리더에만 읽힌다.
+  titleInContent?: boolean;
   children: ReactNode;
 };
 
@@ -34,6 +36,7 @@ export function HubLayout({
   aside,
   width = 'wide',
   announcement = false,
+  titleInContent = false,
   children,
 }: HubLayoutProps) {
   // 머리 띠 안쪽과 본문은 같은 열을 쓴다. 그래야 제목·탭·오른쪽 버튼의 가장자리가 본문 가장자리와 맞는다.
@@ -43,11 +46,11 @@ export function HubLayout({
     <div className="flex min-h-dvh flex-col bg-canvas pb-(--bottom-nav-h)">
       {announcement && <AnnouncementBar />}
       <SiteHeader />
-      <div className="border-b border-line bg-canvas">
-        <div className="mx-auto max-w-screen-xl px-4 pt-8">
+      <div className={titleInContent ? 'bg-canvas' : 'border-b border-line bg-canvas'}>
+        <div className={`mx-auto max-w-screen-xl px-4 ${titleInContent ? 'pt-6' : 'pt-8'}`}>
           <div className={column}>
             {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
-            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3">
+            <div className={titleInContent ? 'sr-only' : 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3'}>
               <div className="flex min-w-0 flex-col gap-1">
                 <h1 className="break-words text-3xl font-extrabold tracking-tight text-ink lg:text-4xl">{title}</h1>
                 {description && <p className="text-base text-ink">{description}</p>}
