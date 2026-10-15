@@ -14,49 +14,52 @@
   /* 랜딩 첫 제목과 섹션 제목에만 쓰는 세리프다. 앱 화면 제목은 Pretendard로 둔다 */
   --font-serif: "Gowun Batang", AppleMyungjo, "Noto Serif KR", serif;
 
-  /* 바탕과 면: 화면 바탕은 눈이 덜 피곤한 미색이고, 카드·시트·입력 같은 면은 흰색이라 바탕 위에 살짝 떠 보인다 */
-  --color-canvas: #f6f4ee;        /* 화면 바탕. 먹 15.3:1, 보조 글자 6.1:1 */
-  --color-fill: #eeede6;          /* 입력 바탕, 보조 버튼, 눌린 상태, 신뢰 단계 0. 미색 바탕과 흰 면 양쪽에서 보이게 한 단계 짙다. 보조 글자 5.7:1 */
-  --color-fill-strong: #e6e8e4;   /* fill 위 hover·pressed */
-  --color-surface: #ffffff;       /* 시트·패널·카드·다이얼로그 */
-  --color-line: #e2dfd6;          /* 면 테두리, 구분선. 미색에 맞춘 따뜻한 선이고 대비가 낮아 정보 전달에 쓰지 않는다 */
+  /* 바탕과 면: 바탕은 햇빛 아래에서도 눈이 덜 피곤한 옅은 미색이고, 목록판·패널·입력란은 흰 판이라 바탕 위에서 판처럼 읽힌다 */
+  --color-canvas: #f6f5f1;        /* 화면 바탕. 먹 16.2:1, 보조 글자 6.8:1 */
+  --color-fill: #ecebe5;          /* 눌린 상태, hover, 신뢰 단계 0 바탕. 보조 글자 6.2:1 */
+  --color-fill-strong: #e2e1da;   /* fill 위 hover·pressed */
+  --color-surface: #ffffff;       /* 목록판·패널·시트·다이얼로그·입력란 */
+  --color-line: #dad8d1;          /* 판 테두리, 행 사이 선. 대비가 낮아 정보 전달에 쓰지 않는다 */
 
   /* 글자 */
-  --color-ink: #1d1d1f;           /* 본문, 주 버튼. 흰 바탕 16.8:1, fill 15.1:1 */
-  --color-ink-muted: #5c5c61;     /* 보조 글자, 주 버튼 hover. 흰 바탕 6.7:1, fill 6:1 */
-  --color-ink-subtle: #68686d;    /* 메타 글자, 입력 테두리. 흰 바탕 5.5:1, fill 5:1 */
+  --color-ink: #141a17;           /* 본문, 고른 칸 반전. 흰 바탕 17.7:1 */
+  --color-ink-muted: #4f5853;     /* 보조 글자. 흰 바탕 7.4:1, fill 6.2:1 */
+  --color-ink-subtle: #5d655f;    /* 메타 글자, 입력란 테두리. 흰 바탕 6:1, 미색 5.5:1 */
 
-  /* 포인트: 바닥글 띠와 공식 행사 알림 띠처럼 넓은 면만 칠하는 브랜드 색이다. 버튼·배지는 칠하지 않아 행동 색과 섞이지 않는다 */
-  --color-brand: #2f4a3c;         /* 깊은 숲. 흰 글자 9.7:1 */
-  --color-brand-ink: #c5d1c8;     /* 포인트 면 위 보조 글자. 6.2:1 */
+  /* 판: 탐방로 안내판의 진한 숲색이다. 머리글, 지금 보는 곳 띠, 패널 머리, 주 버튼, 바닥글을 칠한다 */
+  --color-brand: #1d3b2c;         /* 흰 글자 12.3:1 */
+  --color-brand-strong: #163023;  /* 주 버튼 hover·pressed. 흰 글자 14.2:1 */
+  --color-brand-raised: #25483a;  /* 판 위에 한 단계 밝게 놓는 띠. 흰 글자 10.2:1 */
+  --color-brand-ink: #b7c7bd;     /* 판 위 보조 글자. brand 위 7:1, brand-raised 위 5.8:1 */
 
-  /* 강조: 행동·선택·성공·신뢰 회원. 화면에서 행동을 부르는 색은 이것 하나다 */
-  --color-accent: #0b6e4f;        /* 흰 바탕 글자 6.3:1, 흰 글자 6.3:1, soft 위 5.4:1 */
-  --color-accent-strong: #085a40; /* hover·pressed. 흰 글자 8.3:1 */
-  --color-accent-deep: #06452f;   /* soft 위 글자 9.6:1 */
-  --color-accent-soft: #e6f2ec;   /* 선택·성공 바탕 */
+  /* 확인: 모집 중, 조건에 맞음, 성공 같은 좋은 상태의 글자와 고른 칸 표시 */
+  --color-accent: #24603f;        /* 흰 바탕 7.5:1, 미색 6.8:1 */
+  --color-accent-strong: #1b4a31;
+  --color-accent-deep: #1b4a31;   /* soft 위 글자 8.6:1 */
+  --color-accent-soft: #e6eee8;   /* 선택·성공 바탕 */
 
-  /* 정보: 안내, 본인확인, 포커스 링, 공공 야영장 */
+  /* 정보: 안내, 본인확인, 포커스 링 */
   --color-info: #1d4fc4;          /* 흰 글자 7.1:1, soft 위 6.2:1 */
   --color-info-strong: #173f9c;   /* hover·pressed. 흰 글자 9.4:1 */
   --color-info-soft: #ebf1fd;
 
-  /* 박지 */
-  --color-bakji: #8a5526;         /* 흰 글자 6.2:1, 흰 바탕 위 마커 6.2:1 */
+  /* 박지: 회원이 제보한 곳. 지도 번호 원과 목록 번호 원을 칠한다 */
+  --color-bakji: #a85d1c;         /* 흰 글자 4.9:1 */
   --color-bakji-strong: #6b411c;  /* soft 위 글자 7.7:1 */
   --color-bakji-soft: #f7efe6;
 
   /* 경고·위험 */
-  --color-warning: #8a4a00;       /* 공원 경계 경고 글자. soft 위 6.2:1 */
-  --color-warning-line: #c77c12;  /* 경고 테두리·아이콘. 흰 바탕 3.3:1 */
-  --color-warning-soft: #fdf2dc;
+  --color-warning: #8f4705;       /* 공원 경계 경고 글자. 흰 바탕 6.8:1, soft 위 5.8:1 */
+  --color-warning-line: #c27316;  /* 경고 테두리·아이콘·핀 고리. 흰 바탕 3.7:1 */
+  --color-warning-soft: #f6ead8;
   --color-danger: #c0331b;        /* 오류·위험 행동. 흰 글자 5.6:1, soft 위 4.9:1 */
   --color-danger-soft: #fdecea;
 
-  --radius-control: 0.375rem;     /* 버튼·입력·칩 6px. 둥글수록 UI 키트처럼 보여서 작게 둔다 */
-  --radius-sheet: 0.75rem;        /* 시트·다이얼로그·지도 위 패널 12px. 시트는 윗모서리에만 */
-  /* 떠 있는 층(시트·다이얼로그·토스트·검색 후보)에만 쓴다. 가까운 그림자와 넓은 그림자를 겹쳐 종이처럼 살짝 뜨게 한다 */
-  --shadow-raise: 0 1px 2px rgb(0 0 0 / 0.08), 0 8px 28px rgb(0 0 0 / 0.1);
+  --radius-control: 0.25rem;      /* 버튼·입력·칸 4px. 안내판처럼 각이 서 보이게 작게 둔다 */
+  --radius-sheet: 0.375rem;       /* 목록판·패널·다이얼로그 6px */
+  --radius-drawer: 0.75rem;       /* 모바일 하단 시트의 윗모서리 12px. 손잡이로 끄는 층이라 판보다 둥글게 둔다 */
+  /* 떠 있는 층(지도 위 판·시트·다이얼로그·토스트·검색 후보)에만 쓴다. 먹색을 섞은 가까운 그림자와 넓은 그림자를 겹친다 */
+  --shadow-raise: 0 1px 2px rgb(20 26 23 / 0.08), 0 10px 30px rgb(20 26 23 / 0.14);
 }
 
 
@@ -80,7 +83,8 @@
     -webkit-font-smoothing: antialiased;
     /* 스크롤 막대가 없는 지도 화면과 있는 목록 화면을 오갈 때 가운데 정렬한 머리글이 막대 폭만큼 밀리지 않게 자리를 늘 비워 둔다 */
     scrollbar-gutter: stable;
-    caret-color: var(--color-accent);
+    caret-color: var(--color-brand);
+    scrollbar-color: #c3c1b9 transparent;
   }
 
   body {
