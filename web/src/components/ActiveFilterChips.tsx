@@ -13,7 +13,7 @@ type ActiveFilterChipsProps = {
 };
 
 const CHIP =
-  'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-1 rounded-control border border-accent bg-accent-soft pr-2 pl-3 text-sm font-semibold text-ink hover:bg-fill';
+  'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-1 rounded-control border border-ink bg-ink pr-2 pl-3 text-sm font-bold text-white hover:bg-ink/85';
 const RESET =
   'pointer-events-auto inline-flex min-h-11 shrink-0 items-center rounded-control border border-line bg-surface px-3 text-sm text-ink hover:bg-fill';
 

@@ -7,7 +7,7 @@ export type StatusTone = 'neutral' | 'closed' | 'accent' | 'info' | 'bakji' | 'w
 const TONE_CLASSES: Record<StatusTone, string> = {
   neutral: 'text-ink-muted',
   closed: 'text-ink-muted',
-  accent: 'text-accent-deep',
+  accent: 'text-accent',
   info: 'text-info',
   bakji: 'text-bakji-strong',
   warning: 'text-warning',

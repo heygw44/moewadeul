@@ -74,22 +74,21 @@ export function HubLayout({
   );
 }
 
-// 안내 열의 한 묶음이다. 지도가 없는 화면이라 상자로 감싸지 않고, 위에 먹색 선을 그어 묶음을 나눈다.
+// 안내 열의 한 묶음이다. 목록판과 같은 흰 판에 넣는다.
 // 본문 목록은 text-sm이고 항목 사이를 띄운다.
 export function AsideSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 border-t border-ink pt-3">
-      <h2 className="text-base font-semibold text-ink">{title}</h2>
+    <section className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-4">
+      <h2 className="text-base font-bold text-ink">{title}</h2>
       <div className="flex flex-col gap-2 text-sm text-ink [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2">{children}</div>
     </section>
   );
 }
 
-// 목록을 감싸는 패널이다. 상자로 감싸지 않고 위에 먹색 선, 항목 사이와 끝에 옅은 선을 긋는다.
-// 항목은 안쪽 여백(px-4)을 갖고 있어서, 패널을 양옆으로 그만큼 넓혀 항목 글자가 제목과 같은 가장자리에서 시작하게 한다.
+// 목록을 감싸는 흰 목록판이다. 탐방로 안내판의 행처럼 항목 사이에 옅은 선을 긋는다.
 export function ListPanel({ header, children }: { header?: ReactNode; children: ReactNode }) {
   return (
-    <div className="-mx-4 border-y border-t-ink border-b-line">
+    <div className="overflow-hidden rounded-sheet border border-line bg-surface">
       {header && (
         <div className="flex items-center justify-between border-b border-line px-4 py-2 text-sm text-ink-muted">
           {header}

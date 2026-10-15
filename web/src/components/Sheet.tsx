@@ -160,7 +160,7 @@ export function Sheet({ snap, onSnapChange, header, children, label, aboveBottom
       onKeyDown={handleKeyDown}
       style={dragging ? { height: `${dragHeight}px` } : undefined}
       className={[
-        'fixed inset-x-0 z-10 flex flex-col rounded-t-sheet border-t border-line bg-surface shadow-raise',
+        'fixed inset-x-0 z-10 flex flex-col rounded-t-drawer border-t border-line bg-surface shadow-raise',
         aboveBottomNav ? 'bottom-(--bottom-nav-h)' : 'bottom-0',
         dragging
           ? 'transition-none'
