@@ -20,14 +20,14 @@ public record SpotGridCells(int level, List<Integer> rows, int fromColumn, int t
     }
 
     /**
-     * 호출하면 화면 칸 크기(viewCellSize, 도)의 절반 이하인 격자 가운데 가장 큰 단계를 고르고, 영역을 덮는 칸 범위를 돌려준다. 가장 작은 격자도 절반을
-     * 넘으면 단계 0을 고른다. 격자 칸이 화면 칸보다 충분히 작아야 칸 배정이 화면 칸 경계에서 덜 어긋난다.
+     * 호출하면 칸 크기가 maxCellSize(도) 이하인 격자 가운데 가장 큰 단계를 고르고, 영역을 덮는 칸 범위를 돌려준다. 가장 작은 격자도 maxCellSize를
+     * 넘으면 단계 0을 고른다. 상한은 호출하는 쪽이 정한다. 격자가 클수록 읽을 행이 줄어 조회가 빨라지지만, 칸 배정이 화면 칸 경계에서 더 어긋난다.
      *
      * <p>범위는 경계에 걸친 칸을 놓치지 않게 양쪽으로 한 칸씩 넓힌다. 어느 칸을 셀지는 매퍼가 칸 중심으로 다시 고른다.
      */
-    public static SpotGridCells covering(double swLat, double swLng, double neLat, double neLng, double viewCellSize) {
+    public static SpotGridCells covering(double swLat, double swLng, double neLat, double neLng, double maxCellSize) {
         int level = 0;
-        while (level + 1 < LEVEL_COUNT && cellSize(level + 1) <= viewCellSize / 2) {
+        while (level + 1 < LEVEL_COUNT && cellSize(level + 1) <= maxCellSize) {
             level++;
         }
         double size = cellSize(level);

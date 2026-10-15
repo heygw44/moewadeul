@@ -429,8 +429,8 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 묶음은 화면 칸에 들어간 장소의 평균 좌표와 수를 남쪽 행부터, 같은 행에서는 서쪽 칸부터 준다")
     void clustersByViewCellInRowOrderWithAverageOfAssignedSpots() {
-        // given: 화면 칸은 0.05도 폭이고, 서버는 그 절반 이하인 0.02도 격자로 센다.
-        // 남서 화면 칸에는 서로 다른 격자 칸 두 곳에 나눠 넣고, 동쪽 끝 화면 칸과 북쪽 끝 화면 칸에도 장소를 둔다.
+        // given: 화면 칸은 0.05도 폭이고, 서버는 그 이하인 0.04도 격자로 묶는다.
+        // 남서 화면 칸에는 두 지점에 나눠 넣어 평균 좌표를 확인하고, 동쪽 끝 화면 칸과 북쪽 끝 화면 칸에도 장소를 둔다.
         List<Coordinate> coordinates = new ArrayList<>();
         coordinates.addAll(Collections.nCopies(100, new Coordinate(36.011, 127.011)));
         coordinates.addAll(Collections.nCopies(100, new Coordinate(36.031, 127.031)));
@@ -487,6 +487,25 @@ class SpotMapQueryServiceIntegrationTest {
         // then
         assertThat(result.clusters()).isEmpty();
         assertThat(result.markers()).hasSize(SpotMapQueryService.MAX_ITEMS);
+    }
+
+    @Test
+    @DisplayName("[F-03] 거친 격자로 세어 상한을 못 넘는다고 나와도, 실제로 500개를 넘으면 마커를 읽어 판단해 묶음을 준다")
+    void returnsClustersByMarkerFallbackWhenCoarseCountUnderCounts() {
+        // given: 화면 칸이 0.05도라서 세는 격자는 0.08도, 묶음 격자는 0.04도다.
+        // 장소 501개는 위도 36.03에 있다. 이 위치는 0.08도 격자 칸 [36.00, 36.08)에 들지만, 그 칸은 영역(남쪽 변 36.0125) 안에 통째로 들지 않아 세어지지 않는다.
+        // 그래서 먼저 세는 단계는 0개로 세고, 마커 501건을 읽는 단계에서 상한 초과로 판단한다.
+        Area shifted = new Area(36.0125, 127.0, 37.0125, 128.0);
+        int spotCount = SpotMapQueryService.MAX_ITEMS + 1;
+        insertCampsites(Collections.nCopies(spotCount, new Coordinate(36.03, 127.5)));
+
+        // when
+        SpotAreaResult result = spotMapQueryService.findInArea(shifted.query());
+
+        // then
+        assertThat(result.markers()).isEmpty();
+        assertThat(result.clusters().stream().mapToLong(SpotCluster::count).sum())
+                .isEqualTo(spotCount);
     }
 
     private static void assertCluster(SpotCluster cluster, Coordinate expectedCenter, long expectedCount) {

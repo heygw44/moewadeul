@@ -32,6 +32,18 @@ public class SpotMapQueryService {
     static final int MAX_ITEMS = 500;
     static final int GRID_SIZE = 20;
 
+    // 묶음 조회가 읽을 격자 칸의 최대 크기를 화면 칸 크기의 몇 배로 할지 정한다.
+    // 격자 칸이 클수록 화면 칸 하나에 든 격자 칸이 적어서, 묶음 조회가 읽고 정렬하는 행이 줄어든다.
+    // 대신 화면 칸 경계에 걸친 격자 칸은 중심으로 배정하므로, 배정이 어긋나는 크기가 화면 칸의 4분의 1에서 2분의 1로 커진다.
+    // 묶음 마커는 그 묶음에 든 실제 장소의 평균 좌표에 그리므로, 경계 근처 장소 몇 곳이 옆 묶음으로 넘어가도 마커가 장소 없는 곳에 찍히지는 않는다.
+    static final double CLUSTER_CELL_RATIO = 1.0;
+
+    // 상한 초과 여부를 먼저 세는 조회가 읽을 격자 칸의 최대 크기를 화면 칸 크기의 몇 배로 할지 정한다.
+    // 이 조회는 장소가 MAX_ITEMS개를 넘는지만 판단한다. 영역 안에 통째로 든 격자 칸만 세면 실제 수보다 작거나 같은 값이라서,
+    // 격자를 키워도 판단이 틀리지 않는다. 너무 크게 키워 영역 안에 통째로 든 칸이 적으면 실제로 넘는데도 못 넘는다고 세지만,
+    // 그때는 마커를 MAX_ITEMS+1건 읽어 다시 판단한다. 결과는 정확하고 조금 느릴 뿐이다.
+    static final double COUNT_CELL_RATIO = 2.0;
+
     private final SpotAreaMapper spotAreaMapper;
     private final Clock clock;
 
@@ -41,7 +53,7 @@ public class SpotMapQueryService {
      *
      * <p>묶음은 장소 테이블이 아니라 미리 세어 둔 격자 집계 표에서 합친다. 넓은 영역은 장소가 수십만 건이라 요청마다 세면 DB CPU가 모자라기 때문이다.
      * 상한을 넘는지는 영역 안 장소 수로 정확히 판단한다. 먼저 영역 안에 통째로 든 격자 칸만 세어 상한을 넘으면 바로 묶음을 주고, 그렇지 않을 때만 마커를
-     * 상한보다 한 건 더 읽어 판단한다.
+     * 상한보다 한 건 더 읽어 판단한다. 세는 조회는 묶음 조회보다 거친 격자를 쓴다. 상한 초과만 판단하면 되고, 적게 세어도 결과가 틀리지 않기 때문이다.
      *
      * <p>입지 필터를 켜면 격자 집계 표에 입지 축이 없어서 먼저 세는 단계를 건너뛰고, 마커를 상한보다 한 건 더 읽어 판단한다. 상한을 넘으면 집계 표
      * 대신 장소를 직접 세어 묶는다. 입지가 있는 장소는 고캠핑 야영장뿐이라 그 수가 적다.
@@ -54,14 +66,15 @@ public class SpotMapQueryService {
         LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
         SpotAreaCondition condition = toCondition(query, today);
         SpotClusterGrid grid = toGrid(query);
-        SpotGridCells cells = SpotGridCells.covering(
-                query.swLat(), query.swLng(), query.neLat(), query.neLng(), Math.min(grid.cellLat(), grid.cellLng()));
-        if (!condition.filtersSettings() && countCertainlyInArea(condition, cells) > MAX_ITEMS) {
-            return new SpotAreaResult(List.of(), findClusters(condition, grid, cells));
+        double viewCellSize = Math.min(grid.cellLat(), grid.cellLng());
+        SpotGridCells countCells = coveringArea(query, viewCellSize * COUNT_CELL_RATIO);
+        SpotGridCells clusterCells = coveringArea(query, viewCellSize * CLUSTER_CELL_RATIO);
+        if (!condition.filtersSettings() && countCertainlyInArea(condition, countCells) > MAX_ITEMS) {
+            return new SpotAreaResult(List.of(), findClusters(condition, grid, clusterCells));
         }
         List<SpotMarkerRow> rows = spotAreaMapper.selectMarkers(condition, MAX_ITEMS + 1);
         if (rows.size() > MAX_ITEMS) {
-            return new SpotAreaResult(List.of(), findClusters(condition, grid, cells));
+            return new SpotAreaResult(List.of(), findClusters(condition, grid, clusterCells));
         }
         List<SpotMarker> markers =
                 rows.stream().map(row -> toMarker(row, today)).toList();
@@ -91,6 +104,10 @@ public class SpotMapQueryService {
             return spotAreaMapper.selectSettingClusters(condition, grid);
         }
         return spotAreaMapper.selectClusters(condition, grid, cells);
+    }
+
+    private static SpotGridCells coveringArea(SpotAreaQuery query, double maxCellSize) {
+        return SpotGridCells.covering(query.swLat(), query.swLng(), query.neLat(), query.neLng(), maxCellSize);
     }
 
     private static SpotClusterGrid toGrid(SpotAreaQuery query) {
