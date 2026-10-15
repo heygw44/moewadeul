@@ -41,7 +41,7 @@ export function ProgramListPage() {
     <HubLayout
       announcement
       title="공식 행사"
-      description="지자체와 브랜드가 여는 백패킹 행사에 신청할 수 있어요."
+      description="지자체와 브랜드가 여는 백패킹 행사에 참여할 수 있어요."
       actions={
         signedIn ? (
           <Link to="/me/program-applications" className={SECONDARY_LINK_CLASS}>
