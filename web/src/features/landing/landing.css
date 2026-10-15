@@ -1,0 +1,87 @@
+/* 랜딩에서만 쓰는 모양과 움직임이다. 움직임은 transform·opacity·clip-path만 바꾸고, 움직임 줄이기 설정이면 끝난 상태로 둔다. */
+
+/* 첫 화면 무대: 왼쪽 위 모서리를 사선으로 잘라 제품 조각을 올리는 깊은 숲 면이다. 페이지에서 하나뿐인 장식이다. */
+.landing-stage {
+  clip-path: polygon(0 96px, 96px 0, 100% 0, 100% 100%, 0 100%);
+}
+@media (max-width: 63.99rem) {
+  .landing-stage {
+    clip-path: polygon(0 72px, 72px 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 무대는 아래에서 열리고, 그 위 조각은 살짝 떠오르며 자리 잡는다 */
+  .landing-stage {
+    animation: landing-stage-open 1100ms cubic-bezier(0.76, 0, 0.24, 1) 250ms both;
+  }
+  .landing-stage-fragment {
+    animation: landing-settle 1500ms cubic-bezier(0.33, 1, 0.68, 1) 500ms both;
+  }
+  .landing-rise {
+    animation: landing-rise 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+  }
+}
+
+@keyframes landing-stage-open {
+  from {
+    clip-path: polygon(0 100%, 0 100%, 100% 100%, 100% 100%, 0 100%);
+  }
+}
+@keyframes landing-settle {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(1.04);
+  }
+}
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+/* 섹션 안 요소의 등장. useReveal이 화면 아래 요소에만 wait를 붙이고, 화면에 들어오면 in으로 바꾼다.
+   요소마다 --reveal-order를 주면 그만큼 80ms씩 늦게 시작한다. */
+[data-reveal] {
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--reveal-order, 0) * 80ms);
+}
+[data-reveal='wait'] {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+/* 어두운 줄: 가운데 조각만 밝고, 나머지는 어둡고 작게 둔다 */
+.landing-carousel {
+  scrollbar-width: none;
+}
+.landing-carousel::-webkit-scrollbar {
+  display: none;
+}
+.landing-carousel-card {
+  transition:
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 500ms ease;
+  transform: scale(0.9);
+  filter: brightness(0.55);
+}
+.landing-carousel-card[data-current='true'] {
+  transform: none;
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-stage,
+  .landing-stage-fragment,
+  .landing-rise {
+    animation: none;
+  }
+  [data-reveal],
+  .landing-carousel-card {
+    transition: none;
+  }
+}

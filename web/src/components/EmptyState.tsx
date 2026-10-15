@@ -11,12 +11,12 @@ type EmptyStateProps = {
 // 결과가 없을 때 다음에 할 일을 함께 안내한다. 머리 띠의 제목과 같은 쪽에 맞추려고 왼쪽 정렬한다.
 export function EmptyState({ title, description, action, framed = false }: EmptyStateProps) {
   const body = (
-    <div className={`flex flex-col items-start gap-2 py-8 ${framed ? '' : 'px-4'}`}>
+    <div className={`flex flex-col items-start gap-2 py-8 ${framed ? 'px-6' : 'px-4'}`}>
       <p className="text-lg font-semibold text-ink">{title}</p>
       {description && <p className="text-sm text-ink-muted">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );
   if (!framed) return body;
-  return <div className="border-t border-ink">{body}</div>;
+  return <div className="rounded-sheet bg-surface">{body}</div>;
 }

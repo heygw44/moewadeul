@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Pretendard Variable과 Gowun Batang의 @font-face는 index.html의 <link>로 불러오는 CSS에 들어 있다 */
+/* Pretendard Variable의 @font-face는 index.html의 <link>로 불러오는 CSS에 들어 있다 */
 
 @theme {
   /* Tailwind 기본 팔레트(stone, slate, blue 등)를 지워서 프로젝트 토큰만 쓰게 한다 */
@@ -11,52 +11,54 @@
   /* 좌표·기준일·거리 같은 데이터 값에 쓴다. 고정폭 글꼴 대신 같은 Pretendard에 숫자 폭만 맞춰서, 표처럼 줄이 맞으면서도 글자 모양이 본문과 같다 */
   --font-mono: var(--font-sans);
   --font-mono--font-feature-settings: "tnum";
-  /* 랜딩 첫 제목과 섹션 제목에만 쓰는 세리프다. 앱 화면 제목은 Pretendard로 둔다 */
-  --font-serif: "Gowun Batang", AppleMyungjo, "Noto Serif KR", serif;
 
-  /* 바탕과 면: 화면 바탕은 눈이 덜 피곤한 미색이고, 카드·시트·입력 같은 면은 흰색이라 바탕 위에 살짝 떠 보인다 */
-  --color-canvas: #f6f4ee;        /* 화면 바탕. 먹 15.3:1, 보조 글자 6.1:1 */
-  --color-fill: #eeede6;          /* 입력 바탕, 보조 버튼, 눌린 상태, 신뢰 단계 0. 미색 바탕과 흰 면 양쪽에서 보이게 한 단계 짙다. 보조 글자 5.7:1 */
-  --color-fill-strong: #e6e8e4;   /* fill 위 hover·pressed */
-  --color-surface: #ffffff;       /* 시트·패널·카드·다이얼로그 */
-  --color-line: #e2dfd6;          /* 면 테두리, 구분선. 미색에 맞춘 따뜻한 선이고 대비가 낮아 정보 전달에 쓰지 않는다 */
+  /* 색은 이름에서 왔다. 뫼(산)는 짙은 먹숲색 글자, 들은 마른 풀빛 바탕, 깊은 숲은 바닥글과 랜딩 무대다.
+     주황은 공원 경계 경고에만 쓴다. 대비는 모두 WCAG 기준으로 계산했다. */
 
-  /* 글자 */
-  --color-ink: #1d1d1f;           /* 본문, 주 버튼. 흰 바탕 16.8:1, fill 15.1:1 */
-  --color-ink-muted: #5c5c61;     /* 보조 글자, 주 버튼 hover. 흰 바탕 6.7:1, fill 6:1 */
-  --color-ink-subtle: #68686d;    /* 메타 글자, 입력 테두리. 흰 바탕 5.5:1, fill 5:1 */
+  /* 들: 바탕과 면. 바탕은 마른 풀빛이고, 카드·패널·입력은 한 단계 밝은 면이라 선 없이 바탕 위에 구분된다 */
+  --color-canvas: #efeadf;        /* 화면 바탕. 먹 13:1, 보조 글자 5.3:1 */
+  --color-fill: #e4ddcd;          /* 보조 버튼, 쉬는 칩, 눌린 상태, 줄무늬 행. 먹 11.5:1, 보조 글자 4.7:1 */
+  --color-fill-strong: #d9d1be;   /* fill 위 hover·pressed, 입력 테두리 */
+  --color-surface: #f8f5ee;       /* 카드·패널·시트·다이얼로그·입력. 먹 14.3:1, 보조 글자 5.9:1 */
+  --color-line: #d9d1be;          /* 꼭 필요한 곳에만 쓰는 구분선. 대비가 낮아 정보 전달에 쓰지 않는다 */
 
-  /* 포인트: 바닥글 띠와 공식 행사 알림 띠처럼 넓은 면만 칠하는 브랜드 색이다. 버튼·배지는 칠하지 않아 행동 색과 섞이지 않는다 */
-  --color-brand: #2f4a3c;         /* 깊은 숲. 흰 글자 9.7:1 */
-  --color-brand-ink: #c5d1c8;     /* 포인트 면 위 보조 글자. 6.2:1 */
+  /* 뫼: 글자 */
+  --color-ink: #1b2620;           /* 본문, 주 버튼 바탕. 바탕 13:1 */
+  --color-ink-muted: #5a615a;     /* 보조 글자. 바탕 5.3:1, 면 5.9:1 */
+  --color-ink-subtle: #5a615a;    /* 메타 글자. 보조 글자와 같은 값이다 */
 
-  /* 강조: 행동·선택·성공·신뢰 회원. 화면에서 행동을 부르는 색은 이것 하나다 */
-  --color-accent: #0b6e4f;        /* 흰 바탕 글자 6.3:1, 흰 글자 6.3:1, soft 위 5.4:1 */
-  --color-accent-strong: #085a40; /* hover·pressed. 흰 글자 8.3:1 */
-  --color-accent-deep: #06452f;   /* soft 위 글자 9.6:1 */
-  --color-accent-soft: #e6f2ec;   /* 선택·성공 바탕 */
+  /* 깊은 숲: 바닥글, 랜딩 무대, 공식 행사 알림 띠처럼 넓은 면에만 칠한다 */
+  --color-brand: #2b4535;         /* 바탕색 글자 8.7:1 */
+  --color-brand-deep: #223829;    /* 바닥글 띠 */
+  --color-brand-ink: #b9c2b6;     /* 숲 면 위 보조 글자. brand 5.7:1, brand-deep 6.9:1 */
 
-  /* 정보: 안내, 본인확인, 포커스 링, 공공 야영장 */
-  --color-info: #1d4fc4;          /* 흰 글자 7.1:1, soft 위 6.2:1 */
-  --color-info-strong: #173f9c;   /* hover·pressed. 흰 글자 9.4:1 */
+  /* 확인·선택·성공·신뢰 회원 상태 글자. 행동 버튼은 먹색이고, 이 색은 상태를 알릴 때 쓴다 */
+  --color-accent: #2c5e43;        /* 면 6.9:1, 바탕 6.3:1, 흰 글자 7.5:1, soft 위 6:1 */
+  --color-accent-strong: #234c36; /* hover·pressed */
+  --color-accent-deep: #1b3c2b;   /* soft 위 글자 */
+  --color-accent-soft: #dfe8dc;   /* 선택·성공 바탕 */
+
+  /* 정보: 안내, 본인확인 */
+  --color-info: #1d4fc4;          /* 바탕 5.9:1, soft 위 6.2:1 */
+  --color-info-strong: #173f9c;
   --color-info-soft: #ebf1fd;
 
   /* 박지 */
-  --color-bakji: #8a5526;         /* 흰 글자 6.2:1, 흰 바탕 위 마커 6.2:1 */
-  --color-bakji-strong: #6b411c;  /* soft 위 글자 7.7:1 */
+  --color-bakji: #8a5526;         /* 바탕 5.1:1 */
+  --color-bakji-strong: #6b411c;  /* soft 위 7.7:1 */
   --color-bakji-soft: #f7efe6;
 
   /* 경고·위험 */
-  --color-warning: #8a4a00;       /* 공원 경계 경고 글자. soft 위 6.2:1 */
-  --color-warning-line: #c77c12;  /* 경고 테두리·아이콘. 흰 바탕 3.3:1 */
-  --color-warning-soft: #fdf2dc;
-  --color-danger: #c0331b;        /* 오류·위험 행동. 흰 글자 5.6:1, soft 위 4.9:1 */
+  --color-warning: #8f4705;       /* 공원 경계 경고 글자. soft 위 5.5:1, 면 6.3:1 */
+  --color-warning-line: #c27316;  /* 경고 아이콘·핀 고리·새 알림 점. 글자에는 쓰지 않는다 */
+  --color-warning-soft: #f4e4c6;  /* 경고 상자 바탕 */
+  --color-danger: #c0331b;        /* 오류·위험 행동. 바탕 4.7:1, 면 5.2:1 */
   --color-danger-soft: #fdecea;
 
   --radius-control: 0.375rem;     /* 버튼·입력·칩 6px. 둥글수록 UI 키트처럼 보여서 작게 둔다 */
   --radius-sheet: 0.75rem;        /* 시트·다이얼로그·지도 위 패널 12px. 시트는 윗모서리에만 */
   /* 떠 있는 층(시트·다이얼로그·토스트·검색 후보)에만 쓴다. 가까운 그림자와 넓은 그림자를 겹쳐 종이처럼 살짝 뜨게 한다 */
-  --shadow-raise: 0 1px 2px rgb(0 0 0 / 0.08), 0 8px 28px rgb(0 0 0 / 0.1);
+  --shadow-raise: 0 1px 2px rgb(27 38 32 / 0.08), 0 8px 24px rgb(27 38 32 / 0.14);
 }
 
 
@@ -80,7 +82,7 @@
     -webkit-font-smoothing: antialiased;
     /* 스크롤 막대가 없는 지도 화면과 있는 목록 화면을 오갈 때 가운데 정렬한 머리글이 막대 폭만큼 밀리지 않게 자리를 늘 비워 둔다 */
     scrollbar-gutter: stable;
-    caret-color: var(--color-accent);
+    caret-color: var(--color-ink);
   }
 
   body {
@@ -88,17 +90,17 @@
   }
 
   ::selection {
-    background-color: var(--color-accent-soft);
-    color: var(--color-accent-deep);
+    background-color: var(--color-ink);
+    color: var(--color-surface);
   }
 
   a {
     text-underline-offset: 0.2em;
   }
 
-  /* 키보드로 이동할 때 포커스가 보이지 않는 일이 없게 기본 윤곽선을 정보색으로 둔다 */
+  /* 키보드로 이동할 때 포커스가 보이지 않는 일이 없게 기본 윤곽선을 먹색으로 둔다 */
   :focus-visible {
-    outline: 2px solid var(--color-info);
+    outline: 2px solid var(--color-ink);
     outline-offset: 2px;
   }
 }

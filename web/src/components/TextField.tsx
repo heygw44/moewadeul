@@ -17,7 +17,7 @@ type TextFieldProps = ComponentPropsWithRef<'input'> & {
 // 입력란 글자는 16px 아래로 내리지 않는다. iOS가 작은 입력란에 포커스하면 화면을 확대하기 때문이다.
 // 입력란은 옅은 면으로 알리고, 포커스하면 흰 면과 정보색 테두리로 바뀐다.
 const INPUT_BASE =
-  'min-h-11 w-full rounded-control border bg-fill px-3 text-base text-ink focus:bg-surface focus:border-info disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-subtle';
+  'min-h-12 w-full rounded-control border bg-surface px-3.5 text-base text-ink focus:border-ink focus:outline-none disabled:cursor-not-allowed disabled:bg-fill disabled:text-ink-subtle';
 
 export function TextField({
   label,
@@ -44,14 +44,14 @@ export function TextField({
       id={inputId}
       aria-invalid={error || invalid ? true : undefined}
       aria-describedby={describedByIds}
-      className={`${INPUT_BASE}${trailing ? ' pr-12' : ''} ${error || invalid ? 'border-danger' : 'border-line'}`}
+      className={`${INPUT_BASE}${trailing ? ' pr-12' : ''} ${error || invalid ? 'border-danger' : 'border-fill-strong'}`}
       {...rest}
     />
   );
 
   return (
     <div className={['flex flex-col gap-1', className ?? ''].filter(Boolean).join(' ')}>
-      <label htmlFor={inputId} className={hideLabel ? 'sr-only' : 'text-sm font-medium text-ink'}>
+      <label htmlFor={inputId} className={hideLabel ? 'sr-only' : 'text-sm font-semibold text-ink'}>
         {label}
       </label>
       {trailing ? (

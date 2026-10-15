@@ -23,7 +23,7 @@ export function AccountChip() {
     const here = pathname + search;
     return (
       <div className="pointer-events-auto inline-flex items-center gap-1">
-        <Link to={withNext('/login', here)} className={`${TEXT_LINK_CLASS} text-accent`}>
+        <Link to={withNext('/login', here)} className={`${TEXT_LINK_CLASS} text-ink`}>
           로그인
         </Link>
         <Link to={withNext('/signup', here)} className={`${buttonClassName('signup')} whitespace-nowrap`}>

@@ -160,12 +160,12 @@ export function Sheet({ snap, onSnapChange, header, children, label, aboveBottom
       onKeyDown={handleKeyDown}
       style={dragging ? { height: `${dragHeight}px` } : undefined}
       className={[
-        'fixed inset-x-0 z-10 flex flex-col rounded-t-sheet border-t border-line bg-surface shadow-raise',
+        'fixed inset-x-0 z-10 flex flex-col rounded-t-[16px] bg-canvas shadow-raise',
         aboveBottomNav ? 'bottom-(--bottom-nav-h)' : 'bottom-0',
         dragging
           ? 'transition-none'
           : `${aboveBottomNav && snap === 'full' ? FULL_ABOVE_NAV_CLASS : SNAP_HEIGHT_CLASSES[snap]} transition-[height] duration-200 ease-out motion-reduce:transition-none`,
-        'lg:static lg:z-auto lg:h-full lg:w-[400px] lg:shrink-0 lg:rounded-none lg:border-t-0 lg:border-r lg:shadow-none',
+        'lg:static lg:z-auto lg:h-full lg:w-[420px] lg:shrink-0 lg:rounded-none lg:shadow-none',
       ].join(' ')}
     >
       <button
@@ -178,9 +178,9 @@ export function Sheet({ snap, onSnapChange, header, children, label, aboveBottom
         onPointerCancel={handlePointerCancel}
         className="flex h-11 w-full shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing lg:hidden"
       >
-        <span aria-hidden="true" className="h-1 w-9 rounded-full bg-ink-subtle/50" />
+        <span aria-hidden="true" className="h-1 w-10 rounded-full bg-fill-strong" />
       </button>
-      {header && <div className="shrink-0 border-b border-line px-4 pb-3 lg:pt-4">{header}</div>}
+      {header && <div className="shrink-0 px-4 pb-3 lg:px-5 lg:pt-5">{header}</div>}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
     </section>
   );

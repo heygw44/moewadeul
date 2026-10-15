@@ -1,26 +1,37 @@
-import { useEffect } from 'react';
-import { SiteFooter } from '../../app/layout/SiteFooter';
-import { SiteHeader } from '../../app/layout/SiteHeader';
+import { useEffect, useRef } from 'react';
 import { AnnouncementBar } from '../program/AnnouncementBar';
-import { LandingStage } from './LandingStage';
+import { LandingAgenda } from './LandingAgenda';
+import { LandingClose } from './LandingClose';
+import { LandingFooter } from './LandingFooter';
+import { LandingHero } from './LandingHero';
+import { LandingIntro } from './LandingIntro';
+import { LandingNotes } from './LandingNotes';
+import { LandingShowcase } from './LandingShowcase';
+import { useReveal } from './useReveal';
+import './landing.css';
 
-// 처음 온 사람에게 뫼와들이 무엇을 하는지 보여 주는 첫 화면이다.
-// 화면을 채운 실제 지도 위로 장면 문장이 지나가며 차별점(판단 근거, 동행 신뢰, 장소에서 동행·행사로 이어지는 흐름)을 차례로 보여 준다.
+// 처음 온 사람에게 뫼와들이 무엇을 하는지 보여 주는 첫 화면이다. 사진 대신 제품 조각을 실제 크기로 보여 준다.
+// 순서는 무대 위 장소 패널 → 첫 문단과 네 칸 → 베이스캠프 한 장 → 어두운 줄 → 공식 행사 → 열린 첫 단계 → 칸 바닥글이다.
 export function LandingPage() {
+  const mainRef = useRef<HTMLElement>(null);
+  useReveal(mainRef);
+
   useEffect(() => {
-    document.title = '뫼와들 · 잘 수 있는 박지와 믿을 수 있는 동행';
+    document.title = '뫼와들 · 자도 되는 곳에서, 믿을 사람과';
   }, []);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-canvas">
+    <div id="top" className="flex min-h-dvh flex-col bg-canvas">
       <AnnouncementBar />
-      <SiteHeader mobileAccount lineOnScroll />
-
-      <main className="flex-1 break-keep">
-        <LandingStage />
+      <main ref={mainRef} className="flex-1 break-keep">
+        <LandingHero />
+        <LandingIntro />
+        <LandingNotes />
+        <LandingShowcase />
+        <LandingAgenda />
+        <LandingClose />
       </main>
-
-      <SiteFooter />
+      <LandingFooter />
     </div>
   );
 }

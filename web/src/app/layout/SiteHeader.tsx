@@ -16,13 +16,15 @@ type SiteHeaderProps = {
   mobileAccount?: boolean;
   // 로그인·가입 화면처럼 계정 표시가 그 화면의 할 일과 겹치는 곳에서 켠다. 알림·계정 자리를 비운다.
   minimal?: boolean;
-  // 랜딩에서 켠다. 맨 위에서는 아래 선을 숨겨 머리글과 첫 화면을 한 면으로 잇고, 스크롤하면 선을 보인다.
+  // 랜딩에서 켠다. 맨 위에서는 바탕과 한 면이고, 스크롤하면 아래에 옅은 그림자를 띄워 본문과 나눈다.
   lineOnScroll?: boolean;
   className?: string;
 };
 
 const PRIMARY_KEYS = new Set(['map', 'basecamps', 'footprints', 'community', 'programs']);
 const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
+// 위에 붙어 다니는 머리글이 본문 위에 떠 있을 때만 아래로 옅은 그림자를 띄운다.
+const RAISED_SHADOW = 'shadow-[0_6px_16px_-12px_rgb(27_38_32/0.35)]'; // taste-skill-ignore: 붙어 다니는 막대
 
 // 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 한 줄 머리글이다. 왼쪽부터 서비스 이름, 메뉴, 오른쪽 끝에 알림·계정을 둔다.
 // 지도 화면을 포함한 모든 화면에서 가운데 최대 폭(max-w-screen-xl) 안에 둔다. 그래서 메뉴로 화면을 오가도 로고와 메뉴 자리가 움직이지 않는다.
@@ -38,8 +40,8 @@ export function SiteHeader({ mobileAccount = false, minimal = false, lineOnScrol
   const [openedAt, setOpenedAt] = useState<string | null>(null);
   const menuOpen = openedAt === pathname;
   const scrolled = useScrolled(lineOnScroll);
-  // 메뉴를 펼치면 목록과 머리글을 나누려고 선을 보인다.
-  const showLine = !lineOnScroll || scrolled || menuOpen;
+  // 머리글은 선 없이 바탕과 한 면이다. 랜딩에서 스크롤했거나 모바일 메뉴를 펼쳤을 때만 아래 그림자로 나눈다.
+  const showLine = (lineOnScroll && scrolled) || menuOpen;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -51,13 +53,13 @@ export function SiteHeader({ mobileAccount = false, minimal = false, lineOnScrol
   }, [menuOpen]);
 
   return (
-    <header className={`sticky top-0 z-20 border-b bg-canvas ${showLine ? 'border-line' : 'border-transparent'} ${className}`}>
-      <div className="mx-auto flex min-h-13 max-w-screen-xl items-center gap-3 px-4 lg:gap-10">
+    <header className={`sticky top-0 z-20 bg-canvas transition-shadow ${showLine ? RAISED_SHADOW : ''} ${className}`}>
+      <div className="mx-auto flex min-h-16 max-w-screen-xl items-center gap-3 px-4 lg:gap-10 lg:px-10">
         <Link to="/" className="shrink-0 text-ink">
-          <BrandMark className="text-lg" />
+          <BrandMark className="text-[22px] font-extrabold tracking-[-0.04em]" />
         </Link>
 
-        {/* 데스크톱 메뉴는 서비스 이름 바로 옆에 둔다. 지금 메뉴는 먹색 글자와 밑줄, 나머지는 보조 글자색이다.
+        {/* 데스크톱 메뉴는 서비스 이름 바로 옆에 둔다. 지금 메뉴는 먹색, 나머지는 보조 글자색이다.
             굵기는 모두 같게 둔다. 지금 메뉴만 굵게 하면 메뉴를 옮길 때 글자 폭이 바뀌어 옆 메뉴가 밀린다. */}
         {!minimal && (
           <nav aria-label="주 메뉴" className="hidden items-center gap-7 lg:flex">
@@ -69,10 +71,8 @@ export function SiteHeader({ mobileAccount = false, minimal = false, lineOnScrol
                   to={item.path}
                   aria-current={current ? 'page' : undefined}
                   className={[
-                    'relative inline-flex min-h-11 items-center text-sm font-medium',
-                    current
-                      ? 'text-ink after:absolute after:inset-x-0 after:bottom-2 after:h-0.5 after:bg-ink'
-                      : 'text-ink-muted hover:text-ink',
+                    'inline-flex min-h-11 items-center text-[15px] font-semibold transition-colors',
+                    current ? 'text-ink' : 'text-ink-muted hover:text-ink',
                   ].join(' ')}
                 >
                   {item.label}
@@ -113,7 +113,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, lineOnScrol
               <div className="inline-flex items-center gap-1 lg:hidden">
                 <Link
                   to={withNext('/login', pathname + search)}
-                  className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-accent"
+                  className="inline-flex min-h-11 items-center px-2 font-semibold whitespace-nowrap text-ink"
                 >
                   로그인
                 </Link>
@@ -140,7 +140,7 @@ export function SiteHeader({ mobileAccount = false, minimal = false, lineOnScrol
 
 
       {!minimal && menuOpen && (
-        <nav id="mobile-nav" aria-label="주 메뉴" className="border-t border-line bg-canvas lg:hidden">
+        <nav id="mobile-nav" aria-label="주 메뉴" className="bg-canvas lg:hidden">
           <ul className="mx-auto flex max-w-screen-xl flex-col py-3">
             {PRIMARY_ITEMS.map((item) => {
               const current = active === item.key;
