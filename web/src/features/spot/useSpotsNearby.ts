@@ -89,13 +89,14 @@ export function useSpotsNearby(
 
     const draw = (items: NearbySpot[]) =>
       map.showMarkers(
-        items.map((item) => ({
+        items.map((item, index) => ({
           id: item.spotId,
           kind: item.type,
           name: item.name,
           position: { lat: item.lat, lng: item.lng },
           warning: item.parkWarning,
           closed: item.closedNow,
+          label: String(index + 1),
         })),
         [],
       );

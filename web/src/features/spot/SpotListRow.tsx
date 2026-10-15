@@ -1,46 +1,74 @@
+import type { MouseEvent } from 'react';
 import { Link } from '../../app/router';
 import type { SpotMarker } from '../../api/types';
-import { Icon } from '../../components/icons';
 import { MetaLine, StatusText } from '../../components/StatusText';
+import { formatDistanceKm } from '../../lib/geo';
 import { SPOT_TYPE_META } from './spotLabels';
 
 type SpotListRowProps = {
   marker: SpotMarker;
-  // 반경 검색 결과에서만 넘긴다. 기준점에서 떨어진 거리(km)를 메타 줄 맨 앞에 적는다.
-  distanceKm?: number;
+  // 목록 순서 번호다. 지도 핀에 같은 번호가 적힌다.
+  number: number;
+  // 지도 가운데(반경 검색이면 기준점)에서 떨어진 거리(km)다.
+  distanceKm: number;
+  selected?: boolean;
+  // 넘기면 행을 눌렀을 때 상세로 가지 않고 이 함수를 부른다. 데스크톱에서 지도 위 근거 판을 띄울 때 쓴다.
+  onPreview?: (spotId: number) => void;
 };
 
 // 지도 마커를 누르지 못하는 사람도 같은 장소를 고를 수 있도록, 목록 행 하나가 마커 하나와 짝을 이룬다.
-export function SpotListRow({ marker, distanceKm }: SpotListRowProps) {
+// 탐방로 안내판의 갈림길 행처럼 왼쪽에 번호 원, 가운데 이름, 오른쪽에 굵은 거리를 둔다.
+export function SpotListRow({ marker, number, distanceKm, selected = false, onPreview }: SpotListRowProps) {
   const meta = SPOT_TYPE_META[marker.type];
+  const roundel = marker.type === 'BAKJI' ? 'bg-bakji' : 'bg-brand';
+  const distance = formatDistanceKm(distanceKm);
+
+  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
+    // 새 탭으로 여는 클릭은 그대로 상세 주소로 보낸다.
+    if (!onPreview || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    onPreview(marker.spotId);
+  }
 
   return (
     <li>
       <Link
         to={`/spots/${marker.spotId}`}
-        className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-3 hover:bg-fill focus-visible:-outline-offset-2"
+        onClick={handleClick}
+        aria-current={selected ? 'true' : undefined}
+        className={`grid min-h-16 grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 hover:bg-fill focus-visible:-outline-offset-2 ${selected ? 'bg-accent-soft' : ''}`}
       >
-        <span className={`flex size-8 shrink-0 items-center justify-center rounded-control ${meta.tileClass}`}>
-          <Icon name={meta.icon} size={18} />
+        <span
+          aria-hidden="true"
+          className={`flex size-7 items-center justify-center rounded-full font-mono text-sm font-extrabold tabular-nums text-white ${roundel}`}
+        >
+          {number}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="truncate text-base text-ink">{marker.name}</span>
-          {/* 장소 유형은 왼쪽 아이콘이 이미 알린다. 그래서 판단에 필요한 경고와 휴장만 글로 적는다. */}
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="truncate text-base font-bold tracking-[-0.01em] text-ink">
+            <span className="sr-only">{number}번 </span>
+            {marker.name}
+          </span>
           <MetaLine
+            className="text-[0.8125rem]"
             items={[
-              distanceKm !== undefined && <span className="font-mono">{distanceKm}km</span>,
+              meta.label,
               marker.parkWarning && (
                 <StatusText tone="warning" icon="alert">
-                  공원 경계 경고
+                  공원 경계 안일 수 있어요
                 </StatusText>
               ),
               marker.closedNow && (
-                <StatusText tone="closed" icon="closed">
-                  휴장 중
+                <StatusText tone="neutral" icon="closed">
+                  <span className="text-ink">휴장 중</span>
                 </StatusText>
               ),
             ]}
           />
+        </span>
+        <span className="font-mono text-lg font-extrabold tracking-[-0.02em] tabular-nums text-ink">
+          {distance}
+          <span className="ml-0.5 text-xs font-semibold text-ink-muted">km</span>
         </span>
       </Link>
     </li>

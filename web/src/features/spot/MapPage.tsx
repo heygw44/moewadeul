@@ -4,7 +4,7 @@ import type { AiInterpretResponse, NearbySpot } from '../../api/types';
 import { BottomTabBar } from '../../app/layout/BottomTabBar';
 import { SiteHeader } from '../../app/layout/SiteHeader';
 import { Link, navigate } from '../../app/router';
-import { BrandMark } from '../../components/BrandMark';
+import type { SpotType } from '../../api/types';
 import { ActiveFilterChips } from '../../components/ActiveFilterChips';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -30,7 +30,6 @@ import { NO_BASECAMP_FILTERS, basecampFilterChips } from '../basecamp/basecampFi
 import type { BasecampFilters } from '../basecamp/basecampFilters';
 import type { BasecampsInView } from '../basecamp/useBasecampsInView';
 import { withNext } from '../member/nextPath';
-import { NotificationBellLink } from '../notification/NotificationLink';
 import { useSession } from '../member/session';
 import { BakjiReportPanel } from './BakjiReportPanel';
 import { MapLegend } from './MapLegend';
@@ -44,6 +43,7 @@ import { SpotFilterDialog } from './SpotFilterDialog';
 import { NO_SPOT_FILTERS, filtersFromInterpretation, spotFilterChips } from './spotFilters';
 import type { SpotFilters } from './spotFilters';
 import { SpotListRow } from './SpotListRow';
+import { SpotPreviewBoard } from './SpotPreviewBoard';
 import { useMapMoving } from './useMapMoving';
 import { useRegionName } from './useRegionName';
 import { useSpotsInView } from './useSpotsInView';
@@ -70,8 +70,33 @@ const DRAFT_FOCUS_LEVEL = 5;
 // 묶음을 누르면 이만큼 확대해서 안의 장소가 풀려 보이게 한다.
 const CLUSTER_ZOOM_STEP = 2;
 
-const CHIP_CLASS =
-  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3';
+// 데스크톱(lg)부터 지도 왼쪽에 패널을 두고, 장소를 고르면 지도 위에 근거 판을 띄운다.
+const DESKTOP_QUERY = '(min-width: 64rem)';
+
+// 지도 위에 띄우는 버튼(박지 제보·지형)이다. 흰 판에 그림자로 지도에서 띄운다.
+const MAP_BUTTON_CLASS =
+  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-base font-semibold text-ink shadow-raise hover:bg-fill';
+const MAP_BUTTON_ON_CLASS =
+  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-brand bg-brand px-3 text-base font-semibold text-white shadow-raise';
+
+// 목록 위 유형 선택 칸이다. 상세 조건의 유형을 하나만 고르는 지름길이고, 전체는 유형 조건을 푼다.
+const TYPE_SEGMENTS: ReadonlyArray<{ value: SpotType | null; label: string }> = [
+  { value: null, label: '전체' },
+  { value: 'CAMPSITE', label: '야영장' },
+  { value: 'FOREST', label: '휴양림' },
+  { value: 'BAKJI', label: '박지' },
+];
+
+function useIsDesktop(): boolean {
+  const [desktop, setDesktop] = useState(() => window.matchMedia(DESKTOP_QUERY).matches);
+  useEffect(() => {
+    const query = window.matchMedia(DESKTOP_QUERY);
+    const onChange = () => setDesktop(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+  return desktop;
+}
 
 type MapPageProps = {
   spotId?: number;
@@ -128,8 +153,14 @@ export function MapPage({
   const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
   // 지도에서 장소 마커를 눌러 고른 장소다. 베이스캠프 목록을 그 장소로 거른다.
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
+  // 데스크톱에서 목록을 둔 채 지도 위 근거 판으로 보고 있는 장소다.
+  const [previewId, setPreviewId] = useState<number | null>(null);
+  const desktop = useIsDesktop();
   // 장소 조건은 지도를 둘러보는 화면에서만 쓴다. 박지를 제보하거나 베이스캠프를 여는 중에는 근처 장소를 빠짐없이 보여 준다.
   const browsing = mode === 'browse';
+  // 근거 판은 데스크톱에서 장소를 둘러볼 때, 상세가 열려 있지 않을 때만 띄운다.
+  const previewEnabled = browsing && desktop && spotId === undefined;
+  if (!previewEnabled && previewId !== null) setPreviewId(null);
   // 반경 검색과 AI 요약은 지도를 둘러보는 화면에서만 쓴다. 다른 화면으로 가면 버린다.
   if (!browsing && (radiusSearch !== null || aiSummary !== null)) {
     setRadiusSearch(null);
@@ -246,6 +277,10 @@ export function MapPage({
         if (basecampId !== undefined) navigate('/basecamps');
         return;
       }
+      if (previewEnabled) {
+        setPreviewId(id);
+        return;
+      }
       navigate(`/spots/${id}`);
     });
     const offCluster = map.onClusterClick((cluster) => {
@@ -255,7 +290,7 @@ export function MapPage({
       offMarker();
       offCluster();
     };
-  }, [map, reporting, basecampMode, basecampId]);
+  }, [map, reporting, basecampMode, basecampId, previewEnabled]);
 
   // 제보 화면에서만 지도를 눌러 박지 위치를 찍는다. 화면을 벗어나면 임시 핀을 지우고 찍은 위치도 버린다.
   useEffect(() => {
@@ -307,6 +342,12 @@ export function MapPage({
     };
   }, [map, contextMenuEnabled, closeContextMenu, spotId, basecampId]);
 
+  // 지도의 빈 곳을 누르면 근거 판을 닫는다.
+  useEffect(() => {
+    if (!map || !previewEnabled) return;
+    return map.onMapClick(() => setPreviewId(null));
+  }, [map, previewEnabled]);
+
   useEffect(() => {
     map?.showSearchPin(searchPin);
   }, [map, searchPin]);
@@ -327,8 +368,8 @@ export function MapPage({
   }, [map]);
 
   useEffect(() => {
-    map?.setSelected(basecampMode ? spotFilterId : opening ? (openSpotId ?? null) : (spotId ?? null));
-  }, [map, spotId, basecampMode, spotFilterId, opening, openSpotId]);
+    map?.setSelected(basecampMode ? spotFilterId : opening ? (openSpotId ?? null) : (spotId ?? previewId));
+  }, [map, spotId, basecampMode, spotFilterId, opening, openSpotId, previewId]);
 
   useEffect(() => {
     map?.setTerrain(terrainOn);
@@ -397,6 +438,44 @@ export function MapPage({
     });
   }
 
+  // 검색 줄(검색 칸·AI 검색·조건), 유형 선택, 켜진 조건 칩, AI 요약이다.
+  // 모바일은 지도 위에 띄우고, 데스크톱은 왼쪽 패널 위쪽 도구 줄에 둔다. 둘 중 하나만 화면에 보인다.
+  function renderControls(inPanel: boolean) {
+    if (!map) return null;
+    const filterable = browsing || basecampMode;
+    return (
+      <>
+        <div className={`flex w-full items-start gap-2 ${inPanel ? '' : 'pointer-events-none'}`}>
+          <MapSearchBar
+            onSearch={() => setSearchPin(null)}
+            onSelect={selectRegion}
+            mapMoving={mapMoving.moving}
+            inPanel={inPanel}
+            ai={browsing ? { onResult: applyAiResult } : undefined}
+          />
+          {filterable && !inPanel && (
+            <FilterButton
+              compact
+              count={basecampMode ? basecampFilterChipList.length : spotFilterChipList.length}
+              onClick={() => setFilterDialogOpen(true)}
+            />
+          )}
+        </div>
+        {inPanel && filterable && (
+          <div className="flex gap-1.5">
+            {browsing && <TypeSegments types={spotFilters.types} onChange={(types) => setSpotFilters({ ...spotFilters, types })} />}
+            <FilterButton
+              count={basecampMode ? basecampFilterChipList.length : spotFilterChipList.length}
+              onClick={() => setFilterDialogOpen(true)}
+            />
+          </div>
+        )}
+        <ActiveFilterChips chips={filterChipList} onReset={resetFilters} />
+        {aiSummary && <AiInterpretSummary summary={aiSummary} className={inPanel ? 'w-full' : 'w-fit max-w-full'} />}
+      </>
+    );
+  }
+
   function retryMap() {
     setMapFailure(null);
     setMapAttempt((value) => value + 1);
@@ -404,13 +483,14 @@ export function MapPage({
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-canvas">
-      <SiteHeader className="hidden lg:block" />
+      <SiteHeader />
       <div className="relative min-h-0 flex-1 lg:flex">
         <Sheet
           aboveBottomNav={!contentOpen}
           snap={snap}
           onSnapChange={setSnap}
           label={sheetLabel}
+          toolbar={map ? renderControls(true) : undefined}
           header={
             contentOpen ? undefined : basecampMode ? (
               <BasecampListHeader
@@ -455,6 +535,8 @@ export function MapPage({
               area={area}
               waitingForMap={map === null && mapFailure === null}
               filtered={spotFilterChipList.length > 0}
+              previewId={previewId}
+              onPreview={previewEnabled ? setPreviewId : undefined}
             />
           ) : (
             <SpotDetailPanel key={spotId} spotId={spotId} onBack={() => navigate('/map')} />
@@ -513,53 +595,30 @@ export function MapPage({
             }`}
           >
             <h1 className="sr-only">뫼와들 지도</h1>
-            <div className="flex items-start justify-between gap-2">
-              {/* 데스크톱은 위의 머리글이 서비스 이름과 메뉴를 보여 주므로, 지도 위에는 모바일에서만 이름을 띄운다. */}
-              <Link to="/" className={`${CHIP_CLASS} text-ink lg:invisible`}>
-                <BrandMark className="text-lg" />
-              </Link>
-              <div className="flex flex-wrap justify-end gap-2">
-                <NotificationBellLink className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-ink hover:bg-fill lg:hidden" />
-                {map && (
-                  <>
-                    {!reporting && !basecampMode && !opening && <ReportButton />}
-                    <button
-                      type="button"
-                      aria-pressed={terrainOn}
-                      onClick={() => setTerrainOn((value) => !value)}
-                      className={
-                        terrainOn
-                          ? 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-accent-deep'
-                          : 'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-base font-semibold text-ink hover:bg-fill'
-                      }
-                    >
-                      <Icon name="terrain" size={20} />
-                      지형
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+            {/* 모바일은 검색 줄을 지도 위 맨 위에 띄우고, 데스크톱은 왼쪽 패널 도구 줄이 맡는다. */}
+            <div className="flex flex-col gap-2 lg:hidden">{renderControls(false)}</div>
             {map && (
-              <div className="flex w-full items-start gap-2 lg:max-w-md">
-                <MapSearchBar
-                  onSearch={() => setSearchPin(null)}
-                  onSelect={selectRegion}
-                  mapMoving={mapMoving.moving}
-                  ai={browsing ? { onResult: applyAiResult } : undefined}
-                />
-                {(browsing || basecampMode) && (
-                  <FilterButton
-                    count={basecampMode ? basecampFilterChipList.length : spotFilterChipList.length}
-                    onClick={() => setFilterDialogOpen(true)}
-                  />
-                )}
+              <div className="flex flex-wrap justify-end gap-2 lg:justify-start">
+                {!reporting && !basecampMode && !opening && <ReportButton />}
+                <button
+                  type="button"
+                  aria-pressed={terrainOn}
+                  onClick={() => setTerrainOn((value) => !value)}
+                  className={terrainOn ? MAP_BUTTON_ON_CLASS : MAP_BUTTON_CLASS}
+                >
+                  <Icon name="terrain" size={20} />
+                  지형
+                </button>
               </div>
             )}
-            <ActiveFilterChips chips={filterChipList} onReset={resetFilters} className="lg:max-w-md" />
-            {aiSummary && <AiInterpretSummary summary={aiSummary} className="w-fit max-w-full lg:max-w-md" />}
             <MapSafetyNotice />
           </div>
+
+          {previewEnabled && previewId !== null && (
+            <div className="pointer-events-none absolute top-4 right-4 z-10">
+              <SpotPreviewBoard key={previewId} spotId={previewId} onClose={() => setPreviewId(null)} />
+            </div>
+          )}
         </div>
       </div>
       {filterDialogOpen && basecampMode && (
@@ -602,6 +661,10 @@ export function MapPage({
   );
 }
 
+// 목록 행을 담는 흰 목록판이다. 패널 안쪽 여백만큼 띄우고 행 사이에 선을 긋는다.
+const LIST_BOARD_CLASS =
+  'mx-3 mb-4 divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface lg:mx-5';
+
 // 서버는 장소가 너무 많으면 markers를 비우고 clusters만 준다. 그래서 묶음일 때는 묶음 개수의 합이 지금 화면의 장소 수다.
 function totalCount(area: SpotsInView): number {
   if (area.markers.length > 0) return area.markers.length;
@@ -616,6 +679,13 @@ function regionPhrase(label: RegionLabel | null): string {
   return '이 지역';
 }
 
+// 목록 머리 띠의 제목이다. 장소 수는 띠 오른쪽에 따로 적으므로 지역 이름만 쓴다.
+function regionTitle(label: RegionLabel | null): string {
+  if (label?.kind === 'named') return label.name;
+  if (label?.kind === 'wide') return '여러 시·도';
+  return '이 지역';
+}
+
 function ListHeader({
   area,
   regionName,
@@ -625,8 +695,14 @@ function ListHeader({
 }) {
   const counted = area.status === 'ready' || area.markers.length > 0 || area.clusters.length > 0;
   return (
-    <h2 className="truncate text-lg font-semibold text-ink">
-      {regionPhrase(regionName)} 장소{counted && <span className="tabular-nums"> {totalCount(area)}곳</span>}
+    <h2 className="flex items-baseline justify-between gap-3">
+      <span className="truncate text-lg font-extrabold tracking-[-0.02em] lg:text-[1.375rem]">
+        {regionTitle(regionName)}
+        <span className="sr-only"> 장소</span>
+      </span>
+      {counted && (
+        <span className="shrink-0 text-sm tabular-nums text-ink-muted lg:text-brand-ink">장소 {totalCount(area)}곳</span>
+      )}
     </h2>
   );
 }
@@ -634,7 +710,7 @@ function ListHeader({
 function NearbyListHeader({ nearby, radius }: { nearby: SpotsNearby; radius: RadiusSearch }) {
   const counted = nearby.status === 'ready' || nearby.items.length > 0;
   return (
-    <h2 className="truncate text-lg font-semibold text-ink">
+    <h2 className="truncate text-lg font-extrabold tracking-[-0.02em]">
       {radius.label}에서 {radius.radiusKm}km 안 장소
       {counted && (
         <span className="tabular-nums">
@@ -647,8 +723,9 @@ function NearbyListHeader({ nearby, radius }: { nearby: SpotsNearby; radius: Rad
   );
 }
 
-// 검색 칸 오른쪽의 상세 조건 버튼이다. 켜진 조건이 있으면 개수를 함께 적고 선택 색으로 바꾼다.
-function FilterButton({ count, onClick }: { count: number; onClick: () => void }) {
+// 상세 조건 버튼이다. 켜진 조건이 있으면 개수를 함께 적고 먹색으로 뒤집는다.
+// compact는 모바일 지도 위 검색 줄에 둘 때 켠다. 아이콘만 그리고 지도 위라서 그림자로 띄운다.
+function FilterButton({ count, onClick, compact = false }: { count: number; onClick: () => void; compact?: boolean }) {
   const active = count > 0;
   return (
     <button
@@ -656,15 +733,44 @@ function FilterButton({ count, onClick }: { count: number; onClick: () => void }
       onClick={onClick}
       aria-haspopup="dialog"
       aria-label={active ? `조건 ${count}개 켜짐, 조건 바꾸기` : '조건 고르기'}
-      className={
+      className={[
+        'pointer-events-auto inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-control text-sm font-semibold whitespace-nowrap',
+        compact ? 'min-w-11 px-2.5 shadow-raise' : 'px-3',
         active
-          ? 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-accent bg-accent-soft px-3 text-base font-semibold text-accent-deep'
-          : 'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-base font-semibold text-ink hover:bg-fill'
-      }
+          ? 'border border-ink bg-ink text-white'
+          : compact
+            ? 'border border-transparent bg-surface text-ink hover:bg-fill'
+            : 'border border-line bg-surface text-ink hover:bg-fill',
+      ].join(' ')}
     >
-      <Icon name="sliders" size={20} />
-      조건{active && <span className="tabular-nums">{count}</span>}
+      <Icon name="sliders" size={18} />
+      {!compact && '조건'}
+      {active && <span className="tabular-nums">{count}</span>}
     </button>
+  );
+}
+
+// 유형을 하나만 고르는 칸이다. 상세 조건에서 유형을 여럿 골랐으면 어느 칸도 눌리지 않은 채로 둔다.
+function TypeSegments({ types, onChange }: { types: SpotType[]; onChange: (types: SpotType[]) => void }) {
+  return (
+    <div role="group" aria-label="장소 유형" className="flex min-w-0 flex-1 gap-1.5">
+      {TYPE_SEGMENTS.map((segment) => {
+        const pressed = segment.value === null ? types.length === 0 : types.length === 1 && types[0] === segment.value;
+        return (
+          <button
+            key={segment.label}
+            type="button"
+            aria-pressed={pressed}
+            onClick={() => onChange(segment.value === null ? [] : [segment.value])}
+            className={`inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-control px-1 text-sm whitespace-nowrap ${
+              pressed ? 'border border-ink bg-ink font-bold text-white' : 'border border-line bg-surface text-ink hover:bg-fill'
+            }`}
+          >
+            {segment.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -677,7 +783,7 @@ function BasecampListHeader({
 }) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
-    <h2 className="truncate text-lg font-semibold text-ink">
+    <h2 className="truncate text-lg font-extrabold tracking-[-0.02em]">
       {regionPhrase(regionName)} 베이스캠프
       {counted && (
         <span className="tabular-nums">
@@ -694,10 +800,14 @@ function SpotList({
   area,
   waitingForMap,
   filtered,
+  previewId,
+  onPreview,
 }: {
   area: SpotsInView;
   waitingForMap: boolean;
   filtered: boolean;
+  previewId: number | null;
+  onPreview?: (spotId: number) => void;
 }) {
   const showSkeleton = useDelayedFlag(area.status === 'loading' || waitingForMap);
 
@@ -705,8 +815,8 @@ function SpotList({
     return (
       <div aria-busy="true" className="flex flex-col">
         {[0, 1, 2].map((index) => (
-          <div key={index} className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-3">
-            <Skeleton className="size-8 shrink-0" />
+          <div key={index} className="flex min-h-16 items-center gap-3 border-b border-line px-4 py-3 lg:px-5">
+            <Skeleton className="size-7 shrink-0 rounded-full" />
             <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-4 w-2/3" />
               <Skeleton className="h-3 w-1/3" />
@@ -733,7 +843,7 @@ function SpotList({
       )}
 
       {area.status === 'ready' && area.markers.length === 0 && area.clusters.length > 0 && (
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-4 lg:px-5">
           {/* 머리의 장소 수가 지역 전체가 아니라 지금 화면의 수라는 것을 함께 적는다. 상태 안내라서 상자로 감싸지 않는다. */}
           <p className="text-sm text-ink-muted">
             장소가 많아서 지도에 묶어서 보여요. 지도를 확대하면 목록으로 볼 수 있어요.
@@ -750,11 +860,24 @@ function SpotList({
       )}
 
       {area.markers.length > 0 && (
-        <ul aria-label="이 지역의 장소">
-          {area.markers.map((marker) => (
-            <SpotListRow key={marker.spotId} marker={marker} />
-          ))}
-        </ul>
+        <>
+          <p className="flex justify-between px-4 pt-3 pb-2 text-[0.8125rem] text-ink-muted lg:px-5">
+            <span>지도 가운데에서 가까운 순</span>
+            <span className="tabular-nums">{area.markers.length}곳</span>
+          </p>
+          <ul aria-label="이 지역의 장소" className={LIST_BOARD_CLASS}>
+            {area.markers.map((marker, index) => (
+              <SpotListRow
+                key={marker.spotId}
+                marker={marker}
+                number={index + 1}
+                distanceKm={marker.distanceKm}
+                selected={marker.spotId === previewId}
+                onPreview={onPreview}
+              />
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );
@@ -768,8 +891,8 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
     return (
       <div aria-busy="true" className="flex flex-col">
         {[0, 1, 2].map((index) => (
-          <div key={index} className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-3">
-            <Skeleton className="size-8 shrink-0" />
+          <div key={index} className="flex min-h-16 items-center gap-3 border-b border-line px-4 py-3 lg:px-5">
+            <Skeleton className="size-7 shrink-0 rounded-full" />
             <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-4 w-2/3" />
               <Skeleton className="h-3 w-1/3" />
@@ -800,9 +923,9 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
       )}
 
       {nearby.items.length > 0 && (
-        <ul aria-label="반경 안의 장소">
-          {nearby.items.map((item) => (
-            <SpotListRow key={item.spotId} marker={item} distanceKm={item.distanceKm} />
+        <ul aria-label="반경 안의 장소" className={`${LIST_BOARD_CLASS} mt-3`}>
+          {nearby.items.map((item, index) => (
+            <SpotListRow key={item.spotId} marker={item} number={index + 1} distanceKm={item.distanceKm} />
           ))}
         </ul>
       )}
@@ -832,7 +955,7 @@ function ReportButton() {
   return (
     <Link
       to={target}
-      className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface shadow-raise px-3 text-base font-semibold text-ink hover:bg-fill"
+      className={MAP_BUTTON_CLASS}
     >
       <Icon name="backpack" size={20} />
       박지 제보

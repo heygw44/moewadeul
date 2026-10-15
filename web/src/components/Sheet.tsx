@@ -7,6 +7,8 @@ type SheetProps = {
   snap: SheetSnap;
   onSnapChange: (snap: SheetSnap) => void;
   header?: ReactNode;
+  // 데스크톱(lg)에서만 머리 아래에 두는 도구 줄이다. 지도 화면은 여기에 검색·유형 선택·조건을 둔다.
+  toolbar?: ReactNode;
   children: ReactNode;
   label: string;
   // 모바일 하단 탭 위에 시트를 띄울 때 켠다. 시트의 아래 끝을 탭 높이만큼 올리고, 전체 높이에서도 그만큼 뺀다.
@@ -77,7 +79,7 @@ function nearestSnap(height: number, viewportHeight: number, bottomInset: number
 }
 
 // 모바일에서는 지도 위에 뜨는 하단 시트이고, lg 이상에서는 같은 내용을 왼쪽 400px 고정 패널로 그린다.
-export function Sheet({ snap, onSnapChange, header, children, label, aboveBottomNav = false }: SheetProps) {
+export function Sheet({ snap, onSnapChange, header, toolbar, children, label, aboveBottomNav = false }: SheetProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const dragRef = useRef<DragState | null>(null);
   // 끌기를 마친 직후에 브라우저가 보내는 click을 무시하려고 기억해 둔다.
@@ -160,7 +162,7 @@ export function Sheet({ snap, onSnapChange, header, children, label, aboveBottom
       onKeyDown={handleKeyDown}
       style={dragging ? { height: `${dragHeight}px` } : undefined}
       className={[
-        'fixed inset-x-0 z-10 flex flex-col rounded-t-drawer border-t border-line bg-surface shadow-raise',
+        'fixed inset-x-0 z-10 flex flex-col rounded-t-drawer border-t border-line bg-canvas shadow-raise',
         aboveBottomNav ? 'bottom-(--bottom-nav-h)' : 'bottom-0',
         dragging
           ? 'transition-none'
@@ -180,7 +182,11 @@ export function Sheet({ snap, onSnapChange, header, children, label, aboveBottom
       >
         <span aria-hidden="true" className="h-1 w-9 rounded-full bg-ink-subtle/50" />
       </button>
-      {header && <div className="shrink-0 border-b border-line px-4 pb-3 lg:pt-4">{header}</div>}
+      {/* 머리는 모바일에서 미색 시트 위 제목이고, 데스크톱에서는 탐방로 안내판의 지금 보는 곳 띠처럼 숲색 판에 흰 글자로 그린다. */}
+      {header && (
+        <div className="shrink-0 px-4 pb-3 text-ink lg:bg-brand-raised lg:px-5 lg:py-4 lg:text-white">{header}</div>
+      )}
+      {toolbar && <div className="hidden shrink-0 flex-col gap-3 px-5 pt-5 pb-3 lg:flex">{toolbar}</div>}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
     </section>
   );

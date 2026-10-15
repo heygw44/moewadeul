@@ -22,6 +22,8 @@ export interface SpotMarkerData {
   closed: boolean;
   // 이 장소의 모집 중 베이스캠프 수다. 베이스캠프를 찾는 화면에서만 채운다.
   count?: number;
+  // 목록 행에 붙인 번호다. 핀에 같은 번호를 적어 목록과 지도를 잇는다. 없으면 유형 아이콘을 그린다.
+  label?: string;
 }
 
 // 서버가 묶어서 보낸 장소 묶음이다. 지도 래퍼는 화면에서 겹치는 묶음만 합쳐서 그린다.
