@@ -1,5 +1,5 @@
 // 버튼 변형별 클래스다. Button 컴포넌트와, 버튼처럼 보여야 하는 링크가 함께 쓴다.
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'ghost' | 'signup';
 
 // Tailwind가 소스 글자를 읽어 클래스를 만들기 때문에 클래스 이름을 이어 붙이지 않고 통째로 적는다.
 export const VARIANT_CLASSES: Record<ButtonVariant, string> = {
@@ -11,6 +11,8 @@ export const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   // 빼기·지우기처럼 다시 할 수 있는 위험 행동에 쓴다. 되돌릴 수 없는 확정은 Dialog 안의 danger로 한다.
   'danger-outline': 'bg-surface text-danger border border-danger',
   ghost: 'bg-transparent text-ink border border-transparent',
+  // 머리글의 회원가입에만 쓴다. 먹색으로 채워서 눈에 띄게 하되, 강조색이 아니라서 화면의 primary 하나와 겹치지 않는다.
+  signup: 'bg-ink text-white border border-ink',
 };
 
 export const HOVER_CLASSES: Record<ButtonVariant, string> = {
@@ -20,6 +22,7 @@ export const HOVER_CLASSES: Record<ButtonVariant, string> = {
   danger: '',
   'danger-outline': 'hover:bg-danger-soft',
   ghost: 'hover:bg-fill',
+  signup: 'hover:bg-ink/85 hover:border-transparent',
 };
 
 // 흐리게 만들면 대비가 떨어지므로 투명도 대신 대비가 확보된 색 조합으로 비활성을 표시한다.
