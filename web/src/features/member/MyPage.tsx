@@ -193,15 +193,15 @@ function TrustCard({ me }: { me: Me }) {
 }
 
 // 다음 단계 조건 한 줄이다. 막대는 채운 정도를 눈으로 빨리 보게 하는 장식이고, 값은 글로 함께 적는다.
-// 좁은 화면에서는 막대를 라벨 아래 한 줄로 내린다.
+// 좁은 화면에서는 막대를 라벨 아래 한 줄로 내린다. 라벨과 값이 한 줄에 다 들어가지 않으면 값도 다음 줄 오른쪽으로 내린다.
 function ProgressRow({ label, value, ratio }: { label: string; value: string; ratio?: number }) {
   const percent = ratio === undefined ? null : Math.round(Math.min(Math.max(ratio, 0), 1) * 100);
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 border-t border-line px-5 py-4 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_8.75rem_auto]">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-line px-5 py-4 first:border-t-0 sm:grid sm:grid-cols-[minmax(0,1fr)_8.75rem_auto]">
       <dt className="text-base text-ink">{label}</dt>
-      <dd className="text-right text-base font-bold tabular-nums text-ink sm:order-last">{value}</dd>
+      <dd className="ml-auto text-right text-base font-bold tabular-nums text-ink sm:order-last">{value}</dd>
       {percent !== null ? (
-        <dd aria-hidden="true" className="col-span-2 h-1.5 overflow-hidden rounded-control bg-fill sm:col-span-1">
+        <dd aria-hidden="true" className="h-1.5 basis-full overflow-hidden rounded-control bg-fill">
           <span className="block h-full bg-brand" style={{ width: `${percent}%` }} />
         </dd>
       ) : (

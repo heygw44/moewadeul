@@ -19,7 +19,7 @@ const AI_MIN_LENGTH = 2;
 const AI_MAX_LENGTH = 100;
 
 const AI_LENGTH_MESSAGE = `${AI_MIN_LENGTH}자 이상 ${AI_MAX_LENGTH}자 이하로 입력해 주세요.`;
-const AI_PLACEHOLDER = '예: 강원도 계곡 옆 식수 있는 박지';
+const AI_PLACEHOLDER = '예: 강원도 계곡 옆 박지';
 const AI_NOTICE = '입력한 문장은 해석을 위해 OpenAI로 보내져요. 하루 20번까지 쓸 수 있어요.';
 const GUIDE_BOX_CLASS = 'rounded-control bg-surface px-3 py-3 text-sm text-ink shadow-raise';
 const GUIDE_LINK_CLASS =
@@ -278,7 +278,7 @@ export function MapSearchBar({
               type="text"
               enterKeyHint="search"
               autoComplete="off"
-              placeholder={aiActive ? AI_PLACEHOLDER : '지역 이름이나 주소 (예: 안동, 원주)'}
+              placeholder={aiActive ? AI_PLACEHOLDER : '지역이나 주소 (예: 안동)'}
               value={aiActive ? aiQuery : query}
               error={inputError}
               onChange={(event) => {

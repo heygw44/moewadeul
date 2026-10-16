@@ -158,6 +158,7 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
   return (
     <section
       ref={sectionRef}
+      data-sheet
       aria-label={label}
       onKeyDown={handleKeyDown}
       style={dragging ? { height: `${dragHeight}px` } : undefined}

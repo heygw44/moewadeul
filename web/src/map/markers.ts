@@ -92,10 +92,11 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
     markup +=
       '<span data-pin-count class="pointer-events-none absolute bottom-3 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-surface px-1 font-mono text-xs font-extrabold tabular-nums text-brand ring-[1.5px] ring-brand"></span>';
   }
-  // 겹친 장소 수는 원 왼쪽 아래에 걸친다. 베이스캠프 수와 헷갈리지 않게 먹 바탕에 흰 글자로 그린다.
+  // 겹친 장소 수는 원 왼쪽 아래 바깥에 건다. 원 안 세 자리 번호를 가리지 않게 원 아래쪽으로 내린다.
+  // 베이스캠프 수와 헷갈리지 않게 먹 바탕에 흰 글자로 그린다.
   if (stackedCount > 0) {
     markup +=
-      '<span data-pin-stacked class="pointer-events-none absolute bottom-3 -left-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-ink px-1 font-mono text-xs font-bold tabular-nums text-white"></span>';
+      '<span data-pin-stacked class="pointer-events-none absolute bottom-0 -left-2 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-ink px-1 font-mono text-xs font-bold tabular-nums text-white"></span>';
   }
   button.innerHTML = markup;
   const countBadge = button.querySelector('[data-pin-count]');
