@@ -598,6 +598,11 @@ export async function createMapView(
       terrainOn = on;
     },
 
+    setInteractive(drag, zoomGestures = drag) {
+      map.setDraggable(drag);
+      map.setZoomable(zoomGestures);
+    },
+
     relayout() {
       map.relayout();
     },
