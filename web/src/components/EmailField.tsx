@@ -17,9 +17,11 @@ type EmailFieldProps = {
   error?: string;
   autoFocus?: boolean;
   onBlur?: () => void;
+  // 아이디 칸의 자동 완성 종류다. 로그인 화면은 비밀번호 관리자가 저장한 계정을 채우도록 username을 쓴다.
+  autoComplete?: 'email' | 'username';
 };
 
-export function EmailField({ value, onChange, error, autoFocus, onBlur }: EmailFieldProps) {
+export function EmailField({ value, onChange, error, autoFocus, onBlur, autoComplete = 'email' }: EmailFieldProps) {
   const errorId = useId();
   const invalidProps = {
     invalid: Boolean(error),
@@ -37,7 +39,7 @@ export function EmailField({ value, onChange, error, autoFocus, onBlur }: EmailF
           type="text"
           name="email"
           inputMode="email"
-          autoComplete="email"
+          autoComplete={autoComplete}
           autoCapitalize="none"
           spellCheck={false}
           autoFocus={autoFocus}

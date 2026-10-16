@@ -1,3 +1,6 @@
+import { CUSTOM_DOMAIN } from '../../components/emailValue';
+import type { EmailValue } from '../../components/emailValue';
+
 // 입력란이 비었을 때 서버에 보내기 전에 보여 주는 안내 문구다. 가입, 로그인, 계정 설정 화면이 함께 쓴다.
 // 비밀번호·닉네임이 규칙에 맞는지는 서버가 검사하고, 화면은 빈 칸만 미리 막는다.
 export const EMAIL_REQUIRED = '이메일을 입력해 주세요.';
@@ -11,3 +14,12 @@ export const EMAIL_CUSTOM_DOMAIN_REQUIRED = '도메인을 입력해 주세요.';
 
 // 비밀번호 확인이 비밀번호와 다른지는 서버로 보내기 전에 화면도 확인하므로 안내 문구도 여기 둔다.
 export const PASSWORD_CONFIRM_MISMATCH = '비밀번호가 서로 달라요.';
+
+// 아이디 @ 도메인으로 나눠 받는 이메일 칸에서 빈 곳을 찾아 안내 문구를 돌려준다. 다 채웠으면 null이다.
+// 가입, 로그인, 비밀번호 재설정 요청 화면이 함께 쓴다.
+export function emailRequiredMessage(email: EmailValue): string | null {
+  if (email.local.trim() === '') return EMAIL_REQUIRED;
+  if (email.domainChoice === '') return EMAIL_DOMAIN_REQUIRED;
+  if (email.domainChoice === CUSTOM_DOMAIN && email.customDomain.trim() === '') return EMAIL_CUSTOM_DOMAIN_REQUIRED;
+  return null;
+}
