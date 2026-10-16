@@ -21,6 +21,25 @@ const SPREAD_Z_INDEX = 4;
 const SEARCH_PIN_Z_INDEX = 5;
 const DRAFT_PIN_Z_INDEX = 6;
 const MENU_Z_INDEX = 7;
+// 메뉴를 지도 가장자리에서 띄울 거리(px)다.
+const MENU_MARGIN = 8;
+
+// 카카오 로고 링크에서 위로 올라가며 절대 위치로 놓인 저작권 칸을 찾아 아래 여백을 바꾼다.
+// 카카오가 그린 요소의 구조에 기대므로, 찾지 못하면 아무것도 하지 않는다.
+function raiseCopyright(container: HTMLElement) {
+  const logo = [...container.querySelectorAll('a')].find((link) => link.href.includes('map.kakao.com'));
+  let box = logo?.parentElement ?? null;
+  while (box && box !== container && box.style.position !== 'absolute') box = box.parentElement;
+  if (box && box !== container) box.style.bottom = 'var(--sheet-top, 0px)';
+}
+
+// 누른 점에서 메뉴를 얼마나 옮길지(px) 정한다. 누른 점이 뒤쪽 절반이면 앞쪽으로 펼치고,
+// 그래도 가장자리를 넘으면 안쪽으로 밀어 넣는다. 메뉴가 영역보다 크면 앞쪽 끝을 맞춘다.
+function menuOffset(at: number, size: number, limit: number): number {
+  const preferred = at > limit / 2 ? -size : 0;
+  const clamped = Math.min(preferred, limit - MENU_MARGIN - size - at);
+  return Math.max(clamped, MENU_MARGIN - at);
+}
 
 // 휴대폰에는 우클릭이 없어서, 지도를 움직이지 않고 이만큼 누르고 있으면 우클릭과 같이 본다.
 const LONG_PRESS_MS = 500;
@@ -77,6 +96,9 @@ export async function createMapView(
   });
   // 왼쪽 아래에는 지도 범례를 두므로, 카카오 로고와 저작권 표시는 오른쪽 아래로 옮긴다.
   map.setCopyrightPosition(kakao.maps.CopyrightPosition.BOTTOMRIGHT, true);
+  // 폰 지도 화면은 지도 아래쪽을 시트가 덮는다. 카카오는 로고 자리를 아래쪽으로만 고르게 하므로,
+  // 로고 칸을 바깥 칸이 정한 CSS 변수 --sheet-top(시트 윗변 높이)만큼 올려 시트 위에 보이게 한다. 변수가 없으면 맨 아래다.
+  raiseCopyright(container);
 
   const idleListeners = new Set<() => void>();
   const moveStartListeners = new Set<() => void>();
@@ -198,6 +220,7 @@ export async function createMapView(
   let draftOverlay: kakao.maps.CustomOverlay | null = null;
   let searchOverlay: kakao.maps.CustomOverlay | null = null;
   let menuOverlay: kakao.maps.CustomOverlay | null = null;
+  let menuResize: ResizeObserver | null = null;
   let selectedId: number | null = null;
   let radiusCircle: kakao.maps.Circle | null = null;
   let terrainOn = false;
@@ -454,17 +477,27 @@ export async function createMapView(
     // 메뉴가 지도 밖으로 넘치지 않게, 누른 곳이 화면 오른쪽 절반이면 메뉴를 왼쪽으로, 아래쪽 절반이면 위로 펼친다.
     // SDK는 오버레이를 만들 때 내용의 크기로 기준점을 계산하는데, 그때는 화면 코드가 아직 내용을 그리기 전이라 크기가 0이다.
     // 그래서 기준점은 왼쪽 위로 두고, 펼칠 방향은 내용 요소를 CSS로 옮겨서 정한다. 열 때마다 새로 만든다.
-    showMenu(position: LatLng | null) {
+    showMenu(position: LatLng | null, visibleHeight?: number) {
       menuOverlay?.setMap(null);
       menuOverlay = null;
+      menuResize?.disconnect();
+      menuResize = null;
       if (destroyed || position === null) return null;
       const kakaoPosition = toKakaoLatLng(position);
       const point = map.getProjection().containerPointFromCoords(kakaoPosition);
       const element = document.createElement('div');
       element.setAttribute(OVERLAY_ATTRIBUTE, '');
-      const shiftX = point.x > container.clientWidth / 2 ? '-100%' : '0';
-      const shiftY = point.y > container.clientHeight / 2 ? '-100%' : '0';
-      element.style.transform = `translate(${shiftX}, ${shiftY})`;
+      // 메뉴 내용은 화면 코드가 나중에 그려 넣으므로, 크기가 정해질 때마다 다시 자리를 잡는다.
+      // 폰에서는 메뉴가 지도 폭보다 넓을 수 있고 지도 아래쪽은 시트가 덮으므로, 보이는 영역 안으로 밀어 넣는다.
+      const place = () => {
+        const height = Math.min(visibleHeight ?? container.clientHeight, container.clientHeight);
+        const x = menuOffset(point.x, element.offsetWidth, container.clientWidth);
+        const y = menuOffset(point.y, element.offsetHeight, height);
+        element.style.transform = `translate(${x}px, ${y}px)`;
+      };
+      place();
+      menuResize = new ResizeObserver(place);
+      menuResize.observe(element);
       menuOverlay = new kakao.maps.CustomOverlay({
         map,
         content: element,
@@ -597,6 +630,8 @@ export async function createMapView(
       radiusCircle = null;
       menuOverlay?.setMap(null);
       menuOverlay = null;
+      menuResize?.disconnect();
+      menuResize = null;
       idleListeners.clear();
       moveStartListeners.clear();
       markerListeners.clear();
