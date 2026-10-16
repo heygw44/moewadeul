@@ -13,6 +13,7 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.notification.application.NotificationEventTypes;
 import com.moewadeul.notification.domain.setting.NotificationSetting;
 import com.moewadeul.notification.domain.setting.NotificationSettingRepository;
+import com.moewadeul.notification.infra.setting.NotificationSettingMemberLockMapper;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,8 @@ class NotificationSettingServiceTest {
     private static final long MEMBER_ID = 7L;
 
     private final NotificationSettingRepository repository = mock(NotificationSettingRepository.class);
-    private final NotificationSettingService service = new NotificationSettingService(repository);
+    private final NotificationSettingService service =
+            new NotificationSettingService(repository, mock(NotificationSettingMemberLockMapper.class));
 
     @Test
     @DisplayName("[F-20] 요청 길이의 상한은 설정할 수 있는 알림 종류의 수와 같다")
