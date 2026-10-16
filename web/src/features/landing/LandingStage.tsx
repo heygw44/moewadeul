@@ -1,13 +1,12 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
-import { fetchSpotsNearby } from '../../api/spots';
-import type { NearbySpot } from '../../api/types';
-import { Link } from '../../app/router';
+import { Link, navigate } from '../../app/router';
 import { Icon } from '../../components/icons';
 import { createMapView } from '../../map/KakaoMap';
 import type { RegionLabel } from '../../map/regionLabel';
-import type { Bounds, LatLng, MapView } from '../../map/types';
+import type { LatLng, MapView } from '../../map/types';
 import { SpotListRow } from '../spot/SpotListRow';
 import { useRegionName } from '../spot/useRegionName';
+import { useSpotsInView } from '../spot/useSpotsInView';
 import {
   approach,
   clamp01,
@@ -15,19 +14,24 @@ import {
   useActiveIndex,
   useFrameWhileVisible,
   useInView,
+  useMediaQuery,
   usePrefersReducedMotion,
 } from './motion';
 
-// 첫 화면 안내판 지도의 위치다. 경기 양평군 옥천면 일대로, 자연휴양림과 공공 야영장이 가까이 모여 있다.
+// 첫 화면 안내판 지도가 처음 보여 줄 위치다. 경기 양평군 옥천면 일대로, 자연휴양림과 공공 야영장이 가까이 모여 있다.
 const BOARD_CENTER: LatLng = { lat: 37.555, lng: 127.47 };
-const BOARD_LEVEL = 8;
-// 안내판에 번호를 붙여 보여 줄 장소 수와, 장소를 찾는 반경(km)이다. 지도에는 4곳을 찍고 목록에는 3곳을 적는다.
-const BOARD_SPOT_COUNT = 4;
+const BOARD_LEVEL = 7;
+// 안내판 목록에 적을 장소 수다. 지도에는 지금 영역의 장소를 모두 찍는다.
 const BOARD_ROW_COUNT = 3;
-const BOARD_RADIUS_KM = 20;
+// 묶음을 누르면 이만큼 확대해서 안의 장소가 풀려 보이게 한다. 지도 화면과 같은 값이다.
+const CLUSTER_ZOOM_STEP = 2;
+// 카카오맵의 확대 수준 범위다. 1이 가장 가깝다.
+const MIN_LEVEL = 1;
+const MAX_LEVEL = 14;
 // 안내판이 처음 보일 때 핀을 1번부터 하나씩 짚는 시작 시각과 간격(ms)이다.
 const PIN_TOUR_START_MS = 1400;
 const PIN_TOUR_STEP_MS = 700;
+const DESKTOP_QUERY = '(min-width: 64rem)';
 
 // 제목·소개 글자 크기. 섹션마다 같은 단계를 쓴다.
 const H2_CLASS = 'text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.06] font-extrabold tracking-[-0.045em]';
@@ -41,9 +45,12 @@ const TEXT_LINK_CLASS =
 const NUDGE_CLASS = 'transition-transform duration-300 motion-safe:group-hover:translate-x-1';
 const PRIMARY_LINK_CLASS =
   'inline-flex min-h-14 items-center justify-center rounded-control bg-brand px-7 text-lg font-bold text-white transition hover:bg-brand-strong active:scale-[0.97]';
+// 안내판 지도 위에 띄우는 흰 버튼이다.
+const MAP_BUTTON_CLASS =
+  'pointer-events-auto inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-surface font-bold text-ink shadow-raise hover:bg-fill';
 
 // 처음 온 사람에게 뫼와들이 하는 일을 애플 제품 페이지처럼 한 장면씩 보여 주는 랜딩이다.
-// 첫 화면의 안내판은 공개 API가 돌려준 실제 장소다. 근거 섹션과 흐름 섹션의 그림은 앱 화면을 찍은 것이다.
+// 첫 화면의 안내판은 지도 화면처럼 공개 API로 지금 영역의 장소를 받는다. 근거 섹션과 흐름 섹션의 그림은 앱 화면을 찍은 것이다.
 // 장소 상세는 날씨 때문에 기상청을 부르므로 랜딩에서 부르지 않는다.
 export function LandingStage() {
   return (
@@ -61,17 +68,22 @@ export function LandingStage() {
 
 function LandingHero() {
   const reduced = usePrefersReducedMotion();
+  const desktop = useMediaQuery(DESKTOP_QUERY);
   const hostRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(0.92);
   const tourRef = useRef<number[]>([]);
+  const touredRef = useRef(false);
   // 지금 짚고 있는 장소다. 같은 번호의 행과 핀을 함께 고른 상태로 그린다.
   const [activeId, setActiveId] = useState<number | null>(null);
   const [view, setView] = useState<MapView | null>(null);
   const [mapFailed, setMapFailed] = useState(false);
-  const [spots, setSpots] = useState<NearbySpot[]>([]);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  // 휴대폰에서 '지도 움직이기'를 눌렀는지다. 데스크톱은 누르지 않아도 처음부터 움직인다.
+  const [unlocked, setUnlocked] = useState(false);
+  const interactive = desktop || unlocked;
+  const area = useSpotsInView(view);
+  const rows = area.markers.slice(0, BOARD_ROW_COUNT);
   const regionName = useRegionName(view);
 
   useEffect(() => {
@@ -82,7 +94,8 @@ function LandingHero() {
     host.appendChild(element);
     let cancelled = false;
     let created: MapView | null = null;
-    // 안내판 지도는 그림처럼 고정한다. 끌거나 휠을 굴리면 페이지 스크롤이 지도에 먹히기 때문이다.
+    // 마우스 휠은 지도 대신 페이지를 스크롤한다. 지도가 페이지 한가운데 있어서 휠이 지도에 먹히면 아래로 내려가지 못한다.
+    // 끌기와 손가락 확대는 아래 효과가 화면 폭에 따라 켠다.
     createMapView(element, { center: BOARD_CENTER, level: BOARD_LEVEL, scrollWheel: false, draggable: false }).then(
       (next) => {
         if (cancelled) {
@@ -104,71 +117,62 @@ function LandingHero() {
     };
   }, []);
 
+  // 휴대폰에서 지도가 처음부터 끌리면 지도 위를 쓸어도 페이지가 스크롤되지 않는다. 그래서 '지도 움직이기'를 누를 때까지 고정해 둔다.
+  // 데스크톱은 끌기만 켜고 휠 확대는 끈다. 휠은 페이지를 스크롤하고, 확대·축소는 지도 위 버튼으로 한다.
   useEffect(() => {
-    const controller = new AbortController();
-    fetchSpotsNearby({ ...BOARD_CENTER, radiusKm: BOARD_RADIUS_KM, size: BOARD_SPOT_COUNT }, controller.signal).then(
-      (page) => {
-        setSpots(page.content);
-        setStatus('ready');
-      },
-      () => {
-        if (!controller.signal.aborted) setStatus('error');
-      },
-    );
-    return () => controller.abort();
-  }, []);
+    view?.setInteractive(interactive, interactive && !desktop);
+  }, [view, interactive, desktop]);
 
+  // 핀을 누르면 지도 화면의 그 장소 상세로 가고, 묶음을 누르면 그 자리로 확대한다.
   useEffect(() => {
     if (!view) return;
-    view.showMarkers(
-      spots.map((spot, index) => ({
-        id: spot.spotId,
-        kind: spot.type,
-        name: spot.name,
-        position: { lat: spot.lat, lng: spot.lng },
-        warning: spot.parkWarning,
-        closed: spot.closedNow,
-        label: String(index + 1),
-      })),
-      [],
-    );
-    fitToSpots(view, spots);
-  }, [view, spots]);
+    const offMarker = view.onMarkerClick((id) => navigate(`/spots/${id}`));
+    const offCluster = view.onClusterClick((cluster) => {
+      view.setCenter(cluster.position, Math.max(MIN_LEVEL, view.getLevel() - CLUSTER_ZOOM_STEP));
+    });
+    return () => {
+      offMarker();
+      offCluster();
+    };
+  }, [view]);
 
-  // 지도 칸 크기가 바뀌면(창을 넓히거나 휴대폰 배치에서 넓은 배치로 바뀌면) 지도를 새 크기에 맞춰 다시 그리고 핀이 모두 보이게 맞춘다.
-  // 다시 그리지 않으면 카카오맵이 처음 크기를 기준으로 그린 채 남아서 핀이 한쪽으로 쏠리거나 가장자리에서 잘린다.
+  // 지도 칸 크기가 바뀌면(창을 넓히거나 휴대폰 배치에서 넓은 배치로 바뀌면) 지도를 새 크기에 맞춰 다시 그린다.
+  // 다시 그리지 않으면 카카오맵이 처음 크기를 기준으로 그린 채 남아서 지도 일부가 빈 칸으로 남는다.
   useEffect(() => {
     const host = hostRef.current;
     if (!view || !host || typeof ResizeObserver === 'undefined') return;
-    let first = true;
-    const observer = new ResizeObserver(() => {
-      // 처음 한 번은 관찰을 시작할 때 오는 알림이라 건너뛴다.
-      if (first) {
-        first = false;
-        return;
-      }
-      view.relayout();
-      fitToSpots(view, spots);
-    });
+    const observer = new ResizeObserver(() => view.relayout());
     observer.observe(host);
     return () => observer.disconnect();
-  }, [view, spots]);
+  }, [view]);
 
   useEffect(() => {
     view?.setSelected(activeId);
   }, [view, activeId]);
 
-  // 목록과 지도가 같은 번호로 이어진다는 것을 보여 주려고, 처음 한 번 핀을 1번부터 차례로 골랐다가 놓는다.
+  // 목록과 지도가 같은 번호로 이어진다는 것을 보여 주려고, 처음 받은 장소로 한 번만 핀을 1번부터 차례로 골랐다가 놓는다.
+  // 지도를 옮겨 목록이 바뀌어도 다시 짚지 않는다.
   useEffect(() => {
-    if (!view || spots.length === 0 || reduced) return;
-    const rows = spots.slice(0, BOARD_ROW_COUNT);
-    const timers = rows.map((spot, index) =>
+    if (touredRef.current || reduced || area.status !== 'ready' || area.markers.length === 0) return;
+    touredRef.current = true;
+    const first = area.markers.slice(0, BOARD_ROW_COUNT);
+    const timers = first.map((spot, index) =>
       window.setTimeout(() => setActiveId(spot.spotId), PIN_TOUR_START_MS + index * PIN_TOUR_STEP_MS),
     );
-    timers.push(window.setTimeout(() => setActiveId(null), PIN_TOUR_START_MS + rows.length * PIN_TOUR_STEP_MS));
+    timers.push(window.setTimeout(() => setActiveId(null), PIN_TOUR_START_MS + first.length * PIN_TOUR_STEP_MS));
     tourRef.current = timers;
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [view, spots, reduced]);
+  }, [area.status, area.markers, reduced]);
+
+  useEffect(() => () => tourRef.current.forEach((timer) => window.clearTimeout(timer)), []);
+
+  // 사용자가 지도를 직접 움직이면 처음에 차례로 짚던 움직임을 멈춘다.
+  useEffect(() => {
+    if (!view) return;
+    return view.onMoveStart(() => {
+      tourRef.current.forEach((timer) => window.clearTimeout(timer));
+      setActiveId(null);
+    });
+  }, [view]);
 
   // 장소 행에 마우스·펜·손가락을 올리거나 키보드로 고르면 그 행과 같은 번호의 핀을 고른 상태로 그린다.
   // 사용자가 직접 고르기 시작하면 처음에 차례로 짚던 움직임은 멈춘다.
@@ -176,10 +180,16 @@ function LandingHero() {
     if (!(target instanceof Element)) return;
     const row = target.closest('li');
     const index = row?.parentElement ? Array.from(row.parentElement.children).indexOf(row) : -1;
-    const spot = spots[index];
+    const spot = rows[index];
     if (!spot) return;
     tourRef.current.forEach((timer) => window.clearTimeout(timer));
     setActiveId(spot.spotId);
+  }
+
+  function zoomBy(step: number) {
+    if (!view) return;
+    const level = Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, view.getLevel() + step));
+    view.setCenter(view.getCenter(), level);
   }
 
   // 스크롤을 내리면 안내판이 92%에서 100% 크기로 다가온다. 스크롤을 바로 따라가지 않고 매 프레임 조금씩 따라간다.
@@ -231,22 +241,62 @@ function LandingHero() {
             <p className="shrink-0 text-sm text-brand-ink">가까운 순</p>
           </div>
           <div className="grid lg:grid-cols-[1.35fr_1fr]">
-            <div
-              ref={hostRef}
-              role="img"
-              aria-label="안내판 지도. 목록과 같은 번호로 장소를 찍었어요."
-              className={`relative h-64 bg-fill lg:h-auto lg:min-h-[26rem] ${mapFailed ? 'hidden' : ''}`}
-            />
-            {spots.length > 0 ? (
+            <div className={`relative h-80 bg-fill lg:h-auto lg:min-h-[26rem] ${mapFailed ? 'hidden' : ''}`}>
+              <div
+                ref={hostRef}
+                role="region"
+                aria-label="장소 지도. 끌어서 옮기고 확대·축소할 수 있어요. 지도에 찍힌 장소는 옆 목록과 같은 번호예요."
+                className="absolute inset-0"
+              />
+              {/* 카카오맵은 지도 칸에 touch-action: none을 걸어서, 끌기를 꺼도 지도 위를 쓸면 페이지가 스크롤되지 않는다.
+                  그래서 고정해 둔 동안에는 빈 판을 지도 위에 덮어 손가락이 지도에 닿지 않게 한다. */}
+              {interactive ? null : <div aria-hidden="true" className="absolute inset-0 z-[5]" />}
+              <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-end justify-between p-3">
+                {interactive ? (
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      aria-label="확대"
+                      onClick={() => zoomBy(-1)}
+                      className={`${MAP_BUTTON_CLASS} w-11`}
+                    >
+                      <Icon name="plus" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="축소"
+                      onClick={() => zoomBy(1)}
+                      className={`${MAP_BUTTON_CLASS} w-11`}
+                    >
+                      <Icon name="minus" />
+                    </button>
+                  </div>
+                ) : (
+                  <span />
+                )}
+                {!desktop && view ? (
+                  <button
+                    type="button"
+                    aria-pressed={unlocked}
+                    onClick={() => setUnlocked((on) => !on)}
+                    className={`${MAP_BUTTON_CLASS} self-start px-4 text-[0.9375rem]`}
+                  >
+                    <Icon name={unlocked ? 'close' : 'map'} size={18} />
+                    {unlocked ? '지도 고정' : '지도 움직이기'}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            {rows.length > 0 ? (
               <ul
-                aria-label="안내판의 장소"
+                aria-label="지도에 찍힌 장소"
                 onPointerOver={(event) => pointAt(event.target)}
                 onFocus={(event) => pointAt(event.target)}
                 onPointerLeave={() => setActiveId(null)}
                 onBlur={() => setActiveId(null)}
                 className="flex flex-col justify-center py-2 motion-safe:[&>li]:animate-rise motion-safe:[&>li:nth-child(2)]:[animation-delay:120ms] motion-safe:[&>li:nth-child(3)]:[animation-delay:240ms] lg:py-4"
               >
-                {spots.slice(0, BOARD_ROW_COUNT).map((spot, index) => (
+                {rows.map((spot, index) => (
                   <SpotListRow
                     key={spot.spotId}
                     marker={spot}
@@ -258,19 +308,33 @@ function LandingHero() {
                 ))}
               </ul>
             ) : (
-              <p className="self-center px-5 py-8 text-base text-ink-muted lg:px-7">
-                {status === 'loading'
-                  ? '가까운 장소를 찾고 있어요.'
-                  : status === 'error'
-                    ? '장소를 불러오지 못했어요. 지도에서 찾아 주세요.'
-                    : '이 근처에는 장소가 없어요. 지도에서 다른 지역을 찾아 주세요.'}
-              </p>
+              <div className="flex min-h-40 flex-col items-start justify-center gap-3 px-5 py-8 lg:px-7">
+                <p className="text-base text-ink-muted">{boardMessage(area.status, area.clusters.length, mapFailed)}</p>
+                {area.status === 'error' ? (
+                  <button type="button" onClick={area.retry} className={TEXT_LINK_CLASS}>
+                    다시 불러오기
+                  </button>
+                ) : null}
+              </div>
             )}
           </div>
         </div>
       </div>
     </section>
   );
+}
+
+// 목록에 적을 장소가 없을 때 그 자리에 둘 문구다.
+function boardMessage(
+  status: 'idle' | 'loading' | 'ready' | 'error',
+  clusterCount: number,
+  mapFailed: boolean,
+): string {
+  if (mapFailed) return '지도를 불러오지 못했어요. 지도 화면에서 장소를 찾아 주세요.';
+  if (status === 'error') return '장소를 불러오지 못했어요.';
+  if (status !== 'ready') return '이 지역의 장소를 찾고 있어요.';
+  if (clusterCount > 0) return '장소가 많아서 지도에 묶어서 보여요. 지도를 확대하면 목록으로 볼 수 있어요.';
+  return '이 지역에는 장소가 없어요. 지도를 옮기거나 축소해 보세요.';
 }
 
 // 제목 한 줄을 줄 칸 아래에 숨겨 두었다가 올린다. 줄 칸이 넘친 부분을 가려서 글자가 가림막 밑에서 나온다.
@@ -282,18 +346,6 @@ function HeadlineLine({ children, delayMs = 0 }: { children: ReactNode; delayMs?
       </span>
     </span>
   );
-}
-
-// 안내판의 장소가 모두 보이도록 지도를 맞춘다. 지도 래퍼가 가장자리에 여백을 두고 맞춰서 핀이 칸 끝에서 잘리지 않는다.
-function fitToSpots(view: MapView, spots: NearbySpot[]) {
-  if (spots.length === 0) return;
-  const lats = spots.map((spot) => spot.lat);
-  const lngs = spots.map((spot) => spot.lng);
-  const bounds: Bounds = {
-    sw: { lat: Math.min(...lats), lng: Math.min(...lngs) },
-    ne: { lat: Math.max(...lats), lng: Math.max(...lngs) },
-  };
-  view.fitBounds(bounds);
 }
 
 // 지역 이름에 이미 "일대"가 붙어 오는 경우(도 단위)가 있어서 두 번 붙지 않게 한다.
@@ -362,7 +414,7 @@ function Statement() {
 }
 
 // 근거 무대 그림(박지 상세 화면)에서 단계마다 짚을 부분이다. focus는 그림 높이·너비를 100으로 본 위치와 크기이고,
-// crop은 휴대폰에서 단계마다 그림을 잘라 보일 세로 위치다.
+// mobileCrop은 휴대폰에서 단계마다 잘라 보일 영역이다. 글줄이나 상자 테두리 중간에서 끊기지 않게 상자 바깥 여백에서 자른다.
 const EVIDENCE_STEPS = [
   {
     title: '공원 경계 안일 수 있다고 알려요',
@@ -370,7 +422,7 @@ const EVIDENCE_STEPS = [
     chip: '설악산국립공원',
     warning: true,
     focus: { top: 13.8, height: 25.6, left: 3.2, width: 93.6 },
-    crop: '18%',
+    mobileCrop: { top: 13.3, height: 26.8, left: 0, width: 100 },
     alt: '박지 상세의 공원 경계 경고 상자.',
   },
   {
@@ -379,7 +431,7 @@ const EVIDENCE_STEPS = [
     chip: '한국보호지역통합DB(KDPA) · 2025-12-31',
     warning: false,
     focus: { top: 31, height: 7, left: 9.6, width: 85 },
-    crop: '29%',
+    mobileCrop: { top: 31.3, height: 7.3, left: 11.5, width: 83.5 },
     alt: '경고 상자 안의 출처와 기준일 줄.',
   },
   {
@@ -388,11 +440,13 @@ const EVIDENCE_STEPS = [
     chip: '이 장소에서 베이스캠프 열기 · 꺼짐',
     warning: false,
     focus: { top: 86.6, height: 10.2, left: 2.4, width: 95.2 },
-    crop: '100%',
+    mobileCrop: { top: 86.3, height: 10.4, left: 0, width: 100 },
     alt: '꺼진 "이 장소에서 베이스캠프 열기" 버튼과 그 이유.',
   },
 ];
 const EVIDENCE_IMAGE = '/landing/spot-detail-warning.webp';
+// 근거 그림의 원본 크기(px)다. 휴대폰에서 자를 영역의 가로세로 비율을 계산할 때 쓴다.
+const EVIDENCE_IMAGE_SIZE = { width: 860, height: 2240 };
 const NO_FOCUS = { top: 0, height: 0, left: 0, width: 0 };
 
 // 박지 상세 화면을 붙잡아 두고, 근거 세 단계를 지날 때마다 그 부분으로 화면을 옮겨 강조한다.
@@ -463,15 +517,13 @@ function EvidenceSection() {
                 >
                   {step.chip}
                 </p>
-                <div className="mt-5 h-60 overflow-hidden rounded-media bg-canvas lg:hidden">
-                  <img
-                    src={EVIDENCE_IMAGE}
-                    alt={step.alt}
-                    loading="lazy"
-                    className="size-full object-cover"
-                    style={{ objectPosition: `0 ${step.crop}` }}
-                  />
-                </div>
+                <CroppedImage
+                  src={EVIDENCE_IMAGE}
+                  size={EVIDENCE_IMAGE_SIZE}
+                  crop={step.mobileCrop}
+                  alt={step.alt}
+                  className="mt-5 rounded-media bg-canvas lg:hidden"
+                />
               </li>
             ))}
           </ol>
@@ -500,6 +552,40 @@ function EvidenceSection() {
         </div>
       </div>
     </section>
+  );
+}
+
+// 그림에서 crop 영역(그림 너비·높이를 100으로 본 %)만 그 비율 그대로 잘라 보여 준다. 칸 너비에 맞춰 그림을 키우고 영역만큼 옮긴다.
+function CroppedImage({
+  src,
+  size,
+  crop,
+  alt,
+  className,
+}: {
+  src: string;
+  size: { width: number; height: number };
+  crop: { top: number; height: number; left: number; width: number };
+  alt: string;
+  className: string;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden ${className}`}
+      style={{ aspectRatio: `${crop.width * size.width} / ${crop.height * size.height}` }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        className="absolute max-w-none"
+        style={{
+          width: `${(100 / crop.width) * 100}%`,
+          left: `${(-crop.left / crop.width) * 100}%`,
+          top: `${(-crop.top / crop.height) * 100}%`,
+        }}
+      />
+    </div>
   );
 }
 
@@ -660,6 +746,11 @@ function TrustDigit({ value, reduced }: { value: number; reduced: boolean }) {
   );
 }
 
+// 흐름 섹션의 앱 화면 그림(860px 너비)을 위에서 1190px까지만 보이는 비율이다.
+// 지도 그림은 시트 손잡이 아래, 베이스캠프 그림은 멤버 목록 아래 빈 줄에서 끝나서 글줄이나 상자가 중간에서 잘리지 않는다.
+// 행사 규칙 판도 데스크톱에서는 세 그림 높이를 맞추려고 같은 비율을 쓰고, 휴대폰에서는 내용 높이 그대로 둔다.
+const SCREEN_FRAME_CLASS = 'aspect-[860/1190]';
+
 function TrailSection() {
   const { ref: leadRef, inView: leadInView } = useInView<HTMLDivElement>();
   const { ref: listRef, inView: listInView } = useInView<HTMLOListElement>();
@@ -719,6 +810,7 @@ function TrailSection() {
             to="/programs"
             linkText="행사 보기"
             picture={<ProgramRulesCard />}
+            frameClass="lg:aspect-[860/1190]"
           >
             운영진이 여는 백패킹 행사예요. 선착순으로 받고 빈자리가 생기면 알림을 보내요.
           </TrailStop>
@@ -735,6 +827,7 @@ function TrailStop({
   to,
   linkText,
   picture,
+  frameClass = SCREEN_FRAME_CLASS,
   children,
 }: {
   order: number;
@@ -743,11 +836,13 @@ function TrailStop({
   to: string;
   linkText: string;
   picture: ReactNode;
+  // 그림 칸의 비율 클래스다. 앱 화면 그림은 섹션 사이 빈 줄에서 끝나는 비율을 쓴다.
+  frameClass?: string;
   children: ReactNode;
 }) {
   return (
     <li className={`group flex flex-col ${riseClass(inView)}`} style={{ animationDelay: `${order * 120}ms` }}>
-      <div className="mb-7 aspect-[4/3] overflow-hidden rounded-media bg-fill lg:aspect-[4/5]">
+      <div className={`mb-7 overflow-hidden rounded-media bg-fill ${frameClass}`}>
         {/* 그림에 마우스를 올리면 천천히 조금 커진다. 앱 화면이든 정책 판이든 같은 움직임이다 */}
         <div
           className={`size-full transition-transform duration-[1200ms] motion-safe:group-hover:scale-[1.03] ${EASE_SOFT}`}
