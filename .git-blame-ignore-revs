@@ -1,0 +1,6 @@
+# git blame에서 건너뛸 커밋이다. 코드 동작은 그대로 두고 포맷만 바꾼 커밋을 적는다.
+# GitHub의 blame 화면은 이 파일을 자동으로 읽는다. 로컬 git은 한 번 설정해야 한다:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# chore(web): Prettier로 프론트엔드 코드 포맷 맞추기 (#431)
+4d2089b2d55981b2b24e1d252d9206c3dd9a8817
