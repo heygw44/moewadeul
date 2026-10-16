@@ -21,6 +21,9 @@ public interface SpotDetailMapper {
     /** 호출하면 spotId인 ACTIVE 장소의 상세를 읽는다. 장소가 없거나 ACTIVE가 아니면 빈 값이다. */
     Optional<SpotDetailRow> selectActiveDetail(@Param("spotId") long spotId);
 
+    /** 호출하면 spotId인 ACTIVE 장소의 좌표와 기상청 격자를 읽는다. 장소가 없거나 ACTIVE가 아니면 빈 값이다. */
+    Optional<SpotWeatherLocationRow> selectActiveWeatherLocation(@Param("spotId") long spotId);
+
     /** 호출하면 spotId인 장소의 후기 수와 평균 평점을 계산한다. 후기가 없으면 후기 수 0과 {@code null} 평균을 돌려준다. */
     SpotRatingRow selectRating(@Param("spotId") long spotId);
 

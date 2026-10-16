@@ -1,6 +1,5 @@
 package com.moewadeul.spot.api.detail;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.moewadeul.spot.api.ParkWarningResponse;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
@@ -13,20 +12,15 @@ import com.moewadeul.spot.application.detail.SpotPublicDetail;
 import com.moewadeul.spot.application.detail.SpotRating;
 import com.moewadeul.spot.application.detail.SpotRecentReview;
 import com.moewadeul.spot.application.detail.SpotRecruitingBasecamp;
-import com.moewadeul.spot.application.detail.SpotWeather;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
 import com.moewadeul.spot.domain.SpotType;
-import com.moewadeul.weather.application.SunTimes;
-import com.moewadeul.weather.application.WeatherForecast;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 // expectedPeople은 오늘부터 야영하는 밤별 인원이고, 인원이 있는 날짜만 날짜 순으로 준다. recruitingBasecamps는 모집 중인 베이스캠프만 출발일 순으로 준다.
 // 둘 다 없으면 빈 배열이다.
-// bakji.notice는 경고가 아닌 박지에만 내보낸다. parkWarning은 경고가 아니면 warned만 내보낸다. weather는 기상청 호출이 실패하면 null이고, 천문연만 실패하면 weather 안의
-// sun이 null이다.
+// bakji.notice는 경고가 아닌 박지에만 내보낸다. parkWarning은 경고가 아니면 warned만 내보낸다. 날씨는 이 응답에 넣지 않고 SpotWeatherResponse로 따로 준다.
 public record SpotDetailResponse(
         long spotId,
         SpotType type,
@@ -40,8 +34,7 @@ public record SpotDetailResponse(
         Rating rating,
         List<RecentReview> recentReviews,
         List<ExpectedPeople> expectedPeople,
-        List<RecruitingBasecamp> recruitingBasecamps,
-        Weather weather) {
+        List<RecruitingBasecamp> recruitingBasecamps) {
 
     static SpotDetailResponse from(SpotDetail detail) {
         return new SpotDetailResponse(
@@ -59,8 +52,7 @@ public record SpotDetailResponse(
                 detail.expectedPeople().stream().map(ExpectedPeople::from).toList(),
                 detail.recruitingBasecamps().stream()
                         .map(RecruitingBasecamp::from)
-                        .toList(),
-                detail.weather() == null ? null : Weather.from(detail.weather()));
+                        .toList());
     }
 
     public record ExpectedPeople(LocalDate date, int count) {
@@ -178,60 +170,6 @@ public record SpotDetailResponse(
                     facilities.nearbyFacilities(),
                     facilities.nearbyFacilitiesEtc(),
                     facilities.petPolicy());
-        }
-    }
-
-    /** sun은 천문연이 실패해도 필드를 남기고 null로 준다. */
-    public record Weather(String source, List<ShortTerm> shortTerm, List<MidTerm> midTerm, Sun sun) {
-
-        static Weather from(SpotWeather weather) {
-            WeatherForecast forecast = weather.forecast();
-            return new Weather(
-                    forecast.source(),
-                    forecast.shortTerm().stream().map(ShortTerm::from).toList(),
-                    forecast.midTerm().stream().map(MidTerm::from).toList(),
-                    weather.sun() == null ? null : Sun.from(weather.sun()));
-        }
-    }
-
-    public record ShortTerm(Instant at, Integer temperature, Integer precipitationProbability, Double windSpeed) {
-
-        static ShortTerm from(WeatherForecast.ShortTermForecast forecast) {
-            return new ShortTerm(
-                    forecast.at(), forecast.temperature(), forecast.precipitationProbability(), forecast.windSpeed());
-        }
-    }
-
-    public record MidTerm(
-            LocalDate date,
-            Integer minTemperature,
-            Integer maxTemperature,
-            String amSky,
-            String pmSky,
-            Integer amPrecipitationProbability,
-            Integer pmPrecipitationProbability) {
-
-        static MidTerm from(WeatherForecast.MidTermForecast forecast) {
-            return new MidTerm(
-                    forecast.date(),
-                    forecast.minTemperature(),
-                    forecast.maxTemperature(),
-                    forecast.amSky(),
-                    forecast.pmSky(),
-                    forecast.amPrecipitationProbability(),
-                    forecast.pmPrecipitationProbability());
-        }
-    }
-
-    // 시각은 초 없이 "HH:mm"(한국 시각)으로 내보낸다.
-    public record Sun(
-            LocalDate date,
-            @JsonFormat(pattern = "HH:mm") LocalTime sunrise,
-            @JsonFormat(pattern = "HH:mm") LocalTime sunset,
-            @JsonFormat(pattern = "HH:mm") LocalTime civilTwilightEnd) {
-
-        static Sun from(SunTimes sun) {
-            return new Sun(sun.date(), sun.sunrise(), sun.sunset(), sun.civilTwilightEnd());
         }
     }
 

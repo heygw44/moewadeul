@@ -188,6 +188,9 @@ export interface SpotDetail {
   recentReviews: SpotReview[];
   expectedPeople: ExpectedPeople[];
   recruitingBasecamps: unknown[];
-  // 날씨 연동 전이거나 외부 API가 실패하면 null이다.
+}
+
+// 장소 날씨는 상세와 따로 받는다(GET /api/spots/{spotId}/weather). 기상청이 실패하면 weather가 null이다.
+export interface SpotWeatherResponse {
   weather: Weather | null;
 }

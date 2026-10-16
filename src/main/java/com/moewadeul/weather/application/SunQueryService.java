@@ -25,10 +25,12 @@ public class SunQueryService {
     private static final String API = "kasi";
 
     private final KasiClient kasiClient;
+    private final WeatherCaches caches;
     private final ExternalApiMetrics metrics;
 
     /**
-     * 위치와 날짜의 출몰시각을 조회한다. 날짜는 호출하는 쪽이 정한다.
+     * 위치와 날짜의 출몰시각을 조회한다. 날짜는 호출하는 쪽이 정한다. 같은 위치·날짜의 값은 {@link WeatherCaches}에 둔 것을 쓰고, 실패한 결과는
+     * 두지 않는다.
      *
      * @param lat 장소의 위도
      * @param lng 장소의 경도
@@ -36,6 +38,10 @@ public class SunQueryService {
      * @return 출몰시각. 천문연 호출이 실패했거나, 항목이 없거나, 값을 해석하지 못했으면 빈 값
      */
     public Optional<SunTimes> sunTimes(double lat, double lng, LocalDate date) {
+        return caches.sunTimes(lat, lng, date, () -> fetch(lat, lng, date));
+    }
+
+    private Optional<SunTimes> fetch(double lat, double lng, LocalDate date) {
         try {
             Optional<KasiRiseSetItem> item = kasiClient.getRiseSet(date, lat, lng);
             if (item.isEmpty()) {

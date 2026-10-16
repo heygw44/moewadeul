@@ -30,6 +30,7 @@ public class SecurityConfig {
         "/api/spots/nearby",
         "/api/spots/*",
         "/api/spots/*/reviews",
+        "/api/spots/*/weather",
         "/api/basecamps",
         "/api/basecamps/*",
         "/api/programs",

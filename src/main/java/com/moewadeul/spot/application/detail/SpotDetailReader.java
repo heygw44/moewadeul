@@ -35,8 +35,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * 장소 한 곳의 상세를 DB에서 읽는다. 박지는 박지 상세를, 야영장과 자연휴양림은 공공데이터 상세를 채운다. 날씨는 채우지 않는다.
  *
- * <p>공공데이터 장소의 휴장 여부는 조회한 날의 한국 날짜로 계산한다. 읽기 트랜잭션은 이 빈에만 있다. 장소 상세 서비스가 외부 API를 트랜잭션 밖에서
- * 부르려고, DB 조회를 이 빈으로 나눴다.
+ * <p>공공데이터 장소의 휴장 여부는 조회한 날의 한국 날짜로 계산한다.
  */
 @Component
 @RequiredArgsConstructor
@@ -51,9 +50,6 @@ class SpotDetailReader {
     private final JsonMapper jsonMapper;
     private final Clock clock;
 
-    /** 날씨를 뺀 상세와, 날씨 조회에 쓸 기상청 격자 좌표. */
-    record Read(SpotDetail detail, int weatherNx, int weatherNy) {}
-
     /**
      * 호출하면 spotId인 장소의 상세를 돌려준다.
      *
@@ -61,12 +57,12 @@ class SpotDetailReader {
      * 구분하지 않는다.
      */
     @Transactional(readOnly = true)
-    public Read read(long spotId) {
+    public SpotDetail read(long spotId) {
         SpotDetailRow row = spotDetailMapper
                 .selectActiveDetail(spotId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
-        SpotDetail detail = new SpotDetail(
+        return new SpotDetail(
                 row.spotId(),
                 row.type(),
                 row.name(),
@@ -81,9 +77,7 @@ class SpotDetailReader {
                 toExpectedPeople(readStays(spotId, today), today),
                 spotDetailMapper.selectRecruitingBasecamps(spotId).stream()
                         .map(SpotDetailReader::toRecruitingBasecamp)
-                        .toList(),
-                null);
-        return new Read(detail, row.weatherNx(), row.weatherNy());
+                        .toList());
     }
 
     // 확정 베이스캠프, 이 장소에 연결된 숙박 공식 행사의 확정 참가자, 혼자 가는 개인 일정을 같은 모양의 야영 기간으로 모은다.

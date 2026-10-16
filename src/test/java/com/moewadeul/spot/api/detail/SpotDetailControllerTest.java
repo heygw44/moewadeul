@@ -22,6 +22,7 @@ import com.moewadeul.spot.application.detail.SpotRating;
 import com.moewadeul.spot.application.detail.SpotRecentReview;
 import com.moewadeul.spot.application.detail.SpotRecruitingBasecamp;
 import com.moewadeul.spot.application.detail.SpotWeather;
+import com.moewadeul.spot.application.detail.SpotWeatherQueryService;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
 import com.moewadeul.spot.domain.SpotType;
 import com.moewadeul.weather.application.SunTimes;
@@ -31,6 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +65,9 @@ class SpotDetailControllerTest {
     @MockitoBean
     private SpotDetailQueryService spotDetailQueryService;
 
+    @MockitoBean
+    private SpotWeatherQueryService spotWeatherQueryService;
+
     @Test
     @DisplayName(
             "[F-05][SF-06] 로그인하지 않은 사용자가 경고 박지 상세를 조회하면 박지 상세와 제보자를 받고 확인 안내 notice는 없으며, publicDetail은 null이고 아직 채우지 않는 항목은 빈 값이다")
@@ -83,8 +88,7 @@ class SpotDetailControllerTest {
                         NO_RATING,
                         List.of(),
                         List.of(),
-                        List.of(),
-                        null));
+                        List.of()));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/101").exchange();
@@ -106,7 +110,7 @@ class SpotDetailControllerTest {
                     "guide": "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요."
                   },
                   "rating": { "average": null, "count": 0 },
-                  "recentReviews": [], "expectedPeople": [], "recruitingBasecamps": [], "weather": null
+                  "recentReviews": [], "expectedPeople": [], "recruitingBasecamps": []
                 }
                 """);
     }
@@ -130,8 +134,7 @@ class SpotDetailControllerTest {
                         NO_RATING,
                         List.of(),
                         List.of(),
-                        List.of(),
-                        null));
+                        List.of()));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/102").exchange();
@@ -169,8 +172,7 @@ class SpotDetailControllerTest {
                         new SpotRating(4.3, 3),
                         List.of(review),
                         List.of(),
-                        List.of(),
-                        null));
+                        List.of()));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/106").exchange();
@@ -230,8 +232,7 @@ class SpotDetailControllerTest {
                         NO_RATING,
                         List.of(),
                         List.of(),
-                        List.of(),
-                        null));
+                        List.of()));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/102").exchange();
@@ -257,22 +258,16 @@ class SpotDetailControllerTest {
                   },
                   "parkWarning": { "warned": false },
                   "rating": { "average": null, "count": 0 },
-                  "recentReviews": [], "expectedPeople": [], "recruitingBasecamps": [], "weather": null
+                  "recentReviews": [], "expectedPeople": [], "recruitingBasecamps": []
                 }
                 """);
     }
 
     @Test
-    @DisplayName("[F-05][F-09][SF-05] 경고 박지에 날씨가 있으면 경고 필드 전체와 단기·중기 예보, 출몰시각을 응답한다")
-    void readsWarnedBakjiDetailWithWeather() {
+    @DisplayName("[F-05][SF-05] 경고 박지 상세는 경고 필드 전체와 예상 인원, 모집 중 베이스캠프를 응답하고 weather 필드는 없다")
+    void readsWarnedBakjiDetailWithoutWeather() {
         // given
         SpotBakjiDetail bakji = new SpotBakjiDetail("능선 끝 평지", false, true, "WEAK", 12L, 31L, "새벽능선", null);
-        WeatherForecast forecast = new WeatherForecast(
-                "기상청",
-                List.of(new WeatherForecast.ShortTermForecast(Instant.parse("2026-10-04T05:00:00Z"), 18, 30, 2.5)),
-                List.of(new WeatherForecast.MidTermForecast(LocalDate.of(2026, 10, 8), 10, 20, "맑음", "구름많음", 10, 20)));
-        SunTimes sun =
-                new SunTimes(LocalDate.of(2026, 10, 4), LocalTime.of(7, 1), LocalTime.of(18, 11), LocalTime.of(18, 38));
         when(spotDetailQueryService.findDetail(103L))
                 .thenReturn(new SpotDetail(
                         103L,
@@ -305,8 +300,7 @@ class SpotDetailControllerTest {
                                         LocalDate.of(2026, 11, 16),
                                         4,
                                         1,
-                                        new SpotJoinCondition(null, null, null, false))),
-                        new SpotWeather(forecast, sun)));
+                                        new SpotJoinCondition(null, null, null, false)))));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/103").exchange();
@@ -339,7 +333,30 @@ class SpotDetailControllerTest {
                       "capacity": 4, "headcount": 1,
                       "joinCondition": { "minTrustLevel": null, "ageGroupMin": null, "ageGroupMax": null,
                                          "sameGenderOnly": false } }
-                  ],
+                  ]
+                }
+                """);
+    }
+
+    @Test
+    @DisplayName("[F-09] 날씨를 조회하면 weather에 출처, 단기·중기 예보, 출몰시각을 응답한다")
+    void readsWeather() {
+        // given
+        WeatherForecast forecast = new WeatherForecast(
+                "기상청",
+                List.of(new WeatherForecast.ShortTermForecast(Instant.parse("2026-10-04T05:00:00Z"), 18, 30, 2.5)),
+                List.of(new WeatherForecast.MidTermForecast(LocalDate.of(2026, 10, 8), 10, 20, "맑음", "구름많음", 10, 20)));
+        SunTimes sun =
+                new SunTimes(LocalDate.of(2026, 10, 4), LocalTime.of(7, 1), LocalTime.of(18, 11), LocalTime.of(18, 38));
+        when(spotWeatherQueryService.findWeather(103L)).thenReturn(Optional.of(new SpotWeather(forecast, sun)));
+
+        // when
+        MvcTestResult result = mvc.get().uri(PATH + "/103/weather").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().isStrictlyEqualTo("""
+                {
                   "weather": {
                     "source": "기상청",
                     "shortTerm": [
@@ -357,29 +374,14 @@ class SpotDetailControllerTest {
     }
 
     @Test
-    @DisplayName("[F-05][F-09] 천문연만 실패해 sun이 없으면 weather 안에 sun 필드를 null로 남긴다")
+    @DisplayName("[F-09][NFR-05] 천문연만 실패해 sun이 없으면 weather 안에 sun 필드를 null로 남긴다")
     void keepsSunFieldAsNullWhenSunMissing() {
         // given
         WeatherForecast forecast = new WeatherForecast("기상청", List.of(), List.of());
-        when(spotDetailQueryService.findDetail(104L))
-                .thenReturn(new SpotDetail(
-                        104L,
-                        SpotType.CAMPSITE,
-                        "숲속 야영장",
-                        37.52,
-                        127.81,
-                        null,
-                        NOT_WARNED,
-                        null,
-                        null,
-                        NO_RATING,
-                        List.of(),
-                        List.of(),
-                        List.of(),
-                        new SpotWeather(forecast, null)));
+        when(spotWeatherQueryService.findWeather(104L)).thenReturn(Optional.of(new SpotWeather(forecast, null)));
 
         // when
-        MvcTestResult result = mvc.get().uri(PATH + "/104").exchange();
+        MvcTestResult result = mvc.get().uri(PATH + "/104/weather").exchange();
 
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
@@ -391,6 +393,36 @@ class SpotDetailControllerTest {
                 .isEmpty();
         assertThat(result).bodyJson().extractingPath("$.weather").asMap().containsKey("sun");
         assertThat(result).bodyJson().extractingPath("$.weather.sun").isNull();
+    }
+
+    @Test
+    @DisplayName("[F-09][NFR-05] 기상청이 실패해 날씨가 없으면 200으로 weather 필드를 null로 남긴다")
+    void keepsWeatherFieldAsNullWhenForecastMissing() {
+        // given
+        when(spotWeatherQueryService.findWeather(105L)).thenReturn(Optional.empty());
+
+        // when
+        MvcTestResult result = mvc.get().uri(PATH + "/105/weather").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().isStrictlyEqualTo("""
+                { "weather": null }
+                """);
+    }
+
+    @Test
+    @DisplayName("[F-09] 날씨를 조회할 장소를 서비스가 찾지 못하면 404 NOT_FOUND를 응답한다")
+    void missingSpotWeatherReturnsNotFound() {
+        // given
+        when(spotWeatherQueryService.findWeather(999L)).thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
+
+        // when
+        MvcTestResult result = mvc.get().uri(PATH + "/999/weather").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("NOT_FOUND");
     }
 
     @Test
@@ -411,8 +443,7 @@ class SpotDetailControllerTest {
                         NO_RATING,
                         List.of(),
                         List.of(),
-                        List.of(),
-                        null));
+                        List.of()));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/105").exchange();
@@ -420,7 +451,7 @@ class SpotDetailControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(result).bodyJson().extractingPath("$.parkWarning").isEqualTo(Map.of("warned", false));
-        assertThat(result).bodyJson().extractingPath("$.weather").isNull();
+        assertThat(result).bodyJson().doesNotHavePath("$.weather");
     }
 
     @Test

@@ -33,10 +33,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @IntegrationTest
-class SpotDetailTransactionIntegrationTest {
+class SpotWeatherTransactionIntegrationTest {
 
     @Autowired
-    private SpotDetailQueryService spotDetailQueryService;
+    private SpotWeatherQueryService spotWeatherQueryService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -54,7 +54,7 @@ class SpotDetailTransactionIntegrationTest {
     private SunQueryService sunQueryService;
 
     @Test
-    @DisplayName("[F-05][NFR-05] 기상청과 천문연을 부르는 동안에는 DB 트랜잭션이 열려 있지 않다")
+    @DisplayName("[F-09][NFR-05] 장소 날씨를 조회할 때 기상청과 천문연을 부르는 동안에는 DB 트랜잭션이 열려 있지 않다")
     void callsExternalApisOutsideTransaction() {
         // given: 한국 시각 2026-10-04 12:58. 날씨 픽스처를 받은 시각이다.
         clock.setInstant(Instant.parse("2026-10-04T03:58:00Z"));
@@ -82,7 +82,7 @@ class SpotDetailTransactionIntegrationTest {
                 .sunTimes(anyDouble(), anyDouble(), any(LocalDate.class));
 
         // when
-        spotDetailQueryService.findDetail(spotId);
+        spotWeatherQueryService.findWeather(spotId);
 
         // then
         verify(weatherQueryService).forecast(anyInt(), anyInt(), anyDouble(), anyDouble());

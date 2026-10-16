@@ -38,6 +38,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-mail")
+    // 기상청·천문연 결과를 메모리에 잠시 둔다. 버전은 Spring Boot가 관리한다.
+    implementation("com.github.ben-manes.caffeine:caffeine")
     // AWS SDK는 Spring Boot가 버전을 관리하지 않는다. BOM으로 SDK 모듈들의 버전을 하나로 맞춘다.
     implementation(platform("software.amazon.awssdk:bom:2.55.12"))
     implementation("software.amazon.awssdk:s3")

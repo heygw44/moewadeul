@@ -1,48 +1,26 @@
 package com.moewadeul.spot.application.detail;
 
-import com.moewadeul.common.time.KoreaTime;
-import com.moewadeul.weather.application.SunQueryService;
-import com.moewadeul.weather.application.SunTimes;
-import com.moewadeul.weather.application.WeatherForecast;
-import com.moewadeul.weather.application.WeatherQueryService;
-import java.time.Clock;
-import java.time.LocalDate;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * 장소 한 곳의 상세를 찾고 날씨를 붙인다.
+ * 장소 한 곳의 상세를 찾는다. 날씨는 붙이지 않는다.
  *
- * <p>외부 API(기상청, 천문연)를 DB 트랜잭션 밖에서 부르려고 이 서비스에는 트랜잭션을 두지 않는다. DB 조회는 {@link SpotDetailReader}가
- * 읽기 트랜잭션 안에서 하고, 끝난 뒤에 외부 API를 부른다.
+ * <p>상세는 DB 값만 읽어서 외부 API를 기다리지 않는다. 그래서 화면은 공원 경계 경고와 출처·기준일 같은 장소 근거를 날씨보다 먼저 그린다. 날씨는
+ * {@link SpotWeatherQueryService}가 따로 준다.
  */
 @Service
 @RequiredArgsConstructor
 public class SpotDetailQueryService {
 
     private final SpotDetailReader spotDetailReader;
-    private final WeatherQueryService weatherQueryService;
-    private final SunQueryService sunQueryService;
-    private final Clock clock;
 
     /**
      * 호출하면 spotId인 장소의 상세를 돌려준다.
      *
-     * <p>장소가 없거나 숨김, 삭제, 검토 대기처럼 ACTIVE가 아니면 서비스는 NOT_FOUND로 거부한다. 기상청 호출이 실패하면 weather를 null로 두고,
-     * 이때 천문연은 부르지 않는다. 기상청이 성공하고 천문연만 실패하면 weather는 채우고 sun만 null로 둔다. 출몰시각의 날짜는 오늘 한국 날짜다.
+     * <p>장소가 없거나 숨김, 삭제, 검토 대기처럼 ACTIVE가 아니면 서비스는 NOT_FOUND로 거부한다.
      */
     public SpotDetail findDetail(long spotId) {
-        SpotDetailReader.Read read = spotDetailReader.read(spotId);
-        SpotDetail detail = read.detail();
-        Optional<WeatherForecast> forecast =
-                weatherQueryService.forecast(read.weatherNx(), read.weatherNy(), detail.lat(), detail.lng());
-        if (forecast.isEmpty()) {
-            return detail;
-        }
-        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
-        SunTimes sun =
-                sunQueryService.sunTimes(detail.lat(), detail.lng(), today).orElse(null);
-        return detail.withWeather(new SpotWeather(forecast.get(), sun));
+        return spotDetailReader.read(spotId);
     }
 }

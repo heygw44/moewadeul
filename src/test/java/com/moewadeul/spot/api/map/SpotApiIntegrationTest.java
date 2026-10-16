@@ -295,8 +295,25 @@ class SpotApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-05][NFR-05] 기상청 응답이 응답 대기 시간보다 늦어도 200으로 응답하고 weather만 null이다")
-    void detailRespondsWithoutWeatherWhenKmaIsSlow() {
+    @DisplayName("[F-05][F-09] 장소 상세 응답에는 weather 필드가 없고, 서버는 상세를 줄 때 기상청을 부르지 않는다")
+    void detailHasNoWeatherField() {
+        // given
+        long reporterId = insertMember("날씨없는제보자");
+        long spotId = insertBakji("날씨 없는 상세 박지", "ACTIVE", reporterId);
+
+        // when
+        MvcTestResult result = mvc.get().uri(PATH + "/" + spotId).exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().doesNotHavePath("$.weather");
+        assertThat(result).bodyJson().extractingPath("$.name").isEqualTo("날씨 없는 상세 박지");
+        assertThat(wireMock.getAllServeEvents()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-09][NFR-05] 기상청 응답이 응답 대기 시간보다 늦어도 날씨 조회는 200으로 응답하고 weather가 null이다")
+    void weatherRespondsWithNullWhenKmaIsSlow() {
         // given: 테스트 프로필의 응답 대기 시간은 1초라서, 2초 늦은 응답은 시간 초과로 실패한다.
         long reporterId = insertMember("느린날씨제보자");
         long spotId = insertBakji("날씨 지연 박지", "ACTIVE", reporterId);
@@ -304,18 +321,13 @@ class SpotApiIntegrationTest {
                 .willReturn(okJson("{}").withFixedDelay(2_000)));
 
         // when
-        MvcTestResult result = mvc.get().uri(PATH + "/" + spotId).exchange();
+        MvcTestResult result = mvc.get().uri(PATH + "/" + spotId + "/weather").exchange();
 
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
-        assertThat(result).bodyJson().extractingPath("$.weather").isNull();
-        assertThat(result).bodyJson().extractingPath("$.spotId").isEqualTo((int) spotId);
-        assertThat(result).bodyJson().extractingPath("$.name").isEqualTo("날씨 지연 박지");
-        assertThat(result)
-                .bodyJson()
-                .extractingPath("$.bakji.reporter.nickname")
-                .isEqualTo("느린날씨제보자");
-        assertThat(result).bodyJson().extractingPath("$.parkWarning.warned").isEqualTo(false);
+        assertThat(result).bodyJson().isStrictlyEqualTo("""
+                { "weather": null }
+                """);
     }
 
     @Test
