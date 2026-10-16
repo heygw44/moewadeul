@@ -29,8 +29,7 @@ type SpotDetailPanelProps = {
 
 // 어느 요청(장소, 시도 횟수)의 결과인지 함께 기억해서, 장소를 바꾸면 이전 결과를 곧바로 버린다.
 type DetailResult =
-  | { spotId: number; attempt: number; detail: SpotDetail }
-  | { spotId: number; attempt: number; error: unknown };
+  { spotId: number; attempt: number; detail: SpotDetail } | { spotId: number; attempt: number; error: unknown };
 
 const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
 const SECTION_TITLE_CLASS = 'text-[0.9375rem] font-bold text-ink';
@@ -81,12 +80,7 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
   } else if ('detail' in current) {
     body = <DetailContent detail={current.detail} />;
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
-    body = (
-      <EmptyState
-        title="장소를 찾을 수 없어요"
-        description="삭제됐거나 숨겨진 장소예요."
-      />
-    );
+    body = <EmptyState title="장소를 찾을 수 없어요" description="삭제됐거나 숨겨진 장소예요." />;
   } else {
     body = (
       <div className="flex flex-col gap-3">
@@ -197,10 +191,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
               이 장소에서 베이스캠프 열기
             </Button>
           ) : (
-            <Link
-              to={`/basecamps/new?spotId=${detail.spotId}`}
-              className={buttonClassName('secondary')}
-            >
+            <Link to={`/basecamps/new?spotId=${detail.spotId}`} className={buttonClassName('secondary')}>
               이 장소에서 베이스캠프 열기
             </Link>
           )}
@@ -212,16 +203,10 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
           커뮤니티
         </h3>
         <div className="mt-2 flex flex-wrap gap-2">
-          <Link
-            to={`/community?spotId=${detail.spotId}`}
-            className={buttonClassName('secondary')}
-          >
+          <Link to={`/community?spotId=${detail.spotId}`} className={buttonClassName('secondary')}>
             이 장소 글 보기
           </Link>
-          <Link
-            to={`/community/new?spotId=${detail.spotId}`}
-            className={buttonClassName('secondary')}
-          >
+          <Link to={`/community/new?spotId=${detail.spotId}`} className={buttonClassName('secondary')}>
             이 장소로 글쓰기
           </Link>
         </div>
@@ -393,7 +378,9 @@ function ExpectedPeopleSection({ expectedPeople }: { expectedPeople: ExpectedPeo
         <p className="mt-2 text-sm text-ink-muted">아직 예상 인원이 없어요</p>
       ) : (
         <div className="mt-2 flex flex-col gap-2">
-          <p className="text-sm text-ink-muted">확정된 베이스캠프 멤버, 행사 참가자, 혼자 가는 일정을 합쳐 밤마다 센 인원이에요.</p>
+          <p className="text-sm text-ink-muted">
+            확정된 베이스캠프 멤버, 행사 참가자, 혼자 가는 일정을 합쳐 밤마다 센 인원이에요.
+          </p>
           <Evidence
             items={expectedPeople.map((day) => ({ label: formatLocalDate(day.date), value: `${day.count}명` }))}
           />

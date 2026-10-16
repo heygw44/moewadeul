@@ -67,7 +67,12 @@ export function MemoryLikeButton({
 
   return (
     <div className="flex flex-col gap-1">
-      <Button variant={liked ? 'primary' : 'secondary'} aria-pressed={liked} loading={busy} onClick={() => void toggle()}>
+      <Button
+        variant={liked ? 'primary' : 'secondary'}
+        aria-pressed={liked}
+        loading={busy}
+        onClick={() => void toggle()}
+      >
         {content}
       </Button>
       {error && (

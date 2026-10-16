@@ -102,7 +102,9 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
               htmlFor={inputId}
               className={[
                 'flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-control border border-dashed border-ink-subtle p-1 text-center text-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-info',
-                disabled ? 'cursor-not-allowed bg-fill text-ink-muted' : 'cursor-pointer bg-surface text-ink hover:bg-fill',
+                disabled
+                  ? 'cursor-not-allowed bg-fill text-ink-muted'
+                  : 'cursor-pointer bg-surface text-ink hover:bg-fill',
               ].join(' ')}
             >
               <Icon name="image" size={24} />

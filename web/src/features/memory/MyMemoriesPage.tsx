@@ -70,7 +70,11 @@ export function MyMemoriesPage() {
   );
 
   if (!authenticated) {
-    return <HubLayout title="내 기록 지도" width="narrow">{null}</HubLayout>;
+    return (
+      <HubLayout title="내 기록 지도" width="narrow">
+        {null}
+      </HubLayout>
+    );
   }
 
   let body;

@@ -23,7 +23,9 @@ export function AdminSegments<T extends string>({ label, segments, value, onChan
               if (!pressed) onChange(segment.value);
             }}
             className={`inline-flex min-h-11 items-center justify-center rounded-control px-3 text-sm whitespace-nowrap sm:px-4 ${
-              pressed ? 'border border-ink bg-ink font-bold text-white' : 'border border-line bg-surface text-ink hover:bg-fill'
+              pressed
+                ? 'border border-ink bg-ink font-bold text-white'
+                : 'border border-line bg-surface text-ink hover:bg-fill'
             }`}
           >
             {segment.label}

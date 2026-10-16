@@ -272,10 +272,7 @@ export interface PhotoPin {
 
 // 추억 기록 하나를 지도에 나타내는 핀이다. 사진이 있으면 44px 정사각 사진 칸이고, 없으면 박지 핀 모양이다.
 // 사진은 글로 설명할 내용이 없어서 alt를 비우고, 버튼의 aria-label이 기록을 설명한다.
-export function createPhotoPin(
-  data: { thumbnailUrl?: string; label: string },
-  onActivate: () => void,
-): PhotoPin {
+export function createPhotoPin(data: { thumbnailUrl?: string; label: string }, onActivate: () => void): PhotoPin {
   const button = document.createElement('button');
   button.type = 'button';
   button.setAttribute('aria-label', data.label);

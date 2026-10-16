@@ -131,11 +131,7 @@ export function VerifyEmailPage() {
     return (
       <AuthLayout title="이미 인증을 마쳤어요" footer={footer}>
         <p className="text-ink-muted">이메일 인증은 한 번만 하면 돼요.</p>
-        <Link
-          to={next ?? '/map'}
-          replace
-          className={`${buttonClassName('primary')} w-full`}
-        >
+        <Link to={next ?? '/map'} replace className={`${buttonClassName('primary')} w-full`}>
           {next ? '보던 화면으로 돌아가기' : '지도로 가기'}
         </Link>
       </AuthLayout>

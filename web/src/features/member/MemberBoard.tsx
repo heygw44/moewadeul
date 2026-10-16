@@ -27,7 +27,9 @@ export function MemberBoard({ nickname, trustLevel, caption, aside }: MemberBoar
         </span>
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <h2 className="break-words text-2xl leading-tight font-extrabold tracking-[-0.03em] sm:text-[1.75rem]">{nickname}</h2>
+        <h2 className="break-words text-2xl leading-tight font-extrabold tracking-[-0.03em] sm:text-[1.75rem]">
+          {nickname}
+        </h2>
         {trustLevel !== undefined && (
           <p className="text-sm text-brand-ink">
             신뢰 단계 {trustLevel} · {caption ?? trustLevelCaption(trustLevel)}

@@ -64,7 +64,13 @@ declare namespace kakao.maps {
     setDraggable(draggable: boolean): void;
     getCenter(): LatLng;
     setLevel(level: number, options?: SetLevelOptions): void;
-    setBounds(bounds: LatLngBounds, paddingTop?: number, paddingRight?: number, paddingBottom?: number, paddingLeft?: number): void;
+    setBounds(
+      bounds: LatLngBounds,
+      paddingTop?: number,
+      paddingRight?: number,
+      paddingBottom?: number,
+      paddingLeft?: number,
+    ): void;
     getLevel(): number;
     getBounds(): LatLngBounds;
     getProjection(): MapProjection;

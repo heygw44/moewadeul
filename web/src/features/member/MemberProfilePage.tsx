@@ -18,8 +18,7 @@ import { withNext } from './nextPath';
 import { useSession } from './session';
 
 type ProfileResult =
-  | { memberId: number; attempt: number; profile: MemberProfile }
-  | { memberId: number; attempt: number; error: unknown };
+  { memberId: number; attempt: number; profile: MemberProfile } | { memberId: number; attempt: number; error: unknown };
 
 // 다른 회원이 보는 프로필. 서버가 요청자에 맞게 필드를 빼서 주므로, 화면은 응답에 있는 값만 보여 준다.
 export function MemberProfilePage({ memberId }: { memberId: number }) {
@@ -61,9 +60,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   } else if ('profile' in current) {
     body = <ProfileContent profile={current.profile} />;
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
-    body = (
-      <EmptyState framed title="회원을 찾을 수 없어요" description="탈퇴했거나 주소가 잘못됐어요." />
-    );
+    body = <EmptyState framed title="회원을 찾을 수 없어요" description="탈퇴했거나 주소가 잘못됐어요." />;
   } else {
     body = (
       <div className="flex flex-col gap-3">
@@ -129,8 +126,17 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
       <PageCard title="기본 정보">
         <Evidence
           items={[
-            { label: '연령대', value: verifiedValue(profile.ageGroup ? AGE_GROUP_LABELS[profile.ageGroup] : null, profile.ageGroupVerified) },
-            { label: '성별', value: verifiedValue(profile.gender ? GENDER_LABELS[profile.gender] : null, profile.genderVerified) },
+            {
+              label: '연령대',
+              value: verifiedValue(
+                profile.ageGroup ? AGE_GROUP_LABELS[profile.ageGroup] : null,
+                profile.ageGroupVerified,
+              ),
+            },
+            {
+              label: '성별',
+              value: verifiedValue(profile.gender ? GENDER_LABELS[profile.gender] : null, profile.genderVerified),
+            },
           ]}
         />
         <p className="text-sm text-ink-muted">

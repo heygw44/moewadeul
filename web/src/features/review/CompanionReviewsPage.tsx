@@ -69,17 +69,13 @@ export function CompanionReviewsPage() {
   }, [session.status, pathname, search]);
 
   if (session.status !== 'authenticated' || !session.me) {
-    return (
-      <PageLayout title="동행 후기">
-        {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
-      </PageLayout>
-    );
+    return <PageLayout title="동행 후기">{showSkeleton ? <Skeleton className="h-40 w-full" /> : null}</PageLayout>;
   }
 
   return (
     <PageLayout
       title="동행 후기"
-     
+
       tabs={
         <UnderlineTabs
           label="동행 후기 종류"
@@ -101,7 +97,9 @@ type PendingResult = { attempt: number; items: PendingCompanionReview[] } | { at
 function PendingTab({ trustLevel }: { trustLevel: number }) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<PendingResult | null>(null);
-  const [writing, setWriting] = useState<{ review: PendingCompanionReview; target: PendingCompanionTarget } | null>(null);
+  const [writing, setWriting] = useState<{ review: PendingCompanionReview; target: PendingCompanionTarget } | null>(
+    null,
+  );
   const [done, setDone] = useState<string | null>(null);
   const eligible = trustLevel >= 1;
 
@@ -126,7 +124,10 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
     return (
       <div className="flex flex-col items-start gap-1">
         <p className="text-base text-ink">본인확인을 마치면 동행 후기를 쓸 수 있어요.</p>
-        <Link to="/identity-verification" className="inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2">
+        <Link
+          to="/identity-verification"
+          className="inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2"
+        >
           본인확인하기
         </Link>
       </div>
@@ -329,7 +330,8 @@ function ReceivedTab() {
     const controller = new AbortController();
     fetchReceivedCompanionReviews(0, controller.signal).then(
       (page) => {
-        if (!controller.signal.aborted) setState({ items: page.content, page: page.page, hasNext: page.hasNext, error: null });
+        if (!controller.signal.aborted)
+          setState({ items: page.content, page: page.page, hasNext: page.hasNext, error: null });
       },
       (caught: unknown) => {
         if (!controller.signal.aborted) setState({ items: [], page: 0, hasNext: false, error: toUserMessage(caught) });
@@ -346,7 +348,9 @@ function ReceivedTab() {
     try {
       const next = await fetchReceivedCompanionReviews(state.page + 1);
       setState((previous) =>
-        previous ? { items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null } : previous,
+        previous
+          ? { items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null }
+          : previous,
       );
     } catch (caught) {
       setState((previous) => (previous ? { ...previous, error: toUserMessage(caught) } : previous));

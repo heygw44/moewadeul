@@ -22,10 +22,9 @@ type BakjiFeedbackProps = {
 
 const REPORT_CONTENT_MAX = 1000;
 
-const REASON_OPTIONS: ChoiceOption<BakjiReportReason>[] = (Object.keys(REPORT_REASON_LABELS) as BakjiReportReason[]).map(
-  (value) => ({ value, label: REPORT_REASON_LABELS[value] }),
-);
-
+const REASON_OPTIONS: ChoiceOption<BakjiReportReason>[] = (
+  Object.keys(REPORT_REASON_LABELS) as BakjiReportReason[]
+).map((value) => ({ value, label: REPORT_REASON_LABELS[value] }));
 
 // 박지를 다녀온 회원이 정보를 확인하거나 문제를 신고한다.
 // 상세 응답에는 내가 이미 확인했는지가 없어서 미리 막지 않고, 서버가 이미 확인했다고 답하면 완료 상태로 바꾼다.
@@ -41,7 +40,6 @@ export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   if (session.status === 'loading') return null;
-
 
   async function handleConfirm() {
     if (confirming || confirmed !== null) return;

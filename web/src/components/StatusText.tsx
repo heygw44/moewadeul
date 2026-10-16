@@ -30,7 +30,9 @@ export function MetaLine({ items: raw, className }: { items: ReactNode[]; classN
   const items = raw.filter((child) => child !== null && child !== undefined && child !== false && child !== '');
   if (items.length === 0) return null;
   return (
-    <span className={['flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-ink-muted', className ?? ''].join(' ')}>
+    <span
+      className={['flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-ink-muted', className ?? ''].join(' ')}
+    >
       {items.map((item, index) => (
         <span key={index} className="inline-flex items-center gap-1.5">
           {index > 0 && (

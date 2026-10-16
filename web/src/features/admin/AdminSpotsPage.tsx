@@ -165,9 +165,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.name}</h3>
         <StatusText tone={meta.tone}>{meta.label}</StatusText>
-        <StatusText tone="neutral">
-          {item.status === 'HIDDEN' ? '숨김' : '검토 대기'}
-        </StatusText>
+        <StatusText tone="neutral">{item.status === 'HIDDEN' ? '숨김' : '검토 대기'}</StatusText>
         {item.parkWarning && (
           <StatusText tone="warning" icon="alert">
             공원 경계 경고
@@ -213,10 +211,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Link
-          to={`/spots/${item.spotId}`}
-          className={buttonClassName('secondary')}
-        >
+        <Link to={`/spots/${item.spotId}`} className={buttonClassName('secondary')}>
           장소 보기
         </Link>
         {tab === 'PENDING_REVIEW' && (
@@ -224,7 +219,12 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
             숨기기
           </Button>
         )}
-        <Button variant="secondary" loading={busy === 'restore'} disabled={busy === 'hide'} onClick={() => void run('restore')}>
+        <Button
+          variant="secondary"
+          loading={busy === 'restore'}
+          disabled={busy === 'hide'}
+          onClick={() => void run('restore')}
+        >
           복구
         </Button>
       </div>

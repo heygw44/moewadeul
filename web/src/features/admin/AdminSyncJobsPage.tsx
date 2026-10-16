@@ -59,7 +59,10 @@ async function loadCards(signal: AbortSignal): Promise<CardsState> {
   );
   const entries = JOB_TYPES.map((jobType, index): [SyncJobType, CardEntry] => {
     const items = pages[index]?.content ?? [];
-    return [jobType, { latest: items[0] ?? null, lastSuccess: items.find((run) => run.status === 'COMPLETED') ?? null }];
+    return [
+      jobType,
+      { latest: items[0] ?? null, lastSuccess: items.find((run) => run.status === 'COMPLETED') ?? null },
+    ];
   });
   return Object.fromEntries(entries) as CardsState;
 }
@@ -338,9 +341,7 @@ function JobCard({
       {latest?.status === 'FAILED' && latest.errorMessage && (
         <p className="break-words border-l-2 border-danger pl-3 text-sm text-ink">{latest.errorMessage}</p>
       )}
-      {jobType === 'PARK_BOUNDARY' && (
-        <p className="text-sm text-ink-muted">성공하면 박지 재판정이 이어서 실행돼요</p>
-      )}
+      {jobType === 'PARK_BOUNDARY' && <p className="text-sm text-ink-muted">성공하면 박지 재판정이 이어서 실행돼요</p>}
       {error && (
         <div role="alert">
           <Notice tone="danger" title="작업을 실행하지 못했어요">
@@ -400,7 +401,9 @@ function HistoryRow({ run }: { run: SyncJobRun }) {
           건너뜀 <Count value={run.skippedCount} />
         </span>
       </p>
-      {run.errorMessage && <p className="min-w-0 break-words border-l-2 border-danger pl-3 text-sm text-ink">{run.errorMessage}</p>}
+      {run.errorMessage && (
+        <p className="min-w-0 break-words border-l-2 border-danger pl-3 text-sm text-ink">{run.errorMessage}</p>
+      )}
     </li>
   );
 }

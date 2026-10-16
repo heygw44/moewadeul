@@ -51,7 +51,9 @@ export function HubLayout({
           {/* 띠 아래 선은 화면 끝까지 긋지 않고 본문과 같은 열 안에서 끝낸다. 좁은 한 열 화면에서 선만 넓게 뻗지 않게 하기 위해서다. */}
           <div className={titleInContent ? column : `border-b border-line ${column}`}>
             {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
-            <div className={titleInContent ? 'sr-only' : 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3'}>
+            <div
+              className={titleInContent ? 'sr-only' : 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3'}
+            >
               <div className="flex min-w-0 flex-col gap-1">
                 <h1 className="break-words text-3xl font-extrabold tracking-tight text-ink lg:text-4xl">{title}</h1>
                 {description && <p className="text-base text-ink">{description}</p>}

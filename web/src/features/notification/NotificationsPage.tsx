@@ -28,7 +28,6 @@ function isInternalPath(link: string): boolean {
   return link.startsWith('/') && !link.startsWith('//') && !link.includes('\\');
 }
 
-
 export function NotificationsPage() {
   const session = useSession();
   const { pathname, search } = useLocation();
@@ -44,11 +43,7 @@ export function NotificationsPage() {
   }, [session.status, pathname, search]);
 
   if (session.status !== 'authenticated' || !session.me) {
-    return (
-      <PageLayout title="알림">
-        {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
-      </PageLayout>
-    );
+    return <PageLayout title="알림">{showSkeleton ? <Skeleton className="h-40 w-full" /> : null}</PageLayout>;
   }
 
   return <NotificationList />;
@@ -175,39 +170,39 @@ function NotificationList() {
         ) : undefined
       }
     >
-    <section className="flex flex-col gap-3" aria-label="알림 목록">
-      {(state.error || actionError) && (
-        <div role="alert" className="flex flex-col gap-3">
-          <Notice tone="danger" title={state.error ? '알림을 불러오지 못했어요' : '읽음으로 바꾸지 못했어요'}>
-            <p>{state.error ?? actionError}</p>
-          </Notice>
-          {state.error && state.items.length === 0 && (
-            <div>
-              <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
-                다시 불러오기
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-      {state.items.length === 0 && !state.error ? (
-        <EmptyState framed title="알림이 없어요" description="합류 신청이나 신고 처리 결과가 오면 여기에 보여요." />
-      ) : (
-        <ListPanel>
-          {state.items.map((item) => (
-            <NotificationRow key={item.notificationId} item={item} onOpen={() => void open(item)} />
-          ))}
-        </ListPanel>
-      )}
-      {state.hasNext && (
-        <div>
-          <Button variant="secondary" loading={loadingMore} onClick={() => void loadMore()}>
-            더 보기
-          </Button>
-        </div>
-      )}
-    </section>
-    <EmailSettingsCard />
+      <section className="flex flex-col gap-3" aria-label="알림 목록">
+        {(state.error || actionError) && (
+          <div role="alert" className="flex flex-col gap-3">
+            <Notice tone="danger" title={state.error ? '알림을 불러오지 못했어요' : '읽음으로 바꾸지 못했어요'}>
+              <p>{state.error ?? actionError}</p>
+            </Notice>
+            {state.error && state.items.length === 0 && (
+              <div>
+                <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
+                  다시 불러오기
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+        {state.items.length === 0 && !state.error ? (
+          <EmptyState framed title="알림이 없어요" description="합류 신청이나 신고 처리 결과가 오면 여기에 보여요." />
+        ) : (
+          <ListPanel>
+            {state.items.map((item) => (
+              <NotificationRow key={item.notificationId} item={item} onOpen={() => void open(item)} />
+            ))}
+          </ListPanel>
+        )}
+        {state.hasNext && (
+          <div>
+            <Button variant="secondary" loading={loadingMore} onClick={() => void loadMore()}>
+              더 보기
+            </Button>
+          </div>
+        )}
+      </section>
+      <EmailSettingsCard />
     </PageLayout>
   );
 }

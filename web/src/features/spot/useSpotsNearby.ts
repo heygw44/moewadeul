@@ -181,7 +181,19 @@ export function useSpotsNearby(
       map.showRadius(null);
       setState(INITIAL_STATE);
     };
-  }, [map, enabled, centerLat, centerLng, radiusKm, typesKey, settingsKey, hasWater, hasToilet, excludeWarning, hideClosed]);
+  }, [
+    map,
+    enabled,
+    centerLat,
+    centerLng,
+    radiusKm,
+    typesKey,
+    settingsKey,
+    hasWater,
+    hasToilet,
+    excludeWarning,
+    hideClosed,
+  ]);
 
   const retry = useCallback(() => loadRef.current(), []);
   const loadMore = useCallback(() => moreRef.current(), []);

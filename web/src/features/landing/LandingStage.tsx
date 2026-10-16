@@ -139,7 +139,8 @@ function LandingHero() {
             함께 가요
           </h1>
           <p className="mt-4 max-w-[30em] text-base leading-relaxed text-ink-muted lg:mt-5 lg:text-[1.1875rem]">
-            공공 야영장·자연휴양림·회원이 제보한 박지를 한 지도에서 봐요. 장소마다 공원 경계와 데이터 기준일이 붙어 있어요.
+            공공 야영장·자연휴양림·회원이 제보한 박지를 한 지도에서 봐요. 장소마다 공원 경계와 데이터 기준일이 붙어
+            있어요.
           </p>
           {view && (
             <div className="mt-6 flex max-w-[30rem] lg:mt-9">
@@ -198,7 +199,10 @@ function EvidenceSection() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchSpotsNearby({ ...WARNING_SEARCH_CENTER, radiusKm: WARNING_SEARCH_RADIUS_KM, size: 50 }, controller.signal).then(
+    fetchSpotsNearby(
+      { ...WARNING_SEARCH_CENTER, radiusKm: WARNING_SEARCH_RADIUS_KM, size: 50 },
+      controller.signal,
+    ).then(
       (page) => setWarnedSpot(page.content.find((spot) => spot.parkWarning) ?? null),
       () => {},
     );
@@ -230,8 +234,8 @@ function EvidenceSection() {
             {warnedSpot && <span className="text-sm font-semibold text-warning">{warnedSpot.name}</span>}
           </div>
           <p className="px-5 pt-4 text-[0.9375rem] leading-relaxed text-ink">
-            공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요. 자연공원 안에서는 지정된 야영장 밖의
-            야영과 취사가 금지돼 있어요.
+            공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요. 자연공원 안에서는 지정된 야영장
+            밖의 야영과 취사가 금지돼 있어요.
           </p>
           <dl className="mt-3">
             <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 border-t border-line px-5 py-3 text-sm">
@@ -324,7 +328,10 @@ function TrustSection() {
           </ol>
         </div>
 
-        <ol aria-label="뫼와들에서 하는 일의 순서" className="mt-14 grid border-l-2 border-brand pl-0 lg:mt-20 lg:grid-cols-3 lg:border-t-2 lg:border-l-0">
+        <ol
+          aria-label="뫼와들에서 하는 일의 순서"
+          className="mt-14 grid border-l-2 border-brand pl-0 lg:mt-20 lg:grid-cols-3 lg:border-t-2 lg:border-l-0"
+        >
           <TrailStop title="장소를 찾고" to="/map" linkText="지도 열기">
             지도에서 장소를 고르면 날씨·일몰·예상 인원이 함께 나와요.
           </TrailStop>
@@ -362,7 +369,17 @@ function SectionLead({ id, title, children }: { id: string; title: ReactNode; ch
 }
 
 // 흐름 줄의 한 정류장이다. 모바일은 왼쪽 세로 줄, 데스크톱은 위 가로 줄에 숲색 점을 찍는다.
-function TrailStop({ title, to, linkText, children }: { title: string; to: string; linkText: string; children: ReactNode }) {
+function TrailStop({
+  title,
+  to,
+  linkText,
+  children,
+}: {
+  title: string;
+  to: string;
+  linkText: string;
+  children: ReactNode;
+}) {
   return (
     <li className="relative pb-8 pl-6 last:pb-0 lg:pt-6 lg:pr-8 lg:pb-0 lg:pl-0">
       <span
@@ -371,7 +388,10 @@ function TrailStop({ title, to, linkText, children }: { title: string; to: strin
       />
       <h3 className="text-xl font-extrabold tracking-[-0.02em] text-ink">{title}</h3>
       <p className="mt-1.5 max-w-[22em] text-[0.9375rem] leading-relaxed text-ink-muted">{children}</p>
-      <Link to={to} className="mt-3 inline-flex min-h-11 items-center gap-1 text-[0.9375rem] font-bold text-brand underline-offset-4 hover:underline">
+      <Link
+        to={to}
+        className="mt-3 inline-flex min-h-11 items-center gap-1 text-[0.9375rem] font-bold text-brand underline-offset-4 hover:underline"
+      >
         {linkText}
         <Icon name="chevronRight" size={16} />
       </Link>

@@ -463,7 +463,9 @@ export function MapPage({
         </div>
         {inPanel && filterable && (
           <div className="flex gap-1.5">
-            {browsing && <TypeSegments types={spotFilters.types} onChange={(types) => setSpotFilters({ ...spotFilters, types })} />}
+            {browsing && (
+              <TypeSegments types={spotFilters.types} onChange={(types) => setSpotFilters({ ...spotFilters, types })} />
+            )}
             <FilterButton
               count={basecampMode ? basecampFilterChipList.length : spotFilterChipList.length}
               onClick={() => setFilterDialogOpen(true)}
@@ -493,10 +495,7 @@ export function MapPage({
           toolbar={map ? renderControls(true) : undefined}
           header={
             contentOpen ? undefined : basecampMode ? (
-              <BasecampListHeader
-                result={basecamps}
-                regionName={regionName}
-              />
+              <BasecampListHeader result={basecamps} regionName={regionName} />
             ) : radiusActive && radiusSearch ? (
               <NearbyListHeader nearby={nearby} radius={radiusSearch} />
             ) : (
@@ -572,7 +571,9 @@ export function MapPage({
                   <div className="flex flex-col gap-3">
                     <p>{mapFailure.message}</p>
                     {mapFailure.reason === 'NO_KEY' ? (
-                      import.meta.env.DEV && <p>저장소 루트의 .env에 VITE_KAKAO_JS_KEY를 넣고 개발 서버를 다시 켜 주세요.</p>
+                      import.meta.env.DEV && (
+                        <p>저장소 루트의 .env에 VITE_KAKAO_JS_KEY를 넣고 개발 서버를 다시 켜 주세요.</p>
+                      )
                     ) : (
                       <div>
                         <Button variant="secondary" onClick={retryMap}>
@@ -671,7 +672,6 @@ function totalCount(area: SpotsInView): number {
   return area.clusters.reduce((sum, cluster) => sum + cluster.count, 0);
 }
 
-
 // 목록 머리 띠의 제목이다. 장소 수는 띠 오른쪽에 따로 적으므로 지역 이름만 쓴다.
 function regionTitle(label: RegionLabel | null): string {
   if (label?.kind === 'named') return label.name;
@@ -679,13 +679,7 @@ function regionTitle(label: RegionLabel | null): string {
   return '이 지역';
 }
 
-function ListHeader({
-  area,
-  regionName,
-}: {
-  area: SpotsInView;
-  regionName: RegionLabel | null;
-}) {
+function ListHeader({ area, regionName }: { area: SpotsInView; regionName: RegionLabel | null }) {
   const counted = area.status === 'ready' || area.markers.length > 0 || area.clusters.length > 0;
   return (
     <h2 className="flex items-baseline justify-between gap-3">
@@ -694,7 +688,9 @@ function ListHeader({
         <span className="sr-only"> 장소</span>
       </span>
       {counted && (
-        <span className="shrink-0 text-sm tabular-nums text-ink-muted lg:text-brand-ink">장소 {totalCount(area)}곳</span>
+        <span className="shrink-0 text-sm tabular-nums text-ink-muted lg:text-brand-ink">
+          장소 {totalCount(area)}곳
+        </span>
       )}
     </h2>
   );
@@ -756,7 +752,9 @@ function TypeSegments({ types, onChange }: { types: SpotType[]; onChange: (types
             aria-pressed={pressed}
             onClick={() => onChange(segment.value === null ? [] : [segment.value])}
             className={`inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-control px-1 text-sm whitespace-nowrap ${
-              pressed ? 'border border-ink bg-ink font-bold text-white' : 'border border-line bg-surface text-ink hover:bg-fill'
+              pressed
+                ? 'border border-ink bg-ink font-bold text-white'
+                : 'border border-line bg-surface text-ink hover:bg-fill'
             }`}
           >
             {segment.label}
@@ -767,13 +765,7 @@ function TypeSegments({ types, onChange }: { types: SpotType[]; onChange: (types
   );
 }
 
-function BasecampListHeader({
-  result,
-  regionName,
-}: {
-  result: BasecampsInView;
-  regionName: RegionLabel | null;
-}) {
+function BasecampListHeader({ result, regionName }: { result: BasecampsInView; regionName: RegionLabel | null }) {
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
     <h2 className="flex items-baseline justify-between gap-3">
@@ -846,13 +838,14 @@ function SpotList({
         </div>
       )}
 
-      {area.status === 'ready' && area.markers.length === 0 && area.clusters.length === 0 && (
-        filtered ? (
+      {area.status === 'ready' &&
+        area.markers.length === 0 &&
+        area.clusters.length === 0 &&
+        (filtered ? (
           <EmptyState title="조건에 맞는 장소가 없어요" description="조건을 줄이거나 지도를 다른 곳으로 옮겨 주세요." />
         ) : (
           <EmptyState title="이 지역에는 장소가 없어요" description="지도를 옮기거나 축소해 주세요." />
-        )
-      )}
+        ))}
 
       {area.markers.length > 0 && (
         <>
@@ -948,10 +941,7 @@ function ReportButton() {
   const target = anonymous ? withNext('/login', '/bakjis/new') : '/bakjis/new';
 
   return (
-    <Link
-      to={target}
-      className={MAP_BUTTON_CLASS}
-    >
+    <Link to={target} className={MAP_BUTTON_CLASS}>
       <Icon name="backpack" size={20} />
       박지 제보
     </Link>

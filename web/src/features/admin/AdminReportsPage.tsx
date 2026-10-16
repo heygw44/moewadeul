@@ -129,7 +129,10 @@ function ReportList() {
       {state !== null && state.items.length > 0 && (
         <div className="overflow-hidden rounded-sheet border border-line bg-surface">
           {/* 넓은 화면에서는 표처럼 칸 이름 줄을 둔다. 좁은 화면은 행마다 위아래로 쌓으므로 이 줄을 숨긴다. */}
-          <div aria-hidden="true" className={`hidden border-b border-line bg-canvas py-2.5 text-sm font-semibold text-ink-muted md:grid ${ROW_GRID}`}>
+          <div
+            aria-hidden="true"
+            className={`hidden border-b border-line bg-canvas py-2.5 text-sm font-semibold text-ink-muted md:grid ${ROW_GRID}`}
+          >
             <span>우선</span>
             <span>사유</span>
             <span>신고한 회원 → 대상</span>

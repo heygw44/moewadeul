@@ -190,7 +190,8 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
         </dd>
         <dt className="text-ink-muted">다녀온 날</dt>
         <dd className="text-ink">
-          <span className="font-mono tabular-nums">{formatLocalDate(item.visitedDate)}</span> · {nightsLabel(item.nights)}
+          <span className="font-mono tabular-nums">{formatLocalDate(item.visitedDate)}</span> ·{' '}
+          {nightsLabel(item.nights)}
         </dd>
         {item.images.length > thumbnails.length && (
           <>
@@ -241,7 +242,12 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
             숨기기
           </Button>
         )}
-        <Button variant="secondary" loading={busy === 'restore'} disabled={busy === 'hide'} onClick={() => void run('restore')}>
+        <Button
+          variant="secondary"
+          loading={busy === 'restore'}
+          disabled={busy === 'hide'}
+          onClick={() => void run('restore')}
+        >
           복구
         </Button>
       </div>

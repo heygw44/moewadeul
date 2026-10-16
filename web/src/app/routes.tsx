@@ -95,11 +95,7 @@ export const routes: RouteDef[] = [
     path: '/community/:postId/edit',
     render: (params) => {
       const postId = toPositiveId(params.postId);
-      return postId === null ? (
-        <NotFoundPage />
-      ) : (
-        <CommunityPostFormPage key={postId} mode="edit" postId={postId} />
-      );
+      return postId === null ? <NotFoundPage /> : <CommunityPostFormPage key={postId} mode="edit" postId={postId} />;
     },
   },
   {

@@ -164,13 +164,7 @@ function EditLoader({ postId, myMemberId }: { postId: number; myMemberId: number
   }
   if ('error' in result) {
     if (result.error instanceof ApiError && result.error.code === 'NOT_FOUND') {
-      return (
-        <EmptyState
-          framed
-          title="글을 찾을 수 없어요"
-          description="삭제됐거나 볼 수 없는 글이에요."
-        />
-      );
+      return <EmptyState framed title="글을 찾을 수 없어요" description="삭제됐거나 볼 수 없는 글이에요." />;
     }
     return (
       <div className="flex flex-col gap-3">
@@ -203,7 +197,9 @@ function isFormField(field: string): field is FormField {
   return field === 'title' || field === 'content' || field === 'imageIds';
 }
 
-type PostFormProps = { initialSpot: LinkedSpot | null } & ({ mode: 'create' } | { mode: 'edit'; post: CommunityPostDetail });
+type PostFormProps = { initialSpot: LinkedSpot | null } & (
+  { mode: 'create' } | { mode: 'edit'; post: CommunityPostDetail }
+);
 
 function PostForm(props: PostFormProps) {
   const mode: FormMode = props.mode;
@@ -225,7 +221,9 @@ function PostForm(props: PostFormProps) {
       (detail) => {
         if (controller.signal.aborted) return;
         setSpot((previous) =>
-          previous !== null && previous.spotId === unnamedSpotId ? { spotId: unnamedSpotId, name: detail.name } : previous,
+          previous !== null && previous.spotId === unnamedSpotId
+            ? { spotId: unnamedSpotId, name: detail.name }
+            : previous,
         );
       },
       () => undefined,

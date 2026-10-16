@@ -8,12 +8,7 @@ export type BasecampRelation = 'NONE' | 'APPLICANT' | 'MEMBER' | 'LEADER';
 
 // 합류 신청을 못 하는 이유. 서버가 이 순서로 모두 알려 준다.
 export type JoinUnmetReason =
-  | 'TRUST_LEVEL'
-  | 'AGE_GROUP'
-  | 'GENDER'
-  | 'DATE_CONFLICT'
-  | 'ALREADY_JOINED'
-  | 'REAPPLY_NOT_ALLOWED';
+  'TRUST_LEVEL' | 'AGE_GROUP' | 'GENDER' | 'DATE_CONFLICT' | 'ALREADY_JOINED' | 'REAPPLY_NOT_ALLOWED';
 
 // 합류 조건. 연령대 범위는 20, 30, 40, 50, 60(60대 이상) 중 하나씩이고, 조건이 없는 항목은 null이다.
 export interface JoinCondition {

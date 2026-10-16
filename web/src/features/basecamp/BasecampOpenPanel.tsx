@@ -33,14 +33,7 @@ type BasecampOpenPanelProps = {
 type SpotResult = { spotId: number; detail: SpotDetail } | { spotId: number; error: unknown };
 
 type FormField =
-  | 'title'
-  | 'description'
-  | 'startDate'
-  | 'endDate'
-  | 'capacity'
-  | 'minTrustLevel'
-  | 'ageGroup'
-  | 'sameGenderOnly';
+  'title' | 'description' | 'startDate' | 'endDate' | 'capacity' | 'minTrustLevel' | 'ageGroup' | 'sameGenderOnly';
 
 type FieldErrors = Partial<Record<FormField, string>>;
 
@@ -128,7 +121,9 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
       <div className="flex flex-col gap-4">
         <h2 className="text-xl font-bold tracking-tight text-ink">{current.detail.name}에서 베이스캠프 열기</h2>
         <ParkWarningNotice warning={current.detail.parkWarning} />
-        <p className="text-base font-semibold text-danger">이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
+        <p className="text-base font-semibold text-danger">
+          이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.
+        </p>
       </div>
     );
   } else if (session.status === 'anonymous' || session.me === null) {
@@ -226,7 +221,8 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
     if (title.trim() === '') errors.title = '제목을 적어 주세요.';
     if (description.trim() === '') errors.description = '설명을 적어 주세요.';
     if (startDate === '') errors.startDate = '출발일을 골라 주세요.';
-    else if (startDate < minStart || startDate > maxStart) errors.startDate = '출발일은 내일부터 60일 안에서 골라 주세요.';
+    else if (startDate < minStart || startDate > maxStart)
+      errors.startDate = '출발일은 내일부터 60일 안에서 골라 주세요.';
     if (endDate === '') errors.endDate = '돌아오는 날을 골라 주세요.';
     else if (endMin !== undefined && endMax !== undefined && (endDate < endMin || endDate > endMax)) {
       errors.endDate = '돌아오는 날은 출발일에서 1~3박 뒤로 골라 주세요.';

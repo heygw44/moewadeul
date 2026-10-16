@@ -43,7 +43,6 @@ const BOARD_CLASS = 'overflow-hidden rounded-sheet border border-line bg-surface
 const MESSAGE_MAX = 500;
 const ACTION_LINK_CLASS = buttonClassName('secondary');
 
-
 const CONFIRMED_SAFETY_RULES = [
   '출발 전에 일정을 가족이나 지인에게 알려 주세요.',
   '되도록 일행과 떨어지지 마세요.',
@@ -153,22 +152,31 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
         {/* 머리는 탐방로 안내판처럼 숲색 판에 상태·제목·일정 세 칸을 적는다. 패널 폭으로 깐다. */}
         <header className="-mx-4 bg-brand px-4 pt-4 pb-5 text-white lg:-mx-5 lg:px-5">
           <p className="inline-flex items-center gap-1.5 text-[0.8125rem] font-bold">
-            <span aria-hidden="true" className={`size-2 rounded-full ${detail.status === 'RECRUITING' ? 'bg-accent-soft' : 'bg-brand-ink'}`} />
+            <span
+              aria-hidden="true"
+              className={`size-2 rounded-full ${detail.status === 'RECRUITING' ? 'bg-accent-soft' : 'bg-brand-ink'}`}
+            />
             {status.label}
           </p>
           <h2 className="mt-1 text-2xl leading-tight font-extrabold tracking-[-0.025em] break-words">{detail.title}</h2>
           <dl className="mt-4 grid grid-cols-[1fr_1fr_auto] overflow-hidden rounded-control border border-white/25">
             <div className="px-3 py-2">
               <dt className="text-xs text-brand-ink">출발</dt>
-              <dd className="text-[0.9375rem] font-extrabold whitespace-nowrap tabular-nums">{formatLocalDate(detail.startDate)}</dd>
+              <dd className="text-[0.9375rem] font-extrabold whitespace-nowrap tabular-nums">
+                {formatLocalDate(detail.startDate)}
+              </dd>
             </div>
             <div className="border-l border-white/25 px-3 py-2">
               <dt className="text-xs text-brand-ink">돌아오는 날</dt>
-              <dd className="text-[0.9375rem] font-extrabold whitespace-nowrap tabular-nums">{formatLocalDate(detail.endDate)}</dd>
+              <dd className="text-[0.9375rem] font-extrabold whitespace-nowrap tabular-nums">
+                {formatLocalDate(detail.endDate)}
+              </dd>
             </div>
             <div className="border-l border-white/25 px-3 py-2">
               <dt className="text-xs text-brand-ink">일정</dt>
-              <dd className="text-[0.9375rem] font-extrabold tabular-nums">{nightsBetween(detail.startDate, detail.endDate)}박</dd>
+              <dd className="text-[0.9375rem] font-extrabold tabular-nums">
+                {nightsBetween(detail.startDate, detail.endDate)}박
+              </dd>
             </div>
           </dl>
         </header>
@@ -187,7 +195,10 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
               aria-hidden="true"
               className={`flex size-7 shrink-0 items-center justify-center rounded-full text-white ${detail.spot.type === 'BAKJI' ? 'bg-bakji' : 'bg-brand'}`}
             >
-              <Icon name={detail.spot.type === 'BAKJI' ? 'backpack' : detail.spot.type === 'FOREST' ? 'tree' : 'tent'} size={16} />
+              <Icon
+                name={detail.spot.type === 'BAKJI' ? 'backpack' : detail.spot.type === 'FOREST' ? 'tree' : 'tent'}
+                size={16}
+              />
             </span>
             <span className="min-w-0 flex-1 truncate text-base font-bold text-ink">{detail.spot.name}</span>
             <Icon name="chevronRight" size={20} className="shrink-0 text-ink-muted" />
@@ -199,7 +210,11 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
             인원과 멤버
           </h3>
           <div className={BOARD_CLASS}>
-            <SeatRow headcount={detail.headcount} capacity={detail.capacity} recruiting={detail.status === 'RECRUITING'} />
+            <SeatRow
+              headcount={detail.headcount}
+              capacity={detail.capacity}
+              recruiting={detail.status === 'RECRUITING'}
+            />
             <ul>
               {detail.members.map((member) => (
                 <MemberRow
@@ -561,10 +576,14 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
               <Button
                 loading={submitting}
                 onClick={() =>
-                  run(async () => {
-                    await applyToBasecamp(detail.basecampId, message.trim() || undefined);
-                    setMessage('');
-                  }, '합류 신청을 보냈어요.', '합류 신청을 보내지 못했어요')
+                  run(
+                    async () => {
+                      await applyToBasecamp(detail.basecampId, message.trim() || undefined);
+                      setMessage('');
+                    },
+                    '합류 신청을 보냈어요.',
+                    '합류 신청을 보내지 못했어요',
+                  )
                 }
               >
                 신청하기
@@ -579,7 +598,10 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
             <p className="text-base text-ink">탈퇴하면 이 베이스캠프에 다시 신청할 수 없어요.</p>
             {isLateLeave(detail) && (
               <Notice tone="warning" title="출발이 얼마 남지 않았어요">
-                <p>출발 48시간 안에 탈퇴하면 임박 탈퇴로 기록돼요. 임박 탈퇴가 180일 안에 3번 쌓이면 신뢰 단계 2에서 빠져요.</p>
+                <p>
+                  출발 48시간 안에 탈퇴하면 임박 탈퇴로 기록돼요. 임박 탈퇴가 180일 안에 3번 쌓이면 신뢰 단계 2에서
+                  빠져요.
+                </p>
               </Notice>
             )}
             <div className="flex flex-wrap justify-end gap-2">
@@ -589,7 +611,9 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
               <Button
                 variant="danger"
                 loading={submitting}
-                onClick={() => run(() => leaveBasecamp(detail.basecampId), '베이스캠프에서 탈퇴했어요.', '탈퇴하지 못했어요')}
+                onClick={() =>
+                  run(() => leaveBasecamp(detail.basecampId), '베이스캠프에서 탈퇴했어요.', '탈퇴하지 못했어요')
+                }
               >
                 탈퇴
               </Button>
@@ -608,7 +632,13 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
               <Button
                 variant="danger"
                 loading={submitting}
-                onClick={() => run(() => cancelMyApplication(detail.basecampId), '합류 신청을 취소했어요.', '합류 신청을 취소하지 못했어요')}
+                onClick={() =>
+                  run(
+                    () => cancelMyApplication(detail.basecampId),
+                    '합류 신청을 취소했어요.',
+                    '합류 신청을 취소하지 못했어요',
+                  )
+                }
               >
                 신청 취소
               </Button>

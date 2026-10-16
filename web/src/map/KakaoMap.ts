@@ -1,5 +1,12 @@
 import { loadKakaoMaps } from './kakaoLoader';
-import { createClusterButton, createDraftPin, createSearchPin, createSpotDot, createSpotPin, createSpread } from './markers';
+import {
+  createClusterButton,
+  createDraftPin,
+  createSearchPin,
+  createSpotDot,
+  createSpotPin,
+  createSpread,
+} from './markers';
 import { mergeClusters } from './mergeClusters';
 import { arrangeSpread, stackPins } from './stackPins';
 import type { SpotPin } from './markers';
@@ -384,7 +391,8 @@ export async function createMapView(
         return;
       }
       map.panTo(toKakaoLatLng(position));
-      if (level !== undefined && level !== current) map.setLevel(level, { animate: true, anchor: toKakaoLatLng(position) });
+      if (level !== undefined && level !== current)
+        map.setLevel(level, { animate: true, anchor: toKakaoLatLng(position) });
     },
 
     // 서버 묶음은 핀과 섞어 묶지 않는다. 묶음끼리만 합쳐서 그린다.

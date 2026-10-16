@@ -28,11 +28,7 @@ export function MyPage() {
   }, [session.status]);
 
   if (session.status !== 'authenticated' || !session.me) {
-    return (
-      <PageLayout title="내 정보">
-        {showSkeleton ? <Skeleton className="h-40 w-full" /> : null}
-      </PageLayout>
-    );
+    return <PageLayout title="내 정보">{showSkeleton ? <Skeleton className="h-40 w-full" /> : null}</PageLayout>;
   }
 
   const me = session.me;

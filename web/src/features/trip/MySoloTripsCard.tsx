@@ -39,9 +39,7 @@ export function MySoloTripsCard() {
   return (
     <BoardSection title="혼자 가는 일정">
       <div className="flex flex-col gap-3 px-5 py-4">
-        <p className="text-sm text-ink-muted">
-          나만 보는 일정이에요. 다른 사람에게는 예상 인원 1명으로만 보여요.
-        </p>
+        <p className="text-sm text-ink-muted">나만 보는 일정이에요. 다른 사람에게는 예상 인원 1명으로만 보여요.</p>
         {current === null ? (
           showSkeleton && <Skeleton className="h-16 w-full" />
         ) : 'error' in current ? (
@@ -100,7 +98,15 @@ export function MySoloTripsCard() {
   );
 }
 
-function DeleteTripDialog({ trip, onClose, onDeleted }: { trip: SoloTrip; onClose: () => void; onDeleted: () => void }) {
+function DeleteTripDialog({
+  trip,
+  onClose,
+  onDeleted,
+}: {
+  trip: SoloTrip;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
