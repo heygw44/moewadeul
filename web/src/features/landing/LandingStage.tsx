@@ -574,15 +574,17 @@ function CroppedImage({
       className={`relative overflow-hidden ${className}`}
       style={{ aspectRatio: `${crop.width * size.width} / ${crop.height * size.height}` }}
     >
+      {/* 그림을 칸 너비 기준 margin으로 옮긴다. margin 퍼센트는 위아래도 칸 너비를 기준으로 계산되므로,
+          aspect-ratio로 정한 칸 높이를 퍼센트 top으로 풀지 못하는 브라우저에서도 같은 자리에 그려진다.
+          같은 그림을 데스크톱 무대가 이미 불러오므로 lazy로 미루지 않는다. 두 방식을 쓰던 때 아이폰 Safari에서 이 칸이 빈 상자로 보였다. */}
       <img
         src={src}
         alt={alt}
-        loading="lazy"
-        className="absolute max-w-none"
+        className="block max-w-none"
         style={{
           width: `${(100 / crop.width) * 100}%`,
-          left: `${(-crop.left / crop.width) * 100}%`,
-          top: `${(-crop.top / crop.height) * 100}%`,
+          marginLeft: `${(-crop.left / crop.width) * 100}%`,
+          marginTop: `${(-crop.top / crop.width) * (size.height / size.width) * 100}%`,
         }}
       />
     </div>
