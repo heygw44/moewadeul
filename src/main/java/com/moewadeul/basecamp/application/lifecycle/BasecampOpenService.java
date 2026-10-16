@@ -8,6 +8,7 @@ import com.moewadeul.basecamp.domain.BasecampOpenPolicy;
 import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.Capacity;
 import com.moewadeul.basecamp.domain.JoinCondition;
+import com.moewadeul.basecamp.infra.lifecycle.BasecampLeaderLockMapper;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.time.KoreaTime;
@@ -28,8 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>캠프 리더의 자격은 신뢰 단계가 1 이상이고 지금 적용 중인 이용 정지가 없는 것이다. 경고와 기간이 끝난 정지는 열기를 막지 않는다.
  * 정지를 확정하면 그 회원의 세션을 지우지만, 지우기 전에 이미 들어온 요청을 막으려고 여기서도 한 번 더 확인한다.
  *
- * <p>한 회원이 열어 둔 베이스캠프 수는 저장하기 전에 세어 확인할 뿐 잠그지 않는다. 그래서 같은 회원의 요청 두 개가 동시에 들어오면 둘 다
- * 개수 검사를 통과해 4개가 열릴 수 있다. 한 사람이 거의 동시에 연달아 여는 경우는 드물어서 지금은 막지 않고, 개선 후보로 따로 기록해 둔다.
+ * <p>한 회원이 열어 둔 베이스캠프 수는 저장하기 전에 센다. 그런데 같은 회원의 요청 두 개가 동시에 들어오면 둘 다 "아직 3개 미만"으로 세고
+ * 함께 저장할 수 있다. 그래서 서비스는 트랜잭션의 첫 쿼리로 캠프 리더의 회원 행을 잠가 같은 회원의 열기를 한 줄로 세운다.
  */
 @Service
 @RequiredArgsConstructor
@@ -41,6 +42,7 @@ public class BasecampOpenService {
     private final SanctionQueryService sanctionQueryService;
     private final ActiveSpotChecker activeSpotChecker;
     private final BasecampRepository basecampRepository;
+    private final BasecampLeaderLockMapper basecampLeaderLockMapper;
     private final Clock clock;
 
     /**
@@ -60,6 +62,8 @@ public class BasecampOpenService {
      */
     @Transactional
     public BasecampOpenResult open(long leaderId, BasecampOpenCommand command) {
+        // 잠금이 트랜잭션의 첫 쿼리여야 한다. 그래야 아래 개수 조회가 잠금을 얻은 뒤의 스냅숏을 읽어서, 먼저 끝난 요청이 연 베이스캠프가 보인다.
+        basecampLeaderLockMapper.lockMember(leaderId);
         Instant now = clock.instant();
         BasecampOpenPolicy.requireSchedule(
                 command.startDate(), command.endDate(), LocalDate.ofInstant(now, KoreaTime.ZONE));
