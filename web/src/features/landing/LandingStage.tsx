@@ -5,7 +5,7 @@ import { Link } from '../../app/router';
 import { Icon } from '../../components/icons';
 import { createMapView } from '../../map/KakaoMap';
 import type { RegionLabel } from '../../map/regionLabel';
-import type { LatLng, MapView } from '../../map/types';
+import type { Bounds, LatLng, MapView } from '../../map/types';
 import { SpotListRow } from '../spot/SpotListRow';
 import { useRegionName } from '../spot/useRegionName';
 import {
@@ -66,6 +66,8 @@ function LandingHero() {
   const boardRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(0.92);
   const tourRef = useRef<number[]>([]);
+  // 지금 짚고 있는 장소다. 같은 번호의 행과 핀을 함께 고른 상태로 그린다.
+  const [activeId, setActiveId] = useState<number | null>(null);
   const [view, setView] = useState<MapView | null>(null);
   const [mapFailed, setMapFailed] = useState(false);
   const [spots, setSpots] = useState<NearbySpot[]>([]);
@@ -130,29 +132,54 @@ function LandingHero() {
       })),
       [],
     );
+    fitToSpots(view, spots);
   }, [view, spots]);
+
+  // 지도 칸 크기가 바뀌면(창을 넓히거나 휴대폰 배치에서 넓은 배치로 바뀌면) 지도를 새 크기에 맞춰 다시 그리고 핀이 모두 보이게 맞춘다.
+  // 다시 그리지 않으면 카카오맵이 처음 크기를 기준으로 그린 채 남아서 핀이 한쪽으로 쏠리거나 가장자리에서 잘린다.
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!view || !host || typeof ResizeObserver === 'undefined') return;
+    let first = true;
+    const observer = new ResizeObserver(() => {
+      // 처음 한 번은 관찰을 시작할 때 오는 알림이라 건너뛴다.
+      if (first) {
+        first = false;
+        return;
+      }
+      view.relayout();
+      fitToSpots(view, spots);
+    });
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, [view, spots]);
+
+  useEffect(() => {
+    view?.setSelected(activeId);
+  }, [view, activeId]);
 
   // 목록과 지도가 같은 번호로 이어진다는 것을 보여 주려고, 처음 한 번 핀을 1번부터 차례로 골랐다가 놓는다.
   useEffect(() => {
     if (!view || spots.length === 0 || reduced) return;
     const rows = spots.slice(0, BOARD_ROW_COUNT);
     const timers = rows.map((spot, index) =>
-      window.setTimeout(() => view.setSelected(spot.spotId), PIN_TOUR_START_MS + index * PIN_TOUR_STEP_MS),
+      window.setTimeout(() => setActiveId(spot.spotId), PIN_TOUR_START_MS + index * PIN_TOUR_STEP_MS),
     );
-    timers.push(window.setTimeout(() => view.setSelected(null), PIN_TOUR_START_MS + rows.length * PIN_TOUR_STEP_MS));
+    timers.push(window.setTimeout(() => setActiveId(null), PIN_TOUR_START_MS + rows.length * PIN_TOUR_STEP_MS));
     tourRef.current = timers;
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [view, spots, reduced]);
 
-  // 장소 행에 마우스를 올리거나 키보드로 고르면 같은 번호의 핀을 고른 상태로 그린다.
+  // 장소 행에 마우스·펜·손가락을 올리거나 키보드로 고르면 그 행과 같은 번호의 핀을 고른 상태로 그린다.
+  // 사용자가 직접 고르기 시작하면 처음에 차례로 짚던 움직임은 멈춘다.
   function pointAt(target: EventTarget) {
-    if (!view || !(target instanceof Element)) return;
+    if (!(target instanceof Element)) return;
     const row = target.closest('li');
     const index = row?.parentElement ? Array.from(row.parentElement.children).indexOf(row) : -1;
     const spot = spots[index];
     if (!spot) return;
     tourRef.current.forEach((timer) => window.clearTimeout(timer));
-    view.setSelected(spot.spotId);
+    setActiveId(spot.spotId);
   }
 
   // 스크롤을 내리면 안내판이 92%에서 100% 크기로 다가온다. 스크롤을 바로 따라가지 않고 매 프레임 조금씩 따라간다.
@@ -213,10 +240,10 @@ function LandingHero() {
             {spots.length > 0 ? (
               <ul
                 aria-label="안내판의 장소"
-                onMouseOver={(event) => pointAt(event.target)}
+                onPointerOver={(event) => pointAt(event.target)}
                 onFocus={(event) => pointAt(event.target)}
-                onMouseLeave={() => view?.setSelected(null)}
-                onBlur={() => view?.setSelected(null)}
+                onPointerLeave={() => setActiveId(null)}
+                onBlur={() => setActiveId(null)}
                 className="flex flex-col justify-center py-2 motion-safe:[&>li]:animate-rise motion-safe:[&>li:nth-child(2)]:[animation-delay:120ms] motion-safe:[&>li:nth-child(3)]:[animation-delay:240ms] lg:py-4"
               >
                 {spots.slice(0, BOARD_ROW_COUNT).map((spot, index) => (
@@ -226,6 +253,7 @@ function LandingHero() {
                     number={index + 1}
                     distanceKm={spot.distanceKm}
                     size="large"
+                    selected={spot.spotId === activeId}
                   />
                 ))}
               </ul>
@@ -254,6 +282,18 @@ function HeadlineLine({ children, delayMs = 0 }: { children: ReactNode; delayMs?
       </span>
     </span>
   );
+}
+
+// 안내판의 장소가 모두 보이도록 지도를 맞춘다. 지도 래퍼가 가장자리에 여백을 두고 맞춰서 핀이 칸 끝에서 잘리지 않는다.
+function fitToSpots(view: MapView, spots: NearbySpot[]) {
+  if (spots.length === 0) return;
+  const lats = spots.map((spot) => spot.lat);
+  const lngs = spots.map((spot) => spot.lng);
+  const bounds: Bounds = {
+    sw: { lat: Math.min(...lats), lng: Math.min(...lngs) },
+    ne: { lat: Math.max(...lats), lng: Math.max(...lngs) },
+  };
+  view.fitBounds(bounds);
 }
 
 // 지역 이름에 이미 "일대"가 붙어 오는 경우(도 단위)가 있어서 두 번 붙지 않게 한다.
