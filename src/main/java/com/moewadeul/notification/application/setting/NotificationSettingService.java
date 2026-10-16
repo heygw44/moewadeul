@@ -5,6 +5,7 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.notification.application.NotificationEventTypes;
 import com.moewadeul.notification.domain.setting.NotificationSetting;
 import com.moewadeul.notification.domain.setting.NotificationSettingRepository;
+import com.moewadeul.notification.infra.setting.NotificationSettingMemberLockMapper;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ public class NotificationSettingService {
     public static final int TYPE_COUNT = 14;
 
     private final NotificationSettingRepository notificationSettingRepository;
+    private final NotificationSettingMemberLockMapper notificationSettingMemberLockMapper;
 
     /** 호출하면 memberId인 회원의 모든 알림 종류별 이메일 수신 여부를 정해진 순서로 돌려준다. 저장하지 않은 종류는 기본값이다. */
     @Transactional(readOnly = true)
@@ -39,10 +41,13 @@ public class NotificationSettingService {
      * 호출하면 memberId인 회원의 설정을 requested로 통째로 바꾸고, 바뀐 뒤의 모든 종류별 설정을 돌려준다.
      * requested에 없는 종류는 기본값으로 돌아간다. 모르는 종류나 같은 종류가 두 번 있으면 아무것도 바꾸지 않고
      * INVALID_INPUT 예외를 던진다.
+     *
+     * <p>같은 회원의 변경이 동시에 들어오면 서비스는 회원 행을 먼저 잠가 하나씩 처리한다. 그래서 마지막으로 처리한 요청의 설정이 남는다.
      */
     @Transactional
     public List<NotificationSettingItem> replace(long memberId, List<NotificationSettingItem> requested) {
         validate(requested);
+        notificationSettingMemberLockMapper.lockMember(memberId);
         notificationSettingRepository.deleteByMemberId(memberId);
         List<NotificationSetting> settings = requested.stream()
                 .map(item -> NotificationSetting.of(memberId, item.type(), item.emailEnabled()))
