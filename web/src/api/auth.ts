@@ -1,5 +1,13 @@
 import { ApiError, apiFetch } from './client';
-import type { LoginRequest, LoginResponse, Me, MemberStatus, SignupRequest, SignupResponse } from './types';
+import type {
+  LoginRequest,
+  LoginResponse,
+  Me,
+  MemberStatus,
+  PasswordResetConfirmRequest,
+  SignupRequest,
+  SignupResponse,
+} from './types';
 
 // 가입하면 서버가 인증 코드 메일을 보낸다.
 export function signUp(req: SignupRequest): Promise<SignupResponse> {
@@ -13,6 +21,24 @@ export function login(req: LoginRequest): Promise<LoginResponse> {
 
 export function logout(): Promise<void> {
   return apiFetch<void>('/api/auth/logout', { method: 'POST', skipUnauthorizedHandler: true });
+}
+
+// 가입 여부와 상관없이 서버가 같은 204로 답해서, 화면도 메일을 보냈다고 단정하지 않는다.
+export function requestPasswordReset(email: string): Promise<void> {
+  return apiFetch<void>('/api/auth/password-reset/request', {
+    method: 'POST',
+    body: { email },
+    skipUnauthorizedHandler: true,
+  });
+}
+
+// 성공하면 서버가 그 회원의 세션을 모두 지운다.
+export function confirmPasswordReset(req: PasswordResetConfirmRequest): Promise<void> {
+  return apiFetch<void>('/api/auth/password-reset/confirm', {
+    method: 'POST',
+    body: req,
+    skipUnauthorizedHandler: true,
+  });
 }
 
 export function verifyEmail(code: string): Promise<{ status: MemberStatus }> {

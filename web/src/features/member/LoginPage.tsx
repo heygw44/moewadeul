@@ -132,6 +132,9 @@ export function LoginPage() {
           onChange={(event) => setPassword(event.target.value)}
           error={fieldErrors.password}
         />
+        <Link to="/password-reset" className={`${FOOTER_LINK_CLASS} -my-2 self-end text-sm`}>
+          비밀번호를 잊었나요?
+        </Link>
         {formError && (
           <div role="alert">
             <Notice tone="danger" title="로그인하지 못했어요">

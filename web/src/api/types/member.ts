@@ -72,6 +72,13 @@ export interface PasswordChangeRequest {
   newPasswordConfirm: string;
 }
 
+// 재설정 메일 링크의 토큰으로 새 비밀번호를 정한다.
+export interface PasswordResetConfirmRequest {
+  token: string;
+  newPassword: string;
+  newPasswordConfirm: string;
+}
+
 // 신뢰 단계
 
 export interface TrustProgress {

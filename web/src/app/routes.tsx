@@ -15,6 +15,7 @@ import { NotificationsPage } from '../features/notification/NotificationsPage';
 import { CompanionReviewsPage } from '../features/review/CompanionReviewsPage';
 import { AccountSettingsPage } from '../features/member/AccountSettingsPage';
 import { LoginPage } from '../features/member/LoginPage';
+import { PasswordResetPage } from '../features/member/PasswordResetPage';
 import { MemberProfilePage } from '../features/member/MemberProfilePage';
 import { MyPage } from '../features/member/MyPage';
 import { SignupPage } from '../features/member/SignupPage';
@@ -151,6 +152,7 @@ export const routes: RouteDef[] = [
   { path: '/admin/sync-jobs', render: () => <AdminSyncJobsPage /> },
   { path: '/login', render: () => <LoginPage /> },
   { path: '/signup', render: () => <SignupPage /> },
+  { path: '/password-reset', render: () => <PasswordResetPage /> },
   { path: '/verify-email', render: () => <VerifyEmailPage /> },
   { path: '/identity-verification', render: () => <IdentityVerificationPage /> },
   { path: '/me', render: () => <MyPage /> },
