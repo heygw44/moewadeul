@@ -109,7 +109,17 @@ function ratingText(detail: SpotDetail): string | null {
 }
 
 // 판의 한 행이다. 왼쪽 라벨, 오른쪽 굵은 값, 값 아래에 출처·기준일을 단다.
-function Row({ label, value, source, tone }: { label: string; value: ReactNode; source?: string | null; tone?: 'warning' }) {
+function Row({
+  label,
+  value,
+  source,
+  tone,
+}: {
+  label: string;
+  value: ReactNode;
+  source?: string | null;
+  tone?: 'warning';
+}) {
   return (
     <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 border-t border-line px-5 py-3 text-sm first:border-t-0">
       <dt className="text-ink-muted">{label}</dt>
@@ -138,7 +148,9 @@ function OperationRow({ detail }: { detail: SpotDetail }) {
       .join(' · ');
     let value = '운영 중';
     if (publicDetail.closedNow) {
-      value = publicDetail.closedUntil ? `${formatLocalDate(publicDetail.closedUntil)}까지 휴장` : '지금은 휴장 기간이에요';
+      value = publicDetail.closedUntil
+        ? `${formatLocalDate(publicDetail.closedUntil)}까지 휴장`
+        : '지금은 휴장 기간이에요';
     } else if (publicDetail.operatingStatus === null) {
       value = '운영 정보 없음';
     }
@@ -168,7 +180,13 @@ function WeatherRow({ detail }: { detail: SpotDetail }) {
   }
   if (weather.sun) parts.push(`일몰 ${weather.sun.sunset}`);
   const source = weather.sun ? `${weather.source} · 한국천문연구원` : weather.source;
-  return <Row label="날씨" value={<span className="font-mono tabular-nums">{parts.join(' · ') || '예보 없음'}</span>} source={source} />;
+  return (
+    <Row
+      label="날씨"
+      value={<span className="font-mono tabular-nums">{parts.join(' · ') || '예보 없음'}</span>}
+      source={source}
+    />
+  );
 }
 
 function PeopleRow({ detail }: { detail: SpotDetail }) {

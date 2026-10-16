@@ -214,8 +214,7 @@ function isFormField(field: string): field is FormField {
 }
 
 type MemoryFormProps = { position: LatLng | null; initialSpot: LinkedSpot | null } & (
-  | { mode: 'create' }
-  | { mode: 'edit'; memory: MemoryDetail }
+  { mode: 'create' } | { mode: 'edit'; memory: MemoryDetail }
 );
 
 function MemoryForm(props: MemoryFormProps) {
@@ -244,7 +243,9 @@ function MemoryForm(props: MemoryFormProps) {
       (detail) => {
         if (controller.signal.aborted) return;
         setSpot((previous) =>
-          previous !== null && previous.spotId === unnamedSpotId ? { spotId: unnamedSpotId, name: detail.name } : previous,
+          previous !== null && previous.spotId === unnamedSpotId
+            ? { spotId: unnamedSpotId, name: detail.name }
+            : previous,
         );
       },
       () => undefined,
@@ -258,7 +259,8 @@ function MemoryForm(props: MemoryFormProps) {
     const errors: FormFieldErrors = {};
     if (visitedDate === '') errors.visitedDate = '다녀온 날을 골라 주세요.';
     else if (visitedDate > today) errors.visitedDate = '오늘이나 그 전 날짜를 골라 주세요.';
-    if (content.length > MEMORY_CONTENT_MAX) errors.content = `${MEMORY_CONTENT_MAX.toLocaleString()}자 이하로 적어 주세요.`;
+    if (content.length > MEMORY_CONTENT_MAX)
+      errors.content = `${MEMORY_CONTENT_MAX.toLocaleString()}자 이하로 적어 주세요.`;
     return errors;
   }
 
@@ -291,7 +293,14 @@ function MemoryForm(props: MemoryFormProps) {
         return;
       }
       const memory = props.memory;
-      const changes = collectChanges(memory, { visitedDate, nights: Number(nights), content: trimmed, visibility, spot, imageIds });
+      const changes = collectChanges(memory, {
+        visitedDate,
+        nights: Number(nights),
+        content: trimmed,
+        visibility,
+        spot,
+        imageIds,
+      });
       if (Object.keys(changes).length > 0) await updateMemory(memory.memoryId, changes);
       navigate(`/memories/${memory.memoryId}`);
     } catch (error) {

@@ -32,7 +32,8 @@ type LoadResult = { programId: number; detail: ProgramDetail } | { programId: nu
 
 const LINK_BUTTON_CLASS = buttonClassName('primary');
 const SECONDARY_LINK_CLASS = buttonClassName('secondary');
-const BOARD_ROW_CLASS = 'grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 border-t border-line px-4 py-3 text-[0.9375rem] first:border-t-0 sm:grid-cols-[8rem_minmax(0,1fr)] sm:px-5';
+const BOARD_ROW_CLASS =
+  'grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 border-t border-line px-4 py-3 text-[0.9375rem] first:border-t-0 sm:grid-cols-[8rem_minmax(0,1fr)] sm:px-5';
 
 export function ProgramDetailPage({ programId }: { programId: number }) {
   const session = useSession();
@@ -110,7 +111,9 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
     <MetaLine
       items={[
         detail.status !== 'CANCELED' && (
-          <StatusText tone={PROGRAM_STATUS_META[detail.status].tone}>{PROGRAM_STATUS_META[detail.status].label}</StatusText>
+          <StatusText tone={PROGRAM_STATUS_META[detail.status].tone}>
+            {PROGRAM_STATUS_META[detail.status].label}
+          </StatusText>
         ),
         detail.overnight && '숙박',
       ]}
@@ -137,12 +140,18 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
         <header className="rounded-sheet bg-brand px-5 pt-5 pb-5 text-white sm:px-6 [&_:focus-visible]:outline-white">
           {detail.status !== 'CANCELED' && (
             <p className="inline-flex items-center gap-1.5 text-[0.8125rem] font-bold">
-              <span aria-hidden="true" className={`size-2 rounded-full ${detail.status === 'OPEN' ? 'bg-accent-soft' : 'bg-brand-ink'}`} />
+              <span
+                aria-hidden="true"
+                className={`size-2 rounded-full ${detail.status === 'OPEN' ? 'bg-accent-soft' : 'bg-brand-ink'}`}
+              />
               {PROGRAM_STATUS_META[detail.status].label}
               {detail.overnight && <span className="font-normal text-brand-ink"> · 숙박</span>}
             </p>
           )}
-          <p aria-hidden="true" className="mt-1 text-2xl leading-tight font-extrabold tracking-[-0.03em] break-words sm:text-[1.875rem]">
+          <p
+            aria-hidden="true"
+            className="mt-1 text-2xl leading-tight font-extrabold tracking-[-0.03em] break-words sm:text-[1.875rem]"
+          >
             {detail.title}
           </p>
           <p className="mt-1.5 text-sm text-brand-ink">
@@ -157,15 +166,21 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
           <dl className="mt-4 grid grid-cols-2 overflow-hidden rounded-control border border-white/25 sm:grid-cols-[1fr_1fr_auto]">
             <div className="px-3 py-2">
               <dt className="text-xs text-brand-ink">시작</dt>
-              <dd className="text-sm font-extrabold tabular-nums sm:text-[0.9375rem]">{formatKstDateTime(detail.startAt)}</dd>
+              <dd className="text-sm font-extrabold tabular-nums sm:text-[0.9375rem]">
+                {formatKstDateTime(detail.startAt)}
+              </dd>
             </div>
             <div className="border-l border-white/25 px-3 py-2">
               <dt className="text-xs text-brand-ink">끝</dt>
-              <dd className="text-sm font-extrabold tabular-nums sm:text-[0.9375rem]">{formatKstDateTime(detail.endAt)}</dd>
+              <dd className="text-sm font-extrabold tabular-nums sm:text-[0.9375rem]">
+                {formatKstDateTime(detail.endAt)}
+              </dd>
             </div>
             <div className="col-span-2 border-t border-white/25 px-3 py-2 sm:col-span-1 sm:border-t-0 sm:border-l">
               <dt className="text-xs text-brand-ink">남은 자리</dt>
-              <dd className="font-mono text-[0.9375rem] font-extrabold tabular-nums">{seatsText(detail.remainingSeats, detail.capacity)}</dd>
+              <dd className="font-mono text-[0.9375rem] font-extrabold tabular-nums">
+                {seatsText(detail.remainingSeats, detail.capacity)}
+              </dd>
             </div>
           </dl>
         </header>
@@ -257,11 +272,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
     return () => window.clearInterval(timer);
   }, [payExpired, onChanged]);
 
-  async function run(
-    kind: Exclude<Busy, null>,
-    keyRef: KeyRef | null,
-    call: () => Promise<void>,
-  ): Promise<void> {
+  async function run(kind: Exclude<Busy, null>, keyRef: KeyRef | null, call: () => Promise<void>): Promise<void> {
     if (busy !== null) return;
     setBusy(kind);
     setError(null);
@@ -359,22 +370,19 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
                 ) : (
                   <>
                     남은 시간{' '}
-                    <span className="font-mono text-base tabular-nums">{countdownText(dueAt, now, detail.paymentDeadlineMinutes * 60)}</span>
+                    <span className="font-mono text-base tabular-nums">
+                      {countdownText(dueAt, now, detail.paymentDeadlineMinutes * 60)}
+                    </span>
                   </>
                 )}
               </p>
             )}
             <p className="mt-1">
-              {detail.fee === 0 ? '참가비가 없는 행사예요.' : `참가비는 ${feeText(detail.fee)}이에요.`} 시연용 결제라서 실제로 돈이
-              나가지 않아요.
+              {detail.fee === 0 ? '참가비가 없는 행사예요.' : `참가비는 ${feeText(detail.fee)}이에요.`} 시연용 결제라서
+              실제로 돈이 나가지 않아요.
             </p>
           </Notice>
-          <Button
-            fullWidth
-            loading={busy === 'pay'}
-            disabled={payExpired || busy !== null}
-            onClick={() => void pay()}
-          >
+          <Button fullWidth loading={busy === 'pay'} disabled={payExpired || busy !== null} onClick={() => void pay()}>
             결제하기
           </Button>
           <Button fullWidth variant="secondary" disabled={busy !== null} onClick={() => setConfirmCancel(true)}>
@@ -433,7 +441,12 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
           {canAlert && alertOn && (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-ink">빈자리 알림을 신청했어요</p>
-              <Button variant="ghost" loading={busy === 'alert'} disabled={busy !== null} onClick={() => void unsubscribe()}>
+              <Button
+                variant="ghost"
+                loading={busy === 'alert'}
+                disabled={busy !== null}
+                onClick={() => void unsubscribe()}
+              >
                 알림 끄기
               </Button>
             </div>
@@ -450,7 +463,13 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
                 : '취소하면 자리가 다시 열려요. 다시 신청하려면 남은 자리가 있어야 해요.'}
             </p>
             <div className="flex flex-col gap-2">
-              <Button variant="danger" fullWidth loading={busy === 'cancel'} disabled={busy !== null} onClick={() => void cancel()}>
+              <Button
+                variant="danger"
+                fullWidth
+                loading={busy === 'cancel'}
+                disabled={busy !== null}
+                onClick={() => void cancel()}
+              >
                 신청 취소하기
               </Button>
               <Button variant="secondary" fullWidth disabled={busy !== null} onClick={() => setConfirmCancel(false)}>
@@ -488,7 +507,10 @@ function ActionError({ title, error }: { title: string; error: ApiError }) {
       <p>{error.message}</p>
       {error.code === 'TRUST_LEVEL_INSUFFICIENT' && (
         <p className="mt-2">
-          <Link to="/identity-verification" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
+          <Link
+            to="/identity-verification"
+            className="inline-flex min-h-11 items-center text-accent underline underline-offset-2"
+          >
             본인확인하기
           </Link>
         </p>

@@ -69,10 +69,7 @@ export const ICON_PATHS: Record<IconName, string> = {
   close: '<path d="M18 6 6 18"/>' + '<path d="m6 6 12 12"/>',
   menu: '<path d="M4 6h16"/>' + '<path d="M4 12h16"/>' + '<path d="M4 18h16"/>',
   info: '<circle cx="12" cy="12" r="9"/>' + '<path d="M12 11v5"/>' + '<path d="M12 8h.01"/>',
-  bell:
-    '<path d="M6 17V11a6 6 0 0 1 12 0v6"/>' +
-    '<path d="M4 17h16"/>' +
-    '<path d="M10 20.5a2 2 0 0 0 4 0"/>',
+  bell: '<path d="M6 17V11a6 6 0 0 1 12 0v6"/>' + '<path d="M4 17h16"/>' + '<path d="M10 20.5a2 2 0 0 0 4 0"/>',
   map: '<path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5z"/>' + '<path d="M9 4v13"/>' + '<path d="M15 6.5v13"/>',
   footprints:
     '<path d="M8 3.5c2 0 3 2 3 4.5 0 2-1 3-3 3S5 10 5 8c0-2.5 1-4.5 3-4.5z"/>' +

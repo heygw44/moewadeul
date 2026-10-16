@@ -1,4 +1,11 @@
-import type { BakjiReportReason, GroundType, PublicFacilities, SignalLevel, SpotSetting, SpotType } from '../../api/types';
+import type {
+  BakjiReportReason,
+  GroundType,
+  PublicFacilities,
+  SignalLevel,
+  SpotSetting,
+  SpotType,
+} from '../../api/types';
 import type { IconName } from '../../components/iconPaths';
 
 type SpotTypeTone = 'info' | 'accent' | 'bakji';

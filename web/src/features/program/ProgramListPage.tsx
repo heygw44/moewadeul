@@ -122,7 +122,6 @@ function ProgramEmpty({ filtered, onReset }: { filtered: boolean; onReset: () =>
   );
 }
 
-
 function ProgramRow({ item }: { item: ProgramSummary }) {
   const status = PROGRAM_STATUS_META[item.status];
   const date = kstDateBlock(item.startAt);
@@ -145,7 +144,11 @@ function ProgramRow({ item }: { item: ProgramSummary }) {
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="break-words text-lg font-bold tracking-[-0.015em] text-ink">{item.title}</span>
           <MetaLine
-            items={[<StatusText tone={status.tone}>{status.label}</StatusText>, item.overnight && '숙박', item.locationText]}
+            items={[
+              <StatusText tone={status.tone}>{status.label}</StatusText>,
+              item.overnight && '숙박',
+              item.locationText,
+            ]}
           />
           <span className="font-mono text-sm tabular-nums text-ink-muted">
             {formatKstDateTime(item.startAt)} ~ {formatKstDateTime(item.endAt)}

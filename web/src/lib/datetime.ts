@@ -50,7 +50,12 @@ export function formatLocalDate(date: string): string {
   return `${month}월 ${day}일 (${weekday})`;
 }
 
-const KST_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });
+const KST_DATE = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 
 // 시각을 한국 시간 기준 MM-DD로 돌려준다. 예: 2026-10-12T18:04:11Z -> 10-13
 export function formatKstMonthDay(iso: string): string {

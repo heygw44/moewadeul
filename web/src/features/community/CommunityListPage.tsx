@@ -136,10 +136,15 @@ export function CommunityListPage() {
   return (
     <HubLayout
       title="커뮤니티"
-      actions={
-        <WriteAction spotId={query.spotId} />
+      actions={<WriteAction spotId={query.spotId} />}
+      tabs={
+        <UnderlineTabs
+          label="글 모아 보기"
+          options={TABS}
+          value={query.tab}
+          onChange={(tab) => goTo({ tab, page: 1 })}
+        />
       }
-      tabs={<UnderlineTabs label="글 모아 보기" options={TABS} value={query.tab} onChange={(tab) => goTo({ tab, page: 1 })} />}
       aside={<CommunityAside />}
     >
       {query.spotId !== null && (

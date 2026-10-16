@@ -14,7 +14,8 @@ const DATA_SOURCES = [
   '카카오맵',
 ];
 
-const LINK_CLASS = 'inline-flex min-h-11 items-center text-sm text-brand-ink hover:text-white hover:underline lg:min-h-8';
+const LINK_CLASS =
+  'inline-flex min-h-11 items-center text-sm text-brand-ink hover:text-white hover:underline lg:min-h-8';
 
 // 랜딩과 지도가 없는 화면 맨 아래에 둔다. 지도 화면은 화면 전체를 지도가 쓰므로 바닥글이 없다.
 // 위에서부터 글자 열 셋, 데이터 출처 한 줄, 고지 줄 순서다.
@@ -74,7 +75,6 @@ export function SiteFooter() {
             </>
           )}
         </FooterColumn>
-
       </div>
 
       <div className="border-t border-white/15">

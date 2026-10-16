@@ -48,6 +48,8 @@ export async function regionNameAt(position: LatLng): Promise<string | null> {
   await loadKakaoMaps();
   const region = await findRegion(position);
   if (region === null) return null;
-  const name = [region.region_1depth_name, region.region_2depth_name, region.region_3depth_name].filter(Boolean).join(' ');
+  const name = [region.region_1depth_name, region.region_2depth_name, region.region_3depth_name]
+    .filter(Boolean)
+    .join(' ');
   return name || null;
 }

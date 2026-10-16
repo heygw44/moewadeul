@@ -29,7 +29,12 @@ const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
 // 지도 화면을 포함한 모든 화면에서 가운데 최대 폭(max-w-screen-xl) 안에 둔다. 그래서 메뉴로 화면을 오가도 로고와 메뉴 자리가 움직이지 않는다.
 // 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 메뉴 버튼은 하단 탭이 없는 랜딩·404(mobileAccount)에만 둔다.
 // 하단 탭이 있는 화면에서 메뉴 버튼까지 두면 같은 다섯 메뉴가 한 화면에 두 번 있게 된다.
-export function SiteHeader({ mobileAccount = false, minimal = false, lineOnScroll = false, className = '' }: SiteHeaderProps) {
+export function SiteHeader({
+  mobileAccount = false,
+  minimal = false,
+  lineOnScroll = false,
+  className = '',
+}: SiteHeaderProps) {
   const { pathname, search } = useLocation();
   const session = useSession();
   const count = useUnreadCount();
@@ -119,27 +124,29 @@ export function SiteHeader({ mobileAccount = false, minimal = false, lineOnScrol
                 >
                   로그인
                 </Link>
-                <Link to={withNext('/signup', pathname + search)} className={`${buttonClassName('signup')} whitespace-nowrap`}>
+                <Link
+                  to={withNext('/signup', pathname + search)}
+                  className={`${buttonClassName('signup')} whitespace-nowrap`}
+                >
                   회원가입
                 </Link>
               </div>
             )}
             {mobileAccount && (
-            <button
-              type="button"
-              aria-expanded={menuOpen}
-              aria-controls="mobile-nav"
-              aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
-              onClick={() => setOpenedAt(menuOpen ? null : pathname)}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-white hover:bg-brand-raised lg:hidden"
-            >
-              <Icon name={menuOpen ? 'close' : 'menu'} size={22} />
-            </button>
+              <button
+                type="button"
+                aria-expanded={menuOpen}
+                aria-controls="mobile-nav"
+                aria-label={menuOpen ? '메뉴 닫기' : '메뉴 열기'}
+                onClick={() => setOpenedAt(menuOpen ? null : pathname)}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-white hover:bg-brand-raised lg:hidden"
+              >
+                <Icon name={menuOpen ? 'close' : 'menu'} size={22} />
+              </button>
             )}
           </div>
         )}
       </div>
-
 
       {!minimal && menuOpen && (
         <nav id="mobile-nav" aria-label="주 메뉴" className="border-t border-brand-raised bg-brand lg:hidden">

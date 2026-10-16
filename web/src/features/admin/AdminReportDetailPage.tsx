@@ -40,9 +40,7 @@ const SANCTION_OPTIONS = [
 ];
 
 type DetailState =
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | { status: 'ready'; detail: AdminReportDetail };
+  { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; detail: AdminReportDetail };
 
 export function AdminReportDetailPage({ reportId }: { reportId: number }) {
   return (
@@ -93,10 +91,7 @@ function ReportDetail({ reportId }: { reportId: number }) {
           >
             다시 불러오기
           </Button>
-          <Link
-            to="/admin/reports"
-            className={buttonClassName('secondary')}
-          >
+          <Link to="/admin/reports" className={buttonClassName('secondary')}>
             신고 목록
           </Link>
         </div>
@@ -166,7 +161,10 @@ function BasecampCard({ basecamp }: { basecamp: NonNullable<AdminReportDetail['b
         ]}
       />
       <div>
-        <Link to={`/basecamps/${basecamp.basecampId}`} className="inline-flex min-h-11 items-center font-semibold text-accent">
+        <Link
+          to={`/basecamps/${basecamp.basecampId}`}
+          className="inline-flex min-h-11 items-center font-semibold text-accent"
+        >
           베이스캠프 보기
         </Link>
       </div>
@@ -183,9 +181,7 @@ function ReviewCard({ review }: { review: NonNullable<AdminReportDetail['compani
           {review.rejoinWanted ? '다시 동행하고 싶어요' : '다시 동행하고 싶지 않아요'}
         </StatusText>
       </div>
-      {review.tags.length > 0 && (
-        <p className="text-sm text-ink-muted">태그: {review.tags.join(' · ')}</p>
-      )}
+      {review.tags.length > 0 && <p className="text-sm text-ink-muted">태그: {review.tags.join(' · ')}</p>}
       {review.comment ? (
         <p className="whitespace-pre-line break-words text-base text-ink">{review.comment}</p>
       ) : (
@@ -316,8 +312,8 @@ function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onCh
   return (
     <PageCard title="처리">
       <p className="text-sm text-ink-muted">
-        제재 단계는 이전 제재 이력에 따라 정해져요. 고른 단계가 맞지 않으면 저장되지 않아요. 오류 안내에 맞춰 다시 골라 주세요.
-        심각한 위반이면 영구 정지를 바로 고를 수 있어요.
+        제재 단계는 이전 제재 이력에 따라 정해져요. 고른 단계가 맞지 않으면 저장되지 않아요. 오류 안내에 맞춰 다시 골라
+        주세요. 심각한 위반이면 영구 정지를 바로 고를 수 있어요.
       </p>
       {formError && (
         <div role="alert">
@@ -410,15 +406,7 @@ function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onCh
   );
 }
 
-function DismissDialog({
-  reportId,
-  onClose,
-  onDone,
-}: {
-  reportId: number;
-  onClose: () => void;
-  onDone: () => void;
-}) {
+function DismissDialog({ reportId, onClose, onDone }: { reportId: number; onClose: () => void; onDone: () => void }) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [noteError, setNoteError] = useState<string | undefined>();
@@ -443,9 +431,7 @@ function DismissDialog({
   return (
     <Dialog title="신고를 기각할까요?" onClose={() => !busy && onClose()}>
       <div className="flex flex-col gap-4">
-        <p className="text-base text-ink">
-          신고를 받아들이지 않아요. 이 신고로 임시 정지가 걸려 있으면 함께 풀려요.
-        </p>
+        <p className="text-base text-ink">신고를 받아들이지 않아요. 이 신고로 임시 정지가 걸려 있으면 함께 풀려요.</p>
         {error && (
           <div role="alert">
             <Notice tone="danger" title="기각하지 못했어요">
@@ -488,8 +474,12 @@ function SanctionHistoryCard({ items, onChanged }: { items: AdminSanctionHistory
             <li key={item.sanctionId} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-base font-semibold text-ink">{SANCTION_TYPE_LABELS[item.type]}</span>
-                {item.level !== null && <span className="font-mono text-sm tabular-nums text-ink-muted">{item.level}단계</span>}
-                <StatusText tone={item.status === 'ACTIVE' ? 'danger' : 'neutral'}>{SANCTION_STATUS_LABELS[item.status]}</StatusText>
+                {item.level !== null && (
+                  <span className="font-mono text-sm tabular-nums text-ink-muted">{item.level}단계</span>
+                )}
+                <StatusText tone={item.status === 'ACTIVE' ? 'danger' : 'neutral'}>
+                  {SANCTION_STATUS_LABELS[item.status]}
+                </StatusText>
               </div>
               <p className="whitespace-pre-line break-words text-sm text-ink">{item.reason}</p>
               <p className="font-mono text-sm tabular-nums text-ink-muted">
@@ -551,7 +541,8 @@ function LiftDialog({
     <Dialog title="제재를 해제할까요?" onClose={() => !busy && onClose()}>
       <div className="flex flex-col gap-4">
         <p className="text-base text-ink">
-          {SANCTION_TYPE_LABELS[sanction.type]}를 해제해요. 이미 빠진 베이스캠프와 취소된 결제 대기 신청은 되돌아가지 않아요.
+          {SANCTION_TYPE_LABELS[sanction.type]}를 해제해요. 이미 빠진 베이스캠프와 취소된 결제 대기 신청은 되돌아가지
+          않아요.
         </p>
         {error && (
           <div role="alert">

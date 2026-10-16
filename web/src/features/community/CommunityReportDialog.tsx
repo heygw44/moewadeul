@@ -16,7 +16,9 @@ export function CommunityReportDialog({ target, onClose }: CommunityReportDialog
       targetLabel={target.type === 'post' ? '글' : '댓글'}
       reasonOptions={REPORT_REASON_OPTIONS}
       alreadyReportedCode="COMMUNITY_ALREADY_REPORTED"
-      submit={(request) => (target.type === 'post' ? reportPost(target.id, request) : reportComment(target.id, request))}
+      submit={(request) =>
+        target.type === 'post' ? reportPost(target.id, request) : reportComment(target.id, request)
+      }
       onClose={onClose}
     />
   );

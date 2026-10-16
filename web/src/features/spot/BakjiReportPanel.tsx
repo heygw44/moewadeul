@@ -250,7 +250,10 @@ function ReportForm({
 
       {unverified && (
         <Notice tone="warning" title="이메일 인증을 마치면 박지를 제보할 수 있어요">
-          <Link to="/verify-email" className="inline-flex min-h-11 items-center text-accent underline underline-offset-2">
+          <Link
+            to="/verify-email"
+            className="inline-flex min-h-11 items-center text-accent underline underline-offset-2"
+          >
             이메일 인증하기
           </Link>
         </Notice>
@@ -331,12 +334,7 @@ function ReportForm({
         error={fieldErrors.groundType}
       />
 
-      <Button
-        type="submit"
-        fullWidth
-        loading={submitting}
-        disabled={unverified}
-      >
+      <Button type="submit" fullWidth loading={submitting} disabled={unverified}>
         제보하기
       </Button>
     </form>
@@ -355,7 +353,9 @@ function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionRespon
         <>
           <ParkWarningNotice warning={parkWarning} />
           {nextBasecamp && (
-            <p className="text-base font-semibold text-danger">이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.</p>
+            <p className="text-base font-semibold text-danger">
+              이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.
+            </p>
           )}
         </>
       ) : (

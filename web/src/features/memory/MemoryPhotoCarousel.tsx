@@ -68,12 +68,22 @@ export function MemoryPhotoCarousel({
       {total > 1 && (
         <>
           {index > 0 && (
-            <button type="button" aria-label="이전 사진" onClick={() => goTo(index - 1)} className={`${ARROW_BUTTON} left-2`}>
+            <button
+              type="button"
+              aria-label="이전 사진"
+              onClick={() => goTo(index - 1)}
+              className={`${ARROW_BUTTON} left-2`}
+            >
               <Icon name="chevronLeft" size={20} />
             </button>
           )}
           {index < total - 1 && (
-            <button type="button" aria-label="다음 사진" onClick={() => goTo(index + 1)} className={`${ARROW_BUTTON} right-2`}>
+            <button
+              type="button"
+              aria-label="다음 사진"
+              onClick={() => goTo(index + 1)}
+              className={`${ARROW_BUTTON} right-2`}
+            >
               <Icon name="chevronRight" size={20} />
             </button>
           )}

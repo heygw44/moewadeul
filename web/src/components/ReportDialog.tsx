@@ -21,7 +21,13 @@ type ReportDialogProps = {
 };
 
 // 커뮤니티 글·댓글과 기록 신고가 함께 쓰는 대화상자다. 같은 대상을 다시 신고할 수 있는지는 서버가 판단한다.
-export function ReportDialog({ targetLabel, reasonOptions, alreadyReportedCode, submit: send, onClose }: ReportDialogProps) {
+export function ReportDialog({
+  targetLabel,
+  reasonOptions,
+  alreadyReportedCode,
+  submit: send,
+  onClose,
+}: ReportDialogProps) {
   const [reason, setReason] = useState<CommunityReportReason | null>(null);
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);

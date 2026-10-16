@@ -8,7 +8,13 @@ import { MetaLine, StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
 import { useSession } from '../member/session';
-import { BASECAMP_STATUS_META, headcountText, joinConditionSummary, nightsBetween, unmetReasonText } from './basecampLabels';
+import {
+  BASECAMP_STATUS_META,
+  headcountText,
+  joinConditionSummary,
+  nightsBetween,
+  unmetReasonText,
+} from './basecampLabels';
 import type { BasecampsInView } from './useBasecampsInView';
 
 type BasecampListPanelProps = {

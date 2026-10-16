@@ -58,7 +58,14 @@ type MapSearchBarProps = {
   ai?: { onResult: (result: AiInterpretResponse, candidate: RegionCandidate | null) => void };
 };
 
-export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, inPanel = false, ai }: MapSearchBarProps) {
+export function MapSearchBar({
+  onSearch,
+  onSelect,
+  mapMoving,
+  floating = true,
+  inPanel = false,
+  ai,
+}: MapSearchBarProps) {
   const session = useSession();
   const { pathname, search } = useLocation();
   const countdown = useRetryCountdown();
@@ -203,8 +210,7 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, i
     if (pending && ai) {
       setAiResolved(true);
       ai.onResult(pending, candidate);
-    }
-    else onSelect(candidate);
+    } else onSelect(candidate);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLFormElement>) {
@@ -251,61 +257,67 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, i
       }
     >
       <div className="flex items-start gap-2">
-      <div className="min-w-0 flex-1">
-      {aiGuide ? (
-        <div className={`${boxClass} flex flex-col items-start gap-1`}>
-          <p>{anonymous ? 'AI 검색은 로그인한 회원이 쓸 수 있어요.' : '이메일 인증을 마친 뒤에 쓸 수 있어요.'}</p>
-          <Link
-            to={anonymous ? withNext('/login', pathname + search) : '/verify-email'}
-            className={GUIDE_LINK_CLASS}
-          >
-            {anonymous ? '로그인' : '이메일 인증하기'}
-          </Link>
-          <button type="button" onClick={toggleMode} className={MODE_BUTTON_CLASS}>
-            지역 검색으로 바꾸기
-          </button>
-        </div>
-      ) : (
-        <TextField
-          label={aiActive ? 'AI 검색' : '지역 검색'}
-          hideLabel
-          type="text"
-          enterKeyHint="search"
-          autoComplete="off"
-          placeholder={aiActive ? AI_PLACEHOLDER : '지역 이름이나 주소 (예: 안동, 원주)'}
-          value={aiActive ? aiQuery : query}
-          error={inputError}
-          onChange={(event) => {
-            if (aiActive) {
-              setAiQuery(event.target.value);
-              setAiResolved(false);
-            } else setQuery(event.target.value);
-          }}
-          trailing={
-            <>
-              <button
-                type="submit"
-                aria-label={aiActive ? 'AI 검색' : '지역 검색'}
-                aria-busy={loading || undefined}
-                disabled={loading || waiting}
-                className={
-                  floating || inPanel
-                    ? 'inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted'
-                    : 'mr-1.5 inline-flex h-10 items-center justify-center rounded-control bg-brand px-4 font-bold text-white hover:bg-brand-strong disabled:bg-ink-muted'
-                }
+        <div className="min-w-0 flex-1">
+          {aiGuide ? (
+            <div className={`${boxClass} flex flex-col items-start gap-1`}>
+              <p>{anonymous ? 'AI 검색은 로그인한 회원이 쓸 수 있어요.' : '이메일 인증을 마친 뒤에 쓸 수 있어요.'}</p>
+              <Link
+                to={anonymous ? withNext('/login', pathname + search) : '/verify-email'}
+                className={GUIDE_LINK_CLASS}
               >
-                {floating || inPanel ? <Icon name="search" size={20} /> : '찾기'}
+                {anonymous ? '로그인' : '이메일 인증하기'}
+              </Link>
+              <button type="button" onClick={toggleMode} className={MODE_BUTTON_CLASS}>
+                지역 검색으로 바꾸기
               </button>
-            </>
-          }
-        />
-      )}
-      </div>
-      {modeButton}
+            </div>
+          ) : (
+            <TextField
+              label={aiActive ? 'AI 검색' : '지역 검색'}
+              hideLabel
+              type="text"
+              enterKeyHint="search"
+              autoComplete="off"
+              placeholder={aiActive ? AI_PLACEHOLDER : '지역 이름이나 주소 (예: 안동, 원주)'}
+              value={aiActive ? aiQuery : query}
+              error={inputError}
+              onChange={(event) => {
+                if (aiActive) {
+                  setAiQuery(event.target.value);
+                  setAiResolved(false);
+                } else setQuery(event.target.value);
+              }}
+              trailing={
+                <>
+                  <button
+                    type="submit"
+                    aria-label={aiActive ? 'AI 검색' : '지역 검색'}
+                    aria-busy={loading || undefined}
+                    disabled={loading || waiting}
+                    className={
+                      floating || inPanel
+                        ? 'inline-flex size-11 items-center justify-center text-ink hover:text-accent disabled:text-ink-muted'
+                        : 'mr-1.5 inline-flex h-10 items-center justify-center rounded-control bg-brand px-4 font-bold text-white hover:bg-brand-strong disabled:bg-ink-muted'
+                    }
+                  >
+                    {floating || inPanel ? <Icon name="search" size={20} /> : '찾기'}
+                  </button>
+                </>
+              }
+            />
+          )}
+        </div>
+        {modeButton}
       </div>
 
       {aiActive && !aiGuide && !aiResolved && (
-        <p className={inPanel ? 'mt-2 text-[0.8125rem] text-ink-muted' : 'mt-1 rounded-control bg-surface px-3 py-2 text-sm text-ink-muted shadow-raise'}>
+        <p
+          className={
+            inPanel
+              ? 'mt-2 text-[0.8125rem] text-ink-muted'
+              : 'mt-1 rounded-control bg-surface px-3 py-2 text-sm text-ink-muted shadow-raise'
+          }
+        >
           {AI_NOTICE}
         </p>
       )}
@@ -313,7 +325,9 @@ export function MapSearchBar({ onSearch, onSelect, mapMoving, floating = true, i
       {aiActive && limitedShown && (
         <p role="alert" className={`${boxClass} mt-1`}>
           오늘 AI 검색 20번을 모두 썼어요.{' '}
-          {aiError.timed ? `${formatRemaining(countdown.secondsLeft)} 뒤에 다시 쓸 수 있어요.` : '내일 다시 쓸 수 있어요.'}{' '}
+          {aiError.timed
+            ? `${formatRemaining(countdown.secondsLeft)} 뒤에 다시 쓸 수 있어요.`
+            : '내일 다시 쓸 수 있어요.'}{' '}
           지역 이름 검색은 지금도 쓸 수 있어요.
         </p>
       )}

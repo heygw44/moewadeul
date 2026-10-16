@@ -51,7 +51,11 @@ export function basecampFilterChips(
     chips.push({ key: 'dates', label, onRemove: () => onChange({ ...filters, fromDate: '', toDate: '' }) });
   }
   if (filters.hasVacancy) {
-    chips.push({ key: 'hasVacancy', label: '빈자리 있음', onRemove: () => onChange({ ...filters, hasVacancy: false }) });
+    chips.push({
+      key: 'hasVacancy',
+      label: '빈자리 있음',
+      onRemove: () => onChange({ ...filters, hasVacancy: false }),
+    });
   }
   if (filters.types.length > 0) {
     const label = SPOT_TYPE_ORDER.filter((type) => filters.types.includes(type))
@@ -74,7 +78,11 @@ export function basecampFilterChips(
     });
   }
   if (filters.noAgeLimit) {
-    chips.push({ key: 'noAgeLimit', label: '연령 제한 없음', onRemove: () => onChange({ ...filters, noAgeLimit: false }) });
+    chips.push({
+      key: 'noAgeLimit',
+      label: '연령 제한 없음',
+      onRemove: () => onChange({ ...filters, noAgeLimit: false }),
+    });
   }
   if (filters.noSameGenderOnly) {
     chips.push({

@@ -9,7 +9,15 @@ type CheckboxProps = Omit<ComponentPropsWithRef<'input'>, 'type'> & {
 };
 
 // 라벨 전체가 눌리는 영역이라 터치 높이가 44px 이상이다.
-export function Checkbox({ label, error, hint, id, className, 'aria-describedby': describedBy, ...rest }: CheckboxProps) {
+export function Checkbox({
+  label,
+  error,
+  hint,
+  id,
+  className,
+  'aria-describedby': describedBy,
+  ...rest
+}: CheckboxProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const hintId = `${inputId}-hint`;

@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import {
-  createComment,
-  deleteComment,
-  listComments,
-  updateComment,
-} from '../../api/community';
+import { createComment, deleteComment, listComments, updateComment } from '../../api/community';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import type { CommunityComment } from '../../api/types';
@@ -86,7 +81,8 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
     const controller = new AbortController();
     listComments(postId, 0, controller.signal).then(
       (result) => {
-        if (!controller.signal.aborted) setList({ comments: result.content, page: result.page, hasNext: result.hasNext });
+        if (!controller.signal.aborted)
+          setList({ comments: result.content, page: result.page, hasNext: result.hasNext });
       },
       (error: unknown) => {
         if (!controller.signal.aborted) setListError(toUserMessage(error));
@@ -349,12 +345,7 @@ function CommentItem({
       <p className="mt-1 whitespace-pre-wrap break-words text-base text-ink">{content}</p>
       <div className="-mx-2 flex flex-wrap items-center">
         {topLevel && signedIn && (
-          <Button
-            variant="ghost"
-            onClick={onReply}
-            disabled={unverified}
-            className="px-2"
-          >
+          <Button variant="ghost" onClick={onReply} disabled={unverified} className="px-2">
             답글
           </Button>
         )}
@@ -369,12 +360,7 @@ function CommentItem({
           </>
         ) : (
           signedIn && (
-            <Button
-              variant="ghost"
-              onClick={() => onReport(comment.commentId)}
-              disabled={unverified}
-              className="px-2"
-            >
+            <Button variant="ghost" onClick={() => onReport(comment.commentId)} disabled={unverified} className="px-2">
               신고
             </Button>
           )

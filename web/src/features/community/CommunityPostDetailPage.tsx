@@ -72,9 +72,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
     );
   }
 
-  const asideNode = (
-    <PostAside post={current !== null && 'post' in current ? current.post : null} />
-  );
+  const asideNode = <PostAside post={current !== null && 'post' in current ? current.post : null} />;
 
   if (current === null) {
     return (
@@ -151,7 +149,10 @@ function PostMeta({ post }: { post: CommunityPostDetail }) {
   const edited = post.updatedAt !== post.createdAt;
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
-      <Link to={`/members/${post.author.memberId}`} className="font-semibold text-ink underline-offset-2 hover:underline">
+      <Link
+        to={`/members/${post.author.memberId}`}
+        className="font-semibold text-ink underline-offset-2 hover:underline"
+      >
         {post.author.nickname}
       </Link>
       <span aria-hidden="true">·</span>
@@ -204,16 +205,14 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
           </Button>
         </>
       ) : (
-        <Button
-          variant="ghost"
-          onClick={() => setReporting(true)}
-          disabled={unverified}
-        >
+        <Button variant="ghost" onClick={() => setReporting(true)} disabled={unverified}>
           신고
         </Button>
       )}
       {deleting && <DeletePostDialog postId={post.postId} onClose={() => setDeleting(false)} />}
-      {reporting && <CommunityReportDialog target={{ type: 'post', id: post.postId }} onClose={() => setReporting(false)} />}
+      {reporting && (
+        <CommunityReportDialog target={{ type: 'post', id: post.postId }} onClose={() => setReporting(false)} />
+      )}
     </>
   );
 }
@@ -263,7 +262,10 @@ function PostContent({ post, meta, actions, onLikeChanged, onImageError }: PostC
     <article className="overflow-hidden rounded-sheet border border-line bg-surface">
       <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-line px-5 py-5 sm:px-6">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <p aria-hidden="true" className="text-2xl leading-tight font-extrabold tracking-[-0.03em] break-words text-ink sm:text-[1.75rem]">
+          <p
+            aria-hidden="true"
+            className="text-2xl leading-tight font-extrabold tracking-[-0.03em] break-words text-ink sm:text-[1.75rem]"
+          >
             {post.title}
           </p>
           {meta}
@@ -299,7 +301,13 @@ function PostContent({ post, meta, actions, onLikeChanged, onImageError }: PostC
   );
 }
 
-function LikeButton({ post, onChanged }: { post: CommunityPostDetail; onChanged: (response: CommunityLikeResponse) => void }) {
+function LikeButton({
+  post,
+  onChanged,
+}: {
+  post: CommunityPostDetail;
+  onChanged: (response: CommunityLikeResponse) => void;
+}) {
   const session = useSession();
   const { pathname, search } = useLocation();
   const [busy, setBusy] = useState(false);

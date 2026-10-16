@@ -69,7 +69,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   BASECAMP_CONDITION_NOT_MET: '이 베이스캠프의 합류 조건에 맞지 않아요. 다른 베이스캠프를 찾아 주세요.',
   BASECAMP_DATE_CONFLICT: '같은 날짜에 확정된 다른 베이스캠프가 있어요. 다른 날짜를 골라 주세요.',
   BASECAMP_REAPPLY_NOT_ALLOWED: '이 베이스캠프에는 다시 합류 신청할 수 없어요. 다른 베이스캠프를 찾아 주세요.',
-  BASECAMP_PENDING_LIMIT: '답을 기다리는 합류 신청이 너무 많아요. 내 베이스캠프에서 신청을 취소한 뒤 다시 신청해 주세요.',
+  BASECAMP_PENDING_LIMIT:
+    '답을 기다리는 합류 신청이 너무 많아요. 내 베이스캠프에서 신청을 취소한 뒤 다시 신청해 주세요.',
   BASECAMP_ALREADY_APPLIED: '이미 합류 신청했거나 멤버인 베이스캠프예요. 내 베이스캠프에서 볼 수 있어요.',
   BASECAMP_FULL: '정원이 모두 찼어요. 다른 베이스캠프를 찾아 주세요.',
   BASECAMP_INVALID_STATE: STATE_CHANGED,

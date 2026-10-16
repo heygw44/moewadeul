@@ -37,7 +37,6 @@ const RATING_OPTIONS: ReadonlyArray<ChoiceOption<string>> = [5, 4, 3, 2, 1].map(
   label: `${'★'.repeat(value)}${'☆'.repeat(MAX_RATING - value)} ${value}점`,
 }));
 
-
 type SpotReviewsProps = {
   spotId: number;
   initialRating: SpotRating;
@@ -96,7 +95,8 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
     const controller = new AbortController();
     fetchSpotReviews(spotId, 0, controller.signal).then(
       (result) => {
-        if (!controller.signal.aborted) setList({ reviews: result.content, page: result.page, hasNext: result.hasNext });
+        if (!controller.signal.aborted)
+          setList({ reviews: result.content, page: result.page, hasNext: result.hasNext });
       },
       (error: unknown) => {
         if (!controller.signal.aborted) setListError(toUserMessage(error));
@@ -136,9 +136,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
         />
       </div>
       <p className="mt-2 text-base text-ink tabular-nums">
-        {rating.average === null
-          ? '아직 후기가 없어요'
-          : `평점 ${rating.average.toFixed(1)} · 후기 ${rating.count}개`}
+        {rating.average === null ? '아직 후기가 없어요' : `평점 ${rating.average.toFixed(1)} · 후기 ${rating.count}개`}
       </p>
 
       {status && (

@@ -14,7 +14,6 @@ import { GatedButton } from '../member/GatedButton';
 const MAX_DAYS_UNTIL_START = 60;
 const MAX_NIGHTS = 3;
 
-
 const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
 const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
 
@@ -33,9 +32,7 @@ export function SoloTripSection({ spotId, onRegistered }: SoloTripSectionProps) 
       <h3 id="spot-solo-trip-title" className={SECTION_TITLE_CLASS}>
         혼자 가는 일정
       </h3>
-      <p className="mt-2 text-sm text-ink-muted">
-        나만 보는 일정이에요. 다른 사람에게는 예상 인원 1명으로만 보여요.
-      </p>
+      <p className="mt-2 text-sm text-ink-muted">나만 보는 일정이에요. 다른 사람에게는 예상 인원 1명으로만 보여요.</p>
       {done && (
         <div role="status" className="mt-2">
           <Notice tone="info" title="일정을 등록했어요">
@@ -112,7 +109,8 @@ function SoloTripForm({
   function validate(): TripFieldErrors {
     const errors: TripFieldErrors = {};
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) errors.startDate = '출발일을 골라 주세요.';
-    else if (startDate < minStart || startDate > maxStart) errors.startDate = '출발일은 내일부터 60일 안에서 골라 주세요.';
+    else if (startDate < minStart || startDate > maxStart)
+      errors.startDate = '출발일은 내일부터 60일 안에서 골라 주세요.';
     if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) errors.endDate = '돌아오는 날을 골라 주세요.';
     else if (endDate <= startDate || endDate > addDaysToLocalDate(startDate, MAX_NIGHTS))
       errors.endDate = '일정은 1~3박으로 골라 주세요.';
