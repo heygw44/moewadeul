@@ -6,7 +6,7 @@
          없는 쪽의 열은 NULL로 나온다. 제보한 회원은 bakji_detail이 있을 때만 붙는다.
          박지 확인 수는 상관 서브쿼리로 센다. 확인 행을 조인해서 GROUP BY로 세면 다른 열을 모두 묶어야 해서, 한 장소만 읽는 이 조회에서는
          서브쿼리가 더 단순하다. 박지가 아니면 확인 행이 없으므로 0이 나온다.
-         공원 경계는 spot.protected_area_id가 있을 때만 붙고, 없으면 area_* 열은 NULL이다. 날씨 조회에 쓰려고 기상청 격자(weather_nx, weather_ny)도 함께 읽는다.
+         공원 경계는 spot.protected_area_id가 있을 때만 붙고, 없으면 area_* 열은 NULL이다.
          SRID 4326 점에서 ST_Latitude는 위도를, ST_Longitude는 경도를 꺼낸다. 그래서 좌표 순서를 직접 다루지 않는다. -->
     <!-- checked_at은 장소의 원천(d.source)과 같은 종류 동기화 가운데 마지막으로 성공한 실행의 종료 시각이다. 허용된 모듈 의존이 publicdata에서 spot 쪽이라서, spot이 publicdata를 부르지 않고 sync_job_run을 직접 읽는다. 박지는 d.source가 NULL이라 NULL이다. -->
     <select id="selectActiveDetail" resultType="com.moewadeul.spot.infra.detail.SpotDetailRow">
@@ -16,8 +16,6 @@
                ST_Latitude(s.location) AS lat,
                ST_Longitude(s.location) AS lng,
                s.address AS address,
-               s.weather_nx AS weather_nx,
-               s.weather_ny AS weather_ny,
                s.park_warning AS park_warning,
                pa.name AS area_name,
                pa.source AS area_source,
@@ -50,6 +48,17 @@
     </select>
 
     <!-- 후기가 없으면 집계 함수가 행 하나를 돌려주고 COUNT는 0, AVG는 NULL이다. 평균은 소수 첫째 자리에서 반올림한다. -->
+    <!-- 날씨 조회는 장소 상세와 따로 들어와서, 서버가 외부 API를 부르기 전에 ACTIVE인지와 좌표·기상청 격자만 읽는다. -->
+    <select id="selectActiveWeatherLocation" resultType="com.moewadeul.spot.infra.detail.SpotWeatherLocationRow">
+        SELECT ST_Latitude(s.location) AS lat,
+               ST_Longitude(s.location) AS lng,
+               s.weather_nx AS weather_nx,
+               s.weather_ny AS weather_ny
+        FROM spot s
+        WHERE s.id = #{spotId}
+          AND s.status = 'ACTIVE'
+    </select>
+
     <select id="selectRating" resultType="com.moewadeul.spot.infra.detail.SpotRatingRow">
         SELECT COUNT(*) AS count,
                ROUND(AVG(r.rating), 1) AS average

@@ -10,6 +10,8 @@ import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstTime, formatLocalDate } from '../../lib/datetime';
 import { SPOT_TYPE_META, sourceLabel } from './spotLabels';
+import { useSpotWeather } from './useSpotWeather';
+import type { SpotWeatherState } from './useSpotWeather';
 
 type SpotPreviewBoardProps = {
   spotId: number;
@@ -20,9 +22,11 @@ type PreviewResult = { spotId: number; detail: SpotDetail } | { spotId: number; 
 
 // 데스크톱 지도에서 장소를 고르면 목록을 둔 채 지도 오른쪽 위에 띄우는 근거 판이다.
 // 탐방로 안내판처럼 숲색 머리에 이름을 적고, 판단에 필요한 근거(공원 경계·운영·날씨·예상 인원)를 행마다 출처와 함께 적는다.
-// 장소 상세 응답을 그대로 쓰고, 더 자세한 내용은 '자세히 보기'로 왼쪽 패널의 상세에서 본다.
+// 장소 상세 응답과 장소 날씨 응답을 함께 요청하고, 날씨를 기다리지 않고 근거 행을 먼저 그린다.
+// 더 자세한 내용은 '자세히 보기'로 왼쪽 패널의 상세에서 본다.
 export function SpotPreviewBoard({ spotId, onClose }: SpotPreviewBoardProps) {
   const [result, setResult] = useState<PreviewResult | null>(null);
+  const weather = useSpotWeather(spotId);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -86,7 +90,7 @@ export function SpotPreviewBoard({ spotId, onClose }: SpotPreviewBoardProps) {
           <dl>
             <ParkRow detail={detail} />
             <OperationRow detail={detail} />
-            <WeatherRow detail={detail} />
+            <WeatherRow weather={weather} />
             <PeopleRow detail={detail} />
           </dl>
           <div className="border-t border-line px-5 pt-4 pb-5">
@@ -168,8 +172,21 @@ function OperationRow({ detail }: { detail: SpotDetail }) {
   return null;
 }
 
-function WeatherRow({ detail }: { detail: SpotDetail }) {
-  const weather = detail.weather;
+function WeatherRow({ weather: state }: { weather: SpotWeatherState }) {
+  const showSkeleton = useDelayedFlag(state.status === 'loading');
+  if (state.status === 'loading') {
+    return (
+      <Row
+        label="날씨"
+        value={
+          <span aria-busy="true" className="block py-0.5">
+            {showSkeleton ? <Skeleton className="h-4 w-40" /> : <span className="block h-4" />}
+          </span>
+        }
+      />
+    );
+  }
+  const weather = state.weather;
   if (weather === null) return <Row label="날씨" value="날씨 정보를 불러오지 못했어요" />;
   const first = weather.shortTerm[0];
   const parts: string[] = [];

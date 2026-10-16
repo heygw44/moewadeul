@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import { fetchSpotDetail } from '../../api/spots';
-import type { BakjiDetail, ExpectedPeople, MidTermForecast, PublicDetail, SpotDetail, Weather } from '../../api/types';
+import type { BakjiDetail, ExpectedPeople, MidTermForecast, PublicDetail, SpotDetail } from '../../api/types';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { buttonClassName } from '../../components/buttonClass';
@@ -21,6 +21,8 @@ import { SoloTripSection } from '../trip/SoloTripSection';
 import { BakjiFeedback } from './BakjiFeedback';
 import { ParkWarningNotice } from './ParkWarningNotice';
 import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META, sourceLabel } from './spotLabels';
+import { useSpotWeather } from './useSpotWeather';
+import type { SpotWeatherState } from './useSpotWeather';
 
 type SpotDetailPanelProps = {
   spotId: number;
@@ -48,6 +50,8 @@ function formatValue(value: number | null, unit: string): string {
 export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
+  // 날씨는 상세와 같은 때에 따로 요청한다. 상세가 먼저 오면 근거부터 그리고, 날씨 칸만 날씨를 기다린다.
+  const weather = useSpotWeather(spotId);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -78,7 +82,7 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
   if (current === null) {
     body = showSkeleton ? <DetailSkeleton /> : null;
   } else if ('detail' in current) {
-    body = <DetailContent detail={current.detail} />;
+    body = <DetailContent detail={current.detail} weather={weather} />;
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     body = <EmptyState title="장소를 찾을 수 없어요" description="삭제됐거나 숨겨진 장소예요." />;
   } else {
@@ -126,7 +130,7 @@ function DetailSkeleton() {
   );
 }
 
-function DetailContent({ detail }: { detail: SpotDetail }) {
+function DetailContent({ detail, weather }: { detail: SpotDetail; weather: SpotWeatherState }) {
   const meta = SPOT_TYPE_META[detail.type];
   const publicDetail = detail.publicDetail;
   const bakji = detail.bakji;
@@ -229,7 +233,7 @@ function DetailContent({ detail }: { detail: SpotDetail }) {
 
       <SpotReviews key={detail.spotId} spotId={detail.spotId} initialRating={detail.rating} />
 
-      <WeatherSection weather={detail.weather} />
+      <WeatherSection weather={weather} />
     </article>
   );
 }
@@ -390,13 +394,22 @@ function ExpectedPeopleSection({ expectedPeople }: { expectedPeople: ExpectedPeo
   );
 }
 
-function WeatherSection({ weather }: { weather: Weather | null }) {
+function WeatherSection({ weather: state }: { weather: SpotWeatherState }) {
+  const showSkeleton = useDelayedFlag(state.status === 'loading');
+  const weather = state.status === 'loaded' ? state.weather : null;
   return (
-    <section className={SECTION_CLASS} aria-labelledby="spot-weather-title">
+    <section className={SECTION_CLASS} aria-labelledby="spot-weather-title" aria-busy={state.status === 'loading'}>
       <h3 id="spot-weather-title" className={SECTION_TITLE_CLASS}>
         날씨
       </h3>
-      {weather === null ? (
+      {state.status === 'loading' ? (
+        showSkeleton && (
+          <div className="mt-2 flex flex-col gap-2">
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        )
+      ) : weather === null ? (
         <p className="mt-2 text-sm text-ink-muted">날씨 정보를 불러오지 못했어요</p>
       ) : (
         <div className="mt-2 flex flex-col gap-3">
