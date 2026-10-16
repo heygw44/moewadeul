@@ -67,6 +67,9 @@ export interface MapView {
   // 반경 검색의 기준점과 반경을 원 하나로 그린다. null이면 지운다. 원 위를 눌러도 지도를 누른 것과 같게 다룬다.
   showRadius(area: { center: LatLng; radiusKm: number } | null): void;
   setTerrain(on: boolean): void;
+  // 끌어서 옮기기를 켜고 끈다. zoomGestures는 손가락 벌리기·마우스 휠 확대·축소를 함께 켜고 끈다(카카오맵이 둘을 나눠 끄지 못한다).
+  // 페이지 안에 둔 지도에서 데스크톱은 휠이 페이지를 스크롤하도록 zoomGestures를 끄고 확대 버튼을 따로 둔다.
+  setInteractive(drag: boolean, zoomGestures?: boolean): void;
   // 지도를 담은 요소의 크기가 바뀐 뒤에 부른다.
   relayout(): void;
   // 오버레이와 이벤트 구독을 모두 지운다.

@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
-// 운영체제에서 동작 줄이기를 켰는지 알려 준다. 켜면 랜딩은 움직이지 않고 모든 내용을 처음부터 보여 준다.
-export function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+// 미디어 쿼리가 지금 맞는지 알려 주고, 창 크기나 설정이 바뀌면 다시 알려 준다.
+export function useMediaQuery(media: string): boolean {
+  const [matches, setMatches] = useState(() => matchMedia(media).matches);
   useEffect(() => {
-    const query = matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => setReduced(query.matches);
+    const query = matchMedia(media);
+    const update = () => setMatches(query.matches);
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
-  }, []);
-  return reduced;
+  }, [media]);
+  return matches;
+}
+
+// 운영체제에서 동작 줄이기를 켰는지 알려 준다. 켜면 랜딩은 움직이지 않고 모든 내용을 처음부터 보여 준다.
+export function usePrefersReducedMotion(): boolean {
+  return useMediaQuery('(prefers-reduced-motion: reduce)');
 }
 
 // 요소가 화면에 처음 들어왔는지 알려 준다. 한 번 들어오면 다시 숨기지 않는다.
