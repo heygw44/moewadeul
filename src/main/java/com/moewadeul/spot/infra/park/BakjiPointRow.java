@@ -1,7 +1,7 @@
 package com.moewadeul.spot.infra.park;
 
 /**
- * 박지 재판정이 읽은 박지 한 건의 ID, 좌표, 판정 전 공원 경고 여부. MyBatis가 이름으로 매핑하므로, 구성요소 이름은 열 별칭을 camelCase로 바꾼 것과
- * 같아야 한다.
+ * 박지 재판정이 읽은 박지 한 건의 ID, 좌표, 판정 전 공원 경고 여부, 읽은 때의 낙관적 잠금 번호(version). MyBatis가 이름으로 매핑하므로, 구성요소
+ * 이름은 열 별칭을 camelCase로 바꾼 것과 같아야 한다.
  */
-public record BakjiPointRow(long id, double lat, double lng, boolean parkWarning) {}
+public record BakjiPointRow(long id, double lat, double lng, boolean parkWarning, long version) {}

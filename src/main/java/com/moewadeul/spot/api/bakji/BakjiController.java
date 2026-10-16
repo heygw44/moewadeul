@@ -2,6 +2,7 @@ package com.moewadeul.spot.api.bakji;
 
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.spot.application.bakji.BakjiCommandService;
+import com.moewadeul.spot.application.bakji.BakjiEditService;
 import com.moewadeul.spot.application.bakji.BakjiFeedbackService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -21,10 +22,15 @@ import org.springframework.web.bind.annotation.RestController;
 class BakjiController {
 
     private final BakjiCommandService bakjiCommandService;
+    private final BakjiEditService bakjiEditService;
     private final BakjiFeedbackService bakjiFeedbackService;
 
-    BakjiController(BakjiCommandService bakjiCommandService, BakjiFeedbackService bakjiFeedbackService) {
+    BakjiController(
+            BakjiCommandService bakjiCommandService,
+            BakjiEditService bakjiEditService,
+            BakjiFeedbackService bakjiFeedbackService) {
         this.bakjiCommandService = bakjiCommandService;
+        this.bakjiEditService = bakjiEditService;
         this.bakjiFeedbackService = bakjiFeedbackService;
     }
 
@@ -53,25 +59,27 @@ class BakjiController {
                     + "좌표가 실제로 바뀔 때만 서버가 새 좌표로 공원 경계를 다시 판정한다. 새 좌표가 기상청 격자 범위 밖이면 400 INVALID_INPUT이다. "
                     + "응답은 박지 제보와 같고, 중복 후보도 수정한 뒤의 좌표로 계산한다. "
                     + "장소가 없거나, 박지가 아니거나, 지도에 보이는(ACTIVE) 상태가 아니면 404 NOT_FOUND로 응답한다. "
-                    + "다른 회원이 제보한 박지이면 403 ACCESS_DENIED로 응답한다.")
+                    + "다른 회원이 제보한 박지이면 403 ACCESS_DENIED로 응답한다. "
+                    + "다른 쓰기(재판정, 관리자 숨김 등)와 겹쳐 서버가 한 번 다시 적용해도 충돌하면 409 BAKJI_CONCURRENTLY_MODIFIED로 응답한다.")
     @PatchMapping("/{spotId}")
     BakjiSubmissionResponse update(
             @AuthenticationPrincipal LoginMember loginMember,
             @PathVariable long spotId,
             @RequestBody BakjiUpdateRequest request) {
         return BakjiSubmissionResponse.from(
-                bakjiCommandService.update(loginMember.memberId(), spotId, request.toCommand()));
+                bakjiEditService.update(loginMember.memberId(), spotId, request.toCommand()));
     }
 
     @Operation(
             summary = "박지 삭제",
             description = "제보자가 자기 박지를 삭제한다. 서버는 행을 지우지 않고 상태를 DELETED로 바꿔 지도와 상세에서 숨기고, 204로 응답한다. "
                     + "장소가 없거나, 박지가 아니거나, 지도에 보이는(ACTIVE) 상태가 아니면 404 NOT_FOUND로 응답한다. "
-                    + "다른 회원이 제보한 박지이면 403 ACCESS_DENIED로 응답한다.")
+                    + "다른 회원이 제보한 박지이면 403 ACCESS_DENIED로 응답한다. "
+                    + "다른 쓰기와 겹쳐 서버가 한 번 다시 적용해도 충돌하면 409 BAKJI_CONCURRENTLY_MODIFIED로 응답한다.")
     @DeleteMapping("/{spotId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@AuthenticationPrincipal LoginMember loginMember, @PathVariable long spotId) {
-        bakjiCommandService.delete(loginMember.memberId(), spotId);
+        bakjiEditService.delete(loginMember.memberId(), spotId);
     }
 
     @Operation(

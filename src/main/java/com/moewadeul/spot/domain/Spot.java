@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -73,6 +74,11 @@ public class Spot {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    // 행을 바꿀 때마다 오르는 낙관적 잠금 번호다. Hibernate가 UPDATE에 읽은 번호를 조건으로 걸고, 다른 쓰기가 먼저 바꿨으면 실패시킨다.
+    // MyBatis로 장소 행을 바꾸는 SQL도 이 번호를 올려야 한다.
+    @Version
+    private long version;
 
     private Spot(SpotType type, String name, GeoPoint location, WeatherGrid weatherGrid, Instant now) {
         this.type = type;
