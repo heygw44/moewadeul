@@ -43,6 +43,13 @@ export function nameRegions(regions: RegionNames[], level: number, sampled: numb
   const cities = distinct(regions.map((region) => cityOf(region.region_2depth_name)));
   const onlyCity = cities.length === 1 ? cities[0] : undefined;
   if (onlyCity) return { kind: 'named', name: joinNames(province, onlyCity) };
+  // 화면 모서리가 이웃 시·군에 조금 걸쳐도, 첫 점(보통 화면 가운데)의 시·군이 조회한 점의 절반을 넘으면 그 시·군 일대로 부른다.
+  // 예를 들어 양평군 안의 장소를 보는데 오른쪽 위 모서리만 가평군에 걸치면 "경기도 일대"보다 "경기도 양평군 일대"가 정확하다.
+  const mainCity = cityOf(first.region_2depth_name);
+  const inMainCity = regions.filter((region) => cityOf(region.region_2depth_name) === mainCity).length;
+  if (mainCity && inMainCity * 2 > regions.length) {
+    return { kind: 'named', name: `${joinNames(province, mainCity)} 일대` };
+  }
   return { kind: 'named', name: `${province} 일대` };
 }
 
