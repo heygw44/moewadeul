@@ -26,6 +26,7 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.GET, "/api/spots/nearby"),
             new Endpoint(HttpMethod.GET, "/api/spots/1"),
             new Endpoint(HttpMethod.GET, "/api/spots/1/reviews"),
+            new Endpoint(HttpMethod.GET, "/api/spots/1/weather"),
             new Endpoint(HttpMethod.GET, "/api/basecamps"),
             new Endpoint(HttpMethod.GET, "/api/basecamps/1"),
             new Endpoint(HttpMethod.GET, "/api/programs"),

@@ -34,18 +34,26 @@ final class KmaForecastConverter {
 
     /** 같은 예보 시각의 기온·강수확률·풍속을 한 항목으로 묶는다. {@code now}보다 앞선 시각은 뺀다. */
     static List<ShortTermForecast> toShortTerm(List<KmaShortTermItem> items, Instant now) {
+        return upcoming(toShortTerm(items), now);
+    }
+
+    /** 발표 하나의 원천 항목을 시각별 예보로 묶는다. 시각으로 거르지 않으므로 지난 시각도 남는다. */
+    static List<ShortTermForecast> toShortTerm(List<KmaShortTermItem> items) {
         TreeMap<Instant, ShortTermBuilder> byTime = new TreeMap<>();
         for (KmaShortTermItem item : items) {
             if (!isWanted(item.category())) {
                 continue;
             }
-            Instant at = parseInstant(item);
-            if (at.isBefore(now)) {
-                continue;
-            }
-            byTime.computeIfAbsent(at, ShortTermBuilder::new).put(item);
+            byTime.computeIfAbsent(parseInstant(item), ShortTermBuilder::new).put(item);
         }
         return byTime.values().stream().map(ShortTermBuilder::build).toList();
+    }
+
+    /** 시각별 예보 가운데 now와 같거나 늦은 것만 남긴다. */
+    static List<ShortTermForecast> upcoming(List<ShortTermForecast> forecasts, Instant now) {
+        return forecasts.stream()
+                .filter(forecast -> !forecast.at().isBefore(now))
+                .toList();
     }
 
     /** 육상예보와 기온예보를 날짜별로 묶는다. {@code tmFc}의 4~10일 뒤 가운데 {@code today} 이후 날짜만 남기고, 값이 하나도 없는 날짜는 뺀다. */

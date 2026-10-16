@@ -15,7 +15,7 @@ import java.util.List;
  * <p>expectedPeople은 오늘부터 야영하는 밤별 예상 인원이고 인원이 있는 날짜만 날짜 순으로 담는다. recruitingBasecamps는 이 장소에서 모집 중인
  * 베이스캠프를 출발일 순으로 담는다. 둘 다 없으면 빈 목록이다.
  *
- * <p>weather는 기상청 호출이 실패하면 {@code null}이다.
+ * <p>날씨는 담지 않는다. 날씨는 외부 API를 기다려야 해서, 화면이 DB 값인 장소 근거를 먼저 그리도록 {@link SpotWeatherQueryService}가 따로 준다.
  */
 public record SpotDetail(
         long spotId,
@@ -30,24 +30,4 @@ public record SpotDetail(
         SpotRating rating,
         List<SpotRecentReview> recentReviews,
         List<SpotExpectedPeople> expectedPeople,
-        List<SpotRecruitingBasecamp> recruitingBasecamps,
-        SpotWeather weather) {
-
-    SpotDetail withWeather(SpotWeather weather) {
-        return new SpotDetail(
-                spotId,
-                type,
-                name,
-                lat,
-                lng,
-                address,
-                parkWarning,
-                bakji,
-                publicDetail,
-                rating,
-                recentReviews,
-                expectedPeople,
-                recruitingBasecamps,
-                weather);
-    }
-}
+        List<SpotRecruitingBasecamp> recruitingBasecamps) {}

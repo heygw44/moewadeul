@@ -1,11 +1,8 @@
 package com.moewadeul.spot.application.detail;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
-import static com.github.tomakehurst.wiremock.client.WireMock.serverError;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,9 +23,9 @@ import com.moewadeul.spot.domain.SpotType;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,12 +39,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class SpotDetailQueryServiceIntegrationTest {
 
     private static final String VILAGE_FCST_PATH = "/1360000/VilageFcstInfoService_2.0/getVilageFcst";
-    private static final String MID_LAND_FCST_PATH = "/1360000/MidFcstInfoService/getMidLandFcst";
-    private static final String MID_TA_PATH = "/1360000/MidFcstInfoService/getMidTa";
     private static final String RISE_SET_PATH = "/B090041/openapi/service/RiseSetInfoService/getLCRiseSetInfo";
 
     // 위도와 경도가 크게 다른 좌표라서, 조회 SQL이 두 값을 바꿔 읽으면 단언이 실패한다.
     private static final Coordinate RIDGE = new Coordinate(37.71, 128.75);
+
+    // 상세가 외부 API를 기다리면 이 시간보다 늦게 끝난다.
+    private static final int EXTERNAL_DELAY_MILLIS = 3_000;
 
     @Autowired
     private SpotDetailQueryService spotDetailQueryService;
@@ -405,60 +403,23 @@ class SpotDetailQueryServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-05][F-09] 기상청과 천문연이 정상이면 단기·중기 예보, 출처, 오늘 한국 날짜의 출몰시각을 채운다")
-    void fillsWeatherAndSunWhenBothApisSucceed() {
+    @DisplayName("[F-05][NFR-05] 상세는 기상청·천문연을 부르지 않아서, 두 API가 3초씩 늦어도 기다리지 않고 응답한다")
+    void returnsDetailWithoutCallingWeatherApis() {
         // given
         long spotId = insertSeoulCampsite();
-        stubKmaSuccess();
-        stubKasi(okXml(readFixture("kasi/rise-set.xml")));
+        wireMock.stubFor(get(urlPathEqualTo(VILAGE_FCST_PATH))
+                .willReturn(okJson(readFixture("kma/vilage-fcst.json")).withFixedDelay(EXTERNAL_DELAY_MILLIS)));
+        stubKasi(okXml(readFixture("kasi/rise-set.xml")).withFixedDelay(EXTERNAL_DELAY_MILLIS));
 
         // when
+        long startedAt = System.nanoTime();
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+        long elapsedMillis = Duration.ofNanos(System.nanoTime() - startedAt).toMillis();
 
         // then
-        assertThat(detail.weather()).isNotNull();
-        assertThat(detail.weather().forecast().source()).isEqualTo("기상청");
-        assertThat(detail.weather().forecast().shortTerm()).isNotEmpty();
-        assertThat(detail.weather().forecast().midTerm()).hasSize(7);
-        assertThat(detail.weather().sun().date()).isEqualTo(LocalDate.parse("2026-10-04"));
-        assertThat(detail.weather().sun().sunrise()).isEqualTo(LocalTime.of(6, 30));
-        wireMock.verify(getRequestedFor(urlPathEqualTo(RISE_SET_PATH)).withQueryParam("locdate", equalTo("20261004")));
-    }
-
-    @Test
-    @DisplayName("[F-05][NFR-05] 기상청이 500이면 weather만 null이고 나머지는 정상이며 천문연은 부르지 않는다")
-    void leavesWeatherNullAndSkipsKasiWhenKmaFails() {
-        // given
-        long spotId = insertSeoulCampsite();
-        wireMock.stubFor(get(urlPathEqualTo(VILAGE_FCST_PATH)).willReturn(serverError()));
-        stubKasi(okXml(readFixture("kasi/rise-set.xml")));
-
-        // when
-        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
-
-        // then
-        assertThat(detail.weather()).isNull();
-        assertThat(detail.name()).isNotBlank();
         assertThat(detail.publicDetail()).isNotNull();
-        assertThat(wireMock.findAll(getRequestedFor(urlPathEqualTo(RISE_SET_PATH))))
-                .isEmpty();
-    }
-
-    @Test
-    @DisplayName("[F-05][NFR-05] 기상청은 성공하고 천문연만 실패하면 weather는 채우고 sun만 null이다")
-    void leavesSunNullWhenOnlyKasiFails() {
-        // given
-        long spotId = insertSeoulCampsite();
-        stubKmaSuccess();
-        stubKasi(serverError());
-
-        // when
-        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
-
-        // then
-        assertThat(detail.weather()).isNotNull();
-        assertThat(detail.weather().forecast().shortTerm()).isNotEmpty();
-        assertThat(detail.weather().sun()).isNull();
+        assertThat(elapsedMillis).isLessThan(EXTERNAL_DELAY_MILLIS);
+        assertThat(wireMock.getAllServeEvents()).isEmpty();
     }
 
     @Test
@@ -729,13 +690,6 @@ class SpotDetailQueryServiceIntegrationTest {
         long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
         insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
         return spotId;
-    }
-
-    private void stubKmaSuccess() {
-        wireMock.stubFor(get(urlPathEqualTo(VILAGE_FCST_PATH)).willReturn(okJson(readFixture("kma/vilage-fcst.json"))));
-        wireMock.stubFor(
-                get(urlPathEqualTo(MID_LAND_FCST_PATH)).willReturn(okJson(readFixture("kma/mid-land-fcst.json"))));
-        wireMock.stubFor(get(urlPathEqualTo(MID_TA_PATH)).willReturn(okJson(readFixture("kma/mid-ta.json"))));
     }
 
     private void stubKasi(ResponseDefinitionBuilder response) {
