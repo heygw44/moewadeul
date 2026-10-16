@@ -17,15 +17,22 @@ public interface ParkAreaJudgeMapper {
     /** 호출하면 id인 공원 경계의 이름, 출처, 기준일을 돌려준다. 그런 경계가 없으면 null을 돌려준다. */
     ProtectedAreaEvidenceRow selectAreaEvidence(@Param("id") long id);
 
-    /** 호출하면 상태와 상관없이 모든 박지의 ID, 좌표, 판정 전 공원 경고 여부를 ID 순서로 돌려준다. */
+    /** 호출하면 상태와 상관없이 모든 박지의 ID, 좌표, 판정 전 공원 경고 여부, 낙관적 잠금 번호를 ID 순서로 돌려준다. 잠그지 않는다. */
     List<BakjiPointRow> selectBakjiPoints();
 
     /**
-     * 호출하면 spotIds의 박지에 판정 결과를 기록한다. protectedAreaId가 null이면 경계 밖으로 보고 경고를 끄며, 아니면 경고를 켜고 그 경계를 근거로 남긴다.
-     * area_checked_at은 now로 기록하고 updated_at은 건드리지 않는다. spotIds는 비어 있으면 안 된다. 갱신한 행 수를 돌려준다.
+     * 호출하면 ids인 박지 행을 ID 순서로 쓰기 잠금하며 읽어 지금의 좌표, 공원 경고 여부, 낙관적 잠금 번호를 돌려준다. 잠금 읽기라서 트랜잭션의 스냅숏이 아니라
+     * 마지막으로 커밋된 값을 읽는다. ids는 비어 있으면 안 된다.
+     */
+    List<BakjiPointRow> selectBakjiPointsForUpdate(@Param("ids") List<Long> ids);
+
+    /**
+     * 호출하면 targets의 박지 가운데 낙관적 잠금 번호가 읽은 때와 같은 행에만 판정 결과를 기록하고 번호를 올린다. protectedAreaId가 null이면 경계 밖으로 보고
+     * 경고를 끄며, 아니면 경고를 켜고 그 경계를 근거로 남긴다. area_checked_at은 now로 기록하고 updated_at은 건드리지 않는다. targets는 비어 있으면 안
+     * 된다. 갱신한 행 수를 돌려준다. 그 사이 다른 쓰기가 바꾼 행은 갱신하지 않으므로, 돌려준 수가 targets 수보다 작을 수 있다.
      */
     int updateJudgement(
-            @Param("spotIds") List<Long> spotIds,
+            @Param("targets") List<BakjiJudgeTarget> targets,
             @Param("protectedAreaId") Long protectedAreaId,
             @Param("now") Instant now);
 }
