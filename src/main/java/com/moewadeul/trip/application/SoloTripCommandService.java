@@ -6,6 +6,7 @@ import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import com.moewadeul.trip.domain.SoloTrip;
 import com.moewadeul.trip.domain.SoloTripRepository;
+import com.moewadeul.trip.infra.SoloTripMemberLockMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,8 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>일정을 등록할 수 있는 장소는 지도에 보이는(ACTIVE) 장소뿐이다. 베이스캠프와 달리 공원 경계 경고 박지도 막지 않는다. 다른 회원을 모으는 일이
  * 아니고, 장소 상세가 경고와 야영 금지 안내를 그대로 보여 주기 때문이다.
  *
- * <p>서비스는 회원의 진행 예정 일정을 저장하기 전에 읽어 개수와 밤 겹침을 확인할 뿐 잠그지 않는다. 그래서 같은 회원의 요청 두 개가 동시에 들어오면 둘 다
- * 검사를 통과할 수 있다. 베이스캠프 열기도 같은 방식이고, 한 사람이 거의 동시에 연달아 등록하는 경우는 드물어서 지금은 막지 않는다.
+ * <p>서비스는 회원의 진행 예정 일정을 저장하기 전에 읽어 개수와 밤 겹침을 확인한다. 그런데 같은 회원의 요청 두 개가 동시에 들어오면 서로의 새 일정을
+ * 보지 못하고 둘 다 검사를 통과할 수 있다. 그래서 서비스는 등록 트랜잭션의 첫 쿼리로 회원 행을 잠가 같은 회원의 등록을 한 줄로 세운다.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class SoloTripCommandService {
 
     private final ActiveSpotChecker activeSpotChecker;
     private final SoloTripRepository soloTripRepository;
+    private final SoloTripMemberLockMapper soloTripMemberLockMapper;
     private final Clock clock;
 
     /**
@@ -38,6 +40,8 @@ public class SoloTripCommandService {
      */
     @Transactional
     public long register(long memberId, SoloTripRegisterCommand command) {
+        // 잠금이 트랜잭션의 첫 쿼리여야 한다. 그래야 아래 일정 조회가 잠금을 얻은 뒤의 스냅숏을 읽어서, 먼저 끝난 요청이 저장한 일정이 보인다.
+        soloTripMemberLockMapper.lockMember(memberId);
         Instant now = clock.instant();
         LocalDate today = LocalDate.ofInstant(now, KoreaTime.ZONE);
         activeSpotChecker.requireActive(command.spotId());
