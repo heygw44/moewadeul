@@ -1,12 +1,15 @@
 import { useId, useState } from 'react';
 import { Icon } from '../../components/icons';
 import { readStored, writeStored } from '../../lib/storage';
-import { KIND_STYLE, PIN_PATH } from '../../map/markers';
-import type { MarkerKind } from '../../map/types';
 
 const OPEN_KEY = 'moewadeul.mapLegendOpen';
 const DESKTOP_QUERY = '(min-width: 64rem)';
-const LEGEND_KINDS: ReadonlyArray<MarkerKind> = ['CAMPSITE', 'FOREST', 'BAKJI'];
+// 핀은 번호 원이라 유형 대신 색과 고리로 나눈다. 야영장과 휴양림은 같은 숲색이고, 목록 행에 유형을 글로 적는다.
+const LEGEND_ITEMS: ReadonlyArray<{ key: string; label: string; swatch: string }> = [
+  { key: 'public', label: '야영장·휴양림', swatch: 'bg-brand' },
+  { key: 'bakji', label: '박지', swatch: 'bg-bakji' },
+  { key: 'warning', label: '공원 경계 경고', swatch: 'bg-surface ring-[2.5px] ring-inset ring-warning-line' },
+];
 
 // 사용자가 한 번 접거나 펼치면 그 상태를 따른다. 처음에는 넓은 화면에서 펼치고, 폰에서는 지도를 덜 가리게 접어 둔다.
 function initialOpen(): boolean {
@@ -15,7 +18,7 @@ function initialOpen(): boolean {
   return window.matchMedia(DESKTOP_QUERY).matches;
 }
 
-// 지도 왼쪽 아래의 핀 유형 범례다. 핀은 지도 마커와 같은 모양·색을 작게 그린다.
+// 지도 왼쪽 아래의 핀 범례다. 지도 핀과 같은 색의 작은 원을 그린다.
 // 모바일에서는 접힌 시트 위 지역 칩(높이 36px)의 한 줄 위에 둔다. 펼치면 위로만 커져서 칩을 가리지 않는다. 시트를 올리면 시트가 덮는다.
 export function MapLegend() {
   const [open, setOpen] = useState(initialOpen);
@@ -29,7 +32,7 @@ export function MapLegend() {
 
   // 둥근 모서리 밖으로 버튼 hover 바탕이 삐져나가지 않게 상자에서 자른다. 그래서 포커스 링은 버튼 안쪽에 그린다.
   return (
-    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col overflow-hidden rounded-control border border-transparent bg-surface shadow-raise text-ink lg:bottom-4">
+    <div className="pointer-events-auto absolute bottom-[calc(28dvh+var(--bottom-nav-h)+3.5rem)] left-4 z-10 flex flex-col overflow-hidden rounded-control border border-transparent bg-surface text-ink shadow-raise lg:bottom-[3.75rem] lg:flex-row lg:items-center">
       <button
         type="button"
         onClick={toggle}
@@ -41,19 +44,16 @@ export function MapLegend() {
         <Icon name={open ? 'chevronLeft' : 'chevronRight'} size={16} className="shrink-0 text-ink-muted" />
       </button>
       {open && (
-        <ul id={listId} className="flex flex-col gap-1.5 border-t border-line px-3 pb-2.5 pt-2">
-          {LEGEND_KINDS.map((kind) => {
-            const style = KIND_STYLE[kind];
-            return (
-              <li key={kind} className="flex items-center gap-2 text-sm">
-                <svg className="block shrink-0" width="18" height="22" viewBox="0 0 36 44" aria-hidden="true">
-                  <path className={style.fill} d={PIN_PATH} />
-                  <Icon name={style.icon} x={8} y={8} size={20} className="text-white" />
-                </svg>
-                {style.label}
-              </li>
-            );
-          })}
+        <ul
+          id={listId}
+          className="flex flex-col gap-1.5 border-t border-line px-3 pt-2 pb-2.5 lg:flex-row lg:gap-4 lg:border-t-0 lg:border-l lg:py-0 lg:pr-4"
+        >
+          {LEGEND_ITEMS.map((item) => (
+            <li key={item.key} className="flex items-center gap-2 text-sm">
+              <span aria-hidden="true" className={`block size-3 shrink-0 rounded-full ${item.swatch}`} />
+              {item.label}
+            </li>
+          ))}
         </ul>
       )}
     </div>

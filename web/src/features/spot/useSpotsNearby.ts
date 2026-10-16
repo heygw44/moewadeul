@@ -89,13 +89,14 @@ export function useSpotsNearby(
 
     const draw = (items: NearbySpot[]) =>
       map.showMarkers(
-        items.map((item) => ({
+        items.map((item, index) => ({
           id: item.spotId,
           kind: item.type,
           name: item.name,
           position: { lat: item.lat, lng: item.lng },
           warning: item.parkWarning,
           closed: item.closedNow,
+          label: String(index + 1),
         })),
         [],
       );
@@ -180,7 +181,19 @@ export function useSpotsNearby(
       map.showRadius(null);
       setState(INITIAL_STATE);
     };
-  }, [map, enabled, centerLat, centerLng, radiusKm, typesKey, settingsKey, hasWater, hasToilet, excludeWarning, hideClosed]);
+  }, [
+    map,
+    enabled,
+    centerLat,
+    centerLng,
+    radiusKm,
+    typesKey,
+    settingsKey,
+    hasWater,
+    hasToilet,
+    excludeWarning,
+    hideClosed,
+  ]);
 
   const retry = useCallback(() => loadRef.current(), []);
   const loadMore = useCallback(() => moreRef.current(), []);

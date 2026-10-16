@@ -13,6 +13,7 @@ import { AuthLayout } from './AuthLayout';
 import { safeNextPath, withNext } from './nextPath';
 import { useSession } from './session';
 import { useRetryCountdown } from './useRetryCountdown';
+import { buttonClassName } from '../../components/buttonClass';
 
 // 코드를 다시 받은 뒤 이 시간 동안은 재발송 버튼을 잠근다.
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -130,11 +131,7 @@ export function VerifyEmailPage() {
     return (
       <AuthLayout title="이미 인증을 마쳤어요" footer={footer}>
         <p className="text-ink-muted">이메일 인증은 한 번만 하면 돼요.</p>
-        <Link
-          to={next ?? '/map'}
-          replace
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-control border border-ink bg-ink px-4 font-semibold text-white hover:border-ink-muted hover:bg-ink-muted"
-        >
+        <Link to={next ?? '/map'} replace className={`${buttonClassName('primary')} w-full`}>
           {next ? '보던 화면으로 돌아가기' : '지도로 가기'}
         </Link>
       </AuthLayout>

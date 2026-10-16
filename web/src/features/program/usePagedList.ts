@@ -44,7 +44,13 @@ export function usePagedList<T, F>(enabled: boolean, filter: F, fetcher: Fetcher
       const next = await fetcherRef.current(filter, current.page + 1);
       setState((previous) =>
         previous !== null && previous.filter === filter
-          ? { ...previous, items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null }
+          ? {
+              ...previous,
+              items: [...previous.items, ...next.content],
+              page: next.page,
+              hasNext: next.hasNext,
+              error: null,
+            }
           : previous,
       );
     } catch (caught) {

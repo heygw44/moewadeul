@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import { fetchMyBasecamps } from '../../api/basecamps';
 import { toUserMessage } from '../../api/errors';
 import type { MyBasecampItem, MyBasecampRelation } from '../../api/types';
@@ -87,7 +88,13 @@ export function MyBasecampsPage() {
       const next = await fetchMyBasecamps({ relation: filter === 'ALL' ? undefined : filter, page: current.page + 1 });
       setState((previous) =>
         previous?.filter === filter
-          ? { ...previous, items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null }
+          ? {
+              ...previous,
+              items: [...previous.items, ...next.content],
+              page: next.page,
+              hasNext: next.hasNext,
+              error: null,
+            }
           : previous,
       );
     } catch (caught) {
@@ -105,7 +112,9 @@ export function MyBasecampsPage() {
     >
       <div aria-busy={authenticated && current === null} className="flex flex-col gap-3">
         {!authenticated || current === null ? (
-          showSkeleton ? <Skeleton className="h-24 w-full" /> : null
+          showSkeleton ? (
+            <Skeleton className="h-24 w-full" />
+          ) : null
         ) : (
           <>
             {current.error && (
@@ -126,13 +135,14 @@ export function MyBasecampsPage() {
               <EmptyState
                 framed
                 title={filter === 'ALL' ? '열었거나 합류한 베이스캠프가 없어요' : '해당하는 베이스캠프가 없어요'}
-                description={filter === 'ALL' ? '같은 날 같은 곳으로 가는 베이스캠프를 찾아 합류 신청을 보낼 수 있어요.' : undefined}
+                description={
+                  filter === 'ALL'
+                    ? '같은 날 같은 곳으로 가는 베이스캠프를 찾아 합류 신청을 보낼 수 있어요.'
+                    : undefined
+                }
                 action={
                   filter === 'ALL' && (
-                    <Link
-                      to="/basecamps"
-                      className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
-                    >
+                    <Link to="/basecamps" className={buttonClassName('secondary')}>
                       베이스캠프 찾기
                     </Link>
                   )
@@ -141,7 +151,11 @@ export function MyBasecampsPage() {
             ) : (
               <ListPanel>
                 {current.items.map((item) => (
-                  <BasecampCard key={`${item.basecampId}-${item.myRelation}`} item={item} showRelation={filter === 'ALL'} />
+                  <BasecampCard
+                    key={`${item.basecampId}-${item.myRelation}`}
+                    item={item}
+                    showRelation={filter === 'ALL'}
+                  />
                 ))}
               </ListPanel>
             )}
@@ -164,10 +178,7 @@ function BasecampCard({ item, showRelation }: { item: MyBasecampItem; showRelati
   const status = BASECAMP_STATUS_META[item.status];
   return (
     <li>
-      <Link
-        to={`/basecamps/${item.basecampId}`}
-        className="flex flex-col gap-1 p-4 hover:bg-fill"
-      >
+      <Link to={`/basecamps/${item.basecampId}`} className="flex flex-col gap-1 p-4 hover:bg-fill">
         <span className="text-lg font-semibold text-ink">{item.title}</span>
         <MetaLine
           items={[
@@ -177,7 +188,8 @@ function BasecampCard({ item, showRelation }: { item: MyBasecampItem; showRelati
           ]}
         />
         <span className="font-mono text-sm tabular-nums text-ink-muted">
-          {formatLocalDate(item.startDate)} ~ {formatLocalDate(item.endDate)} · {headcountText(item.headcount, item.capacity)}명
+          {formatLocalDate(item.startDate)} ~ {formatLocalDate(item.endDate)} ·{' '}
+          {headcountText(item.headcount, item.capacity)}명
         </span>
       </Link>
     </li>

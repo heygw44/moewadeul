@@ -5,21 +5,22 @@ import type { IconName } from '../components/iconPaths';
 import type { Offset } from './stackPins';
 import type { ClusterData, MarkerKind, SpotMarkerData } from './types';
 
-// 세 유형은 색(야영장 청록, 휴양림 녹색, 박지 흙색)과 아이콘 모양으로 함께 구분한다. 세 색 모두 흰 아이콘과 대비가 4.5:1 이상이다.
+// 핀은 탐방로 안내판의 번호 원이다. 야영장·휴양림은 숲색 판, 박지는 흙색이고, 흰 숫자(또는 아이콘)와 대비가 4.5:1 이상이다.
+// 목록 번호가 없을 때(베이스캠프 화면 등)는 원 안에 유형 아이콘을 그려 세 유형을 구분한다.
 export const KIND_STYLE: Record<MarkerKind, { label: string; icon: IconName; fill: string }> = {
-  CAMPSITE: { label: '공공 야영장', icon: 'tent', fill: 'fill-info' },
-  FOREST: { label: '자연휴양림', icon: 'tree', fill: 'fill-accent' },
+  CAMPSITE: { label: '공공 야영장', icon: 'tent', fill: 'fill-brand' },
+  FOREST: { label: '자연휴양림', icon: 'tree', fill: 'fill-brand' },
   BAKJI: { label: '박지', icon: 'backpack', fill: 'fill-bakji' },
 };
 
-// 핀 모양이다. 모서리를 6만큼 둥글린 28×28 몸통(좌표 4~32) 아래로 뾰족한 끝이 (18, 42)에 온다.
-// 버튼 높이가 44px이고 오버레이를 아래쪽 끝(yAnchor 1)에 맞추므로, 핀 끝이 장소 좌표에 거의 그대로 놓인다.
-export const PIN_PATH = 'M10 4h16a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6h-3.5L18 42l-4.5-10H10a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6z';
+// 핀 모양이다. 지름 28의 번호 원(가운데 18, 16) 아래로 짧은 꼭지가 (18, 42)에 온다.
+// 버튼 높이가 44px이고 오버레이를 아래쪽 끝(yAnchor 1)에 맞추므로, 꼭지 끝이 장소 좌표에 거의 그대로 놓인다.
+export const PIN_PATH = 'M18 2a14 14 0 0 1 4.6 27.2L18 42l-4.6-12.8A14 14 0 0 1 18 2z';
 
 // 흰 윤곽선 굵기다. 선은 경로 양쪽으로 반씩 퍼지고 안쪽 반은 핀 색이 덮으므로, 바깥에 보이는 두께는 절반이다.
-// 기본은 바깥 1px, 경고 핀은 황토 테두리(바깥 1px) 밖으로 1px, 선택하면 흰 링이 2px 더 두꺼워진다.
+// 기본은 바깥 1px, 경고 핀은 경고색 고리(바깥 1.5px) 밖으로 흰 선 1px, 선택하면 흰 링이 2px 더 두꺼워진다.
 const OUTLINE_WIDTH = 2;
-const WARNING_OUTLINE_WIDTH = 4;
+const WARNING_OUTLINE_WIDTH = 5;
 const SELECTED_EXTRA_WIDTH = 4;
 
 const FOCUS_RING =
@@ -29,6 +30,15 @@ function iconMarkup(name: IconName, attributes: string): string {
   return (
     `<svg ${attributes} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" ` +
     `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]}</svg>`
+  );
+}
+
+// 번호 원 안의 숫자다. 세 자리까지 원 안에 들어가게 자릿수에 따라 글자 크기를 줄인다.
+function labelMarkup(label: string): string {
+  const size = label.length >= 3 ? 10 : label.length === 2 ? 12.5 : 14;
+  return (
+    `<text x="18" y="16" text-anchor="middle" dominant-baseline="central" class="fill-white" ` +
+    `font-size="${size}" font-weight="800" style="font-variant-numeric: tabular-nums">${label}</text>`
   );
 }
 
@@ -45,50 +55,47 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
   const button = document.createElement('button');
   button.type = 'button';
   button.className =
-    'relative flex h-11 w-11 cursor-pointer items-end justify-center rounded-control origin-bottom ' +
+    'relative flex h-11 w-11 cursor-pointer items-end justify-center rounded-full origin-bottom ' +
     'transition-[scale] duration-150 motion-reduce:transition-none ' +
     FOCUS_RING;
 
-  const labelParts = [data.name, style.label];
+  const labelParts = data.label ? [`${data.label}번`, data.name, style.label] : [data.name, style.label];
   if (data.warning) labelParts.push('공원 경계 경고');
   if (data.closed) labelParts.push('휴장');
   if (data.count !== undefined) labelParts.push(`모집 중인 베이스캠프 ${data.count}개`);
   if (stackedCount > 0) labelParts.push(`겹친 장소 ${stackedCount}곳 더, 눌러서 펼치기`);
   button.setAttribute('aria-label', labelParts.join(', '));
 
-  // 경고 핀은 몸통에 황토 테두리를 두르고, 그 밖을 흰 윤곽선이 한 번 더 감싼다.
+  // 경고 핀은 몸통에 경고색 고리를 두르고, 그 밖을 흰 윤곽선이 한 번 더 감싼다.
   const bodyAttributes = data.warning
-    ? `class="${style.fill} stroke-warning-line" stroke-width="2"`
+    ? `class="${style.fill} stroke-warning-line" stroke-width="3"`
     : `class="${style.fill}"`;
+  const content = data.label
+    ? labelMarkup(data.label.replace(/[^0-9]/g, ''))
+    : iconMarkup(style.icon, 'class="text-white" x="9" y="7" width="18" height="18"');
   let markup =
     '<svg class="block overflow-visible" width="36" height="44" viewBox="0 0 36 44" aria-hidden="true">' +
     `<path data-pin-outline class="fill-white stroke-white" stroke-width="${baseOutline}" stroke-linejoin="round" d="${PIN_PATH}"/>` +
     `<path ${bodyAttributes} stroke-linejoin="round" d="${PIN_PATH}"/>` +
-    iconMarkup(style.icon, 'class="text-white" x="8" y="8" width="20" height="20"') +
+    content +
     '</svg>';
 
-  // 배지는 몸통 모서리에 걸친다. 휴장이어도 핀을 숨기거나 흐리게 하지 않고 배지만 더한다.
-  if (data.warning) {
-    markup +=
-      '<span class="pointer-events-none absolute -left-0.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-warning-line bg-warning-soft text-warning">' +
-      iconMarkup('alert', 'width="14" height="14"') +
-      '</span>';
-  }
+  // 휴장이어도 핀을 숨기거나 흐리게 하지 않고 원 오른쪽 위에 배지만 더한다.
   if (data.closed) {
     markup +=
-      '<span class="pointer-events-none absolute -right-0.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-ink text-white">' +
+      '<span class="pointer-events-none absolute -right-0.5 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-ink text-white">' +
       iconMarkup('closed', 'width="14" height="14"') +
       '</span>';
   }
-  // 베이스캠프 수는 몸통 오른쪽 아래에 걸친다. 휴장 배지는 오른쪽 위라서 겹치지 않는다.
+  // 베이스캠프 수는 원 오른쪽 아래에 흰 원 배지로 건다. 휴장 배지는 오른쪽 위라서 겹치지 않는다.
   if (data.count !== undefined) {
     markup +=
-      '<span data-pin-count class="pointer-events-none absolute bottom-2 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-ink px-1 font-mono text-xs tabular-nums text-white"></span>';
+      '<span data-pin-count class="pointer-events-none absolute bottom-3 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-surface px-1 font-mono text-xs font-extrabold tabular-nums text-brand ring-[1.5px] ring-brand"></span>';
   }
-  // 겹친 장소 수는 몸통 왼쪽 아래에 걸친다. 먹 바탕인 베이스캠프 수와 헷갈리지 않게 흰 바탕에 먹 글자로 그린다.
+  // 겹친 장소 수는 원 왼쪽 아래에 걸친다. 베이스캠프 수와 헷갈리지 않게 먹 바탕에 흰 글자로 그린다.
   if (stackedCount > 0) {
     markup +=
-      '<span data-pin-stacked class="pointer-events-none absolute bottom-2 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-ink bg-surface px-1 font-mono text-xs tabular-nums text-ink"></span>';
+      '<span data-pin-stacked class="pointer-events-none absolute bottom-3 -left-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-ink px-1 font-mono text-xs font-bold tabular-nums text-white"></span>';
   }
   button.innerHTML = markup;
   const countBadge = button.querySelector('[data-pin-count]');
@@ -104,10 +111,13 @@ export function createSpotPin(data: SpotMarkerData, onActivate: (id: number) => 
     onActivate(data.id);
   });
 
+  // 고른 핀은 키우고 흰 링을 두껍게 한 뒤, 그 밖에 숲색 고리를 두른다.
   function setSelected(selected: boolean) {
     button.classList.toggle('scale-125', selected);
     button.setAttribute('aria-pressed', String(selected));
     outline?.setAttribute('stroke-width', String(selected ? baseOutline + SELECTED_EXTRA_WIDTH : baseOutline));
+    outline?.classList.toggle('stroke-white', !selected);
+    outline?.classList.toggle('stroke-brand', selected);
   }
   setSelected(false);
 
@@ -136,7 +146,7 @@ export function createSpotDot(data: SpotMarkerData, onActivate: (id: number) => 
 
   function setSelected(selected: boolean) {
     dot.className = selected
-      ? 'block size-[18px] rounded-full bg-accent ring-[3px] ring-white shadow-raise'
+      ? 'block size-[18px] rounded-full bg-brand ring-[3px] ring-white shadow-raise'
       : 'block size-2.5 rounded-full bg-ink ring-2 ring-white';
     button.setAttribute('aria-pressed', String(selected));
   }
@@ -210,8 +220,8 @@ export function createClusterButton(
   const button = document.createElement('button');
   button.type = 'button';
   button.className =
-    'flex h-11 min-w-11 cursor-pointer items-center justify-center rounded-full bg-ink px-2 shadow-raise ' +
-    'font-mono text-sm font-semibold tabular-nums text-white ring-2 ring-white ' +
+    'flex h-11 min-w-11 cursor-pointer items-center justify-center rounded-full bg-brand px-2 shadow-raise ' +
+    'font-mono text-sm font-bold tabular-nums text-white ring-2 ring-white ' +
     FOCUS_RING;
   button.textContent = cluster.count.toLocaleString('ko-KR');
   button.setAttribute('aria-label', `장소 ${cluster.count}곳, 눌러서 확대`);
@@ -234,7 +244,7 @@ export function createDraftPin(): HTMLElement {
     '<svg class="block overflow-visible" width="36" height="44" viewBox="0 0 36 44">' +
     `<path class="fill-white stroke-white" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" d="${PIN_PATH}"/>` +
     `<path class="fill-bakji stroke-white" stroke-width="2" stroke-dasharray="4 3" stroke-linejoin="round" d="${PIN_PATH}"/>` +
-    iconMarkup('backpack', 'class="text-white" x="8" y="8" width="20" height="20"') +
+    iconMarkup('backpack', 'class="text-white" x="9" y="7" width="18" height="18"') +
     '</svg>';
   return element;
 }
@@ -248,7 +258,7 @@ export function createSearchPin(): HTMLElement {
     '<svg class="block overflow-visible" width="36" height="44" viewBox="0 0 36 44">' +
     `<path class="fill-white stroke-white" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" d="${PIN_PATH}"/>` +
     `<path class="fill-ink" d="${PIN_PATH}"/>` +
-    '<circle class="fill-white" cx="18" cy="18" r="5"/>' +
+    '<circle class="fill-white" cx="18" cy="16" r="5"/>' +
     '</svg>';
   return element;
 }
@@ -262,10 +272,7 @@ export interface PhotoPin {
 
 // 추억 기록 하나를 지도에 나타내는 핀이다. 사진이 있으면 44px 정사각 사진 칸이고, 없으면 박지 핀 모양이다.
 // 사진은 글로 설명할 내용이 없어서 alt를 비우고, 버튼의 aria-label이 기록을 설명한다.
-export function createPhotoPin(
-  data: { thumbnailUrl?: string; label: string },
-  onActivate: () => void,
-): PhotoPin {
+export function createPhotoPin(data: { thumbnailUrl?: string; label: string }, onActivate: () => void): PhotoPin {
   const button = document.createElement('button');
   button.type = 'button';
   button.setAttribute('aria-label', data.label);
@@ -294,7 +301,7 @@ export function createPhotoPin(
       '<svg class="block overflow-visible" width="36" height="44" viewBox="0 0 36 44" aria-hidden="true">' +
       `<path class="fill-white stroke-white" stroke-width="${OUTLINE_WIDTH}" stroke-linejoin="round" d="${PIN_PATH}"/>` +
       `<path class="fill-bakji" d="${PIN_PATH}"/>` +
-      iconMarkup('image', 'class="text-white" x="8" y="8" width="20" height="20"') +
+      iconMarkup('image', 'class="text-white" x="9" y="7" width="18" height="18"') +
       '</svg>';
   }
 

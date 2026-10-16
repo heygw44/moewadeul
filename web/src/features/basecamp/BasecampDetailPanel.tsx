@@ -9,10 +9,9 @@ import { Button } from '../../components/Button';
 import { buttonClassName } from '../../components/buttonClass';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
-import { Evidence } from '../../components/Evidence';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
-import { MetaLine, StatusText } from '../../components/StatusText';
+import { StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
@@ -26,6 +25,7 @@ import {
   BASECAMP_STATUS_META,
   headcountText,
   joinConditionSummary,
+  nightsBetween,
   profileSummary,
   unmetReasonText,
 } from './basecampLabels';
@@ -37,11 +37,11 @@ type BasecampDetailPanelProps = {
 
 type DetailResult = { basecampId: number; detail: BasecampDetail } | { basecampId: number; error: unknown };
 
-const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
-const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
+const SECTION_CLASS = 'mt-5';
+const SECTION_TITLE_CLASS = 'mb-2 text-sm font-bold text-ink-muted';
+const BOARD_CLASS = 'overflow-hidden rounded-sheet border border-line bg-surface';
 const MESSAGE_MAX = 500;
-const ACTION_LINK_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
+const ACTION_LINK_CLASS = buttonClassName('secondary');
 
 const CONFIRMED_SAFETY_RULES = [
   '출발 전에 일정을 가족이나 지인에게 알려 주세요.',
@@ -116,11 +116,11 @@ export function BasecampDetailPanel({ basecampId, onBack }: BasecampDetailPanelP
       <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
         <button
           type="button"
-          aria-label="목록으로"
           onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
+          className="inline-flex min-h-11 items-center gap-1 rounded-control pr-3 pl-1 text-sm font-semibold text-ink hover:bg-fill"
         >
-          <Icon name="chevronLeft" size={24} />
+          <Icon name="chevronLeft" size={22} />
+          베이스캠프 목록
         </button>
       </div>
       <div aria-busy={current === null} className="flex flex-1 flex-col">
@@ -148,52 +148,101 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
 
   return (
     <>
-      <article className="px-4 py-4">
-        <header className="flex flex-col gap-2">
-          <h2 className="text-xl font-bold tracking-tight text-ink">{detail.title}</h2>
-          <StatusText tone={status.tone}>{status.label}</StatusText>
-          <Link
-            to={`/spots/${detail.spot.spotId}`}
-            className="inline-flex min-h-11 items-center gap-1 self-start text-accent underline underline-offset-2"
-          >
-            <Icon name="backpack" size={18} className="shrink-0" />
-            {detail.spot.name}
-          </Link>
+      <article className="px-4 pb-4 lg:px-5">
+        {/* 머리는 탐방로 안내판처럼 숲색 판에 상태·제목·일정 세 칸을 적는다. 패널 폭으로 깐다. */}
+        <header className="-mx-4 bg-brand px-4 pt-4 pb-5 text-white lg:-mx-5 lg:px-5">
+          <p className="inline-flex items-center gap-1.5 text-[0.8125rem] font-bold">
+            <span
+              aria-hidden="true"
+              className={`size-2 rounded-full ${detail.status === 'RECRUITING' ? 'bg-accent-soft' : 'bg-brand-ink'}`}
+            />
+            {status.label}
+          </p>
+          <h2 className="mt-1 text-2xl leading-tight font-extrabold tracking-[-0.025em] break-words">{detail.title}</h2>
+          <dl className="mt-4 grid grid-cols-[1fr_1fr_auto] overflow-hidden rounded-control border border-white/25">
+            <div className="px-3 py-2">
+              <dt className="text-xs text-brand-ink">출발</dt>
+              <dd className="text-[0.9375rem] font-extrabold whitespace-nowrap tabular-nums">
+                {formatLocalDate(detail.startDate)}
+              </dd>
+            </div>
+            <div className="border-l border-white/25 px-3 py-2">
+              <dt className="text-xs text-brand-ink">돌아오는 날</dt>
+              <dd className="text-[0.9375rem] font-extrabold whitespace-nowrap tabular-nums">
+                {formatLocalDate(detail.endDate)}
+              </dd>
+            </div>
+            <div className="border-l border-white/25 px-3 py-2">
+              <dt className="text-xs text-brand-ink">일정</dt>
+              <dd className="text-[0.9375rem] font-extrabold tabular-nums">
+                {nightsBetween(detail.startDate, detail.endDate)}박
+              </dd>
+            </div>
+          </dl>
         </header>
 
-        <div className="mt-2">
-          <Evidence
-            items={[
-              {
-                label: '일정',
-                value: `${formatLocalDate(detail.startDate)} ~ ${formatLocalDate(detail.endDate)}`,
-              },
-              { label: '인원', value: `${headcountText(detail.headcount, detail.capacity)}명` },
-              { label: '합류 조건', value: joinConditionSummary(detail.joinCondition) },
-            ]}
-          />
-        </div>
+        {detail.description && <p className="mt-4 whitespace-pre-line text-base text-ink">{detail.description}</p>}
 
-        <p className="mt-3 whitespace-pre-line text-base text-ink">{detail.description}</p>
+        <section className={SECTION_CLASS} aria-labelledby="basecamp-spot-title">
+          <h3 id="basecamp-spot-title" className={SECTION_TITLE_CLASS}>
+            장소
+          </h3>
+          <Link
+            to={`/spots/${detail.spot.spotId}`}
+            className={`${BOARD_CLASS} flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-fill`}
+          >
+            <span
+              aria-hidden="true"
+              className={`flex size-7 shrink-0 items-center justify-center rounded-full text-white ${detail.spot.type === 'BAKJI' ? 'bg-bakji' : 'bg-brand'}`}
+            >
+              <Icon
+                name={detail.spot.type === 'BAKJI' ? 'backpack' : detail.spot.type === 'FOREST' ? 'tree' : 'tent'}
+                size={16}
+              />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-base font-bold text-ink">{detail.spot.name}</span>
+            <Icon name="chevronRight" size={20} className="shrink-0 text-ink-muted" />
+          </Link>
+        </section>
 
         <section className={SECTION_CLASS} aria-labelledby="basecamp-members-title">
           <h3 id="basecamp-members-title" className={SECTION_TITLE_CLASS}>
-            멤버
+            인원과 멤버
           </h3>
-          <ul className="mt-2 flex flex-col">
-            {detail.members.map((member) => (
-              <MemberRow
-                key={member.memberId}
-                member={member}
-                basecampId={detail.basecampId}
-                // 신고 버튼은 편의일 뿐이고, 신고할 수 있는지는 서버가 판단한다.
-                reportable={isMember && member.memberId !== session.me?.memberId}
-              />
-            ))}
-          </ul>
+          <div className={BOARD_CLASS}>
+            <SeatRow
+              headcount={detail.headcount}
+              capacity={detail.capacity}
+              recruiting={detail.status === 'RECRUITING'}
+            />
+            <ul>
+              {detail.members.map((member) => (
+                <MemberRow
+                  key={member.memberId}
+                  member={member}
+                  basecampId={detail.basecampId}
+                  // 신고 버튼은 편의일 뿐이고, 신고할 수 있는지는 서버가 판단한다.
+                  reportable={isMember && member.memberId !== session.me?.memberId}
+                />
+              ))}
+            </ul>
+          </div>
           {detail.leader.trustLevel === undefined && (
             <p className="mt-2 text-sm text-ink-muted">로그인하면 멤버의 신뢰 단계와 동행 기록을 볼 수 있어요.</p>
           )}
+        </section>
+
+        <section className={SECTION_CLASS} aria-labelledby="basecamp-condition-title">
+          <h3 id="basecamp-condition-title" className={SECTION_TITLE_CLASS}>
+            합류 조건
+          </h3>
+          <div className={`${BOARD_CLASS} flex items-center justify-between gap-3 px-4 py-3 text-sm`}>
+            <span className="text-ink">{joinConditionSummary(detail.joinCondition)}</span>
+            {detail.canApply === true && <StatusText tone="accent">내 조건에 맞아요</StatusText>}
+            {detail.canApply === false && (detail.unmetReasons ?? []).length > 0 && (
+              <StatusText tone="warning">내 조건과 달라요</StatusText>
+            )}
+          </div>
         </section>
 
         <section className={SECTION_CLASS} aria-labelledby="basecamp-contact-title">
@@ -240,31 +289,41 @@ function MemberRow({
   const profile = profileSummary(member);
 
   return (
-    <li className="flex flex-col gap-1 border-t border-line py-2 first:border-t-0">
-      <div className="flex flex-wrap items-center gap-2">
-        <Link
-          to={`/members/${member.memberId}`}
-          className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
+    <li className="flex flex-col gap-1 border-t border-line px-4 py-2.5">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[0.9375rem] font-extrabold text-accent-deep"
         >
-          {member.nickname}
-        </Link>
-        <MetaLine
-          items={[
-            member.role === 'LEADER' && <StatusText tone="bakji">캠프 리더</StatusText>,
-            badge && (
-              <StatusText tone={badge.tone} icon={badge.icon}>
-                {badge.label}
-              </StatusText>
-            ),
-          ]}
-        />
+          {member.nickname.slice(0, 1)}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="flex flex-wrap items-center gap-x-2">
+            <Link
+              to={`/members/${member.memberId}`}
+              className="inline-flex min-h-8 items-center text-[0.9375rem] font-bold text-ink underline-offset-2 hover:underline"
+            >
+              {member.nickname}
+            </Link>
+            {member.role === 'LEADER' && (
+              <span className="rounded-[3px] border border-brand px-1.5 text-xs font-bold text-brand">캠프 리더</span>
+            )}
+          </span>
+          {profile.length > 0 && <span className="text-[0.8125rem] text-ink-muted">{profile.join(' · ')}</span>}
+        </div>
+        {badge && (
+          <span className="shrink-0 text-sm">
+            <StatusText tone={badge.tone} icon={badge.icon}>
+              {badge.label}
+            </StatusText>
+          </span>
+        )}
         {reportable && (
-          <Button variant="ghost" className="ml-auto" onClick={() => setReporting(true)}>
+          <Button variant="ghost" className="shrink-0 px-2" onClick={() => setReporting(true)}>
             신고
           </Button>
         )}
       </div>
-      {profile.length > 0 && <p className="text-sm text-ink-muted">{profile.join(' · ')}</p>}
       {reporting && (
         <MemberReportDialog
           kind="MEMBER"
@@ -275,6 +334,27 @@ function MemberRow({
         />
       )}
     </li>
+  );
+}
+
+// 정원만큼 자리 점을 그린다. 찬 자리는 숲색, 빈자리는 테두리만 그린다. 숫자와 남은 자리를 글로도 적는다.
+function SeatRow({ headcount, capacity, recruiting }: { headcount: number; capacity: number; recruiting: boolean }) {
+  const left = Math.max(0, capacity - headcount);
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <span aria-hidden="true" className="flex gap-1">
+        {Array.from({ length: capacity }, (_, index) => (
+          <span
+            key={index}
+            className={`size-5 rounded-full ${index < headcount ? 'bg-brand' : 'bg-surface ring-[1.5px] ring-inset ring-brand'}`}
+          />
+        ))}
+      </span>
+      <span className="font-mono text-base font-extrabold tabular-nums text-ink">
+        {headcountText(headcount, capacity)}명
+      </span>
+      {recruiting && left > 0 && <span className="ml-auto text-[0.8125rem] text-ink-muted">{left}자리 남았어요</span>}
+    </div>
   );
 }
 
@@ -394,10 +474,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
     content = (
       <>
         <p className="text-sm text-ink-muted">이메일 인증을 마치면 합류를 신청할 수 있어요.</p>
-        <Link
-          to="/verify-email"
-          className="inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted"
-        >
+        <Link to="/verify-email" className={buttonClassName('primary')}>
           이메일 인증하기
         </Link>
       </>
@@ -499,10 +576,14 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
               <Button
                 loading={submitting}
                 onClick={() =>
-                  run(async () => {
-                    await applyToBasecamp(detail.basecampId, message.trim() || undefined);
-                    setMessage('');
-                  }, '합류 신청을 보냈어요.', '합류 신청을 보내지 못했어요')
+                  run(
+                    async () => {
+                      await applyToBasecamp(detail.basecampId, message.trim() || undefined);
+                      setMessage('');
+                    },
+                    '합류 신청을 보냈어요.',
+                    '합류 신청을 보내지 못했어요',
+                  )
                 }
               >
                 신청하기
@@ -517,7 +598,10 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
             <p className="text-base text-ink">탈퇴하면 이 베이스캠프에 다시 신청할 수 없어요.</p>
             {isLateLeave(detail) && (
               <Notice tone="warning" title="출발이 얼마 남지 않았어요">
-                <p>출발 48시간 안에 탈퇴하면 임박 탈퇴로 기록돼요. 임박 탈퇴가 180일 안에 3번 쌓이면 신뢰 단계 2에서 빠져요.</p>
+                <p>
+                  출발 48시간 안에 탈퇴하면 임박 탈퇴로 기록돼요. 임박 탈퇴가 180일 안에 3번 쌓이면 신뢰 단계 2에서
+                  빠져요.
+                </p>
               </Notice>
             )}
             <div className="flex flex-wrap justify-end gap-2">
@@ -527,7 +611,9 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
               <Button
                 variant="danger"
                 loading={submitting}
-                onClick={() => run(() => leaveBasecamp(detail.basecampId), '베이스캠프에서 탈퇴했어요.', '탈퇴하지 못했어요')}
+                onClick={() =>
+                  run(() => leaveBasecamp(detail.basecampId), '베이스캠프에서 탈퇴했어요.', '탈퇴하지 못했어요')
+                }
               >
                 탈퇴
               </Button>
@@ -546,7 +632,13 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
               <Button
                 variant="danger"
                 loading={submitting}
-                onClick={() => run(() => cancelMyApplication(detail.basecampId), '합류 신청을 취소했어요.', '합류 신청을 취소하지 못했어요')}
+                onClick={() =>
+                  run(
+                    () => cancelMyApplication(detail.basecampId),
+                    '합류 신청을 취소했어요.',
+                    '합류 신청을 취소하지 못했어요',
+                  )
+                }
               >
                 신청 취소
               </Button>

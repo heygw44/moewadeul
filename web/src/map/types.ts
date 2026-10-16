@@ -22,6 +22,8 @@ export interface SpotMarkerData {
   closed: boolean;
   // 이 장소의 모집 중 베이스캠프 수다. 베이스캠프를 찾는 화면에서만 채운다.
   count?: number;
+  // 목록 행에 붙인 번호다. 핀에 같은 번호를 적어 목록과 지도를 잇는다. 없으면 유형 아이콘을 그린다.
+  label?: string;
 }
 
 // 서버가 묶어서 보낸 장소 묶음이다. 지도 래퍼는 화면에서 겹치는 묶음만 합쳐서 그린다.
@@ -36,6 +38,8 @@ export interface MapView {
   getCenter(): LatLng;
   // level을 넘기면 그 확대 수준으로 바꾼다. 두 단계 이하로 바꿀 때만 확대·축소를 애니메이션으로 보여 준다.
   setCenter(position: LatLng, level?: number): void;
+  // setCenter와 같지만 중심을 부드럽게 옮긴다. 화면 밖 먼 곳이면 카카오맵이 바로 옮긴다.
+  panTo(position: LatLng, level?: number): void;
   // 지금 그려진 마커와 묶음을 모두 지우고 새로 그린다.
   showMarkers(markers: SpotMarkerData[], clusters: ClusterData[]): void;
   // 선택한 id는 showMarkers를 다시 불러도 유지된다.

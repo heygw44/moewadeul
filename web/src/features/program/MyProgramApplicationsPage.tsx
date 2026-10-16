@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import { listMyProgramApplications } from '../../api/programs';
 import type { MyProgramApplicationItem, ProgramApplicationStatus } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
@@ -52,7 +53,9 @@ export function MyProgramApplicationsPage() {
     >
       <div aria-busy={authenticated && current === null} className="flex flex-col gap-3">
         {!authenticated || current === null ? (
-          showSkeleton ? <Skeleton className="h-24 w-full" /> : null
+          showSkeleton ? (
+            <Skeleton className="h-24 w-full" />
+          ) : null
         ) : (
           <>
             {current.error && (
@@ -75,10 +78,7 @@ export function MyProgramApplicationsPage() {
                 title={filter === 'ALL' ? '신청한 행사가 없어요' : '해당하는 신청이 없어요'}
                 action={
                   filter === 'ALL' && (
-                    <Link
-                      to="/programs"
-                      className="inline-flex min-h-11 items-center rounded-control border border-fill bg-fill px-4 font-semibold text-ink hover:bg-fill-strong"
-                    >
+                    <Link to="/programs" className={buttonClassName('secondary')}>
                       공식 행사 보기
                     </Link>
                   )
@@ -115,10 +115,7 @@ function ApplicationCard({ item, now }: { item: MyProgramApplicationItem; now: n
   const pending = item.status === 'PENDING_PAYMENT' && item.paymentDueAt !== null;
   return (
     <li>
-      <Link
-        to={`/programs/${item.program.programId}`}
-        className="flex min-h-11 flex-col gap-2 p-4 hover:bg-fill"
-      >
+      <Link to={`/programs/${item.program.programId}`} className="flex min-h-11 flex-col gap-2 p-4 hover:bg-fill">
         <span className="text-lg font-semibold text-ink">{item.program.title}</span>
         <MetaLine
           items={[

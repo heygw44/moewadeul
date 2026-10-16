@@ -3,13 +3,17 @@ import { fetchSpotsInArea } from '../../api/spots';
 import { toUserMessage } from '../../api/errors';
 import type { SpotCluster, SpotMarker, SpotSetting, SpotType } from '../../api/types';
 import type { MapView } from '../../map/types';
+import { distanceKm } from '../../lib/geo';
 import { NO_SPOT_FILTERS } from './spotFilters';
 import type { SpotFilters } from './spotFilters';
 
 type AreaStatus = 'idle' | 'loading' | 'ready' | 'error';
 
+// 목록 행 하나다. 지도 가운데에서 떨어진 거리(km)를 함께 쥐고, 가까운 순으로 줄 선다. 순서 번호가 곧 핀 번호다.
+export type ListedSpot = SpotMarker & { distanceKm: number };
+
 export type SpotsInView = {
-  markers: SpotMarker[];
+  markers: ListedSpot[];
   clusters: SpotCluster[];
   status: AreaStatus;
   error: string | null;
@@ -17,7 +21,7 @@ export type SpotsInView = {
 };
 
 type AreaState = {
-  markers: SpotMarker[];
+  markers: ListedSpot[];
   clusters: SpotCluster[];
   status: AreaStatus;
   error: string | null;
@@ -67,21 +71,27 @@ export function useSpotsInView(
       ).then(
         (response) => {
           if (controller.signal.aborted) return;
+          // 응답 순서 대신 지금 지도 가운데에서 가까운 순으로 줄 세우고, 그 순서를 목록 번호와 핀 번호로 쓴다.
+          const center = map.getCenter();
+          const listed = response.markers
+            .map((marker) => ({ ...marker, distanceKm: distanceKm(center, { lat: marker.lat, lng: marker.lng }) }))
+            .sort((a, b) => a.distanceKm - b.distanceKm);
           map.showMarkers(
-            response.markers.map((marker) => ({
+            listed.map((marker, index) => ({
               id: marker.spotId,
               kind: marker.type,
               name: marker.name,
               position: { lat: marker.lat, lng: marker.lng },
               warning: marker.parkWarning,
               closed: marker.closedNow,
+              label: String(index + 1),
             })),
             response.clusters.map((cluster) => ({
               position: { lat: cluster.lat, lng: cluster.lng },
               count: cluster.count,
             })),
           );
-          setState({ markers: response.markers, clusters: response.clusters, status: 'ready', error: null });
+          setState({ markers: listed, clusters: response.clusters, status: 'ready', error: null });
         },
         (error: unknown) => {
           // 취소한 요청의 실패는 새 요청이 이어받으므로 화면에 반영하지 않는다.

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { buttonClassName } from '../../components/buttonClass';
 import type { FormEvent, ReactNode } from 'react';
 import {
   approveApplication,
@@ -44,10 +45,11 @@ const KICK_OPTIONS: ReadonlyArray<ChoiceOption<KickReason>> = [
   { value: 'OTHER', label: '기타' },
 ];
 
-const LINK_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-control border border-fill bg-fill px-4 text-base font-semibold text-ink hover:bg-fill-strong';
+const LINK_BUTTON_CLASS = buttonClassName('secondary');
 
-type DetailResult = { basecampId: number; attempt: number; detail: BasecampDetail } | { basecampId: number; attempt: number; error: unknown };
+type DetailResult =
+  | { basecampId: number; attempt: number; detail: BasecampDetail }
+  | { basecampId: number; attempt: number; error: unknown };
 
 type ApplicationsState = {
   basecampId: number;
@@ -114,7 +116,14 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
     fetchBasecampApplications(basecampId, 0, controller.signal).then(
       (page) => {
         if (controller.signal.aborted) return;
-        setApplications({ basecampId, attempt, items: page.content, page: page.page, hasNext: page.hasNext, error: null });
+        setApplications({
+          basecampId,
+          attempt,
+          items: page.content,
+          page: page.page,
+          hasNext: page.hasNext,
+          error: null,
+        });
       },
       (caught: unknown) => {
         if (controller.signal.aborted) return;
@@ -159,7 +168,13 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
       const next = await fetchBasecampApplications(basecampId, applications.page + 1);
       setApplications((previous) =>
         previous && previous.basecampId === basecampId
-          ? { ...previous, items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null }
+          ? {
+              ...previous,
+              items: [...previous.items, ...next.content],
+              page: next.page,
+              hasNext: next.hasNext,
+              error: null,
+            }
           : previous,
       );
     } catch (caught) {
@@ -212,7 +227,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
     body = (
       <>
         {done && (
-          <p role="status" className="text-sm font-semibold text-accent-deep">
+          <p role="status" className="text-sm font-semibold text-accent">
             {done}
           </p>
         )}
@@ -231,7 +246,11 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
           submitting={submitting}
           loadingMore={loadingMore}
           onApprove={(application) =>
-            run(() => approveApplication(basecampId, application.applicationId), `${application.applicant.nickname}님의 합류를 승인했어요.`, '승인하지 못했어요')
+            run(
+              () => approveApplication(basecampId, application.applicationId),
+              `${application.applicant.nickname}님의 합류를 승인했어요.`,
+              '승인하지 못했어요',
+            )
           }
           onReject={(application) => setDialog({ kind: 'reject', application })}
           onLoadMore={loadMore}
@@ -268,7 +287,9 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
                 submitting={submitting}
                 confirmLabel="확정"
                 onBack={() => setDialog(null)}
-                onConfirm={() => run(() => confirmBasecamp(basecampId), '베이스캠프를 확정했어요.', '확정하지 못했어요')}
+                onConfirm={() =>
+                  run(() => confirmBasecamp(basecampId), '베이스캠프를 확정했어요.', '확정하지 못했어요')
+                }
               />
             </div>
           </Dialog>
@@ -282,7 +303,9 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
                 danger
                 confirmLabel="베이스캠프 취소"
                 onBack={() => setDialog(null)}
-                onConfirm={() => run(() => cancelBasecamp(basecampId), '베이스캠프를 취소했어요.', '베이스캠프를 취소하지 못했어요')}
+                onConfirm={() =>
+                  run(() => cancelBasecamp(basecampId), '베이스캠프를 취소했어요.', '베이스캠프를 취소하지 못했어요')
+                }
               />
             </div>
           </Dialog>
@@ -299,7 +322,11 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
                 confirmLabel="거절"
                 onBack={() => setDialog(null)}
                 onConfirm={() =>
-                  run(() => rejectApplication(basecampId, dialog.application.applicationId), '합류 신청을 거절했어요.', '거절하지 못했어요')
+                  run(
+                    () => rejectApplication(basecampId, dialog.application.applicationId),
+                    '합류 신청을 거절했어요.',
+                    '거절하지 못했어요',
+                  )
                 }
               />
             </div>
@@ -327,7 +354,11 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
                 onBack={() => setDialog(null)}
                 onConfirm={() => {
                   if (kickReason === null) return;
-                  void run(() => kickMember(basecampId, dialog.member.memberId, kickReason), `${dialog.member.nickname}님을 강퇴했어요.`, '강퇴하지 못했어요');
+                  void run(
+                    () => kickMember(basecampId, dialog.member.memberId, kickReason),
+                    `${dialog.member.nickname}님을 강퇴했어요.`,
+                    '강퇴하지 못했어요',
+                  );
                 }}
               />
             </div>
@@ -382,11 +413,11 @@ function DialogButtons({
 function HeaderCard({ detail }: { detail: BasecampDetail }) {
   const status = BASECAMP_STATUS_META[detail.status];
   return (
-    <section className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-5">
-      <h2 className="text-lg font-semibold text-ink">{detail.title}</h2>
+    <section className="flex flex-col gap-2 rounded-sheet bg-brand p-5 text-white [&_:focus-visible]:outline-white">
+      <h2 className="text-xl font-extrabold tracking-[-0.02em]">{detail.title}</h2>
       <div className="flex flex-wrap items-center gap-2">
-        <StatusText tone={status.tone}>{status.label}</StatusText>
-        <span className="font-mono text-sm tabular-nums text-ink-muted">
+        <span className="text-sm font-bold">{status.label}</span>
+        <span className="font-mono text-sm tabular-nums text-brand-ink">
           {headcountText(detail.headcount, detail.capacity)}명
         </span>
       </div>
@@ -423,7 +454,13 @@ function StatusActions({
           <Button
             variant="secondary"
             disabled={submitting}
-            onClick={() => void run(() => reopenBasecamp(detail.basecampId), '모집을 다시 시작했어요.', '모집을 다시 시작하지 못했어요')}
+            onClick={() =>
+              void run(
+                () => reopenBasecamp(detail.basecampId),
+                '모집을 다시 시작했어요.',
+                '모집을 다시 시작하지 못했어요',
+              )
+            }
           >
             모집 다시 열기
           </Button>
@@ -547,7 +584,9 @@ function ApplicationRow({
         )}
       </div>
       {profile.length > 0 && <p className="text-sm text-ink-muted">{profile.join(' · ')}</p>}
-      {application.message && <p className="whitespace-pre-line break-words text-base text-ink">{application.message}</p>}
+      {application.message && (
+        <p className="whitespace-pre-line break-words text-base text-ink">{application.message}</p>
+      )}
       <p className="font-mono text-sm tabular-nums text-ink-muted">{formatKstDateTime(application.appliedAt)} 신청</p>
       {recruiting && (
         <div className="mt-1 flex flex-wrap gap-2">
@@ -572,7 +611,10 @@ function MembersCard({ detail, onKick }: { detail: BasecampDetail; onKick: (memb
           const badge = member.trustLevel === undefined ? null : trustLevelBadge(member.trustLevel);
           const profile = profileSummary(member);
           return (
-            <li key={member.memberId} className="flex flex-col gap-1 border-t border-line py-2 first:border-t-0 first:pt-0">
+            <li
+              key={member.memberId}
+              className="flex flex-col gap-1 border-t border-line py-2 first:border-t-0 first:pt-0"
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <Link
                   to={`/members/${member.memberId}`}

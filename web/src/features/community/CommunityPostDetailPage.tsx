@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { deletePost, getPost, likePost, unlikePost } from '../../api/community';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
@@ -72,9 +72,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
     );
   }
 
-  const asideNode = (
-    <PostAside post={current !== null && 'post' in current ? current.post : null} />
-  );
+  const asideNode = <PostAside post={current !== null && 'post' in current ? current.post : null} />;
 
   if (current === null) {
     return (
@@ -94,14 +92,14 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   if ('post' in current) {
     const post = current.post;
     return (
-      <HubLayout
-        title={post.title}
-        breadcrumb={<BackToCommunity />}
-        meta={<PostMeta post={post} />}
-        actions={<PostActions post={post} />}
-        aside={asideNode}
-      >
-        <PostContent post={post} onLikeChanged={applyLike} onImageError={handleImageError} />
+      <HubLayout title={post.title} breadcrumb={<BackToCommunity />} aside={asideNode} titleInContent>
+        <PostContent
+          post={post}
+          meta={<PostMeta post={post} />}
+          actions={<PostActions post={post} />}
+          onLikeChanged={applyLike}
+          onImageError={handleImageError}
+        />
         <CommunityComments postId={postId} count={post.commentCount} onChanged={reload} />
         <div>
           <Link to="/community" className={SECONDARY_LINK_CLASS}>
@@ -151,7 +149,10 @@ function PostMeta({ post }: { post: CommunityPostDetail }) {
   const edited = post.updatedAt !== post.createdAt;
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
-      <Link to={`/members/${post.author.memberId}`} className="font-semibold text-ink underline-offset-2 hover:underline">
+      <Link
+        to={`/members/${post.author.memberId}`}
+        className="font-semibold text-ink underline-offset-2 hover:underline"
+      >
         {post.author.nickname}
       </Link>
       <span aria-hidden="true">·</span>
@@ -204,16 +205,14 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
           </Button>
         </>
       ) : (
-        <Button
-          variant="ghost"
-          onClick={() => setReporting(true)}
-          disabled={unverified}
-        >
+        <Button variant="ghost" onClick={() => setReporting(true)} disabled={unverified}>
           신고
         </Button>
       )}
       {deleting && <DeletePostDialog postId={post.postId} onClose={() => setDeleting(false)} />}
-      {reporting && <CommunityReportDialog target={{ type: 'post', id: post.postId }} onClose={() => setReporting(false)} />}
+      {reporting && (
+        <CommunityReportDialog target={{ type: 'post', id: post.postId }} onClose={() => setReporting(false)} />
+      )}
     </>
   );
 }
@@ -238,8 +237,8 @@ function PostAside({ post }: { post: CommunityPostDetail | null }) {
             </Link>
             에서 구해요.
           </li>
-          <li>돈을 보내 달라는 글은 신고해 주세요.</li>
-          <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
+          <li>금전을 요구하는 글은 신고해 주세요.</li>
+          <li>공원 내에서 야영을 권하는 글은 신고 대상이에요.</li>
         </ul>
       </AsideSection>
     </>
@@ -250,14 +249,30 @@ const ASIDE_LINK = 'inline-flex min-h-11 items-center text-base font-semibold te
 
 type PostContentProps = {
   post: CommunityPostDetail;
+  meta: ReactNode;
+  actions: ReactNode;
   onLikeChanged: (response: CommunityLikeResponse) => void;
   onImageError: () => void;
 };
 
-function PostContent({ post, onLikeChanged, onImageError }: PostContentProps) {
+// 글 하나를 흰 판에 담는다. 머리에 제목·글쓴이 줄·수정·신고 버튼, 그 아래 본문·사진, 맨 아래 좋아요와 댓글 수다.
+// 페이지 제목(h1)은 위 띠가 스크린 리더에 읽히므로, 판의 제목은 화면에만 보인다.
+function PostContent({ post, meta, actions, onLikeChanged, onImageError }: PostContentProps) {
   return (
-    <article className="rounded-sheet border border-line bg-surface">
-      <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink">{post.content}</p>
+    <article className="overflow-hidden rounded-sheet border border-line bg-surface">
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-line px-5 py-5 sm:px-6">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <p
+            aria-hidden="true"
+            className="text-2xl leading-tight font-extrabold tracking-[-0.03em] break-words text-ink sm:text-[1.75rem]"
+          >
+            {post.title}
+          </p>
+          {meta}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">{actions}</div>
+      </header>
+      <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink sm:px-6">{post.content}</p>
 
       {post.images.length > 0 && (
         <ul className="flex flex-col gap-3 px-5 pb-5">
@@ -286,7 +301,13 @@ function PostContent({ post, onLikeChanged, onImageError }: PostContentProps) {
   );
 }
 
-function LikeButton({ post, onChanged }: { post: CommunityPostDetail; onChanged: (response: CommunityLikeResponse) => void }) {
+function LikeButton({
+  post,
+  onChanged,
+}: {
+  post: CommunityPostDetail;
+  onChanged: (response: CommunityLikeResponse) => void;
+}) {
   const session = useSession();
   const { pathname, search } = useLocation();
   const [busy, setBusy] = useState(false);

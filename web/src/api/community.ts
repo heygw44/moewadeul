@@ -40,7 +40,9 @@ export function listPosts(
       popular: filter.popular || undefined,
       searchType: filter.keyword ? filter.searchType : undefined,
       keyword: filter.keyword,
-      page, size: COMMUNITY_POST_PAGE_SIZE },
+      page,
+      size: COMMUNITY_POST_PAGE_SIZE,
+    },
     signal,
   });
 }
@@ -62,11 +64,7 @@ export function deletePost(postId: number): Promise<void> {
 }
 
 // 페이지는 답글이 아닌 댓글 단위로 센다. 댓글은 오래된 순이다.
-export function listComments(
-  postId: number,
-  page: number,
-  signal?: AbortSignal,
-): Promise<Page<CommunityComment>> {
+export function listComments(postId: number, page: number, signal?: AbortSignal): Promise<Page<CommunityComment>> {
   return apiFetch<Page<CommunityComment>>(`/api/community/posts/${postId}/comments`, {
     query: { page, size: COMMUNITY_COMMENT_PAGE_SIZE },
     signal,
@@ -106,4 +104,3 @@ export function reportComment(commentId: number, req: CommunityReportRequest): P
 export function requestImageUpload(req: CommunityImageUploadRequest): Promise<CommunityImageUpload> {
   return apiFetch<CommunityImageUpload>('/api/community/images', { method: 'POST', body: req });
 }
-

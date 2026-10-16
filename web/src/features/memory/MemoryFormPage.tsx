@@ -72,7 +72,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
   if (session.status !== 'authenticated' || !session.me) {
     return layout(
       showSkeleton ? (
-        <div className="rounded-sheet border border-line bg-surface p-5">
+        <div className="rounded-sheet border border-line bg-surface p-4 sm:p-5">
           <Skeleton className="h-40 w-full" />
         </div>
       ) : null,
@@ -80,7 +80,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
   }
   if (session.me.status === 'UNVERIFIED') {
     return layout(
-      <div className="rounded-sheet border border-line bg-surface p-5">
+      <div className="rounded-sheet border border-line bg-surface p-4 sm:p-5">
         <Notice tone="warning" title="이메일 인증을 마치면 기록을 남길 수 있어요">
           <div className="flex flex-col gap-3">
             <p>메일로 받은 인증 코드만 입력하면 돼요.</p>
@@ -170,7 +170,7 @@ function EditLoader({ memoryId, myMemberId }: { memoryId: number; myMemberId: nu
 
   if (result === null || notMine) {
     return showSkeleton ? (
-      <div className="rounded-sheet border border-line bg-surface p-5">
+      <div className="rounded-sheet border border-line bg-surface p-4 sm:p-5">
         <Skeleton className="h-64 w-full" />
       </div>
     ) : null;
@@ -214,8 +214,7 @@ function isFormField(field: string): field is FormField {
 }
 
 type MemoryFormProps = { position: LatLng | null; initialSpot: LinkedSpot | null } & (
-  | { mode: 'create' }
-  | { mode: 'edit'; memory: MemoryDetail }
+  { mode: 'create' } | { mode: 'edit'; memory: MemoryDetail }
 );
 
 function MemoryForm(props: MemoryFormProps) {
@@ -244,7 +243,9 @@ function MemoryForm(props: MemoryFormProps) {
       (detail) => {
         if (controller.signal.aborted) return;
         setSpot((previous) =>
-          previous !== null && previous.spotId === unnamedSpotId ? { spotId: unnamedSpotId, name: detail.name } : previous,
+          previous !== null && previous.spotId === unnamedSpotId
+            ? { spotId: unnamedSpotId, name: detail.name }
+            : previous,
         );
       },
       () => undefined,
@@ -258,7 +259,8 @@ function MemoryForm(props: MemoryFormProps) {
     const errors: FormFieldErrors = {};
     if (visitedDate === '') errors.visitedDate = '다녀온 날을 골라 주세요.';
     else if (visitedDate > today) errors.visitedDate = '오늘이나 그 전 날짜를 골라 주세요.';
-    if (content.length > MEMORY_CONTENT_MAX) errors.content = `${MEMORY_CONTENT_MAX.toLocaleString()}자 이하로 적어 주세요.`;
+    if (content.length > MEMORY_CONTENT_MAX)
+      errors.content = `${MEMORY_CONTENT_MAX.toLocaleString()}자 이하로 적어 주세요.`;
     return errors;
   }
 
@@ -291,7 +293,14 @@ function MemoryForm(props: MemoryFormProps) {
         return;
       }
       const memory = props.memory;
-      const changes = collectChanges(memory, { visitedDate, nights: Number(nights), content: trimmed, visibility, spot, imageIds });
+      const changes = collectChanges(memory, {
+        visitedDate,
+        nights: Number(nights),
+        content: trimmed,
+        visibility,
+        spot,
+        imageIds,
+      });
       if (Object.keys(changes).length > 0) await updateMemory(memory.memoryId, changes);
       navigate(`/memories/${memory.memoryId}`);
     } catch (error) {
@@ -327,7 +336,7 @@ function MemoryForm(props: MemoryFormProps) {
       noValidate
       onSubmit={handleSubmit}
       aria-label={props.mode === 'create' ? '기록 남기기' : '기록 수정'}
-      className="divide-y divide-line rounded-sheet border border-line bg-surface"
+      className="divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface"
     >
       {formError && (
         <div role="alert" className="px-5 py-5">

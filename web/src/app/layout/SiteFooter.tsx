@@ -14,23 +14,25 @@ const DATA_SOURCES = [
   '카카오맵',
 ];
 
-const LINK_CLASS = 'inline-flex min-h-11 items-center text-sm text-brand-ink hover:text-white hover:underline lg:min-h-8';
+const LINK_CLASS =
+  'inline-flex min-h-11 items-center text-sm text-brand-ink hover:text-white hover:underline lg:min-h-8';
 
 // 랜딩과 지도가 없는 화면 맨 아래에 둔다. 지도 화면은 화면 전체를 지도가 쓰므로 바닥글이 없다.
+// 위에서부터 글자 열 셋, 데이터 출처 한 줄, 고지 줄 순서다.
 export function SiteFooter() {
   const session = useSession();
   const signedIn = session.status === 'authenticated' && session.me !== null;
 
   return (
-    // 바닥글은 포인트 면(깊은 숲) 전체 띠다. 짙은 바탕이라 글자는 흰색과 옅은 숲색이고, 포커스 링도 흰색으로 바꾼다.
+    // 바닥글은 머리글과 같은 숲색 판이다. 짙은 바탕이라 글자는 흰색과 옅은 숲색이고, 포커스 링도 흰색으로 바꾼다.
     <footer className="bg-brand text-white [&_:focus-visible]:outline-white">
-      <div className="mx-auto grid max-w-screen-xl gap-8 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr_1.4fr]">
-        <div className="flex flex-col gap-2">
+      <div className="mx-auto grid max-w-screen-xl grid-cols-2 gap-8 px-4 py-10 md:grid-cols-[2fr_1fr_1fr]">
+        <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
           <Link to="/" className="self-start text-white">
-            <BrandMark className="text-lg" />
+            <BrandMark className="text-xl" />
           </Link>
           <p className="max-w-xs text-sm text-brand-ink">
-            자도 되는 곳을 찾고 믿을 수 있는 사람과 함께 가는 백패킹 서비스예요.
+            잘 수 있는 곳을 찾고 믿을 수 있는 사람과 함께 가는 백패킹 서비스예요.
           </p>
         </div>
 
@@ -73,21 +75,17 @@ export function SiteFooter() {
             </>
           )}
         </FooterColumn>
-
-        <FooterColumn title="데이터 출처">
-          {DATA_SOURCES.map((source) => (
-            <span key={source} className="text-sm text-brand-ink">
-              {source}
-            </span>
-          ))}
-        </FooterColumn>
       </div>
 
       <div className="border-t border-white/15">
-        <div className="mx-auto flex max-w-screen-xl flex-col gap-2 px-4 py-5 text-xs text-brand-ink md:flex-row md:items-center md:justify-between">
+        {/* 출처는 판단 근거라서 지우지 않고, 열 하나를 차지하지 않게 한 줄로 모은다. */}
+        <p className="mx-auto max-w-screen-xl px-4 pt-5 text-xs leading-relaxed text-brand-ink">
+          데이터 · {DATA_SOURCES.join(' · ')}
+        </p>
+        <div className="mx-auto flex max-w-screen-xl flex-col gap-2 px-4 pt-3 pb-8 text-xs text-brand-ink md:flex-row md:items-center md:justify-between">
           <p>
-            공원 경계는 법적 효력이 없는 참고 자료예요. 공식 경계는 고시 도면에서 확인해 주세요. 뫼와들은 장소 정보를
-            안내만 하고, 야영하다 생긴 일에 책임지지 않아요.
+            공원 경계는 법적 효력이 없는 참고 자료예요. 공식 경계는 고시 도면에서 확인해 주세요. 뫼와들은 장소 정보만
+            안내하고, 야영 중에 생긴 일에는 책임지지 않아요. 본인확인과 결제는 시연용 가짜 구현이에요.
           </p>
           <p className="flex items-center gap-3">
             <span>© 2026 뫼와들</span>
@@ -109,7 +107,7 @@ export function SiteFooter() {
 function FooterColumn({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <h2 className="mb-1 text-sm font-semibold text-white">{title}</h2>
+      <h2 className="mb-1 text-sm font-bold text-white">{title}</h2>
       {children}
     </div>
   );

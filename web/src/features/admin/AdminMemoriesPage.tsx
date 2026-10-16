@@ -13,6 +13,7 @@ import { REPORT_REASON_OPTIONS } from '../community/communityLabels';
 import { ApproxLocationLabel } from '../memory/ApproxLocationLabel';
 import { nightsLabel } from '../memory/memoryLabels';
 import { AdminPage } from './AdminGate';
+import { AdminSegments } from './AdminSegments';
 import { adminErrorMessage } from './adminErrors';
 
 const TABS: ReadonlyArray<{ status: AdminMemoryStatus; label: string }> = [
@@ -88,27 +89,15 @@ function MemoryReview() {
 
   return (
     <section className="flex flex-col gap-4" aria-label="기록 검토 목록">
-      <div role="group" aria-label="목록 종류" className="flex flex-wrap gap-2">
-        {TABS.map((item) => (
-          <button
-            key={item.status}
-            type="button"
-            aria-pressed={item.status === tab}
-            onClick={() => {
-              if (item.status === tab) return;
-              setState(null);
-              setTab(item.status);
-            }}
-            className={`inline-flex min-h-11 items-center rounded-control border px-4 font-semibold ${
-              item.status === tab
-                ? 'border-accent bg-accent-soft text-accent-deep'
-                : 'border-line bg-surface text-ink hover:bg-fill'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <AdminSegments
+        label="목록 종류"
+        segments={TABS.map((item) => ({ value: item.status, label: item.label }))}
+        value={tab}
+        onChange={(status) => {
+          setState(null);
+          setTab(status);
+        }}
+      />
       {state?.error && (
         <div role="alert" className="flex flex-col gap-3">
           <Notice tone="danger" title="기록을 불러오지 못했어요">
@@ -201,7 +190,8 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
         </dd>
         <dt className="text-ink-muted">다녀온 날</dt>
         <dd className="text-ink">
-          <span className="font-mono tabular-nums">{formatLocalDate(item.visitedDate)}</span> · {nightsLabel(item.nights)}
+          <span className="font-mono tabular-nums">{formatLocalDate(item.visitedDate)}</span> ·{' '}
+          {nightsLabel(item.nights)}
         </dd>
         {item.images.length > thumbnails.length && (
           <>
@@ -226,9 +216,9 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
       {item.recentReports.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium text-ink">최근 신고</p>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col divide-y divide-line border-y border-line">
             {item.recentReports.map((report, index) => (
-              <li key={index} className="rounded-control bg-fill px-3 py-2 text-sm">
+              <li key={index} className="py-2 text-sm">
                 <p className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-ink">{REASON_LABELS[report.reason] ?? report.reason}</span>
                   <span className="font-mono tabular-nums text-ink-muted">{formatKstDateTime(report.createdAt)}</span>
@@ -252,7 +242,12 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
             숨기기
           </Button>
         )}
-        <Button variant="secondary" loading={busy === 'restore'} disabled={busy === 'hide'} onClick={() => void run('restore')}>
+        <Button
+          variant="secondary"
+          loading={busy === 'restore'}
+          disabled={busy === 'hide'}
+          onClick={() => void run('restore')}
+        >
           복구
         </Button>
       </div>

@@ -1,5 +1,12 @@
 import { loadKakaoMaps } from './kakaoLoader';
-import { createClusterButton, createDraftPin, createSearchPin, createSpotDot, createSpotPin, createSpread } from './markers';
+import {
+  createClusterButton,
+  createDraftPin,
+  createSearchPin,
+  createSpotDot,
+  createSpotPin,
+  createSpread,
+} from './markers';
 import { mergeClusters } from './mergeClusters';
 import { arrangeSpread, stackPins } from './stackPins';
 import type { SpotPin } from './markers';
@@ -37,8 +44,8 @@ const MAX_ANIMATED_LEVEL_STEP = 2;
 
 // 영역에 맞출 때 장소가 화면 가장자리에 붙지 않도록 둘레에 두는 여백(px)이다.
 const FIT_PADDING_PX = 48;
-// 반경 원의 색이다. 정보 색 토큰(info)과 같은 값이고, 지도 SDK에는 CSS 변수를 넘길 수 없어서 값을 적는다.
-const RADIUS_COLOR = '#1d4fc4';
+// 반경 원의 색이다. 숲색 판 토큰(brand)과 같은 값이고, 지도 SDK에는 CSS 변수를 넘길 수 없어서 값을 적는다.
+const RADIUS_COLOR = '#1d3b2c';
 
 interface DrawnPin {
   overlay: kakao.maps.CustomOverlay;
@@ -55,7 +62,8 @@ export async function createMapView(
   container: HTMLElement,
   // scrollWheel을 끄면 마우스 휠이 지도를 확대·축소하지 않고 페이지를 스크롤한다. 랜딩처럼 지도가 페이지 안에 있을 때 끈다.
   // markerStyle이 'dot'이면 장소를 유형별 핀 대신 작은 점으로 그리고, 겹친 점을 묶지 않는다.
-  initial: { center: LatLng; level: number; scrollWheel?: boolean; markerStyle?: 'pin' | 'dot' },
+  // draggable을 끄면 지도를 끌어 옮길 수 없다. 랜딩처럼 화면에 고정한 지도에서 터치 스크롤이 지도에 먹히지 않게 할 때 끈다.
+  initial: { center: LatLng; level: number; scrollWheel?: boolean; draggable?: boolean; markerStyle?: 'pin' | 'dot' },
 ): Promise<MapView> {
   await loadKakaoMaps();
 
@@ -65,6 +73,7 @@ export async function createMapView(
     center: toKakaoLatLng(initial.center),
     level: initial.level,
     scrollwheel: initial.scrollWheel ?? true,
+    draggable: initial.draggable ?? true,
   });
   // 왼쪽 아래에는 지도 범례를 두므로, 카카오 로고와 저작권 표시는 오른쪽 아래로 옮긴다.
   map.setCopyrightPosition(kakao.maps.CopyrightPosition.BOTTOMRIGHT, true);
@@ -339,7 +348,7 @@ export async function createMapView(
     };
   }
 
-  return {
+  const view: MapView = {
     getBounds(): Bounds {
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
@@ -372,6 +381,18 @@ export async function createMapView(
       }
       map.setCenter(toKakaoLatLng(position));
       map.setLevel(level, { animate: true });
+    },
+
+    panTo(position: LatLng, level?: number) {
+      const current = map.getLevel();
+      if (level !== undefined && Math.abs(level - current) > MAX_ANIMATED_LEVEL_STEP) {
+        // 확대 수준을 크게 바꾸면 애니메이션이 없으므로 setCenter와 같이 바로 옮긴다.
+        view.setCenter(position, level);
+        return;
+      }
+      map.panTo(toKakaoLatLng(position));
+      if (level !== undefined && level !== current)
+        map.setLevel(level, { animate: true, anchor: toKakaoLatLng(position) });
     },
 
     // 서버 묶음은 핀과 섞어 묶지 않는다. 묶음끼리만 합쳐서 그린다.
@@ -584,4 +605,5 @@ export async function createMapView(
       contextMenuListeners.clear();
     },
   };
+  return view;
 }

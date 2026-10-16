@@ -70,7 +70,9 @@ export function SpotFilterDialog({ initial, onApply, onClose }: SpotFilterDialog
               </ToggleChip>
             ))}
           </div>
-          <p className="text-sm text-ink-muted">고르면 입지 정보가 있는 공공 야영장만 보여요. 박지와 자연휴양림은 빠져요.</p>
+          <p className="text-sm text-ink-muted">
+            고르면 입지 정보가 있는 공공 야영장만 보여요. 박지와 자연휴양림은 빠져요.
+          </p>
         </fieldset>
 
         <fieldset className="flex min-w-0 flex-col">

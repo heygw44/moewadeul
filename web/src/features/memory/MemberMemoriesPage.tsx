@@ -102,7 +102,11 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
     if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
       return (
         <HubLayout title="회원을 찾을 수 없어요" width="narrow">
-          <EmptyState framed title="탈퇴했거나 주소가 잘못됐어요" description="피드 메뉴에서 다른 회원의 기록을 볼 수 있어요." />
+          <EmptyState
+            framed
+            title="탈퇴했거나 주소가 잘못됐어요"
+            description="피드 메뉴에서 다른 회원의 기록을 볼 수 있어요."
+          />
         </HubLayout>
       );
     }
@@ -119,7 +123,9 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
       </div>
     );
   } else if (items.length === 0) {
-    body = <EmptyState framed title="공개한 기록이 아직 없어요" description="이 회원이 기록을 공개하면 여기에 보여요." />;
+    body = (
+      <EmptyState framed title="공개한 기록이 아직 없어요" description="이 회원이 기록을 공개하면 여기에 보여요." />
+    );
   } else {
     body = (
       <>

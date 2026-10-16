@@ -110,7 +110,11 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     return (
       <HubLayout title="기록을 찾을 수 없어요" breadcrumb={breadcrumb} width="narrow">
-        <EmptyState framed title="삭제됐거나 볼 수 없는 기록이에요" description="나만 보기 기록은 남긴 사람만 열 수 있어요." />
+        <EmptyState
+          framed
+          title="삭제됐거나 볼 수 없는 기록이에요"
+          description="나만 보기 기록은 남긴 사람만 열 수 있어요."
+        />
       </HubLayout>
     );
   }
@@ -138,7 +142,10 @@ function titleOf(memory: MemoryDetail): string {
 function MemoryMeta({ memory }: { memory: MemoryDetail }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
-      <Link to={`/members/${memory.author.memberId}`} className="font-semibold text-ink underline-offset-2 hover:underline">
+      <Link
+        to={`/members/${memory.author.memberId}`}
+        className="font-semibold text-ink underline-offset-2 hover:underline"
+      >
         {memory.author.nickname}
       </Link>
       <span aria-hidden="true">·</span>
@@ -229,7 +236,7 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
   return (
     <div className="flex flex-col gap-4">
       <HiddenStatusNotice status={memory.status} />
-      <article className="divide-y divide-line rounded-sheet border border-line bg-surface">
+      <article className="divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface">
         {position !== null && (
           <div className="flex flex-col gap-1 px-5 py-4">
             <p className="text-sm text-ink-muted">다녀온 곳 (정확한 위치, 나만 봐요)</p>
@@ -255,7 +262,11 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
         )}
         {likeable && (
           <div className="px-5 py-4">
-            <MemoryLikeButton memoryId={memory.memoryId} likedByMe={memory.likedByMe === true} likeCount={memory.likeCount} />
+            <MemoryLikeButton
+              memoryId={memory.memoryId}
+              likedByMe={memory.likedByMe === true}
+              likeCount={memory.likeCount}
+            />
           </div>
         )}
       </article>

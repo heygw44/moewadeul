@@ -7,17 +7,18 @@ import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { EmptyState } from '../../components/EmptyState';
 import { Notice } from '../../components/Notice';
-import { SelectField } from '../../components/SelectField';
+import { Icon } from '../../components/icons';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
 import { REPORT_KIND_LABELS, REPORT_STATUS_META, REPORT_TYPE_LABELS } from '../report/reportLabels';
 import { AdminPage } from './AdminGate';
+import { AdminSegments } from './AdminSegments';
 import { adminErrorMessage } from './adminErrors';
 
 const ALL = 'ALL';
 
-const STATUS_OPTIONS = [
+const STATUS_SEGMENTS = [
   { value: ALL, label: '전체' },
   { value: 'RECEIVED', label: '접수' },
   { value: 'IN_REVIEW', label: '검토 중' },
@@ -88,13 +89,12 @@ function ReportList() {
 
   return (
     <section className="flex flex-col gap-4" aria-label="신고 목록">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-6">
-        <SelectField
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <AdminSegments
           label="처리 상태"
-          className="sm:w-48"
+          segments={STATUS_SEGMENTS}
           value={status}
-          options={STATUS_OPTIONS}
-          onChange={(event) => changeFilter(() => setStatus(event.target.value))}
+          onChange={(value) => changeFilter(() => setStatus(value))}
         />
         <Checkbox
           label="긴급 신고만"
@@ -127,11 +127,24 @@ function ReportList() {
         <EmptyState framed title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꿔 주세요." />
       )}
       {state !== null && state.items.length > 0 && (
-        <ul className="flex flex-col rounded-sheet border border-line bg-surface">
-          {state.items.map((item) => (
-            <ReportRow key={item.reportId} item={item} />
-          ))}
-        </ul>
+        <div className="overflow-hidden rounded-sheet border border-line bg-surface">
+          {/* 넓은 화면에서는 표처럼 칸 이름 줄을 둔다. 좁은 화면은 행마다 위아래로 쌓으므로 이 줄을 숨긴다. */}
+          <div
+            aria-hidden="true"
+            className={`hidden border-b border-line bg-canvas py-2.5 text-sm font-semibold text-ink-muted md:grid ${ROW_GRID}`}
+          >
+            <span>우선</span>
+            <span>사유</span>
+            <span>신고한 회원 → 대상</span>
+            <span>상태</span>
+            <span>접수</span>
+          </div>
+          <ul className="divide-y divide-line">
+            {state.items.map((item) => (
+              <ReportRow key={item.reportId} item={item} />
+            ))}
+          </ul>
+        </div>
       )}
       {state?.hasNext && (
         <div>
@@ -144,24 +157,30 @@ function ReportList() {
   );
 }
 
+// 칸 이름 줄과 행이 같은 칸 폭을 쓴다.
+const ROW_GRID = 'px-4 md:grid-cols-[3.5rem_minmax(0,10rem)_minmax(0,1fr)_6rem_9.5rem_1.25rem] md:gap-4';
+
 function ReportRow({ item }: { item: AdminReportSummary }) {
   const status = REPORT_STATUS_META[item.status];
   return (
-    <li className="border-t border-line first:border-t-0">
+    <li>
       <Link
         to={`/admin/reports/${item.reportId}`}
-        className="flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-fill sm:flex-row sm:items-center sm:gap-4"
+        className={`flex min-h-11 flex-col gap-1 py-3 hover:bg-fill md:grid md:items-center ${ROW_GRID}`}
       >
-        <span className="flex flex-wrap items-center gap-2 sm:w-72 sm:shrink-0">
-          {item.urgent && <StatusText tone="danger">긴급</StatusText>}
-          <span className="text-base font-semibold text-ink">{REPORT_TYPE_LABELS[item.type]}</span>
-          <span className="text-sm text-ink-muted">{REPORT_KIND_LABELS[item.kind]}</span>
-          <StatusText tone={status.tone}>{status.label}</StatusText>
+        <span className={`text-sm font-extrabold ${item.urgent ? 'text-danger' : 'text-ink-muted'}`}>
+          {item.urgent ? '긴급' : '보통'}
         </span>
-        <span className="min-w-0 flex-1 break-words text-base text-ink">
+        <span className="flex min-w-0 flex-col">
+          <span className="break-words text-base font-bold text-ink">{REPORT_TYPE_LABELS[item.type]}</span>
+          <span className="text-sm text-ink-muted">{REPORT_KIND_LABELS[item.kind]}</span>
+        </span>
+        <span className="min-w-0 break-words text-base text-ink">
           {item.reporter.nickname} → {item.target.nickname}
         </span>
+        <StatusText tone={status.tone}>{status.label}</StatusText>
         <span className="font-mono text-sm tabular-nums text-ink-muted">{formatKstDateTime(item.createdAt)}</span>
+        <Icon name="chevronRight" size={18} className="hidden text-ink-muted md:block" />
       </Link>
     </li>
   );

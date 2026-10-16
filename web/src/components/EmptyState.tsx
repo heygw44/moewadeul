@@ -4,7 +4,7 @@ type EmptyStateProps = {
   title: string;
   description?: string;
   action?: ReactNode;
-  // 지도가 없는 화면의 본문 열에 둘 때 켠다. 흰 면에 담아서 목록 패널·머리 띠와 같은 가장자리에 맞춘다.
+  // 지도가 없는 화면의 본문 열에 둘 때 켠다. 목록판과 같은 흰 판 안에 넣는다.
   framed?: boolean;
 };
 

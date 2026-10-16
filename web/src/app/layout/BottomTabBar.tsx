@@ -4,7 +4,7 @@ import { Link, useLocation } from '../router';
 import { activeNavKey, NAV_ITEMS, navTarget } from './navItems';
 
 // 모바일 화면 맨 아래에 붙는 다섯 칸 메뉴다. lg부터는 머리글이 메뉴를 맡으므로 숨긴다.
-// 높이는 theme.css의 --bottom-nav-h와 같다(56px + 아이폰 홈 막대 여백).
+// 높이는 theme.css의 --bottom-nav-h와 같다(64px + 아이폰 홈 막대 여백).
 export function BottomTabBar() {
   const { pathname } = useLocation();
   const session = useSession();
@@ -25,8 +25,8 @@ export function BottomTabBar() {
                 to={navTarget(item, signedIn)}
                 aria-current={current ? 'page' : undefined}
                 className={[
-                  'relative flex h-14 flex-col items-center justify-center gap-0.5 text-xs',
-                  current ? 'font-semibold text-accent' : 'text-ink-muted',
+                  'relative flex h-16 flex-col items-center justify-center gap-1 text-[0.6875rem]',
+                  current ? 'font-bold text-brand' : 'text-ink-muted',
                 ].join(' ')}
               >
                 <Icon name={item.icon} size={22} />

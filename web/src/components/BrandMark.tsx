@@ -5,5 +5,5 @@ type BrandMarkProps = {
 
 // 서비스 이름을 한글 워드마크 '뫼와들'로 그린다. 본문과 같은 Pretendard를 굵게 써서 따로 글꼴 파일을 받지 않는다.
 export function BrandMark({ className = '' }: BrandMarkProps) {
-  return <span className={['font-bold whitespace-nowrap tracking-tight', className].join(' ')}>뫼와들</span>;
+  return <span className={['font-extrabold whitespace-nowrap tracking-[-0.03em]', className].join(' ')}>뫼와들</span>;
 }

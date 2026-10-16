@@ -19,7 +19,9 @@ services:
       - caddy-config:/config
     depends_on:
       - app
-    mem_limit: 128m
+    # 행사 신청이 열리는 순간처럼 요청 2,000개가 동시에 앱 응답을 기다리면 Caddy는 약 200MB를 쓴다(연결 하나에 약 0.1MB).
+    # 128MB에서는 메모리 한도로 종료돼 응답이 전달되지 않았다.
+    mem_limit: 256m
 
   app:
     image: ${APP_IMAGE:?}
@@ -42,6 +44,9 @@ services:
       PUBLICDATA_FOREST_FILE: ${PUBLICDATA_FOREST_FILE:-}
       PUBLICDATA_FOREST_STANDARD_FILE: ${PUBLICDATA_FOREST_STANDARD_FILE:-}
       PUBLICDATA_PARK_BOUNDARY_FILE: ${PUBLICDATA_PARK_BOUNDARY_FILE:-}
+      # glibc는 스레드가 많으면 malloc 영역(아레나)을 코어 수의 8배까지 만들어 힙 밖 메모리가 커진다.
+      # 두 개로 묶으니 지도 조회 부하에서 앱 메모리가 약 150MB 줄었고 응답 시간은 그대로였다.
+      MALLOC_ARENA_MAX: "2"
     volumes:
       # 공공데이터 파일(휴양림 CSV, 전국휴양림표준데이터 JSON, 공원 경계 TSV)은 저장소에 없어서 서버의 /opt/moewadeul/data에 둔다.
       - ./data:/data:ro
@@ -66,6 +71,25 @@ services:
       # binlog가 켜진 MySQL은 SUPER 권한이 없는 앱 계정의 트리거 생성을 거부한다. 마이그레이션이 지도 묶음 집계용 트리거를 만들어서 켠다.
       # binlog 형식은 ROW라서 트리거가 바꾼 행이 그대로 기록된다.
       - --log-bin-trust-function-creators=1
+      # 메모리 한도 640MB 안에서 데이터 캐시(버퍼 풀)에 더 많이 쓰도록 나머지 몫을 줄인다.
+      # 기본값에서는 performance_schema가 약 235MB, redo 로그 버퍼가 64MB를 써서, 버퍼 풀이 128MB인데도 한도에 닿았다.
+      # performance_schema 통계 표의 크기에 상한을 두면 약 44MB다. Alloy가 읽는 쿼리 통계 표(digest 요약)는 남긴다.
+      - --innodb-buffer-pool-size=256M
+      - --innodb-log-buffer-size=16M
+      # 앱 커넥션 풀 10개와 지표 수집, 백업이 쓰는 연결이면 충분하다.
+      - --max-connections=40
+      - --performance-schema-digests-size=1000
+      - --performance-schema-events-statements-history-long-size=0
+      - --performance-schema-events-stages-history-long-size=0
+      - --performance-schema-events-waits-history-long-size=0
+      - --performance-schema-events-transactions-history-long-size=0
+      - --performance-schema-max-thread-instances=100
+      - --performance-schema-accounts-size=10
+      - --performance-schema-hosts-size=10
+      - --performance-schema-users-size=10
+      - --performance-schema-max-table-handles=500
+      - --performance-schema-max-table-instances=500
+      - --performance-schema-max-file-instances=1000
     # 포트를 열지 않는다. 앱은 Compose 내부 네트워크로만 접속한다.
     volumes:
       - mysql-data:/var/lib/mysql

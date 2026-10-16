@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import {
-  createComment,
-  deleteComment,
-  listComments,
-  updateComment,
-} from '../../api/community';
+import { createComment, deleteComment, listComments, updateComment } from '../../api/community';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import type { CommunityComment } from '../../api/types';
@@ -86,7 +81,8 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
     const controller = new AbortController();
     listComments(postId, 0, controller.signal).then(
       (result) => {
-        if (!controller.signal.aborted) setList({ comments: result.content, page: result.page, hasNext: result.hasNext });
+        if (!controller.signal.aborted)
+          setList({ comments: result.content, page: result.page, hasNext: result.hasNext });
       },
       (error: unknown) => {
         if (!controller.signal.aborted) setListError(toUserMessage(error));
@@ -110,11 +106,11 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
     <section
       id="comments"
       aria-labelledby="community-comments-title"
-      className="scroll-mt-20 rounded-sheet border border-line bg-surface"
+      className="scroll-mt-20 overflow-hidden rounded-sheet border border-line bg-surface"
     >
       <h2
         id="community-comments-title"
-        className="border-b border-line px-4 py-3 text-base font-semibold text-ink"
+        className="border-b border-line px-4 py-3 text-base font-extrabold text-ink sm:px-5"
       >
         댓글 <span className="font-mono tabular-nums">{count}</span>
       </h2>
@@ -127,7 +123,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
           }}
         />
         {status && (
-          <p role="status" className="mt-2 text-sm text-accent-deep">
+          <p role="status" className="mt-2 text-sm text-accent">
             {status}
           </p>
         )}
@@ -191,7 +187,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                 }}
               />
               {comment.replies.length > 0 && (
-                <ul className="mt-2 ml-4 flex flex-col gap-3 border-l-2 border-line pl-3">
+                <ul className="mt-2 ml-4 flex flex-col gap-3 border-l border-line pl-3">
                   {comment.replies.map((reply) => (
                     <li key={reply.commentId}>
                       <CommentItem
@@ -349,12 +345,7 @@ function CommentItem({
       <p className="mt-1 whitespace-pre-wrap break-words text-base text-ink">{content}</p>
       <div className="-mx-2 flex flex-wrap items-center">
         {topLevel && signedIn && (
-          <Button
-            variant="ghost"
-            onClick={onReply}
-            disabled={unverified}
-            className="px-2"
-          >
+          <Button variant="ghost" onClick={onReply} disabled={unverified} className="px-2">
             답글
           </Button>
         )}
@@ -369,12 +360,7 @@ function CommentItem({
           </>
         ) : (
           signedIn && (
-            <Button
-              variant="ghost"
-              onClick={() => onReport(comment.commentId)}
-              disabled={unverified}
-              className="px-2"
-            >
+            <Button variant="ghost" onClick={() => onReport(comment.commentId)} disabled={unverified} className="px-2">
               신고
             </Button>
           )

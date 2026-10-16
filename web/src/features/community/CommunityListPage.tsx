@@ -136,10 +136,15 @@ export function CommunityListPage() {
   return (
     <HubLayout
       title="커뮤니티"
-      actions={
-        <WriteAction spotId={query.spotId} />
+      actions={<WriteAction spotId={query.spotId} />}
+      tabs={
+        <UnderlineTabs
+          label="글 모아 보기"
+          options={TABS}
+          value={query.tab}
+          onChange={(tab) => goTo({ tab, page: 1 })}
+        />
       }
-      tabs={<UnderlineTabs label="글 모아 보기" options={TABS} value={query.tab} onChange={(tab) => goTo({ tab, page: 1 })} />}
       aside={<CommunityAside />}
     >
       {query.spotId !== null && (
@@ -339,8 +344,8 @@ function CommunityAside() {
             </Link>
             에서 구해요.
           </li>
-          <li>돈을 보내 달라는 글은 신고해 주세요.</li>
-          <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
+          <li>금전을 요구하는 글은 신고해 주세요.</li>
+          <li>공원 내에서 야영을 권하는 글은 신고 대상이에요.</li>
           <li>신고가 5건 쌓이면 글이 잠시 내려가고 관리자가 검토해요.</li>
         </ul>
       </AsideSection>
@@ -386,7 +391,7 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
 
   const label = name === null ? '이 장소 글' : `${name} 글`;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 rounded-sheet border border-line bg-surface px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 border-y border-line py-3">
       <p className="text-base font-semibold text-ink">{label}</p>
       <button
         type="button"
@@ -410,7 +415,7 @@ function PostRow({ item }: { item: CommunityPostSummary }) {
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-base font-semibold text-ink">{item.title}</span>
           {item.commentCount > 0 && (
-            <span className="shrink-0 font-mono text-sm tabular-nums text-accent-deep">
+            <span className="shrink-0 font-mono text-sm tabular-nums text-accent">
               [<span className="sr-only">댓글 </span>
               {item.commentCount}
               <span className="sr-only">개</span>]

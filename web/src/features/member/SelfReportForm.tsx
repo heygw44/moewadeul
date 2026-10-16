@@ -106,7 +106,8 @@ export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void })
     <PageCard title="프로필 정보">
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
         <p className="text-sm text-ink-muted">
-          연령대와 성별은 직접 고르는 정보예요. 다른 회원에게는 '직접 입력'으로 표시돼요. 베이스캠프의 연령·성별 조건은 본인확인한 정보로만 따져요.
+          연령대와 성별은 직접 고르는 정보예요. 다른 회원에게는 '직접 입력'으로 표시돼요. 베이스캠프의 연령·성별 조건은
+          본인확인한 정보로만 따져요.
         </p>
         {formError && (
           <div role="alert">

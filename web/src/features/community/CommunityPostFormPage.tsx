@@ -68,7 +68,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   if (session.status !== 'authenticated' || !session.me) {
     return layout(
       showSkeleton ? (
-        <div className="rounded-sheet border border-line bg-surface p-5">
+        <div className="rounded-sheet border border-line bg-surface p-4 sm:p-5">
           <Skeleton className="h-40 w-full" />
         </div>
       ) : null,
@@ -76,7 +76,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   }
   if (session.me.status === 'UNVERIFIED') {
     return layout(
-      <div className="rounded-sheet border border-line bg-surface p-5">
+      <div className="rounded-sheet border border-line bg-surface p-4 sm:p-5">
         <Notice tone="warning" title="이메일 인증을 마치면 글을 쓸 수 있어요">
           <div className="flex flex-col gap-3">
             <p>메일로 받은 인증 코드만 입력하면 돼요.</p>
@@ -108,8 +108,8 @@ function WriteAside() {
             </Link>
             에서 구해요.
           </li>
-          <li>돈을 보내 달라는 글은 신고해 주세요.</li>
-          <li>공원 안 야영을 권하는 글은 신고 대상이에요.</li>
+          <li>금전을 요구하는 글은 신고해 주세요.</li>
+          <li>공원 내에서 야영을 권하는 글은 신고 대상이에요.</li>
           <li>전화번호나 주소 같은 개인정보는 적지 말아 주세요.</li>
         </ul>
       </AsideSection>
@@ -157,20 +157,14 @@ function EditLoader({ postId, myMemberId }: { postId: number; myMemberId: number
 
   if (result === null || notMine) {
     return showSkeleton ? (
-      <div className="rounded-sheet border border-line bg-surface p-5">
+      <div className="rounded-sheet border border-line bg-surface p-4 sm:p-5">
         <Skeleton className="h-64 w-full" />
       </div>
     ) : null;
   }
   if ('error' in result) {
     if (result.error instanceof ApiError && result.error.code === 'NOT_FOUND') {
-      return (
-        <EmptyState
-          framed
-          title="글을 찾을 수 없어요"
-          description="삭제됐거나 볼 수 없는 글이에요."
-        />
-      );
+      return <EmptyState framed title="글을 찾을 수 없어요" description="삭제됐거나 볼 수 없는 글이에요." />;
     }
     return (
       <div className="flex flex-col gap-3">
@@ -203,7 +197,9 @@ function isFormField(field: string): field is FormField {
   return field === 'title' || field === 'content' || field === 'imageIds';
 }
 
-type PostFormProps = { initialSpot: LinkedSpot | null } & ({ mode: 'create' } | { mode: 'edit'; post: CommunityPostDetail });
+type PostFormProps = { initialSpot: LinkedSpot | null } & (
+  { mode: 'create' } | { mode: 'edit'; post: CommunityPostDetail }
+);
 
 function PostForm(props: PostFormProps) {
   const mode: FormMode = props.mode;
@@ -225,7 +221,9 @@ function PostForm(props: PostFormProps) {
       (detail) => {
         if (controller.signal.aborted) return;
         setSpot((previous) =>
-          previous !== null && previous.spotId === unnamedSpotId ? { spotId: unnamedSpotId, name: detail.name } : previous,
+          previous !== null && previous.spotId === unnamedSpotId
+            ? { spotId: unnamedSpotId, name: detail.name }
+            : previous,
         );
       },
       () => undefined,
@@ -309,7 +307,7 @@ function PostForm(props: PostFormProps) {
       noValidate
       onSubmit={handleSubmit}
       aria-label={mode === 'create' ? '글쓰기' : '글 수정'}
-      className="divide-y divide-line rounded-sheet border border-line bg-surface"
+      className="divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface"
     >
       {formError && (
         <div role="alert" className="px-5 py-5">

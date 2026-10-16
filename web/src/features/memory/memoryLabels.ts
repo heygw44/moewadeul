@@ -27,10 +27,13 @@ export function nightsLabel(nights: number): string {
   return nights === 0 ? '당일' : `${nights}박`;
 }
 
-export const NIGHTS_OPTIONS: ReadonlyArray<SelectOption> = Array.from({ length: MEMORY_MAX_NIGHTS + 1 }, (_, nights) => ({
-  value: String(nights),
-  label: nightsLabel(nights),
-}));
+export const NIGHTS_OPTIONS: ReadonlyArray<SelectOption> = Array.from(
+  { length: MEMORY_MAX_NIGHTS + 1 },
+  (_, nights) => ({
+    value: String(nights),
+    label: nightsLabel(nights),
+  }),
+);
 
 // 주소의 좌표가 숫자가 아니거나 범위를 벗어나면 null이다. 서버도 같은 범위를 검사한다.
 export function parseLatLng(lat: string | null, lng: string | null): { lat: number; lng: number } | null {
@@ -54,7 +57,10 @@ export function roundCoordinate(value: number): number {
 }
 
 export function newMemoryPath(position: { lat: number; lng: number }, spotId?: number): string {
-  const query = new URLSearchParams({ lat: String(roundCoordinate(position.lat)), lng: String(roundCoordinate(position.lng)) });
+  const query = new URLSearchParams({
+    lat: String(roundCoordinate(position.lat)),
+    lng: String(roundCoordinate(position.lng)),
+  });
   if (spotId !== undefined) query.set('spotId', String(spotId));
   return `/memories/new?${query.toString()}`;
 }

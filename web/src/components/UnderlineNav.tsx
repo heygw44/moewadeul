@@ -4,7 +4,7 @@ import { Link } from '../app/router';
 // 머리글 띠 아래에 놓는 이동 링크 줄이다. UnderlineTabs와 같은 모양이고, 현재 화면은 aria-current로 알린다.
 export function UnderlineNav({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <nav aria-label={label} className="-mx-3 flex gap-1 overflow-x-auto">
+    <nav aria-label={label} className="flex gap-1 overflow-x-auto">
       {children}
     </nav>
   );
@@ -17,7 +17,7 @@ export function UnderlineNavLink({ to, active, children }: { to: string; active:
       aria-current={active ? 'page' : undefined}
       className={[
         'inline-flex min-h-11 items-center whitespace-nowrap border-b-2 px-3 text-base',
-        active ? 'border-ink font-semibold text-ink' : 'border-transparent text-ink-muted hover:text-ink',
+        active ? 'border-brand font-bold text-ink' : 'border-transparent text-ink-muted hover:text-ink',
       ].join(' ')}
     >
       {children}

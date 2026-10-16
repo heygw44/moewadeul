@@ -11,6 +11,7 @@ type PageLayoutProps = {
   actions?: ReactNode;
   tabs?: ReactNode;
   aside?: ReactNode;
+  titleInContent?: boolean;
   children: ReactNode;
 };
 
@@ -23,12 +24,23 @@ export function PageLayout({ wide = false, children, ...rest }: PageLayoutProps)
   );
 }
 
-// 화면 안의 한 묶음. 테두리 있는 카드 바탕 위에 글자를 둔다.
+// 화면 안의 한 묶음. 목록판과 같은 흰 판에 제목과 내용을 넣는다.
 export function PageCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
-      <h2 className="text-lg font-semibold text-ink">{title}</h2>
+    <section className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4 lg:p-5">
+      <h2 className="text-lg font-bold text-ink">{title}</h2>
       {children}
+    </section>
+  );
+}
+
+// 안내판의 행 목록이다. 제목은 판 바깥 위에 작은 글자로 두고, 판 안의 행은 끝에서 끝까지 1px 선으로 나눈다.
+// 판 안쪽 여백은 행마다 준다. 판에 여백을 주면 행 사이 선이 판 끝까지 닿지 않는다.
+export function BoardSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-sm font-bold text-ink-muted">{title}</h2>
+      <div className="overflow-hidden rounded-sheet border border-line bg-surface">{children}</div>
     </section>
   );
 }

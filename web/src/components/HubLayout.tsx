@@ -19,6 +19,8 @@ type HubLayoutProps = {
   // 공식 행사 알림 띠를 맨 위에 둘지 정한다. 행사 목록처럼 행사를 찾는 화면에서만 켠다.
   // 작업하는 화면(내 정보, 알림, 커뮤니티 등)에 두면 할 일과 상관없는 홍보가 맨 위를 차지한다.
   announcement?: boolean;
+  // 본문 첫 판이 제목을 크게 보여 줄 때 켠다. 머리 띠에는 이동 경로만 남기고 제목(h1)은 스크린 리더에만 읽힌다.
+  titleInContent?: boolean;
   children: ReactNode;
 };
 
@@ -34,6 +36,7 @@ export function HubLayout({
   aside,
   width = 'wide',
   announcement = false,
+  titleInContent = false,
   children,
 }: HubLayoutProps) {
   // 머리 띠 안쪽과 본문은 같은 열을 쓴다. 그래야 제목·탭·오른쪽 버튼의 가장자리가 본문 가장자리와 맞는다.
@@ -43,14 +46,17 @@ export function HubLayout({
     <div className="flex min-h-dvh flex-col bg-canvas pb-(--bottom-nav-h)">
       {announcement && <AnnouncementBar />}
       <SiteHeader />
-      <div className="border-b border-line bg-canvas">
-        <div className="mx-auto max-w-screen-xl px-4 pt-8">
-          <div className={column}>
+      <div className="bg-canvas">
+        <div className={`mx-auto max-w-screen-xl px-4 ${titleInContent ? 'pt-6' : 'pt-8'}`}>
+          {/* 띠 아래 선은 화면 끝까지 긋지 않고 본문과 같은 열 안에서 끝낸다. 좁은 한 열 화면에서 선만 넓게 뻗지 않게 하기 위해서다. */}
+          <div className={titleInContent ? column : `border-b border-line ${column}`}>
             {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
-            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3">
+            <div
+              className={titleInContent ? 'sr-only' : 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3'}
+            >
               <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="break-words text-2xl font-bold tracking-tight text-ink">{title}</h1>
-                {description && <p className="text-sm text-ink-muted">{description}</p>}
+                <h1 className="break-words text-3xl font-extrabold tracking-tight text-ink lg:text-4xl">{title}</h1>
+                {description && <p className="text-base text-ink">{description}</p>}
                 {meta}
               </div>
               {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -62,7 +68,7 @@ export function HubLayout({
       <div className="flex-1 bg-canvas">
         {/* 안내 열이 없으면 두 열 격자를 쓰지 않는다. 쓰면 빈 오른쪽 열 폭만큼 본문이 머리 띠보다 좁아진다. */}
         <main
-          className={`mx-auto max-w-screen-xl px-4 py-6 ${aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-6' : ''}`}
+          className={`mx-auto max-w-screen-xl px-4 py-6 ${aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-10' : ''}`}
         >
           <div className={`flex min-w-0 flex-col gap-4 ${column}`}>{children}</div>
           {aside && <aside className="mt-6 flex flex-col gap-4 lg:mt-0">{aside}</aside>}
@@ -74,17 +80,18 @@ export function HubLayout({
   );
 }
 
-// 안내 열의 한 묶음이다. 본문 목록은 text-sm이고 항목 사이를 띄운다.
+// 안내 열의 한 묶음이다. 목록판과 같은 흰 판에 넣는다.
+// 본문 목록은 text-sm이고 항목 사이를 띄운다.
 export function AsideSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-4">
-      <h2 className="text-base font-semibold text-ink">{title}</h2>
-      <div className="flex flex-col gap-2 text-sm text-ink-muted [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2">{children}</div>
+      <h2 className="text-base font-bold text-ink">{title}</h2>
+      <div className="flex flex-col gap-2 text-sm text-ink [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2">{children}</div>
     </section>
   );
 }
 
-// 목록을 감싸는 패널이다. header가 있으면 위에 한 줄 머리를 두고, 항목 사이에는 선을 긋는다.
+// 목록을 감싸는 흰 목록판이다. 탐방로 안내판의 행처럼 항목 사이에 옅은 선을 긋는다.
 export function ListPanel({ header, children }: { header?: ReactNode; children: ReactNode }) {
   return (
     <div className="overflow-hidden rounded-sheet border border-line bg-surface">

@@ -91,7 +91,11 @@ export function spotFilterChips(filters: SpotFilters, onChange: (next: SpotFilte
     });
   }
   if (filters.hideClosed) {
-    chips.push({ key: 'hideClosed', label: '휴장인 곳 빼기', onRemove: () => onChange({ ...filters, hideClosed: false }) });
+    chips.push({
+      key: 'hideClosed',
+      label: '휴장인 곳 빼기',
+      onRemove: () => onChange({ ...filters, hideClosed: false }),
+    });
   }
   return chips;
 }
