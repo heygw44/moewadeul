@@ -117,7 +117,8 @@ export function BasecampFilterDialog({ initial, onApply, onClose }: BasecampFilt
           />
         </fieldset>
 
-        <div className="flex gap-2 border-t border-line pt-4">
+        {/* 조건이 길어 창을 굴려도 초기화·적용 버튼은 창 아래에 붙여 둔다. 대화상자 본문 여백만큼 바깥으로 넓혀 바탕을 채운다. */}
+        <div className="sticky -bottom-5 -mx-5 -mb-5 flex gap-2 border-t border-line bg-surface px-5 pt-4 pb-5">
           <Button type="button" variant="ghost" className="shrink-0" onClick={() => setDraft(NO_BASECAMP_FILTERS)}>
             초기화
           </Button>

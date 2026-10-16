@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import type { AiInterpretResponse, NearbySpot } from '../../api/types';
 import { BottomTabBar } from '../../app/layout/BottomTabBar';
@@ -52,6 +53,23 @@ import { useSpotsNearby } from './useSpotsNearby';
 import type { SpotsNearby } from './useSpotsNearby';
 
 type SheetSnap = 'peek' | 'half' | 'full';
+
+// 모바일에서 시트 윗변이 화면 아래에서 떨어진 높이다. Sheet의 단계별 높이(28dvh, 55dvh, 92dvh)와 같은 값이다.
+// 하단 탭 위에 뜨는 전체 단계는 시트 높이에서 탭 높이를 빼고 그만큼 올리므로, 윗변은 탭과 상관없이 92dvh다.
+const SHEET_TOP: Record<SheetSnap, string> = { peek: '28dvh', half: '55dvh', full: '92dvh' };
+
+// 폰에서 지도 위쪽 끝부터 시트 윗변까지의 높이(px)다. 데스크톱은 시트가 지도 옆 패널이라 지도 높이 전체가 보인다.
+function visibleMapHeight(host: HTMLElement | null): number | undefined {
+  if (!host || window.matchMedia(DESKTOP_QUERY).matches) return undefined;
+  const sheet = host.closest('[data-map-root]')?.querySelector('[data-sheet]');
+  if (!sheet) return undefined;
+  return sheet.getBoundingClientRect().top - host.getBoundingClientRect().top;
+}
+
+function sheetTop(snap: SheetSnap, aboveBottomNav: boolean): string {
+  if (snap === 'full' || !aboveBottomNav) return SHEET_TOP[snap];
+  return `calc(${SHEET_TOP[snap]} + var(--bottom-nav-h))`;
+}
 
 type MapFailure = { reason: MapLoadErrorReason; message: string };
 
@@ -329,7 +347,7 @@ export function MapPage({
   useEffect(() => {
     if (!map || !contextMenuEnabled) return;
     const offContextMenu = map.onContextMenu((position) => {
-      const host = map.showMenu(position);
+      const host = map.showMenu(position, visibleMapHeight(hostRef.current));
       setContextMenu(host ? { position, host } : null);
     });
     const offMoveStart = map.onMoveStart(closeContextMenu);
@@ -483,10 +501,13 @@ export function MapPage({
     setMapAttempt((value) => value + 1);
   }
 
+  // 폰에서 시트를 전체로 올렸거나 길게 누른 메뉴가 떠 있으면 범례와 지역 칩을 숨긴다. 메뉴를 가리지 않게 하기 위해서다.
+  const hideMapOverlays = snap === 'full' || contextMenu !== null;
+
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-canvas">
       <SiteHeader />
-      <div className="relative min-h-0 flex-1 lg:flex">
+      <div data-map-root className="relative min-h-0 flex-1 lg:flex">
         <Sheet
           aboveBottomNav={!contentOpen}
           snap={snap}
@@ -543,7 +564,11 @@ export function MapPage({
         </Sheet>
 
         {/* z-0으로 쌓임 맥락을 따로 만들어서, 지도와 위에 뜬 버튼이 모바일 시트보다 아래에 그려지게 한다. */}
-        <div className="absolute inset-0 z-0 lg:relative lg:flex-1">
+        {/* 폰에서 시트 윗변 높이를 --sheet-top으로 넘긴다. 범례·지역 칩·카카오 로고가 이 높이 위에 선다. 데스크톱은 시트가 옆 패널이라 0이다. */}
+        <div
+          style={{ '--mobile-sheet-top': sheetTop(snap, !contentOpen) } as CSSProperties}
+          className="absolute inset-0 z-0 [--sheet-top:var(--mobile-sheet-top)] lg:relative lg:flex-1 lg:[--sheet-top:0px]"
+        >
           <div ref={hostRef} role="region" aria-label="지도" className="absolute inset-0" />
           {!mapFailure && (
             <>
@@ -559,8 +584,8 @@ export function MapPage({
               >
                 <path d="M10 0v20M0 10h20" strokeWidth="1.5" />
               </svg>
-              <MapLegend />
-              <MapRegionChip label={regionName} />
+              <MapLegend hiddenOnMobile={hideMapOverlays} />
+              <MapRegionChip label={regionName} hiddenOnMobile={hideMapOverlays} />
             </>
           )}
 

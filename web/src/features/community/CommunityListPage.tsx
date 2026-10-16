@@ -270,7 +270,7 @@ function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
           options={SEARCH_TYPES}
           value={type}
           onChange={(event) => setType(parseSearchType(event.target.value))}
-          className="w-28 shrink-0 sm:w-32"
+          className="w-32 shrink-0"
         />
         <TextField
           label="검색어"
