@@ -389,7 +389,7 @@ function Statement() {
       <div className="mx-auto max-w-[73.75rem] px-4 lg:px-8">
         <p
           ref={textRef}
-          className="max-w-[24em] text-[1.375rem] leading-[1.45] font-bold tracking-[-0.025em] lg:text-[clamp(1.625rem,2.6vw,2.25rem)]"
+          className="mx-auto max-w-[24em] text-center text-[1.375rem] leading-[1.45] font-bold tracking-[-0.025em] lg:text-[clamp(1.625rem,2.6vw,2.25rem)]"
         >
           {words.map((word, index) => (
             <Fragment key={index}>

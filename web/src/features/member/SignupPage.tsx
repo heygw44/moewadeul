@@ -6,7 +6,7 @@ import { toUserMessage } from '../../api/errors';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmailField } from '../../components/EmailField';
-import { composeEmail, CUSTOM_DOMAIN, EMPTY_EMAIL } from '../../components/emailValue';
+import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
 import { Notice } from '../../components/Notice';
 import { PasswordField } from '../../components/PasswordField';
@@ -14,9 +14,7 @@ import { TextField } from '../../components/TextField';
 import { AuthLayout } from './AuthLayout';
 import { safeNextPath, withNext } from './nextPath';
 import {
-  EMAIL_CUSTOM_DOMAIN_REQUIRED,
-  EMAIL_DOMAIN_REQUIRED,
-  EMAIL_REQUIRED,
+  emailRequiredMessage,
   NICKNAME_REQUIRED,
   PASSWORD_CONFIRM_MISMATCH,
   PASSWORD_CONFIRM_REQUIRED,
@@ -64,11 +62,8 @@ export function SignupPage() {
 
     // 비밀번호·닉네임 규칙은 서버가 검사한다. 화면은 빈 칸만 미리 막는다.
     const emptyErrors: Partial<Record<SignupField, string>> = {};
-    if (email.local.trim() === '') emptyErrors.email = EMAIL_REQUIRED;
-    else if (email.domainChoice === '') emptyErrors.email = EMAIL_DOMAIN_REQUIRED;
-    else if (email.domainChoice === CUSTOM_DOMAIN && email.customDomain.trim() === '') {
-      emptyErrors.email = EMAIL_CUSTOM_DOMAIN_REQUIRED;
-    }
+    const emailMissing = emailRequiredMessage(email);
+    if (emailMissing) emptyErrors.email = emailMissing;
     if (password === '') emptyErrors.password = PASSWORD_REQUIRED;
     if (passwordConfirm === '') emptyErrors.passwordConfirm = PASSWORD_CONFIRM_REQUIRED;
     else if (passwordConfirm !== password) emptyErrors.passwordConfirm = PASSWORD_CONFIRM_MISMATCH;
