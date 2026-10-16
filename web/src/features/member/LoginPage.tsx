@@ -6,12 +6,15 @@ import { toUserMessage } from '../../api/errors';
 import type { Me } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
+import { EmailField } from '../../components/EmailField';
+import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
+import type { EmailValue } from '../../components/emailValue';
 import { Notice } from '../../components/Notice';
 import { TextField } from '../../components/TextField';
 import { formatKstDateTime } from '../../lib/datetime';
 import { AuthLayout } from './AuthLayout';
 import { safeNextPath, withNext } from './nextPath';
-import { EMAIL_REQUIRED, PASSWORD_REQUIRED } from './requiredMessages';
+import { emailRequiredMessage, PASSWORD_REQUIRED } from './requiredMessages';
 import { useSession } from './session';
 import { useRetryCountdown } from './useRetryCountdown';
 
@@ -35,7 +38,7 @@ export function LoginPage() {
   const session = useSession();
   const lock = useRetryCountdown();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState<EmailValue>(EMPTY_EMAIL);
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<LoginField, string>>>({});
   const [formError, setFormError] = useState<FormError | null>(null);
@@ -57,7 +60,8 @@ export function LoginPage() {
     if (submitting || lock.secondsLeft > 0) return;
 
     const emptyErrors: Partial<Record<LoginField, string>> = {};
-    if (email.trim() === '') emptyErrors.email = EMAIL_REQUIRED;
+    const emailMissing = emailRequiredMessage(email);
+    if (emailMissing) emptyErrors.email = emailMissing;
     if (password === '') emptyErrors.password = PASSWORD_REQUIRED;
     setFieldErrors(emptyErrors);
     setFormError(null);
@@ -65,7 +69,7 @@ export function LoginPage() {
 
     setSubmitting(true);
     try {
-      const result = await login({ email: email.trim(), password });
+      const result = await login({ email: composeEmail(email), password });
       const me = await session.refresh();
       navigate(destinationAfterLogin(me ?? result, next), { replace: true });
     } catch (error) {
@@ -113,16 +117,7 @@ export function LoginPage() {
       }
     >
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <TextField
-          label="이메일"
-          type="email"
-          name="email"
-          autoComplete="email"
-          autoFocus
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          error={fieldErrors.email}
-        />
+        <EmailField autoFocus autoComplete="username" value={email} onChange={setEmail} error={fieldErrors.email} />
         <TextField
           label="비밀번호"
           type="password"

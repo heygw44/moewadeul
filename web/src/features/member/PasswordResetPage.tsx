@@ -5,12 +5,14 @@ import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
+import { EmailField } from '../../components/EmailField';
+import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
+import type { EmailValue } from '../../components/emailValue';
 import { Notice } from '../../components/Notice';
 import { PasswordField } from '../../components/PasswordField';
-import { TextField } from '../../components/TextField';
 import { AuthLayout } from './AuthLayout';
 import {
-  EMAIL_REQUIRED,
+  emailRequiredMessage,
   NEW_PASSWORD_REQUIRED,
   PASSWORD_CONFIRM_MISMATCH,
   PASSWORD_CONFIRM_REQUIRED,
@@ -62,7 +64,7 @@ function BackToLogin() {
 
 // 가입 여부와 상관없이 서버가 같은 응답을 주므로, 화면도 가입된 이메일일 때만 메일이 간다고 적는다.
 function RequestStep() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState<EmailValue>(EMPTY_EMAIL);
   const [emailError, setEmailError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -74,15 +76,16 @@ function RequestStep() {
     if (submitting || wait.secondsLeft > 0) return;
     setFormError(null);
     setSent(false);
-    if (email.trim() === '') {
-      setEmailError(EMAIL_REQUIRED);
+    const emailMissing = emailRequiredMessage(email);
+    if (emailMissing) {
+      setEmailError(emailMissing);
       return;
     }
     setEmailError(undefined);
 
     setSubmitting(true);
     try {
-      await requestPasswordReset(email.trim());
+      await requestPasswordReset(composeEmail(email));
       setSent(true);
     } catch (error) {
       handleError(error);
@@ -116,16 +119,7 @@ function RequestStep() {
       footer={<BackToLogin />}
     >
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <TextField
-          label="이메일"
-          type="email"
-          name="email"
-          autoComplete="email"
-          autoFocus
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          error={emailError}
-        />
+        <EmailField autoFocus value={email} onChange={setEmail} error={emailError} />
         {formError && (
           <div role="alert">
             <Notice tone="danger" title="재설정 링크를 보내지 못했어요">
