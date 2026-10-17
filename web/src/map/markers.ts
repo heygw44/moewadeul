@@ -281,7 +281,7 @@ export function createPhotoPin(data: { thumbnailUrl?: string; label: string }, o
   let yAnchor = 0.5;
   if (data.thumbnailUrl) {
     button.className =
-      'relative block h-11 w-11 cursor-pointer overflow-hidden rounded-control border border-white bg-bakji ' +
+      'relative block h-11 w-11 cursor-pointer overflow-hidden rounded-row border-2 border-white bg-bakji ' +
       'transition-[scale] duration-150 motion-reduce:transition-none ' +
       FOCUS_RING;
     const image = document.createElement('img');

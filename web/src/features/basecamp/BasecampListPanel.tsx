@@ -137,7 +137,7 @@ function BasecampRow({ item }: { item: BasecampSearchItem }) {
         to={`/basecamps/${item.basecampId}`}
         className="grid min-h-16 grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3 hover:bg-fill focus-visible:-outline-offset-2"
       >
-        <span className="flex flex-col items-center rounded-control border border-line py-1.5 text-center">
+        <span className="flex flex-col items-center rounded-row bg-fill py-1.5 text-center">
           <span className="font-mono text-xl leading-none font-extrabold tabular-nums text-ink">{Number(day)}</span>
           <span className="mt-1 text-[0.6875rem] text-ink-muted">
             {Number(month)}월 {weekday}

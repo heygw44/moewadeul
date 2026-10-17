@@ -176,7 +176,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
       {thumbnails.length > 0 && (
         <ul className="grid grid-cols-4 gap-1" aria-label={`사진 ${item.images.length}장`}>
           {thumbnails.map((image, index) => (
-            <li key={image.imageId} className="aspect-square overflow-hidden rounded-control bg-fill">
+            <li key={image.imageId} className="aspect-square overflow-hidden rounded-row bg-fill">
               <img src={image.url} alt={`사진 ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
             </li>
           ))}

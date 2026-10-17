@@ -144,7 +144,7 @@ function SoloTripForm({
       noValidate
       onSubmit={handleSubmit}
       aria-label="혼자 가는 일정 등록"
-      className="flex flex-col gap-4 rounded-control border border-line bg-canvas p-4"
+      className="flex flex-col gap-4 rounded-sheet bg-fill p-5"
     >
       {formError && (
         <div role="alert">

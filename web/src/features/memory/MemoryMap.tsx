@@ -108,7 +108,7 @@ export function MemoryMap({
       ref={hostRef}
       role="region"
       aria-label="기록 지도"
-      className="relative h-72 w-full overflow-hidden rounded-control border border-line bg-fill sm:h-96"
+      className="relative h-72 w-full overflow-hidden rounded-sheet bg-fill sm:h-96"
     />
   );
 }

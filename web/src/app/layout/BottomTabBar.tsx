@@ -25,11 +25,12 @@ export function BottomTabBar() {
                 to={navTarget(item, signedIn)}
                 aria-current={current ? 'page' : undefined}
                 className={[
-                  'relative flex h-16 flex-col items-center justify-center gap-1 text-[0.6875rem]',
-                  current ? 'font-bold text-brand' : 'text-ink-muted',
+                  'relative flex h-16 flex-col items-center justify-center gap-1 text-xs font-semibold',
+                  current ? 'text-ink' : 'text-ink-muted',
                 ].join(' ')}
               >
-                <Icon name={item.icon} size={22} />
+                {/* 지금 탭은 글자를 먹색으로, 아이콘을 숲색으로 칠해 두 가지로 알아보게 한다. */}
+                <Icon name={item.icon} size={22} className={current ? 'text-brand' : undefined} />
                 {item.label}
               </Link>
             </li>

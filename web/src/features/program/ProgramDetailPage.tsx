@@ -163,7 +163,7 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
               detail.locationText
             )}
           </p>
-          <dl className="mt-4 grid grid-cols-2 overflow-hidden rounded-control border border-white/25 sm:grid-cols-[1fr_1fr_auto]">
+          <dl className="mt-4 grid grid-cols-2 overflow-hidden rounded-row border border-white/25 sm:grid-cols-[1fr_1fr_auto]">
             <div className="px-3 py-2">
               <dt className="text-xs text-brand-ink">시작</dt>
               <dd className="text-sm font-extrabold tabular-nums sm:text-[0.9375rem]">

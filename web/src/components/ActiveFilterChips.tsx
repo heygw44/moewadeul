@@ -13,9 +13,9 @@ type ActiveFilterChipsProps = {
 };
 
 const CHIP =
-  'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-1 rounded-control border border-ink bg-ink pr-2 pl-3 text-sm font-bold text-white hover:bg-ink/85';
+  'pointer-events-auto inline-flex min-h-11 shrink-0 items-center gap-1 rounded-control bg-ink pr-3 pl-4 text-sm font-semibold text-white hover:bg-ink/85';
 const RESET =
-  'pointer-events-auto inline-flex min-h-11 shrink-0 items-center rounded-control border border-line bg-surface px-3 text-sm text-ink hover:bg-fill';
+  'pointer-events-auto inline-flex min-h-11 shrink-0 items-center rounded-control bg-fill px-4 text-sm font-semibold text-ink hover:bg-fill-strong';
 
 // 켜진 조건을 한 줄로 보여 준다. 칩을 누르면 그 조건만 풀고, 줄이 넘치면 가로로 밀어서 본다.
 // 지도 위에 띄우므로 줄 너비를 칩만큼으로 줄여서, 칩이 없는 빈자리는 지도를 끄는 손가락을 막지 않게 한다.

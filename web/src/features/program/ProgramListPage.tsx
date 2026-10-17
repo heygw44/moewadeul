@@ -136,7 +136,7 @@ function ProgramRow({ item }: { item: ProgramSummary }) {
   return (
     <li>
       <Link to={`/programs/${item.programId}`} className="flex min-h-11 gap-4 px-4 py-4 hover:bg-fill">
-        <span className="flex w-14 shrink-0 flex-col items-center self-start rounded-control border border-line py-1.5 text-center">
+        <span className="flex w-14 shrink-0 flex-col items-center self-start rounded-row bg-fill py-1.5 text-center">
           <span className="text-[0.6875rem] text-ink-muted">{date.month}</span>
           <span className="font-mono text-xl leading-tight font-extrabold tabular-nums text-ink">{date.day}</span>
           <span className="text-[0.6875rem] text-ink-muted">{date.weekday}</span>

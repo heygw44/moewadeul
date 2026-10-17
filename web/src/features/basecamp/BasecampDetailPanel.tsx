@@ -159,7 +159,7 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
             {status.label}
           </p>
           <h2 className="mt-1 text-2xl leading-tight font-extrabold tracking-[-0.025em] break-words">{detail.title}</h2>
-          <dl className="mt-4 grid grid-cols-[1fr_1fr_auto] overflow-hidden rounded-control border border-white/25">
+          <dl className="mt-4 grid grid-cols-[1fr_1fr_auto] overflow-hidden rounded-row border border-white/25">
             <div className="px-3 py-2">
               <dt className="text-xs text-brand-ink">출발</dt>
               <dd className="text-[0.9375rem] font-extrabold whitespace-nowrap tabular-nums">

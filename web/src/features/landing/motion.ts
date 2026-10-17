@@ -47,27 +47,6 @@ export function riseClass(inView: boolean): string {
   return inView ? 'motion-safe:animate-rise' : 'motion-safe:opacity-0';
 }
 
-// 목록 중에서 지금 화면 세로 가운데를 지나는 항목의 순서를 알려 준다. 스크롤에 맞춰 단계를 바꾸는 섹션이 쓴다.
-export function useActiveIndex(itemRefs: RefObject<(HTMLElement | null)[]>): number {
-  const [active, setActive] = useState(0);
-  useEffect(() => {
-    const items = (itemRefs.current ?? []).filter((item): item is HTMLElement => item !== null);
-    if (items.length === 0 || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActive(items.indexOf(entry.target as HTMLElement));
-        }
-      },
-      // 화면 가운데 4% 띠에 걸친 항목만 고른다.
-      { rootMargin: '-48% 0px -48% 0px' },
-    );
-    items.forEach((item) => observer.observe(item));
-    return () => observer.disconnect();
-  }, [itemRefs]);
-  return active;
-}
-
 // 요소가 화면 근처에 있는 동안만 매 프레임 step을 부른다. 스크롤에 묶인 움직임이 화면 밖에서 계산을 계속하지 않게 한다.
 export function useFrameWhileVisible(ref: RefObject<Element | null>, step: () => void, enabled: boolean) {
   const stepRef = useRef(step);
@@ -102,8 +81,4 @@ export function useFrameWhileVisible(ref: RefObject<Element | null>, step: () =>
 export function approach(current: number, target: number, rate: number): number {
   const next = current + (target - current) * rate;
   return Math.abs(target - next) < 0.0005 ? target : next;
-}
-
-export function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }

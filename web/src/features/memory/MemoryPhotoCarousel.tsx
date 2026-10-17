@@ -41,7 +41,7 @@ export function MemoryPhotoCarousel({
         onScroll={handleScroll}
         tabIndex={total > 1 ? 0 : undefined}
         aria-label={`${owner}님의 기록 사진 ${total}장`}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-control border border-line bg-fill [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory overflow-x-auto rounded-sheet bg-fill [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onKeyDown={(event) => {
           if (total < 2) return;
           if (event.key === 'ArrowRight' && index < total - 1) {

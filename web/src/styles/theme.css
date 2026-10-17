@@ -14,30 +14,30 @@
   --font-mono: var(--font-sans);
   --font-mono--font-feature-settings: 'tnum';
 
-  /* 바탕과 면: 바탕은 햇빛 아래에서도 눈이 덜 피곤한 옅은 미색이고, 목록판·패널·입력란은 흰 판이라 바탕 위에서 판처럼 읽힌다 */
-  --color-canvas: #f6f5f1; /* 화면 바탕. 먹 16.2:1, 보조 글자 6.8:1 */
-  --color-fill: #ecebe5; /* 눌린 상태, hover, 신뢰 단계 0 바탕. 보조 글자 6.2:1 */
-  --color-fill-strong: #e2e1da; /* fill 위 hover·pressed */
-  --color-surface: #ffffff; /* 목록판·패널·시트·다이얼로그·입력란 */
-  --color-line: #dad8d1; /* 판 테두리, 행 사이 선. 대비가 낮아 정보 전달에 쓰지 않는다 */
+  /* 바탕과 면: 바탕은 흰색이고, 묶음은 옅은 세이지 면이다. 면과 면은 1px 선이나 그림자 대신 색 한 단계로 나눈다 */
+  --color-canvas: #ffffff; /* 화면 바탕. 먹 16.6:1, 보조 글자 6.4:1 */
+  --color-fill: #f1f4ef; /* 카드·패널 묶음·칩·검색 칸·hover 면. 먹 14.9:1, 보조 글자 5.8:1 */
+  --color-fill-strong: #e6ece4; /* fill 위 hover, 보조 버튼, 비활성 버튼. brand-strong 글자 7.3:1, 보조 글자 5.3:1 */
+  --color-surface: #ffffff; /* 세이지 면 위에 다시 올리는 흰 판·시트·다이얼로그·입력란 */
+  --color-line: #e3e8e1; /* 앱 화면 조각 안의 행 구분, 스크롤한 머리글 아래 선. 대비가 낮아 정보 전달에 쓰지 않는다 */
 
   /* 글자 */
-  --color-ink: #141a17; /* 본문, 고른 칸 반전. 흰 바탕 17.7:1 */
-  --color-ink-muted: #4f5853; /* 보조 글자. 흰 바탕 7.4:1, fill 6.2:1 */
-  --color-ink-subtle: #5d655f; /* 메타 글자, 입력란 테두리. 흰 바탕 6:1, 미색 5.5:1 */
-  --color-ink-faint: #858b87; /* 랜딩에서 스크롤로 채우기 전의 큰 글자. 흰 바탕 3.5:1이라 24px 이상 굵은 글자에만 쓴다 */
+  --color-ink: #16211a; /* 본문, 고른 칸 반전. 흰 바탕 16.6:1 */
+  --color-ink-muted: #56625a; /* 보조 글자. 흰 바탕 6.4:1, fill 5.8:1 */
+  --color-ink-subtle: #5f6a62; /* 메타 글자, 비활성 버튼 글자. 흰 바탕 5.6:1, fill-strong 4.7:1 */
+  --color-ink-faint: #8a948c; /* 입력란 테두리(흰 바탕 3.1:1), 랜딩에서 스크롤로 채우기 전의 큰 글자(24px 이상 굵은 글자에만) */
 
-  /* 판: 탐방로 안내판의 진한 숲색이다. 머리글, 지금 보는 곳 띠, 패널 머리, 주 버튼, 바닥글을 칠한다 */
-  --color-brand: #1d3b2c; /* 흰 글자 12.3:1 */
-  --color-brand-strong: #163023; /* 주 버튼 hover·pressed. 흰 글자 14.2:1 */
-  --color-brand-raised: #25483a; /* 판 위에 한 단계 밝게 놓는 띠. 흰 글자 10.2:1 */
-  --color-brand-ink: #b7c7bd; /* 판 위 보조 글자. brand 위 7:1, brand-raised 위 5.8:1 */
+  /* 숲색: 넓게 칠하는 색은 이것 하나다. 주 버튼, 켜진 토글, 번호 원과 핀, 알림 띠를 칠한다 */
+  --color-brand: #2c6a45; /* 흰 글자 6.4:1 */
+  --color-brand-strong: #22543a; /* 주 버튼 hover·pressed, 보조 버튼 글자. 흰 글자 8.8:1 */
+  --color-brand-raised: #2c5a40; /* 랜딩 마무리 면. 흰 글자 7.9:1 */
+  --color-brand-ink: #dbe6dd; /* 마무리 면 위 보조 글자. brand-raised 위 6.2:1 */
 
-  /* 확인: 모집 중, 조건에 맞음, 성공 같은 좋은 상태의 글자와 고른 칸 표시 */
-  --color-accent: #24603f; /* 흰 바탕 7.5:1, 미색 6.8:1 */
-  --color-accent-strong: #1b4a31;
-  --color-accent-deep: #1b4a31; /* soft 위 글자 8.6:1 */
-  --color-accent-soft: #e6eee8; /* 선택·성공 바탕 */
+  /* 확인: 모집 중, 조건에 맞음, 성공 같은 좋은 상태의 글자와 고른 행 바탕 */
+  --color-accent: #2c6a45; /* 흰 바탕 6.4:1, fill 5.8:1 */
+  --color-accent-strong: #22543a;
+  --color-accent-deep: #22543a; /* soft 위 글자 7.3:1 */
+  --color-accent-soft: #e6ece4; /* 선택·성공 바탕 */
 
   /* 정보: 안내, 본인확인, 포커스 링 */
   --color-info: #1d4fc4; /* 흰 글자 7.1:1, soft 위 6.2:1 */
@@ -51,19 +51,21 @@
 
   /* 경고·위험 */
   --color-warning: #8f4705; /* 공원 경계 경고 글자. 흰 바탕 6.8:1, soft 위 5.8:1 */
-  --color-warning-line: #c27316; /* 경고 테두리·아이콘·핀 고리. 흰 바탕 3.7:1 */
+  --color-warning-line: #c27316; /* 경고 아이콘·핀 고리. 흰 바탕 3.7:1 */
   --color-warning-soft: #f6ead8;
   --color-danger: #c0331b; /* 오류·위험 행동. 흰 글자 5.6:1, soft 위 4.9:1 */
   --color-danger-soft: #fdecea;
 
-  --radius-control: 0.25rem; /* 버튼·입력·칸 4px. 안내판처럼 각이 서 보이게 작게 둔다 */
-  --radius-sheet: 0.375rem; /* 목록판·패널·다이얼로그 6px */
-  --radius-drawer: 0.75rem; /* 모바일 하단 시트의 윗모서리 12px. 손잡이로 끄는 층이라 판보다 둥글게 둔다 */
-  /* 떠 있는 층(지도 위 판·시트·다이얼로그·토스트·검색 후보)에만 쓴다. 먹색을 섞은 가까운 그림자와 넓은 그림자를 겹친다 */
-  --shadow-raise: 0 1px 2px rgb(20 26 23 / 0.08), 0 10px 30px rgb(20 26 23 / 0.14);
+  --radius-control: 9999px; /* 버튼·칩·탭·검색 칸은 모두 알약이다. 9~16px의 어중간한 둥근 버튼을 쓰지 않으려고 한 모양으로 정한다 */
+  --radius-field: 0.75rem; /* 입력란·선택란·글 상자 12px. 여러 줄 글이 들어가서 알약 대신 둥근 칸이다 */
+  --radius-row: 1.125rem; /* 목록 행의 hover·선택 바탕 18px */
+  --radius-sheet: 1.25rem; /* 카드·패널 묶음·안내 상자·다이얼로그 20px */
+  --radius-drawer: 1.5rem; /* 모바일 하단 시트의 윗모서리 24px */
+  /* 떠 있는 층(지도 위 버튼·칩·판, 시트, 다이얼로그, 토스트, 검색 후보)에만 쓴다. 쉬는 요소에는 그림자를 두지 않는다 */
+  --shadow-raise: 0 1px 2px rgb(22 33 26 / 0.06), 0 10px 30px rgb(22 33 26 / 0.14);
 
-  /* 랜딩의 그림과 안내판 16px. 화면 그림을 제품 사진처럼 크게 놓는 자리라서 판보다 둥글게 둔다 */
-  --radius-media: 1rem;
+  /* 데스크톱 지도 칸과 랜딩의 그림·큰 카드 24px */
+  --radius-media: 1.5rem;
 
   /* 랜딩의 등장 움직임. 위치와 투명도만 바꾸고, 쓰는 쪽은 motion-safe: 아래에서만 건다.
      처음엔 빠르게 움직이다 끝에서 천천히 멈추는 곡선이라 멈출 때 덜컥거리지 않는다 */
@@ -112,7 +114,7 @@
     /* 스크롤 막대가 없는 지도 화면과 있는 목록 화면을 오갈 때 가운데 정렬한 머리글이 막대 폭만큼 밀리지 않게 자리를 늘 비워 둔다 */
     scrollbar-gutter: stable;
     caret-color: var(--color-brand);
-    scrollbar-color: #c3c1b9 transparent;
+    scrollbar-color: #c9d1c6 transparent;
   }
 
   body {
