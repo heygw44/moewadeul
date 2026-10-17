@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import type { AiInterpretResponse, NearbySpot } from '../../api/types';
@@ -17,6 +17,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { createMapView } from '../../map/KakaoMap';
 import { MapLoadError } from '../../map/kakaoLoader';
 import type { MapLoadErrorReason } from '../../map/kakaoLoader';
+import { searchRegions } from '../../map/regionSearch';
 import type { RegionCandidate } from '../../map/regionSearch';
 import type { RegionLabel } from '../../map/regionLabel';
 import { radiusBounds } from '../../map/radiusBounds';
@@ -429,6 +430,25 @@ export function MapPage({
     setAiSummary(null);
     moveToRegion(candidate);
   }
+
+  // 랜딩의 지역 검색에서 넘어오면(`/map?q=지역`) 지도를 불러온 뒤 그 지역을 한 번 찾아 첫 후보로 옮긴다.
+  // 주소에서 검색어를 먼저 지워서, 새로 고치거나 뒤로 가도 같은 검색을 되풀이하지 않게 한다. 찾지 못하면 지도를 그대로 둔다.
+  const selectSearchedRegion = useEffectEvent((candidate: RegionCandidate) => selectRegion(candidate));
+  useEffect(() => {
+    if (!map || mode !== 'browse') return;
+    const query = new URLSearchParams(window.location.search).get('q')?.trim();
+    if (!query) return;
+    navigate('/map', { replace: true });
+    let cancelled = false;
+    searchRegions(query)
+      .then(([first]) => {
+        if (!cancelled && first) selectSearchedRegion(first);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [map, mode]);
 
   // AI가 읽은 조건으로 장소 조건을 통째로 바꾼다. 반경이 있으면 지역 후보(없으면 지도 가운데)를 기준점으로 반경 검색을 하고,
   // 없으면 지역 후보로 지도만 옮긴다. 상세 화면을 보고 있었다면 결과 목록이 보이도록 지도 화면으로 돌아간다.
