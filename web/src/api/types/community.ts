@@ -63,9 +63,11 @@ export interface CommunityPostUpdateRequest {
 }
 
 // 삭제된 댓글은 보이는 답글이 있을 때만 deleted: true로 오고, author와 content는 빠진다.
+// replyTo는 답글에 답한 답글에만 온다. 답한 답글을 쓴 회원이다.
 export interface CommunityComment {
   commentId: number;
   author?: CommunityAuthor;
+  replyTo?: CommunityAuthor;
   content?: string;
   deleted: boolean;
   createdAt?: string;
@@ -73,6 +75,7 @@ export interface CommunityComment {
   replies: CommunityComment[];
 }
 
+// parentId는 답할 댓글이다. 답글이어도 되고, 그러면 서버가 같은 최상위 댓글 아래에 단다.
 export interface CommunityCommentCreateRequest {
   content: string;
   parentId?: number;

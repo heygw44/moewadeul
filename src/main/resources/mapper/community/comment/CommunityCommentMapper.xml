@@ -3,24 +3,33 @@
 <mapper namespace="com.moewadeul.community.infra.comment.CommunityCommentMapper">
 
     <!-- 작성자 닉네임은 조회할 때의 회원 값이다. 탈퇴한 회원은 member 행의 닉네임이 익명 값으로 바뀌어 있어서 그대로 내보낸다.
-         댓글 ID는 순서대로 커지므로 ID 오름차순이 곧 오래된 순이다. 그래서 작성 시각 정렬 없이 기본 키 순서로 읽는다. -->
+         댓글 ID는 순서대로 커지므로 ID 오름차순이 곧 오래된 순이다. 그래서 작성 시각 정렬 없이 기본 키 순서로 읽는다.
+         답글에 답한 답글이면 답한 댓글을 쓴 회원의 현재 닉네임도 읽는다. 답한 댓글이 지워지거나 숨겨져도 닉네임은 공개 값이라 그대로 읽는다. -->
     <sql id="commentColumns">
         c.id AS comment_id,
         c.parent_id AS parent_id,
         (c.status = 'ACTIVE') AS active,
         c.member_id AS author_id,
         m.nickname AS author_nickname,
+        t.member_id AS reply_to_member_id,
+        tm.nickname AS reply_to_nickname,
         c.content AS content,
         c.created_at AS created_at,
         c.updated_at AS updated_at
+    </sql>
+
+    <sql id="commentJoins">
+        FROM community_comment c
+        JOIN member m ON m.id = c.member_id
+        LEFT JOIN community_comment t ON t.id = c.reply_to_comment_id
+        LEFT JOIN member tm ON tm.id = t.member_id
     </sql>
 
     <!-- 페이지는 최상위 댓글 단위로 센다. ACTIVE가 아닌 최상위 댓글은 보이는 답글이 있을 때만 읽어서, 자리만 남길 댓글만 페이지에 든다. -->
     <select id="selectTopLevel" resultType="com.moewadeul.community.infra.comment.CommunityCommentRow">
         SELECT
         <include refid="commentColumns"/>
-        FROM community_comment c
-        JOIN member m ON m.id = c.member_id
+        <include refid="commentJoins"/>
         WHERE c.post_id = #{postId}
           AND c.parent_id IS NULL
           AND (c.status = 'ACTIVE'
@@ -35,8 +44,7 @@
     <select id="selectActiveReplies" resultType="com.moewadeul.community.infra.comment.CommunityCommentRow">
         SELECT
         <include refid="commentColumns"/>
-        FROM community_comment c
-        JOIN member m ON m.id = c.member_id
+        <include refid="commentJoins"/>
         WHERE c.status = 'ACTIVE'
           AND c.parent_id IN
         <foreach collection="parentIds" item="id" open="(" separator="," close=")">#{id}</foreach>
@@ -46,8 +54,7 @@
     <select id="selectById" resultType="com.moewadeul.community.infra.comment.CommunityCommentRow">
         SELECT
         <include refid="commentColumns"/>
-        FROM community_comment c
-        JOIN member m ON m.id = c.member_id
+        <include refid="commentJoins"/>
         WHERE c.id = #{commentId}
     </select>
 

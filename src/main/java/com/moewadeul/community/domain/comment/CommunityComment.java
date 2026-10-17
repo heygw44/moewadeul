@@ -18,8 +18,9 @@ import lombok.NoArgsConstructor;
 /**
  * 커뮤니티 글에 회원이 다는 댓글. {@code parentId}가 있으면 그 댓글에 다는 답글이다. 작성자만 고치고 지울 수 있고, 지워도 행은 남긴다.
  *
- * <p>글과 작성자는 연관관계로 걸지 않고 ID로만 가리킨다. 답글은 한 단계만 허용한다. 부모가 같은 글의 ACTIVE 최상위 댓글인지는
- * 부모 행을 읽어야 알 수 있어서, 호출하는 쪽이 확인한다.
+ * <p>글과 작성자는 연관관계로 걸지 않고 ID로만 가리킨다. 답글은 한 단계만 둔다. 그래서 회원이 답글에 답하면 새 답글의 부모는 그 답글의
+ * 최상위 댓글이 되고, 답한 답글은 {@code replyToCommentId}에 따로 남는다. 답할 댓글이 같은 글의 ACTIVE 댓글인지는 그 행을 읽어야 알 수
+ * 있어서, 호출하는 쪽이 확인한다.
  */
 @Entity
 @Table(name = "community_comment")
@@ -43,6 +44,10 @@ public class CommunityComment {
     @Column(name = "parent_id")
     private Long parentId;
 
+    // 답글에 답했을 때만 그 답글의 ID다. 최상위 댓글과 최상위 댓글에 바로 단 답글은 null이다.
+    @Column(name = "reply_to_comment_id")
+    private Long replyToCommentId;
+
     // 지운 댓글은 내용을 NULL로 지운다.
     private String content;
 
@@ -55,10 +60,12 @@ public class CommunityComment {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    private CommunityComment(long postId, long memberId, Long parentId, String content, Instant now) {
+    private CommunityComment(
+            long postId, long memberId, Long parentId, Long replyToCommentId, String content, Instant now) {
         this.postId = postId;
         this.memberId = memberId;
         this.parentId = parentId;
+        this.replyToCommentId = replyToCommentId;
         this.content = content;
         this.status = CommunityCommentStatus.ACTIVE;
         this.createdAt = now;
@@ -73,7 +80,23 @@ public class CommunityComment {
     public static CommunityComment write(long postId, long memberId, Long parentId, String content, Instant now) {
         requireNow(now);
         requireValidContent(content);
-        return new CommunityComment(postId, memberId, parentId, content, now);
+        return new CommunityComment(postId, memberId, parentId, null, content, now);
+    }
+
+    /**
+     * 호출하면 memberId인 회원이 target 댓글에 답한 답글을 ACTIVE 상태로 만든다. 글은 target과 같다.
+     *
+     * <p>target이 최상위 댓글이면 새 답글의 부모는 target이다. target이 답글이면 깊이를 늘리지 않으려고 target의 부모를 부모로 쓰고, target은
+     * 답한 대상으로 남긴다. target이 같은 글의 ACTIVE 댓글인지는 호출하는 쪽이 확인한다. now나 내용이 규칙을 어기면
+     * {@link IllegalArgumentException}을 던진다.
+     */
+    public static CommunityComment replyTo(CommunityComment target, long memberId, String content, Instant now) {
+        requireNow(now);
+        requireValidContent(content);
+        if (target.isReply()) {
+            return new CommunityComment(target.postId, memberId, target.parentId, target.id, content, now);
+        }
+        return new CommunityComment(target.postId, memberId, target.id, null, content, now);
     }
 
     /**
