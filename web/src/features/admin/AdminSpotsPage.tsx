@@ -161,7 +161,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4">
+    <li className="flex flex-col gap-3 rounded-sheet bg-fill p-5">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.name}</h3>
         <StatusText tone={meta.tone}>{meta.label}</StatusText>
@@ -190,9 +190,9 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       {item.recentReports.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium text-ink">최근 신고</p>
-          <ul className="flex flex-col divide-y divide-line border-y border-line">
+          <ul className="flex flex-col gap-1">
             {item.recentReports.map((report, index) => (
-              <li key={index} className="py-2 text-sm">
+              <li key={index} className="rounded-row bg-surface px-4 py-2.5 text-sm">
                 <p className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-ink">{REPORT_REASON_LABELS[report.reason] ?? report.reason}</span>
                   <span className="font-mono tabular-nums text-ink-muted">{formatKstDateTime(report.createdAt)}</span>

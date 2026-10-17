@@ -62,7 +62,7 @@ export function AdminPage({ title, current, children }: { title: string; current
         </UnderlineNav>
       }
     >
-      {/* 선택 칸은 바탕 위에 두고, 목록과 묶음만 흰 판으로 올린다. 화면 전체를 판 하나로 감싸면 안쪽 판이 겹쳐 보인다. */}
+      {/* 선택 칸은 바탕 위에 두고, 목록과 묶음만 세이지 카드로 올린다. 화면 전체를 판 하나로 감싸면 안쪽 판이 겹쳐 보인다. */}
       <div className="flex min-w-0 flex-col gap-4">{children}</div>
     </PageLayout>
   );

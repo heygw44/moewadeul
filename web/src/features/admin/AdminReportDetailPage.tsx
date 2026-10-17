@@ -469,9 +469,9 @@ function SanctionHistoryCard({ items, onChanged }: { items: AdminSanctionHistory
       {items.length === 0 ? (
         <p className="text-sm text-ink-muted">제재 이력이 없어요.</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-line">
+        <ul className="flex flex-col gap-1">
           {items.map((item) => (
-            <li key={item.sanctionId} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
+            <li key={item.sanctionId} className="flex flex-col gap-2 rounded-row bg-surface p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-base font-semibold text-ink">{SANCTION_TYPE_LABELS[item.type]}</span>
                 {item.level !== null && (
