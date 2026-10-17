@@ -168,7 +168,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4">
+    <li className="flex flex-col gap-3 rounded-sheet bg-fill p-5">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.author.nickname}님의 기록</h3>
         <StatusText tone="neutral">{item.status === 'HIDDEN' ? '숨김' : '검토 대기'}</StatusText>
@@ -176,7 +176,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
       {thumbnails.length > 0 && (
         <ul className="grid grid-cols-4 gap-1" aria-label={`사진 ${item.images.length}장`}>
           {thumbnails.map((image, index) => (
-            <li key={image.imageId} className="aspect-square overflow-hidden rounded-row bg-fill">
+            <li key={image.imageId} className="aspect-square overflow-hidden rounded-row bg-fill-strong">
               <img src={image.url} alt={`사진 ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
             </li>
           ))}
@@ -216,9 +216,9 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
       {item.recentReports.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium text-ink">최근 신고</p>
-          <ul className="flex flex-col divide-y divide-line border-y border-line">
+          <ul className="flex flex-col gap-1">
             {item.recentReports.map((report, index) => (
-              <li key={index} className="py-2 text-sm">
+              <li key={index} className="rounded-row bg-surface px-4 py-2.5 text-sm">
                 <p className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-ink">{REASON_LABELS[report.reason] ?? report.reason}</span>
                   <span className="font-mono tabular-nums text-ink-muted">{formatKstDateTime(report.createdAt)}</span>

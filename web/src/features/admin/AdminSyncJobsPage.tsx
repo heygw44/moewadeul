@@ -240,7 +240,7 @@ function SyncJobs() {
           <EmptyState framed title="실행 기록이 없어요" description="작업을 실행하면 여기에 기록이 쌓여요." />
         )}
         {history !== null && history.items.length > 0 && (
-          <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface">
+          <ul className="flex flex-col gap-1 rounded-sheet bg-fill p-1.5">
             {history.items.map((run) => (
               <HistoryRow key={run.jobRunId} run={run} />
             ))}
@@ -313,7 +313,7 @@ function JobCard({
   }
 
   return (
-    <li className="flex min-w-0 flex-col gap-3 rounded-sheet border border-line bg-surface p-4">
+    <li className="flex min-w-0 flex-col gap-3 rounded-sheet bg-fill p-5">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{label}</h3>
         {latest && <RunStatus status={latest.status} />}
@@ -339,7 +339,7 @@ function JobCard({
         </dl>
       )}
       {latest?.status === 'FAILED' && latest.errorMessage && (
-        <p className="break-words border-l-2 border-danger pl-3 text-sm text-ink">{latest.errorMessage}</p>
+        <p className="break-words rounded-row bg-surface px-4 py-2.5 text-sm text-danger">{latest.errorMessage}</p>
       )}
       {jobType === 'PARK_BOUNDARY' && <p className="text-sm text-ink-muted">성공하면 박지 재판정이 이어서 실행돼요</p>}
       {error && (
@@ -384,7 +384,7 @@ function JobCard({
 // 실행 한 번을 목록판의 한 행으로 적는다. 작업과 상태를 앞에 두고, 시각과 건수를 한 줄로 잇는다.
 function HistoryRow({ run }: { run: SyncJobRun }) {
   return (
-    <li className="flex min-w-0 flex-col gap-1 px-4 py-3">
+    <li className="flex min-w-0 flex-col gap-1 rounded-row bg-surface px-4 py-3">
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-base font-bold text-ink">{JOB_LABELS[run.jobType]}</span>
         <RunStatus status={run.status} />
@@ -402,7 +402,9 @@ function HistoryRow({ run }: { run: SyncJobRun }) {
         </span>
       </p>
       {run.errorMessage && (
-        <p className="min-w-0 break-words border-l-2 border-danger pl-3 text-sm text-ink">{run.errorMessage}</p>
+        <p className="min-w-0 break-words rounded-row bg-danger-soft px-4 py-2.5 text-sm text-danger">
+          {run.errorMessage}
+        </p>
       )}
     </li>
   );
