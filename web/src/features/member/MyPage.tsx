@@ -42,7 +42,7 @@ export function MyPage() {
 }
 
 const SHORTCUT_ROW_CLASS =
-  'flex min-h-14 w-full items-center justify-between gap-3 border-t border-line px-5 text-left text-base font-bold text-ink first:border-t-0 hover:bg-fill';
+  'flex min-h-14 w-full items-center justify-between gap-3 rounded-row px-5 text-left text-base font-bold text-ink hover:bg-fill-strong';
 
 function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const links = [
@@ -56,7 +56,7 @@ function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
   ];
   return (
     <BoardSection title="바로 가기">
-      {/* 안내판의 행처럼 링크마다 한 줄을 차지하고 오른쪽에 화살표를 둔다. */}
+      {/* 링크마다 한 줄을 차지하고 오른쪽에 화살표를 둔다. */}
       <nav aria-label="바로 가기" className="flex flex-col">
         {links.map((link) => (
           <Link key={link.to} to={link.to} className={SHORTCUT_ROW_CLASS}>
@@ -81,7 +81,7 @@ function AccountCard({ me }: { me: Me }) {
         <BoardRow label="이메일 · 나만 볼 수 있어요" value={me.email} />
       </dl>
       {me.status === 'UNVERIFIED' && (
-        <div className="border-t border-line p-4">
+        <div className="p-4">
           <Notice tone="warning" title="이메일 인증이 필요해요">
             <p>인증을 마치면 후기를 쓰고 박지를 제보할 수 있어요.</p>
             <Link to="/verify-email" className="mt-1 inline-flex min-h-11 items-center font-semibold text-accent">
@@ -97,7 +97,7 @@ function AccountCard({ me }: { me: Me }) {
 // 판 안의 "라벨 — 굵은 값" 한 줄이다. 값이 길면 라벨 아래로 내려간다.
 function BoardRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line px-5 py-4 first:border-t-0">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3.5">
       <dt className="text-base text-ink-muted">{label}</dt>
       <dd className="min-w-0 break-all text-base font-bold text-ink">{value}</dd>
     </div>
@@ -197,11 +197,11 @@ function TrustCard({ me }: { me: Me }) {
 function ProgressRow({ label, value, ratio }: { label: string; value: string; ratio?: number }) {
   const percent = ratio === undefined ? null : Math.round(Math.min(Math.max(ratio, 0), 1) * 100);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-line px-5 py-4 first:border-t-0 sm:grid sm:grid-cols-[minmax(0,1fr)_8.75rem_auto]">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3.5 sm:grid sm:grid-cols-[minmax(0,1fr)_8.75rem_auto]">
       <dt className="text-base text-ink">{label}</dt>
       <dd className="ml-auto text-right text-base font-bold tabular-nums text-ink sm:order-last">{value}</dd>
       {percent !== null ? (
-        <dd aria-hidden="true" className="h-1.5 basis-full overflow-hidden rounded-control bg-fill">
+        <dd aria-hidden="true" className="h-1.5 basis-full overflow-hidden rounded-control bg-surface">
           <span className="block h-full bg-brand" style={{ width: `${percent}%` }} />
         </dd>
       ) : (

@@ -170,10 +170,7 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
             </p>
             <ul className="flex flex-col">
               {review.targets.map((target) => (
-                <li
-                  key={target.memberId}
-                  className="flex items-center justify-between gap-2 border-t border-line py-1 first:border-t-0"
-                >
+                <li key={target.memberId} className="flex items-center justify-between gap-2 py-1">
                   <Link
                     to={`/members/${target.memberId}`}
                     className="inline-flex min-h-11 items-center text-base font-semibold text-accent underline underline-offset-2"
@@ -409,7 +406,7 @@ function ReceivedTab() {
             <section
               // 공개 전 후기는 ID가 없고, 한 베이스캠프에서 여러 개가 올 수 있어서 순서로 구분한다.
               key={`sealed-${item.basecampId}-${index}`}
-              className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4 lg:p-5"
+              className="flex flex-col gap-3 rounded-sheet bg-fill p-4 lg:p-5"
             >
               <p className="text-base text-ink">내 후기를 남기면 상대가 쓴 후기를 볼 수 있어요.</p>
               <Link to={`/basecamps/${item.basecampId}`} className={`${LINK_BUTTON_CLASS} self-start`}>
