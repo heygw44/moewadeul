@@ -64,10 +64,7 @@ export function MySoloTripsCard() {
         ) : (
           <ul className="flex flex-col">
             {current.trips.map((trip) => (
-              <li
-                key={trip.soloTripId}
-                className="flex items-center justify-between gap-3 border-t border-line py-3 first:border-t-0"
-              >
+              <li key={trip.soloTripId} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="flex min-w-0 flex-col">
                   <Link to={`/spots/${trip.spot.spotId}`} className="truncate font-semibold text-ink hover:underline">
                     {trip.spot.name}

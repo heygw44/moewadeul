@@ -11,17 +11,17 @@ type MemberBoardProps = {
   aside?: ReactNode;
 };
 
-// 회원 한 사람을 소개하는 숲색 판이다. 탐방로 안내판의 번호 원처럼 신뢰 단계를 큰 숫자로 먼저 보여 준다.
+// 회원 한 사람을 소개하는 세이지 카드다. 신뢰 단계를 숲색 원 안의 큰 숫자로 먼저 보여 준다.
 export function MemberBoard({ nickname, trustLevel, caption, aside }: MemberBoardProps) {
   return (
     <section
       aria-label="회원 정보"
-      className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-sheet bg-brand px-5 py-5 text-white sm:px-6 [&_:focus-visible]:outline-white"
+      className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-sheet bg-fill px-5 py-5 text-ink sm:px-6"
     >
       {trustLevel !== undefined && (
         <span
           aria-hidden="true"
-          className="flex size-14 shrink-0 items-center justify-center rounded-full bg-surface text-[1.75rem] font-extrabold tabular-nums text-brand sm:size-16 sm:text-[1.875rem]"
+          className="flex size-14 shrink-0 items-center justify-center rounded-full bg-brand text-[1.75rem] font-extrabold tabular-nums text-white sm:size-16 sm:text-[1.875rem]"
         >
           {trustLevel}
         </span>
@@ -31,7 +31,7 @@ export function MemberBoard({ nickname, trustLevel, caption, aside }: MemberBoar
           {nickname}
         </h2>
         {trustLevel !== undefined && (
-          <p className="text-sm text-brand-ink">
+          <p className="text-sm text-ink-muted">
             신뢰 단계 {trustLevel} · {caption ?? trustLevelCaption(trustLevel)}
           </p>
         )}
@@ -41,15 +41,15 @@ export function MemberBoard({ nickname, trustLevel, caption, aside }: MemberBoar
   );
 }
 
-// 판 위에 얹는 표시다. 숲색 판 위에서 흰 글자와 옅은 흰 선으로 칸을 나눈다.
+// 카드 위에 얹는 표시다. 세이지 카드 위에서 흰 알약으로 띄운다.
 export function MemberBoardTag({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex min-h-9 items-center gap-1.5 rounded-control border border-brand-ink/40 px-3 text-sm font-bold">
+    <span className="inline-flex min-h-9 items-center gap-1.5 rounded-control bg-surface px-3 text-sm font-bold text-ink">
       {children}
     </span>
   );
 }
 
-// 숲색 판 위에 두는 링크 모양이다.
+// 세이지 카드 위에 두는 링크 모양이다.
 export const MEMBER_BOARD_LINK_CLASS =
-  'inline-flex min-h-11 items-center gap-1.5 rounded-control border border-brand-ink/40 px-3 text-sm font-bold text-white hover:bg-brand-raised';
+  'inline-flex min-h-11 items-center gap-1.5 rounded-control bg-surface px-4 text-sm font-bold text-ink hover:bg-fill-strong';

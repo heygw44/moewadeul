@@ -321,7 +321,7 @@ function EmailSettingsCard() {
                 checked={state.enabled[type]}
                 disabled={saving}
                 onChange={(event) => toggle(type, event.target.checked)}
-                className="border-t border-line first:border-t-0"
+                className="rounded-row"
               />
             ))}
           </fieldset>

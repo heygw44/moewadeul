@@ -33,7 +33,7 @@ type LoadResult = { programId: number; detail: ProgramDetail } | { programId: nu
 const LINK_BUTTON_CLASS = buttonClassName('primary');
 const SECONDARY_LINK_CLASS = buttonClassName('secondary');
 const BOARD_ROW_CLASS =
-  'grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 border-t border-line px-4 py-3 text-[0.9375rem] first:border-t-0 sm:grid-cols-[8rem_minmax(0,1fr)] sm:px-5';
+  'grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 px-4 py-2.5 text-[0.9375rem] sm:grid-cols-[8rem_minmax(0,1fr)] sm:px-5';
 
 export function ProgramDetailPage({ programId }: { programId: number }) {
   const session = useSession();
@@ -136,16 +136,16 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
   return (
     <div className="flex flex-col gap-4">
       <article className="flex flex-col gap-4">
-        {/* 탐방로 안내판처럼 숲색 머리판에 상태·제목·장소와 일시·남은 자리 칸을 적는다. 페이지 제목(h1)은 위 띠가 스크린 리더에 읽힌다. */}
-        <header className="rounded-sheet bg-brand px-5 pt-5 pb-5 text-white sm:px-6 [&_:focus-visible]:outline-white">
+        {/* 머리는 상태·제목·장소 아래에 일시·남은 자리를 세이지 칸으로 적는다. 페이지 제목(h1)은 위 띠가 스크린 리더에 읽힌다. */}
+        <header className="text-ink">
           {detail.status !== 'CANCELED' && (
             <p className="inline-flex items-center gap-1.5 text-[0.8125rem] font-bold">
               <span
                 aria-hidden="true"
-                className={`size-2 rounded-full ${detail.status === 'OPEN' ? 'bg-accent-soft' : 'bg-brand-ink'}`}
+                className={`size-2 rounded-full ${detail.status === 'OPEN' ? 'bg-brand' : 'bg-ink-faint'}`}
               />
               {PROGRAM_STATUS_META[detail.status].label}
-              {detail.overnight && <span className="font-normal text-brand-ink"> · 숙박</span>}
+              {detail.overnight && <span className="font-normal text-ink-muted"> · 숙박</span>}
             </p>
           )}
           <p
@@ -154,30 +154,30 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
           >
             {detail.title}
           </p>
-          <p className="mt-1.5 text-sm text-brand-ink">
+          <p className="mt-1.5 text-sm text-ink-muted">
             {detail.spotId !== null ? (
-              <Link to={`/spots/${detail.spotId}`} className="text-white underline underline-offset-2">
+              <Link to={`/spots/${detail.spotId}`} className="text-accent underline underline-offset-2">
                 {detail.locationText}
               </Link>
             ) : (
               detail.locationText
             )}
           </p>
-          <dl className="mt-4 grid grid-cols-2 overflow-hidden rounded-row border border-white/25 sm:grid-cols-[1fr_1fr_auto]">
-            <div className="px-3 py-2">
-              <dt className="text-xs text-brand-ink">시작</dt>
+          <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <div className="rounded-sheet bg-fill px-4 py-3">
+              <dt className="text-[0.8125rem] text-ink-muted">시작</dt>
               <dd className="text-sm font-extrabold tabular-nums sm:text-[0.9375rem]">
                 {formatKstDateTime(detail.startAt)}
               </dd>
             </div>
-            <div className="border-l border-white/25 px-3 py-2">
-              <dt className="text-xs text-brand-ink">끝</dt>
+            <div className="rounded-sheet bg-fill px-4 py-3">
+              <dt className="text-[0.8125rem] text-ink-muted">끝</dt>
               <dd className="text-sm font-extrabold tabular-nums sm:text-[0.9375rem]">
                 {formatKstDateTime(detail.endAt)}
               </dd>
             </div>
-            <div className="col-span-2 border-t border-white/25 px-3 py-2 sm:col-span-1 sm:border-t-0 sm:border-l">
-              <dt className="text-xs text-brand-ink">남은 자리</dt>
+            <div className="col-span-2 rounded-sheet bg-fill px-4 py-3 sm:col-span-1">
+              <dt className="text-[0.8125rem] text-ink-muted">남은 자리</dt>
               <dd className="font-mono text-[0.9375rem] font-extrabold tabular-nums">
                 {seatsText(detail.remainingSeats, detail.capacity)}
               </dd>
@@ -194,10 +194,10 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
         <p className="whitespace-pre-line text-base leading-relaxed text-ink">{detail.description}</p>
 
         <section aria-labelledby="program-apply-info" className="flex flex-col gap-2">
-          <h2 id="program-apply-info" className="text-sm font-bold text-ink-muted">
+          <h2 id="program-apply-info" className="text-[1.1875rem] font-extrabold tracking-[-0.02em] text-ink">
             신청 정보
           </h2>
-          <dl className="overflow-hidden rounded-sheet border border-line bg-surface">
+          <dl className="rounded-sheet bg-fill py-2">
             <div className={BOARD_ROW_CLASS}>
               <dt className="text-ink-muted">신청 기간</dt>
               <dd className="font-semibold tabular-nums text-ink">
@@ -351,7 +351,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   return (
     <section
       aria-label="신청"
-      className="sticky bottom-(--bottom-nav-h) z-10 flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4 shadow-raise"
+      className="sticky bottom-(--bottom-nav-h) z-10 flex flex-col gap-3 rounded-sheet bg-surface p-4 shadow-raise"
     >
       {notice && (
         <p role="status" className="text-sm font-semibold text-accent">
