@@ -1,7 +1,8 @@
 // 지도 영역 조회 부하 검증. 장소 100만 건이 들어간 환경에서 동시 사용자 300명이 지도를 움직이는 상황을 흉내 낸다.
 // 기준: 지도 영역 조회 p95 200ms 이하, 오류율 1% 미만.
 //
-// 환경 변수: BASE_URL(기본 http://localhost:8080), VUS(기본 300), DURATION(기본 10m)
+// 환경 변수: BASE_URL(기본 http://localhost:8080), VUS(기본 300), DURATION(기본 10m),
+//            HIDE_CLOSED_RATIO(기본 0. 휴장 제외를 켠 요청의 비율, 0~1)
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { BASE_URL } from './lib/auth.js';
@@ -10,6 +11,8 @@ import { pickWeighted, randomPointNearRegion } from './lib/regions.js';
 const VUS = Number(__ENV.VUS || 300);
 const DURATION = __ENV.DURATION || '10m';
 const MAX_ITEMS = 500;
+// 화면 기본값은 휴장 제외가 꺼져 있다. 그래서 기본값 0이면 예전 측정과 같은 요청만 보낸다.
+const HIDE_CLOSED_RATIO = Number(__ENV.HIDE_CLOSED_RATIO || 0);
 
 // 카카오맵 확대 수준별 화면 비율. 사람은 전국 지도를 잠깐 보고 시·군이나 동네 단위로 들어가서 오래 본다고 가정했다.
 // 화면 너비(경도)는 13레벨에서 남한 전체가 들어가는 7도로 잡고, 한 레벨 내려갈 때마다 절반이 된다. 높이(위도)는 너비의 0.8배다.
@@ -31,11 +34,13 @@ export const options = {
     thresholds: {
         'http_req_duration{name:spots-area}': ['p(95)<200'],
         'http_req_failed{name:spots-area}': ['rate<0.01'],
-        // 아래 네 줄은 판정용이 아니다. k6 요약에 확대 수준별 응답 시간을 따로 보이게 하려고 늘 통과하는 조건을 걸었다.
+        // 아래 여섯 줄은 판정용이 아니다. k6 요약에 확대 수준별·휴장 제외 여부별 응답 시간을 따로 보이게 하려고 늘 통과하는 조건을 걸었다.
         'http_req_duration{name:spots-area,level:13}': ['max>=0'],
         'http_req_duration{name:spots-area,level:10}': ['max>=0'],
         'http_req_duration{name:spots-area,level:8}': ['max>=0'],
         'http_req_duration{name:spots-area,level:5}': ['max>=0'],
+        'http_req_duration{name:spots-area,hideClosed:true}': ['max>=0'],
+        'http_req_duration{name:spots-area,hideClosed:false}': ['max>=0'],
     },
 };
 
@@ -55,10 +60,13 @@ function randomViewport() {
 
 export default function () {
     const v = randomViewport();
+    const hideClosed = Math.random() < HIDE_CLOSED_RATIO;
     const url =
         `${BASE_URL}/api/spots?swLat=${v.swLat}&swLng=${v.swLng}&neLat=${v.neLat}&neLng=${v.neLng}` +
-        `&zoom=${v.level}`;
-    const res = http.get(url, { tags: { name: 'spots-area', level: String(v.level) } });
+        `&zoom=${v.level}${hideClosed ? '&hideClosed=true' : ''}`;
+    const res = http.get(url, {
+        tags: { name: 'spots-area', level: String(v.level), hideClosed: String(hideClosed) },
+    });
     check(res, {
         '200 응답': (r) => r.status === 200,
         '마커와 묶음 합이 500개 이하': (r) => {

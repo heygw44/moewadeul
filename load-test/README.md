@@ -87,6 +87,8 @@ k6는 앱과 다른 머신에서 돌린다. 같은 머신에서 돌리면 k6가 
 |---|---|
 | `map-area.js` | 지도 영역 조회. 가상 사용자(VU) 300명이 각자 화면 영역을 하나 골라 조회하고 1~3초 쉬기를 반복한다 |
 | `program-open.js` | 행사 오픈 순간 신청. 준비 단계에서 회원을 모두 로그인시키고 행사를 만든 뒤, 신청이 열리는 순간 모든 회원이 한 번씩 신청한다 |
+| `spot-nearby.js` | 반경 검색. VU마다 시·도 가중치로 중심을 고르고, 반경·조건·페이지를 섞어 검색한 뒤 1~3초 쉬기를 반복한다(#457) |
+| `spot-detail.js` | 장소 상세. VU마다 장소 ID를 무작위로 골라 상세를 조회하고 1~3초 쉬기를 반복한다(#457) |
 | `lib/auth.js` | CSRF 토큰 받기, 로그인, 인증 헤더 만들기 |
 | `lib/regions.js` | 시·도 중심 좌표와 가중치. `seed/seed.sql`과 같은 값이다 |
 
@@ -97,6 +99,9 @@ k6는 앱과 다른 머신에서 돌린다. 같은 머신에서 돌리면 k6가 
 k6 run -e VUS=10 -e DURATION=30s load-test/map-area.js
 k6 run -e APPLICANTS=200 -e CAPACITY=20 -e OPEN_DELAY=5 load-test/program-open.js
 k6 run -e APPLICANTS=200 -e CAPACITY=20 -e OPEN_DELAY=5 -e OVERNIGHT=false load-test/program-open.js
+k6 run -e VUS=10 -e DURATION=30s -e HIDE_CLOSED_RATIO=0.3 load-test/map-area.js
+k6 run -e VUS=2 -e DURATION=30s -e RADII=1,5 load-test/spot-nearby.js
+k6 run -e VUS=10 -e DURATION=30s -e SPOT_MAX_ID=20000 load-test/spot-detail.js
 
 # 검증 환경, 기준 조건 (결과는 gitignore된 load-test/results/에 남긴다)
 k6 run -e BASE_URL=http://앱-서버-사설-IP --summary-trend-stats "avg,med,p(95),p(99),max" \
@@ -111,6 +116,11 @@ k6 run -e BASE_URL=http://앱-서버-사설-IP --summary-trend-stats "avg,med,p(
 | `LOADTEST_PASSWORD` | 검증용 가짜 비밀번호 | 둘 다 | 검증 회원 비밀번호. 1절 데이터를 썼다면 바꾸지 않는다 |
 | `VUS` | 300 | `map-area.js` | 동시 사용자 수 |
 | `DURATION` | `10m` | `map-area.js` | 측정 시간 |
+| `HIDE_CLOSED_RATIO` | 0 | `map-area.js` | 휴장 제외를 켠 요청의 비율(0~1). 화면 기본값은 꺼져 있어서 0이면 예전 측정과 같은 요청만 보낸다 |
+| `VUS` | 10 / 300 | `spot-nearby.js` / `spot-detail.js` | 동시 사용자 수 |
+| `DURATION` | `2m` | `spot-nearby.js`, `spot-detail.js` | 측정 시간 |
+| `RADII` | `5,10,20,50` | `spot-nearby.js` | 고를 반경(km) 목록. 같은 비율로 고른다 |
+| `SPOT_MAX_ID` | 1000000 | `spot-detail.js` | 고를 장소 ID의 최댓값. 검증 DB의 `SELECT MAX(id) FROM spot` 값을 넣는다 |
 | `APPLICANTS` | 2000 | `program-open.js` | 신청 회원 수. 1절의 `MEMBER_COUNT`보다 많으면 로그인에 실패한다 |
 | `CAPACITY` | 200 | `program-open.js` | 행사 정원 |
 | `OVERNIGHT` | `true` | `program-open.js` | 숙박 행사 여부. 숙박 행사는 서버가 신청마다 신뢰 단계를 계산한다 |
@@ -129,6 +139,21 @@ k6 run -e BASE_URL=http://앱-서버-사설-IP --summary-trend-stats "avg,med,p(
 | 5 | 20% | 0.027° × 0.022° | 동네 |
 
 - 요약에는 확대 수준별 응답 시간(`level:13` 등)이 따로 나온다. 이 줄의 조건(`max>=0`)은 요약에 보이게 하려는 것이라 늘 통과한다.
+
+- 휴장 제외 비율을 0보다 크게 주면, 요약에 휴장 제외 여부별 응답 시간(`hideClosed:true`, `hideClosed:false`)이 따로 나온다.
+
+### 반경 검색 (`spot-nearby.js`)
+
+- 반경 검색에는 수치 기준이 없어서 판정 조건을 두지 않는다. 요약에 반경별 응답 시간(`radius:20` 등)이 따로 나온다.
+- 조건은 없음 60%, 물 있는 박지 20%, 휴장 제외 20%로 섞는다. 열 번에 한 번은 2~5쪽을 읽는다.
+- 화면에서 반경 검색은 AI 검색이 문장의 거리를 읽었을 때 열린다. 그래서 지도 조회보다 요청이 훨씬 적다고 보고, 기본 VU를 10으로 잡았다.
+- 검증용 데이터에서 반경 안 장소 수는 중심과 반경에 따라 크게 다르다. 예를 들어 경기 중심은 반경 5km에 약 2천 곳, 50km에 약 17만 곳이다.
+
+### 장소 상세 (`spot-detail.js`)
+
+- 장소 상세에는 수치 기준이 없어서 판정 조건을 두지 않는다.
+- 검증용 데이터는 장소 ID 사이에 빈 번호가 있다. 빈 번호나 숨김·검토 대기 장소를 고르면 404가 나오고, 404는 장소를 읽지 않아 200보다 빠르다. 그래서 200 응답의 시간만 `spot_detail_found_duration`으로 따로 모은다.
+- 날씨는 외부 API를 부르는 별도 요청이라 이 스크립트는 부르지 않는다.
 
 ### 행사 오픈 순간 신청 (`program-open.js`)
 
