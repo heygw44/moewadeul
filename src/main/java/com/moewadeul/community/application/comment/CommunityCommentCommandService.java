@@ -17,7 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 회원이 커뮤니티 글에 댓글과 답글을 쓰고, 자기 댓글을 고치거나 지운다.
  *
- * <p>댓글은 ACTIVE인 글에만 달 수 있다. 답글의 부모는 같은 글의 ACTIVE 최상위 댓글이어야 하고, 어기면 INVALID_INPUT으로 거부한다.
+ * <p>댓글은 ACTIVE인 글에만 달 수 있다. 답할 댓글은 같은 글의 ACTIVE 댓글이어야 하고, 어기면 INVALID_INPUT으로 거부한다. 답할 댓글이
+ * 답글이어도 받는다. 이때 새 답글은 그 답글의 최상위 댓글 아래에 달리므로, 최상위 댓글의 상태는 보지 않는다.
  * 고치거나 지울 때는 댓글이 없거나, 댓글이 ACTIVE가 아니거나, 글이 ACTIVE가 아니면 NOT_FOUND로 거부한다. 작성자 본인에게도 같다.
  * 그 조건을 통과한 뒤 작성자가 아니면 ACCESS_DENIED로 거부하므로, 검사 순서는 대상 확인, 작성자 확인이다.
  *
@@ -36,18 +37,17 @@ public class CommunityCommentCommandService {
     /**
      * 호출하면 memberId인 회원의 댓글을 postId인 글에 저장하고 댓글 ID를 돌려준다.
      *
-     * <p>글이 없거나 ACTIVE가 아니면 NOT_FOUND로 거부한다. 내용이 공백뿐이거나 1,000자를 넘거나, parentId인 댓글이 없거나 다른 글의
-     * 댓글이거나 ACTIVE가 아니거나 그 자체가 답글이면 INVALID_INPUT으로 거부한다.
+     * <p>parentId는 답할 댓글이고, 최상위 댓글과 답글 모두 될 수 있다. 글이 없거나 ACTIVE가 아니면 NOT_FOUND로 거부한다. 내용이 공백뿐이거나
+     * 1,000자를 넘거나, parentId인 댓글이 없거나 다른 글의 댓글이거나 ACTIVE가 아니면 INVALID_INPUT으로 거부한다.
      */
     @Transactional
     public long write(long memberId, long postId, CommunityCommentWriteCommand command) {
         requireActivePost(postId);
         requireValidContent(command.content());
-        if (command.parentId() != null) {
-            requireReplyable(postId, command.parentId());
-        }
-        CommunityComment comment =
-                CommunityComment.write(postId, memberId, command.parentId(), command.content(), clock.instant());
+        CommunityComment comment = command.parentId() == null
+                ? CommunityComment.write(postId, memberId, null, command.content(), clock.instant())
+                : CommunityComment.replyTo(
+                        loadReplyTarget(postId, command.parentId()), memberId, command.content(), clock.instant());
         return communityCommentRepository.saveAndFlush(comment).getId();
     }
 
@@ -108,15 +108,12 @@ public class CommunityCommentCommandService {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 
-    // 답글은 한 단계만 허용한다. 그래서 부모가 같은 글의 ACTIVE 최상위 댓글인지 확인한다.
-    private void requireReplyable(long postId, long parentId) {
-        boolean replyable = communityCommentRepository
-                .findById(parentId)
-                .filter(parent -> parent.belongsTo(postId) && parent.isActive() && !parent.isReply())
-                .isPresent();
-        if (!replyable) {
-            throw invalidInput("답글을 달 수 없는 댓글이에요.");
-        }
+    // 답할 댓글은 같은 글에 있고 내용이 보여야 한다. 답글이어도 되는데, 새 답글의 부모는 엔티티가 최상위 댓글로 맞추기 때문이다.
+    private CommunityComment loadReplyTarget(long postId, long targetId) {
+        return communityCommentRepository
+                .findById(targetId)
+                .filter(target -> target.belongsTo(postId) && target.isActive())
+                .orElseThrow(() -> invalidInput("답글을 달 수 없는 댓글이에요."));
     }
 
     private static void requireValidContent(String content) {

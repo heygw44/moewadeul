@@ -173,7 +173,6 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                 }}
                 onDelete={setDeleting}
                 onReport={(id) => setReporting({ type: 'comment', id })}
-                topLevel
                 replying={replyingId === comment.commentId}
                 onReply={() => {
                   setStatus(null);
@@ -206,6 +205,17 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                         }}
                         onDelete={setDeleting}
                         onReport={(id) => setReporting({ type: 'comment', id })}
+                        replying={replyingId === reply.commentId}
+                        onReply={() => {
+                          setStatus(null);
+                          setEditingId(null);
+                          setReplyingId(reply.commentId);
+                        }}
+                        onCancelReply={() => setReplyingId(null)}
+                        onSubmitReply={async (content) => {
+                          await createComment(postId, { content, parentId: reply.commentId });
+                          await refreshAfterChange('답글을 남겼어요.');
+                        }}
                       />
                     </li>
                   ))}
@@ -273,8 +283,7 @@ type CommentItemProps = {
   onSaveEdit: (commentId: number, content: string) => Promise<void>;
   onDelete: (commentId: number) => void;
   onReport: (commentId: number) => void;
-  // 답글에는 아래 값을 넘기지 않는다. 답글에 다는 답글은 없다.
-  topLevel?: boolean;
+  // 답글에 답해도 서버가 같은 최상위 댓글 아래에 달아서, 화면의 들여쓰기는 한 단계로 끝난다.
   replying?: boolean;
   onReply?: () => void;
   onCancelReply?: () => void;
@@ -290,7 +299,6 @@ function CommentItem({
   onSaveEdit,
   onDelete,
   onReport,
-  topLevel = false,
   replying = false,
   onReply,
   onCancelReply,
@@ -342,9 +350,21 @@ function CommentItem({
         )}
         {edited && <span className="text-xs text-ink-muted">수정됨</span>}
       </div>
-      <p className="mt-1 whitespace-pre-wrap break-words text-base text-ink">{content}</p>
+      <p className="mt-1 whitespace-pre-wrap break-words text-base text-ink">
+        {comment.replyTo && (
+          <>
+            <Link
+              to={`/members/${comment.replyTo.memberId}`}
+              className="font-semibold text-accent underline-offset-2 hover:underline"
+            >
+              @{comment.replyTo.nickname}
+            </Link>{' '}
+          </>
+        )}
+        {content}
+      </p>
       <div className="-mx-2 flex flex-wrap items-center">
-        {topLevel && signedIn && (
+        {onReply && signedIn && (
           <Button variant="ghost" onClick={onReply} disabled={unverified} className="px-2">
             답글
           </Button>
@@ -366,7 +386,7 @@ function CommentItem({
           )
         )}
       </div>
-      {topLevel && replying && onSubmitReply && (
+      {replying && onSubmitReply && (
         <div className="mt-2">
           <CommentForm label="답글" submitLabel="답글 남기기" onCancel={onCancelReply} onSubmit={onSubmitReply} />
         </div>

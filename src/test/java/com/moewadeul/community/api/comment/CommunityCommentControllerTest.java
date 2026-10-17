@@ -46,11 +46,13 @@ class CommunityCommentControllerTest {
     private static final Instant CREATED_AT = Instant.parse("2026-10-05T03:00:00Z");
     private static final Instant UPDATED_AT = Instant.parse("2026-10-05T04:00:00Z");
     private static final CommunityCommentItem REPLY =
-            new CommunityCommentItem(22L, false, 32L, "아침안개", "저도요", CREATED_AT, CREATED_AT, List.of());
-    private static final CommunityCommentItem WITH_REPLY =
-            new CommunityCommentItem(21L, false, 31L, "새벽능선", "좋아요", CREATED_AT, UPDATED_AT, List.of(REPLY));
+            new CommunityCommentItem(22L, false, 32L, "아침안개", null, null, "저도요", CREATED_AT, CREATED_AT, List.of());
+    private static final CommunityCommentItem REPLY_TO_REPLY =
+            new CommunityCommentItem(23L, false, 31L, "새벽능선", 32L, "아침안개", "반가워요", CREATED_AT, CREATED_AT, List.of());
+    private static final CommunityCommentItem WITH_REPLY = new CommunityCommentItem(
+            21L, false, 31L, "새벽능선", null, null, "좋아요", CREATED_AT, UPDATED_AT, List.of(REPLY, REPLY_TO_REPLY));
     private static final CommunityCommentItem PLACEHOLDER =
-            new CommunityCommentItem(20L, true, null, null, null, null, null, List.of(REPLY));
+            new CommunityCommentItem(20L, true, null, null, null, null, null, null, null, List.of(REPLY));
 
     @Autowired
     private MockMvcTester mvc;
@@ -62,7 +64,7 @@ class CommunityCommentControllerTest {
     private CommunityCommentQueryService communityCommentQueryService;
 
     @Test
-    @DisplayName("[F-29][CM-04] 로그인하지 않은 사용자도 댓글 목록을 조회하면 댓글 아래에 답글이 묶여 나온다")
+    @DisplayName("[F-29][CM-04] 로그인하지 않은 사용자도 댓글 목록을 조회하면 댓글 아래에 답글이 묶여 나오고, 답글에 답한 답글에만 replyTo가 있다")
     void anonymousReadsCommentList() {
         // given
         when(communityCommentQueryService.list(9L, 0, 20))
@@ -86,6 +88,15 @@ class CommunityCommentControllerTest {
                       "commentId": 22,
                       "author": { "memberId": 32, "nickname": "아침안개" },
                       "content": "저도요",
+                      "deleted": false,
+                      "createdAt": "2026-10-05T03:00:00Z",
+                      "updatedAt": "2026-10-05T03:00:00Z",
+                      "replies": []
+                    }, {
+                      "commentId": 23,
+                      "author": { "memberId": 31, "nickname": "새벽능선" },
+                      "replyTo": { "memberId": 32, "nickname": "아침안개" },
+                      "content": "반가워요",
                       "deleted": false,
                       "createdAt": "2026-10-05T03:00:00Z",
                       "updatedAt": "2026-10-05T03:00:00Z",

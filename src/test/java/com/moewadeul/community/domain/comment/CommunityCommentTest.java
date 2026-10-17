@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class CommunityCommentTest {
 
@@ -46,6 +47,52 @@ class CommunityCommentTest {
         assertThat(top.isReply()).isFalse();
         assertThat(reply.isReply()).isTrue();
         assertThat(reply.getParentId()).isEqualTo(11L);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-04] 최상위 댓글에 답하면 그 댓글이 부모이고 답한 대상은 따로 남기지 않는다")
+    void replyToTopLevelUsesItAsParent() {
+        // given
+        CommunityComment top = saved(CommunityComment.write(3L, 7L, null, "댓글", NOW), 11L);
+
+        // when
+        CommunityComment reply = CommunityComment.replyTo(top, 8L, "답글", NOW);
+
+        // then
+        assertThat(reply.getPostId()).isEqualTo(3L);
+        assertThat(reply.getMemberId()).isEqualTo(8L);
+        assertThat(reply.getParentId()).isEqualTo(11L);
+        assertThat(reply.getReplyToCommentId()).isNull();
+        assertThat(reply.isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-04] 답글에 답하면 깊이를 늘리지 않고 그 답글의 부모를 부모로 쓰며, 답한 답글을 대상으로 남긴다")
+    void replyToReplyKeepsOneLevel() {
+        // given
+        CommunityComment reply = saved(CommunityComment.write(3L, 7L, 11L, "답글", NOW), 12L);
+
+        // when
+        CommunityComment answer = CommunityComment.replyTo(reply, 9L, "답글에 답해요", NOW);
+
+        // then
+        assertThat(answer.getPostId()).isEqualTo(3L);
+        assertThat(answer.getParentId()).isEqualTo(11L);
+        assertThat(answer.getReplyToCommentId()).isEqualTo(12L);
+        assertThat(answer.isReply()).isTrue();
+    }
+
+    @Test
+    @DisplayName("[F-29] 답글을 만들 때도 내용이 공백뿐이거나 1000자를 넘으면 거부한다")
+    void replyToRejectsInvalidContent() {
+        // given
+        CommunityComment top = saved(CommunityComment.write(3L, 7L, null, "댓글", NOW), 11L);
+
+        // then
+        assertThatThrownBy(() -> CommunityComment.replyTo(top, 8L, " ", NOW))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> CommunityComment.replyTo(top, 8L, "가".repeat(1001), NOW))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -246,5 +293,11 @@ class CommunityCommentTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommunityErrorCode.COMMUNITY_INVALID_STATE));
+    }
+
+    // 답글은 대상의 ID를 써야 해서, 저장된 댓글처럼 ID를 넣어 둔다.
+    private static CommunityComment saved(CommunityComment comment, long id) {
+        ReflectionTestUtils.setField(comment, "id", id);
+        return comment;
     }
 }

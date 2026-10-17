@@ -6,10 +6,12 @@ import java.time.Instant;
 import java.util.List;
 
 // 작성자는 회원 ID와 닉네임만 내보낸다. 이메일 같은 다른 회원 정보는 응답에 넣지 않는다.
+// 답한 대상(replyTo)은 답글에 답한 답글에만 넣는다. 최상위 댓글과 최상위 댓글에 바로 단 답글은 필드를 뺀다.
 // 삭제·숨김·검토 대기 댓글은 답글 때문에 자리만 남으므로, 작성자·내용·시각 필드를 null이 아니라 아예 뺀다.
 public record CommunityCommentItemResponse(
         long commentId,
         @JsonInclude(JsonInclude.Include.NON_NULL) Author author,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Author replyTo,
         @JsonInclude(JsonInclude.Include.NON_NULL) String content,
         boolean deleted,
         @JsonInclude(JsonInclude.Include.NON_NULL) Instant createdAt,
@@ -20,6 +22,7 @@ public record CommunityCommentItemResponse(
         return new CommunityCommentItemResponse(
                 item.commentId(),
                 item.deleted() ? null : new Author(item.authorId(), item.authorNickname()),
+                item.replyToMemberId() == null ? null : new Author(item.replyToMemberId(), item.replyToNickname()),
                 item.content(),
                 item.deleted(),
                 item.createdAt(),
