@@ -362,7 +362,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
         error={fieldErrors.capacity}
       />
 
-      <fieldset className="flex min-w-0 flex-col gap-3 rounded-control border border-line p-3">
+      <fieldset className="flex min-w-0 flex-col gap-3 rounded-sheet bg-fill p-4">
         <legend className="px-1 text-sm font-medium text-ink">합류 조건 (선택)</legend>
         <ChoiceGroup
           legend="최소 신뢰 단계"

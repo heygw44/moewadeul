@@ -18,7 +18,7 @@ export function AiInterpretSummary({ summary, className }: { summary: AiSummary;
   return (
     <div
       className={[
-        'pointer-events-auto flex flex-col gap-0.5 rounded-control bg-surface px-3 py-2 text-sm text-ink shadow-raise',
+        'pointer-events-auto flex flex-col gap-0.5 rounded-sheet bg-surface px-4 py-3 text-sm text-ink shadow-raise',
         className ?? '',
       ]
         .filter(Boolean)

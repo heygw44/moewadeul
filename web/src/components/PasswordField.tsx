@@ -19,7 +19,7 @@ export function PasswordField(props: PasswordFieldProps) {
           aria-label="비밀번호 보기"
           aria-pressed={visible}
           onClick={() => setVisible((current) => !current)}
-          className="flex h-11 w-11 items-center justify-center rounded-control text-ink-muted hover:text-ink"
+          className="flex h-12 w-12 items-center justify-center rounded-field text-ink-muted hover:text-ink"
         >
           <Icon name={visible ? 'eyeOff' : 'eye'} />
         </button>

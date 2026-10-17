@@ -289,7 +289,7 @@ function ReviewItem({
                 src={image.url}
                 alt={`${review.author.nickname}님 후기 사진 ${index + 1}`}
                 loading="lazy"
-                className="aspect-square w-full rounded-control border border-line bg-fill object-cover"
+                className="aspect-square w-full rounded-row bg-fill object-cover"
               />
             </li>
           ))}
@@ -399,7 +399,7 @@ function ReviewForm({
       noValidate
       onSubmit={handleSubmit}
       aria-label={title}
-      className="mt-3 flex flex-col gap-4 rounded-control border border-line bg-canvas p-4"
+      className="mt-3 flex flex-col gap-4 rounded-sheet bg-fill p-5"
     >
       {formError && (
         <div role="alert">

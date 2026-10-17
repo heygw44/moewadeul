@@ -283,7 +283,7 @@ function PostContent({ post, meta, actions, onLikeChanged, onImageError }: PostC
                 alt={`글 사진 ${post.images.length}장 중 ${index + 1}번째`}
                 loading="lazy"
                 onError={onImageError}
-                className="max-h-[32rem] w-full rounded-control border border-line bg-fill object-contain"
+                className="max-h-[32rem] w-full rounded-sheet bg-fill object-contain"
               />
             </li>
           ))}

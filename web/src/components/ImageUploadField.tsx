@@ -101,7 +101,7 @@ export function ImageUploadField({ uploads, inputId, error, disabled, className 
             <label
               htmlFor={inputId}
               className={[
-                'flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-control border border-dashed border-ink-subtle p-1 text-center text-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-info',
+                'flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-row border-[1.5px] border-dashed border-ink-faint p-1 text-center text-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-info',
                 disabled
                   ? 'cursor-not-allowed bg-fill text-ink-muted'
                   : 'cursor-pointer bg-surface text-ink hover:bg-fill',
@@ -140,6 +140,6 @@ function ImagePreview({ file, url, alt }: { file?: File; url?: string; alt: stri
     return () => URL.revokeObjectURL(created);
   }, [file]);
 
-  const box = 'aspect-square w-full rounded-control border border-line bg-fill object-cover';
+  const box = 'aspect-square w-full rounded-row bg-fill object-cover';
   return <img ref={ref} src={file ? undefined : url} alt={alt} className={box} />;
 }
