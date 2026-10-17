@@ -164,7 +164,7 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
+      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
         <button
           type="button"
           aria-label="장소로 돌아가기"

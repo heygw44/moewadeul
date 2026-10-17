@@ -17,10 +17,7 @@ export function MapSafetyNotice() {
   }
 
   return (
-    <div
-      role="note"
-      className="pointer-events-auto flex max-w-md gap-3 rounded-sheet border border-info bg-info-soft p-3 shadow-raise"
-    >
+    <div role="note" className="pointer-events-auto flex max-w-md gap-3 rounded-sheet bg-info-soft p-4 shadow-raise">
       <Icon name="info" size={20} className="mt-0.5 shrink-0 text-info" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="font-bold text-info">야영하기 전에 알아 두세요</p>
@@ -31,7 +28,7 @@ export function MapSafetyNotice() {
         <button
           type="button"
           onClick={confirm}
-          className="mt-1 inline-flex min-h-11 items-center self-start rounded-control border border-info px-3 text-sm font-semibold text-info hover:bg-surface"
+          className="mt-1 inline-flex min-h-11 items-center self-start rounded-control bg-info px-4 text-sm font-semibold text-white hover:bg-info-strong"
         >
           확인했어요
         </button>

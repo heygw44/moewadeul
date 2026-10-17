@@ -48,26 +48,28 @@ export function SpotPreviewBoard({ spotId, onClose }: SpotPreviewBoardProps) {
   return (
     <section
       aria-label="고른 장소의 근거"
-      className="pointer-events-auto w-[22.5rem] overflow-hidden rounded-sheet bg-surface shadow-raise [&_.board-head_:focus-visible]:outline-white"
+      className="pointer-events-auto w-[22.5rem] overflow-hidden rounded-sheet bg-surface shadow-raise"
     >
-      <div className="board-head flex items-start gap-2 bg-brand py-4 pr-2 pl-5 text-white">
+      <div className="flex items-start gap-2 pt-4 pr-2 pb-3 pl-5 text-ink">
         <div className="min-w-0 flex-1">
           {detail ? (
             <>
-              <h2 className="text-2xl leading-tight font-extrabold tracking-[-0.025em] break-words">{detail.name}</h2>
-              <p className="mt-1 text-[0.8125rem] text-brand-ink">
+              <h2 className="text-[1.375rem] leading-tight font-extrabold tracking-[-0.025em] break-words">
+                {detail.name}
+              </h2>
+              <p className="mt-1 text-[0.8125rem] text-ink-muted">
                 {[SPOT_TYPE_META[detail.type].label, detail.address, ratingText(detail)].filter(Boolean).join(' · ')}
               </p>
             </>
           ) : (
-            <h2 className="text-2xl font-extrabold tracking-[-0.025em]">장소 근거</h2>
+            <h2 className="text-[1.375rem] font-extrabold tracking-[-0.025em]">장소 근거</h2>
           )}
         </div>
         <button
           type="button"
           aria-label="근거 판 닫기"
           onClick={onClose}
-          className="flex size-11 shrink-0 items-center justify-center rounded-control text-white hover:bg-brand-raised"
+          className="flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-fill hover:text-ink"
         >
           <Icon name="close" size={22} />
         </button>
@@ -87,13 +89,13 @@ export function SpotPreviewBoard({ spotId, onClose }: SpotPreviewBoardProps) {
         </p>
       ) : (
         <>
-          <dl>
+          <dl className="mx-3 flex flex-col gap-0.5 rounded-sheet bg-fill py-1.5">
             <ParkRow detail={detail} />
             <OperationRow detail={detail} />
             <WeatherRow weather={weather} />
             <PeopleRow detail={detail} />
           </dl>
-          <div className="border-t border-line px-5 pt-4 pb-5">
+          <div className="px-3 pt-3 pb-3">
             <Link to={`/spots/${detail.spotId}`} className={`${buttonClassName('primary')} w-full`}>
               {detail.recruitingBasecamps.length > 0
                 ? `모집 중인 베이스캠프 ${detail.recruitingBasecamps.length}개와 자세히 보기`
@@ -125,7 +127,7 @@ function Row({
   tone?: 'warning';
 }) {
   return (
-    <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 border-t border-line px-5 py-3 text-sm first:border-t-0">
+    <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-3 px-4 py-2.5 text-sm">
       <dt className="text-ink-muted">{label}</dt>
       <dd className="min-w-0">
         <span className={`block font-bold ${tone === 'warning' ? 'text-warning' : 'text-ink'}`}>{value}</span>
