@@ -18,10 +18,25 @@
           AND member_id = #{memberId}
     </delete>
 
-    <select id="countByPost" resultType="long">
-        SELECT COUNT(*)
-        FROM community_post_like
-        WHERE post_id = #{postId}
+    <!-- 기본 키로 글 행 하나만 잠그고 상태를 읽는다. 글이 없으면 NULL이다. -->
+    <select id="lockPostStatus" resultType="string">
+        SELECT status
+        FROM community_post
+        WHERE id = #{postId}
+        FOR UPDATE
+    </select>
+
+    <!-- 좋아요 행을 기본 키 앞부분(글 ID)으로 다시 세어 글 행에 쓴다. -->
+    <update id="refreshLikeCount">
+        UPDATE community_post
+        SET like_count = (SELECT COUNT(*) FROM community_post_like WHERE post_id = #{postId})
+        WHERE id = #{postId}
+    </update>
+
+    <select id="selectLikeCount" resultType="long">
+        SELECT like_count
+        FROM community_post
+        WHERE id = #{postId}
     </select>
 
 </mapper>
