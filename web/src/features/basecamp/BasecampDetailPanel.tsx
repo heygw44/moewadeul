@@ -37,9 +37,10 @@ type BasecampDetailPanelProps = {
 
 type DetailResult = { basecampId: number; detail: BasecampDetail } | { basecampId: number; error: unknown };
 
-const SECTION_CLASS = 'mt-5';
-const SECTION_TITLE_CLASS = 'mb-2 text-sm font-bold text-ink-muted';
-const BOARD_CLASS = 'overflow-hidden rounded-sheet border border-line bg-surface';
+// 섹션은 선 없이 간격과 굵은 제목으로 나누고, 묶음은 세이지 면에 담는다.
+const SECTION_CLASS = 'mt-8';
+const SECTION_TITLE_CLASS = 'mb-3 text-[1.1875rem] font-extrabold tracking-[-0.02em] text-ink';
+const BOARD_CLASS = 'overflow-hidden rounded-sheet bg-fill';
 const MESSAGE_MAX = 500;
 const ACTION_LINK_CLASS = buttonClassName('secondary');
 
@@ -113,7 +114,7 @@ export function BasecampDetailPanel({ basecampId, onBack }: BasecampDetailPanelP
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
+      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
         <button
           type="button"
           onClick={onBack}
@@ -148,32 +149,34 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
 
   return (
     <>
-      <article className="px-4 pb-4 lg:px-5">
-        {/* 머리는 탐방로 안내판처럼 숲색 판에 상태·제목·일정 세 칸을 적는다. 패널 폭으로 깐다. */}
-        <header className="-mx-4 bg-brand px-4 pt-4 pb-5 text-white lg:-mx-5 lg:px-5">
-          <p className="inline-flex items-center gap-1.5 text-[0.8125rem] font-bold">
+      <article className="px-4 pt-2 pb-6 lg:px-6">
+        {/* 머리는 상태·제목 아래에 출발·돌아오는 날·일정을 세이지 칸 셋으로 적는다. */}
+        <header>
+          <p className="inline-flex items-center gap-1.5 text-[0.8125rem] font-bold text-ink">
             <span
               aria-hidden="true"
-              className={`size-2 rounded-full ${detail.status === 'RECRUITING' ? 'bg-accent-soft' : 'bg-brand-ink'}`}
+              className={`size-2 rounded-full ${detail.status === 'RECRUITING' ? 'bg-brand' : 'bg-ink-faint'}`}
             />
             {status.label}
           </p>
-          <h2 className="mt-1 text-2xl leading-tight font-extrabold tracking-[-0.025em] break-words">{detail.title}</h2>
-          <dl className="mt-4 grid grid-cols-[1fr_1fr_auto] overflow-hidden rounded-row border border-white/25">
-            <div className="px-3 py-2">
-              <dt className="text-xs text-brand-ink">출발</dt>
+          <h2 className="mt-1 text-[1.75rem] leading-tight font-extrabold tracking-[-0.03em] break-words text-ink lg:text-[1.875rem]">
+            {detail.title}
+          </h2>
+          <dl className="mt-5 grid grid-cols-[1fr_1fr_auto] gap-2 text-ink">
+            <div className="rounded-sheet bg-fill px-4 py-3">
+              <dt className="text-[0.8125rem] text-ink-muted">출발</dt>
               <dd className="text-[0.9375rem] font-extrabold whitespace-nowrap tabular-nums">
                 {formatLocalDate(detail.startDate)}
               </dd>
             </div>
-            <div className="border-l border-white/25 px-3 py-2">
-              <dt className="text-xs text-brand-ink">돌아오는 날</dt>
+            <div className="rounded-sheet bg-fill px-4 py-3">
+              <dt className="text-[0.8125rem] text-ink-muted">돌아오는 날</dt>
               <dd className="text-[0.9375rem] font-extrabold whitespace-nowrap tabular-nums">
                 {formatLocalDate(detail.endDate)}
               </dd>
             </div>
-            <div className="border-l border-white/25 px-3 py-2">
-              <dt className="text-xs text-brand-ink">일정</dt>
+            <div className="rounded-sheet bg-fill px-4 py-3">
+              <dt className="text-[0.8125rem] text-ink-muted">일정</dt>
               <dd className="text-[0.9375rem] font-extrabold tabular-nums">
                 {nightsBetween(detail.startDate, detail.endDate)}박
               </dd>
@@ -189,7 +192,7 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
           </h3>
           <Link
             to={`/spots/${detail.spot.spotId}`}
-            className={`${BOARD_CLASS} flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-fill`}
+            className={`${BOARD_CLASS} flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-fill-strong`}
           >
             <span
               aria-hidden="true"
@@ -289,11 +292,11 @@ function MemberRow({
   const profile = profileSummary(member);
 
   return (
-    <li className="flex flex-col gap-1 border-t border-line px-4 py-2.5">
+    <li className="flex flex-col gap-1 px-4 py-2.5">
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[0.9375rem] font-extrabold text-accent-deep"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface text-[0.9375rem] font-extrabold text-brand-strong"
         >
           {member.nickname.slice(0, 1)}
         </span>
@@ -306,7 +309,7 @@ function MemberRow({
               {member.nickname}
             </Link>
             {member.role === 'LEADER' && (
-              <span className="rounded-[3px] border border-brand px-1.5 text-xs font-bold text-brand">캠프 리더</span>
+              <span className="rounded-control bg-brand px-2 py-0.5 text-xs font-bold text-white">캠프 리더</span>
             )}
           </span>
           {profile.length > 0 && <span className="text-[0.8125rem] text-ink-muted">{profile.join(' · ')}</span>}
@@ -544,7 +547,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   if (content === null && !error && !done) return null;
 
   return (
-    <div className="sticky bottom-0 z-10 mt-auto flex flex-col gap-2 border-t border-line bg-surface px-4 py-3">
+    <div className="sticky bottom-0 z-10 mt-auto flex flex-col gap-2 border-t border-line bg-surface px-4 py-3 lg:px-6">
       {done && (
         <p role="status" className="text-sm font-semibold text-accent-deep">
           {done}

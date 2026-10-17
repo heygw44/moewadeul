@@ -3,7 +3,14 @@ import type { ReactNode } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import { fetchSpotDetail } from '../../api/spots';
-import type { BakjiDetail, ExpectedPeople, MidTermForecast, PublicDetail, SpotDetail } from '../../api/types';
+import type {
+  BakjiDetail,
+  ExpectedPeople,
+  MidTermForecast,
+  PublicDetail,
+  SpotDetail,
+  SpotRating,
+} from '../../api/types';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { buttonClassName } from '../../components/buttonClass';
@@ -33,8 +40,9 @@ type SpotDetailPanelProps = {
 type DetailResult =
   { spotId: number; attempt: number; detail: SpotDetail } | { spotId: number; attempt: number; error: unknown };
 
-const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
-const SECTION_TITLE_CLASS = 'text-[0.9375rem] font-bold text-ink';
+// 섹션은 선 없이 간격과 굵은 제목으로 나눈다.
+const SECTION_CLASS = 'mt-8';
+const SECTION_TITLE_CLASS = 'text-[1.1875rem] font-extrabold tracking-[-0.02em] text-ink';
 
 // 단기 예보는 앞에서부터 이만큼만 보여 준다.
 const SHORT_TERM_LIMIT = 4;
@@ -102,7 +110,7 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
+      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
         <button
           type="button"
           onClick={onBack}
@@ -112,7 +120,7 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
           목록
         </button>
       </div>
-      <div aria-busy={current === null} className="px-4 py-4 lg:px-5">
+      <div aria-busy={current === null} className="px-4 pt-2 pb-8 lg:px-6">
         {body}
       </div>
     </div>
@@ -150,11 +158,12 @@ function DetailContent({ detail, weather }: { detail: SpotDetail; weather: SpotW
 
   return (
     <article>
-      {/* 패널 머리는 탐방로 안내판처럼 숲색 판에 흰 이름을 적는다.
-          휴장과 공원 경계 경고는 바로 아래 안내 상자가 기간·근거와 함께 알리므로, 이름 아래에는 장소 유형과 주소만 둔다. */}
-      <header className="-mx-4 -mt-4 flex flex-col gap-1 bg-brand px-4 py-4 text-white lg:-mx-5 lg:px-5">
-        <h2 className="text-2xl leading-tight font-extrabold tracking-[-0.025em]">{detail.name}</h2>
-        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-brand-ink">
+      {/* 휴장과 공원 경계 경고는 바로 아래 안내 상자가 기간·근거와 함께 알리므로, 이름 아래에는 장소 유형과 주소만 둔다. */}
+      <header className="flex flex-col gap-1.5">
+        <h2 className="text-[1.75rem] leading-tight font-extrabold tracking-[-0.03em] text-ink lg:text-[1.875rem]">
+          {detail.name}
+        </h2>
+        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-ink-muted">
           <Icon name={meta.icon} size={16} className="shrink-0" />
           {[meta.label, detail.address].filter(Boolean).join(' · ')}
         </p>
@@ -170,6 +179,8 @@ function DetailContent({ detail, weather }: { detail: SpotDetail; weather: SpotW
           <ParkWarningNotice warning={warning} />
         </div>
       )}
+
+      <SummaryTiles rating={detail.rating} expectedPeople={expectedPeople} />
 
       {bakji && (
         <BakjiSection bakji={bakji} confirmationCount={confirmationCount}>
@@ -238,6 +249,26 @@ function DetailContent({ detail, weather }: { detail: SpotDetail; weather: SpotW
   );
 }
 
+// 평점·후기 수·가장 가까운 밤의 예상 인원을 세이지 칸 셋으로 먼저 보여 준다. 자세한 값은 아래 섹션에 있다.
+function SummaryTiles({ rating, expectedPeople }: { rating: SpotRating; expectedPeople: ExpectedPeople[] }) {
+  const next = expectedPeople[0];
+  const tiles = [
+    { label: '평점', value: rating.average === null ? '-' : rating.average.toFixed(1) },
+    { label: '후기', value: `${rating.count}개` },
+    { label: next ? `${formatLocalDate(next.date)} 밤` : '예상 인원', value: next ? `${next.count}명` : '-' },
+  ];
+  return (
+    <dl className="mt-5 grid grid-cols-3 gap-2">
+      {tiles.map((tile) => (
+        <div key={tile.label} className="flex min-w-0 flex-col gap-1 rounded-sheet bg-fill px-4 py-3.5">
+          <dt className="truncate text-[0.8125rem] text-ink-muted">{tile.label}</dt>
+          <dd className="text-xl font-extrabold tracking-[-0.02em] tabular-nums text-ink">{tile.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function ClosedNotice({ publicDetail }: { publicDetail: PublicDetail }) {
   const { closedFrom, closedUntil } = publicDetail;
   let period: string | null = null;
@@ -276,7 +307,7 @@ function BakjiSection({
       </h3>
       {bakji.notice && <p className="mt-2 text-sm text-ink-muted">{bakji.notice}</p>}
       {bakji.description && <p className="mt-2 whitespace-pre-line text-base text-ink">{bakji.description}</p>}
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-sheet bg-fill p-4 text-sm">
         <dt className="text-ink-muted">식수</dt>
         <dd className="text-ink">{bakji.hasWater ? '있음' : '없음'}</dd>
         <dt className="text-ink-muted">화장실</dt>
@@ -415,34 +446,36 @@ function WeatherSection({ weather: state }: { weather: SpotWeatherState }) {
         <div className="mt-2 flex flex-col gap-3">
           <p className="text-sm text-ink-muted">출처 {weather.source}</p>
           {weather.shortTerm.length > 0 && (
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="text-ink-muted">
-                  <th scope="col" className="py-1 font-normal">
-                    시각
-                  </th>
-                  <th scope="col" className="py-1 text-right font-normal">
-                    기온
-                  </th>
-                  <th scope="col" className="py-1 text-right font-normal">
-                    강수확률
-                  </th>
-                  <th scope="col" className="py-1 text-right font-normal">
-                    바람
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="font-mono tabular-nums text-ink">
-                {weather.shortTerm.slice(0, SHORT_TERM_LIMIT).map((forecast) => (
-                  <tr key={forecast.at} className="border-t border-line">
-                    <td className="py-2">{formatKstTime(forecast.at)}</td>
-                    <td className="py-2 text-right">{formatValue(forecast.temperature, '°C')}</td>
-                    <td className="py-2 text-right">{formatValue(forecast.precipitationProbability, '%')}</td>
-                    <td className="py-2 text-right">{formatValue(forecast.windSpeed, 'm/s')}</td>
+            <div className="rounded-sheet bg-fill px-4 py-2">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="text-ink-muted">
+                    <th scope="col" className="py-1 font-normal">
+                      시각
+                    </th>
+                    <th scope="col" className="py-1 text-right font-normal">
+                      기온
+                    </th>
+                    <th scope="col" className="py-1 text-right font-normal">
+                      강수확률
+                    </th>
+                    <th scope="col" className="py-1 text-right font-normal">
+                      바람
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="font-mono tabular-nums text-ink">
+                  {weather.shortTerm.slice(0, SHORT_TERM_LIMIT).map((forecast) => (
+                    <tr key={forecast.at}>
+                      <td className="py-2">{formatKstTime(forecast.at)}</td>
+                      <td className="py-2 text-right">{formatValue(forecast.temperature, '°C')}</td>
+                      <td className="py-2 text-right">{formatValue(forecast.precipitationProbability, '%')}</td>
+                      <td className="py-2 text-right">{formatValue(forecast.windSpeed, 'm/s')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {weather.midTerm.length > 0 && <MidTermTable forecasts={weather.midTerm.slice(0, MID_TERM_LIMIT)} />}
           {weather.sun ? (
@@ -464,36 +497,38 @@ function WeatherSection({ weather: state }: { weather: SpotWeatherState }) {
 
 function MidTermTable({ forecasts }: { forecasts: MidTermForecast[] }) {
   return (
-    <table className="w-full text-left text-sm">
-      <caption className="pb-1 text-left text-ink-muted">중기 예보</caption>
-      <thead>
-        <tr className="text-ink-muted">
-          <th scope="col" className="py-1 font-normal">
-            날짜
-          </th>
-          <th scope="col" className="py-1 text-right font-normal">
-            최저/최고
-          </th>
-          <th scope="col" className="py-1 text-right font-normal">
-            오전
-          </th>
-          <th scope="col" className="py-1 text-right font-normal">
-            오후
-          </th>
-        </tr>
-      </thead>
-      <tbody className="tabular-nums text-ink">
-        {forecasts.map((forecast) => (
-          <tr key={forecast.date} className="border-t border-line">
-            <td className="py-2">{formatLocalDate(forecast.date)}</td>
-            <td className="py-2 text-right font-mono">
-              {formatValue(forecast.minTemperature, '°')}/{formatValue(forecast.maxTemperature, '°')}
-            </td>
-            <td className="py-2 text-right">{forecast.amSky ?? '-'}</td>
-            <td className="py-2 text-right">{forecast.pmSky ?? '-'}</td>
+    <div className="rounded-sheet bg-fill px-4 py-2">
+      <table className="w-full text-left text-sm">
+        <caption className="pb-1 text-left text-ink-muted">중기 예보</caption>
+        <thead>
+          <tr className="text-ink-muted">
+            <th scope="col" className="py-1 font-normal">
+              날짜
+            </th>
+            <th scope="col" className="py-1 text-right font-normal">
+              최저/최고
+            </th>
+            <th scope="col" className="py-1 text-right font-normal">
+              오전
+            </th>
+            <th scope="col" className="py-1 text-right font-normal">
+              오후
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody className="tabular-nums text-ink">
+          {forecasts.map((forecast) => (
+            <tr key={forecast.date}>
+              <td className="py-2">{formatLocalDate(forecast.date)}</td>
+              <td className="py-2 text-right font-mono">
+                {formatValue(forecast.minTemperature, '°')}/{formatValue(forecast.maxTemperature, '°')}
+              </td>
+              <td className="py-2 text-right">{forecast.amSky ?? '-'}</td>
+              <td className="py-2 text-right">{forecast.pmSky ?? '-'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

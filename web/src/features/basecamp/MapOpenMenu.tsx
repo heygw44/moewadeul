@@ -142,7 +142,7 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
       onKeyDown={(event) => {
         if (event.key === 'Escape') onClose();
       }}
-      className="m-1 flex w-64 break-keep whitespace-normal max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-sheet border border-line bg-surface py-2 pr-1 pl-3 text-ink shadow-raise"
+      className="m-1 flex w-64 break-keep whitespace-normal max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-sheet bg-surface py-2 pr-1 pl-4 text-ink shadow-raise"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-1 pt-1">
@@ -184,11 +184,11 @@ export function SpotPickDialog({ spots, onClose }: SpotPickDialogProps) {
   return (
     <Dialog title="어느 장소에서 열까요?" onClose={onClose}>
       <p className="text-sm text-ink-muted">누른 곳에서 50m 안에 있는 장소예요.</p>
-      <ul className="mt-2 flex flex-col">
+      <ul className="mt-2 flex flex-col gap-0.5">
         {spots.map((spot) => (
-          <li key={spot.spotId} className="border-t border-line first:border-t-0">
+          <li key={spot.spotId}>
             {spot.parkWarning ? (
-              <div aria-disabled="true" className="flex min-h-11 flex-col gap-1 py-2">
+              <div aria-disabled="true" className="flex min-h-11 flex-col gap-1 rounded-row bg-fill px-3 py-2.5">
                 <SpotPickLabel spot={spot} />
                 <p className="text-sm text-warning">공원 경계 경고가 있는 박지라 베이스캠프를 열 수 없어요.</p>
               </div>
@@ -196,7 +196,7 @@ export function SpotPickDialog({ spots, onClose }: SpotPickDialogProps) {
               <Link
                 to={`/basecamps/new?spotId=${spot.spotId}`}
                 onClick={onClose}
-                className="flex min-h-11 flex-col gap-1 py-2 hover:bg-fill"
+                className="flex min-h-11 flex-col gap-1 rounded-row px-3 py-2.5 hover:bg-fill"
               >
                 <SpotPickLabel spot={spot} />
               </Link>

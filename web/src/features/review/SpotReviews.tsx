@@ -121,9 +121,9 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
   }
 
   return (
-    <section className="mt-4 border-t border-line pt-4" aria-labelledby="spot-review-title">
+    <section className="mt-8" aria-labelledby="spot-review-title">
       <div className="flex items-center justify-between gap-2">
-        <h3 id="spot-review-title" className="text-sm font-semibold text-ink-muted">
+        <h3 id="spot-review-title" className="text-[1.1875rem] font-extrabold tracking-[-0.02em] text-ink">
           후기
         </h3>
         <WriteAction
@@ -178,10 +178,10 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
       )}
 
       {list && list.reviews.length > 0 && (
-        <ul className="mt-3 flex flex-col">
+        <ul className="mt-3 flex flex-col gap-2">
           {list.reviews.map((review) =>
             editingId === review.reviewId ? (
-              <li key={review.reviewId} className="border-t border-line py-3">
+              <li key={review.reviewId} className="rounded-sheet bg-fill p-4">
                 <ReviewForm
                   mode="edit"
                   initial={review}
@@ -269,7 +269,7 @@ function ReviewItem({
   onDelete: () => void;
 }) {
   return (
-    <li className="border-t border-line py-3">
+    <li className="rounded-sheet bg-fill p-4">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         <Stars rating={review.rating} />
         <Link
