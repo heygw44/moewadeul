@@ -5,6 +5,7 @@ import static com.moewadeul.community.api.CommunityApiFixture.POSTS;
 import static com.moewadeul.community.api.CommunityApiFixture.postIdOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.api.CommunityApiFixture;
@@ -12,6 +13,7 @@ import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -625,6 +627,45 @@ class CommunityPostApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-01][CM-12] 활성이 아닌 글과 숨긴 장소의 글이 섞여도 조건마다 페이지를 끝까지 넘긴 글이 전체 글 수와 같고 최신순이다")
+    void pagingThroughEveryConditionMatchesTotalCount() throws Exception {
+        // given: 활성 글 사이에 지운 글·숨긴 글·검토 대기 글을 두고, 연결한 장소는 나중에 숨긴다
+        long spotId = fixture.insertSpot("능선 끝 평지", "ACTIVE");
+        Cookie ridge = fixture.verifiedSession(fixture.saveMember("능선러"));
+        Cookie other = fixture.verifiedSession(fixture.saveMember(null));
+        List<Cookie> likers = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            likers.add(fixture.verifiedSession(fixture.saveMember(null)));
+        }
+        long p1 = fixture.writePost(ridge, "글 1", "본문", spotId);
+        long p2 = fixture.writePost(other, "글 2", "본문", null);
+        long deleted = fixture.writePost(ridge, "지운 글", "본문", null);
+        long hidden = fixture.writePost(other, "숨긴 글", "본문", spotId);
+        long pending = fixture.writePost(ridge, "검토 대기 글", "본문", null);
+        long p6 = fixture.writePost(other, "글 6", "본문", null);
+        long p7 = fixture.writePost(ridge, "글 7", "본문", spotId);
+        like(hidden, likers);
+        like(p6, likers);
+        like(p7, likers);
+        fixture.send(mvc.delete().uri(POSTS + "/" + deleted), ridge, null);
+        jdbc.update("UPDATE community_post SET status = 'HIDDEN' WHERE id = ?", hidden);
+        jdbc.update("UPDATE community_post SET status = 'PENDING_REVIEW' WHERE id = ?", pending);
+        fixture.setSpotStatus(spotId, "HIDDEN");
+
+        // when
+        List<Integer> all = idsOverAllPages("");
+        List<Integer> bySpot = idsOverAllPages("&spotId=" + spotId);
+        List<Integer> popular = idsOverAllPages("&popular=true");
+        List<Integer> byAuthor = idsOverAllPages("&searchType=AUTHOR&keyword=능선러");
+
+        // then
+        assertThat(all).containsExactly((int) p7, (int) p6, (int) p2, (int) p1);
+        assertThat(bySpot).containsExactly((int) p7, (int) p1);
+        assertThat(popular).containsExactly((int) p7, (int) p6);
+        assertThat(byAuthor).containsExactly((int) p7, (int) p1);
+    }
+
+    @Test
     @DisplayName("[F-29][CM-13] 제목+내용·제목·내용·글쓴이 대상마다 검색어가 들어간 글만 나오고, 검색 대상을 보내지 않으면 제목+내용을 찾는다")
     void searchesBySearchType() {
         // given
@@ -757,6 +798,26 @@ class CommunityPostApiIntegrationTest {
                 .bodyJson()
                 .extractingPath("$.content[*].postId")
                 .asList();
+    }
+
+    // 한 쪽에 한 건씩 마지막 페이지까지 넘기며 글 ID를 모은다. 모은 수가 응답의 전체 글 수와 같아야 한다.
+    private List<Integer> idsOverAllPages(String condition) throws Exception {
+        MvcTestResult first =
+                mvc.get().uri(POSTS + "?size=1&page=0" + condition).exchange();
+        assertThat(first).hasStatus(HttpStatus.OK);
+        int totalElements =
+                JsonPath.read(first.getResponse().getContentAsString(StandardCharsets.UTF_8), "$.totalElements");
+        List<Integer> ids = new ArrayList<>();
+        for (int page = 0; page < totalElements + 1; page++) {
+            MvcTestResult result =
+                    mvc.get().uri(POSTS + "?size=1&page=" + page + condition).exchange();
+            assertThat(result).bodyJson().extractingPath("$.totalElements").isEqualTo(totalElements);
+            List<Integer> content = JsonPath.read(
+                    result.getResponse().getContentAsString(StandardCharsets.UTF_8), "$.content[*].postId");
+            ids.addAll(content);
+        }
+        assertThat(ids).hasSize(totalElements);
+        return ids;
     }
 
     private void like(long postId, List<Cookie> sessions) {

@@ -58,7 +58,7 @@ class CommunityPostLikeConcurrencyIntegrationTest {
         // then
         assertThat(failures).isEmpty();
         assertThat(rowCount(postId)).isEqualTo(THREADS);
-        assertThat(likeMapper.countByPost(postId)).isEqualTo(THREADS);
+        assertThat(likeMapper.selectLikeCount(postId)).isEqualTo(THREADS);
     }
 
     @RepeatedTest(5)
@@ -75,7 +75,31 @@ class CommunityPostLikeConcurrencyIntegrationTest {
         // then
         assertThat(failures).isEmpty();
         assertThat(rowCount(postId)).isEqualTo(1);
-        assertThat(likeMapper.countByPost(postId)).isEqualTo(1);
+        assertThat(likeMapper.selectLikeCount(postId)).isEqualTo(1);
+    }
+
+    @RepeatedTest(5)
+    @DisplayName("[F-29][CM-05] 좋아요와 취소가 같은 글에 동시에 섞여 와도 글 행에 저장한 좋아요 수가 좋아요 행 수와 같다")
+    void concurrentLikesAndUnlikesKeepStoredCountEqualToRows() throws Exception {
+        // given: 앞의 절반은 미리 눌러 두고, 동시에 앞의 절반은 취소하고 뒤의 절반은 누른다
+        List<Long> memberIds = saveMembers(THREADS);
+        long postId = savePost(memberIds.get(0));
+        List<Long> unlikers = memberIds.subList(0, THREADS / 2);
+        for (long memberId : unlikers) {
+            likeService.like(memberId, postId);
+        }
+
+        // when
+        List<Throwable> failures = runConcurrently(
+                memberIds,
+                memberId -> unlikers.contains(memberId)
+                        ? likeService.unlike(memberId, postId)
+                        : likeService.like(memberId, postId));
+
+        // then
+        assertThat(failures).isEmpty();
+        assertThat(rowCount(postId)).isEqualTo(THREADS - unlikers.size());
+        assertThat(likeMapper.selectLikeCount(postId)).isEqualTo(THREADS - unlikers.size());
     }
 
     private long savePost(long authorId) {

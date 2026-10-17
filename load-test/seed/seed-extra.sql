@@ -510,6 +510,10 @@ BEGIN
     ) x
     JOIN lt_bg g ON g.idx = (x.s * 7919 + x.k * 104729) % extra_member_count;
     SELECT COUNT(*) AS community_post_likes FROM community_post_like;
+    -- 서버는 좋아요 수를 글 행에도 저장하고, 좋아요·취소할 때 좋아요 행 수로 다시 쓴다. 시드도 같은 값으로 채운다.
+    UPDATE community_post p
+    JOIN (SELECT post_id, COUNT(*) AS cnt FROM community_post_like GROUP BY post_id) l ON l.post_id = p.id
+    SET p.like_count = l.cnt;
 
     -- 글 이미지. 열에 하나꼴로 1~5장을 붙인다. 붙지 않은 이미지는 정리 작업이 지우므로 만들지 않는다.
     INSERT INTO community_image (member_id, post_id, object_key, content_type, size_bytes, display_order, created_at)
