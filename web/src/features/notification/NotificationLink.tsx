@@ -3,7 +3,7 @@ import { Icon } from '../../components/icons';
 import { useSession } from '../member/session';
 import { notificationLabel, useUnreadCount } from './unreadCount';
 
-// 안 읽은 알림 수 배지. 100개부터는 99+로 줄여 적는다. 숲색 머리글과 흰 판 어디서나 보이게 위험색으로 칠한다.
+// 안 읽은 알림 수 배지. 100개부터는 99+로 줄여 적는다. 흰 바탕과 세이지 면 어디서나 보이게 위험색으로 칠한다.
 export function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
@@ -27,7 +27,7 @@ export function NotificationLink() {
     <Link
       to="/me/notifications"
       aria-label={notificationLabel(count)}
-      className="inline-flex min-h-11 items-center gap-2 rounded-sheet border border-line bg-surface px-3 text-ink hover:bg-fill"
+      className="inline-flex min-h-11 items-center gap-2 rounded-control bg-fill px-4 text-ink hover:bg-fill-strong"
     >
       <Icon name="bell" size={20} />
       <span className="text-sm">알림</span>
