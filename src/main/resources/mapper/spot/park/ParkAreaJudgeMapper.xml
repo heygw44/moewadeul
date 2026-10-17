@@ -29,24 +29,47 @@
         SELECT s.id AS id,
                ST_Latitude(s.location) AS lat,
                ST_Longitude(s.location) AS lng,
-               s.park_warning AS parkWarning
+               s.park_warning AS parkWarning,
+               s.version AS version
         FROM spot s
         WHERE s.type = 'BAKJI'
         ORDER BY s.id
     </select>
 
-    <!-- 같은 경계로 판정된 박지들의 판정 결과를 한 번에 기록한다. protectedAreaId가 null이면 경계 밖이라 경고를 끄고 근거 경계를 비운다.
-         판정 결과는 제보 내용을 고친 것이 아니라서 updated_at은 그대로 두고, 판정 시각은 area_checked_at에 남긴다. -->
-    <update id="updateJudgement">
-        UPDATE spot
-        SET protected_area_id = #{protectedAreaId,jdbcType=BIGINT},
-            park_warning = (#{protectedAreaId,jdbcType=BIGINT} IS NOT NULL),
-            area_checked_at = #{now}
-        WHERE type = 'BAKJI'
-          AND id IN
-        <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
-            #{spotId}
+    <!-- 재판정 도중 다른 쓰기가 바꾼 박지를 다시 판정할 때 쓴다. 기본 키 목록으로만 잠가서 다른 행이나 빈 범위를 잠그지 않고,
+         여러 트랜잭션이 같은 순서로 잠그도록 ID 순서로 읽는다. -->
+    <select id="selectBakjiPointsForUpdate" resultType="com.moewadeul.spot.infra.park.BakjiPointRow">
+        SELECT s.id AS id,
+               ST_Latitude(s.location) AS lat,
+               ST_Longitude(s.location) AS lng,
+               s.park_warning AS parkWarning,
+               s.version AS version
+        FROM spot s
+        WHERE s.type = 'BAKJI'
+          AND s.id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
         </foreach>
+        ORDER BY s.id
+        FOR UPDATE
+    </select>
+
+    <!-- 같은 경계로 판정된 박지들의 판정 결과를 한 번에 기록한다. protectedAreaId가 null이면 경계 밖이라 경고를 끄고 근거 경계를 비운다.
+         판정 결과는 제보 내용을 고친 것이 아니라서 updated_at은 그대로 두고, 판정 시각은 area_checked_at에 남긴다.
+         재판정은 박지 좌표를 처음에 한 번 읽고 박지마다 경계를 찾느라 시간이 걸린다. 그 사이 제보자가 좌표를 옮기면 옛 좌표의 판정을 쓰게 된다.
+         그래서 (ID, 읽은 때의 version) 파생 테이블과 조인해 번호가 그대로인 행만 바꾸고, 번호를 올린다. 바뀌지 않은 행은 서비스가 다시 판정한다. -->
+    <update id="updateJudgement">
+        UPDATE spot s
+        JOIN (
+        <foreach collection="targets" item="target" separator="UNION ALL">
+            SELECT #{target.id} AS id, #{target.version} AS version
+        </foreach>
+        ) AS judged ON judged.id = s.id AND judged.version = s.version
+        SET s.protected_area_id = #{protectedAreaId,jdbcType=BIGINT},
+            s.park_warning = (#{protectedAreaId,jdbcType=BIGINT} IS NOT NULL),
+            s.area_checked_at = #{now},
+            s.version = s.version + 1
+        WHERE s.type = 'BAKJI'
     </update>
 
 </mapper>

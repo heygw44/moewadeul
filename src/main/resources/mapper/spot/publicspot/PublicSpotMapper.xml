@@ -88,7 +88,8 @@
             s.location = ST_SRID(POINT(changed.longitude, changed.latitude), 4326),
             s.weather_nx = changed.weather_nx,
             s.weather_ny = changed.weather_ny,
-            s.updated_at = #{now}
+            s.updated_at = #{now},
+            s.version = s.version + 1
     </update>
 
     <update id="updateDetails">
@@ -124,7 +125,8 @@
         UPDATE spot s
         JOIN public_spot_detail d ON d.spot_id = s.id
         SET s.status = 'ACTIVE',
-            s.updated_at = #{now}
+            s.updated_at = #{now},
+            s.version = s.version + 1
         WHERE s.status = 'HIDDEN'
           AND d.source_removed_at IS NOT NULL
           AND s.id IN
@@ -221,7 +223,8 @@
     <update id="hideSpots">
         UPDATE spot
         SET status = 'HIDDEN',
-            updated_at = #{now}
+            updated_at = #{now},
+            version = version + 1
         WHERE status = 'ACTIVE'
           AND id IN
         <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">

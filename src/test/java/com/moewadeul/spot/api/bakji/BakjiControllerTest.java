@@ -19,6 +19,7 @@ import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.spot.application.SpotParkWarning;
 import com.moewadeul.spot.application.bakji.BakjiCommandService;
 import com.moewadeul.spot.application.bakji.BakjiDuplicateCandidate;
+import com.moewadeul.spot.application.bakji.BakjiEditService;
 import com.moewadeul.spot.application.bakji.BakjiFeedbackService;
 import com.moewadeul.spot.application.bakji.BakjiProblemReportCommand;
 import com.moewadeul.spot.application.bakji.BakjiReportCommand;
@@ -57,6 +58,9 @@ class BakjiControllerTest {
 
     @MockitoBean
     private BakjiCommandService bakjiCommandService;
+
+    @MockitoBean
+    private BakjiEditService bakjiEditService;
 
     @MockitoBean
     private BakjiFeedbackService bakjiFeedbackService;
@@ -163,7 +167,7 @@ class BakjiControllerTest {
                 .extractingPath("$.fieldErrors[?(@.field=='hasToilet')]")
                 .asList()
                 .isNotEmpty();
-        verifyNoInteractions(bakjiCommandService);
+        verifyNoInteractions(bakjiCommandService, bakjiEditService);
     }
 
     @Test
@@ -187,7 +191,7 @@ class BakjiControllerTest {
                 .extractingPath("$.fieldErrors[?(@.field=='lng')].reason")
                 .asList()
                 .containsExactly("서비스 지역 밖 좌표예요.");
-        verifyNoInteractions(bakjiCommandService);
+        verifyNoInteractions(bakjiCommandService, bakjiEditService);
     }
 
     @Test
@@ -210,7 +214,7 @@ class BakjiControllerTest {
     @DisplayName("[F-07] 수정 요청은 보낸 필드와 null로 보낸 필드를 구별해서 서비스에 넘기고, 200과 제보와 같은 본문을 응답한다")
     void updateDistinguishesAbsentAndNullFields() {
         // given
-        when(bakjiCommandService.update(eq(MEMBER_ID), eq(205L), any()))
+        when(bakjiEditService.update(eq(MEMBER_ID), eq(205L), any()))
                 .thenReturn(new BakjiSubmission(205L, NOT_WARNED, "일반 문구", "확인 안내", List.of()));
 
         // when
@@ -221,7 +225,7 @@ class BakjiControllerTest {
         assertThat(result).bodyJson().extractingPath("$.spotId").isEqualTo(205);
         assertThat(result).bodyJson().extractingPath("$.parkWarning.warned").isEqualTo(false);
         ArgumentCaptor<BakjiUpdateCommand> captor = ArgumentCaptor.forClass(BakjiUpdateCommand.class);
-        verify(bakjiCommandService).update(eq(MEMBER_ID), eq(205L), captor.capture());
+        verify(bakjiEditService).update(eq(MEMBER_ID), eq(205L), captor.capture());
         BakjiUpdateCommand command = captor.getValue();
         assertThat(command.name().present()).isTrue();
         assertThat(command.name().value()).isEqualTo("새 이름");
@@ -235,7 +239,7 @@ class BakjiControllerTest {
     @DisplayName("[F-07] 서비스가 ACCESS_DENIED로 거부하면 수정은 403을 응답한다")
     void updateByOtherMemberIsForbidden() {
         // given
-        when(bakjiCommandService.update(anyLong(), anyLong(), any()))
+        when(bakjiEditService.update(anyLong(), anyLong(), any()))
                 .thenThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED));
 
         // when
@@ -255,7 +259,7 @@ class BakjiControllerTest {
 
         // then
         assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
-        verify(bakjiCommandService).delete(MEMBER_ID, 205L);
+        verify(bakjiEditService).delete(MEMBER_ID, 205L);
     }
 
     @Test
@@ -266,7 +270,7 @@ class BakjiControllerTest {
 
         // then
         assertThat(result).hasStatus(HttpStatus.FORBIDDEN);
-        verifyNoInteractions(bakjiCommandService);
+        verifyNoInteractions(bakjiCommandService, bakjiEditService);
     }
 
     @Test

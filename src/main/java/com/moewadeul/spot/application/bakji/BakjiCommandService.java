@@ -82,6 +82,9 @@ public class BakjiCommandService {
      * 호출하면 제보자 memberId가 요청에 담은 필드만 고치고 결과를 돌려준다. 요청에 없는 필드는 그대로 둔다.
      *
      * <p>좌표가 실제로 바뀔 때만 서비스가 새 좌표로 공원 경계를 다시 판정한다. 같은 좌표를 다시 보내면 판정은 그대로다.
+     *
+     * <p>박지 행을 잠그지 않고 읽으므로, 그 사이 다른 쓰기가 먼저 커밋하면 커밋할 때 낙관적 잠금 충돌로 실패한다. 다시 시도는 {@link BakjiEditService}가
+     * 한다. 컨트롤러는 그 서비스를 부른다.
      */
     @Transactional
     public BakjiSubmission update(long memberId, long spotId, BakjiUpdateCommand command) {
