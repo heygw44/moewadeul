@@ -5,11 +5,15 @@ type UnderlineTabsProps<T extends string> = {
   onChange: (value: T) => void;
 };
 
-// 머리글 띠 아래에 놓는 분류 탭이다. 고른 탭은 aria-pressed로 알리고, 좁은 화면에서는 띠 안에서만 가로로 밀린다.
-// 탭 안쪽 여백(px-3)만큼 줄을 왼쪽으로 당겨서 첫 탭 글자가 제목과 같은 가장자리에서 시작하게 한다.
+// 제목 아래에 놓는 분류 탭이다. 세이지 알약 트랙 안에서 고른 탭만 먹색 알약으로 뒤집고, aria-pressed로 알린다.
+// 좁은 화면에서는 트랙 안에서만 가로로 밀린다. 이름은 예전 밑줄 모양에서 왔고, 부르는 곳이 많아 그대로 둔다.
 export function UnderlineTabs<T extends string>({ label, options, value, onChange }: UnderlineTabsProps<T>) {
   return (
-    <div role="group" aria-label={label} className="flex gap-1 overflow-x-auto">
+    <div
+      role="group"
+      aria-label={label}
+      className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-control bg-fill p-1"
+    >
       {options.map((item) => (
         <button
           key={item.value}
@@ -17,10 +21,8 @@ export function UnderlineTabs<T extends string>({ label, options, value, onChang
           aria-pressed={value === item.value}
           onClick={() => onChange(item.value)}
           className={[
-            'min-h-11 whitespace-nowrap border-b-2 px-3 text-base',
-            value === item.value
-              ? 'border-brand font-bold text-ink'
-              : 'border-transparent text-ink-muted hover:text-ink',
+            'min-h-10 whitespace-nowrap rounded-control px-4 text-base font-semibold transition-colors',
+            value === item.value ? 'bg-ink text-white' : 'text-ink-muted hover:text-ink',
           ].join(' ')}
         >
           {item.label}

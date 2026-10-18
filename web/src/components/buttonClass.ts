@@ -3,34 +3,34 @@ export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'danger-outline
 
 // Tailwind가 소스 글자를 읽어 클래스를 만들기 때문에 클래스 이름을 이어 붙이지 않고 통째로 적는다.
 export const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  // 행동을 부르는 버튼은 안내판과 같은 숲색 판 하나다. 한 화면에 primary는 하나만 둔다.
-  primary: 'bg-brand text-white border border-brand',
-  // 흰 판에 옅은 선을 두른다. 바탕(미색)과 흰 판 어디에 놓아도 버튼 경계가 보인다.
-  secondary: 'bg-surface text-ink border border-line',
-  danger: 'bg-danger text-white border border-danger',
+  // 행동을 부르는 버튼은 숲색 알약 하나다. 넓게 칠하는 색이 숲색뿐이라 한 화면에 primary는 하나만 둔다.
+  primary: 'bg-brand text-white',
+  // 테두리 없이 세이지 면 한 단계로 버튼 경계를 낸다. 흰 바탕과 세이지 카드 어디에 놓아도 보인다.
+  secondary: 'bg-fill-strong text-brand-strong',
+  danger: 'bg-danger text-white',
   // 빼기·지우기처럼 다시 할 수 있는 위험 행동에 쓴다. 되돌릴 수 없는 확정은 Dialog 안의 danger로 한다.
-  'danger-outline': 'bg-surface text-danger border border-danger',
-  ghost: 'bg-transparent text-ink border border-transparent',
-  // 머리글의 회원가입에만 쓴다. 숲색 머리글 위에 흰 판으로 올려서 머리글에서 가장 먼저 보이게 한다.
-  signup: 'bg-surface text-brand border border-surface',
+  'danger-outline': 'bg-danger-soft text-danger',
+  ghost: 'bg-transparent text-ink',
+  // 머리글의 회원가입에만 쓴다. 주 버튼과 같은 숲색 알약이고, 머리글에서 가장 먼저 보이는 행동이다.
+  signup: 'bg-brand text-white',
 };
 
 export const HOVER_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'hover:bg-brand-strong hover:border-brand-strong',
-  secondary: 'hover:bg-fill',
+  primary: 'hover:bg-brand-strong',
+  secondary: 'hover:bg-accent-soft hover:text-ink',
   // 위험 색에는 더 짙은 토큰이 없어서 hover 색을 바꾸지 않는다.
   danger: '',
   'danger-outline': 'hover:bg-danger-soft',
   ghost: 'hover:bg-fill',
-  signup: 'hover:bg-fill hover:border-fill',
+  signup: 'hover:bg-brand-strong',
 };
 
 // 흐리게 만들면 대비가 떨어지므로 투명도 대신 대비가 확보된 색 조합으로 비활성을 표시한다.
-// 보조 버튼이 흰 판이라서, 비활성은 옅은 면으로 채워 보조 버튼과 다르게 보이게 한다.
-export const DISABLED_CLASSES = 'bg-fill text-ink-subtle border border-fill cursor-not-allowed';
+// 비활성은 보조 버튼과 같은 면에 회색 글자라서, 글자색으로 누를 수 없는 상태를 구분한다.
+export const DISABLED_CLASSES = 'bg-fill-strong text-ink-subtle cursor-not-allowed';
 
 export const BASE_CLASSES =
-  'inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 text-base font-bold';
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-5 text-base font-semibold transition-[background-color,color,transform] duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100';
 
 // 버튼처럼 보이는 링크에 쓴다. 로그인이 필요한 행동을 비회원에게 같은 모양으로 보여 줄 때처럼, 버튼과 모양을 맞춰야 할 때 부른다.
 export function buttonClassName(variant: ButtonVariant = 'primary'): string {

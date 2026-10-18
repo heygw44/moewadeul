@@ -42,7 +42,7 @@ export function BasecampListPanel({
   return (
     <div className="flex flex-col">
       {spotFilterId !== null && (
-        <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas px-4 py-1 lg:px-5">
+        <div className="mx-2 mb-1 flex items-center justify-between gap-2 rounded-row bg-fill py-1 pr-1 pl-4 lg:mx-3">
           <p className="min-w-0 truncate text-sm text-ink">{filteredSpotName ?? '고른 장소'} 베이스캠프만 보여요</p>
           <Button variant="ghost" onClick={onClearSpotFilter} className="shrink-0 px-3">
             모든 장소 보기
@@ -53,7 +53,7 @@ export function BasecampListPanel({
       {showSkeleton && result.items.length === 0 ? (
         <div aria-busy="true" className="flex flex-col">
           {[0, 1, 2].map((index) => (
-            <div key={index} className="flex min-h-16 flex-col gap-2 border-b border-line px-4 py-3 lg:px-5">
+            <div key={index} className="flex min-h-16 flex-col gap-2 px-4 py-3 lg:px-5">
               <Skeleton className="h-4 w-2/3" />
               <Skeleton className="h-3 w-1/2" />
             </div>
@@ -92,10 +92,7 @@ export function BasecampListPanel({
           )}
 
           {visible.length > 0 && (
-            <ul
-              aria-label="이 지역의 베이스캠프"
-              className="mx-3 my-3 divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface lg:mx-5"
-            >
+            <ul aria-label="이 지역의 베이스캠프" className="mx-2 mb-4 flex flex-col gap-0.5 lg:mx-3">
               {visible.map((item) => (
                 <BasecampRow key={item.basecampId} item={item} />
               ))}
@@ -135,9 +132,9 @@ function BasecampRow({ item }: { item: BasecampSearchItem }) {
     <li>
       <Link
         to={`/basecamps/${item.basecampId}`}
-        className="grid min-h-16 grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3 hover:bg-fill focus-visible:-outline-offset-2"
+        className="grid min-h-16 grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-3 rounded-row px-3 py-3.5 hover:bg-fill focus-visible:-outline-offset-2"
       >
-        <span className="flex flex-col items-center rounded-control border border-line py-1.5 text-center">
+        <span className="flex flex-col items-center rounded-[0.875rem] bg-fill-strong py-1.5 text-center">
           <span className="font-mono text-xl leading-none font-extrabold tabular-nums text-ink">{Number(day)}</span>
           <span className="mt-1 text-[0.6875rem] text-ink-muted">
             {Number(month)}월 {weekday}

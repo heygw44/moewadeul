@@ -117,9 +117,6 @@ function usePostPage(query: ListQuery) {
   return { current, retry: () => setAttempt((value) => value + 1) };
 }
 
-// 넓은 화면에서 머리 줄과 행이 같은 열 너비를 쓴다.
-const ROW_COLUMNS = 'md:grid md:grid-cols-[minmax(0,1fr)_8rem_6rem_3.5rem_3.5rem] md:items-center md:gap-3';
-
 export function CommunityListPage() {
   const { search } = useLocation();
   const query = parseListQuery(search);
@@ -173,12 +170,13 @@ export function CommunityListPage() {
         onSearch={(searchType, keyword) => goTo({ searchType, keyword, page: 1 })}
       />
       <div aria-busy={current === null} className="flex flex-col gap-4">
-        <ListPanel header={<ListHeader />}>
+        <ListPanel>
           {current === null ? (
             showSkeleton ? (
               Array.from({ length: 5 }, (_, index) => (
-                <li key={index} className="flex flex-col gap-2 px-4 py-3">
+                <li key={index} className="flex flex-col gap-2 px-4 py-5">
                   <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-1/3" />
                 </li>
               ))
@@ -209,21 +207,6 @@ export function CommunityListPage() {
         )}
       </div>
     </HubLayout>
-  );
-}
-
-function ListHeader() {
-  return (
-    <div className="w-full">
-      <span className="md:hidden">최신순</span>
-      <div aria-hidden="true" className={`hidden ${ROW_COLUMNS}`}>
-        <span>제목</span>
-        <span>글쓴이</span>
-        <span>작성일</span>
-        <span className="text-right">조회</span>
-        <span className="text-right">좋아요</span>
-      </div>
-    </div>
   );
 }
 
@@ -263,7 +246,8 @@ function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
 
   return (
     <form role="search" aria-label="글 검색" onSubmit={handleSubmit} className="flex flex-col gap-1">
-      <div className="flex items-start gap-2">
+      {/* 검색 줄은 지도 패널 검색 칸처럼 세이지 알약으로 그린다. 오류가 있으면 입력란의 오류 테두리가 그대로 보인다. */}
+      <div className="flex items-start gap-2 [&_input]:rounded-control [&_input]:bg-fill [&_input]:pl-5 [&_input:not([aria-invalid])]:border-transparent [&_select]:rounded-control [&_select]:border-transparent [&_select]:bg-fill [&_select]:pl-5">
         <SelectField
           label="검색 대상"
           hideLabel
@@ -297,6 +281,8 @@ function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
           <span>{error}</span>
         </p>
       )}
+      {/* 서버는 최근 글 1만 개 안에서만 검색한다. 오래된 글이 안 나오는 이유를 알 수 있게 검색 중에만 보여 준다. */}
+      {!error && keyword !== null && <p className="text-sm text-ink-muted">최근 글 1만 개 안에서 찾았어요.</p>}
     </form>
   );
 }
@@ -391,7 +377,7 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
 
   const label = name === null ? '이 장소 글' : `${name} 글`;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 border-y border-line py-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 rounded-row bg-fill py-1 pr-2 pl-4">
       <p className="text-base font-semibold text-ink">{label}</p>
       <button
         type="button"
@@ -404,48 +390,50 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
   );
 }
 
-// 좁은 화면에서는 제목 한 줄과 정보 한 줄(글쓴이 · 작성일 · 조회 · 좋아요)로, 넓은 화면에서는 머리 줄과 같은 열로 보여 준다.
+// 제목, 본문 앞부분 두 줄, 정보 한 줄(글쓴이 · 작성일 · 좋아요 · 댓글 · 조회)을 쌓고, 사진이 있으면 오른쪽에 대표 사진을 둔다.
+// 회원이 올린 사진이라 색이나 모양을 바꾸지 않고 칸에 맞춰 자르기만 한다. 사진을 받지 못하면 칸을 비우지 않고 뺀다.
 function PostRow({ item }: { item: CommunityPostSummary }) {
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
+  const thumbnail = item.thumbnailUrl && !thumbnailFailed ? item.thumbnailUrl : null;
   return (
     <li>
       <Link
         to={`/community/${item.postId}`}
-        className={`flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-fill ${ROW_COLUMNS}`}
+        className="flex min-h-11 items-start gap-4 rounded-row px-4 py-4 hover:bg-fill sm:gap-6 sm:py-5"
       >
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-base font-semibold text-ink">{item.title}</span>
-          {item.commentCount > 0 && (
-            <span className="shrink-0 font-mono text-sm tabular-nums text-accent">
-              [<span className="sr-only">댓글 </span>
-              {item.commentCount}
-              <span className="sr-only">개</span>]
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="line-clamp-2 text-[1.0625rem] leading-snug font-bold tracking-[-0.01em] break-words text-ink sm:text-lg">
+              {item.title}
+            </span>
+            {thumbnail === null && item.imageCount > 0 && (
+              <Icon name="image" size={16} title="사진 있음" className="shrink-0 text-ink-muted" />
+            )}
+          </span>
+          {item.excerpt && (
+            <span className="line-clamp-2 text-[0.9375rem] leading-relaxed break-words text-ink-muted">
+              {item.excerpt}
             </span>
           )}
-          {item.imageCount > 0 && <Icon name="image" size={16} title="사진 있음" className="shrink-0 text-ink-muted" />}
-        </span>
-        <span className="flex flex-wrap items-center gap-x-1 text-xs text-ink-muted md:contents md:text-sm">
-          <span className="min-w-0 truncate">{item.author.nickname}</span>
-          <span aria-hidden="true" className="md:hidden">
-            ·
-          </span>
-          <time dateTime={item.createdAt} className="tabular-nums">
-            {formatRelativeKst(item.createdAt)}
-          </time>
-          <span aria-hidden="true" className="md:hidden">
-            ·
-          </span>
-          <span className="tabular-nums md:text-right">
-            <span className="md:sr-only">조회 </span>
-            {item.viewCount}
-          </span>
-          <span aria-hidden="true" className="md:hidden">
-            ·
-          </span>
-          <span className="tabular-nums md:text-right">
-            <span className="md:sr-only">좋아요 </span>
-            {item.likeCount}
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.8125rem] text-ink-muted">
+            <span className="min-w-0 truncate">{item.author.nickname}</span>
+            <time dateTime={item.createdAt} className="tabular-nums">
+              {formatRelativeKst(item.createdAt)}
+            </time>
+            <span className="tabular-nums">좋아요 {item.likeCount}</span>
+            <span className="tabular-nums">댓글 {item.commentCount}</span>
+            <span className="tabular-nums">조회 {item.viewCount}</span>
           </span>
         </span>
+        {thumbnail !== null && (
+          <img
+            src={thumbnail}
+            alt=""
+            loading="lazy"
+            onError={() => setThumbnailFailed(true)}
+            className="size-20 shrink-0 rounded-row bg-fill object-cover sm:size-28"
+          />
+        )}
       </Link>
     </li>
   );

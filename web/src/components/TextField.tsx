@@ -15,9 +15,9 @@ type TextFieldProps = ComponentPropsWithRef<'input'> & {
 };
 
 // 입력란 글자는 16px 아래로 내리지 않는다. iOS가 작은 입력란에 포커스하면 화면을 확대하기 때문이다.
-// 입력란은 흰 판에 1.5px 테두리를 두르고, 포커스하면 테두리가 먹색으로 짙어진다.
+// 입력란은 흰 판에 1.5px 테두리를 두르고, 포커스하면 테두리가 숲색으로 바뀐다.
 const INPUT_BASE =
-  'min-h-11 w-full rounded-control border-[1.5px] bg-surface px-3 text-base text-ink focus:border-ink disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-subtle';
+  'min-h-12 w-full rounded-field border-[1.5px] bg-surface px-4 text-base text-ink focus:border-brand disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-subtle';
 
 export function TextField({
   label,
@@ -44,7 +44,7 @@ export function TextField({
       id={inputId}
       aria-invalid={error || invalid ? true : undefined}
       aria-describedby={describedByIds}
-      className={`${INPUT_BASE}${trailing ? ' pr-12' : ''} ${error || invalid ? 'border-danger' : 'border-ink-subtle'}`}
+      className={`${INPUT_BASE}${trailing ? ' pr-12' : ''} ${error || invalid ? 'border-danger' : 'border-ink-faint'}`}
       {...rest}
     />
   );

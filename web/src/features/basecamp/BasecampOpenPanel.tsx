@@ -164,7 +164,7 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
+      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
         <button
           type="button"
           aria-label="장소로 돌아가기"
@@ -362,7 +362,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
         error={fieldErrors.capacity}
       />
 
-      <fieldset className="flex min-w-0 flex-col gap-3 rounded-control border border-line p-3">
+      <fieldset className="flex min-w-0 flex-col gap-3 rounded-sheet bg-fill p-4">
         <legend className="px-1 text-sm font-medium text-ink">합류 조건 (선택)</legend>
         <ChoiceGroup
           legend="최소 신뢰 단계"

@@ -95,7 +95,7 @@ class CommunityCommentApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-04] 답글에 다는 답글, 다른 글의 댓글을 부모로 한 답글, 없는 부모 ID, ACTIVE가 아닌 부모는 400 INVALID_INPUT이고 저장되지 않는다")
+    @DisplayName("[F-29][CM-04] 다른 글의 댓글, 없는 댓글 ID, ACTIVE가 아닌 댓글·답글에 답하면 400 INVALID_INPUT이고 저장되지 않는다")
     void invalidParentIsRejected() {
         // given
         Cookie session = fixture.verifiedSession(fixture.saveMember(null));
@@ -108,21 +108,146 @@ class CommunityCommentApiIntegrationTest {
         fixture.setCommentStatus(hiddenParentId, "HIDDEN");
         long deletedParentId = fixture.writeComment(session, postId, "지울 댓글", null);
         fixture.send(mvc.delete().uri(COMMENT_URI + deletedParentId), session, null);
+        fixture.setCommentStatus(replyId, "HIDDEN");
+        long deletedReplyId = fixture.writeComment(session, postId, "지울 답글", parentId);
+        fixture.send(mvc.delete().uri(COMMENT_URI + deletedReplyId), session, null);
         int before = fixture.commentCount();
 
         // when
-        MvcTestResult toReply = fixture.writeCommentRaw(session, postId, "답글의 답글", replyId);
+        MvcTestResult toHiddenReply = fixture.writeCommentRaw(session, postId, "숨긴 답글에 답", replyId);
+        MvcTestResult toDeletedReply = fixture.writeCommentRaw(session, postId, "지운 답글에 답", deletedReplyId);
         MvcTestResult toOtherPost = fixture.writeCommentRaw(session, postId, "다른 글 부모", otherPostCommentId);
         MvcTestResult toMissing = fixture.writeCommentRaw(session, postId, "없는 부모", 999999L);
         MvcTestResult toHidden = fixture.writeCommentRaw(session, postId, "숨김 부모", hiddenParentId);
         MvcTestResult toDeleted = fixture.writeCommentRaw(session, postId, "삭제 부모", deletedParentId);
 
         // then
-        for (MvcTestResult result : new MvcTestResult[] {toReply, toOtherPost, toMissing, toHidden, toDeleted}) {
+        for (MvcTestResult result :
+                new MvcTestResult[] {toHiddenReply, toDeletedReply, toOtherPost, toMissing, toHidden, toDeleted}) {
             assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
             assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
         }
         assertThat(fixture.commentCount()).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-04] 답글에 답하면 같은 최상위 댓글 아래에 저장되고, 목록에서 그 답글에만 답한 회원의 replyTo가 나온다")
+    void replyToReplyIsStoredUnderSameTopLevel() {
+        // given
+        Member author = fixture.saveMember("새벽능선");
+        Member replier = fixture.saveMember("아침안개");
+        Cookie authorSession = fixture.verifiedSession(author);
+        long postId = fixture.writePost(authorSession, "제목", "본문", null);
+        long commentId = fixture.writeComment(authorSession, postId, "좋은 글이에요", null);
+        long replyId = fixture.writeComment(fixture.verifiedSession(replier), postId, "저도요", commentId);
+
+        // when
+        long answerId = fixture.writeComment(authorSession, postId, "반가워요", replyId);
+        MvcTestResult list = mvc.get().uri(commentsUri(postId)).exchange();
+
+        // then
+        assertThat(parentIdOf(answerId)).isEqualTo(commentId);
+        assertThat(replyToIdOf(answerId)).isEqualTo(replyId);
+        assertThat(replyToIdOf(replyId)).isNull();
+        assertThat(list).hasStatus(HttpStatus.OK);
+        assertThat(list).bodyJson().isStrictlyEqualTo("""
+                {
+                  "content": [{
+                    "commentId": %d,
+                    "author": { "memberId": %d, "nickname": "새벽능선" },
+                    "content": "좋은 글이에요",
+                    "deleted": false,
+                    "createdAt": "2026-10-05T03:00:00Z",
+                    "updatedAt": "2026-10-05T03:00:00Z",
+                    "replies": [{
+                      "commentId": %d,
+                      "author": { "memberId": %d, "nickname": "아침안개" },
+                      "content": "저도요",
+                      "deleted": false,
+                      "createdAt": "2026-10-05T03:00:00Z",
+                      "updatedAt": "2026-10-05T03:00:00Z",
+                      "replies": []
+                    }, {
+                      "commentId": %d,
+                      "author": { "memberId": %d, "nickname": "새벽능선" },
+                      "replyTo": { "memberId": %d, "nickname": "아침안개" },
+                      "content": "반가워요",
+                      "deleted": false,
+                      "createdAt": "2026-10-05T03:00:00Z",
+                      "updatedAt": "2026-10-05T03:00:00Z",
+                      "replies": []
+                    }]
+                  }],
+                  "page": 0, "size": 20, "hasNext": false
+                }
+                """.formatted(
+                commentId, author.getId(), replyId, replier.getId(), answerId, author.getId(), replier.getId()));
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-04] 최상위 댓글이 지워지거나 숨겨져 자리만 남아도, 그 아래 ACTIVE 답글에는 답할 수 있다")
+    void replyToActiveReplyUnderInactiveTopLevelIsAllowed() {
+        // given
+        Cookie session = fixture.verifiedSession(fixture.saveMember(null));
+        long postId = fixture.writePost(session, "제목", "본문", null);
+        long deletedTopId = fixture.writeComment(session, postId, "지울 댓글", null);
+        long underDeletedId = fixture.writeComment(session, postId, "남을 답글", deletedTopId);
+        fixture.send(mvc.delete().uri(COMMENT_URI + deletedTopId), session, null);
+        long hiddenTopId = fixture.writeComment(session, postId, "숨길 댓글", null);
+        long underHiddenId = fixture.writeComment(session, postId, "남을 답글", hiddenTopId);
+        fixture.setCommentStatus(hiddenTopId, "HIDDEN");
+
+        // when
+        long answerUnderDeleted = fixture.writeComment(session, postId, "이어서", underDeletedId);
+        long answerUnderHidden = fixture.writeComment(session, postId, "이어서", underHiddenId);
+        MvcTestResult list = mvc.get().uri(commentsUri(postId)).exchange();
+
+        // then
+        assertThat(parentIdOf(answerUnderDeleted)).isEqualTo(deletedTopId);
+        assertThat(parentIdOf(answerUnderHidden)).isEqualTo(hiddenTopId);
+        assertThat(list).bodyJson().extractingPath("$.content[0].deleted").isEqualTo(true);
+        assertThat(list)
+                .bodyJson()
+                .extractingPath("$.content[0].replies[1].commentId")
+                .isEqualTo((int) answerUnderDeleted);
+        assertThat(list).bodyJson().extractingPath("$.content[1].deleted").isEqualTo(true);
+        assertThat(list)
+                .bodyJson()
+                .extractingPath("$.content[1].replies[1].commentId")
+                .isEqualTo((int) answerUnderHidden);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-04][PV-08] 답한 답글의 작성자가 탈퇴하면 replyTo에 익명 닉네임이 나오고, 답한 답글이 지워져도 replyTo는 남는다")
+    void replyToFollowsTargetAuthorWithdrawalAndSurvivesTargetDeletion() throws Exception {
+        // given
+        Member target = fixture.saveMember("아침안개");
+        Cookie targetSession = fixture.verifiedSession(target);
+        Cookie session = fixture.verifiedSession(fixture.saveMember(null));
+        long postId = fixture.writePost(session, "제목", "본문", null);
+        long commentId = fixture.writeComment(session, postId, "댓글", null);
+        long replyId = fixture.writeComment(targetSession, postId, "답글", commentId);
+        fixture.writeComment(session, postId, "답글에 답", replyId);
+        fixture.send(mvc.delete().uri(COMMENT_URI + replyId), targetSession, null);
+        Member loaded = memberRepository.findById(target.getId()).orElseThrow();
+        loaded.withdraw(MutableClock.DEFAULT_INSTANT);
+        memberRepository.saveAndFlush(loaded);
+
+        // when
+        MvcTestResult list = mvc.get().uri(commentsUri(postId)).exchange();
+
+        // then
+        assertThat(list)
+                .bodyJson()
+                .extractingPath("$.content[0].replies")
+                .asList()
+                .hasSize(1);
+        assertThat(list)
+                .bodyJson()
+                .extractingPath("$.content[0].replies[0].replyTo.nickname")
+                .isEqualTo("탈퇴회원_" + target.getId());
+        assertThat(list.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .doesNotContain(target.getEmail());
     }
 
     @Test
@@ -487,6 +612,15 @@ class CommunityCommentApiIntegrationTest {
         assertThat(notVerified).hasStatus(HttpStatus.FORBIDDEN);
         assertThat(notVerified).bodyJson().extractingPath("$.code").isEqualTo("MEMBER_NOT_VERIFIED");
         assertThat(fixture.commentCount()).isZero();
+    }
+
+    private Long parentIdOf(long commentId) {
+        return jdbc.queryForObject("SELECT parent_id FROM community_comment WHERE id = ?", Long.class, commentId);
+    }
+
+    private Long replyToIdOf(long commentId) {
+        return jdbc.queryForObject(
+                "SELECT reply_to_comment_id FROM community_comment WHERE id = ?", Long.class, commentId);
     }
 
     private static String commentsUri(long postId) {

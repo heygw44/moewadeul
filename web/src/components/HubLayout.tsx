@@ -24,7 +24,7 @@ type HubLayoutProps = {
   children: ReactNode;
 };
 
-// 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 제목과 탭은 위 띠에 두고, 목록은 그 아래 선으로 나눈 패널에 둔다.
+// 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 큰 제목과 탭은 위 띠에 두고, 목록은 그 아래에 둔다.
 // 오른쪽 안내 열(aside)은 넓은 화면에서만 옆에 놓고, 좁은 화면에서는 목록 아래로 내려간다.
 export function HubLayout({
   title,
@@ -48,15 +48,17 @@ export function HubLayout({
       <SiteHeader />
       <div className="bg-canvas">
         <div className={`mx-auto max-w-screen-xl px-4 ${titleInContent ? 'pt-6' : 'pt-8'}`}>
-          {/* 띠 아래 선은 화면 끝까지 긋지 않고 본문과 같은 열 안에서 끝낸다. 좁은 한 열 화면에서 선만 넓게 뻗지 않게 하기 위해서다. */}
-          <div className={titleInContent ? column : `border-b border-line ${column}`}>
+          {/* 제목 띠와 본문은 선 대신 간격으로 나눈다. */}
+          <div className={column}>
             {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
             <div
-              className={titleInContent ? 'sr-only' : 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3 pb-3'}
+              className={titleInContent ? 'sr-only' : 'flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pb-5'}
             >
               <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="break-words text-3xl font-extrabold tracking-tight text-ink lg:text-4xl">{title}</h1>
-                {description && <p className="text-base text-ink">{description}</p>}
+                <h1 className="break-words text-[2rem] leading-tight font-extrabold tracking-[-0.04em] text-ink lg:text-[2.75rem]">
+                  {title}
+                </h1>
+                {description && <p className="text-base text-ink lg:text-lg">{description}</p>}
                 {meta}
               </div>
               {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -68,7 +70,7 @@ export function HubLayout({
       <div className="flex-1 bg-canvas">
         {/* 안내 열이 없으면 두 열 격자를 쓰지 않는다. 쓰면 빈 오른쪽 열 폭만큼 본문이 머리 띠보다 좁아진다. */}
         <main
-          className={`mx-auto max-w-screen-xl px-4 py-6 ${aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-10' : ''}`}
+          className={`mx-auto max-w-screen-xl px-4 py-6 ${aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_18.75rem] lg:items-start lg:gap-12' : ''}`}
         >
           <div className={`flex min-w-0 flex-col gap-4 ${column}`}>{children}</div>
           {aside && <aside className="mt-6 flex flex-col gap-4 lg:mt-0">{aside}</aside>}
@@ -80,27 +82,23 @@ export function HubLayout({
   );
 }
 
-// 안내 열의 한 묶음이다. 목록판과 같은 흰 판에 넣는다.
+// 안내 열의 한 묶음이다. 세이지 카드에 넣는다.
 // 본문 목록은 text-sm이고 항목 사이를 띄운다.
 export function AsideSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2 rounded-sheet border border-line bg-surface p-4">
-      <h2 className="text-base font-bold text-ink">{title}</h2>
+    <section className="flex flex-col gap-3 rounded-sheet bg-fill p-6">
+      <h2 className="text-[1.0625rem] font-extrabold text-ink">{title}</h2>
       <div className="flex flex-col gap-2 text-sm text-ink [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2">{children}</div>
     </section>
   );
 }
 
-// 목록을 감싸는 흰 목록판이다. 탐방로 안내판의 행처럼 항목 사이에 옅은 선을 긋는다.
+// 목록이다. 판으로 감싸지 않고 항목 사이를 간격으로 나눈다. 항목은 hover와 고른 상태에서만 세이지 면을 깐다.
 export function ListPanel({ header, children }: { header?: ReactNode; children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-sheet border border-line bg-surface">
-      {header && (
-        <div className="flex items-center justify-between border-b border-line px-4 py-2 text-sm text-ink-muted">
-          {header}
-        </div>
-      )}
-      <ul className="divide-y divide-line">{children}</ul>
+    <div className="flex flex-col gap-1">
+      {header && <div className="flex items-center justify-between px-4 py-2 text-sm text-ink-muted">{header}</div>}
+      <ul className="flex flex-col gap-0.5">{children}</ul>
     </div>
   );
 }

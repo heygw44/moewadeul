@@ -18,9 +18,9 @@ export const KIND_STYLE: Record<MarkerKind, { label: string; icon: IconName; fil
 export const PIN_PATH = 'M18 2a14 14 0 0 1 4.6 27.2L18 42l-4.6-12.8A14 14 0 0 1 18 2z';
 
 // 흰 윤곽선 굵기다. 선은 경로 양쪽으로 반씩 퍼지고 안쪽 반은 핀 색이 덮으므로, 바깥에 보이는 두께는 절반이다.
-// 기본은 바깥 1px, 경고 핀은 경고색 고리(바깥 1.5px) 밖으로 흰 선 1px, 선택하면 흰 링이 2px 더 두꺼워진다.
-const OUTLINE_WIDTH = 2;
-const WARNING_OUTLINE_WIDTH = 5;
+// 기본은 바깥 3px, 경고 핀은 경고색 고리(바깥 1.5px) 밖으로 흰 선 3px, 선택하면 흰 링이 2px 더 두꺼워진다.
+const OUTLINE_WIDTH = 6;
+const WARNING_OUTLINE_WIDTH = 9;
 const SELECTED_EXTRA_WIDTH = 4;
 
 const FOCUS_RING =
@@ -281,7 +281,7 @@ export function createPhotoPin(data: { thumbnailUrl?: string; label: string }, o
   let yAnchor = 0.5;
   if (data.thumbnailUrl) {
     button.className =
-      'relative block h-11 w-11 cursor-pointer overflow-hidden rounded-control border border-white bg-bakji ' +
+      'relative block h-11 w-11 cursor-pointer overflow-hidden rounded-row border-2 border-white bg-bakji ' +
       'transition-[scale] duration-150 motion-reduce:transition-none ' +
       FOCUS_RING;
     const image = document.createElement('img');

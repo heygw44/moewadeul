@@ -20,9 +20,9 @@ type SelectFieldProps = Omit<ComponentPropsWithRef<'select'>, 'children'> & {
 
 // 입력란 글자는 16px 아래로 내리지 않는다. iOS가 작은 입력란에 포커스하면 화면을 확대하기 때문이다.
 // 브라우저 기본 모양의 선택란은 최소 높이를 무시해서 옆 입력란보다 낮게 그려진다. 그래서 기본 모양을 끄고(appearance-none)
-// 높이를 입력란과 같은 44px로 고정한 뒤, 펼침 화살표는 아이콘으로 직접 그린다.
+// 높이를 입력란과 같은 48px로 고정한 뒤, 펼침 화살표는 아이콘으로 직접 그린다.
 const SELECT_BASE =
-  'h-11 w-full appearance-none rounded-control border-[1.5px] bg-surface pr-10 pl-3 text-base text-ink focus:border-ink disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-subtle';
+  'h-12 w-full appearance-none rounded-field border-[1.5px] bg-surface pr-10 pl-4 text-base text-ink focus:border-brand disabled:cursor-not-allowed disabled:bg-surface disabled:text-ink-subtle';
 
 export function SelectField({
   label,
@@ -54,7 +54,7 @@ export function SelectField({
           id={selectId}
           aria-invalid={error || invalid ? true : undefined}
           aria-describedby={describedByIds}
-          className={`${SELECT_BASE} ${error || invalid ? 'border-danger' : 'border-ink-subtle'}`}
+          className={`${SELECT_BASE} ${error || invalid ? 'border-danger' : 'border-ink-faint'}`}
           {...rest}
         >
           {options.map((option) => (

@@ -3,7 +3,7 @@ import type { MemoryImage } from '../../api/types';
 import { Icon } from '../../components/icons';
 
 const ARROW_BUTTON =
-  'absolute top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-sheet border border-line bg-surface text-ink hover:bg-fill';
+  'absolute top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-control bg-surface text-ink shadow-raise hover:bg-fill';
 
 // 사진을 가로로 한 장씩 넘겨 보는 정사각 칸이다. 스크롤 위치(snap)로 넘기므로 손가락으로 밀어도 되고,
 // 좌우 버튼과 키보드(칸에 포커스를 두고 좌우 화살표)로도 넘긴다. 사진이 한 장이면 버튼과 쪽수를 두지 않는다.
@@ -41,7 +41,7 @@ export function MemoryPhotoCarousel({
         onScroll={handleScroll}
         tabIndex={total > 1 ? 0 : undefined}
         aria-label={`${owner}님의 기록 사진 ${total}장`}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-control border border-line bg-fill [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory overflow-x-auto rounded-sheet bg-fill [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onKeyDown={(event) => {
           if (total < 2) return;
           if (event.key === 'ArrowRight' && index < total - 1) {
@@ -89,7 +89,7 @@ export function MemoryPhotoCarousel({
           )}
           <p
             aria-live="polite"
-            className="absolute bottom-2 right-2 rounded-sheet border border-line bg-surface px-2 py-0.5 font-mono text-xs tabular-nums text-ink"
+            className="absolute bottom-2 right-2 rounded-control bg-surface px-2.5 py-0.5 font-mono text-xs tabular-nums text-ink shadow-raise"
           >
             <span className="sr-only">사진 </span>
             {index + 1}/{total}

@@ -128,7 +128,7 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = 
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-line bg-surface px-2">
+      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
         <button
           type="button"
           aria-label="지도로 돌아가기"
@@ -367,16 +367,16 @@ function SubmittedView({ result, nextBasecamp }: { result: BakjiSubmissionRespon
 
       {duplicateCandidates.length > 0 && (
         <section aria-labelledby="duplicate-title" className="flex flex-col gap-2">
-          <h3 id="duplicate-title" className="text-sm font-semibold text-ink-muted">
+          <h3 id="duplicate-title" className="text-[1.0625rem] font-extrabold text-ink">
             50m 안에 비슷한 박지가 있어요
           </h3>
           <p className="text-sm text-ink">같은 곳이라면 아래 박지의 정보를 확인해 주세요.</p>
-          <ul className="flex flex-col">
+          <ul className="flex flex-col gap-0.5 rounded-sheet bg-fill p-1.5">
             {duplicateCandidates.map((candidate) => (
-              <li key={candidate.spotId} className="border-t border-line first:border-t-0">
+              <li key={candidate.spotId}>
                 <Link
                   to={`/spots/${candidate.spotId}`}
-                  className="flex min-h-11 items-center justify-between gap-3 py-2 text-accent underline underline-offset-2"
+                  className="flex min-h-11 items-center justify-between gap-3 rounded-row px-3 py-2 text-accent underline underline-offset-2 hover:bg-fill-strong"
                 >
                   <span className="min-w-0 break-words">{candidate.name}</span>
                   <span className="shrink-0 font-mono text-sm tabular-nums text-ink-muted">{candidate.distanceM}m</span>

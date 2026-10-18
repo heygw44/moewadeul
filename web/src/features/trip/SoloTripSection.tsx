@@ -14,8 +14,8 @@ import { GatedButton } from '../member/GatedButton';
 const MAX_DAYS_UNTIL_START = 60;
 const MAX_NIGHTS = 3;
 
-const SECTION_CLASS = 'mt-4 border-t border-line pt-4';
-const SECTION_TITLE_CLASS = 'text-sm font-semibold text-ink-muted';
+const SECTION_CLASS = 'mt-8';
+const SECTION_TITLE_CLASS = 'text-[1.1875rem] font-extrabold tracking-[-0.02em] text-ink';
 
 type SoloTripSectionProps = {
   spotId: number;
@@ -144,7 +144,7 @@ function SoloTripForm({
       noValidate
       onSubmit={handleSubmit}
       aria-label="혼자 가는 일정 등록"
-      className="flex flex-col gap-4 rounded-control border border-line bg-canvas p-4"
+      className="flex flex-col gap-4 rounded-sheet bg-fill p-5"
     >
       {formError && (
         <div role="alert">

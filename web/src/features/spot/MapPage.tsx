@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import type { AiInterpretResponse, NearbySpot } from '../../api/types';
@@ -17,6 +17,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { createMapView } from '../../map/KakaoMap';
 import { MapLoadError } from '../../map/kakaoLoader';
 import type { MapLoadErrorReason } from '../../map/kakaoLoader';
+import { searchRegions } from '../../map/regionSearch';
 import type { RegionCandidate } from '../../map/regionSearch';
 import type { RegionLabel } from '../../map/regionLabel';
 import { radiusBounds } from '../../map/radiusBounds';
@@ -91,11 +92,11 @@ const CLUSTER_ZOOM_STEP = 2;
 // 데스크톱(lg)부터 지도 왼쪽에 패널을 두고, 장소를 고르면 지도 위에 근거 판을 띄운다.
 const DESKTOP_QUERY = '(min-width: 64rem)';
 
-// 지도 위에 띄우는 버튼(박지 제보·지형)이다. 흰 판에 그림자로 지도에서 띄운다.
+// 지도 위에 띄우는 버튼(박지 제보·지형)이다. 알약인 검색 칸·칩과 구별되게 14px 모서리의 흰 칸에 그림자로 지도에서 띄운다.
 const MAP_BUTTON_CLASS =
-  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-base font-semibold text-ink shadow-raise hover:bg-fill';
+  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-[0.875rem] bg-surface px-3.5 text-[0.9375rem] font-semibold text-ink shadow-raise hover:bg-fill';
 const MAP_BUTTON_ON_CLASS =
-  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-brand bg-brand px-3 text-base font-semibold text-white shadow-raise';
+  'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-[0.875rem] bg-brand px-3.5 text-[0.9375rem] font-semibold text-white shadow-raise hover:bg-brand-strong';
 
 // 목록 위 유형 선택 칸이다. 상세 조건의 유형을 하나만 고르는 지름길이고, 전체는 유형 조건을 푼다.
 const TYPE_SEGMENTS: ReadonlyArray<{ value: SpotType | null; label: string }> = [
@@ -430,6 +431,25 @@ export function MapPage({
     moveToRegion(candidate);
   }
 
+  // 랜딩의 지역 검색에서 넘어오면(`/map?q=지역`) 지도를 불러온 뒤 그 지역을 한 번 찾아 첫 후보로 옮긴다.
+  // 주소에서 검색어를 먼저 지워서, 새로 고치거나 뒤로 가도 같은 검색을 되풀이하지 않게 한다. 찾지 못하면 지도를 그대로 둔다.
+  const selectSearchedRegion = useEffectEvent((candidate: RegionCandidate) => selectRegion(candidate));
+  useEffect(() => {
+    if (!map || mode !== 'browse') return;
+    const query = new URLSearchParams(window.location.search).get('q')?.trim();
+    if (!query) return;
+    navigate('/map', { replace: true });
+    let cancelled = false;
+    searchRegions(query)
+      .then(([first]) => {
+        if (!cancelled && first) selectSearchedRegion(first);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [map, mode]);
+
   // AI가 읽은 조건으로 장소 조건을 통째로 바꾼다. 반경이 있으면 지역 후보(없으면 지도 가운데)를 기준점으로 반경 검색을 하고,
   // 없으면 지역 후보로 지도만 옮긴다. 상세 화면을 보고 있었다면 결과 목록이 보이도록 지도 화면으로 돌아간다.
   function applyAiResult(result: AiInterpretResponse, candidate: RegionCandidate | null) {
@@ -565,9 +585,10 @@ export function MapPage({
 
         {/* z-0으로 쌓임 맥락을 따로 만들어서, 지도와 위에 뜬 버튼이 모바일 시트보다 아래에 그려지게 한다. */}
         {/* 폰에서 시트 윗변 높이를 --sheet-top으로 넘긴다. 범례·지역 칩·카카오 로고가 이 높이 위에 선다. 데스크톱은 시트가 옆 패널이라 0이다. */}
+        {/* 데스크톱은 지도를 오른쪽·아래 16px 띄운 24px 둥근 칸에 담는다. 위에 뜬 버튼과 판도 이 칸 안에서 자른다. */}
         <div
           style={{ '--mobile-sheet-top': sheetTop(snap, !contentOpen) } as CSSProperties}
-          className="absolute inset-0 z-0 [--sheet-top:var(--mobile-sheet-top)] lg:relative lg:flex-1 lg:[--sheet-top:0px]"
+          className="absolute inset-0 z-0 [--sheet-top:var(--mobile-sheet-top)] lg:relative lg:mr-4 lg:mb-4 lg:flex-1 lg:overflow-hidden lg:rounded-media lg:[--sheet-top:0px]"
         >
           <div ref={hostRef} role="region" aria-label="지도" className="absolute inset-0" />
           {!mapFailure && (
@@ -687,9 +708,8 @@ export function MapPage({
   );
 }
 
-// 목록 행을 담는 흰 목록판이다. 패널 안쪽 여백만큼 띄우고 행 사이에 선을 긋는다.
-const LIST_BOARD_CLASS =
-  'mx-3 mb-4 divide-y divide-line overflow-hidden rounded-sheet border border-line bg-surface lg:mx-5';
+// 목록 행을 판으로 감싸지 않고 2px 간격으로 늘어놓는다. 행은 hover·고른 상태에서만 세이지 면이 된다.
+const LIST_BOARD_CLASS = 'mx-2 mb-4 flex flex-col gap-0.5 lg:mx-3';
 
 // 서버는 장소가 너무 많으면 markers를 비우고 clusters만 준다. 그래서 묶음일 때는 묶음 개수의 합이 지금 화면의 장소 수다.
 function totalCount(area: SpotsInView): number {
@@ -708,15 +728,11 @@ function ListHeader({ area, regionName }: { area: SpotsInView; regionName: Regio
   const counted = area.status === 'ready' || area.markers.length > 0 || area.clusters.length > 0;
   return (
     <h2 className="flex items-baseline justify-between gap-3">
-      <span className="truncate text-lg font-extrabold tracking-[-0.02em] lg:text-[1.375rem]">
+      <span className="truncate text-lg font-extrabold tracking-[-0.02em] lg:text-[1.625rem]">
         {regionTitle(regionName)}
         <span className="sr-only"> 장소</span>
       </span>
-      {counted && (
-        <span className="shrink-0 text-sm tabular-nums text-ink-muted lg:text-brand-ink">
-          장소 {totalCount(area)}곳
-        </span>
-      )}
+      {counted && <span className="shrink-0 text-sm tabular-nums text-ink-muted">장소 {totalCount(area)}곳</span>}
     </h2>
   );
 }
@@ -738,7 +754,7 @@ function NearbyListHeader({ nearby, radius }: { nearby: SpotsNearby; radius: Rad
 }
 
 // 상세 조건 버튼이다. 켜진 조건이 있으면 개수를 함께 적고 먹색으로 뒤집는다.
-// compact는 모바일 지도 위 검색 줄에 둘 때 켠다. 아이콘만 그리고 지도 위라서 그림자로 띄운다.
+// compact는 모바일 지도 위 검색 줄에 둘 때 켠다. 아이콘만 그리고 지도 위라서 흰 알약에 그림자로 띄운다. 패널에서는 세이지 알약이다.
 function FilterButton({ count, onClick, compact = false }: { count: number; onClick: () => void; compact?: boolean }) {
   const active = count > 0;
   return (
@@ -751,10 +767,10 @@ function FilterButton({ count, onClick, compact = false }: { count: number; onCl
         'pointer-events-auto inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-control text-sm font-semibold whitespace-nowrap',
         compact ? 'min-w-11 px-2.5 shadow-raise' : 'px-3',
         active
-          ? 'border border-ink bg-ink text-white'
+          ? 'bg-ink text-white'
           : compact
-            ? 'border border-transparent bg-surface text-ink hover:bg-fill'
-            : 'border border-line bg-surface text-ink hover:bg-fill',
+            ? 'bg-surface text-ink hover:bg-fill'
+            : 'bg-fill text-ink hover:bg-fill-strong',
       ].join(' ')}
     >
       <Icon name="sliders" size={18} />
@@ -776,10 +792,8 @@ function TypeSegments({ types, onChange }: { types: SpotType[]; onChange: (types
             type="button"
             aria-pressed={pressed}
             onClick={() => onChange(segment.value === null ? [] : [segment.value])}
-            className={`inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-control px-1 text-sm whitespace-nowrap ${
-              pressed
-                ? 'border border-ink bg-ink font-bold text-white'
-                : 'border border-line bg-surface text-ink hover:bg-fill'
+            className={`inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-control px-1 text-sm font-semibold whitespace-nowrap ${
+              pressed ? 'bg-ink text-white' : 'bg-fill text-ink hover:bg-fill-strong'
             }`}
           >
             {segment.label}
@@ -794,12 +808,12 @@ function BasecampListHeader({ result, regionName }: { result: BasecampsInView; r
   const counted = result.status === 'ready' || result.items.length > 0;
   return (
     <h2 className="flex items-baseline justify-between gap-3">
-      <span className="truncate text-lg font-extrabold tracking-[-0.02em] lg:text-[1.375rem]">
+      <span className="truncate text-lg font-extrabold tracking-[-0.02em] lg:text-[1.625rem]">
         {regionTitle(regionName)}
         <span className="sr-only"> 베이스캠프</span>
       </span>
       {counted && (
-        <span className="shrink-0 text-sm tabular-nums text-ink-muted lg:text-brand-ink">
+        <span className="shrink-0 text-sm tabular-nums text-ink-muted">
           베이스캠프 {result.items.length}
           {result.hasNext ? '개 이상' : '개'}
         </span>
@@ -827,7 +841,7 @@ function SpotList({
     return (
       <div aria-busy="true" className="flex flex-col">
         {[0, 1, 2].map((index) => (
-          <div key={index} className="flex min-h-16 items-center gap-3 border-b border-line px-4 py-3 lg:px-5">
+          <div key={index} className="flex min-h-16 items-center gap-3 px-4 py-3 lg:px-5">
             <Skeleton className="size-7 shrink-0 rounded-full" />
             <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-4 w-2/3" />
@@ -874,7 +888,7 @@ function SpotList({
 
       {area.markers.length > 0 && (
         <>
-          <p className="flex justify-between px-4 pt-3 pb-2 text-[0.8125rem] text-ink-muted lg:px-5">
+          <p className="flex justify-between px-4 pt-1 pb-2 text-[0.8125rem] text-ink-muted lg:px-6">
             <span>지도 가운데에서 가까운 순</span>
             <span className="tabular-nums">{area.markers.length}곳</span>
           </p>
@@ -904,7 +918,7 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
     return (
       <div aria-busy="true" className="flex flex-col">
         {[0, 1, 2].map((index) => (
-          <div key={index} className="flex min-h-16 items-center gap-3 border-b border-line px-4 py-3 lg:px-5">
+          <div key={index} className="flex min-h-16 items-center gap-3 px-4 py-3 lg:px-5">
             <Skeleton className="size-7 shrink-0 rounded-full" />
             <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-4 w-2/3" />

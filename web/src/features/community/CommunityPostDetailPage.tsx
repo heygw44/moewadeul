@@ -79,7 +79,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
       <HubLayout title="커뮤니티" breadcrumb={<BackToCommunity />} aside={asideNode}>
         <div aria-busy="true">
           {showSkeleton && (
-            <div className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-5">
+            <div className="flex flex-col gap-3 p-1">
               <Skeleton className="h-8 w-2/3" />
               <Skeleton className="h-40 w-full" />
             </div>
@@ -255,12 +255,12 @@ type PostContentProps = {
   onImageError: () => void;
 };
 
-// 글 하나를 흰 판에 담는다. 머리에 제목·글쓴이 줄·수정·신고 버튼, 그 아래 본문·사진, 맨 아래 좋아요와 댓글 수다.
+// 글 하나를 판 없이 흰 바탕에 둔다. 머리에 제목·글쓴이 줄·수정·신고 버튼, 그 아래 본문·사진, 맨 아래 좋아요와 댓글 수다.
 // 페이지 제목(h1)은 위 띠가 스크린 리더에 읽히므로, 판의 제목은 화면에만 보인다.
 function PostContent({ post, meta, actions, onLikeChanged, onImageError }: PostContentProps) {
   return (
-    <article className="overflow-hidden rounded-sheet border border-line bg-surface">
-      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-line px-5 py-5 sm:px-6">
+    <article className="flex flex-col">
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 pb-5">
         <div className="flex min-w-0 flex-col gap-1.5">
           <p
             aria-hidden="true"
@@ -272,10 +272,10 @@ function PostContent({ post, meta, actions, onLikeChanged, onImageError }: PostC
         </div>
         <div className="flex flex-wrap items-center gap-2">{actions}</div>
       </header>
-      <p className="whitespace-pre-wrap break-words px-5 py-5 text-base leading-7 text-ink sm:px-6">{post.content}</p>
+      <p className="whitespace-pre-wrap break-words pb-6 text-base leading-7 text-ink">{post.content}</p>
 
       {post.images.length > 0 && (
-        <ul className="flex flex-col gap-3 px-5 pb-5">
+        <ul className="flex flex-col gap-3 pb-6">
           {post.images.map((image, index) => (
             <li key={image.imageId}>
               <img
@@ -283,14 +283,14 @@ function PostContent({ post, meta, actions, onLikeChanged, onImageError }: PostC
                 alt={`글 사진 ${post.images.length}장 중 ${index + 1}번째`}
                 loading="lazy"
                 onError={onImageError}
-                className="max-h-[32rem] w-full rounded-control border border-line bg-fill object-contain"
+                className="max-h-[32rem] w-full rounded-sheet bg-fill object-contain"
               />
             </li>
           ))}
         </ul>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-sheet bg-fill px-3 py-1.5">
         <LikeButton post={post} onChanged={onLikeChanged} />
         <a href="#comments" className="inline-flex min-h-11 items-center gap-1 text-base text-ink-muted hover:text-ink">
           <Icon name="chat" size={18} />

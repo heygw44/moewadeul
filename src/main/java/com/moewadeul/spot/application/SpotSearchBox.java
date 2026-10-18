@@ -9,7 +9,7 @@ public record SpotSearchBox(double swLat, double swLng, double neLat, double neL
     // 위도 1도의 거리를 짧게 잡은 값이다. 실제 거리는 위도에 따라 110.6~111.7km라서, 이 값으로 나누면 후보 사각형이 조금 넓어진다.
     private static final double KM_PER_DEGREE = 111.0;
 
-    // 후보 사각형은 공간 인덱스로 후보를 좁히는 데만 쓰고, 반경 안인지는 매퍼의 구면 거리 조건이 정한다.
+    // 후보 사각형은 인덱스로 후보를 좁히는 데만 쓰고, 반경 안인지는 매퍼의 구면 거리 조건이 정한다.
     // 그래서 사각형이 반경보다 좁으면 경계 근처 장소가 빠지지만, 넓으면 거리 조건이 걸러 내므로 결과가 바뀌지 않는다.
     // 위도 1도 거리의 차이와 경도 계산의 근삿값을 덮으려고 사각형을 10% 넓힌다.
     private static final double BOX_MARGIN = 1.1;

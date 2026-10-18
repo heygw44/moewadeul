@@ -24,23 +24,23 @@ export function PageLayout({ wide = false, children, ...rest }: PageLayoutProps)
   );
 }
 
-// 화면 안의 한 묶음. 목록판과 같은 흰 판에 제목과 내용을 넣는다.
+// 화면 안의 한 묶음. 테두리 없는 세이지 카드에 제목과 내용을 넣는다.
 export function PageCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3 rounded-sheet border border-line bg-surface p-4 lg:p-5">
-      <h2 className="text-lg font-bold text-ink">{title}</h2>
+    <section className="flex flex-col gap-3 rounded-sheet bg-fill p-5 lg:p-6">
+      <h2 className="text-[1.1875rem] font-extrabold tracking-tight text-ink">{title}</h2>
       {children}
     </section>
   );
 }
 
-// 안내판의 행 목록이다. 제목은 판 바깥 위에 작은 글자로 두고, 판 안의 행은 끝에서 끝까지 1px 선으로 나눈다.
-// 판 안쪽 여백은 행마다 준다. 판에 여백을 주면 행 사이 선이 판 끝까지 닿지 않는다.
+// 행 목록 묶음이다. 제목은 카드 바깥 위에 두고, 행은 세이지 카드 안에 놓는다.
+// 카드 안쪽 여백은 행마다 준다. 행이 hover 면을 카드 끝까지 채우게 하기 위해서다.
 export function BoardSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-bold text-ink-muted">{title}</h2>
-      <div className="overflow-hidden rounded-sheet border border-line bg-surface">{children}</div>
+      <h2 className="text-base font-bold text-ink">{title}</h2>
+      <div className="overflow-hidden rounded-sheet bg-fill">{children}</div>
     </section>
   );
 }

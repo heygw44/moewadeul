@@ -1,928 +1,1005 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Link, navigate } from '../../app/router';
+import { buttonClassName } from '../../components/buttonClass';
 import { Icon } from '../../components/icons';
-import { createMapView } from '../../map/KakaoMap';
-import type { RegionLabel } from '../../map/regionLabel';
-import type { LatLng, MapView } from '../../map/types';
-import { SpotListRow } from '../spot/SpotListRow';
-import { useRegionName } from '../spot/useRegionName';
-import { useSpotsInView } from '../spot/useSpotsInView';
-import {
-  approach,
-  clamp01,
-  riseClass,
-  useActiveIndex,
-  useFrameWhileVisible,
-  useInView,
-  useMediaQuery,
-  usePrefersReducedMotion,
-} from './motion';
+import { approach, riseClass, useFrameWhileVisible, useInView, usePrefersReducedMotion } from './motion';
 
-// 첫 화면 안내판 지도가 처음 보여 줄 위치다. 경기 양평군 옥천면 일대로, 자연휴양림과 공공 야영장이 가까이 모여 있다.
-const BOARD_CENTER: LatLng = { lat: 37.555, lng: 127.47 };
-const BOARD_LEVEL = 7;
-// 안내판 목록에 적을 장소 수다. 지도에는 지금 영역의 장소를 모두 찍는다.
-const BOARD_ROW_COUNT = 3;
-// 묶음을 누르면 이만큼 확대해서 안의 장소가 풀려 보이게 한다. 지도 화면과 같은 값이다.
-const CLUSTER_ZOOM_STEP = 2;
-// 카카오맵의 확대 수준 범위다. 1이 가장 가깝다.
-const MIN_LEVEL = 1;
-const MAX_LEVEL = 14;
-// 안내판이 처음 보일 때 핀을 1번부터 하나씩 짚는 시작 시각과 간격(ms)이다.
-const PIN_TOUR_START_MS = 1400;
-const PIN_TOUR_STEP_MS = 700;
-const DESKTOP_QUERY = '(min-width: 64rem)';
-
-// 제목·소개 글자 크기. 섹션마다 같은 단계를 쓴다.
-const H2_CLASS = 'text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.06] font-extrabold tracking-[-0.045em]';
-const SUB_CLASS = 'mx-auto mt-6 max-w-[30em] text-[clamp(1.25rem,1.7vw,1.5rem)] leading-normal';
-const STEP_TITLE_CLASS = 'text-[clamp(1.5rem,2.2vw,2rem)] leading-tight font-extrabold tracking-[-0.03em]';
-// 처음엔 빠르게 움직이다 끝에서 천천히 멈추는 곡선이다. 등장 움직임(theme.css의 rise)과 같은 곡선을 쓴다.
-const EASE_SOFT = 'ease-[cubic-bezier(0.22,1,0.36,1)]';
-const TEXT_LINK_CLASS =
-  'inline-flex min-h-11 items-center gap-1 text-lg font-bold text-brand underline-offset-4 hover:underline';
+// 섹션 제목·소개 글자 크기. 섹션마다 같은 단계를 쓴다.
+const H2_CLASS = 'text-[clamp(1.875rem,3.2vw,2.75rem)] leading-tight font-extrabold tracking-[-0.035em]';
+const DISPLAY_CLASS = 'text-[clamp(2.75rem,6vw,5.75rem)] leading-none font-extrabold tracking-[-0.045em]';
 // 링크에 마우스를 올리면 화살표를 오른쪽으로 조금 민다.
 const NUDGE_CLASS = 'transition-transform duration-300 motion-safe:group-hover:translate-x-1';
-const PRIMARY_LINK_CLASS =
-  'inline-flex min-h-14 items-center justify-center rounded-control bg-brand px-7 text-lg font-bold text-white transition hover:bg-brand-strong active:scale-[0.97]';
-// 안내판 지도 위에 띄우는 흰 버튼이다.
-const MAP_BUTTON_CLASS =
-  'pointer-events-auto inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-surface font-bold text-ink shadow-raise hover:bg-fill';
+// 세이지 무대 위에 앱 화면 조각을 올린다. 조각은 앱과 같은 흰 판·행 구분선을 쓴다.
+const STAGE_CLASS = 'flex items-center justify-center rounded-media bg-fill p-5 sm:p-9';
+const FRAGMENT_CLASS = 'w-full max-w-[27.5rem] rounded-row bg-surface text-[0.9375rem] leading-snug text-ink';
+const TAG_WARN_CLASS = 'inline-flex rounded-md bg-warning-soft px-2 py-0.5 text-[0.8125rem] font-bold text-warning';
+const TAG_OK_CLASS = 'inline-flex rounded-md bg-accent-soft px-2 py-0.5 text-[0.8125rem] font-bold text-accent';
+const CHIP_CLASS = 'inline-flex h-8 items-center rounded-control bg-fill px-3 text-[0.8125rem] font-semibold';
 
-// 처음 온 사람에게 뫼와들이 하는 일을 애플 제품 페이지처럼 한 장면씩 보여 주는 랜딩이다.
-// 첫 화면의 안내판은 지도 화면처럼 공개 API로 지금 영역의 장소를 받는다. 근거 섹션과 흐름 섹션의 그림은 앱 화면을 찍은 것이다.
-// 장소 상세는 날씨 때문에 기상청을 부르므로 랜딩에서 부르지 않는다.
+// 처음 온 사람에게 뫼와들이 하는 일을 보여 주는 랜딩이다. 첫 화면에서 공원 경계 판정을 직접 해 보고,
+// 아래로 내려가며 박지 찾기·동행 구하기·공식 행사를 탭으로 골라 앱 화면 조각으로 본다.
+// 서버를 부르지 않는다. 화면 조각 속 장소·닉네임·날짜는 예시이고, 정책 값(정원, 신뢰 단계, 결제 기한 등)만 실제와 같다.
 export function LandingStage() {
   return (
     <>
-      <LandingHero />
-      <Statement />
-      <EvidenceSection />
-      <FiguresSection />
-      <TrustSection />
-      <TrailSection />
+      <Hero />
+      <EntryCards />
+      <NightTabs />
+      <FlowSection />
+      <SafetySection />
+      <FaqSection />
       <ClosingSection />
     </>
   );
 }
 
-function LandingHero() {
-  const reduced = usePrefersReducedMotion();
-  const desktop = useMediaQuery(DESKTOP_QUERY);
-  const hostRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const boardRef = useRef<HTMLDivElement>(null);
-  const scaleRef = useRef(0.92);
-  const tourRef = useRef<number[]>([]);
-  const touredRef = useRef(false);
-  // 지금 짚고 있는 장소다. 같은 번호의 행과 핀을 함께 고른 상태로 그린다.
-  const [activeId, setActiveId] = useState<number | null>(null);
-  const [view, setView] = useState<MapView | null>(null);
-  const [mapFailed, setMapFailed] = useState(false);
-  // 휴대폰에서 '지도 움직이기'를 눌렀는지다. 데스크톱은 누르지 않아도 처음부터 움직인다.
-  const [unlocked, setUnlocked] = useState(false);
-  const interactive = desktop || unlocked;
-  const area = useSpotsInView(view);
-  const rows = area.markers.slice(0, BOARD_ROW_COUNT);
-  const regionName = useRegionName(view);
+// 섹션이 화면에 들어오면 자식들을 순서대로 떠오르게 한다. i번째 자식은 i × 80ms 늦게 시작한다.
+function useRise<T extends Element>() {
+  const { ref, inView } = useInView<T>();
+  const rise = (index: number): { className: string; style: CSSProperties } => ({
+    className: riseClass(inView),
+    style: { animationDelay: `${index * 80}ms` },
+  });
+  return { ref, rise };
+}
 
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    const element = document.createElement('div');
-    element.className = 'absolute inset-0';
-    host.appendChild(element);
-    let cancelled = false;
-    let created: MapView | null = null;
-    // 마우스 휠은 지도 대신 페이지를 스크롤한다. 지도가 페이지 한가운데 있어서 휠이 지도에 먹히면 아래로 내려가지 못한다.
-    // 끌기와 손가락 확대는 아래 효과가 화면 폭에 따라 켠다.
-    createMapView(element, { center: BOARD_CENTER, level: BOARD_LEVEL, scrollWheel: false, draggable: false }).then(
-      (next) => {
-        if (cancelled) {
-          next.destroy();
-          return;
-        }
-        created = next;
-        setView(next);
-      },
-      () => {
-        if (!cancelled) setMapFailed(true);
-      },
-    );
-    return () => {
-      cancelled = true;
-      created?.destroy();
-      element.remove();
-      setView(null);
-    };
-  }, []);
+/* ───────────── 첫 화면 ───────────── */
 
-  // 휴대폰에서 지도가 처음부터 끌리면 지도 위를 쓸어도 페이지가 스크롤되지 않는다. 그래서 '지도 움직이기'를 누를 때까지 고정해 둔다.
-  // 데스크톱은 끌기만 켜고 휠 확대는 끈다. 휠은 페이지를 스크롤하고, 확대·축소는 지도 위 버튼으로 한다.
-  useEffect(() => {
-    view?.setInteractive(interactive, interactive && !desktop);
-  }, [view, interactive, desktop]);
-
-  // 핀을 누르면 지도 화면의 그 장소 상세로 가고, 묶음을 누르면 그 자리로 확대한다.
-  useEffect(() => {
-    if (!view) return;
-    const offMarker = view.onMarkerClick((id) => navigate(`/spots/${id}`));
-    const offCluster = view.onClusterClick((cluster) => {
-      view.setCenter(cluster.position, Math.max(MIN_LEVEL, view.getLevel() - CLUSTER_ZOOM_STEP));
-    });
-    return () => {
-      offMarker();
-      offCluster();
-    };
-  }, [view]);
-
-  // 지도 칸 크기가 바뀌면(창을 넓히거나 휴대폰 배치에서 넓은 배치로 바뀌면) 지도를 새 크기에 맞춰 다시 그린다.
-  // 다시 그리지 않으면 카카오맵이 처음 크기를 기준으로 그린 채 남아서 지도 일부가 빈 칸으로 남는다.
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!view || !host || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => view.relayout());
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, [view]);
-
-  useEffect(() => {
-    view?.setSelected(activeId);
-  }, [view, activeId]);
-
-  // 목록과 지도가 같은 번호로 이어진다는 것을 보여 주려고, 처음 받은 장소로 한 번만 핀을 1번부터 차례로 골랐다가 놓는다.
-  // 지도를 옮겨 목록이 바뀌어도 다시 짚지 않는다.
-  useEffect(() => {
-    if (touredRef.current || reduced || area.status !== 'ready' || area.markers.length === 0) return;
-    touredRef.current = true;
-    const first = area.markers.slice(0, BOARD_ROW_COUNT);
-    const timers = first.map((spot, index) =>
-      window.setTimeout(() => setActiveId(spot.spotId), PIN_TOUR_START_MS + index * PIN_TOUR_STEP_MS),
-    );
-    timers.push(window.setTimeout(() => setActiveId(null), PIN_TOUR_START_MS + first.length * PIN_TOUR_STEP_MS));
-    tourRef.current = timers;
-  }, [area.status, area.markers, reduced]);
-
-  useEffect(() => () => tourRef.current.forEach((timer) => window.clearTimeout(timer)), []);
-
-  // 사용자가 지도를 직접 움직이면 처음에 차례로 짚던 움직임을 멈춘다.
-  useEffect(() => {
-    if (!view) return;
-    return view.onMoveStart(() => {
-      tourRef.current.forEach((timer) => window.clearTimeout(timer));
-      setActiveId(null);
-    });
-  }, [view]);
-
-  // 장소 행에 마우스·펜·손가락을 올리거나 키보드로 고르면 그 행과 같은 번호의 핀을 고른 상태로 그린다.
-  // 사용자가 직접 고르기 시작하면 처음에 차례로 짚던 움직임은 멈춘다.
-  function pointAt(target: EventTarget) {
-    if (!(target instanceof Element)) return;
-    const row = target.closest('li');
-    const index = row?.parentElement ? Array.from(row.parentElement.children).indexOf(row) : -1;
-    const spot = rows[index];
-    if (!spot) return;
-    tourRef.current.forEach((timer) => window.clearTimeout(timer));
-    setActiveId(spot.spotId);
-  }
-
-  function zoomBy(step: number) {
-    if (!view) return;
-    const level = Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, view.getLevel() + step));
-    view.setCenter(view.getCenter(), level);
-  }
-
-  // 스크롤을 내리면 안내판이 92%에서 100% 크기로 다가온다. 스크롤을 바로 따라가지 않고 매 프레임 조금씩 따라간다.
-  useFrameWhileVisible(
-    stageRef,
-    () => {
-      const target = 0.92 + clamp01(window.scrollY / (window.innerHeight * 0.75)) * 0.08;
-      scaleRef.current = approach(scaleRef.current, target, 0.1);
-      if (boardRef.current) boardRef.current.style.transform = `scale(${scaleRef.current})`;
-    },
-    !reduced,
-  );
-
-  useEffect(() => {
-    if (reduced && boardRef.current) boardRef.current.style.transform = '';
-  }, [reduced]);
-
+function Hero() {
+  const { ref, rise } = useRise<HTMLElement>();
+  const first = rise(0);
+  const map = rise(1);
+  const second = rise(2);
+  const intro = rise(3);
+  const action = rise(4);
   return (
-    <section aria-labelledby="landing-title" className="overflow-hidden">
-      <div className="mx-auto max-w-[73.75rem] px-4 pt-16 text-center lg:px-8 lg:pt-28">
-        <h1
-          id="landing-title"
-          className="text-[clamp(3.25rem,7vw,6.5rem)] leading-[1.02] font-extrabold tracking-[-0.05em] text-ink"
-        >
-          <HeadlineLine>어디서 잘지</HeadlineLine>
-          <HeadlineLine delayMs={130}>누구와 갈지</HeadlineLine>
-        </h1>
-        <p className={`${SUB_CLASS} text-ink-muted motion-safe:animate-rise motion-safe:[animation-delay:420ms]`}>
-          공원 경계 경고와 신뢰 단계를 보고 정해요.
+    <section ref={ref} aria-labelledby="hero-title" className="mx-auto max-w-[90rem] px-4 pt-8 pb-12 lg:px-8 lg:pt-16">
+      <h1 id="hero-title" className="sr-only">
+        어디서 잘지, 누구와 갈지
+      </h1>
+      {/* 한 문장을 둘로 나눠 양쪽 끝에 두고, 그 사이에 지도 조각을 둔다. 휴대폰에서는 위아래로 쌓는다. */}
+      <div className="grid items-center gap-4 lg:grid-cols-[1fr_minmax(0,35rem)_1fr] lg:gap-8">
+        <p aria-hidden="true" className={`${DISPLAY_CLASS} whitespace-nowrap ${first.className}`} style={first.style}>
+          어디서 잘지,
         </p>
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 motion-safe:animate-rise motion-safe:[animation-delay:520ms]">
-          <Link to="/map" className={PRIMARY_LINK_CLASS}>
+        <div className={map.className} style={map.style}>
+          <JudgeMap />
+        </div>
+        <p
+          aria-hidden="true"
+          className={`${DISPLAY_CLASS} justify-self-end whitespace-nowrap ${second.className}`}
+          style={second.style}
+        >
+          누구와 갈지.
+        </p>
+      </div>
+      <div className="mt-8 flex flex-col gap-5 lg:mt-12 lg:flex-row lg:items-end lg:justify-between">
+        <p className={`max-w-[30ch] text-lg leading-normal lg:text-xl ${intro.className}`} style={intro.style}>
+          합법적인 박지를 지도에서 찾고, 신뢰 단계를 확인한 사람과 함께 떠나요.
+        </p>
+        <div className={action.className} style={action.style}>
+          <Link to="/map" className={`${buttonClassName('primary')} group min-h-13 w-full px-7 text-lg lg:w-auto`}>
             지도 열기
+            <Icon name="chevronRight" size={20} className={NUDGE_CLASS} />
           </Link>
-          <a href="#landing-evidence" className={`group ${TEXT_LINK_CLASS}`}>
-            근거 먼저 보기
-            <Icon name="chevronRight" size={18} className={NUDGE_CLASS} />
-          </a>
         </div>
       </div>
+    </section>
+  );
+}
 
-      <div
-        ref={stageRef}
-        className="mx-auto mt-14 max-w-[67.5rem] px-4 pb-24 motion-safe:animate-rise motion-safe:[animation-delay:300ms] lg:mt-22 lg:px-8 lg:pb-36"
+// 지도 조각의 좌표계(viewBox)다. 다각형과 핀 위치는 이 좌표로 계산한다.
+const MAP_WIDTH = 560;
+const MAP_HEIGHT = 476;
+// 예시 공원 경계 다각형이다. 실제 공원 경계가 아니라 판정이 어떻게 보이는지 보여 주는 그림이다.
+const BOUNDARY: ReadonlyArray<readonly [number, number]> = [
+  [120, 40],
+  [330, 20],
+  [430, 110],
+  [400, 260],
+  [250, 300],
+  [130, 230],
+];
+const BOUNDARY_PATH = `M${BOUNDARY.map(([x, y]) => `${x} ${y}`).join(' L')} Z`;
+// 키보드로 핀을 옮길 때 한 번에 움직이는 거리(지도 좌표)다.
+const KEY_STEP = 16;
+const KEY_MOVES: Record<string, readonly [number, number]> = {
+  ArrowLeft: [-KEY_STEP, 0],
+  ArrowRight: [KEY_STEP, 0],
+  ArrowUp: [0, -KEY_STEP],
+  ArrowDown: [0, KEY_STEP],
+};
+
+// 점이 다각형 안에 있는지 판정한다. 점에서 오른쪽으로 그은 반직선이 변을 홀수 번 넘으면 안쪽이다.
+function insideBoundary(x: number, y: number): boolean {
+  let inside = false;
+  for (let i = 0, j = BOUNDARY.length - 1; i < BOUNDARY.length; j = i++) {
+    const [xi, yi] = BOUNDARY[i]!;
+    const [xj, yj] = BOUNDARY[j]!;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+function clampPoint(x: number, y: number) {
+  return { x: Math.min(MAP_WIDTH, Math.max(0, x)), y: Math.min(MAP_HEIGHT, Math.max(0, y)) };
+}
+
+// 이 페이지의 하나뿐인 조작이다. 지도를 누르거나 화살표 키로 핀을 옮기면 공원 경계 안·밖을 다시 판정하고,
+// 경계 안이면 베이스캠프 열기 버튼을 막는다. 앱의 실제 규칙(경고 박지로는 베이스캠프를 열 수 없음)을 그대로 보여 준다.
+function JudgeMap() {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [pin, setPin] = useState({ x: 291, y: 190 });
+  const warned = insideBoundary(pin.x, pin.y);
+  const hintId = useId();
+
+  function moveTo(clientX: number, clientY: number) {
+    const matrix = svgRef.current?.getScreenCTM();
+    if (!matrix) return;
+    // 화면 좌표를 지도 좌표로 바꾼다. 지도가 칸을 넘치게 채워(slice) 잘려 있어도 정확한 자리를 얻는다.
+    const point = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
+    setPin(clampPoint(point.x, point.y));
+  }
+
+  function handleKeyDown(event: KeyboardEvent<SVGSVGElement>) {
+    const move = KEY_MOVES[event.key];
+    if (!move) return;
+    event.preventDefault();
+    setPin((current) => clampPoint(current.x + move[0], current.y + move[1]));
+  }
+
+  return (
+    <div data-ui className="relative aspect-[4/4.6] overflow-hidden rounded-media bg-[#eef2ea] sm:aspect-[4/3.4]">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+        preserveAspectRatio="xMidYMid slice"
+        role="application"
+        tabIndex={0}
+        aria-label="예시 지도. 화살표 키나 누르기로 박지 핀을 옮겨요"
+        aria-describedby={hintId}
+        onClick={(event) => moveTo(event.clientX, event.clientY)}
+        onKeyDown={handleKeyDown}
+        className="absolute inset-0 size-full cursor-crosshair touch-manipulation"
       >
-        <div ref={boardRef} className="origin-top overflow-hidden rounded-media bg-surface will-change-transform">
-          <div className="flex items-baseline justify-between gap-3 bg-brand px-5 py-4 text-white lg:px-7 lg:py-5">
-            <p className="truncate text-xl font-extrabold tracking-[-0.025em] lg:text-2xl">{boardTitle(regionName)}</p>
-            <p className="shrink-0 text-sm text-brand-ink">가까운 순</p>
-          </div>
-          <div className="grid lg:grid-cols-[1.35fr_1fr]">
-            <div className={`relative h-80 bg-fill lg:h-auto lg:min-h-[26rem] ${mapFailed ? 'hidden' : ''}`}>
-              <div
-                ref={hostRef}
-                role="region"
-                aria-label="장소 지도. 끌어서 옮기고 확대·축소할 수 있어요. 지도에 찍힌 장소는 옆 목록과 같은 번호예요."
-                className="absolute inset-0"
+        <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill="#eef2ea" />
+        <path d="M0 330 C90 300 150 360 240 330 S420 250 560 290 V476 H0Z" fill="#e3eadf" />
+        <path
+          d="M-10 170 C80 150 120 210 210 190 S360 120 470 150 S560 130 580 120"
+          fill="none"
+          stroke="#cfe0ea"
+          strokeWidth={14}
+          strokeLinecap="round"
+        />
+        <path d="M40 420 C140 380 220 430 300 400 S470 360 540 380" fill="none" stroke="#fff" strokeWidth={6} />
+        <g fill="#d6e3d2">
+          <circle cx={80} cy={80} r={26} />
+          <circle cx={500} cy={60} r={34} />
+          <circle cx={470} cy={420} r={30} />
+          <circle cx={60} cy={300} r={22} />
+        </g>
+        <path
+          d={BOUNDARY_PATH}
+          className="fill-warning stroke-warning"
+          fillOpacity={0.08}
+          strokeWidth={2}
+          strokeDasharray="7 6"
+        />
+        <text x={226} y={64} fontSize={13} fontWeight={700} className="fill-warning">
+          예시 국립공원 경계
+        </text>
+        {/* 핀은 지도 좌표에 그려서 화면 크기가 바뀌어도 같은 자리에 있다. 끝이 좌표를 가리키는 물방울 모양이다. */}
+        <g
+          style={{ transform: `translate(${pin.x}px, ${pin.y}px)` }}
+          className="transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+        >
+          <path
+            d="M0 0 C-4 -9 -15 -15 -15 -28 A15 15 0 1 1 15 -28 C15 -15 4 -9 0 0Z"
+            className={warned ? 'fill-warning' : 'fill-brand'}
+            stroke="#fff"
+            strokeWidth={3}
+          />
+          <text y={-23} textAnchor="middle" fontSize={14} fontWeight={800} fill="#fff">
+            1
+          </text>
+        </g>
+      </svg>
+
+      <p
+        id={hintId}
+        className="pointer-events-none absolute top-3 left-3 rounded-control bg-surface px-3.5 py-1.5 text-sm font-semibold shadow-raise"
+      >
+        지도를 눌러 핀을 옮겨 보세요
+      </p>
+
+      {/* 판정 결과 창이다. 지도 위에 떠 있어 그림자를 둔다. 결과가 바뀌면 스크린 리더가 읽는다. */}
+      <div className="absolute inset-x-3 bottom-3 rounded-row bg-surface p-4 text-[0.9375rem] shadow-raise sm:inset-x-4 sm:bottom-4">
+        <p className="text-[1.0625rem] font-bold">이름 없는 박지 · 사용자 제보</p>
+        <p className="text-[0.9375rem] text-ink-muted">경계 자료: 예시 공원 경계 · 2026-06-30 기준</p>
+        <p
+          aria-live="polite"
+          className={`mt-2.5 rounded-xl px-3 py-2 font-semibold ${warned ? 'bg-warning-soft text-warning' : 'bg-accent-soft text-accent'}`}
+        >
+          {warned ? '공원 경계 안이에요. 야영이 금지된 곳일 수 있어요' : '공원 경계 밖이에요. 경고 없이 등록돼요'}
+        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[0.9375rem] text-ink-muted">
+            {warned ? '경고 박지는 베이스캠프를 열 수 없어요' : '이 자리로 베이스캠프를 열 수 있어요'}
+          </span>
+          <span
+            aria-hidden="true"
+            className={`inline-flex h-9 w-full items-center justify-center rounded-control px-4 text-[0.9375rem] font-semibold sm:w-auto ${
+              warned ? 'bg-fill-strong text-ink-subtle' : 'bg-brand text-white'
+            }`}
+          >
+            베이스캠프 열기
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────── 고르는 카드 ───────────── */
+
+const ENTRY_CARDS = [
+  {
+    to: '/map',
+    title: '박지 지도',
+    body: '오늘 밤 잘 곳을 찾을 때',
+    action: '지도 열기',
+    image: '/landing/photos/tent-cone.webp',
+    alt: '초원에 세운 흰 원뿔 텐트와 뒤쪽 산 능선',
+    imageClass: 'w-[64%]',
+  },
+  {
+    to: '/basecamps',
+    title: '베이스캠프',
+    body: '함께 갈 사람을 찾을 때',
+    action: '둘러보기',
+    image: '/landing/photos/boots.webp',
+    alt: '나무 데크 위에 선 등산화 한 켤레',
+    imageClass: 'w-[72%]',
+  },
+  {
+    to: '/programs',
+    title: '공식 행사',
+    body: '공식 행사에 가고 싶을 때',
+    action: '일정 보기',
+    image: '/landing/photos/stove.webp',
+    alt: '풀밭에 놓인 버너와 주전자',
+    imageClass: 'w-[72%]',
+  },
+] as const;
+
+// 너비가 다른 카드 셋으로 할 일을 고르게 한다(데스크톱 6:3:3). 같은 모양 카드를 나란히 두지 않으려고 첫 카드를 넓게 둔다.
+function EntryCards() {
+  const { ref, rise } = useRise<HTMLElement>();
+  return (
+    <section
+      ref={ref}
+      aria-label="하려는 일 고르기"
+      className="mx-auto grid max-w-[90rem] gap-4 px-4 pb-24 lg:grid-cols-[6fr_3fr_3fr] lg:px-8 lg:pb-40"
+    >
+      {ENTRY_CARDS.map((card, index) => {
+        const r = rise(index);
+        return (
+          <Link
+            key={card.to}
+            to={card.to}
+            style={r.style}
+            className={`group relative flex min-h-64 flex-col overflow-hidden rounded-media bg-fill p-6 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:hover:-translate-y-1 lg:min-h-96 lg:p-8 ${r.className}`}
+          >
+            <h2 className="relative z-10 text-[1.625rem] leading-tight font-extrabold tracking-[-0.03em]">
+              {card.title}
+            </h2>
+            <p className="relative z-10 mt-1.5 max-w-[22ch] text-[1.0625rem]">{card.body}</p>
+            <span className={`${buttonClassName('secondary')} relative z-10 mt-auto self-start`}>
+              {card.action}
+              <Icon name="chevronRight" size={18} className={NUDGE_CLASS} />
+            </span>
+            <img
+              src={card.image}
+              alt={card.alt}
+              loading="lazy"
+              className={`pointer-events-none absolute right-0 bottom-0 origin-bottom-right mix-blend-multiply transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-hover:scale-[1.04] ${card.imageClass}`}
+            />
+          </Link>
+        );
+      })}
+    </section>
+  );
+}
+
+/* ───────────── 어떤 밤을 준비하세요? (탭) ───────────── */
+
+type TabItem = { title: string; body: string; stage: ReactNode };
+type NightTab = {
+  key: string;
+  label: string;
+  question: string;
+  action: { to: string; label: string };
+  secondary?: { to: string; label: string };
+  items: TabItem[];
+};
+
+function Photo({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="aspect-[3/2] overflow-hidden rounded-media bg-fill">
+      <img src={src} alt={alt} loading="lazy" className="size-full object-cover mix-blend-multiply" />
+    </div>
+  );
+}
+
+// 무대 안은 앱 화면 조각이라 앱의 행 구분선·작은 글자를 그대로 쓴다(data-ui로 표시).
+function Stage({ children }: { children: ReactNode }) {
+  return (
+    <div className={STAGE_CLASS}>
+      <div data-ui className="contents">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// 목록 행 조각이다. 왼쪽 번호 원, 가운데 이름과 부가 정보, 오른쪽 굵은 거리다.
+function FragmentRow({
+  number,
+  warn = false,
+  name,
+  meta,
+  distance,
+  tag,
+}: {
+  number: number;
+  warn?: boolean;
+  name: string;
+  meta: string;
+  distance: string;
+  tag?: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 border-t border-line px-4 py-3 first:border-t-0">
+      <span
+        className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold text-white ${warn ? 'bg-warning' : 'bg-brand'}`}
+      >
+        {number}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="flex flex-wrap items-center gap-1.5 font-semibold">
+          {name} {tag}
+        </p>
+        <p className="text-[0.9375rem] text-ink-muted">{meta}</p>
+      </div>
+      <span className="font-mono text-base font-extrabold tracking-[-0.02em]">{distance}</span>
+    </div>
+  );
+}
+
+const NIGHT_TABS: NightTab[] = [
+  {
+    key: 'spot',
+    label: '박지 찾기',
+    question: '여기서 자도 되는지, 매번 헷갈리셨나요?',
+    action: { to: '/map', label: '지도 열기' },
+    secondary: { to: '/bakjis/new', label: '박지 제보' },
+    items: [
+      {
+        title: '내 위치에서 가까운 순으로',
+        body: '반경은 50km까지 넓힐 수 있고, 휴장한 곳도 숨기지 않고 표시해요.',
+        stage: (
+          <Stage>
+            <div className={FRAGMENT_CLASS}>
+              <div className="flex flex-wrap gap-1.5 border-b border-line px-4 py-3">
+                <span className={`${CHIP_CLASS} bg-ink text-white`}>반경 10km</span>
+                <span className={CHIP_CLASS}>휴장 제외</span>
+                <span className={CHIP_CLASS}>화장실</span>
+              </div>
+              <FragmentRow number={1} name="양평 옥천 계곡 박지" meta="사용자 제보 · 확인 12명" distance="2.4km" />
+              <FragmentRow number={2} name="산음자연휴양림" meta="공공데이터 · 운영 중" distance="6.1km" />
+              <FragmentRow
+                number={3}
+                warn
+                name="용문산 능선 박지"
+                tag={<span className={TAG_WARN_CLASS}>경계 경고</span>}
+                meta="사용자 제보 · 확인 3명"
+                distance="8.7km"
               />
-              {/* 카카오맵은 지도 칸에 touch-action: none을 걸어서, 끌기를 꺼도 지도 위를 쓸면 페이지가 스크롤되지 않는다.
-                  그래서 고정해 둔 동안에는 빈 판을 지도 위에 덮어 손가락이 지도에 닿지 않게 한다. */}
-              {interactive ? null : <div aria-hidden="true" className="absolute inset-0 z-[5]" />}
-              <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-end justify-between p-3">
-                {interactive ? (
-                  <div className="flex flex-col gap-1.5">
-                    <button
-                      type="button"
-                      aria-label="확대"
-                      onClick={() => zoomBy(-1)}
-                      className={`${MAP_BUTTON_CLASS} w-11`}
-                    >
-                      <Icon name="plus" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="축소"
-                      onClick={() => zoomBy(1)}
-                      className={`${MAP_BUTTON_CLASS} w-11`}
-                    >
-                      <Icon name="minus" />
-                    </button>
-                  </div>
-                ) : (
-                  <span />
-                )}
-                {!desktop && view ? (
-                  <button
-                    type="button"
-                    aria-pressed={unlocked}
-                    onClick={() => setUnlocked((on) => !on)}
-                    className={`${MAP_BUTTON_CLASS} self-start px-4 text-[0.9375rem]`}
+            </div>
+          </Stage>
+        ),
+      },
+      {
+        title: '공원 경계 안이면 먼저 알려 줘요',
+        body: '국립공원 경계 자료로 박지를 판정하고, 자료의 출처와 기준일을 함께 보여 줘요.',
+        stage: <Photo src="/landing/photos/tent-valley.webp" alt="산비탈 아래 골짜기에 세운 텐트 한 동" />,
+      },
+      {
+        title: '경고 박지로는 모임을 열 수 없어요',
+        body: '여럿이 모이는 일정은 경고가 없는 장소에서만 시작해요.',
+        stage: (
+          <Stage>
+            <div className={`${FRAGMENT_CLASS} p-4`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[1.0625rem] font-bold">용문산 능선 박지</p>
+                <span className={TAG_WARN_CLASS}>경계 경고</span>
+              </div>
+              <p className="mt-0.5 text-[0.9375rem] text-ink-muted">용문산 일대 · 사용자 제보</p>
+              <div className="mt-4 flex gap-2">
+                <span className="inline-flex h-9 flex-1 items-center justify-center rounded-control bg-fill-strong text-[0.9375rem] font-semibold text-ink-subtle">
+                  베이스캠프 열기
+                </span>
+                <span className="inline-flex h-9 items-center justify-center rounded-control bg-fill px-4 text-sm font-semibold">
+                  혼자 가기
+                </span>
+              </div>
+              <p className="mt-2.5 text-[0.9375rem] text-warning">
+                공원 경계 경고가 붙은 박지라 베이스캠프를 열 수 없어요.
+              </p>
+            </div>
+          </Stage>
+        ),
+      },
+    ],
+  },
+  {
+    key: 'companion',
+    label: '동행 구하기',
+    question: '처음 보는 사람과 산에서 하룻밤, 망설여지나요?',
+    action: { to: '/basecamps', label: '베이스캠프 둘러보기' },
+    items: [
+      {
+        title: '신뢰 단계로 먼저 확인해요',
+        body: '단계는 저장해 두지 않고, 볼 때마다 지금 기록으로 다시 계산해요.',
+        stage: (
+          <Stage>
+            <ol className={FRAGMENT_CLASS}>
+              {[
+                { level: 0, title: '이메일 인증', note: '가입하면 바로' },
+                { level: 1, title: '본인확인 · 성인', note: '베이스캠프를 열 수 있어요' },
+                { level: 2, title: '완료한 동행 3회 · 다시 동행 80%', note: '최근 180일 확정 제재가 없을 때' },
+              ].map((step) => (
+                <li
+                  key={step.level}
+                  className={`grid grid-cols-[3rem_1fr] items-center gap-3 border-t border-line px-4 py-3 first:border-t-0 ${step.level === 1 ? 'bg-fill' : ''}`}
+                >
+                  <span
+                    className={`text-center text-3xl font-extrabold tracking-[-0.04em] ${step.level === 1 ? 'text-brand' : 'text-ink-faint'}`}
                   >
-                    <Icon name={unlocked ? 'close' : 'map'} size={18} />
-                    {unlocked ? '지도 고정' : '지도 움직이기'}
-                  </button>
-                ) : null}
+                    {step.level}
+                  </span>
+                  <span>
+                    <span className="block font-semibold">{step.title}</span>
+                    <span className="block text-[0.9375rem] text-ink-muted">{step.note}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </Stage>
+        ),
+      },
+      {
+        title: '합류 조건을 정해 두면',
+        body: '최소 신뢰 단계, 연령대, 동성만. 조건에 맞는 사람만 신청할 수 있어요. 정원은 리더를 포함해 2~6명이에요.',
+        stage: (
+          <Stage>
+            <div className={`${FRAGMENT_CLASS} p-4`}>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-[1.0625rem] font-bold">유명산 1박, 별 보러 가요</p>
+                <span className={TAG_OK_CLASS}>모집 중</span>
+              </div>
+              <p className="mt-0.5 text-[0.9375rem] text-ink-muted">11월 8일(토) 출발 · 1박 · 유명산자연휴양림</p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <span className={CHIP_CLASS}>신뢰 단계 1 이상</span>
+                <span className={CHIP_CLASS}>30대</span>
+                <span className={CHIP_CLASS}>동성만</span>
+              </div>
+              <div className="mt-4 flex items-center justify-between font-bold">
+                <span className="text-[0.9375rem] text-ink-muted">멤버</span>
+                <span className="font-mono">3 / 4명</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-fill-strong">
+                <div className="h-full w-3/4 rounded-full bg-brand" />
               </div>
             </div>
-            {rows.length > 0 ? (
-              <ul
-                aria-label="지도에 찍힌 장소"
-                onPointerOver={(event) => pointAt(event.target)}
-                onFocus={(event) => pointAt(event.target)}
-                onPointerLeave={() => setActiveId(null)}
-                onBlur={() => setActiveId(null)}
-                className="flex flex-col justify-center py-2 motion-safe:[&>li]:animate-rise motion-safe:[&>li:nth-child(2)]:[animation-delay:120ms] motion-safe:[&>li:nth-child(3)]:[animation-delay:240ms] lg:py-4"
-              >
-                {rows.map((spot, index) => (
-                  <SpotListRow
-                    key={spot.spotId}
-                    marker={spot}
-                    number={index + 1}
-                    distanceKm={spot.distanceKm}
-                    size="large"
-                    selected={spot.spotId === activeId}
-                  />
-                ))}
-              </ul>
-            ) : (
-              <div className="flex min-h-40 flex-col items-start justify-center gap-3 px-5 py-8 lg:px-7">
-                <p className="text-base text-ink-muted">{boardMessage(area.status, area.clusters.length, mapFailed)}</p>
-                {area.status === 'error' ? (
-                  <button type="button" onClick={area.retry} className={TEXT_LINK_CLASS}>
-                    다시 불러오기
-                  </button>
-                ) : null}
+          </Stage>
+        ),
+      },
+      {
+        title: '연락 수단은 확정된 뒤에',
+        body: '베이스캠프가 확정되면 멤버끼리만 보이고, 다녀온 뒤 7일이 지나면 다시 가려져요.',
+        stage: <Photo src="/landing/photos/meadow.webp" alt="산 아래 풀밭에 누워 쉬는 백패커" />,
+      },
+    ],
+  },
+  {
+    key: 'program',
+    label: '공식 행사',
+    question: '공식 행사 자리, 매번 놓치셨나요?',
+    action: { to: '/programs', label: '행사 일정 보기' },
+    items: [
+      {
+        title: '정원만큼만 정확히',
+        body: '신청이 한꺼번에 몰려도 선착순으로 정원만큼만 받고, 한 사람은 한 번만 신청해요.',
+        stage: (
+          <Stage>
+            <div className={`${FRAGMENT_CLASS} p-4`}>
+              <p className="text-[1.0625rem] font-bold">가을 둘레길 백패킹</p>
+              <p className="mt-0.5 text-[0.9375rem] text-ink-muted">11월 15일~16일 · 숙박 행사 · 참가비 45,000원</p>
+              <div className="mt-4 flex justify-between font-bold">
+                <span>남은 자리</span>
+                <span className="font-mono">12 / 200</span>
               </div>
-            )}
-          </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-fill-strong">
+                <div className="h-full w-[94%] rounded-full bg-brand" />
+              </div>
+              <span className="mt-4 flex h-10 items-center justify-center rounded-control bg-brand text-[0.9375rem] font-semibold text-white">
+                신청하기
+              </span>
+            </div>
+          </Stage>
+        ),
+      },
+      {
+        title: '결제는 15분 안에',
+        body: '기한을 넘기면 자리는 다음 사람에게 돌아가요. 정원이 찼다면 빈자리 알림을 신청해 두세요.',
+        stage: (
+          <Stage>
+            <div className={`${FRAGMENT_CLASS} p-5 text-center`}>
+              <p className="text-[0.9375rem] text-ink-muted">결제 대기</p>
+              <p className="font-mono text-[2.75rem] leading-tight font-extrabold tracking-[-0.04em]">14:32</p>
+              <p className="text-[0.9375rem] text-ink-muted">이 시간이 지나면 신청이 취소되고 자리가 돌아가요</p>
+              <span className="mt-4 flex h-10 items-center justify-center rounded-control bg-brand text-[0.9375rem] font-semibold text-white">
+                45,000원 결제하기
+              </span>
+            </div>
+          </Stage>
+        ),
+      },
+      {
+        title: '시작 3일 전까지는 전액 환불',
+        body: '그 뒤로는 취소할 수 없어요. 숙박 행사는 신뢰 단계 1부터 신청할 수 있어요.',
+        stage: (
+          <Stage>
+            <div className={`${FRAGMENT_CLASS} p-4`}>
+              <p className="text-[1.0625rem] font-bold">신청 취소</p>
+              <p className="mt-0.5 text-[0.9375rem] text-ink-muted">행사 시작 11월 15일 · 오늘 11월 10일</p>
+              <div className="mt-3 flex justify-between rounded-xl bg-fill px-4 py-3 font-bold">
+                <span>환불 금액</span>
+                <span className="font-mono">45,000원</span>
+              </div>
+              <span className="mt-3 flex h-10 items-center justify-center rounded-control bg-brand text-[0.9375rem] font-semibold text-white">
+                전액 환불받고 취소
+              </span>
+            </div>
+          </Stage>
+        ),
+      },
+    ],
+  },
+];
+
+// 탭으로 세 기능 가운데 하나를 고른다. 탭 줄은 스크롤해도 머리글 아래 붙어 있고,
+// 왼쪽에는 기능 이름과 질문을 붙여 두고 오른쪽에서 화면 조각과 설명이 지나간다.
+function NightTabs() {
+  const [selected, setSelected] = useState(NIGHT_TABS[0]!.key);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const { ref, rise } = useRise<HTMLElement>();
+  const title = rise(0);
+  const baseId = useId();
+
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    const next = (index + (event.key === 'ArrowRight' ? 1 : NIGHT_TABS.length - 1)) % NIGHT_TABS.length;
+    setSelected(NIGHT_TABS[next]!.key);
+    tabRefs.current[next]?.focus();
+  }
+
+  return (
+    <section ref={ref} aria-labelledby="night-title" className="mx-auto max-w-screen-xl px-4 pb-24 lg:px-8 lg:pb-40">
+      <h2 id="night-title" className={`${H2_CLASS} text-center ${title.className}`} style={title.style}>
+        어떤 밤을 준비하세요?
+      </h2>
+      <div className="sticky top-14 z-10 -mx-4 mt-8 mb-8 flex justify-center bg-canvas px-4 py-2 lg:top-16 lg:mb-14 lg:bg-transparent">
+        <div role="tablist" aria-label="기능 고르기" className="inline-flex gap-1 rounded-control bg-fill p-1">
+          {NIGHT_TABS.map((tab, index) => {
+            const on = tab.key === selected;
+            return (
+              <button
+                key={tab.key}
+                ref={(element) => {
+                  tabRefs.current[index] = element;
+                }}
+                type="button"
+                role="tab"
+                id={`${baseId}-tab-${tab.key}`}
+                aria-selected={on}
+                aria-controls={`${baseId}-panel-${tab.key}`}
+                tabIndex={on ? 0 : -1}
+                onClick={() => setSelected(tab.key)}
+                onKeyDown={(event) => handleKeyDown(event, index)}
+                className={`min-h-11 rounded-control px-4 text-[0.9375rem] font-semibold whitespace-nowrap transition-colors sm:px-5 sm:text-base ${
+                  on ? 'bg-ink text-white' : 'text-ink-muted hover:text-ink'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {NIGHT_TABS.map((tab) => (
+        <div
+          key={tab.key}
+          role="tabpanel"
+          id={`${baseId}-panel-${tab.key}`}
+          aria-labelledby={`${baseId}-tab-${tab.key}`}
+          hidden={tab.key !== selected}
+          className="grid gap-8 lg:grid-cols-[4fr_8fr] lg:gap-16"
+        >
+          {tab.key === selected && <TabPanelBody tab={tab} />}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+// 패널은 고를 때마다 새로 그려서, 항목이 다시 떠오르며 바뀐 내용을 알린다.
+function TabPanelBody({ tab }: { tab: NightTab }) {
+  const { ref, rise } = useRise<HTMLDivElement>();
+  return (
+    <>
+      <aside className="self-start lg:sticky lg:top-44">
+        <h3 className={H2_CLASS}>{tab.label}</h3>
+        <p className="mt-3 max-w-[18ch] text-xl leading-snug">{tab.question}</p>
+        <div className="mt-7 flex flex-wrap gap-2.5">
+          <Link to={tab.action.to} className={`${buttonClassName('primary')} group`}>
+            {tab.action.label}
+            <Icon name="chevronRight" size={18} className={NUDGE_CLASS} />
+          </Link>
+          {tab.secondary && (
+            <Link to={tab.secondary.to} className={buttonClassName('secondary')}>
+              {tab.secondary.label}
+            </Link>
+          )}
+        </div>
+      </aside>
+      <div ref={ref} className="flex flex-col gap-14 lg:gap-16">
+        {tab.items.map((item, index) => {
+          const r = rise(index);
+          return (
+            <div
+              key={item.title}
+              className={`grid gap-4 lg:grid-cols-[minmax(0,1fr)_13.75rem] lg:gap-8 ${r.className}`}
+              style={r.style}
+            >
+              {item.stage}
+              <div>
+                <h4 className="text-xl leading-snug font-bold tracking-[-0.02em]">{item.title}</h4>
+                <p className="mt-2 max-w-[30ch] text-[1.0625rem]">{item.body}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+/* ───────────── 떠나기까지 세 번이면 돼요 ───────────── */
+
+type FlowStep = { title: string; call?: ReactNode; response: ReactNode; wide?: boolean };
+
+const FLOW_STEPS: FlowStep[] = [
+  {
+    title: '먼저, 갈 곳을 고르세요.',
+    call: (
+      <>
+        <Icon name="search" size={18} className="shrink-0 text-ink-muted" />
+        <span className="flex-1">가평 북면</span>
+        <span className="text-[0.9375rem] text-ink-muted">반경 20km</span>
+      </>
+    ),
+    response: (
+      <div className={`${FRAGMENT_CLASS} max-w-[28.75rem]`}>
+        <FragmentRow number={1} name="명지산 계곡 야영장" meta="공공데이터 · 운영 중" distance="3.2km" />
+        <FragmentRow number={2} name="적목리 강변 박지" meta="사용자 제보 · 확인 7명" distance="5.8km" />
+      </div>
+    ),
+  },
+  {
+    title: '다음, 베이스캠프에 합류를 신청하세요.',
+    call: <span>처음 1박이라 장비를 같이 봐 주시면 좋겠어요.</span>,
+    response: (
+      <div className={`${FRAGMENT_CLASS} flex max-w-[28.75rem] items-center justify-between p-4`}>
+        <div>
+          <p className="font-bold">합류 승인됨</p>
+          <p className="text-[0.9375rem] text-ink-muted">캠프 리더 지윤 · 신뢰 단계 2</p>
+        </div>
+        <span className="font-mono font-bold">4 / 4명</span>
+      </div>
+    ),
+  },
+  {
+    title: '출발 전날 0시, 두 명 이상이면 확정돼요.',
+    wide: true,
+    response: (
+      <div className="grid w-full gap-4 rounded-row bg-surface p-4 text-[0.9375rem] sm:grid-cols-2">
+        <div>
+          <span className={TAG_OK_CLASS}>확정</span>
+          <p className="mt-2 text-[1.0625rem] font-bold">명지산 계곡 야영장 · 11월 8일 1박</p>
+          <p className="mt-1 text-[0.9375rem] text-ink-muted">멤버 4명 · 다녀온 뒤 7일까지 연락 수단이 보여요</p>
+        </div>
+        <div className="rounded-xl bg-fill p-4">
+          <p className="text-[0.9375rem] text-ink-muted">캠프 리더 연락 수단</p>
+          <p className="mt-1 font-bold">확정된 멤버에게만 보이는 오픈채팅 링크</p>
+        </div>
+      </div>
+    ),
+  },
+];
+
+// 사용자가 넣는 것(흰 칸)과 돌아오는 화면 조각을 한 열에 번갈아 둔다. 마지막 조각은 결과라서 열 밖으로 넓게 둔다.
+function FlowSection() {
+  const { ref, rise } = useRise<HTMLElement>();
+  const heading = rise(0);
+  return (
+    <section ref={ref} aria-labelledby="flow-title" className="bg-fill py-24 lg:py-40">
+      <div className="mx-auto max-w-screen-xl px-4 lg:px-8">
+        <div className="max-w-[38.75rem] lg:ml-[calc(25%-2.5rem)]">
+          <h2 id="flow-title" className={`${H2_CLASS} ${heading.className}`} style={heading.style}>
+            떠나기까지 세 번이면 돼요
+          </h2>
+          <ol className="mt-12 flex flex-col gap-16 lg:mt-16 lg:gap-22">
+            {FLOW_STEPS.map((step, index) => {
+              const r = rise(index + 1);
+              return (
+                <li key={step.title} className={r.className} style={r.style}>
+                  <h3 className="text-xl font-bold tracking-[-0.02em]">{step.title}</h3>
+                  {step.call && (
+                    <div className="mt-4 flex max-w-[32.5rem] items-center gap-2.5 rounded-row bg-surface px-4 py-3.5 text-base">
+                      {step.call}
+                    </div>
+                  )}
+                  <div data-ui className={`mt-4 lg:ml-14 ${step.wide ? 'lg:-mr-[40%]' : ''}`}>
+                    {step.response}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </div>
       </div>
     </section>
   );
 }
 
-// 목록에 적을 장소가 없을 때 그 자리에 둘 문구다.
-function boardMessage(
-  status: 'idle' | 'loading' | 'ready' | 'error',
-  clusterCount: number,
-  mapFailed: boolean,
-): string {
-  if (mapFailed) return '지도를 불러오지 못했어요. 지도 화면에서 장소를 찾아 주세요.';
-  if (status === 'error') return '장소를 불러오지 못했어요.';
-  if (status !== 'ready') return '이 지역의 장소를 찾고 있어요.';
-  if (clusterCount > 0) return '장소가 많아서 지도에 묶어서 보여요. 지도를 확대하면 목록으로 볼 수 있어요.';
-  return '이 지역에는 장소가 없어요. 지도를 옮기거나 축소해 보세요.';
-}
+/* ───────────── 안심하고 함께 가도록 ───────────── */
 
-// 제목 한 줄을 줄 칸 아래에 숨겨 두었다가 올린다. 줄 칸이 넘친 부분을 가려서 글자가 가림막 밑에서 나온다.
-function HeadlineLine({ children, delayMs = 0 }: { children: ReactNode; delayMs?: number }) {
-  return (
-    <span className="block overflow-hidden pb-[0.06em]">
-      <span className="block motion-safe:animate-line-up" style={{ animationDelay: `${delayMs}ms` }}>
-        {children}
-      </span>
-    </span>
-  );
-}
+const SAFETY_ITEMS = [
+  { title: '위협 신고는 바로 막아요', body: '성희롱이나 위협을 신고하면 확인 전이라도 72시간 동안 이용을 멈춰요.' },
+  { title: '제재는 단계대로', body: '경고, 7일 정지, 30일 정지, 영구 정지 순서로 무거워져요.' },
+  { title: '후기는 블라인드로', body: '상대에게 후기를 쓰거나 14일이 지나야 내가 받은 후기를 볼 수 있어요.' },
+  {
+    title: '개인정보는 최소로',
+    body: '본인확인 결과는 출생연도와 성별만 남기고, 이름과 전화번호는 저장하지 않아요.',
+  },
+];
 
-// 지역 이름에 이미 "일대"가 붙어 오는 경우(도 단위)가 있어서 두 번 붙지 않게 한다.
-function boardTitle(label: RegionLabel | null): string {
-  if (label?.kind !== 'named') return '가까운 장소';
-  return label.name.endsWith('일대') ? label.name : `${label.name} 일대`;
-}
-
-const STATEMENT =
-  '박지에는 공원 경계 경고와 경계 자료의 기준일이 붙어요. 함께 갈 사람에게는 본인확인 여부와 동행 후기가 붙어요. 뫼와들에서는 그 둘을 보고 정해요.';
-
-// 큰 문장 하나가 스크롤에 맞춰 앞 단어부터 옅은 회색에서 먹색으로 채워진다.
-function Statement() {
+// 오른쪽 사진은 스크롤에 따라 천천히 위로 흐른다. 매 프레임 남은 거리의 일부만 따라가서 멈출 때 부드럽다.
+function SafetySection() {
+  const { ref, rise } = useRise<HTMLElement>();
   const reduced = usePrefersReducedMotion();
-  const textRef = useRef<HTMLParagraphElement>(null);
-  const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const fillRef = useRef(0);
-  const litRef = useRef(-1);
-  const words = STATEMENT.split(' ');
+  const frameRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const offset = useRef(0);
 
   useFrameWhileVisible(
-    textRef,
+    frameRef,
     () => {
-      const text = textRef.current;
-      if (!text) return;
-      const rect = text.getBoundingClientRect();
-      const target = clamp01((window.innerHeight * 0.85 - rect.top) / (rect.height + window.innerHeight * 0.4));
-      fillRef.current = approach(fillRef.current, target, 0.12);
-      const lit = Math.round(fillRef.current * words.length);
-      if (lit === litRef.current) return;
-      litRef.current = lit;
-      wordRefs.current.forEach((word, index) => {
-        if (word) word.dataset.lit = String(index < lit);
-      });
+      const frame = frameRef.current;
+      const image = imageRef.current;
+      if (!frame || !image) return;
+      const rect = frame.getBoundingClientRect();
+      // 그림 가운데가 화면 가운데에서 얼마나 떨어졌는지(화면 높이 단위)에 따라 최대 24px 옮긴다.
+      const distance = (rect.top + rect.height / 2 - innerHeight / 2) / innerHeight;
+      offset.current = approach(offset.current, Math.max(-1, Math.min(1, distance)) * -24, 0.1);
+      image.style.transform = `scale(1.08) translateY(${offset.current}px)`;
     },
     !reduced,
   );
 
+  const heading = rise(0);
+  const photo = rise(5);
   return (
-    <section aria-label="뫼와들이 하는 일" className="bg-surface py-24 lg:py-40">
-      <div className="mx-auto max-w-[73.75rem] px-4 lg:px-8">
-        <p
-          ref={textRef}
-          className="mx-auto max-w-[24em] text-center text-[1.375rem] leading-[1.45] font-bold tracking-[-0.025em] lg:text-[clamp(1.625rem,2.6vw,2.25rem)]"
-        >
-          {words.map((word, index) => (
-            <Fragment key={index}>
-              <span
-                ref={(element) => {
-                  wordRefs.current[index] = element;
-                }}
-                className={
-                  reduced
-                    ? 'text-ink'
-                    : `text-ink-faint transition-colors duration-700 ${EASE_SOFT} data-[lit=true]:text-ink`
-                }
-              >
-                {word}
-              </span>{' '}
-            </Fragment>
-          ))}
-        </p>
+    <section
+      ref={ref}
+      aria-labelledby="safety-title"
+      className="mx-auto grid max-w-screen-xl items-center gap-10 px-4 py-24 lg:grid-cols-[5fr_7fr] lg:gap-16 lg:px-8 lg:py-40"
+    >
+      <div>
+        <h2 id="safety-title" className={`${H2_CLASS} ${heading.className}`} style={heading.style}>
+          안심하고 함께 가도록
+        </h2>
+        <ul className="mt-9 flex flex-col gap-6">
+          {SAFETY_ITEMS.map((item, index) => {
+            const r = rise(index + 1);
+            return (
+              <li key={item.title} className={`max-w-[44ch] ${r.className}`} style={r.style}>
+                <p className="text-xl font-bold tracking-[-0.02em]">{item.title}</p>
+                <p className="mt-1 text-[1.0625rem]">{item.body}</p>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <div
+        ref={frameRef}
+        className={`aspect-[7/5] overflow-hidden rounded-media bg-fill ${photo.className}`}
+        style={photo.style}
+      >
+        <img
+          ref={imageRef}
+          src="/landing/photos/tent-dome.webp"
+          alt="고원 풀밭에 세운 돔 텐트"
+          loading="lazy"
+          className="size-full scale-[1.08] object-cover mix-blend-multiply"
+        />
       </div>
     </section>
   );
 }
 
-// 근거 무대 그림(박지 상세 화면)에서 단계마다 짚을 부분이다. focus는 그림 높이·너비를 100으로 본 위치와 크기이고,
-// mobileCrop은 휴대폰에서 단계마다 잘라 보일 영역이다. 글줄이나 상자 테두리 중간에서 끊기지 않게 상자 바깥 여백에서 자른다.
-const EVIDENCE_STEPS = [
+/* ───────────── 자주 묻는 질문 ───────────── */
+
+const FAQ = [
   {
-    title: '공원 경계 안일 수 있다고 알려요',
-    body: '한계령 능선 아래 공터는 설악산국립공원 경계 안으로 판정됐어요. 경고에는 지정 야영장 밖 야영과 취사가 금지된다는 안내도 들어가요.',
-    chip: '설악산국립공원',
-    warning: true,
-    focus: { top: 13.8, height: 25.6, left: 3.2, width: 93.6 },
-    mobileCrop: { top: 13.3, height: 26.8, left: 0, width: 100 },
-    alt: '박지 상세의 공원 경계 경고 상자.',
+    q: '경고가 붙은 박지는 가면 안 되나요?',
+    a: '경고는 공원 경계 자료로 판정한 참고 정보이고 법적 효력은 없어요. 다만 경고 박지로는 베이스캠프를 열 수 없어요.',
   },
   {
-    title: '어디서 가져온 경계인지 적어요',
-    body: '경고마다 경계 자료의 출처와 기준일을 붙여요. 공원 경계는 법적 효력이 없는 참고 자료라서 정확한 경계는 공식 고시 도면에서 확인해야 해요.',
-    chip: '한국보호지역통합DB(KDPA) · 2025-12-31',
-    warning: false,
-    focus: { top: 31, height: 7, left: 9.6, width: 85 },
-    mobileCrop: { top: 31.3, height: 7.3, left: 11.5, width: 83.5 },
-    alt: '경고 상자 안의 출처와 기준일 줄.',
+    q: '본인확인 때 무엇을 저장하나요?',
+    a: '출생연도와 성별, 그리고 한 사람이 계정 하나만 쓰도록 확인하는 값의 해시만 저장해요. 이름과 전화번호는 남기지 않아요.',
   },
   {
-    title: '경고가 붙은 곳으로는 동행을 모으지 않아요',
-    body: '베이스캠프 열기 버튼이 꺼져요. 화면을 거치지 않고 바로 요청해도 막혀요.',
-    chip: '이 장소에서 베이스캠프 열기 · 꺼짐',
-    warning: false,
-    focus: { top: 86.6, height: 10.2, left: 2.4, width: 95.2 },
-    mobileCrop: { top: 86.3, height: 10.4, left: 0, width: 100 },
-    alt: '꺼진 "이 장소에서 베이스캠프 열기" 버튼과 그 이유.',
+    q: '베이스캠프는 몇 명이 함께 가나요?',
+    a: '캠프 리더를 포함해 2명에서 6명까지예요. 출발일은 다음 날부터 60일 안에서 고르고, 1박에서 3박까지 갈 수 있어요.',
+  },
+  {
+    q: '멤버와는 어떻게 연락하나요?',
+    a: '베이스캠프가 확정되면 멤버끼리 연락 수단이 보여요. 다녀온 뒤 7일이 지나면 다시 가려져요.',
+  },
+  {
+    q: '동행 후기는 언제 보이나요?',
+    a: '내가 상대에게 후기를 쓰거나 다녀온 지 14일이 지나야 받은 후기를 볼 수 있어요. 쓴 뒤에는 고치거나 지울 수 없어요.',
   },
 ];
-const EVIDENCE_IMAGE = '/landing/spot-detail-warning.webp';
-// 근거 그림의 원본 크기(px)다. 휴대폰에서 자를 영역의 가로세로 비율을 계산할 때 쓴다.
-const EVIDENCE_IMAGE_SIZE = { width: 860, height: 2240 };
-const NO_FOCUS = { top: 0, height: 0, left: 0, width: 0 };
 
-// 박지 상세 화면을 붙잡아 두고, 근거 세 단계를 지날 때마다 그 부분으로 화면을 옮겨 강조한다.
-// 휴대폰에서는 붙잡아 둘 자리가 없어서 단계마다 해당 부분을 자른 그림을 둔다.
-function EvidenceSection() {
-  const { ref: leadRef, inView: leadInView } = useInView<HTMLDivElement>();
-  const stepRefs = useRef<(HTMLLIElement | null)[]>([]);
-  const active = useActiveIndex(stepRefs);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const [panY, setPanY] = useState(0);
-  const focus = EVIDENCE_STEPS[active]?.focus ?? NO_FOCUS;
+// 넓은 화면은 왼쪽 질문, 오른쪽에 붙어 있는 큰 답이다. 좁은 화면은 고른 질문 아래에 답을 펼친다.
+function FaqSection() {
+  const [open, setOpen] = useState(0);
+  const { ref, rise } = useRise<HTMLElement>();
+  const list = rise(0);
+  const answer = FAQ[open]!;
+  return (
+    <section
+      ref={ref}
+      aria-labelledby="faq-title"
+      className="mx-auto grid max-w-screen-xl gap-8 px-4 pb-24 lg:grid-cols-[5fr_1fr_6fr] lg:px-8 lg:pb-40"
+    >
+      <div className={list.className} style={list.style}>
+        <h2 id="faq-title" className="mb-5 text-xl font-semibold text-ink-muted">
+          자주 묻는 질문
+        </h2>
+        <ul className="flex flex-col gap-1">
+          {FAQ.map((item, index) => {
+            const on = index === open;
+            return (
+              <li key={item.q}>
+                <button
+                  type="button"
+                  aria-expanded={on}
+                  onClick={() => setOpen(index)}
+                  onFocus={() => setOpen(index)}
+                  onMouseEnter={() => setOpen(index)}
+                  className={`flex min-h-11 w-full items-baseline gap-3.5 py-2 text-left text-xl font-semibold transition-colors ${
+                    on ? 'text-ink' : 'text-ink-muted hover:text-ink'
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`size-2 shrink-0 -translate-y-1 rounded-full ${on ? 'bg-brand' : 'bg-ink-faint'}`}
+                  />
+                  {item.q}
+                </button>
+                {on && <p className="pt-1 pb-4 pl-[1.375rem] text-lg leading-normal lg:hidden">{item.a}</p>}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <p
+        aria-live="polite"
+        className="hidden max-w-[24ch] self-start text-[1.625rem] leading-snug font-medium tracking-[-0.02em] lg:sticky lg:top-40 lg:col-start-3 lg:block"
+      >
+        {answer.a}
+      </p>
+    </section>
+  );
+}
 
-  // 강조할 부분이 무대 가운데 오도록 그림을 옮긴다. 그림 끝을 넘어가지는 않는다.
-  useEffect(() => {
-    function measure() {
-      const stage = stageRef.current;
-      const image = imageRef.current;
-      if (!stage || !image) return;
-      const imageHeight = image.getBoundingClientRect().height;
-      if (!imageHeight) return;
-      const center = ((focus.top + focus.height / 2) / 100) * imageHeight;
-      setPanY(Math.max(0, Math.min(imageHeight - stage.clientHeight, center - stage.clientHeight / 2)));
-    }
-    measure();
-    const image = imageRef.current;
-    image?.addEventListener('load', measure);
-    window.addEventListener('resize', measure);
-    return () => {
-      image?.removeEventListener('load', measure);
-      window.removeEventListener('resize', measure);
-    };
-  }, [focus]);
+/* ───────────── 마무리 ───────────── */
+
+// 숲색 면 위에 지역 검색 대화상자를 둔다. 지역을 넣고 누르면 지도 화면이 그 지역을 찾아 옮긴다.
+function ClosingSection() {
+  const [region, setRegion] = useState('가평 북면');
+  const { ref, rise } = useRise<HTMLElement>();
+  const inputId = useId();
+  const heading = rise(0);
+  const dialog = rise(2);
+
+  function submit() {
+    const query = region.trim();
+    navigate(query === '' ? '/map' : `/map?q=${encodeURIComponent(query)}`);
+  }
 
   return (
     <section
-      id="landing-evidence"
-      aria-labelledby="landing-evidence-title"
-      className="scroll-mt-16 bg-surface pt-6 pb-24 lg:pb-40"
+      ref={ref}
+      aria-labelledby="closing-title"
+      className="relative overflow-hidden bg-brand-raised text-white [&_:focus-visible]:outline-white"
     >
-      <div className="mx-auto max-w-[73.75rem] px-4 lg:px-8">
-        <div ref={leadRef} className="text-center">
-          <h2 id="landing-evidence-title" className={`${H2_CLASS} text-ink ${riseClass(leadInView)}`}>
-            근거부터 봐요
-          </h2>
-          <p className={`${SUB_CLASS} text-ink-muted ${riseClass(leadInView)} motion-safe:[animation-delay:90ms]`}>
-            박지를 등록하면 그 자리가 공원 경계와 겹치는지 바로 판정해요.
-          </p>
-        </div>
-
-        <div className="mt-10 grid lg:mt-24 lg:grid-cols-2 lg:gap-20">
-          <ol>
-            {EVIDENCE_STEPS.map((step, index) => (
-              <li
-                key={step.title}
-                ref={(element) => {
-                  stepRefs.current[index] = element;
-                }}
-                data-on={index === active}
-                className={`flex flex-col py-7 lg:min-h-[60svh] lg:justify-center lg:py-0 lg:opacity-25 lg:transition-opacity lg:duration-700 lg:data-[on=true]:opacity-100 lg:motion-reduce:opacity-100 ${EASE_SOFT}`}
-              >
-                <h3 className={`${STEP_TITLE_CLASS} text-ink`}>{step.title}</h3>
-                <p className="mt-3 max-w-[28em] text-lg text-ink-muted">{step.body}</p>
-                <p
-                  className={`mt-5 self-start rounded-control px-3 py-2 font-mono text-[0.9375rem] font-bold ${
-                    step.warning ? 'bg-warning-soft text-warning' : 'bg-canvas text-ink'
-                  }`}
-                >
-                  {step.chip}
-                </p>
-                <CroppedImage
-                  src={EVIDENCE_IMAGE}
-                  size={EVIDENCE_IMAGE_SIZE}
-                  crop={step.mobileCrop}
-                  alt={step.alt}
-                  className="mt-5 rounded-media bg-canvas lg:hidden"
-                />
-              </li>
-            ))}
-          </ol>
-
-          <div
-            ref={stageRef}
-            aria-hidden="true"
-            className="sticky top-28 hidden h-[calc(100svh-11rem)] max-h-[45rem] overflow-hidden rounded-media bg-canvas lg:block"
-          >
-            <div
-              className={`absolute inset-x-0 top-0 transition-transform duration-[1200ms] motion-reduce:transition-none ${EASE_SOFT}`}
-              style={{ transform: `translateY(${-panY}px)` }}
-            >
-              <img ref={imageRef} src={EVIDENCE_IMAGE} alt="" className="w-full" />
-              <span
-                className={`absolute rounded-[0.625rem] border-[3px] border-brand transition-[top,height,left,width] duration-[1200ms] motion-reduce:transition-none ${EASE_SOFT}`}
-                style={{
-                  top: `${focus.top}%`,
-                  height: `${focus.height}%`,
-                  left: `${focus.left}%`,
-                  width: `${focus.width}%`,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// 그림에서 crop 영역(그림 너비·높이를 100으로 본 %)만 그 비율 그대로 잘라 보여 준다. 칸 너비에 맞춰 그림을 키우고 영역만큼 옮긴다.
-function CroppedImage({
-  src,
-  size,
-  crop,
-  alt,
-  className,
-}: {
-  src: string;
-  size: { width: number; height: number };
-  crop: { top: number; height: number; left: number; width: number };
-  alt: string;
-  className: string;
-}) {
-  return (
-    <div
-      className={`relative overflow-hidden ${className}`}
-      style={{ aspectRatio: `${crop.width * size.width} / ${crop.height * size.height}` }}
-    >
-      {/* 그림을 칸 너비 기준 margin으로 옮긴다. margin 퍼센트는 위아래도 칸 너비를 기준으로 계산되므로,
-          aspect-ratio로 정한 칸 높이를 퍼센트 top으로 풀지 못하는 브라우저에서도 같은 자리에 그려진다.
-          같은 그림을 데스크톱 무대가 이미 불러오므로 lazy로 미루지 않는다. 두 방식을 쓰던 때 아이폰 Safari에서 이 칸이 빈 상자로 보였다. */}
-      <img
-        src={src}
-        alt={alt}
-        className="block max-w-none"
-        style={{
-          width: `${(100 / crop.width) * 100}%`,
-          marginLeft: `${(-crop.left / crop.width) * 100}%`,
-          marginTop: `${(-crop.top / crop.width) * (size.height / size.width) * 100}%`,
-        }}
-      />
-    </div>
-  );
-}
-
-// 소개하는 숫자는 모두 정책 값이다(반경 검색 최대 반경, 베이스캠프 정원, 신뢰 회원의 '다시 동행' 비율).
-const FIGURES = [
-  { value: '50km', text: '반경 검색은 최대 50km 안에서 가까운 순으로 찾아요.' },
-  { value: '2~6명', text: '베이스캠프 정원이에요. 캠프 리더도 이 안에 들어가요.' },
-  { value: '80%', text: '신뢰 회원은 함께 간 사람의 80% 이상에게서 다시 동행하고 싶다는 답을 받았어요.' },
-];
-
-function FiguresSection() {
-  const { ref, inView } = useInView<HTMLDivElement>();
-  return (
-    <section aria-labelledby="landing-figures-title" className="py-24 lg:py-40">
-      <div ref={ref} className="mx-auto max-w-[73.75rem] px-4 text-center lg:px-8">
-        <h2 id="landing-figures-title" className={`${H2_CLASS} text-ink ${riseClass(inView)}`}>
-          숫자로 정해 둔 기준
-        </h2>
-        <ul className="mx-auto mt-12 grid max-w-[60rem] gap-10 sm:grid-cols-3 lg:mt-22">
-          {FIGURES.map((figure, index) => (
-            <li key={figure.value} className={riseClass(inView)} style={{ animationDelay: `${120 + index * 110}ms` }}>
-              <p className="font-mono text-[clamp(2.5rem,5vw,4.5rem)] leading-none font-extrabold tracking-[-0.05em] text-ink">
-                {figure.value}
-              </p>
-              <p className="mx-auto mt-4 max-w-[14em] text-lg text-ink-muted">{figure.text}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-// 신뢰 단계마다 무엇을 뜻하는지와 그 단계에서 할 수 있는 일이다. 단계는 서버가 매번 계산하고, 여기서는 기준만 소개한다.
-const TRUST_LEVELS = [
-  { name: '이메일 인증', meaning: '이메일 인증을 마친 회원이에요.', can: '커뮤니티 글과 기록을 남겨요' },
-  {
-    name: '본인확인 · 성인',
-    meaning: '본인확인을 마친 성인 회원이에요. 연령대와 동성 조건은 이 정보로만 따져요.',
-    can: '베이스캠프를 열거나 합류해요',
-  },
-  {
-    name: '신뢰 회원',
-    meaning:
-      '동행을 3번 이상 마친 회원이에요. 함께 간 사람의 80% 이상이 다시 동행하고 싶다고 했고 최근 180일 동안 제재를 받지 않았어요.',
-    can: '단계 2 조건의 캠프에 합류해요',
-  },
-];
-
-// 숲색 면에 큰 숫자 하나를 붙잡아 두고, 단계 설명을 지날 때마다 숫자를 바꾼다.
-function TrustSection() {
-  const reduced = usePrefersReducedMotion();
-  const { ref: leadRef, inView: leadInView } = useInView<HTMLDivElement>();
-  const levelRefs = useRef<(HTMLLIElement | null)[]>([]);
-  const active = useActiveIndex(levelRefs);
-
-  return (
-    <section aria-labelledby="landing-trust-title" className="bg-brand py-24 text-white lg:py-40">
-      <div className="mx-auto max-w-[73.75rem] px-4 lg:px-8">
-        <div ref={leadRef} className="text-center">
-          <h2 id="landing-trust-title" className={`${H2_CLASS} ${riseClass(leadInView)}`}>
-            함께 갈 사람은
-            <br />
-            단계로 봐요
-          </h2>
-          <p className={`${SUB_CLASS} text-brand-ink ${riseClass(leadInView)} motion-safe:[animation-delay:90ms]`}>
-            신뢰 단계는 볼 때마다 새로 계산해요. 제재를 받으면 바로 내려가요.
-          </p>
-        </div>
-
-        <div className="mt-10 grid lg:mt-16 lg:grid-cols-2 lg:gap-20">
-          <div
-            aria-hidden="true"
-            className="sticky top-36 hidden h-[min(60svh,32.5rem)] items-center justify-center lg:flex"
-          >
-            <TrustDigit value={active} reduced={reduced} />
-          </div>
-          <ol>
-            {TRUST_LEVELS.map((level, index) => (
-              <li
-                key={level.name}
-                ref={(element) => {
-                  levelRefs.current[index] = element;
-                }}
-                data-on={index === active}
-                className={`grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-4 gap-y-1.5 py-6 lg:flex lg:min-h-[52svh] lg:flex-col lg:justify-center lg:gap-3 lg:py-0 lg:opacity-30 lg:transition-opacity lg:duration-700 lg:data-[on=true]:opacity-100 lg:motion-reduce:opacity-100 ${EASE_SOFT}`}
-              >
-                <span
-                  aria-hidden="true"
-                  className="row-span-3 font-mono text-[5.5rem] leading-[0.9] font-extrabold tracking-[-0.05em] lg:hidden"
-                >
-                  {index}
-                </span>
-                <h3 className={STEP_TITLE_CLASS}>
-                  <span className="sr-only">신뢰 단계 {index}, </span>
-                  {level.name}
-                </h3>
-                <p className="max-w-[28em] text-lg text-brand-ink">{level.meaning}</p>
-                <p className="text-lg font-bold">{level.can}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const DIGIT_SPAN_CLASS = `absolute inset-0 grid place-items-center transition-[transform,opacity] duration-1000 ${EASE_SOFT}`;
-
-// 큰 숫자를 바꿀 때 옛 숫자는 흐려지며 빠지고 새 숫자가 반대쪽에서 겹쳐 들어온다. 스크롤을 거꾸로 올리면 방향도 반대다.
-// 숫자 요소는 이 효과 안에서만 만들고 지운다. React는 빈 상자만 그린다.
-function TrustDigit({ value, reduced }: { value: number; reduced: boolean }) {
-  const boxRef = useRef<HTMLDivElement>(null);
-  const shownRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const box = boxRef.current;
-    if (!box) return;
-    const previous = shownRef.current;
-    if (previous === value) return;
-    shownRef.current = value;
-
-    const next = document.createElement('span');
-    next.className = DIGIT_SPAN_CLASS;
-    next.textContent = String(value);
-    const old = box.lastElementChild instanceof HTMLElement ? box.lastElementChild : null;
-    if (previous === null || reduced || !old) {
-      box.replaceChildren(next);
-      return;
-    }
-
-    const shift = value > previous ? 35 : -35;
-    next.style.transform = `translateY(${shift}%)`;
-    next.style.opacity = '0';
-    box.append(next);
-    let frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => {
-        next.style.transform = '';
-        next.style.opacity = '';
-        old.style.transform = `translateY(${-shift}%)`;
-        old.style.opacity = '0';
-      });
-    });
-    const timer = window.setTimeout(() => old.remove(), 1000);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.clearTimeout(timer);
-      old.remove();
-    };
-  }, [value, reduced]);
-
-  return (
-    <div
-      ref={boxRef}
-      className="relative h-[1.1em] w-[0.75em] overflow-y-clip font-mono text-[clamp(13.75rem,26vw,22.5rem)] leading-none font-extrabold"
-    />
-  );
-}
-
-// 흐름 섹션의 앱 화면 그림(860px 너비)을 위에서 1190px까지만 보이는 비율이다.
-// 지도 그림은 시트 손잡이 아래, 베이스캠프 그림은 멤버 목록 아래 빈 줄에서 끝나서 글줄이나 상자가 중간에서 잘리지 않는다.
-// 행사 규칙 판도 데스크톱에서는 세 그림 높이를 맞추려고 같은 비율을 쓰고, 휴대폰에서는 내용 높이 그대로 둔다.
-const SCREEN_FRAME_CLASS = 'aspect-[860/1190]';
-
-function TrailSection() {
-  const { ref: leadRef, inView: leadInView } = useInView<HTMLDivElement>();
-  const { ref: listRef, inView: listInView } = useInView<HTMLOListElement>();
-  return (
-    <section aria-labelledby="landing-trail-title" className="py-24 lg:py-40">
-      <div className="mx-auto max-w-[73.75rem] px-4 lg:px-8">
-        <div ref={leadRef} className="text-center">
-          <h2 id="landing-trail-title" className={`${H2_CLASS} text-ink ${riseClass(leadInView)}`}>
-            장소에서 동행,
-            <br />
-            행사까지
-          </h2>
-          <p className={`${SUB_CLASS} text-ink-muted ${riseClass(leadInView)} motion-safe:[animation-delay:90ms]`}>
-            박지를 찾은 그 화면에서 그곳으로 가는 베이스캠프와 공식 행사로 넘어가요.
-          </p>
-        </div>
-
-        <ol ref={listRef} className="mt-12 grid gap-14 lg:mt-22 lg:grid-cols-3 lg:gap-6">
-          <TrailStop
-            order={0}
-            inView={listInView}
-            title="장소를 찾고"
-            to="/map"
-            linkText="지도 열기"
-            picture={
-              <img
-                src="/landing/map.webp"
-                alt="지도 화면. 강원 영월군 한반도면 일대에 번호 핀 1·2가 있어요."
-                loading="lazy"
-                className="size-full object-cover object-top"
-              />
-            }
-          >
-            지도에서 장소를 고르면 날씨·일몰·예상 인원이 함께 나와요.
-          </TrailStop>
-          <TrailStop
-            order={1}
-            inView={listInView}
-            title="베이스캠프에 합류하고"
-            to="/basecamps"
-            linkText="베이스캠프 보기"
-            picture={
-              <img
-                src="/landing/basecamp.webp"
-                alt="베이스캠프 상세 화면. 방태산 단풍 보러 1박, 10월 24일 출발, 2/4명이에요."
-                loading="lazy"
-                className="size-full object-cover object-top"
-              />
-            }
-          >
-            같은 날 같은 장소로 가는 2~6명 모임이에요. 확정된 멤버에게만 연락 수단이 열려요.
-          </TrailStop>
-          <TrailStop
-            order={2}
-            inView={listInView}
-            title="공식 행사에 참여해요"
-            to="/programs"
-            linkText="행사 보기"
-            picture={<ProgramRulesCard />}
-            frameClass="lg:aspect-[860/1190]"
-          >
-            운영진이 여는 백패킹 행사예요. 선착순으로 받고 빈자리가 생기면 알림을 보내요.
-          </TrailStop>
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-function TrailStop({
-  order,
-  inView,
-  title,
-  to,
-  linkText,
-  picture,
-  frameClass = SCREEN_FRAME_CLASS,
-  children,
-}: {
-  order: number;
-  inView: boolean;
-  title: string;
-  to: string;
-  linkText: string;
-  picture: ReactNode;
-  // 그림 칸의 비율 클래스다. 앱 화면 그림은 섹션 사이 빈 줄에서 끝나는 비율을 쓴다.
-  frameClass?: string;
-  children: ReactNode;
-}) {
-  return (
-    <li className={`group flex flex-col ${riseClass(inView)}`} style={{ animationDelay: `${order * 120}ms` }}>
-      <div className={`mb-7 overflow-hidden rounded-media bg-fill ${frameClass}`}>
-        {/* 그림에 마우스를 올리면 천천히 조금 커진다. 앱 화면이든 정책 판이든 같은 움직임이다 */}
-        <div
-          className={`size-full transition-transform duration-[1200ms] motion-safe:group-hover:scale-[1.03] ${EASE_SOFT}`}
-        >
-          {picture}
-        </div>
-      </div>
-      <h3 className={`${STEP_TITLE_CLASS} text-ink`}>{title}</h3>
-      <p className="mt-2.5 max-w-[22em] text-lg text-ink-muted">{children}</p>
-      <Link to={to} className={`group/link mt-3 self-start ${TEXT_LINK_CLASS}`}>
-        {linkText}
-        <Icon
-          name="chevronRight"
-          size={18}
-          className="transition-transform duration-300 motion-safe:group-hover/link:translate-x-1"
-        />
-      </Link>
-    </li>
-  );
-}
-
-// 공식 행사 정류장의 그림 자리에 둘 판이다. 행사 화면 대신 신청 규칙(정책 값)을 앱의 판 모양으로 보여 준다.
-const PROGRAM_RULES = [
-  ['신청', '1인 1건'],
-  ['결제 기한', '신청 뒤 15분'],
-  ['환불 취소', '시작 3일 전까지'],
-  ['빈자리', '생기면 알림'],
-];
-
-function ProgramRulesCard() {
-  return (
-    <div className="flex size-full flex-col bg-canvas">
-      <div className="bg-brand px-6 py-6 text-white">
-        <p className="text-[0.9375rem] text-brand-ink">공식 행사 신청</p>
-        <p className="mt-1 text-2xl font-extrabold tracking-[-0.025em]">선착순으로 받아요</p>
-      </div>
-      <dl className="grid gap-2.5 p-5 text-[0.9375rem]">
-        {PROGRAM_RULES.map(([label, value]) => (
-          <div key={label} className="flex justify-between gap-3 rounded-[0.5rem] bg-surface px-4 py-3.5">
-            <dt className="text-ink-muted">{label}</dt>
-            <dd className="font-mono font-bold text-ink">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <p
+      {/* 모닥불 영상을 흑백으로 바꿔 숲색 면 위에 낮게 깐다. 소리가 없는 꾸밈이라 스크린 리더에서 숨기고, 동작 줄이기를 켜면 보이지 않는다. */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        poster="/landing/video/campfire-poster.webp"
         aria-hidden="true"
-        className="mx-5 mt-auto mb-5 flex min-h-13 items-center justify-center rounded-control bg-brand text-lg font-bold text-white"
+        className="pointer-events-none absolute inset-0 size-full object-cover opacity-40 mix-blend-multiply grayscale contrast-125 motion-reduce:hidden"
       >
-        신청하기
-      </p>
-    </div>
-  );
-}
-
-function ClosingSection() {
-  const { ref, inView } = useInView<HTMLDivElement>();
-  return (
-    <section aria-labelledby="landing-closing-title" className="pt-16 pb-28 lg:pt-28 lg:pb-44">
-      <div ref={ref} className="mx-auto max-w-[73.75rem] px-4 text-center lg:px-8">
-        <h2 id="landing-closing-title" className={`${H2_CLASS} text-ink ${riseClass(inView)}`}>
-          이번 주말,
-          <br />
-          어디서 잘까요?
-        </h2>
-        <p className={`${SUB_CLASS} text-ink-muted ${riseClass(inView)} motion-safe:[animation-delay:90ms]`}>
-          가입하지 않아도 지도와 장소 정보는 볼 수 있어요.
-        </p>
-        <div
-          className={`mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 ${riseClass(inView)} motion-safe:[animation-delay:180ms]`}
-        >
-          <Link to="/map" className={PRIMARY_LINK_CLASS}>
-            지도 열기
-          </Link>
-          <Link to="/signup" className={`group ${TEXT_LINK_CLASS}`}>
-            회원가입
-            <Icon name="chevronRight" size={18} className={NUDGE_CLASS} />
-          </Link>
+        <source src="/landing/video/campfire.webm" type="video/webm" />
+      </video>
+      <div className="relative mx-auto grid min-h-[88svh] max-w-screen-xl items-end gap-10 px-4 pt-20 pb-16 lg:grid-cols-[7fr_5fr] lg:px-8 lg:pt-24">
+        <div className={heading.className} style={heading.style}>
+          <h2 id="closing-title" className={`${DISPLAY_CLASS} whitespace-nowrap`}>
+            이번 주말,
+            <br />
+            어디서 잘까요?
+          </h2>
+          <p className="mt-5 max-w-[34ch] text-lg text-brand-ink lg:text-xl">
+            지역을 넣으면 그 일대의 박지와 야영장을 지도에서 바로 볼 수 있어요. 가입하지 않아도 돼요.
+          </p>
         </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+          data-ui
+          className={`w-full max-w-[27.5rem] self-center justify-self-center rounded-sheet bg-surface p-7 text-ink shadow-raise [&_:focus-visible]:outline-info ${dialog.className}`}
+          style={dialog.style}
+        >
+          <h3 className="text-lg font-bold">어디로 떠나세요?</h3>
+          <label htmlFor={inputId} className="mt-4 block text-sm font-semibold text-ink-muted">
+            지역
+          </label>
+          <input
+            id={inputId}
+            value={region}
+            onChange={(event) => setRegion(event.target.value)}
+            maxLength={50}
+            autoComplete="off"
+            className="mt-1.5 h-12 w-full rounded-field border-[1.5px] border-ink-faint bg-surface px-4 text-base focus:border-brand"
+          />
+          <button type="submit" className={`${buttonClassName('primary')} group mt-5 min-h-13 w-full`}>
+            지도에서 보기
+            <Icon name="chevronRight" size={18} className={NUDGE_CLASS} />
+          </button>
+        </form>
       </div>
     </section>
   );

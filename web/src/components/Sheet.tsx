@@ -78,7 +78,7 @@ function nearestSnap(height: number, viewportHeight: number, bottomInset: number
   return best;
 }
 
-// 모바일에서는 지도 위에 뜨는 하단 시트이고, lg 이상에서는 같은 내용을 왼쪽 400px 고정 패널로 그린다.
+// 모바일에서는 지도 위에 뜨는 하단 시트이고, lg 이상에서는 같은 내용을 왼쪽 440px 고정 패널로 그린다.
 export function Sheet({ snap, onSnapChange, header, toolbar, children, label, aboveBottomNav = false }: SheetProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -163,12 +163,12 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
       onKeyDown={handleKeyDown}
       style={dragging ? { height: `${dragHeight}px` } : undefined}
       className={[
-        'fixed inset-x-0 z-10 flex flex-col rounded-t-drawer border-t border-line bg-canvas shadow-raise',
+        'fixed inset-x-0 z-10 flex flex-col rounded-t-drawer bg-canvas shadow-raise',
         aboveBottomNav ? 'bottom-(--bottom-nav-h)' : 'bottom-0',
         dragging
           ? 'transition-none'
           : `${aboveBottomNav && snap === 'full' ? FULL_ABOVE_NAV_CLASS : SNAP_HEIGHT_CLASSES[snap]} transition-[height] duration-200 ease-out motion-reduce:transition-none`,
-        'lg:static lg:z-auto lg:h-full lg:w-[400px] lg:shrink-0 lg:rounded-none lg:border-t-0 lg:border-r lg:shadow-none',
+        'lg:static lg:z-auto lg:h-full lg:w-[440px] lg:shrink-0 lg:rounded-none lg:shadow-none',
       ].join(' ')}
     >
       <button
@@ -181,13 +181,11 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
         onPointerCancel={handlePointerCancel}
         className="flex h-11 w-full shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing lg:hidden"
       >
-        <span aria-hidden="true" className="h-1 w-9 rounded-full bg-ink-subtle/50" />
+        <span aria-hidden="true" className="h-1.5 w-10 rounded-full bg-ink-faint/50" />
       </button>
-      {/* 머리는 모바일에서 미색 시트 위 제목이고, 데스크톱에서는 탐방로 안내판의 지금 보는 곳 띠처럼 숲색 판에 흰 글자로 그린다. */}
-      {header && (
-        <div className="shrink-0 px-4 pb-3 text-ink lg:bg-brand-raised lg:px-5 lg:py-4 lg:text-white">{header}</div>
-      )}
-      {toolbar && <div className="hidden shrink-0 flex-col gap-3 px-5 pt-5 pb-3 lg:flex">{toolbar}</div>}
+      {/* 데스크톱은 도구 줄을 맨 위에 두고 그 아래에 머리(지역 이름과 개수)를 둔다. 둘 다 흰 바탕 위에 띠 없이 그린다. */}
+      {toolbar && <div className="hidden shrink-0 flex-col gap-3 px-6 pt-4 lg:flex">{toolbar}</div>}
+      {header && <div className="shrink-0 px-4 pb-3 text-ink lg:px-6 lg:pt-6 lg:pb-2">{header}</div>}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
     </section>
   );

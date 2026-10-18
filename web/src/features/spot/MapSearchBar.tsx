@@ -21,16 +21,17 @@ const AI_MAX_LENGTH = 100;
 const AI_LENGTH_MESSAGE = `${AI_MIN_LENGTH}자 이상 ${AI_MAX_LENGTH}자 이하로 입력해 주세요.`;
 const AI_PLACEHOLDER = '예: 강원도 계곡 옆 박지';
 const AI_NOTICE = '입력한 문장은 해석을 위해 OpenAI로 보내져요. 하루 20번까지 쓸 수 있어요.';
-const GUIDE_BOX_CLASS = 'rounded-control bg-surface px-3 py-3 text-sm text-ink shadow-raise';
+const GUIDE_BOX_CLASS = 'rounded-sheet bg-surface px-4 py-3 text-sm text-ink shadow-raise';
 const GUIDE_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2 hover:text-accent-deep';
 const MODE_BUTTON_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2 hover:text-accent';
 // 검색 칸 옆의 AI 검색 버튼이다. 켜면 숲색 판으로 채워 지금 문장으로 찾는 중임을 알린다.
-const AI_TOGGLE_ON = 'border border-brand bg-brand text-white hover:bg-brand-strong';
-const AI_TOGGLE_FLOATING = 'border border-transparent bg-surface text-ink shadow-raise hover:bg-fill';
-const AI_TOGGLE_PANEL = 'border-[1.5px] border-ink-subtle bg-surface text-ink hover:bg-fill';
-const PANEL_BOX_CLASS = 'rounded-sheet border border-line bg-surface px-3 py-3 text-sm text-ink';
+// AI 검색 버튼은 검색 칸 안 오른쪽의 작은 알약이다. 켜면 숲색, 끄면 검색 칸 바탕과 한 단계 다른 면이다.
+const AI_TOGGLE_ON = 'bg-brand text-white hover:bg-brand-strong';
+const AI_TOGGLE_FLOATING = 'bg-fill text-ink hover:bg-fill-strong';
+const AI_TOGGLE_PANEL = 'bg-surface text-ink hover:bg-fill-strong';
+const PANEL_BOX_CLASS = 'rounded-sheet bg-fill px-4 py-3 text-sm text-ink';
 
 // AI 검색이 실패했을 때 입력란 아래에 띄울 안내의 종류다. 하루 횟수를 다 썼을 때는 남은 시간을 알 때만 시간을 적는다.
 type AiError = { kind: 'limited'; timed: boolean } | { kind: 'unavailable' } | { kind: 'message'; text: string };
@@ -224,14 +225,14 @@ export function MapSearchBar({
   const floatingField = floating && !inPanel;
 
   // 켜고 끄는 버튼이라 이름은 그대로 두고 눌림 상태(aria-pressed)로 지금 모드를 알린다.
-  // 패널 안에서는 "AI 검색"으로, 좁은 지도 위에서는 "AI"로 줄여 적는다.
+  // 검색 칸 안 오른쪽에 두고, 패널 안에서는 "AI 검색"으로, 좁은 지도 위에서는 "AI"로 줄여 적는다.
   const modeButton = aiAvailable && (
     <button
       type="button"
       aria-pressed={aiActive}
       aria-label="AI 검색"
       onClick={toggleMode}
-      className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-control px-3 text-base font-bold whitespace-nowrap ${
+      className={`inline-flex h-10 min-w-11 shrink-0 items-center justify-center rounded-control px-3.5 text-sm font-bold whitespace-nowrap transition-colors ${
         aiActive ? AI_TOGGLE_ON : floatingField ? AI_TOGGLE_FLOATING : AI_TOGGLE_PANEL
       }`}
     >
@@ -239,8 +240,8 @@ export function MapSearchBar({
     </button>
   );
 
-  // 지도 위에서는 입력란이 옅은 면이면 지도에 묻힌다. 흰 면과 그림자로 띄우고, 오류일 때는 위험색 테두리를 남긴다.
-  // 패널 안에서는 공통 입력란 모양(흰 바탕 + 테두리)을 그대로 쓴다.
+  // 검색 칸은 알약 모양이다. 패널 안에서는 세이지 면, 지도 위에서는 지도에 묻히지 않게 흰 면과 그림자로 띄운다.
+  // 오류일 때만 위험색 테두리를 보인다. 칸 안 오른쪽에 찾기 아이콘과 AI 검색 버튼이 들어가서 오른쪽 여백을 넓힌다.
   // 지도 밖(랜딩)에서는 첫 화면의 주 입력이라 52px로 키우고, 아이콘 대신 '찾기' 글자 버튼을 둔다.
   return (
     <form
@@ -250,9 +251,9 @@ export function MapSearchBar({
       onKeyDown={handleKeyDown}
       className={
         inPanel
-          ? 'relative min-w-0 flex-1'
+          ? `relative min-w-0 flex-1 [&_input]:min-h-13 [&_input]:rounded-control [&_input]:bg-fill [&_input]:pl-5 [&_input:not([aria-invalid])]:border-transparent ${aiAvailable ? '[&_input]:pr-36' : ''}`
           : floating
-            ? 'pointer-events-auto relative min-w-0 flex-1 [&_input]:bg-surface [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent'
+            ? `pointer-events-auto relative min-w-0 flex-1 [&_input]:rounded-control [&_input]:bg-surface [&_input]:pl-5 [&_input]:shadow-raise [&_input:not([aria-invalid])]:border-transparent ${aiAvailable ? '[&_input]:pr-28' : ''}`
             : 'relative min-w-0 flex-1 [&_input]:min-h-13 [&_input]:pr-24'
       }
     >
@@ -288,7 +289,7 @@ export function MapSearchBar({
                 } else setQuery(event.target.value);
               }}
               trailing={
-                <>
+                <div className="flex items-center gap-1 pr-1.5">
                   <button
                     type="submit"
                     aria-label={aiActive ? 'AI 검색' : '지역 검색'}
@@ -302,12 +303,12 @@ export function MapSearchBar({
                   >
                     {floating || inPanel ? <Icon name="search" size={20} /> : '찾기'}
                   </button>
-                </>
+                  {modeButton}
+                </div>
               }
             />
           )}
         </div>
-        {modeButton}
       </div>
 
       {aiActive && !aiGuide && !aiResolved && (
@@ -315,7 +316,7 @@ export function MapSearchBar({
           className={
             inPanel
               ? 'mt-2 text-[0.8125rem] text-ink-muted'
-              : 'mt-1 rounded-control bg-surface px-3 py-2 text-sm text-ink-muted shadow-raise'
+              : 'mt-1 rounded-sheet bg-surface px-4 py-2 text-sm text-ink-muted shadow-raise'
           }
         >
           {AI_NOTICE}
@@ -350,14 +351,14 @@ export function MapSearchBar({
       {state.status === 'candidates' && (
         <ul
           aria-label="지역 후보"
-          className="absolute inset-x-0 top-full z-20 mt-1 flex flex-col overflow-hidden rounded-control border border-line bg-surface shadow-raise"
+          className="absolute inset-x-0 top-full z-20 mt-2 flex flex-col gap-0.5 overflow-hidden rounded-sheet bg-surface p-1.5 shadow-raise"
         >
           {state.candidates.map((candidate, index) => (
-            <li key={`${candidate.name}-${index}`} className="border-b border-line last:border-b-0">
+            <li key={`${candidate.name}-${index}`}>
               <button
                 type="button"
                 onClick={() => choose(candidate)}
-                className="flex min-h-11 w-full flex-col items-start justify-center px-3 py-2 text-left hover:bg-fill focus-visible:-outline-offset-2"
+                className="flex min-h-11 w-full flex-col items-start justify-center rounded-row px-3.5 py-2 text-left hover:bg-fill focus-visible:-outline-offset-2"
               >
                 <span className="text-base text-ink">{candidate.name}</span>
                 {candidate.detail && <span className="text-sm text-ink-muted">{candidate.detail}</span>}
@@ -370,7 +371,7 @@ export function MapSearchBar({
       {(state.status === 'empty' || state.status === 'error') && (
         <p
           role="status"
-          className="absolute inset-x-0 top-full z-20 mt-1 rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink shadow-raise"
+          className="absolute inset-x-0 top-full z-20 mt-1 rounded-sheet bg-surface px-4 py-3 text-sm text-ink shadow-raise"
         >
           {state.status === 'empty'
             ? `'${state.keyword}' 검색 결과가 없어요. 다른 지역 이름이나 주소로 찾아 주세요.`

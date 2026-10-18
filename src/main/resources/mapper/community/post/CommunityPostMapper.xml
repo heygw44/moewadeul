@@ -5,7 +5,7 @@
     <!-- 작성자 닉네임은 조회할 때의 회원 값이다. 탈퇴한 회원은 member 행의 닉네임이 익명 값으로 바뀌어 있어서 그대로 내보낸다.
          연결한 장소는 ACTIVE일 때만 조인한다. 장소가 숨겨졌거나 연결하지 않았으면 spot_id와 spot_name이 NULL이 되고, 글은 그대로 나온다.
          likedByMe는 상세에서 조회하는 회원을 넘겼을 때만 값이 있고, 목록과 비회원 상세에서는 NULL이다.
-         likeCount는 좋아요 행의 수이고, 기본 키 (글 ID, 회원 ID)의 앞부분 글 ID로 센다.
+         likeCount는 글 행에 저장한 좋아요 수다. 좋아요·취소할 때 서버가 좋아요 행을 다시 세어 쓴다.
          commentCount는 ACTIVE인 댓글과 답글의 수다. 삭제·숨김·검토 대기 댓글은 세지 않는다. viewCount는 글 행에 저장한 조회수다.
          thumbnailKey는 글 안 순서가 가장 앞선 이미지의 저장소 객체 키이고, 이미지가 없으면 NULL이다. imageCount는 글에 붙은 이미지 수다.
          글 ID는 순서대로 커지므로 ID 내림차순이 곧 최신순이다. 그래서 작성 시각 정렬 없이 기본 키 순서로 읽는다. -->
@@ -18,7 +18,7 @@
         s.name AS spot_name,
         (SELECT i.object_key FROM community_image i WHERE i.post_id = p.id ORDER BY i.display_order LIMIT 1) AS thumbnail_key,
         (SELECT COUNT(*) FROM community_image i2 WHERE i2.post_id = p.id) AS image_count,
-        (SELECT COUNT(*) FROM community_post_like l WHERE l.post_id = p.id) AS like_count,
+        p.like_count AS like_count,
         (SELECT COUNT(*) FROM community_comment c WHERE c.post_id = p.id AND c.status = 'ACTIVE') AS comment_count,
         p.view_count AS view_count,
         p.created_at AS created_at,
@@ -26,15 +26,23 @@
     </sql>
 
     <sql id="postJoins">
-        FROM community_post p
         JOIN member m ON m.id = p.member_id
         LEFT JOIN spot s ON s.id = p.spot_id AND s.status = 'ACTIVE'
     </sql>
 
+    <!-- 작성자 검색만 회원의 현재 닉네임을 본다. 그래서 글을 고르는 쿼리는 작성자 검색일 때만 회원을 조인한다.
+         회원은 반드시 있고 장소는 LEFT JOIN이라, 다른 조건에서는 두 조인이 고르는 글과 개수를 바꾸지 않는다. -->
+    <sql id="conditionJoins">
+        <if test="condition.keyword != null and condition.searchType == 'AUTHOR'">
+            JOIN member m ON m.id = p.member_id
+        </if>
+    </sql>
+
     <!-- 목록과 개수 세기가 같이 쓰는 조건이다.
-         좋아요 수는 저장하지 않으므로 글마다 좋아요 행을 세어 거른다. 그래서 좋아요가 취소되면 바로 조건에서 빠진다.
+         인기글은 글 행에 저장한 좋아요 수로 거른다. 좋아요를 취소하면 그 트랜잭션이 수를 다시 쓰므로 바로 조건에서 빠진다.
          검색어는 #{}로만 넘기고, 검색 대상은 열거값 이름으로 분기한다. 서비스가 검색어의 \, %, _ 앞에 \를 붙여 넘기므로,
-         ESCAPE '\\'로 그 글자들을 와일드카드가 아닌 글자 그대로 찾는다. 작성자 검색은 조인한 member의 현재 닉네임을 본다. -->
+         ESCAPE '\\'로 그 글자들을 와일드카드가 아닌 글자 그대로 찾는다. 작성자 검색은 조인한 member의 현재 닉네임을 본다.
+         검색할 때는 서비스가 최근 글 범위의 가장 작은 글 ID를 minPostId로 넘긴다. 그래서 검색은 그보다 오래된 글을 읽지 않는다. -->
     <sql id="activeListConditions">
         <where>
             p.status = 'ACTIVE'
@@ -42,7 +50,10 @@
                 AND p.spot_id = #{condition.spotId}
             </if>
             <if test="condition.minLikeCount != null">
-                AND (SELECT COUNT(*) FROM community_post_like pl WHERE pl.post_id = p.id) &gt;= #{condition.minLikeCount}
+                AND p.like_count &gt;= #{condition.minLikeCount}
+            </if>
+            <if test="condition.minPostId != null">
+                AND p.id &gt;= #{condition.minPostId}
             </if>
             <if test="condition.keyword != null">
                 <choose>
@@ -64,23 +75,42 @@
         </where>
     </sql>
 
-    <!-- 목록은 본문 전체를 읽지 않고 앞 100자만 읽는다. -->
+    <!-- 안쪽 쿼리가 조건과 최신순으로 이 페이지의 글 ID만 고르고, 바깥 쿼리가 고른 글에만 작성자·장소·이미지·댓글 수를 붙인다.
+         검색이 아니면 안쪽 쿼리는 (status, id, like_count) 인덱스만 읽는다. 그래서 OFFSET만큼 건너뛰는 글의 본문을 읽지 않는다.
+         목록은 본문 전체를 읽지 않고 앞 100자만 읽는다. -->
     <select id="selectActive" resultType="com.moewadeul.community.infra.post.CommunityPostRow">
         SELECT
         <include refid="postColumns"/>,
                LEFT(p.content, 100) AS text,
                NULL AS liked_by_me
+        FROM (
+            SELECT p.id
+            FROM community_post p
+            <include refid="conditionJoins"/>
+            <include refid="activeListConditions"/>
+            ORDER BY p.id DESC
+            LIMIT #{limit} OFFSET #{offset}
+        ) picked
+        JOIN community_post p ON p.id = picked.id
         <include refid="postJoins"/>
-        <include refid="activeListConditions"/>
         ORDER BY p.id DESC
-        LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 목록과 같은 조인과 조건으로 센다. 그래야 페이지 수가 목록과 어긋나지 않는다. -->
+    <!-- 목록의 안쪽 쿼리와 같은 조인과 조건으로 센다. 그래야 페이지 수가 목록과 어긋나지 않는다. -->
     <select id="countActive" resultType="long">
         SELECT COUNT(*)
-        <include refid="postJoins"/>
+        FROM community_post p
+        <include refid="conditionJoins"/>
         <include refid="activeListConditions"/>
+    </select>
+
+    <!-- (status, id, like_count) 인덱스만 거꾸로 읽어 offset건 건너뛴 ACTIVE 글 ID를 고른다. 글 행은 읽지 않는다. -->
+    <select id="selectActiveIdAfter" resultType="long">
+        SELECT p.id
+        FROM community_post p
+        WHERE p.status = 'ACTIVE'
+        ORDER BY p.id DESC
+        LIMIT 1 OFFSET #{offset}
     </select>
 
     <select id="selectActiveById" resultType="com.moewadeul.community.infra.post.CommunityPostRow">
@@ -95,6 +125,7 @@
                 NULL AS liked_by_me
             </otherwise>
         </choose>
+        FROM community_post p
         <include refid="postJoins"/>
         WHERE p.id = #{postId}
           AND p.status = 'ACTIVE'

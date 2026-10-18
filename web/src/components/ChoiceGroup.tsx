@@ -19,10 +19,11 @@ type ChoiceGroupProps<T extends string> = {
 };
 
 // Tailwind가 소스 글자를 읽어 클래스를 만들기 때문에 클래스 이름을 이어 붙이지 않고 통째로 적는다.
+// 쉬는 칸은 세이지 알약이고, 고른 칸은 흰 면에 1.5px 먹색 테두리를 둘러 세이지 바탕 위에서도 고른 칸이 보이게 한다.
 const OPTION_SELECTED =
-  'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border-[1.5px] border-ink bg-surface px-3 text-base font-bold text-ink';
+  'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border-[1.5px] border-ink bg-surface px-4 text-base font-semibold text-ink';
 const OPTION_IDLE =
-  'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border-[1.5px] border-line bg-surface px-3 text-base text-ink hover:bg-fill';
+  'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border-[1.5px] border-fill bg-fill px-4 text-base text-ink hover:border-fill-strong hover:bg-fill-strong';
 
 // 라디오 버튼 묶음이다. 선택 항목이 하나뿐이고 보기가 적을 때 쓴다.
 // 기본 선택을 두지 않을 수 있어서, 잘못된 기본값이 서버에 저장되는 일을 막는 데도 쓴다.

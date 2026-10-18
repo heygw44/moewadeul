@@ -19,7 +19,7 @@ function pageWindow(page: number, totalPages: number): number[] {
 
 // 360px 폭에서 버튼 7개(44px)와 간격이 한 줄에 들어가도록 간격을 2px로 둔다.
 const BUTTON_CLASS =
-  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-control border px-2 text-base tabular-nums disabled:cursor-not-allowed disabled:text-ink-subtle';
+  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-control px-2 text-base tabular-nums disabled:cursor-not-allowed disabled:text-ink-subtle';
 
 export function Pagination({ page, totalPages, onChange, label = '페이지' }: PaginationProps) {
   if (totalPages <= 1) return null;
@@ -31,7 +31,7 @@ export function Pagination({ page, totalPages, onChange, label = '페이지' }: 
         aria-label="이전 페이지"
         disabled={current <= 1}
         onClick={() => onChange(current - 1)}
-        className={`${BUTTON_CLASS} border-transparent text-ink hover:bg-fill`}
+        className={`${BUTTON_CLASS} text-ink hover:bg-fill`}
       >
         <Icon name="chevronLeft" size={18} />
       </button>
@@ -44,9 +44,7 @@ export function Pagination({ page, totalPages, onChange, label = '페이지' }: 
           onClick={() => onChange(number)}
           className={[
             BUTTON_CLASS,
-            number === page
-              ? 'border-ink bg-ink font-semibold text-white'
-              : 'border-transparent text-ink hover:bg-fill',
+            number === page ? 'bg-ink font-semibold text-white' : 'text-ink-muted hover:bg-fill hover:text-ink',
           ].join(' ')}
         >
           {number}
@@ -57,7 +55,7 @@ export function Pagination({ page, totalPages, onChange, label = '페이지' }: 
         aria-label="다음 페이지"
         disabled={current >= totalPages}
         onClick={() => onChange(current + 1)}
-        className={`${BUTTON_CLASS} border-transparent text-ink hover:bg-fill`}
+        className={`${BUTTON_CLASS} text-ink hover:bg-fill`}
       >
         <Icon name="chevronRight" size={18} />
       </button>

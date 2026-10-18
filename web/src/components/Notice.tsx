@@ -12,9 +12,9 @@ type NoticeProps = {
 };
 
 const BOX_CLASSES: Record<NoticeTone, string> = {
-  warning: 'border-warning-line bg-warning-soft',
-  danger: 'border-danger bg-danger-soft',
-  info: 'border-info bg-info-soft',
+  warning: 'bg-warning-soft',
+  danger: 'bg-danger-soft',
+  info: 'bg-info-soft',
 };
 
 const TITLE_CLASSES: Record<NoticeTone, string> = {
@@ -23,7 +23,7 @@ const TITLE_CLASSES: Record<NoticeTone, string> = {
   info: 'text-info',
 };
 
-// 경고 아이콘은 테두리와 같은 황토색으로, 나머지는 제목과 같은 색으로 그린다.
+// 경고 아이콘은 황토색으로, 나머지는 제목과 같은 색으로 그린다.
 const ICON_CLASSES: Record<NoticeTone, string> = {
   warning: 'text-warning-line',
   danger: 'text-danger',
@@ -37,13 +37,13 @@ const DEFAULT_ICONS: Record<NoticeTone, IconName> = {
 };
 
 // 경고와 안내는 판단 근거라서 접거나 닫을 수 없게 둔다. 본문은 햇빛 아래에서도 읽히도록 먹색으로 쓴다.
-// 한쪽만 굵게 칠한 선 대신 의미 색 1px 테두리로 상자 전체를 두른다. 한쪽 굵은 선은 생성형 화면의 흔한 장식이라 쓰지 않는다.
+// 테두리 없이 의미 색 연한 면으로 상자를 나눈다. 한쪽만 굵게 칠한 선은 생성형 화면의 흔한 장식이라 쓰지 않는다.
 export function Notice({ tone, title, icon, children }: NoticeProps) {
   return (
-    <div role="note" className={`flex gap-3 rounded-sheet border p-4 ${BOX_CLASSES[tone]}`}>
+    <div role="note" className={`flex gap-3 rounded-sheet p-5 ${BOX_CLASSES[tone]}`}>
       <Icon name={icon ?? DEFAULT_ICONS[tone]} size={20} className={`mt-0.5 shrink-0 ${ICON_CLASSES[tone]}`} />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <p className={`font-bold ${TITLE_CLASSES[tone]}`}>{title}</p>
+        <p className={`text-[1.0625rem] font-bold ${TITLE_CLASSES[tone]}`}>{title}</p>
         {children !== undefined && children !== null && <div className="text-sm text-ink">{children}</div>}
       </div>
     </div>

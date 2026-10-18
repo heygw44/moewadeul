@@ -25,7 +25,7 @@ export function AnnouncementBar() {
 
   return (
     // 포인트 면이라 흰 글자를 쓰고, 정보색 포커스 링은 짙은 바탕에서 보이지 않아 흰 윤곽선으로 바꾼다.
-    <div className="shrink-0 border-b border-white/10 bg-brand-raised text-white [&_:focus-visible]:outline-white">
+    <div className="shrink-0 bg-brand text-white [&_:focus-visible]:outline-white">
       <div className="mx-auto flex max-w-screen-xl items-center gap-2 pl-4 pr-1">
         <Link
           to={`/programs/${id}`}

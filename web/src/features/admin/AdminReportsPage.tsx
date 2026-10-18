@@ -127,19 +127,16 @@ function ReportList() {
         <EmptyState framed title="조건에 맞는 신고가 없어요" description="처리 상태나 긴급 조건을 바꿔 주세요." />
       )}
       {state !== null && state.items.length > 0 && (
-        <div className="overflow-hidden rounded-sheet border border-line bg-surface">
+        <div className="rounded-sheet bg-fill p-1.5">
           {/* 넓은 화면에서는 표처럼 칸 이름 줄을 둔다. 좁은 화면은 행마다 위아래로 쌓으므로 이 줄을 숨긴다. */}
-          <div
-            aria-hidden="true"
-            className={`hidden border-b border-line bg-canvas py-2.5 text-sm font-semibold text-ink-muted md:grid ${ROW_GRID}`}
-          >
+          <div aria-hidden="true" className={`hidden py-2.5 text-sm font-semibold text-ink-muted md:grid ${ROW_GRID}`}>
             <span>우선</span>
             <span>사유</span>
             <span>신고한 회원 → 대상</span>
             <span>상태</span>
             <span>접수</span>
           </div>
-          <ul className="divide-y divide-line">
+          <ul className="flex flex-col gap-1">
             {state.items.map((item) => (
               <ReportRow key={item.reportId} item={item} />
             ))}
@@ -166,7 +163,7 @@ function ReportRow({ item }: { item: AdminReportSummary }) {
     <li>
       <Link
         to={`/admin/reports/${item.reportId}`}
-        className={`flex min-h-11 flex-col gap-1 py-3 hover:bg-fill md:grid md:items-center ${ROW_GRID}`}
+        className={`flex min-h-11 flex-col gap-1 rounded-row bg-surface py-3 hover:bg-fill-strong md:grid md:items-center ${ROW_GRID}`}
       >
         <span className={`text-sm font-extrabold ${item.urgent ? 'text-danger' : 'text-ink-muted'}`}>
           {item.urgent ? '긴급' : '보통'}
