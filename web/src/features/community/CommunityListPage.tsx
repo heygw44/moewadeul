@@ -281,6 +281,8 @@ function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
           <span>{error}</span>
         </p>
       )}
+      {/* 서버는 최근 글 1만 개 안에서만 검색한다. 오래된 글이 안 나오는 이유를 알 수 있게 검색 중에만 보여 준다. */}
+      {!error && keyword !== null && <p className="text-sm text-ink-muted">최근 글 1만 개 안에서 찾았어요.</p>}
     </form>
   );
 }

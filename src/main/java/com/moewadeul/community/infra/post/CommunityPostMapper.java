@@ -23,6 +23,9 @@ public interface CommunityPostMapper {
     /** 호출하면 {@link #selectActive}와 같은 조건에 맞는 글의 수를 센다. */
     long countActive(@Param("condition") CommunityPostListCondition condition);
 
+    /** 호출하면 ACTIVE 글을 최신순으로 offset건 건너뛴 다음 글의 ID를 돌려준다. ACTIVE 글이 offset건 이하면 null이다. */
+    Long selectActiveIdAfter(@Param("offset") int offset);
+
     /**
      * 호출하면 ACTIVE인 글 한 건을 본문 전체와 함께 읽는다. 글이 없거나 ACTIVE가 아니면 빈 값이다.
      * viewerId가 null이면 likedByMe를 읽지 않고 null로 둔다.

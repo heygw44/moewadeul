@@ -23,6 +23,9 @@ public class CommunityPostQueryService {
      *
      * <p>spotId로 거를 때는 그 장소가 지금 ACTIVE인지 보지 않는다. 화면이 페이지 번호를 그리려면 전체 글 수가 필요하다. 그래서 서비스는 같은
      * 조건으로 글 수를 따로 센다. 마지막 페이지 너머를 요청하면 빈 목록과 함께 전체 글 수와 페이지 수를 돌려준다.
+     *
+     * <p>검색어가 있으면 최근 ACTIVE 글 {@link CommunityPost#SEARCH_RECENT_POST_LIMIT}개 안에서만 찾고, 글 수도 그 안에서 센다. 범위의 가장 작은
+     * 글 ID는 한 번만 구해서 목록과 글 수가 같이 쓴다. 읽기 전용 트랜잭션 하나에서 읽으므로 세 쿼리가 같은 시점의 글을 본다.
      */
     @Transactional(readOnly = true)
     public CommunityPostPage list(CommunityPostListQuery query, int page, int size) {
@@ -59,13 +62,17 @@ public class CommunityPostQueryService {
         return item.withOneMoreView();
     }
 
-    private static CommunityPostListCondition toCondition(CommunityPostListQuery query) {
+    private CommunityPostListCondition toCondition(CommunityPostListQuery query) {
         Integer minLikeCount = query.popular() ? CommunityPost.POPULAR_LIKE_THRESHOLD : null;
         if (query.keyword() == null) {
-            return new CommunityPostListCondition(query.spotId(), minLikeCount, null, null);
+            return new CommunityPostListCondition(query.spotId(), minLikeCount, null, null, null);
         }
         return new CommunityPostListCondition(
-                query.spotId(), minLikeCount, query.searchType().name(), escapeLike(query.keyword()));
+                query.spotId(),
+                minLikeCount,
+                query.searchType().name(),
+                escapeLike(query.keyword()),
+                communityPostMapper.selectActiveIdAfter(CommunityPost.SEARCH_RECENT_POST_LIMIT - 1));
     }
 
     // LIKE에서 %와 _는 와일드카드이고 \는 그 둘을 글자로 만드는 표시다. 회원이 입력한 이 글자들을 글자 그대로 찾도록 앞에 \를 붙인다.

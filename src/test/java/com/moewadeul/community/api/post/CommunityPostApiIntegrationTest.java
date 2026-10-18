@@ -9,6 +9,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.api.CommunityApiFixture;
+import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -701,6 +702,34 @@ class CommunityPostApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-13] 검색은 최근 ACTIVE 글 10,000개 안에서만 찾고 글 수도 그 안에서 세며, 활성이 아닌 글은 10,000개에 넣지 않는다")
+    void searchLooksOnlyAtRecentActivePosts() {
+        // given: 검색어가 든 오래된 글 뒤에 숨긴 글 3개와 활성 글 9,998개를 두고, 검색어가 든 새 글을 하나 더 쓴다
+        Member author = fixture.saveMember(null);
+        Cookie session = fixture.verifiedSession(author);
+        long old = fixture.writePost(session, "오래된 능선 글", "본문", null);
+        insertPosts(author.getId(), "HIDDEN", 3);
+        insertPosts(author.getId(), "ACTIVE", CommunityPost.SEARCH_RECENT_POST_LIMIT - 2);
+        long latest = fixture.writePost(session, "새 능선 글", "본문", null);
+
+        // when: 오래된 글은 최근 활성 글 10,000번째다. 활성 글이 하나 더 생기면 범위 밖으로 밀린다
+        MvcTestResult atBoundary = mvc.get().uri(POSTS + "?keyword=능선").exchange();
+        insertPosts(author.getId(), "ACTIVE", 1);
+        MvcTestResult pushedOut = mvc.get().uri(POSTS + "?keyword=능선").exchange();
+        MvcTestResult unsearched = mvc.get().uri(POSTS + "?size=1").exchange();
+
+        // then
+        postIds(atBoundary).containsExactly((int) latest, (int) old);
+        assertThat(atBoundary).bodyJson().extractingPath("$.totalElements").isEqualTo(2);
+        postIds(pushedOut).containsExactly((int) latest);
+        assertThat(pushedOut).bodyJson().extractingPath("$.totalElements").isEqualTo(1);
+        assertThat(unsearched)
+                .bodyJson()
+                .extractingPath("$.totalElements")
+                .isEqualTo(CommunityPost.SEARCH_RECENT_POST_LIMIT + 1);
+    }
+
+    @Test
     @DisplayName("[F-29][CM-13] 검색어의 %, _, 역슬래시는 와일드카드가 아닌 글자 그대로 찾는다")
     void searchTreatsWildcardsLiterally() {
         // given
@@ -818,6 +847,23 @@ class CommunityPostApiIntegrationTest {
         }
         assertThat(ids).hasSize(totalElements);
         return ids;
+    }
+
+    // 검색어가 들지 않은 글을 count개 한 번에 넣는다. 숫자 열 개를 네 번 곱해 최대 10,000행을 만든다.
+    private void insertPosts(long memberId, String status, int count) {
+        jdbc.update("""
+                INSERT INTO community_post (member_id, title, content, status, created_at, updated_at)
+                SELECT ?, '다른 글', '본문', ?, NOW(6), NOW(6)
+                FROM (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+                      UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) a
+                CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+                      UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) b
+                CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+                      UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) c
+                CROSS JOIN (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+                      UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) d
+                LIMIT ?
+                """, memberId, status, count);
     }
 
     private void like(long postId, List<Cookie> sessions) {
