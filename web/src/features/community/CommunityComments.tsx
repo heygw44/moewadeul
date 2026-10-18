@@ -103,19 +103,12 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
   }
 
   return (
-    <section
-      id="comments"
-      aria-labelledby="community-comments-title"
-      className="scroll-mt-20 overflow-hidden rounded-sheet border border-line bg-surface"
-    >
-      <h2
-        id="community-comments-title"
-        className="border-b border-line px-4 py-3 text-base font-extrabold text-ink sm:px-5"
-      >
+    <section id="comments" aria-labelledby="community-comments-title" className="mt-4 flex scroll-mt-20 flex-col gap-3">
+      <h2 id="community-comments-title" className="text-[1.1875rem] font-extrabold tracking-[-0.02em] text-ink">
         댓글 <span className="font-mono tabular-nums">{count}</span>
       </h2>
 
-      <div className="border-b border-line px-4 py-3">
+      <div className="rounded-sheet bg-fill p-4">
         <NewCommentArea
           onSubmit={async (content) => {
             await createComment(postId, { content });
@@ -130,7 +123,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
       </div>
 
       {listError && (
-        <div role="alert" className="flex flex-col gap-2 px-4 py-3">
+        <div role="alert" className="flex flex-col gap-2">
           <Notice tone="danger" title="댓글을 불러오지 못했어요">
             <p>{listError}</p>
           </Notice>
@@ -143,20 +136,20 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
       )}
 
       {showSkeleton && (
-        <div className="flex flex-col gap-2 px-4 py-3">
+        <div className="flex flex-col gap-2">
           <Skeleton className="h-5 w-1/2" />
           <Skeleton className="h-12 w-full" />
         </div>
       )}
 
       {list && list.comments.length === 0 && !listError && (
-        <p className="px-4 py-3 text-base text-ink-muted">아직 댓글이 없어요.</p>
+        <p className="text-base text-ink-muted">아직 댓글이 없어요.</p>
       )}
 
       {list && (list.comments.length > 0 || list.hasNext) && (
-        <ul className="divide-y divide-line">
+        <ul className="flex flex-col gap-1">
           {list.comments.map((comment) => (
-            <li key={comment.commentId} className="px-4 py-3">
+            <li key={comment.commentId} className="py-3">
               <CommentItem
                 comment={comment}
                 myMemberId={myMemberId}
@@ -186,7 +179,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                 }}
               />
               {comment.replies.length > 0 && (
-                <ul className="mt-2 ml-4 flex flex-col gap-3 border-l border-line pl-3">
+                <ul className="mt-3 ml-4 flex flex-col gap-4 rounded-row bg-fill p-4">
                   {comment.replies.map((reply) => (
                     <li key={reply.commentId}>
                       <CommentItem
