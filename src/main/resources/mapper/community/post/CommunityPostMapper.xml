@@ -41,7 +41,8 @@
     <!-- 목록과 개수 세기가 같이 쓰는 조건이다.
          인기글은 글 행에 저장한 좋아요 수로 거른다. 좋아요를 취소하면 그 트랜잭션이 수를 다시 쓰므로 바로 조건에서 빠진다.
          검색어는 #{}로만 넘기고, 검색 대상은 열거값 이름으로 분기한다. 서비스가 검색어의 \, %, _ 앞에 \를 붙여 넘기므로,
-         ESCAPE '\\'로 그 글자들을 와일드카드가 아닌 글자 그대로 찾는다. 작성자 검색은 조인한 member의 현재 닉네임을 본다. -->
+         ESCAPE '\\'로 그 글자들을 와일드카드가 아닌 글자 그대로 찾는다. 작성자 검색은 조인한 member의 현재 닉네임을 본다.
+         검색할 때는 서비스가 최근 글 범위의 가장 작은 글 ID를 minPostId로 넘긴다. 그래서 검색은 그보다 오래된 글을 읽지 않는다. -->
     <sql id="activeListConditions">
         <where>
             p.status = 'ACTIVE'
@@ -50,6 +51,9 @@
             </if>
             <if test="condition.minLikeCount != null">
                 AND p.like_count &gt;= #{condition.minLikeCount}
+            </if>
+            <if test="condition.minPostId != null">
+                AND p.id &gt;= #{condition.minPostId}
             </if>
             <if test="condition.keyword != null">
                 <choose>
@@ -98,6 +102,15 @@
         FROM community_post p
         <include refid="conditionJoins"/>
         <include refid="activeListConditions"/>
+    </select>
+
+    <!-- (status, id, like_count) 인덱스만 거꾸로 읽어 offset건 건너뛴 ACTIVE 글 ID를 고른다. 글 행은 읽지 않는다. -->
+    <select id="selectActiveIdAfter" resultType="long">
+        SELECT p.id
+        FROM community_post p
+        WHERE p.status = 'ACTIVE'
+        ORDER BY p.id DESC
+        LIMIT 1 OFFSET #{offset}
     </select>
 
     <select id="selectActiveById" resultType="com.moewadeul.community.infra.post.CommunityPostRow">

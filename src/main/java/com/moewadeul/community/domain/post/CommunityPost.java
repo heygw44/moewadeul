@@ -36,6 +36,9 @@ public class CommunityPost {
     /** 좋아요를 이만큼 이상 받은 글이 인기글이다. */
     public static final int POPULAR_LIKE_THRESHOLD = 5;
 
+    /** 검색은 최근 ACTIVE 글 이만큼 안에서만 찾는다. 검색어는 인덱스를 쓸 수 없어서, 범위가 없으면 글이 늘수록 검색마다 글 전체를 읽는다. */
+    public static final int SEARCH_RECENT_POST_LIMIT = 10_000;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
