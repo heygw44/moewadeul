@@ -11,14 +11,12 @@ import tools.jackson.databind.json.JsonMapper;
 class ProgramApplicationCanceledNotificationHandler
         extends NotificationEventHandler<NotificationPayloads.ProgramApplicationCanceled> {
 
-    ProgramApplicationCanceledNotificationHandler(
-            JsonMapper jsonMapper, NotificationWriter notificationWriter, NotificationMailer notificationMailer) {
+    ProgramApplicationCanceledNotificationHandler(JsonMapper jsonMapper, NotificationWriter notificationWriter) {
         super(
                 NotificationEventTypes.PROGRAM_APPLICATION_CANCELED,
                 NotificationPayloads.ProgramApplicationCanceled.class,
                 jsonMapper,
-                notificationWriter,
-                notificationMailer);
+                notificationWriter);
     }
 
     @Override

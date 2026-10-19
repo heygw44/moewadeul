@@ -15,7 +15,10 @@ public interface ProgramVacancyAlertRepository {
     /** 호출하면 memberId인 회원의 빈자리 알림 신청을 지운다. 신청한 적이 없으면 아무것도 하지 않는다. */
     void unsubscribe(long programId, long memberId);
 
-    /** 호출하면 programId인 행사의 알림 신청자 중 결제 대기·확정 신청이 없는 회원의 ID를 오름차순으로 돌려준다. */
+    /**
+     * 호출하면 programId인 행사의 알림 신청자 중 결제 대기·확정 신청이 없는 회원의 ID를 알림을 먼저 신청한 순서로 돌려준다.
+     * 알림 쪽은 이 순서대로 빈자리 메일을 받을 회원을 정한다.
+     */
     List<Long> findAlertTargets(long programId);
 
     /** 호출하면 programId인 행사에서 memberIds인 회원의 알림 시각을 now로 적는다. */

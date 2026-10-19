@@ -12,6 +12,10 @@ moewadeul:
   outbox:
     # 테스트가 발행 시점을 직접 정하려고 publishPending()을 호출한다. 그래서 주기적으로 도는 발행기는 끈다.
     publisher-enabled: false
+  notification:
+    mail:
+      # 테스트가 메일 발송 시점을 직접 정하려고 sendDue()를 호출한다. 그래서 주기적으로 도는 발송 작업은 끈다.
+      sender-enabled: false
     cleanup:
       # 정리 작업을 테스트가 직접 호출한다. 그래서 정해진 시각에 도는 스케줄러는 끈다.
       enabled: false

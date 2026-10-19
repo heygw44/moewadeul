@@ -10,14 +10,12 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 class SanctionConfirmedNotificationHandler extends NotificationEventHandler<NotificationPayloads.SanctionConfirmed> {
 
-    SanctionConfirmedNotificationHandler(
-            JsonMapper jsonMapper, NotificationWriter notificationWriter, NotificationMailer notificationMailer) {
+    SanctionConfirmedNotificationHandler(JsonMapper jsonMapper, NotificationWriter notificationWriter) {
         super(
                 NotificationEventTypes.SANCTION_CONFIRMED,
                 NotificationPayloads.SanctionConfirmed.class,
                 jsonMapper,
-                notificationWriter,
-                notificationMailer);
+                notificationWriter);
     }
 
     @Override

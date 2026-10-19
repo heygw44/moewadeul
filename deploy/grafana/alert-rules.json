@@ -62,7 +62,7 @@
         "service": "moewadeul"
       },
       "annotations": {
-        "summary": "가장 오래된 미발행 이벤트가 10분 넘게 남아 있다. 발행기가 멈췄거나 메일 발송이 계속 실패한다."
+        "summary": "가장 오래된 미발행 이벤트가 10분 넘게 남아 있다. 발행기가 멈췄거나 처리기가 계속 실패한다."
       },
       "data": [
         {
@@ -75,6 +75,55 @@
           "model": {
             "refId": "A",
             "expr": "max(moewadeul_outbox_oldest_pending_age_seconds{job=\"moewadeul-app\"})",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    600
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "uid": "moewadeul-notification-mail-backlog",
+      "title": "알림 메일 10분 이상 적체",
+      "condition": "C",
+      "for": "0s",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "가장 오래된 보낼 알림 메일이 10분 넘게 남아 있다. 메일 서버가 장애이거나, 하루 발송 한도에 닿았거나, 메일 발송 작업이 멈췄다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "max(moewadeul_notification_mail_oldest_pending_age_seconds{job=\"moewadeul-app\"})",
             "instant": true,
             "range": false
           }

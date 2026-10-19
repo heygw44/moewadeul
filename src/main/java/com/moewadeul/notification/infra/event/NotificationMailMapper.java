@@ -1,5 +1,6 @@
 package com.moewadeul.notification.infra.event;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -7,16 +8,47 @@ import org.apache.ibatis.annotations.Param;
 
 // 받는 사람의 주소와 회원 상태는 member 테이블에 있고, notification 모듈은 member 모듈의 Java 클래스를 쓸 수 없다.
 // 그래서 알림, 이메일 수신 설정, 회원을 한 번에 조인하는 SQL로 보낼 대상을 고른다.
+// 메일 상태는 여러 서버의 발송 작업이 함께 바꾸므로, 상태를 바꾸는 문장은 모두 지금 상태를 조건으로 거는 조건부 UPDATE다.
 @Mapper
 public interface NotificationMailMapper {
 
     /**
-     * 호출하면 dedupKeys에 해당하는 알림 가운데 메일을 보낼 것을 알림 ID 순으로 읽는다. 아직 메일을 보내지 않았고,
-     * 받는 회원이 그 종류의 이메일을 받기로 했으며(설정이 없으면 defaultEmailEnabled), 상태가 ACTIVE나 SUSPENDED이고 이메일이 있는 알림이다.
-     * 이메일 인증을 마치지 않은 회원(UNVERIFIED, 인증 전에 정지된 회원 포함)은 주소를 확인하지 않았으므로 보내지 않고, 탈퇴 회원은 이메일이 지워져 있다.
-     * dedupKeys가 비어 있으면 호출하지 않는다. 읽기만 하므로 트랜잭션 없이 불러도 된다.
+     * 호출하면 메일 상태가 PENDING이고 다음 시도 시각이 비었거나 now 이하인 알림을 알림 ID 순으로 최대 limit건 쓰기 잠금으로 읽는다.
+     * 다른 발송 작업이 잠근 알림은 건너뛴다. 트랜잭션 안에서 불러야 잠금이 유지된다.
+     *
+     * <p>{@code deliverable}은 받는 회원이 그 종류의 이메일을 받기로 했고(설정이 없으면 defaultEmailEnabled), 상태가 ACTIVE나
+     * SUSPENDED이고, 이메일이 있고 인증을 마쳤는지다. 인증을 마치지 않은 회원은 주소를 확인하지 않았고, 탈퇴 회원은 이메일이 지워져 있다.
      */
-    List<NotificationMailRow> selectMailTargets(
-            @Param("dedupKeys") Collection<String> dedupKeys,
+    List<NotificationMailRow> selectDueForUpdate(
+            @Param("now") Instant now,
+            @Param("limit") int limit,
             @Param("defaultEmailEnabled") boolean defaultEmailEnabled);
+
+    /** 호출하면 PENDING인 그 알림들의 다음 시도 시각을 leaseUntil로 미뤄, 다른 발송 작업이 그때까지 집지 못하게 한다. */
+    int lease(@Param("ids") Collection<Long> ids, @Param("leaseUntil") Instant leaseUntil);
+
+    /** 호출하면 PENDING인 그 알림들을 SKIPPED로 바꾼다. */
+    int markSkipped(@Param("ids") Collection<Long> ids);
+
+    /** 호출하면 PENDING인 그 알림을 SENT로 바꾸고 보낸 시각을 기록한다. 이미 다른 상태면 0이다. */
+    int markSent(@Param("id") long id, @Param("now") Instant now);
+
+    /**
+     * 호출하면 PENDING인 그 알림의 실패 횟수를 1 올린다. 올린 횟수가 maxAttempts에 닿으면 FAILED로 바꾸고, 아니면 retryAt까지 집지
+     * 않게 한다. 이미 다른 상태면 0이다.
+     */
+    int markFailedAttempt(
+            @Param("id") long id, @Param("maxAttempts") int maxAttempts, @Param("retryAt") Instant retryAt);
+
+    /**
+     * 호출하면 memberIds 가운데 type 종류의 메일을 지금 보낼 수 있는 회원의 ID를 읽는다. 조건은 {@link #selectDueForUpdate}의
+     * deliverable과 같다. memberIds가 비어 있으면 호출하지 않는다.
+     */
+    List<Long> selectDeliverableMemberIds(
+            @Param("type") String type,
+            @Param("memberIds") Collection<Long> memberIds,
+            @Param("defaultEmailEnabled") boolean defaultEmailEnabled);
+
+    /** 호출하면 PENDING·FAILED 알림 수와 가장 오래된 PENDING 알림의 생성 시각을 읽는다. */
+    NotificationMailBacklogRow selectBacklog();
 }
