@@ -138,7 +138,7 @@ class ParkAreaJudgeServiceIntegrationTest {
         // when
         ParkAreaJudgement inside = parkAreaJudgeService.judge(center);
         ParkAreaJudgement away = parkAreaJudgeService.judge(outside);
-        parkAreaJudgeService.rejudgeBakjis();
+        rejudgeAll();
 
         // then
         assertThat(inside.parkWarning()).isTrue();
@@ -169,7 +169,7 @@ class ParkAreaJudgeServiceIntegrationTest {
         clock.setInstant(JUDGED_AT);
 
         // when
-        BakjiRejudgeCounts counts = parkAreaJudgeService.rejudgeBakjis();
+        BakjiRejudgeCounts counts = rejudgeAll();
 
         // then: 경계 안이고 예전 경고가 없던 박지는 inside, hidden, deleted, pending 넷이고, 경고가 풀린 박지는 staleWarned 하나다.
         assertThat(counts).isEqualTo(new BakjiRejudgeCounts(6, 4, 1));
@@ -197,7 +197,7 @@ class ParkAreaJudgeServiceIntegrationTest {
         clock.setInstant(JUDGED_AT);
 
         // when
-        BakjiRejudgeCounts counts = parkAreaJudgeService.rejudgeBakjis();
+        BakjiRejudgeCounts counts = rejudgeAll();
 
         // then
         assertThat(counts).isEqualTo(new BakjiRejudgeCounts(1, 0, 0));
@@ -217,12 +217,49 @@ class ParkAreaJudgeServiceIntegrationTest {
         clock.setInstant(JUDGED_AT);
 
         // when
-        BakjiRejudgeCounts counts = parkAreaJudgeService.rejudgeBakjis();
+        BakjiRejudgeCounts counts = rejudgeAll();
 
         // then
         assertThat(counts.judged()).isGreaterThanOrEqualTo(insideCount + outsideCount);
         assertThat(countBatchSpots(prefix + "-in%", true, areaId)).isEqualTo(insideCount);
         assertThat(countBatchSpots(prefix + "-out%", false, null)).isEqualTo(outsideCount);
+    }
+
+    @Test
+    @DisplayName("[F-06][F-07] 재판정 묶음은 afterId보다 큰 박지만 ID 순서로 limit건 판정하고, 남은 박지가 없으면 빈 마지막 ID를 돌려준다")
+    void rejudgesOnlyOneChunkAfterGivenId() {
+        // given
+        long areaId = insertProtectedArea(PARK_SQUARE);
+        long firstId = insertSpot("BAKJI", "ACTIVE", INSIDE_PARK);
+        long secondId = insertSpot("BAKJI", "ACTIVE", INSIDE_PARK);
+        long thirdId = insertSpot("BAKJI", "ACTIVE", INSIDE_PARK);
+        clock.setInstant(JUDGED_AT);
+
+        // when
+        BakjiRejudgeChunk chunk = parkAreaJudgeService.rejudgeBakjiChunk(firstId, 1, JUDGED_AT);
+
+        // then: 첫 박지는 afterId라서, 셋째 박지는 limit을 넘어서 판정하지 않는다.
+        assertThat(chunk).isEqualTo(new BakjiRejudgeChunk(new BakjiRejudgeCounts(1, 1, 0), secondId));
+        assertThat(judgementOf(firstId)).isEqualTo(new SpotJudgementRow(false, null, null, SAVED_AT));
+        assertThat(judgementOf(secondId)).isEqualTo(new SpotJudgementRow(true, areaId, JUDGED_AT, SAVED_AT));
+        assertThat(judgementOf(thirdId)).isEqualTo(new SpotJudgementRow(false, null, null, SAVED_AT));
+        assertThat(parkAreaJudgeService.rejudgeBakjiChunk(thirdId, 1, JUDGED_AT))
+                .isEqualTo(new BakjiRejudgeChunk(new BakjiRejudgeCounts(0, 0, 0), null));
+    }
+
+    // 재판정 작업처럼 박지를 묶음마다 끝까지 판정하고 집계를 더한다. 판정 시각은 시작할 때의 시계 값이다.
+    private BakjiRejudgeCounts rejudgeAll() {
+        Instant now = clock.instant();
+        BakjiRejudgeCounts total = new BakjiRejudgeCounts(0, 0, 0);
+        long afterId = 0;
+        while (true) {
+            BakjiRejudgeChunk chunk = parkAreaJudgeService.rejudgeBakjiChunk(afterId, 1_000, now);
+            if (chunk.lastId() == null) {
+                return total;
+            }
+            total = total.plus(chunk.counts());
+            afterId = chunk.lastId();
+        }
     }
 
     private void insertBakjiBatch(String namePrefix, GeoPoint at, int count) {
