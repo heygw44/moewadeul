@@ -9,6 +9,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.api.CommunityApiFixture;
+import com.moewadeul.community.application.post.CommunityViewCountFlusher;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
@@ -50,6 +51,9 @@ class CommunityPostApiIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private CommunityViewCountFlusher viewCountFlusher;
 
     @Autowired
     private MutableClock clock;
@@ -523,7 +527,7 @@ class CommunityPostApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-11] 비회원과 다른 회원이 상세를 열 때마다 조회수가 1씩 오르고, 목록에도 같은 값이 보인다")
+    @DisplayName("[F-29][CM-11] 비회원과 다른 회원이 상세를 열 때마다 조회수가 1씩 오르고, DB에 더한 뒤에는 목록에도 같은 값이 보인다")
     void detailByOthersIncrementsViewCount() {
         // given
         Cookie author = fixture.verifiedSession(fixture.saveMember(null));
@@ -534,12 +538,18 @@ class CommunityPostApiIntegrationTest {
         MvcTestResult anonymous = mvc.get().uri(POSTS + "/" + postId).exchange();
         MvcTestResult member = mvc.get().uri(POSTS + "/" + postId).cookie(other).exchange();
         MvcTestResult again = mvc.get().uri(POSTS + "/" + postId).cookie(other).exchange();
+        MvcTestResult listBeforeFlush = mvc.get().uri(POSTS).exchange();
+        viewCountFlusher.flush();
         MvcTestResult list = mvc.get().uri(POSTS).exchange();
 
         // then
         assertThat(anonymous).bodyJson().extractingPath("$.viewCount").isEqualTo(1);
         assertThat(member).bodyJson().extractingPath("$.viewCount").isEqualTo(2);
         assertThat(again).bodyJson().extractingPath("$.viewCount").isEqualTo(3);
+        assertThat(listBeforeFlush)
+                .bodyJson()
+                .extractingPath("$.content[0].viewCount")
+                .isEqualTo(0);
         assertThat(list).bodyJson().extractingPath("$.content[0].viewCount").isEqualTo(3);
         assertThat(viewCount(postId)).isEqualTo(3);
     }
