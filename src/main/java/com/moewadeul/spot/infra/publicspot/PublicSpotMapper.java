@@ -62,10 +62,16 @@ public interface PublicSpotMapper {
     List<String> selectLiveExternalIds(@Param("source") String source);
 
     /**
-     * 호출하면 spotIds 중 지금도 ACTIVE이고 원천 삭제 표시가 없는 장소의 spot ID를 읽으면서 spot과 public_spot_detail 행을 잠근다. 호출하는
-     * 쪽이 연 트랜잭션이 끝날 때까지 다른 트랜잭션은 이 행들을 바꾸지 못한다.
+     * 호출하면 spotIds의 spot 행을 ID 순서로 잠그며 읽고, 그중 지금 ACTIVE인 장소의 ID를 돌려준다. 호출하는 쪽이 연 트랜잭션이 끝날 때까지 다른
+     * 트랜잭션은 이 행들을 바꾸지 못한다. 같은 장소의 public_spot_detail 행보다 먼저 잠가야 한다.
      */
-    List<Long> lockRemovalCandidates(@Param("spotIds") Collection<Long> spotIds);
+    List<Long> lockActiveSpots(@Param("spotIds") Collection<Long> spotIds);
+
+    /**
+     * 호출하면 spotIds의 public_spot_detail 행을 spot ID 순서로 잠그며 읽고, 그중 원천 삭제 표시가 없는 장소의 ID를 돌려준다. 같은 장소의 spot
+     * 행을 {@link #lockActiveSpots}로 먼저 잠근 뒤에 부른다.
+     */
+    List<Long> lockUnremovedDetails(@Param("spotIds") Collection<Long> spotIds);
 
     /** 호출하면 spotIds 중 지금 ACTIVE인 장소를 HIDDEN으로 바꾸고 updated_at을 now로 기록한 뒤, 바뀐 행 수를 돌려준다. */
     int hideSpots(@Param("spotIds") Collection<Long> spotIds, @Param("now") Instant now);
