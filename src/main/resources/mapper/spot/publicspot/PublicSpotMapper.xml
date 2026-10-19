@@ -205,18 +205,32 @@
           AND d.source_removed_at IS NULL
     </select>
 
-    <!-- 기본 키로만 읽으므로, 존재하지 않는 키 사이의 틈에는 잠금이 걸리지 않는다. -->
-    <select id="lockRemovalCandidates" resultType="long">
-        SELECT d.spot_id
-        FROM public_spot_detail d
-        JOIN spot s ON s.id = d.spot_id
-        WHERE s.status = 'ACTIVE'
-          AND d.source_removed_at IS NULL
-          AND d.spot_id IN
+    <!-- 원천 삭제로 숨길 장소를 잠근다. 두 문장 모두 기본 키 목록으로만 읽으므로, 존재하지 않는 키 사이의 틈에는 잠금이 걸리지 않는다.
+         관리자 숨김·복구는 spot 행을 먼저 잠그고 public_spot_detail 행을 나중에 바꾼다. 그래서 동기화도 spot을 먼저, public_spot_detail을
+         나중에 잠근다. 예전에는 두 테이블을 조인한 SELECT ... FOR UPDATE 한 문장으로 잠갔다. 그런데 장소가 하나이면 MySQL이 두 행을 기본 키로
+         먼저 읽는 실행계획을 골라 public_spot_detail을 먼저 잠갔고, 관리자 숨김과 동시에 오면 1,000번 중 852번이 데드락이었다.
+         한 문장으로는 어느 테이블을 먼저 잠글지 실행계획이 정하므로, 순서를 지키려고 문장을 나눈다. -->
+    <select id="lockActiveSpots" resultType="long">
+        SELECT id
+        FROM spot
+        WHERE status = 'ACTIVE'
+          AND id IN
         <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
             #{spotId}
         </foreach>
-        ORDER BY d.spot_id
+        ORDER BY id
+        FOR UPDATE
+    </select>
+
+    <select id="lockUnremovedDetails" resultType="long">
+        SELECT spot_id
+        FROM public_spot_detail
+        WHERE source_removed_at IS NULL
+          AND spot_id IN
+        <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
+            #{spotId}
+        </foreach>
+        ORDER BY spot_id
         FOR UPDATE
     </select>
 

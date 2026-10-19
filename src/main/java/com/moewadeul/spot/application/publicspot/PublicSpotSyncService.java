@@ -105,10 +105,15 @@ public class PublicSpotSyncService {
             return 0;
         }
         // 관리자가 같은 장소의 상태를 동시에 바꿔도 spot과 public_spot_detail이 서로 어긋나지 않게 두 테이블의 행을 먼저 잠근다.
-        // 잠근 뒤에도 ACTIVE이고 표시가 없는 행만 돌려받으므로, 그 사이 숨겨진 행은 빠진다. 두 테이블을 한 UPDATE로 바꾸면 영향받은 행 수가
+        // 관리자 숨김·복구와 같은 순서로 spot을 먼저, public_spot_detail을 나중에 잠근다. 순서가 반대면 동시에 올 때 데드락이 난다.
+        // 잠근 뒤에도 ACTIVE이고 표시가 없는 행만 남기므로, 그 사이 관리자가 숨긴 행은 빠진다. 두 테이블을 한 UPDATE로 바꾸면 영향받은 행 수가
         // 테이블별 합이라 숨긴 수를 알 수 없다. 그래서 spot을 먼저 바꿔 그 행 수를 숨긴 수로 쓰고, 이어서 표시를 남긴다.
         // 조건부 상태 변경이라 JPA 엔티티 대신 MyBatis로 처리한다.
-        List<Long> lockedIds = publicSpotMapper.lockRemovalCandidates(candidateIds);
+        List<Long> activeIds = publicSpotMapper.lockActiveSpots(candidateIds);
+        if (activeIds.isEmpty()) {
+            return 0;
+        }
+        List<Long> lockedIds = publicSpotMapper.lockUnremovedDetails(activeIds);
         if (lockedIds.isEmpty()) {
             return 0;
         }
