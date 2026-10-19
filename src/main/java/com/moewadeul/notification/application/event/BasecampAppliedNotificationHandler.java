@@ -10,14 +10,12 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 class BasecampAppliedNotificationHandler extends NotificationEventHandler<NotificationPayloads.Applied> {
 
-    BasecampAppliedNotificationHandler(
-            JsonMapper jsonMapper, NotificationWriter notificationWriter, NotificationMailer notificationMailer) {
+    BasecampAppliedNotificationHandler(JsonMapper jsonMapper, NotificationWriter notificationWriter) {
         super(
                 NotificationEventTypes.BASECAMP_APPLIED,
                 NotificationPayloads.Applied.class,
                 jsonMapper,
-                notificationWriter,
-                notificationMailer);
+                notificationWriter);
     }
 
     @Override

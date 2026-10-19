@@ -182,9 +182,9 @@ class NotificationApiIntegrationTest {
 
     private long insert(Member member, String dedupKey, boolean read) {
         jdbc.update(
-                "INSERT INTO notification (member_id, type, title, body, link, dedup_key, read_at, created_at) "
+                "INSERT INTO notification (member_id, type, title, body, link, dedup_key, read_at, email_status, created_at) "
                         + "VALUES (?, 'BASECAMP_APPROVED', '합류 승인', '승인됐습니다.', '/basecamps/1', ?, "
-                        + (read ? "UTC_TIMESTAMP(6)" : "NULL") + ", UTC_TIMESTAMP(6))",
+                        + (read ? "UTC_TIMESTAMP(6)" : "NULL") + ", 'SENT', UTC_TIMESTAMP(6))",
                 member.getId(),
                 dedupKey);
         return jdbc.queryForObject("SELECT MAX(id) FROM notification", Long.class);

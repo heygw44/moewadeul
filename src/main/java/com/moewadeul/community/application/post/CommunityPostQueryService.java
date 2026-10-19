@@ -17,6 +17,7 @@ public class CommunityPostQueryService {
 
     private final CommunityPostMapper communityPostMapper;
     private final CommunityPostItemReader communityPostItemReader;
+    private final CommunityViewCountBuffer viewCountBuffer;
 
     /**
      * 호출하면 query 조건에 맞는 ACTIVE인 글을 최신순으로 한 페이지 돌려준다.
@@ -45,9 +46,10 @@ public class CommunityPostQueryService {
      * 글이 없거나 ACTIVE가 아니면 NOT_FOUND로 거부한다.
      *
      * <p>조회한 사람이 작성자가 아니면(비회원 포함) 조회수를 1 올리고, 올린 값을 응답에 담는다. 작성자가 자기 글을 열 때는 세지 않는다. 같은 사람이
-     * 다시 열어도 그때마다 센다.
+     * 다시 열어도 그때마다 센다. 조회는 글 행을 바로 바꾸지 않고 메모리에 모았다가 {@link CommunityViewCountFlusher}가 몇 초마다 더한다.
+     * 그래서 응답의 조회수는 DB 값에 이 서버가 아직 더하지 않은 조회 수(이번 조회 포함)를 더한 값이다.
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public CommunityPostItem detail(long postId, Long viewerId) {
         CommunityPostItem item = communityPostItemReader
                 .findDetail(postId, viewerId)
@@ -55,11 +57,8 @@ public class CommunityPostQueryService {
         if (viewerId != null && viewerId == item.authorId()) {
             return item;
         }
-        // 읽은 뒤 글이 숨겨졌으면 0행이 바뀐다. 이때는 이미 읽은 글을 그대로 돌려준다.
-        if (communityPostMapper.incrementViewCount(postId) == 0) {
-            return item;
-        }
-        return item.withOneMoreView();
+        // 읽은 뒤 글이 숨겨져도 여기서는 센다. DB에 더할 때 ACTIVE가 아닌 글은 0행이 바뀌어 버려진다.
+        return item.withMoreViews(viewCountBuffer.add(postId, 1));
     }
 
     private CommunityPostListCondition toCondition(CommunityPostListQuery query) {

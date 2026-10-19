@@ -32,6 +32,6 @@ public interface CommunityPostMapper {
      */
     Optional<CommunityPostRow> selectActiveById(@Param("postId") long postId, @Param("viewerId") Long viewerId);
 
-    /** 호출하면 ACTIVE인 글의 조회수를 1 올리고 바뀐 행 수를 돌려준다. 글이 없거나 ACTIVE가 아니면 0이다. */
-    int incrementViewCount(@Param("postId") long postId);
+    /** 호출하면 ACTIVE인 글의 조회수를 views만큼 올리고 바뀐 행 수를 돌려준다. 글이 없거나 ACTIVE가 아니면 0이다. */
+    int addViewCount(@Param("postId") long postId, @Param("views") long views);
 }

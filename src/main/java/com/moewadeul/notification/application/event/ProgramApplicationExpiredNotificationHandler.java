@@ -11,14 +11,12 @@ import tools.jackson.databind.json.JsonMapper;
 class ProgramApplicationExpiredNotificationHandler
         extends NotificationEventHandler<NotificationPayloads.ProgramApplicationExpired> {
 
-    ProgramApplicationExpiredNotificationHandler(
-            JsonMapper jsonMapper, NotificationWriter notificationWriter, NotificationMailer notificationMailer) {
+    ProgramApplicationExpiredNotificationHandler(JsonMapper jsonMapper, NotificationWriter notificationWriter) {
         super(
                 NotificationEventTypes.PROGRAM_APPLICATION_EXPIRED,
                 NotificationPayloads.ProgramApplicationExpired.class,
                 jsonMapper,
-                notificationWriter,
-                notificationMailer);
+                notificationWriter);
     }
 
     @Override
