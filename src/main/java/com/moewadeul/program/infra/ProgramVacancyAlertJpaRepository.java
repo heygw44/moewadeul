@@ -38,7 +38,7 @@ public interface ProgramVacancyAlertJpaRepository
                     and a.status in (
                         com.moewadeul.program.domain.ProgramApplicationStatus.PENDING_PAYMENT,
                         com.moewadeul.program.domain.ProgramApplicationStatus.CONFIRMED))
-            order by v.memberId
+            order by v.id
             """)
     List<Long> findAlertTargets(@Param("programId") long programId);
 

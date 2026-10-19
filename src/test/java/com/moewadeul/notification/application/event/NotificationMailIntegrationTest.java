@@ -10,10 +10,16 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.outbox.application.OutboxProperties;
 import com.moewadeul.outbox.application.OutboxPublisher;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +34,7 @@ class NotificationMailIntegrationTest {
     private static final String APPROVED = "BASECAMP_APPROVED";
     private static final String REJECTED = "BASECAMP_REJECTED";
     private static final String CONFIRMED = "BASECAMP_CONFIRMED";
+    private static final String SEAT_RELEASED = "PROGRAM_SEAT_RELEASED";
 
     @Autowired
     private OutboxPublisher publisher;
@@ -36,7 +43,10 @@ class NotificationMailIntegrationTest {
     private OutboxEventRecorder recorder;
 
     @Autowired
-    private OutboxProperties properties;
+    private NotificationMailer mailer;
+
+    @Autowired
+    private NotificationMailProperties properties;
 
     @Autowired
     private TestMailSender mailSender;
@@ -66,7 +76,7 @@ class NotificationMailIntegrationTest {
         recordApproved(applicant.getId(), 3L);
 
         // when
-        publisher.publishPending();
+        publishAndSend();
 
         // then
         assertThat(mailSender.sent()).hasSize(1);
@@ -87,7 +97,7 @@ class NotificationMailIntegrationTest {
         recordRejected(applicant.getId(), 4L);
 
         // when
-        publisher.publishPending();
+        publishAndSend();
 
         // then
         assertThat(countNotifications()).isEqualTo(2);
@@ -109,7 +119,7 @@ class NotificationMailIntegrationTest {
         recordConfirmed(3L, List.of(first.getId(), second.getId(), third.getId()));
 
         // when
-        publisher.publishPending();
+        publishAndSend();
 
         // then
         assertThat(countNotifications()).isEqualTo(3);
@@ -126,7 +136,7 @@ class NotificationMailIntegrationTest {
         recordApproved(unverified.getId(), 3L);
 
         // when
-        publisher.publishPending();
+        publishAndSend();
 
         // then
         assertThat(countNotifications()).isEqualTo(1);
@@ -142,7 +152,7 @@ class NotificationMailIntegrationTest {
         recordSanctionConfirmed(suspended.getId());
 
         // when
-        publisher.publishPending();
+        publishAndSend();
 
         // then
         assertThat(mailSender.sent()).hasSize(1);
@@ -158,7 +168,7 @@ class NotificationMailIntegrationTest {
         recordSanctionConfirmed(suspended.getId());
 
         // when
-        publisher.publishPending();
+        publishAndSend();
 
         // then
         assertThat(countNotifications()).isEqualTo(1);
@@ -166,8 +176,36 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20][NFR-04] 메일 발송이 한 번 실패하면 이벤트를 다시 처리하고, 받는 회원마다 메일은 한 통이며 알림은 중복되지 않는다")
-    void failedSendIsRetriedWithoutDuplicates() {
+    @DisplayName("[F-20] 이벤트를 발행할 때는 알림만 저장하고 메일은 보내지 않으며, 메일은 발송 작업이 보낸다")
+    void publishingStoresNotificationsWithoutSendingMail() {
+        // given
+        Member first = saveActiveMember();
+        Member second = saveActiveMember();
+        recordConfirmed(3L, List.of(first.getId(), second.getId()));
+
+        // when
+        publisher.publishPending();
+
+        // then
+        assertThat(eventStatus()).isEqualTo("PUBLISHED");
+        assertThat(mailSender.sent()).isEmpty();
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(2);
+
+        // when
+        int sent = mailer.sendDue();
+
+        // then
+        assertThat(sent).isEqualTo(2);
+        assertThat(mailSender.sent())
+                .extracting(MailMessage::to)
+                .containsExactlyInAnyOrder(first.getEmail(), second.getEmail());
+        assertThat(countByEmailStatus("SENT")).isEqualTo(2);
+        assertThat(countSentNotifications()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[F-20][NFR-04] 메일 한 통이 실패하면 그 알림만 재시도 간격 뒤에 다시 보내고, 받는 회원마다 메일은 한 통이다")
+    void failedSendIsRetriedOnlyForThatNotification() {
         // given
         Member first = saveActiveMember();
         Member second = saveActiveMember();
@@ -175,47 +213,173 @@ class NotificationMailIntegrationTest {
         mailSender.failNextSends(1);
 
         // when
-        publisher.publishPending();
-
-        // then
-        assertThat(eventStatus()).isEqualTo("PENDING");
-        assertThat(countNotifications()).isEqualTo(2);
-        assertThat(mailSender.sent()).hasSize(1);
-        assertThat(countSentNotifications()).isEqualTo(1);
-        assertThat(jdbcTemplate.queryForObject("SELECT last_error FROM outbox_event", String.class))
-                .contains("MailDeliveryException")
-                .doesNotContain("@");
-
-        // when
-        clock.advance(properties.retryDelay());
-        publisher.publishPending();
+        publishAndSend();
 
         // then
         assertThat(eventStatus()).isEqualTo("PUBLISHED");
+        assertThat(mailSender.sent()).hasSize(1);
+        assertThat(countByEmailStatus("SENT")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT email_attempt_count FROM notification WHERE email_status = 'PENDING'", Integer.class))
+                .isEqualTo(1);
+
+        // when: 재시도 간격 전에는 다시 집지 않는다
+        int beforeRetryDelay = mailer.sendDue();
+
+        // then
+        assertThat(beforeRetryDelay).isZero();
+
+        // when
+        clock.advance(properties.retryDelay());
+        mailer.sendDue();
+
+        // then
         assertThat(countNotifications()).isEqualTo(2);
         assertThat(mailSender.sent())
                 .extracting(MailMessage::to)
                 .containsExactlyInAnyOrder(first.getEmail(), second.getEmail());
-        assertThat(countSentNotifications()).isEqualTo(2);
+        assertThat(countByEmailStatus("SENT")).isEqualTo(2);
     }
 
     @Test
-    @DisplayName("[F-20] 재시도 사이에 회원이 이메일을 끄면 남은 메일은 보내지 않는다")
+    @DisplayName("[F-20] 재시도 한도만큼 실패한 메일은 FAILED로 두고 더 보내지 않는다")
+    void mailFailingUpToMaxAttemptsBecomesFailed() {
+        // given
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending();
+        mailSender.failNextSends(properties.maxAttempts());
+
+        // when
+        for (int attempt = 0; attempt < properties.maxAttempts(); attempt++) {
+            mailer.sendDue();
+            clock.advance(properties.retryDelay());
+        }
+        int afterFailed = mailer.sendDue();
+
+        // then
+        assertThat(afterFailed).isZero();
+        assertThat(mailSender.sent()).isEmpty();
+        assertThat(countByEmailStatus("FAILED")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT email_attempt_count FROM notification", Integer.class))
+                .isEqualTo(properties.maxAttempts());
+    }
+
+    @Test
+    @DisplayName("[F-20] 재시도 사이에 회원이 이메일을 끄면 남은 메일은 보내지 않고 SKIPPED로 둔다")
     void settingChangedBetweenRetriesIsRespected() {
         // given
         Member applicant = saveActiveMember();
         recordApproved(applicant.getId(), 3L);
         mailSender.failNextSends(1);
-        publisher.publishPending();
+        publishAndSend();
 
         // when
         disableEmail(applicant.getId(), APPROVED);
         clock.advance(properties.retryDelay());
-        publisher.publishPending();
+        mailer.sendDue();
 
         // then
-        assertThat(eventStatus()).isEqualTo("PUBLISHED");
         assertThat(mailSender.sent()).isEmpty();
+        assertThat(countByEmailStatus("SKIPPED")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-20] 발송 작업이 집은 메일은 임대가 끝나기 전에는 다른 발송 작업이 다시 집지 않는다")
+    void claimedMailIsNotClaimedAgainBeforeLeaseEnds() {
+        // given
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending();
+        long notificationId = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
+        jdbcTemplate.update(
+                "UPDATE notification SET email_next_attempt_at = ? WHERE id = ?",
+                java.sql.Timestamp.from(clock.instant().plus(properties.lease())),
+                notificationId);
+
+        // when
+        int beforeLeaseEnds = mailer.sendDue();
+        clock.advance(properties.lease());
+        int afterLeaseEnds = mailer.sendDue();
+
+        // then
+        assertThat(beforeLeaseEnds).isZero();
+        assertThat(afterLeaseEnds).isEqualTo(1);
+        assertThat(mailSender.sent()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 빈자리 알림은 모두 알림함에 저장하고, 메일은 알림을 먼저 신청한 순서로 받을 수 있는 회원 50명까지만 보낸다")
+    void seatReleasedMailIsLimitedToFirstFiftyDeliverableMembers() {
+        // given
+        List<Member> members = new ArrayList<>();
+        for (int i = 0; i < 55; i++) {
+            members.add(saveActiveMember());
+        }
+        Member disabled = members.get(1);
+        disableEmail(disabled.getId(), SEAT_RELEASED);
+        Member unverified = memberRepository.saveAndFlush(aMember().build());
+        List<Long> memberIds = new ArrayList<>();
+        memberIds.add(unverified.getId());
+        members.forEach(member -> memberIds.add(member.getId()));
+        record(SEAT_RELEASED, 7L, Map.of("programId", 7L, "memberIds", memberIds));
+
+        // when
+        publisher.publishPending();
+        for (int i = 0; i < 5; i++) {
+            mailer.sendDue();
+        }
+
+        // then
+        assertThat(countNotifications()).isEqualTo(56);
+        List<String> expected = members.stream()
+                .filter(member -> !member.getId().equals(disabled.getId()))
+                .limit(50)
+                .map(Member::getEmail)
+                .toList();
+        assertThat(mailSender.sent()).extracting(MailMessage::to).containsExactlyInAnyOrderElementsOf(expected);
+        assertThat(countByEmailStatus("SENT")).isEqualTo(50);
+        assertThat(countByEmailStatus("SKIPPED")).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("[F-20][NFR-04] 발송 작업 두 개가 동시에 보내도 알림마다 메일은 한 통이다")
+    void twoSendersSendEachMailOnce() throws Exception {
+        // given
+        List<Long> memberIds = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            memberIds.add(saveActiveMember().getId());
+        }
+        recordConfirmed(3L, memberIds);
+        publisher.publishPending();
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        Callable<Integer> drain = () -> {
+            start.await();
+            int total = 0;
+            int sent;
+            do {
+                sent = mailer.sendDue();
+                total += sent;
+            } while (sent > 0);
+            return total;
+        };
+
+        // when
+        try {
+            Future<Integer> first = executor.submit(drain);
+            Future<Integer> second = executor.submit(drain);
+            start.countDown();
+            int total = first.get(30, TimeUnit.SECONDS) + second.get(30, TimeUnit.SECONDS);
+
+            // then
+            assertThat(total).isEqualTo(30);
+        } finally {
+            executor.shutdownNow();
+        }
+        assertThat(mailSender.sent()).hasSize(30);
+        assertThat(mailSender.sent()).extracting(MailMessage::to).doesNotHaveDuplicates();
+        assertThat(countByEmailStatus("SENT")).isEqualTo(30);
     }
 
     private Member saveActiveMember() {
@@ -256,6 +420,16 @@ class NotificationMailIntegrationTest {
     private void record(String eventType, long aggregateId, Map<String, Object> payload) {
         transactionTemplate.executeWithoutResult(
                 status -> recorder.record(eventType, AGGREGATE_TYPE, aggregateId, payload));
+    }
+
+    private void publishAndSend() {
+        publisher.publishPending();
+        mailer.sendDue();
+    }
+
+    private int countByEmailStatus(String status) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM notification WHERE email_status = ?", Integer.class, status);
     }
 
     private int countNotifications() {

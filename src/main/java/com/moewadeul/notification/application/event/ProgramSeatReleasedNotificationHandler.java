@@ -11,14 +11,12 @@ import tools.jackson.databind.json.JsonMapper;
 class ProgramSeatReleasedNotificationHandler
         extends NotificationEventHandler<NotificationPayloads.ProgramSeatReleased> {
 
-    ProgramSeatReleasedNotificationHandler(
-            JsonMapper jsonMapper, NotificationWriter notificationWriter, NotificationMailer notificationMailer) {
+    ProgramSeatReleasedNotificationHandler(JsonMapper jsonMapper, NotificationWriter notificationWriter) {
         super(
                 NotificationEventTypes.PROGRAM_SEAT_RELEASED,
                 NotificationPayloads.ProgramSeatReleased.class,
                 jsonMapper,
-                notificationWriter,
-                notificationMailer);
+                notificationWriter);
     }
 
     @Override

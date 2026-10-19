@@ -49,7 +49,7 @@ class ProgramSeatReleaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20][PG-07] 본인 취소로 자리가 돌아오면 이벤트가 1건 생기고, 이미 신청이 있는 알림 신청자는 빠지며 알림 시각이 적힌다")
+    @DisplayName("[F-20][PG-07] 본인 취소로 자리가 돌아오면 이벤트가 1건 생기고, 이미 신청이 있는 알림 신청자는 빠지며 대상은 알림 신청 순서이고 알림 시각이 적힌다")
     void userCancelRecordsSeatReleased() {
         // given
         long programId = fixture.saveProgram(2, false);
@@ -67,7 +67,7 @@ class ProgramSeatReleaseIntegrationTest {
         programPaymentService.cancel(canceler, cancelApplicationId);
 
         // then
-        assertSeatReleased(programId, List.of(canceler, waiting));
+        assertSeatReleased(programId, List.of(waiting, canceler));
         assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isEqualTo(LocalDateTime.of(2026, 10, 5, 3, 0));
         assertThat(fixture.vacancyAlertNotifiedAt(programId, holder)).isNull();
     }
@@ -90,7 +90,7 @@ class ProgramSeatReleaseIntegrationTest {
         expiryService.run();
 
         // then
-        assertSeatReleased(programId, List.of(expiring, waiting));
+        assertSeatReleased(programId, List.of(waiting, expiring));
         assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isNotNull();
         assertThat(fixture.vacancyAlertNotifiedAt(programId, holder)).isNull();
     }
