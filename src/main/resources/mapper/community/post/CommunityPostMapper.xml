@@ -133,9 +133,9 @@
 
     <!-- 읽은 값에 1을 더해 다시 쓰지 않고, DB가 행 잠금 안에서 더하게 한다. 그래서 동시에 열어도 조회가 빠지지 않는다.
          ACTIVE가 아닌 글은 404로 응답하므로 세지 않는다. -->
-    <update id="incrementViewCount">
+    <update id="addViewCount">
         UPDATE community_post
-        SET view_count = view_count + 1
+        SET view_count = view_count + #{views}
         WHERE id = #{postId}
           AND status = 'ACTIVE'
     </update>

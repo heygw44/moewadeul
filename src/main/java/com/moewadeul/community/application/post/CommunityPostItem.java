@@ -56,8 +56,8 @@ public record CommunityPostItem(
                 row.likedByMe());
     }
 
-    /** 호출하면 조회수만 1 더한 복사본을 돌려준다. 방금 센 조회를 응답에 반영할 때 쓴다. */
-    CommunityPostItem withOneMoreView() {
+    /** 호출하면 조회수만 views 더한 복사본을 돌려준다. 아직 DB에 더하지 않은 조회를 응답에 반영할 때 쓴다. */
+    CommunityPostItem withMoreViews(long views) {
         return new CommunityPostItem(
                 postId,
                 title,
@@ -71,7 +71,7 @@ public record CommunityPostItem(
                 images,
                 likeCount,
                 commentCount,
-                viewCount + 1,
+                viewCount + views,
                 createdAt,
                 updatedAt,
                 likedByMe);

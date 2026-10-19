@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -34,6 +35,9 @@ class CommunityPostViewCountConcurrencyIntegrationTest {
 
     @Autowired
     private MemberJpaRepository memberRepository;
+
+    @Autowired
+    private CommunityViewCountFlusher viewCountFlusher;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -61,7 +65,26 @@ class CommunityPostViewCountConcurrencyIntegrationTest {
 
         // then
         assertThat(failures).isEmpty();
+        viewCountFlusher.flush();
         assertThat(viewCount(postId)).isEqualTo(viewerIds.size() * OPENS_PER_VIEWER);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-11] DB에 더하기 전에는 상세 응답에 아직 더하지 않은 조회가 보이고, 더하는 사이 숨겨진 글에는 더하지 않는다")
+    void pendingViewsAppearInDetailAndHiddenPostIsNotUpdated() {
+        // given
+        long authorId = saveMember();
+        long postId = postCommandService.write(authorId, new CommunityPostWriteCommand("제목", "본문", null));
+        queryService.detail(postId, null);
+
+        // when
+        long secondView = queryService.detail(postId, null).viewCount();
+        jdbc.update("UPDATE community_post SET status = 'HIDDEN' WHERE id = ?", postId);
+        viewCountFlusher.flush();
+
+        // then
+        assertThat(secondView).isEqualTo(2);
+        assertThat(viewCount(postId)).isZero();
     }
 
     private long saveMember() {
