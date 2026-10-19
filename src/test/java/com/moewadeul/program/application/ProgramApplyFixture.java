@@ -3,11 +3,13 @@ package com.moewadeul.program.application;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -159,6 +161,34 @@ public final class ProgramApplyFixture {
                 utc(NOW));
     }
 
+    /**
+     * 이메일 인증을 마친 활동 회원을 count명 한꺼번에 저장하고 ID를 저장 순서대로 돌려준다.
+     * 메일을 받을 수 있는 회원이 수천 명 필요한 테스트가 회원을 한 명씩 저장하지 않으려고 쓴다.
+     */
+    public List<Long> saveEmailVerifiedMembers(int count) {
+        long firstSeq = TestSequence.next();
+        List<Object[]> rows = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            String suffix = firstSeq + "-" + i;
+            rows.add(new Object[] {"bulk-" + suffix + "@example.com", "b-" + suffix, utc(NOW), utc(NOW), utc(NOW)});
+        }
+        jdbc.batchUpdate(
+                "INSERT INTO member (email, nickname, status, role, email_verified_at, created_at, updated_at)"
+                        + " VALUES (?, ?, 'ACTIVE', 'USER', ?, ?, ?)",
+                rows);
+        return jdbc.queryForList(
+                "SELECT id FROM member WHERE email LIKE ? ORDER BY id", Long.class, "bulk-" + firstSeq + "-%");
+    }
+
+    /** 빈자리 알림 신청 행을 회원 목록 순서대로 한꺼번에 저장한다. */
+    public void saveVacancyAlerts(long programId, List<Long> memberIds) {
+        jdbc.batchUpdate(
+                "INSERT INTO program_vacancy_alert (program_id, member_id, created_at) VALUES (?, ?, ?)",
+                memberIds.stream()
+                        .map(memberId -> new Object[] {programId, memberId, utc(NOW)})
+                        .toList());
+    }
+
     public int vacancyAlertCount(long programId, long memberId) {
         return jdbc.queryForObject(
                 "SELECT COUNT(*) FROM program_vacancy_alert WHERE program_id = ? AND member_id = ?",
@@ -176,11 +206,11 @@ public final class ProgramApplyFixture {
                 memberId);
     }
 
-    /** 행사의 빈자리 이벤트 payload 목록이다. 이벤트가 없으면 빈 목록이다. */
+    /** 행사의 빈자리 이벤트 payload 목록을 기록한 순서로 돌려준다. 이벤트가 없으면 빈 목록이다. */
     public List<String> seatReleasedPayloads(long programId) {
         return jdbc.queryForList(
                 "SELECT payload FROM outbox_event WHERE event_type = 'PROGRAM_SEAT_RELEASED'"
-                        + " AND aggregate_type = 'PROGRAM' AND aggregate_id = ?",
+                        + " AND aggregate_type = 'PROGRAM' AND aggregate_id = ? ORDER BY id",
                 String.class,
                 programId);
     }

@@ -96,6 +96,56 @@ class ProgramSeatReleaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-20][PG-07] 마지막 알림 뒤 30분이 되기 전에 자리가 또 돌아오면 이미 알린 회원은 빠지고 그 뒤에 알림을 신청한 회원만 대상이다")
+    void releaseWithinRenotifyIntervalSkipsRecentlyNotified() {
+        // given
+        long programId = fixture.saveProgram(3, false);
+        long firstCanceler = fixture.saveMember();
+        long secondCanceler = fixture.saveMember();
+        long notified = fixture.saveMember();
+        long lateSubscriber = fixture.saveMember();
+        long firstApplicationId = fixture.saveApplication(programId, firstCanceler, "PENDING_PAYMENT");
+        long secondApplicationId = fixture.saveApplication(programId, secondCanceler, "PENDING_PAYMENT");
+        fixture.saveVacancyAlert(programId, notified);
+        programPaymentService.cancel(firstCanceler, firstApplicationId);
+        fixture.saveVacancyAlert(programId, lateSubscriber);
+        clock.advance(Duration.ofMinutes(30).minusSeconds(1));
+
+        // when
+        programPaymentService.cancel(secondCanceler, secondApplicationId);
+
+        // then
+        List<String> payloads = fixture.seatReleasedPayloads(programId);
+        assertThat(payloads).hasSize(2);
+        assertThat(memberIds(payloads.get(1))).containsExactly(lateSubscriber);
+        assertThat(fixture.vacancyAlertNotifiedAt(programId, notified)).isEqualTo(LocalDateTime.of(2026, 10, 5, 3, 0));
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 마지막 알림 뒤 30분이 지나 자리가 또 돌아오면 같은 회원에게 다시 알린다")
+    void releaseAfterRenotifyIntervalNotifiesAgain() {
+        // given
+        long programId = fixture.saveProgram(3, false);
+        long firstCanceler = fixture.saveMember();
+        long secondCanceler = fixture.saveMember();
+        long waiting = fixture.saveMember();
+        long firstApplicationId = fixture.saveApplication(programId, firstCanceler, "PENDING_PAYMENT");
+        long secondApplicationId = fixture.saveApplication(programId, secondCanceler, "PENDING_PAYMENT");
+        fixture.saveVacancyAlert(programId, waiting);
+        programPaymentService.cancel(firstCanceler, firstApplicationId);
+        clock.advance(Duration.ofMinutes(30));
+
+        // when
+        programPaymentService.cancel(secondCanceler, secondApplicationId);
+
+        // then
+        List<String> payloads = fixture.seatReleasedPayloads(programId);
+        assertThat(payloads).hasSize(2);
+        assertThat(memberIds(payloads.get(1))).containsExactly(waiting);
+        assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isEqualTo(LocalDateTime.of(2026, 10, 5, 3, 30));
+    }
+
+    @Test
     @DisplayName("[F-20][PG-07] 관리자가 행사를 취소하면 자리가 생긴 것이 아니므로 이벤트가 없다")
     void adminProgramCancelRecordsNothing() {
         long programId = fixture.saveProgram(2, false);
@@ -171,7 +221,11 @@ class ProgramSeatReleaseIntegrationTest {
         assertThat(payloads).hasSize(1);
         assertThat(JsonPath.<Number>read(payloads.get(0), "$.programId").longValue())
                 .isEqualTo(programId);
-        List<Number> memberIds = JsonPath.read(payloads.get(0), "$.memberIds");
-        assertThat(memberIds.stream().map(Number::longValue).toList()).containsExactlyElementsOf(expectedMemberIds);
+        assertThat(memberIds(payloads.get(0))).containsExactlyElementsOf(expectedMemberIds);
+    }
+
+    private static List<Long> memberIds(String payload) {
+        List<Number> memberIds = JsonPath.read(payload, "$.memberIds");
+        return memberIds.stream().map(Number::longValue).toList();
     }
 }
