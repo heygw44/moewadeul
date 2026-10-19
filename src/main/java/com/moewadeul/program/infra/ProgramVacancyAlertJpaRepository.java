@@ -38,9 +38,28 @@ public interface ProgramVacancyAlertJpaRepository
                     and a.status in (
                         com.moewadeul.program.domain.ProgramApplicationStatus.PENDING_PAYMENT,
                         com.moewadeul.program.domain.ProgramApplicationStatus.CONFIRMED))
+              and (v.notifiedAt is null or v.notifiedAt <= :notifiedBefore)
             order by v.id
             """)
-    List<Long> findAlertTargets(@Param("programId") long programId);
+    List<Long> findAlertTargets(@Param("programId") long programId, @Param("notifiedBefore") Instant notifiedBefore);
+
+    // 조건은 findAlertTargets와 같고, 알림 신청 행을 쓰기 잠금으로 읽는 것만 다르다.
+    // 잠금 읽기는 다른 트랜잭션이 잠근 행의 커밋을 기다린 뒤 최신 알림 시각으로 조건을 본다.
+    // 바깥 SELECT의 FOR UPDATE는 하위 쿼리의 신청 행을 잠그지 않는다.
+    @Override
+    @Query(nativeQuery = true, value = """
+            SELECT v.member_id FROM program_vacancy_alert v
+            WHERE v.program_id = :programId
+              AND NOT EXISTS (
+                  SELECT 1 FROM program_application a
+                  WHERE a.program_id = v.program_id
+                    AND a.member_id = v.member_id
+                    AND a.status IN ('PENDING_PAYMENT', 'CONFIRMED'))
+              AND (v.notified_at IS NULL OR v.notified_at <= :notifiedBefore)
+            ORDER BY v.id
+            FOR UPDATE
+            """)
+    List<Long> lockAlertTargets(@Param("programId") long programId, @Param("notifiedBefore") Instant notifiedBefore);
 
     @Override
     @Modifying
