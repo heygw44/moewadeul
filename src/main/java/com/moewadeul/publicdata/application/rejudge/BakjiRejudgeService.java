@@ -3,8 +3,11 @@ package com.moewadeul.publicdata.application.rejudge;
 import com.moewadeul.publicdata.application.SyncJobRunService;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
 import com.moewadeul.publicdata.domain.SyncJobType;
+import com.moewadeul.spot.application.park.BakjiRejudgeChunk;
 import com.moewadeul.spot.application.park.BakjiRejudgeCounts;
 import com.moewadeul.spot.application.park.ParkAreaJudgeService;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,10 +16,14 @@ import org.springframework.stereotype.Service;
 /**
  * 공원 경계가 바뀐 뒤 모든 박지의 공원 경고를 새 경계로 다시 판정한다.
  *
- * <p>판정은 장소 모듈이 박지 전체를 UPDATE 한 번으로 바꾸고 트랜잭션 하나로 커밋한다. 그래서 도중에 실패하면 DB가 모두 되돌리고, 다음 실행이 이어서
- * 처리할 위치도 없다. 따라서 서비스는 실행 기록에 진행 위치를 쓰지 않고, 직전 실행이 실패했어도 처음부터 다시 판정한다.
+ * <p>서비스는 박지를 ID 순서로 설정한 수만큼씩 나눠, 장소 모듈이 묶음 하나를 한 트랜잭션에서 판정하고 커밋하게 한다. 그래서 박지가 많아도 묶음 하나만큼만
+ * 메모리에 들고, 묶음 하나만큼의 박지 행만 커밋까지 잠근다. 묶음을 커밋할 때마다 실행 기록에 처리 수와 마지막 박지 ID를 남기므로, 관리자는 진행 상황을
+ * 보고 다음 실행은 이 기록이 갱신되는지로 작업이 살아 있는지 판단한다.
  *
- * <p>이 서비스는 트랜잭션을 열지 않는다. 실행 기록과 재판정은 각 서비스의 트랜잭션에서 따로 커밋한다. 그래서 재판정이 실패해도 실패한 실행 기록은 남는다.
+ * <p>도중에 실패하면 앞 묶음의 판정은 커밋된 채 남는다. 그래도 다음 실행은 남은 진행 위치에서 잇지 않고 처음부터 다시 판정한다. 실패한 뒤 경계를 다시
+ * 적재했으면 진행 위치 앞의 박지도 새 경계로 다시 판정해야 하기 때문이다.
+ *
+ * <p>이 서비스는 트랜잭션을 열지 않는다. 실행 기록과 묶음 판정은 각 서비스의 트랜잭션에서 따로 커밋한다. 그래서 재판정이 실패해도 실패한 실행 기록은 남는다.
  */
 @Slf4j
 @Service
@@ -26,6 +33,7 @@ public class BakjiRejudgeService {
     private final SyncJobRunService syncJobRunService;
     private final ParkAreaJudgeService parkAreaJudgeService;
     private final BakjiRejudgeProperties properties;
+    private final Clock clock;
 
     /**
      * 호출하면 실행 기록을 시작하고, 박지를 한 번 재판정한 결과를 돌려준다. 다른 재판정이 진행 중이라 시작하지 않았으면 빈 값을 돌려준다. 실패하면 실행
@@ -46,9 +54,8 @@ public class BakjiRejudgeService {
         long runId = start.runId();
         try {
             log.info("bakji rejudge started runId={}", runId);
-            BakjiRejudgeCounts counts = parkAreaJudgeService.rejudgeBakjis();
+            BakjiRejudgeCounts counts = rejudgeAll(runId);
             BakjiRejudgeResult result = new BakjiRejudgeResult(counts.judged(), counts.newlyWarned(), counts.cleared());
-            syncJobRunService.recordProgress(runId, null, result.judgedCount(), 0);
             syncJobRunService.complete(runId);
             log.info(
                     "bakji rejudge completed runId={} judged={} newlyWarned={} cleared={}",
@@ -60,6 +67,23 @@ public class BakjiRejudgeService {
         } catch (RuntimeException e) {
             recordFailure(runId, e);
             throw e;
+        }
+    }
+
+    // 한 실행의 모든 박지가 같은 판정 시각을 갖도록, 시작할 때 한 번 정한 시각을 묶음마다 넘긴다.
+    private BakjiRejudgeCounts rejudgeAll(long runId) {
+        Instant now = clock.instant();
+        BakjiRejudgeCounts total = new BakjiRejudgeCounts(0, 0, 0);
+        long afterId = 0;
+        while (true) {
+            BakjiRejudgeChunk chunk = parkAreaJudgeService.rejudgeBakjiChunk(afterId, properties.chunkSize(), now);
+            if (chunk.lastId() == null) {
+                return total;
+            }
+            total = total.plus(chunk.counts());
+            afterId = chunk.lastId();
+            syncJobRunService.recordProgress(
+                    runId, String.valueOf(afterId), chunk.counts().judged(), 0);
         }
     }
 

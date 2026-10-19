@@ -14,6 +14,8 @@ import com.moewadeul.spot.domain.bakji.BakjiDetailRepository;
 import com.moewadeul.spot.infra.park.ParkAreaJudgeMapper;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -71,6 +73,9 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private Clock clock;
+
     private final CountDownLatch paused = new CountDownLatch(1);
     private final CountDownLatch resume = new CountDownLatch(1);
     private final AtomicBoolean pauseArmed = new AtomicBoolean();
@@ -101,8 +106,7 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
         Future<?> update = executor.submit(() -> bakjiEditService.update(reporterId, spotId, rename("새 이름")));
         awaitPaused();
         long areaId = insertProtectedArea();
-        assertThat(runInMiddle(() -> parkAreaJudgeService.rejudgeBakjis(), update))
-                .isNull();
+        assertThat(runInMiddle(this::rejudgeAll, update)).isNull();
 
         assertThat(warningOf(spotId)).isTrue();
         assertThat(protectedAreaIdOf(spotId)).isEqualTo(areaId);
@@ -116,7 +120,7 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
         long spotId = report(OUTSIDE_LNG);
         pauseRejudgeAfterReadingPoints();
 
-        Future<?> rejudge = executor.submit(() -> parkAreaJudgeService.rejudgeBakjis());
+        Future<?> rejudge = executor.submit(this::rejudgeAll);
         awaitPaused();
         assertThat(runInMiddle(() -> bakjiEditService.update(reporterId, spotId, moveTo(INSIDE_LNG)), rejudge))
                 .isNull();
@@ -143,6 +147,20 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.NOT_FOUND));
+    }
+
+    // 재판정 작업처럼 박지를 묶음마다 끝까지 판정한다.
+    private Void rejudgeAll() {
+        Instant now = clock.instant();
+        long afterId = 0;
+        while (true) {
+            Long lastId =
+                    parkAreaJudgeService.rejudgeBakjiChunk(afterId, 1_000, now).lastId();
+            if (lastId == null) {
+                return null;
+            }
+            afterId = lastId;
+        }
     }
 
     private long report(double lng) {

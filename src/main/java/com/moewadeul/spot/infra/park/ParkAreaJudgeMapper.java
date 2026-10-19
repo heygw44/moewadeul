@@ -17,8 +17,11 @@ public interface ParkAreaJudgeMapper {
     /** 호출하면 id인 공원 경계의 이름, 출처, 기준일을 돌려준다. 그런 경계가 없으면 null을 돌려준다. */
     ProtectedAreaEvidenceRow selectAreaEvidence(@Param("id") long id);
 
-    /** 호출하면 상태와 상관없이 모든 박지의 ID, 좌표, 판정 전 공원 경고 여부, 낙관적 잠금 번호를 ID 순서로 돌려준다. 잠그지 않는다. */
-    List<BakjiPointRow> selectBakjiPoints();
+    /**
+     * 호출하면 상태와 상관없이 ID가 afterId보다 큰 박지를 ID 순서로 최대 limit건 읽어 ID, 좌표, 판정 전 공원 경고 여부, 낙관적 잠금 번호를 돌려준다.
+     * 잠그지 않는다. 남은 박지가 없으면 빈 목록을 돌려준다.
+     */
+    List<BakjiPointRow> selectBakjiPoints(@Param("afterId") long afterId, @Param("limit") int limit);
 
     /**
      * 호출하면 ids인 박지 행을 ID 순서로 쓰기 잠금하며 읽어 지금의 좌표, 공원 경고 여부, 낙관적 잠금 번호를 돌려준다. 잠금 읽기라서 트랜잭션의 스냅숏이 아니라
