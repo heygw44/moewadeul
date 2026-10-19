@@ -7,4 +7,10 @@ package com.moewadeul.spot.application.park;
  * @param newlyWarned 경고가 없다가 새로 경고를 받은 박지 수
  * @param cleared 경고를 받았다가 경고가 풀린 박지 수
  */
-public record BakjiRejudgeCounts(int judged, int newlyWarned, int cleared) {}
+public record BakjiRejudgeCounts(int judged, int newlyWarned, int cleared) {
+
+    /** 호출하면 이 집계와 other를 더한 집계를 돌려준다. */
+    public BakjiRejudgeCounts plus(BakjiRejudgeCounts other) {
+        return new BakjiRejudgeCounts(judged + other.judged, newlyWarned + other.newlyWarned, cleared + other.cleared);
+    }
+}

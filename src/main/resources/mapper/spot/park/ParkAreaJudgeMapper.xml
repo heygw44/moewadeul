@@ -23,8 +23,9 @@
 
     <!-- 경계를 다시 적재하면 서버가 모든 박지를 다시 판정한다. 숨김, 삭제, 검토 대기 박지도 다시 보이게 될 수 있어서 상태로 거르지 않는다.
          박지마다 경계를 찾는 SELECT를 상관 서브쿼리로 붙인 UPDATE 한 문장으로 판정하면, EXPLAIN에서 서브쿼리가 공간 인덱스 대신 기본 키 인덱스를
-         훑는다. 실제 공원 경계 82곳에서 박지 200건에 20.7초가 걸렸다. 그래서 서비스가 이 SELECT로 박지 좌표와 판정 전 경고 여부를 한 번 읽고,
-         박지 한 건씩 공간 인덱스를 쓰는 selectContainingAreaId로 경계를 찾는다. -->
+         훑는다. 실제 공원 경계 82곳에서 박지 200건에 20.7초가 걸렸다. 그래서 서비스가 이 SELECT로 박지 좌표와 판정 전 경고 여부를 읽고,
+         박지 한 건씩 공간 인덱스를 쓰는 selectContainingAreaId로 경계를 찾는다.
+         박지 90만 건을 한 번에 읽으면 운영 힙(약 300MB)이 모자랐다. 그래서 서비스는 afterId보다 큰 ID부터 limit건씩 기본 키 순서로 나눠 읽는다. -->
     <select id="selectBakjiPoints" resultType="com.moewadeul.spot.infra.park.BakjiPointRow">
         SELECT s.id AS id,
                ST_Latitude(s.location) AS lat,
@@ -33,7 +34,9 @@
                s.version AS version
         FROM spot s
         WHERE s.type = 'BAKJI'
+          AND s.id &gt; #{afterId}
         ORDER BY s.id
+        LIMIT #{limit}
     </select>
 
     <!-- 재판정 도중 다른 쓰기가 바꾼 박지를 다시 판정할 때 쓴다. 기본 키 목록으로만 잠가서 다른 행이나 빈 범위를 잠그지 않고,
