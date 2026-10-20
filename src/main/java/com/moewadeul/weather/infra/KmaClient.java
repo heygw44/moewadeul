@@ -313,6 +313,9 @@ public class KmaClient {
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(properties.readTimeout());
+        // 압축 응답을 받으면, 응답 대기 시간이 지나 다른 스레드가 본문을 닫는 순간 압축 해제기가 IOException이 아닌 IllegalStateException을
+        // 던질 수 있다. 그 예외는 RestClient가 I/O 오류로 감싸지 않아서 이 클라이언트의 실패 처리를 건너뛴다. 그래서 압축을 받지 않는다.
+        requestFactory.enableCompression(false);
         return RestClient.builder()
                 .uriBuilderFactory(uriBuilderFactory)
                 .requestFactory(requestFactory)
