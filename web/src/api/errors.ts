@@ -16,6 +16,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   METHOD_NOT_ALLOWED: REQUEST_BROKEN,
   UNSUPPORTED_MEDIA_TYPE: REQUEST_BROKEN,
   INTERNAL_ERROR: '서버에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.',
+  IMAGE_STORAGE_UNAVAILABLE: '지금은 사진을 확인할 수 없어요. 잠시 뒤 다시 시도해 주세요.',
   IDEMPOTENCY_KEY_REQUIRED: REQUEST_BROKEN,
   IDEMPOTENCY_KEY_REUSED: REQUEST_BROKEN,
   IDEMPOTENCY_IN_PROGRESS: '앞서 보낸 요청을 아직 처리하고 있어요. 잠시 기다려 주세요.',

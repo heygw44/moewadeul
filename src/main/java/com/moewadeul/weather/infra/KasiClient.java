@@ -1,6 +1,8 @@
 package com.moewadeul.weather.infra;
 
 import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.external.ExternalApiProperties;
+import com.moewadeul.common.external.ExternalCallLimit;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.http.HttpClient;
@@ -58,11 +60,14 @@ public class KasiClient {
     private final RestClient restClient;
     private final String serviceKey;
     private final ExternalApiMetrics metrics;
+    private final ExternalCallLimit callLimit;
 
-    public KasiClient(KasiProperties properties, ExternalApiMetrics metrics) {
+    public KasiClient(
+            KasiProperties properties, ExternalApiProperties externalApiProperties, ExternalApiMetrics metrics) {
         this.restClient = createRestClient(properties);
         this.serviceKey = properties.serviceKey();
         this.metrics = metrics;
+        this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
     }
 
     /**
@@ -85,7 +90,14 @@ public class KasiClient {
         return fetch(variables, KasiClient::toItem);
     }
 
+    // 동시 호출 수 한도는 재시도까지 한 호출로 묶어 잡는다. 한도가 차 있으면 기다리지 않고 바로 실패로 끝낸다.
     private <T> T fetch(Map<String, Object> variables, Function<Element, T> parser) {
+        return callLimit.call(
+                () -> fetchWithRetry(variables, parser),
+                () -> new KasiApiException(describe("동시 호출 수가 한도에 닿아 호출하지 않았다")));
+    }
+
+    private <T> T fetchWithRetry(Map<String, Object> variables, Function<Element, T> parser) {
         try {
             return fetchOnce(variables, parser);
         } catch (KasiApiException e) {

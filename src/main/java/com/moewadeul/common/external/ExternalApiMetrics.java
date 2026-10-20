@@ -21,6 +21,7 @@ public class ExternalApiMetrics {
 
     private static final String TIMER_NAME = "moewadeul.external.api.requests";
     private static final String FALLBACK_COUNTER_NAME = "moewadeul.external.api.fallbacks";
+    private static final String REJECTED_COUNTER_NAME = "moewadeul.external.api.rejected";
     private static final String SUCCESS = "success";
     private static final String FAILURE = "failure";
 
@@ -54,6 +55,20 @@ public class ExternalApiMetrics {
     public void recordFallback(String api) {
         Counter.builder(FALLBACK_COUNTER_NAME)
                 .description("외부 API 실패로 해당 값 없이 응답한 수")
+                .tag("api", api)
+                .register(meterRegistry)
+                .increment();
+    }
+
+    /**
+     * 동시 호출 수가 한도에 닿아 외부 API를 부르지 않고 거부한 호출을 센다. 거부한 호출은 HTTP 요청을 보내지 않으므로 {@link #record}에는 남지
+     * 않는다. 운영자는 이 지표로 외부 API가 느려져 기능이 빠지고 있는지 본다.
+     *
+     * @param api 외부 API 이름. 예: {@code kma}
+     */
+    public void recordRejected(String api) {
+        Counter.builder(REJECTED_COUNTER_NAME)
+                .description("동시 호출 수 한도에 닿아 외부 API를 부르지 않고 거부한 수")
                 .tag("api", api)
                 .register(meterRegistry)
                 .increment();

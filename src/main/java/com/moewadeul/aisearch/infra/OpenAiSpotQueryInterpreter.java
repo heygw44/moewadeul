@@ -8,6 +8,8 @@ import com.moewadeul.aisearch.application.SpotQueryInterpretationException;
 import com.moewadeul.aisearch.application.SpotQueryInterpreter;
 import com.moewadeul.aisearch.application.TokenUsage;
 import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.external.ExternalApiProperties;
+import com.moewadeul.common.external.ExternalCallLimit;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
@@ -63,11 +65,17 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
     private final OpenAiProperties properties;
     private final JsonMapper jsonMapper;
     private final ExternalApiMetrics metrics;
+    private final ExternalCallLimit callLimit;
 
-    public OpenAiSpotQueryInterpreter(OpenAiProperties properties, JsonMapper jsonMapper, ExternalApiMetrics metrics) {
+    public OpenAiSpotQueryInterpreter(
+            OpenAiProperties properties,
+            ExternalApiProperties externalApiProperties,
+            JsonMapper jsonMapper,
+            ExternalApiMetrics metrics) {
         this.properties = properties;
         this.jsonMapper = jsonMapper;
         this.metrics = metrics;
+        this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
         this.restClient = createRestClient(properties);
     }
 
@@ -77,7 +85,10 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
             throw fail("OpenAI 키가 설정되지 않았다");
         }
         try {
-            return metrics.record(API, OPERATION, () -> interpretOnce(query));
+            // 동시 호출 수 한도에 닿으면 기다리지 않고 바로 실패로 끝낸다. 호출한 쪽은 이 실패를 503으로 바꾼다.
+            return callLimit.call(
+                    () -> metrics.record(API, OPERATION, () -> interpretOnce(query)),
+                    () -> fail("동시 호출 수가 한도에 닿아 호출하지 않았다"));
         } catch (SpotQueryInterpretationException e) {
             log.warn("AI 검색 문장 해석이 실패했다. reason={}", e.getMessage());
             throw e;

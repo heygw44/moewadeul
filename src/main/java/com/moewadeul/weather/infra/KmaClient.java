@@ -1,6 +1,8 @@
 package com.moewadeul.weather.infra;
 
 import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.external.ExternalApiProperties;
+import com.moewadeul.common.external.ExternalCallLimit;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
@@ -72,12 +74,18 @@ public class KmaClient {
     private final String serviceKey;
     private final JsonMapper jsonMapper;
     private final ExternalApiMetrics metrics;
+    private final ExternalCallLimit callLimit;
 
-    public KmaClient(KmaProperties properties, JsonMapper jsonMapper, ExternalApiMetrics metrics) {
+    public KmaClient(
+            KmaProperties properties,
+            ExternalApiProperties externalApiProperties,
+            JsonMapper jsonMapper,
+            ExternalApiMetrics metrics) {
         this.restClient = createRestClient(properties);
         this.serviceKey = properties.serviceKey();
         this.jsonMapper = jsonMapper;
         this.metrics = metrics;
+        this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
     }
 
     /**
@@ -137,7 +145,15 @@ public class KmaClient {
         return variables;
     }
 
+    // 동시 호출 수 한도는 재시도까지 한 호출로 묶어 잡는다. 한도가 차 있으면 기다리지 않고 바로 실패로 끝낸다.
     private <T> T fetch(String operation, String uri, Map<String, Object> variables, Function<JsonNode, T> parser) {
+        return callLimit.call(
+                () -> fetchWithRetry(operation, uri, variables, parser),
+                () -> new KmaApiException(describe(operation, "동시 호출 수가 한도에 닿아 호출하지 않았다")));
+    }
+
+    private <T> T fetchWithRetry(
+            String operation, String uri, Map<String, Object> variables, Function<JsonNode, T> parser) {
         try {
             return fetchOnce(operation, uri, variables, parser);
         } catch (KmaApiException e) {
