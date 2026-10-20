@@ -28,9 +28,15 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +51,10 @@ class KmaClientIntegrationTest {
     private static final String MID_LAND_FCST_PATH = "/1360000/MidFcstInfoService/getMidLandFcst";
     private static final String MID_TA_PATH = "/1360000/MidFcstInfoService/getMidTa";
     private static final String SERVICE_KEY = "test+key/value==";
+    private static final int CONCURRENT_REQUESTS = 100;
+    private static final int[] NEAR_TIMEOUT_DELAYS_MILLIS = {
+        940, 960, 980, 1000, 940, 960, 980, 1000, 940, 960, 980, 1000
+    };
     private static final String ENCODED_SERVICE_KEY = "test%2Bkey%2Fvalue%3D%3D";
     private static final String REQUEST_TIMER = "moewadeul.external.api.requests";
     private static final String RECOVERED = "recovered";
@@ -308,6 +318,46 @@ class KmaClientIntegrationTest {
         // WireMock이 지연 응답을 다 보낸 뒤에야 요청을 기록한다. 그래서 테스트는 기록이 두 건이 될 때까지 기다린다.
         await().atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(requestCount(MID_TA_PATH)).isEqualTo(2));
+    }
+
+    @Test
+    @DisplayName("[F-09][NFR-05] 압축된 응답을 읽는 도중 응답 대기 시간이 지나도, 모든 요청이 정상 응답이나 다시 보낼 수 있는 예외로 끝난다")
+    void everyRequestEndsWithRetryableFailureWhenReadTimeoutHitsDuringCompressedBody() throws Exception {
+        // given: 테스트 프로필의 응답 대기 시간은 1초다. WireMock은 gzip을 받겠다는 요청에만 본문을 압축해서 보낸다.
+        // 응답이 대기 시간 경계 근처에 끝나게 지연을 두면, 압축을 받는 클라이언트에서는 일부 요청의 본문이 압축을 푸는 도중에 닫힌다.
+        // 그 경쟁은 드물어서 동시 요청 100건을 지연을 바꿔 가며 여러 번 보낸다. 압축을 받던 때는 이 조건 1,200건 중 약 10건이 예외로 끝났다.
+        List<String> unexpected = new CopyOnWriteArrayList<>();
+        ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_REQUESTS);
+
+        // when
+        for (int delayMillis : NEAR_TIMEOUT_DELAYS_MILLIS) {
+            wireMock.resetAll();
+            stub(VILAGE_FCST_PATH, okJson(readFixture("vilage-fcst.json")).withFixedDelay(delayMillis));
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < CONCURRENT_REQUESTS; i++) {
+                futures.add(executor.submit(() -> callRecordingUnexpected(unexpected)));
+            }
+            for (Future<?> future : futures) {
+                future.get(30, TimeUnit.SECONDS);
+            }
+        }
+        executor.shutdown();
+        assertThat(executor.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+
+        // then
+        assertThat(unexpected).isEmpty();
+    }
+
+    private void callRecordingUnexpected(List<String> unexpected) {
+        try {
+            client.getVilageFcst(BASE, 60, 127);
+        } catch (KmaApiException e) {
+            if (!e.isRetryable()) {
+                unexpected.add("다시 보낼 수 없는 실패: " + e.getMessage());
+            }
+        } catch (RuntimeException e) {
+            unexpected.add(e.getClass().getName() + ": " + e.getMessage());
+        }
     }
 
     private void stub(String path, ResponseDefinitionBuilder response) {
