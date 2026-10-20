@@ -2,11 +2,13 @@ package com.moewadeul.weather.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import com.moewadeul.weather.application.WeatherForecast.ShortTermForecast;
 import com.moewadeul.weather.infra.KmaApiException;
 import com.moewadeul.weather.infra.KmaMidTermItem;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -181,15 +184,23 @@ class WeatherCachesTest {
         assertThat(calls).hasValue(1);
     }
 
-    // 첫 요청의 loader가 멈춘 것을 확인한 뒤 같은 키로 요청을 더 보내고, 그다음 첫 호출을 끝낸다.
+    // 첫 요청의 loader가 멈춘 것을 확인한 뒤 같은 키로 요청을 더 보내고, 그 요청들이 모두 첫 호출의 결과를 기다리기 시작한 뒤에 첫 호출을
+    // 끝낸다. 빈 값이나 실패는 끝나자마자 캐시에서 지워지므로, 기다리기 전에 첫 호출이 끝나면 늦게 온 요청이 loader를 다시 부르기 때문이다.
     private <T> List<Future<T>> runConcurrently(CountDownLatch loading, CountDownLatch release, Callable<T> task)
             throws InterruptedException {
         List<Future<T>> results = new ArrayList<>();
         results.add(executor.submit(task));
         assertThat(loading.await(5, TimeUnit.SECONDS)).isTrue();
+        List<Thread> waiters = new CopyOnWriteArrayList<>();
         for (int i = 0; i < WAITERS; i++) {
-            results.add(executor.submit(task));
+            results.add(executor.submit(() -> {
+                waiters.add(Thread.currentThread());
+                return task.call();
+            }));
         }
+        await().atMost(Duration.ofSeconds(5))
+                .until(() -> waiters.size() == WAITERS
+                        && waiters.stream().allMatch(thread -> thread.getState() == Thread.State.WAITING));
         release.countDown();
         return results;
     }
