@@ -17,6 +17,7 @@ import com.moewadeul.aisearch.application.SpotQueryInterpretation;
 import com.moewadeul.aisearch.application.SpotQueryInterpretationException;
 import com.moewadeul.aisearch.application.TokenUsage;
 import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -163,7 +164,8 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
                 Duration.ofSeconds(1),
                 Duration.ofMillis(300),
                 300);
-        OpenAiSpotQueryInterpreter slow = new OpenAiSpotQueryInterpreter(shortTimeout, jsonMapper, metrics);
+        OpenAiSpotQueryInterpreter slow =
+                new OpenAiSpotQueryInterpreter(shortTimeout, new ExternalApiProperties(10), jsonMapper, metrics);
         stub(okResponse(content(), 10, 5).withFixedDelay(1500));
 
         // when & then
@@ -359,7 +361,8 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
                 Duration.ofSeconds(1),
                 Duration.ofSeconds(1),
                 300);
-        OpenAiSpotQueryInterpreter keyless = new OpenAiSpotQueryInterpreter(noKey, jsonMapper, metrics);
+        OpenAiSpotQueryInterpreter keyless =
+                new OpenAiSpotQueryInterpreter(noKey, new ExternalApiProperties(10), jsonMapper, metrics);
 
         // when & then
         assertThatThrownBy(() -> keyless.interpret(SENTENCE)).isInstanceOf(SpotQueryInterpretationException.class);

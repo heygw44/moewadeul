@@ -33,10 +33,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 import tools.jackson.databind.json.JsonMapper;
 
 @IntegrationTest
 @ExtendWith(OutputCaptureExtension.class)
+// 이 클래스의 동시성 테스트는 회원 하루 횟수 제한을 본다. 외부 API 동시 호출 수 한도(기본 10)가 끼어들지 않게, 동시 요청 수보다 크게 둔다.
+@TestPropertySource(properties = "moewadeul.external-api.max-concurrent-calls=100")
 class AiInterpretServiceIntegrationTest {
 
     private static final String PATH = "/openai/v1/chat/completions";
