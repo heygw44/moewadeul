@@ -99,11 +99,12 @@ class IdentityVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("[ID-04] 저장하다 DB 교착 상태로 롤백되면 한 번 다시 실행하고, 다시 실행한 사전 조회가 찾은 중복을 IDENTITY_CI_DUPLICATED로 거부한다")
-    void retriesOnceAfterDeadlockAndRejectsDuplicate() {
-        // given: 첫 실행은 다른 요청과 교착 상태로 롤백되고, 다시 실행하면 먼저 저장된 같은 CI가 보인다.
+    @DisplayName("[ID-04] 저장하다 DB 교착 상태로 두 번 연달아 롤백돼도 세 번째 실행의 사전 조회가 찾은 중복을 IDENTITY_CI_DUPLICATED로 거부한다")
+    void retriesAfterRepeatedDeadlockAndRejectsDuplicate() {
+        // given: 첫 두 실행은 다른 요청과 교착 상태로 롤백되고, 세 번째 실행에서는 먼저 저장된 같은 CI가 보인다.
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
         when(applier.apply(MEMBER_ID, command(1995)))
+                .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"))
                 .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"))
                 .thenThrow(new BusinessException(TrustErrorCode.IDENTITY_CI_DUPLICATED));
 
@@ -112,12 +113,12 @@ class IdentityVerificationServiceTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.IDENTITY_CI_DUPLICATED));
-        verify(applier, times(2)).apply(MEMBER_ID, command(1995));
+        verify(applier, times(3)).apply(MEMBER_ID, command(1995));
     }
 
     @Test
-    @DisplayName("[ID-04] 다시 실행해도 잠금을 얻지 못하면 더 시도하지 않고 그 예외를 던진다")
-    void givesUpAfterSecondLockFailure() {
+    @DisplayName("[ID-04] 세 번 모두 잠금을 얻지 못하면 더 시도하지 않고 그 예외를 던진다")
+    void givesUpAfterThirdLockFailure() {
         // given
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
         when(applier.apply(MEMBER_ID, command(1995)))
@@ -126,7 +127,7 @@ class IdentityVerificationServiceTest {
         // when, then
         assertThatThrownBy(() -> new IdentityVerificationService(applier).verify(MEMBER_ID, command(1995)))
                 .isInstanceOf(CannotAcquireLockException.class);
-        verify(applier, times(2)).apply(MEMBER_ID, command(1995));
+        verify(applier, times(3)).apply(MEMBER_ID, command(1995));
     }
 
     @Test
