@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { toUserMessage } from '../api/errors';
 import type { ImageUpload, ImageUploadRequest } from '../api/types';
@@ -19,9 +19,19 @@ export type UploadImageItem = {
   error?: string;
 };
 
+// 세션이 끊겨 폼을 잠시 떠날 때 보관할 사진이다. 올리기를 마친 사진과 올리지 못해 다시 올릴 수 있는 사진만 남기고, 올리는 중인 사진은 뺀다.
+export function restorableImages(images: UploadImageItem[]): UploadImageItem[] {
+  return images.filter((image) => image.status === 'done' || (image.status === 'failed' && image.file !== undefined));
+}
+
+// 같은 화면에서 보관했다가 되살린 사진의 key와 새로 고른 사진의 key가 겹치지 않도록, 훅 인스턴스와 무관하게 센다.
+let nextKey = 0;
+
 type UseImageUploadsOptions = {
   max: number;
   initial?: { imageId: number; url: string }[];
+  // 보관해 둔 초안에서 되살린 사진이다. 있으면 initial 대신 이 목록으로 시작한다.
+  restored?: UploadImageItem[];
   // 업로드 URL을 받는 API다. 커뮤니티와 후기가 엔드포인트만 다르다.
   requestUpload: (req: ImageUploadRequest) => Promise<ImageUpload>;
 };
@@ -42,12 +52,18 @@ export type ImageUploads = {
 };
 
 // 파일을 고르면 형식·크기·장수를 먼저 거르고, 통과한 파일마다 업로드 URL을 받아 저장소에 바로 올린다.
-export function useImageUploads({ max, initial = [], requestUpload }: UseImageUploadsOptions): ImageUploads {
-  const [images, setImages] = useState<UploadImageItem[]>(() =>
-    initial.map((image) => ({ key: `saved-${image.imageId}`, imageId: image.imageId, url: image.url, status: 'done' })),
+export function useImageUploads({ max, initial = [], restored, requestUpload }: UseImageUploadsOptions): ImageUploads {
+  const [images, setImages] = useState<UploadImageItem[]>(
+    () =>
+      restored ??
+      initial.map((image) => ({
+        key: `saved-${image.imageId}`,
+        imageId: image.imageId,
+        url: image.url,
+        status: 'done' as const,
+      })),
   );
   const [messages, setMessages] = useState<string[]>([]);
-  const nextKey = useRef(0);
 
   const slotsLeft = max - images.length;
 
@@ -85,7 +101,7 @@ export function useImageUploads({ max, initial = [], requestUpload }: UseImageUp
         rejected.push(`${file.name}: 사진은 ${max}장까지 올릴 수 있어요. 다른 사진을 빼고 올려 주세요.`);
       } else {
         room -= 1;
-        accepted.push({ key: `new-${nextKey.current++}`, file, status: 'uploading' });
+        accepted.push({ key: `new-${nextKey++}`, file, status: 'uploading' });
       }
     }
     setMessages(rejected);
