@@ -44,6 +44,14 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- 목록 단계 UPCOMING과 같은 기준(now가 신청 시작 시각보다 이름)이라서, 이 값이 지나면 UPCOMING 행사 하나가 OPEN으로 넘어간다. -->
+    <select id="selectNextApplyOpenAt" resultType="java.time.Instant">
+        SELECT MIN(p.apply_open_at)
+        FROM program p
+        WHERE p.status = 'SCHEDULED'
+          AND #{now} &lt; p.apply_open_at
+    </select>
+
     <select id="selectDetail" resultType="com.moewadeul.program.infra.catalog.ProgramDetailRow">
         SELECT p.id AS program_id,
                p.title AS title,
