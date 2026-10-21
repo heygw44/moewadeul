@@ -150,6 +150,104 @@
       ]
     },
     {
+      "uid": "moewadeul-outbox-failed",
+      "title": "아웃박스 이벤트 FAILED 발생",
+      "condition": "C",
+      "for": "0s",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "최근 1시간 안에 FAILED가 된 아웃박스 이벤트가 있다. 처리기가 재시도 한도만큼 실패해 더 처리하지 않는다. outbox_event의 last_error를 본다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "max(moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}) - max(min_over_time(moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}[1h]))",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "uid": "moewadeul-notification-mail-failed",
+      "title": "알림 메일 FAILED 발생",
+      "condition": "C",
+      "for": "0s",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "최근 1시간 안에 FAILED가 된 알림 메일이 있다. 메일 서버가 일시적이지 않은 오류로 재시도 한도만큼 거부해 더 보내지 않는다. 앱 WARN 로그의 notificationId를 본다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "max(moewadeul_notification_mails{job=\"moewadeul-app\",status=\"failed\"}) - max(min_over_time(moewadeul_notification_mails{job=\"moewadeul-app\",status=\"failed\"}[1h]))",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "uid": "moewadeul-external-api-quota",
       "title": "외부 API 하루 한도 80% 도달",
       "condition": "C",

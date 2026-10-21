@@ -44,15 +44,18 @@
     </update>
 
     <!-- MySQL은 SET 절을 왼쪽에서 오른쪽으로 평가하고 앞에서 바꾼 값을 뒤에서 읽는다.
-         그래서 status를 attempt_count보다 먼저 두어야, 아직 올리지 않은 시도 횟수에 1을 더해 비교한다.
+         그래서 status와 locked_until을 attempt_count보다 먼저 두어야, 아직 올리지 않은 시도 횟수로 계산한다.
          실패한 이벤트는 locked_until을 비우지 않고 다음 재시도 시각으로 채운다.
-         selectClaimableIds는 locked_until이 지난 행만 집는다. 그래서 재시도 시각 컬럼을 따로 두지 않고도 임대 컬럼으로 재시도 간격을 지킨다. -->
+         selectClaimableIds는 locked_until이 지난 행만 집는다. 그래서 재시도 시각 컬럼을 따로 두지 않고도 임대 컬럼으로 재시도 간격을 지킨다.
+         재시도 간격은 실패할 때마다 두 배로 늘리고 상한에서 멈춘다. 일시적인 실패는 횟수 상한 없이 계속 다시 시도하므로,
+         2의 거듭제곱이 DOUBLE 범위를 넘지 않게 지수를 20에서 자른다. 기본값(30초)에서는 지수가 5만 돼도 이미 상한(10분)을 넘는다. -->
     <update id="markFailedAttempt">
         UPDATE outbox_event
-        SET status = CASE WHEN attempt_count + 1 &gt;= #{maxAttempts} THEN 'FAILED' ELSE status END,
+        SET status = CASE WHEN NOT #{transientFailure} AND attempt_count + 1 &gt;= #{maxAttempts} THEN 'FAILED' ELSE status END,
+            locked_until = DATE_ADD(#{now}, INTERVAL
+                LEAST(#{retryDelayMillis} * POW(2, LEAST(attempt_count, 20)), #{retryMaxDelayMillis}) * 1000 MICROSECOND),
             attempt_count = attempt_count + 1,
             last_error = #{error},
-            locked_until = #{retryAt},
             updated_at = #{now}
         WHERE id = #{id}
           AND status = 'PENDING'

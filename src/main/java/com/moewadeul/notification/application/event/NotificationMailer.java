@@ -1,5 +1,6 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.mail.MailDeliveryException;
 import com.moewadeul.common.mail.MailSender;
 import com.moewadeul.notification.infra.event.NotificationMailRow;
 import java.time.Clock;
@@ -57,8 +58,13 @@ class NotificationMailer {
         try {
             mailSender.send(NotificationMailFactory.create(target, baseUrl));
         } catch (RuntimeException e) {
-            log.warn("notification mail failed notificationId={}", target.notificationId());
-            store.markFailedAttempt(target.notificationId());
+            // 메일 서버에 연결하지 못한 것처럼 서버가 돌아오면 성공할 실패는 재시도 한도에 세지 않는다.
+            boolean transientFailure = MailDeliveryException.isTransient(e);
+            log.warn(
+                    "notification mail failed notificationId={} transient={}",
+                    target.notificationId(),
+                    transientFailure);
+            store.markFailedAttempt(target.notificationId(), transientFailure);
             return;
         }
         store.markSent(target.notificationId());

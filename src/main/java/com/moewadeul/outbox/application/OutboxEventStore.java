@@ -46,11 +46,20 @@ public class OutboxEventStore {
         }
     }
 
+    /**
+     * 호출하면 이벤트의 실패를 기록하고 다음 재시도 시각을 정한다. transientFailure가 true이면 횟수가 한도를 넘어도 FAILED로 두지 않고
+     * 계속 다시 시도한다.
+     */
     @Transactional
-    public void markFailedAttempt(long eventId, String error) {
-        Instant now = clock.instant();
-        Instant retryAt = now.plus(properties.retryDelay());
-        int updated = mapper.markFailedAttempt(eventId, error, properties.maxAttempts(), retryAt, now);
+    public void markFailedAttempt(long eventId, String error, boolean transientFailure) {
+        int updated = mapper.markFailedAttempt(
+                eventId,
+                error,
+                transientFailure,
+                properties.maxAttempts(),
+                properties.retryDelay().toMillis(),
+                properties.retryMaxDelay().toMillis(),
+                clock.instant());
         if (updated == 0) {
             log.warn("outbox event was not pending when marking failed eventId={}", eventId);
         }

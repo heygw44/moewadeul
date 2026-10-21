@@ -8,14 +8,20 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import jakarta.mail.AuthenticationFailedException;
 import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
+import java.net.SocketTimeoutException;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
@@ -102,11 +108,58 @@ class SmtpMailSenderTest {
     }
 
     @Test
+    @DisplayName("[F-20] 메일 서버에 연결하는 동안 제한 시간이 지나면 일시적인 실패로 표시한다")
+    void marksConnectionTimeoutAsTransient() {
+        MessagingException connectFailure =
+                new MessagingException("Couldn't connect to host", new SocketTimeoutException("connect timed out"));
+
+        assertThat(failureOf(new MailSendException("Mail server connection failed", connectFailure, Map.of())))
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("[F-20] 메일 서버가 4xx로 답하면 일시적인 실패로 표시한다")
+    void marksTemporaryReplyAsTransient() {
+        MessagingException temporaryReply = new MessagingException("451 4.3.0 Temporary server error");
+
+        assertThat(failureOf(new MailSendException(Map.of("message", temporaryReply))))
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("[F-20] 메일 서버가 5xx로 답하면 일시적인 실패로 표시하지 않는다")
+    void doesNotMarkPermanentReplyAsTransient() {
+        MessagingException permanentReply = new MessagingException("550 5.1.1 <" + RECIPIENT + "> user unknown");
+
+        assertThat(failureOf(new MailSendException(Map.of("message", permanentReply))))
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("[F-20] SMTP 로그인이 거부되면 일시적인 실패로 표시하지 않는다")
+    void doesNotMarkAuthenticationFailureAsTransient() {
+        AuthenticationFailedException rejected =
+                new AuthenticationFailedException("535 5.7.8 Username and Password not accepted");
+
+        assertThat(failureOf(new MailAuthenticationException(rejected))).isFalse();
+    }
+
+    @Test
     @DisplayName("MailMessage의 toString은 수신자와 본문을 드러내지 않는다")
     void mailMessageToStringHidesValues() {
         String text = new MailMessage(RECIPIENT, SUBJECT, BODY).toString();
 
         assertThat(text).doesNotContain(RECIPIENT).doesNotContain(BODY);
+    }
+
+    private boolean failureOf(MailException transportFailure) {
+        willThrow(transportFailure).given(javaMailSender).send(any(MimeMessage.class));
+        try {
+            mailSender.send(new MailMessage(RECIPIENT, SUBJECT, BODY));
+        } catch (MailDeliveryException e) {
+            return e.isTransientFailure();
+        }
+        throw new AssertionError("MailDeliveryException was not thrown");
     }
 
     private MimeMessage captureSentMessage() {

@@ -1,5 +1,6 @@
 package com.moewadeul.outbox.application;
 
+import com.moewadeul.common.mail.MailDeliveryException;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
 import java.util.List;
@@ -21,6 +22,7 @@ public class RecordingOutboxEventHandler implements OutboxEventHandler {
 
     private final List<Long> calledEventIds = new CopyOnWriteArrayList<>();
     private final AtomicInteger remainingFailures = new AtomicInteger();
+    private volatile boolean transientFailures;
 
     @Override
     public String eventType() {
@@ -30,13 +32,26 @@ public class RecordingOutboxEventHandler implements OutboxEventHandler {
     @Override
     public void handle(OutboxMessage message) {
         calledEventIds.add(message.eventId());
-        if (shouldFail()) {
-            throw new IllegalStateException(FAILURE_MESSAGE);
+        if (!shouldFail()) {
+            return;
         }
+        if (transientFailures) {
+            // 처리기가 메일 실패를 다른 예외로 감싸 던져도 발행기가 원인 사슬에서 알아보는지 확인하려고 감싼다.
+            throw new IllegalStateException(
+                    FAILURE_MESSAGE, new MailDeliveryException("mail server unreachable", null, true));
+        }
+        throw new IllegalStateException(FAILURE_MESSAGE);
     }
 
     /** 호출하면 앞으로 {@code count}번의 {@link #handle} 호출이 예외를 던진다. */
     public void failNextCalls(int count) {
+        transientFailures = false;
+        remainingFailures.set(count);
+    }
+
+    /** 호출하면 앞으로 {@code count}번의 {@link #handle} 호출이 일시적인 메일 실패를 원인으로 담은 예외를 던진다. */
+    public void failNextCallsTransiently(int count) {
+        transientFailures = true;
         remainingFailures.set(count);
     }
 
@@ -51,6 +66,7 @@ public class RecordingOutboxEventHandler implements OutboxEventHandler {
 
     public void reset() {
         calledEventIds.clear();
+        transientFailures = false;
         remainingFailures.set(0);
     }
 

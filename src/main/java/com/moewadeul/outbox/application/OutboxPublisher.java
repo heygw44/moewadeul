@@ -1,5 +1,6 @@
 package com.moewadeul.outbox.application;
 
+import com.moewadeul.common.mail.MailDeliveryException;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
 import java.time.Clock;
@@ -43,20 +44,25 @@ public class OutboxPublisher {
     }
 
     private void publish(OutboxMessage message) {
-        Optional<String> failure = handle(message);
+        Optional<Failure> failure = handle(message);
         if (failure.isEmpty()) {
             store.markPublished(message.eventId());
             return;
         }
         // 오류 문자열은 처리기가 만든 메시지라 개인정보가 들어 있을 수 있다. 그래서 로그에는 남기지 않고 last_error 열에만 기록한다.
-        log.warn("outbox event failed eventId={} eventType={}", message.eventId(), message.eventType());
-        store.markFailedAttempt(message.eventId(), failure.get());
+        log.warn(
+                "outbox event failed eventId={} eventType={} transient={}",
+                message.eventId(),
+                message.eventType(),
+                failure.get().transientFailure());
+        store.markFailedAttempt(
+                message.eventId(), failure.get().error(), failure.get().transientFailure());
     }
 
-    private Optional<String> handle(OutboxMessage message) {
+    private Optional<Failure> handle(OutboxMessage message) {
         OutboxEventHandler handler = handlersByEventType.get(message.eventType());
         if (handler == null) {
-            return Optional.of(truncate("no handler for " + message.eventType()));
+            return Optional.of(new Failure(truncate("no handler for " + message.eventType()), false));
         }
         // 처리기는 모듈마다 다르게 구현하므로 어떤 예외가 나올지 미리 알 수 없다.
         // 그런데 이벤트 하나가 던진 예외가 나머지 이벤트 처리를 막으면 안 되고, 던진 이벤트는 재시도 대상으로 남겨야 한다.
@@ -65,7 +71,8 @@ public class OutboxPublisher {
             handler.handle(message);
             return Optional.empty();
         } catch (Exception e) {
-            return Optional.of(describe(e));
+            // 메일 서버에 연결하지 못한 것처럼 서버가 돌아오면 성공할 실패는 재시도 한도에 세지 않는다.
+            return Optional.of(new Failure(describe(e), MailDeliveryException.isTransient(e)));
         }
     }
 
@@ -91,4 +98,6 @@ public class OutboxPublisher {
         }
         return Map.copyOf(index);
     }
+
+    private record Failure(String error, boolean transientFailure) {}
 }

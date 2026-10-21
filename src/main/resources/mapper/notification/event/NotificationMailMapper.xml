@@ -64,12 +64,19 @@
     </update>
 
     <!-- MySQL은 SET 절을 왼쪽에서 오른쪽으로 평가하고 앞에서 바꾼 값을 뒤에서 읽는다.
-         그래서 email_attempt_count를 맨 뒤에 두어야, 앞의 두 식이 아직 올리지 않은 실패 횟수에 1을 더해 비교한다.
-         실패한 알림은 다음 시도 시각을 재시도 시각으로 채운다. selectDueForUpdate는 그 시각이 지난 알림만 집으므로 재시도 간격이 지켜진다. -->
+         그래서 email_attempt_count를 맨 뒤에 두어야, 앞의 두 식이 아직 올리지 않은 실패 횟수로 계산한다.
+         실패한 알림은 다음 시도 시각을 재시도 시각으로 채운다. selectDueForUpdate는 그 시각이 지난 알림만 집으므로 재시도 간격이 지켜진다.
+         재시도 간격은 실패할 때마다 두 배로 늘리고 상한에서 멈춘다. 일시적인 실패는 횟수 상한 없이 계속 다시 시도하므로,
+         2의 거듭제곱이 DOUBLE 범위를 넘지 않게 지수를 20에서 자른다. 기본값(30초)에서는 지수가 5만 돼도 이미 상한(10분)을 넘는다. -->
     <update id="markFailedAttempt">
         UPDATE notification
-        SET email_status = CASE WHEN email_attempt_count + 1 &gt;= #{maxAttempts} THEN 'FAILED' ELSE email_status END,
-            email_next_attempt_at = CASE WHEN email_attempt_count + 1 &gt;= #{maxAttempts} THEN NULL ELSE #{retryAt} END,
+        SET email_status = CASE WHEN NOT #{transientFailure} AND email_attempt_count + 1 &gt;= #{maxAttempts}
+                THEN 'FAILED' ELSE email_status END,
+            email_next_attempt_at = CASE WHEN NOT #{transientFailure} AND email_attempt_count + 1 &gt;= #{maxAttempts}
+                THEN NULL
+                ELSE DATE_ADD(#{now}, INTERVAL
+                    LEAST(#{retryDelayMillis} * POW(2, LEAST(email_attempt_count, 20)), #{retryMaxDelayMillis}) * 1000 MICROSECOND)
+                END,
             email_attempt_count = email_attempt_count + 1
         WHERE id = #{id}
           AND email_status = 'PENDING'

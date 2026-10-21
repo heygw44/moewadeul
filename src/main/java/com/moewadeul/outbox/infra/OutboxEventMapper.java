@@ -28,14 +28,17 @@ public interface OutboxEventMapper {
     int markPublished(@Param("id") long id, @Param("now") Instant now);
 
     /**
-     * 호출하면 PENDING인 행의 시도 횟수를 1 올리고 오류를 기록한다. 임대 만료 시각은 retryAt으로 바꿔서, 그 시각 전에는 다시 집히지 않게 한다.
-     * 올린 시도 횟수가 maxAttempts 이상이면 상태를 FAILED로 바꾼다. 이미 다른 상태이면 0을 돌려준다.
+     * 호출하면 PENDING인 행의 시도 횟수를 1 올리고 오류를 기록한다. 임대 만료 시각은 now에서 retryDelayMillis × 2^(올리기 전 시도 횟수)
+     * 뒤로 바꾸되 retryMaxDelayMillis를 넘기지 않아서, 그 시각 전에는 다시 집히지 않게 한다. 일시적인 실패가 아니고 올린 시도 횟수가
+     * maxAttempts 이상이면 상태를 FAILED로 바꾼다. 이미 다른 상태이면 0을 돌려준다.
      */
     int markFailedAttempt(
             @Param("id") long id,
             @Param("error") String error,
+            @Param("transientFailure") boolean transientFailure,
             @Param("maxAttempts") int maxAttempts,
-            @Param("retryAt") Instant retryAt,
+            @Param("retryDelayMillis") long retryDelayMillis,
+            @Param("retryMaxDelayMillis") long retryMaxDelayMillis,
             @Param("now") Instant now);
 
     /**

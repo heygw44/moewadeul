@@ -11,6 +11,9 @@ import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -253,7 +256,7 @@ class NotificationMailIntegrationTest {
         // when
         for (int attempt = 0; attempt < properties.maxAttempts(); attempt++) {
             mailer.sendDue();
-            clock.advance(properties.retryDelay());
+            clock.advance(properties.retryMaxDelay());
         }
         int afterFailed = mailer.sendDue();
 
@@ -263,6 +266,60 @@ class NotificationMailIntegrationTest {
         assertThat(countByEmailStatus("FAILED")).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("SELECT email_attempt_count FROM notification", Integer.class))
                 .isEqualTo(properties.maxAttempts());
+    }
+
+    @Test
+    @DisplayName("[F-20] 메일이 실패할 때마다 다음 시도까지의 간격이 두 배로 늘고 상한에서 멈춘다")
+    void retryDelayDoublesOnEachFailureUpToMaxDelay() {
+        // given
+        int failures = properties.maxAttempts() - 1;
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending();
+        mailSender.failNextSends(failures);
+        List<Duration> delays = new ArrayList<>();
+
+        // when
+        for (int attempt = 0; attempt < failures; attempt++) {
+            mailer.sendDue();
+            Duration delay = Duration.between(clock.instant(), nextAttemptAt());
+            delays.add(delay);
+            clock.advance(delay);
+        }
+
+        // then
+        assertThat(delays).isEqualTo(expectedDelays(failures));
+        assertThat(delays).contains(properties.retryMaxDelay());
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-20] 메일 서버에 연결하지 못한 일시적인 실패는 한도를 넘어도 FAILED로 두지 않고, 서버가 돌아오면 보낸다")
+    void transientFailureIsRetriedBeyondMaxAttemptsUntilItIsSent() {
+        // given
+        int failures = properties.maxAttempts() + 2;
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending();
+        mailSender.failNextSendsTransiently(failures);
+
+        // when
+        for (int attempt = 0; attempt < failures; attempt++) {
+            mailer.sendDue();
+            clock.advance(properties.retryMaxDelay());
+        }
+
+        // then
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT email_attempt_count FROM notification", Integer.class))
+                .isEqualTo(failures);
+
+        // when
+        mailer.sendDue();
+
+        // then
+        assertThat(countByEmailStatus("SENT")).isEqualTo(1);
+        assertThat(mailSender.sent()).extracting(MailMessage::to).containsExactly(applicant.getEmail());
     }
 
     @Test
@@ -443,5 +500,25 @@ class NotificationMailIntegrationTest {
 
     private String eventStatus() {
         return jdbcTemplate.queryForObject("SELECT status FROM outbox_event", String.class);
+    }
+
+    private Instant nextAttemptAt() {
+        return jdbcTemplate
+                .queryForObject("SELECT email_next_attempt_at FROM notification", Timestamp.class)
+                .toInstant();
+    }
+
+    private List<Duration> expectedDelays(int failures) {
+        List<Duration> expected = new ArrayList<>();
+        Duration delay = properties.retryDelay();
+        for (int attempt = 0; attempt < failures; attempt++) {
+            expected.add(delay);
+            delay = min(delay.multipliedBy(2), properties.retryMaxDelay());
+        }
+        return expected;
+    }
+
+    private static Duration min(Duration first, Duration second) {
+        return first.compareTo(second) <= 0 ? first : second;
     }
 }

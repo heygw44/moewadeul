@@ -16,11 +16,12 @@ public class TestMailSender implements MailSender {
 
     private final List<MailMessage> sent = new CopyOnWriteArrayList<>();
     private final AtomicInteger remainingFailures = new AtomicInteger();
+    private volatile boolean transientFailures;
 
     @Override
     public void send(MailMessage message) {
         if (shouldFail()) {
-            throw new MailDeliveryException(FAILURE_MESSAGE);
+            throw new MailDeliveryException(FAILURE_MESSAGE, null, transientFailures);
         }
         sent.add(message);
     }
@@ -32,11 +33,19 @@ public class TestMailSender implements MailSender {
 
     /** 호출하면 앞으로 {@code count}번의 {@link #send} 호출이 {@link MailDeliveryException}을 던진다. */
     public void failNextSends(int count) {
+        transientFailures = false;
+        remainingFailures.set(count);
+    }
+
+    /** 호출하면 앞으로 {@code count}번의 {@link #send} 호출이 메일 서버에 연결하지 못한 것 같은 일시적인 실패를 던진다. */
+    public void failNextSendsTransiently(int count) {
+        transientFailures = true;
         remainingFailures.set(count);
     }
 
     public void reset() {
         sent.clear();
+        transientFailures = false;
         remainingFailures.set(0);
     }
 
