@@ -222,6 +222,8 @@ export async function createMapView(
   let menuOverlay: kakao.maps.CustomOverlay | null = null;
   let menuResize: ResizeObserver | null = null;
   let selectedId: number | null = null;
+  // 고른 장소가 그린 마커에 없을 때 대신 그릴 핀이다. showSelectedSpot으로 받는다.
+  let selectedSpot: SpotMarkerData | null = null;
   let radiusCircle: kakao.maps.Circle | null = null;
   let terrainOn = false;
   let destroyed = false;
@@ -312,6 +314,11 @@ export async function createMapView(
       seen.add(marker.id);
       const point = projection.containerPointFromCoords(toKakaoLatLng(marker.position));
       placed.push({ marker, x: point.x, y: point.y });
+    }
+    // 고른 장소가 조건에 걸러졌거나 영역 조회가 묶음만 줘서 마커에 없으면, 받아 둔 데이터로 그 핀을 따로 그린다.
+    if (selectedSpot !== null && selectedSpot.id === selectedId && !seen.has(selectedSpot.id)) {
+      const point = projection.containerPointFromCoords(toKakaoLatLng(selectedSpot.position));
+      placed.push({ marker: selectedSpot, x: point.x, y: point.y });
     }
 
     if (initial.markerStyle === 'dot') {
@@ -447,6 +454,12 @@ export async function createMapView(
     setSelected(id: number | null) {
       if (id === selectedId) return;
       selectedId = id;
+      if (!destroyed) layoutPins();
+    },
+
+    showSelectedSpot(marker: SpotMarkerData | null) {
+      if (marker === selectedSpot) return;
+      selectedSpot = marker;
       if (!destroyed) layoutPins();
     },
 

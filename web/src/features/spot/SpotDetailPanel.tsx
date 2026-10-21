@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
@@ -34,6 +34,8 @@ import type { SpotWeatherState } from './useSpotWeather';
 type SpotDetailPanelProps = {
   spotId: number;
   onBack: () => void;
+  // 장소 정보를 불러오면 알린다. 지도 화면은 이 장소로 지도를 옮기고 핀을 그린다.
+  onLoaded?: (detail: SpotDetail) => void;
 };
 
 // 어느 요청(장소, 시도 횟수)의 결과인지 함께 기억해서, 장소를 바꾸면 이전 결과를 곧바로 버린다.
@@ -55,7 +57,7 @@ function formatValue(value: number | null, unit: string): string {
   return value === null ? '-' : `${value}${unit}`;
 }
 
-export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
+export function SpotDetailPanel({ spotId, onBack, onLoaded }: SpotDetailPanelProps) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
   // 날씨는 상세와 같은 때에 따로 요청한다. 상세가 먼저 오면 근거부터 그리고, 날씨 칸만 날씨를 기다린다.
@@ -76,7 +78,13 @@ export function SpotDetailPanel({ spotId, onBack }: SpotDetailPanelProps) {
 
   const current = result && result.spotId === spotId && result.attempt === attempt ? result : null;
   const showSkeleton = useDelayedFlag(current === null);
-  const loadedName = current && 'detail' in current ? current.detail.name : null;
+  const loadedDetail = current && 'detail' in current ? current.detail : null;
+  const loadedName = loadedDetail?.name ?? null;
+
+  const reportLoaded = useEffectEvent((detail: SpotDetail) => onLoaded?.(detail));
+  useEffect(() => {
+    if (loadedDetail !== null) reportLoaded(loadedDetail);
+  }, [loadedDetail]);
 
   useEffect(() => {
     if (loadedName === null) return;
