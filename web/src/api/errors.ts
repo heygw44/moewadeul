@@ -106,6 +106,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   // 서버에 닿지 못한 경우
   NETWORK_ERROR: '인터넷에 연결하지 못했어요. 연결 상태를 본 뒤 다시 시도해 주세요.',
+  REQUEST_TIMEOUT: '응답이 오지 않아요. 연결 상태를 본 뒤 다시 시도해 주세요.',
 };
 
 const FIELD_LABELS: Record<string, string> = {
