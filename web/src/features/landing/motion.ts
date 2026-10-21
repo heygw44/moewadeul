@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 
 // 미디어 쿼리가 지금 맞는지 알려 주고, 창 크기나 설정이 바뀌면 다시 알려 준다.
 export function useMediaQuery(media: string): boolean {
@@ -81,4 +81,14 @@ export function useFrameWhileVisible(ref: RefObject<Element | null>, step: () =>
 export function approach(current: number, target: number, rate: number): number {
   const next = current + (target - current) * rate;
   return Math.abs(target - next) < 0.0005 ? target : next;
+}
+
+// 섹션이 화면에 들어오면 자식들을 순서대로 떠오르게 한다. i번째 자식은 i × 80ms 늦게 시작한다.
+export function useRise<T extends Element>() {
+  const { ref, inView } = useInView<T>();
+  const rise = (index: number): { className: string; style: CSSProperties } => ({
+    className: riseClass(inView),
+    style: { animationDelay: `${index * 80}ms` },
+  });
+  return { ref, rise };
 }
