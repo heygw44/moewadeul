@@ -72,5 +72,6 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run lint
+      - run: npm test
       # 포맷은 Prettier 설정(web/.prettierrc.json)을 따른다. 어긋나면 로컬에서 npm run format으로 고친다
       - run: npm run format:check
