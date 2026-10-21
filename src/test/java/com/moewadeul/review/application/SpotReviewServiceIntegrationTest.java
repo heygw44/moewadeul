@@ -357,6 +357,30 @@ class SpotReviewServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-05][F-10] 상세의 recentReviews는 작성 시각이 같으면 후기 ID가 큰 것이 먼저이고, rating은 그 장소의 후기만 센다")
+    void detailBreaksCreatedAtTieByIdAndCountsOnlyThisSpot() {
+        // given: 후기 셋을 같은 시각에 쓰고, 다른 장소에도 후기를 하나 쓴다.
+        long spotId = saveSpot();
+        long otherSpotId = saveSpot();
+        long first = writeAt(spotId, 1, Duration.ZERO);
+        long second = writeAt(spotId, 2, Duration.ofMinutes(1));
+        long third = writeAt(spotId, 3, Duration.ZERO);
+        long fourth = writeAt(spotId, 4, Duration.ZERO);
+        writeAt(otherSpotId, 5, Duration.ZERO);
+
+        // when
+        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+
+        // then
+        assertThat(detail.recentReviews())
+                .extracting(review -> review.reviewId())
+                .containsExactly(fourth, third, second)
+                .doesNotContain(first);
+        assertThat(detail.rating().count()).isEqualTo(4);
+        assertThat(detail.rating().average()).isEqualTo(2.5);
+    }
+
+    @Test
     @DisplayName("[F-10] 탈퇴해서 닉네임이 익명으로 바뀐 회원의 후기는 목록과 상세에 익명 닉네임으로 나온다")
     void withdrawnAuthorShowsAnonymousNickname() {
         // given
