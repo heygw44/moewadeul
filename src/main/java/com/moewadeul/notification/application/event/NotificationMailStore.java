@@ -57,11 +57,20 @@ class NotificationMailStore {
         }
     }
 
-    /** 호출하면 그 알림의 실패 횟수를 올리고, 한도에 닿았으면 FAILED로, 아니면 재시도 시각까지 집지 않게 둔다. */
+    /**
+     * 호출하면 그 알림의 실패 횟수를 올리고, 한도에 닿았으면 FAILED로, 아니면 재시도 시각까지 집지 않게 둔다. transientFailure가
+     * true이면 한도에 닿아도 FAILED로 두지 않는다.
+     */
     @Transactional
-    void markFailedAttempt(long notificationId) {
-        Instant retryAt = clock.instant().plus(properties.retryDelay());
-        if (mailMapper.markFailedAttempt(notificationId, properties.maxAttempts(), retryAt) == 0) {
+    void markFailedAttempt(long notificationId, boolean transientFailure) {
+        int updated = mailMapper.markFailedAttempt(
+                notificationId,
+                transientFailure,
+                properties.maxAttempts(),
+                properties.retryDelay().toMillis(),
+                properties.retryMaxDelay().toMillis(),
+                clock.instant());
+        if (updated == 0) {
             log.warn("notification mail was not pending when marking failed notificationId={}", notificationId);
         }
     }

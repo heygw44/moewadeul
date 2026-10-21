@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -127,7 +129,7 @@ class OutboxReliabilityIntegrationTest {
         // when
         for (int attempt = 1; attempt < maxAttempts; attempt++) {
             publisher.publishPending();
-            clock.advance(properties.retryDelay());
+            clock.advance(properties.retryMaxDelay());
         }
 
         // then
@@ -135,7 +137,7 @@ class OutboxReliabilityIntegrationTest {
 
         // when
         publisher.publishPending();
-        clock.advance(properties.retryDelay());
+        clock.advance(properties.retryMaxDelay());
         int afterLimit = publisher.publishPending();
 
         // then
@@ -144,6 +146,57 @@ class OutboxReliabilityIntegrationTest {
         assertThat(failed.get("attempt_count")).isEqualTo(maxAttempts);
         assertThat(afterLimit).isZero();
         assertThat(handler.callCount()).isEqualTo(maxAttempts);
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 실패할 때마다 다음 재시도까지의 간격이 두 배로 늘고 상한에서 멈춘다")
+    void retryDelayDoublesOnEachFailureUpToMaxDelay() {
+        // given
+        int failures = properties.maxAttempts() - 1;
+        long eventId = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
+        handler.failNextCalls(failures);
+        List<Duration> delays = new ArrayList<>();
+
+        // when
+        for (int attempt = 0; attempt < failures; attempt++) {
+            publisher.publishPending();
+            Duration delay = Duration.between(clock.instant(), lockedUntil(eventId));
+            delays.add(delay);
+            clock.advance(delay);
+        }
+
+        // then
+        assertThat(delays).isEqualTo(expectedDelays(failures));
+        assertThat(delays).contains(properties.retryMaxDelay());
+        assertThat(findEvent(eventId).get("status")).isEqualTo("PENDING");
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 메일 서버에 연결하지 못한 일시적인 실패는 한도를 넘어도 FAILED로 두지 않고, 서버가 돌아오면 PUBLISHED가 된다")
+    void transientMailFailureIsRetriedBeyondMaxAttemptsUntilItSucceeds() {
+        // given
+        int failures = properties.maxAttempts() + 2;
+        long eventId = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
+        handler.failNextCallsTransiently(failures);
+
+        // when
+        for (int attempt = 0; attempt < failures; attempt++) {
+            publisher.publishPending();
+            clock.advance(properties.retryMaxDelay());
+        }
+
+        // then
+        Map<String, Object> afterOutage = findEvent(eventId);
+        assertThat(afterOutage.get("status")).isEqualTo("PENDING");
+        assertThat(afterOutage.get("attempt_count")).isEqualTo(failures);
+
+        // when
+        int afterRecovery = publisher.publishPending();
+
+        // then
+        assertThat(afterRecovery).isEqualTo(1);
+        assertThat(findEvent(eventId).get("status")).isEqualTo("PUBLISHED");
+        assertThat(handler.callCount()).isEqualTo(failures + 1);
     }
 
     @Test
@@ -251,5 +304,25 @@ class OutboxReliabilityIntegrationTest {
 
     private int sumAttemptCount() {
         return jdbcTemplate.queryForObject("SELECT COALESCE(SUM(attempt_count), 0) FROM outbox_event", Integer.class);
+    }
+
+    private Instant lockedUntil(long eventId) {
+        return jdbcTemplate
+                .queryForObject("SELECT locked_until FROM outbox_event WHERE id = ?", Timestamp.class, eventId)
+                .toInstant();
+    }
+
+    private List<Duration> expectedDelays(int failures) {
+        List<Duration> expected = new ArrayList<>();
+        Duration delay = properties.retryDelay();
+        for (int attempt = 0; attempt < failures; attempt++) {
+            expected.add(delay);
+            delay = min(delay.multipliedBy(2), properties.retryMaxDelay());
+        }
+        return expected;
+    }
+
+    private static Duration min(Duration first, Duration second) {
+        return first.compareTo(second) <= 0 ? first : second;
     }
 }
