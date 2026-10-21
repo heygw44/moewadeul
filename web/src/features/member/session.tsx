@@ -6,6 +6,7 @@ import type { Me } from '../../api/types';
 import { navigate } from '../../app/router';
 import { forgetMapScreen } from '../spot/mapScreenMemory';
 import { fetchMeWithRetry } from './fetchMeWithRetry';
+import { forgetFormDraft, keepFormDraft } from './formDraft';
 import { SessionUnavailable } from './SessionUnavailable';
 
 export type SessionStatus = 'loading' | 'anonymous' | 'authenticated';
@@ -59,8 +60,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // 세션이 끊기면(401) 로그인 화면으로 보내고, 로그인한 뒤 지금 보던 화면으로 돌아오도록 경로를 next에 담는다.
   // 로그인·가입 화면에서는 이미 그 화면에 있으므로 옮기지 않는다.
+  // 쓰던 폼이 있으면 상태를 지우기 전에 값을 보관한다. 상태를 지우면 폼이 사라져서 값을 읽을 수 없다.
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      keepFormDraft();
       setState(ANONYMOUS);
       const { pathname, search } = window.location;
       if (pathname === '/login' || pathname === '/signup') return;
@@ -84,6 +87,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     setState(ANONYMOUS);
     forgetMapScreen();
+    forgetFormDraft();
     navigate('/');
   }, []);
 
