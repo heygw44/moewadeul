@@ -4,6 +4,7 @@ import { logout as logoutRequest, fetchMe } from '../../api/auth';
 import { setUnauthorizedHandler } from '../../api/client';
 import type { Me } from '../../api/types';
 import { navigate } from '../../app/router';
+import { forgetMapScreen } from '../spot/mapScreenMemory';
 
 export type SessionStatus = 'loading' | 'anonymous' | 'authenticated';
 
@@ -65,6 +66,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // 무시한다.
     }
     setState(ANONYMOUS);
+    forgetMapScreen();
     navigate('/');
   }, []);
 

@@ -44,6 +44,9 @@ export interface MapView {
   showMarkers(markers: SpotMarkerData[], clusters: ClusterData[]): void;
   // 선택한 id는 showMarkers를 다시 불러도 유지된다.
   setSelected(id: number | null): void;
+  // 고른 장소가 showMarkers로 그린 마커에 없으면(장소 조건에 걸러졌거나 묶음만 왔을 때) 이 데이터로 그 핀을 함께 그린다.
+  // id가 setSelected로 고른 id와 같을 때만 그린다. null이면 잊는다.
+  showSelectedSpot(marker: SpotMarkerData | null): void;
   // 지도 이동·확대가 멈출 때마다 부른다. 반환한 함수를 부르면 구독을 끊는다.
   onIdle(listener: () => void): () => void;
   // 사용자가 지도를 끌기 시작하거나 확대·축소가 시작될 때 부른다. 멈추면 onIdle이 온다.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import type { AiInterpretResponse, NearbySpot } from '../../api/types';
+import type { AiInterpretResponse, NearbySpot, SpotDetail } from '../../api/types';
 import { BottomTabBar } from '../../app/layout/BottomTabBar';
 import { SiteHeader } from '../../app/layout/SiteHeader';
 import { Link, navigate } from '../../app/router';
@@ -21,7 +21,7 @@ import { searchRegions } from '../../map/regionSearch';
 import type { RegionCandidate } from '../../map/regionSearch';
 import type { RegionLabel } from '../../map/regionLabel';
 import { radiusBounds } from '../../map/radiusBounds';
-import type { LatLng, MapView } from '../../map/types';
+import type { LatLng, MapView, SpotMarkerData } from '../../map/types';
 import { BasecampDetailPanel } from '../basecamp/BasecampDetailPanel';
 import { BasecampFilterDialog } from '../basecamp/BasecampFilterDialog';
 import { BasecampListPanel } from '../basecamp/BasecampListPanel';
@@ -51,13 +51,15 @@ import { useRegionName } from './useRegionName';
 import { useSpotsInView } from './useSpotsInView';
 import type { SpotsInView } from './useSpotsInView';
 import { useSpotsNearby } from './useSpotsNearby';
+import { readMapScreen, rememberMapScreen } from './mapScreenMemory';
+import type { RadiusSearch } from './mapScreenMemory';
 import type { SpotsNearby } from './useSpotsNearby';
 
 type SheetSnap = 'peek' | 'half' | 'full';
 
-// 모바일에서 시트 윗변이 화면 아래에서 떨어진 높이다. Sheet의 단계별 높이(28dvh, 55dvh, 92dvh)와 같은 값이다.
+// 모바일에서 시트 윗변이 화면 아래에서 떨어진 높이(dvh)다. Sheet의 단계별 높이(28dvh, 55dvh, 92dvh)와 같은 값이다.
 // 하단 탭 위에 뜨는 전체 단계는 시트 높이에서 탭 높이를 빼고 그만큼 올리므로, 윗변은 탭과 상관없이 92dvh다.
-const SHEET_TOP: Record<SheetSnap, string> = { peek: '28dvh', half: '55dvh', full: '92dvh' };
+const SHEET_TOP_DVH: Record<SheetSnap, number> = { peek: 28, half: 55, full: 92 };
 
 // 폰에서 지도 위쪽 끝부터 시트 윗변까지의 높이(px)다. 데스크톱은 시트가 지도 옆 패널이라 지도 높이 전체가 보인다.
 function visibleMapHeight(host: HTMLElement | null): number | undefined {
@@ -67,9 +69,52 @@ function visibleMapHeight(host: HTMLElement | null): number | undefined {
   return sheet.getBoundingClientRect().top - host.getBoundingClientRect().top;
 }
 
+// 폰에서 장소 핀을 가리지 않고 보여 줄 세로 구간(지도 칸 위쪽에서 잰 px)이 이보다 좁으면, 위쪽 버튼은 따지지 않는다.
+const MIN_OPEN_SPAN_PX = 48;
+
+// 지도 칸 안에서 핀을 가리지 않고 보여 줄 세로 구간(지도 칸 위쪽에서 잰 px)이다.
+// 폰에서는 지도 위쪽에 검색 줄·조건 칩·지도 버튼(controls)이 뜨고, 상세·폼이 열려 하단 탭이 없으면 아래쪽을 시트가 덮는다.
+// 데스크톱은 검색 줄과 패널이 지도 밖에 있으므로 지도 칸 전체다.
+// 시트가 단계를 옮겨 가는 중에도 도착할 높이로 재려고, 시트 요소 대신 단계 높이로 계산한다.
+function openMapSpan(
+  host: HTMLElement,
+  controls: HTMLElement | null,
+  snap: SheetSnap,
+): { top: number; bottom: number } {
+  const rect = host.getBoundingClientRect();
+  if (window.matchMedia(DESKTOP_QUERY).matches) return { top: 0, bottom: rect.height };
+  const sheetTop = window.innerHeight * (1 - SHEET_TOP_DVH[snap] / 100);
+  const bottom = Math.min(rect.height, sheetTop - rect.top);
+  const top = controls ? Math.max(0, controls.getBoundingClientRect().bottom - rect.top) : 0;
+  if (bottom - top >= MIN_OPEN_SPAN_PX) return { top, bottom };
+  // 시트를 전체로 올렸거나 화면이 낮아서 남는 곳이 좁으면, 시트 위 전체를 쓰고 그마저 좁으면 지도 칸 전체를 쓴다.
+  return bottom >= MIN_OPEN_SPAN_PX ? { top: 0, bottom } : { top: 0, bottom: rect.height };
+}
+
+// level에서 position이 지도 칸 위쪽에서 targetY(px)인 곳에 오도록, 지도 가운데로 둘 좌표를 구한다.
+// 확대 수준이 한 단계 바뀔 때마다 축척이 두 배가 되므로, 지금 화면의 위도 폭으로 목표 수준의 픽셀당 위도를 구한다.
+function centerPlacing(map: MapView, position: LatLng, level: number, mapHeight: number, targetY: number): LatLng {
+  if (mapHeight <= 0) return position;
+  const { sw, ne } = map.getBounds();
+  const latPerPx = ((ne.lat - sw.lat) / mapHeight) * 2 ** (level - map.getLevel());
+  return { lat: position.lat - (mapHeight / 2 - targetY) * latPerPx, lng: position.lng };
+}
+
+// 상세 응답으로 고른 장소의 핀을 만든다. 목록에 없는 핀이라 번호 대신 유형 아이콘을 그린다.
+function selectedSpotMarker(detail: SpotDetail): SpotMarkerData {
+  return {
+    id: detail.spotId,
+    kind: detail.type,
+    name: detail.name,
+    position: { lat: detail.lat, lng: detail.lng },
+    warning: detail.parkWarning.warned,
+    closed: detail.publicDetail?.closedNow ?? false,
+  };
+}
+
 function sheetTop(snap: SheetSnap, aboveBottomNav: boolean): string {
-  if (snap === 'full' || !aboveBottomNav) return SHEET_TOP[snap];
-  return `calc(${SHEET_TOP[snap]} + var(--bottom-nav-h))`;
+  if (snap === 'full' || !aboveBottomNav) return `${SHEET_TOP_DVH[snap]}dvh`;
+  return `calc(${SHEET_TOP_DVH[snap]}dvh + var(--bottom-nav-h))`;
 }
 
 type MapFailure = { reason: MapLoadErrorReason; message: string };
@@ -77,11 +122,12 @@ type MapFailure = { reason: MapLoadErrorReason; message: string };
 // 지도를 우클릭하거나 길게 누른 곳에 띄운 메뉴다. host는 지도 래퍼가 만든 메뉴 칸 요소다.
 type ContextMenu = { position: LatLng; host: HTMLElement };
 
-// 반경 검색의 기준점과 반경이다. label은 목록 머리에 적는 기준점 이름이다.
-type RadiusSearch = { center: LatLng; radiusKm: number; label: string };
-
 // 처음에는 전국이 한 화면에 들어오도록 국토 가운데쯤을 중심으로 크게 축소해서 연다.
+// 이번 방문에서 지도 화면에 다녀간 적이 있으면 마지막으로 보던 곳에서 연다.
 const INITIAL_VIEW = { center: { lat: 36.35, lng: 127.85 }, level: 12 };
+
+// 장소 상세를 열면 그 장소가 가운데에 오게 지도를 옮긴다. 그 동네가 보이도록 이 확대 수준까지는 확대한다.
+const SPOT_FOCUS_LEVEL = 7;
 
 // 제보 화면을 좌표와 함께 열었는데 그 좌표가 화면 밖이면, 이 확대 수준까지 확대해서 옮긴다.
 const DRAFT_FOCUS_LEVEL = 5;
@@ -164,12 +210,16 @@ export function MapPage({
   const [pickSpots, setPickSpots] = useState<NearbySpot[] | null>(null);
   // 넘겨받은 처음 위치를 이미 찍었는지 기억한다. 같은 주소에서 다시 그려도 사용자가 옮긴 위치를 덮어쓰지 않기 위해서다.
   const [appliedDraftKey, setAppliedDraftKey] = useState<string | null>(null);
-  const [filters, setFilters] = useState<BasecampFilters>(NO_BASECAMP_FILTERS);
-  const [spotFilters, setSpotFilters] = useState<SpotFilters>(NO_SPOT_FILTERS);
+  // 조건, 반경 검색, AI 요약은 다른 화면에 다녀와도 이어지도록 화면 밖 메모리에서 꺼내고, 바뀔 때마다 다시 적어 둔다.
+  const [filters, setFilters] = useState<BasecampFilters>(() => readMapScreen().basecampFilters);
+  const [spotFilters, setSpotFilters] = useState<SpotFilters>(() => readMapScreen().spotFilters);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   // AI가 반경을 읽어 냈을 때의 반경 검색이다. 값이 있으면 지도 영역 대신 이 기준점에서 가까운 순으로 장소를 보여 준다.
-  const [radiusSearch, setRadiusSearch] = useState<RadiusSearch | null>(null);
-  const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
+  const [radiusSearch, setRadiusSearch] = useState<RadiusSearch | null>(() => readMapScreen().radiusSearch);
+  const [aiSummary, setAiSummary] = useState<AiSummary | null>(() => readMapScreen().aiSummary);
+  // 장소 상세가 불러온 장소다. 지도를 그 장소로 옮기고 핀을 그릴 때 쓰고, 다른 장소로 바뀌면 버린다.
+  const [spotFocus, setSpotFocus] = useState<SpotMarkerData | null>(null);
+  if (spotFocus !== null && spotFocus.id !== spotId) setSpotFocus(null);
   // 지도에서 장소 마커를 눌러 고른 장소다. 베이스캠프 목록을 그 장소로 거른다.
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
   // 데스크톱에서 목록을 둔 채 지도 위 근거 판으로 보고 있는 장소다.
@@ -180,7 +230,7 @@ export function MapPage({
   // 근거 판은 데스크톱에서 장소를 둘러볼 때, 상세가 열려 있지 않을 때만 띄운다.
   const previewEnabled = browsing && desktop && spotId === undefined;
   if (!previewEnabled && previewId !== null) setPreviewId(null);
-  // 반경 검색과 AI 요약은 지도를 둘러보는 화면에서만 쓴다. 다른 화면으로 가면 버린다.
+  // 반경 검색과 AI 요약은 지도를 둘러보는 화면에서만 쓴다. 베이스캠프·제보처럼 지도 화면의 다른 모드로 가면 버린다.
   if (!browsing && (radiusSearch !== null || aiSummary !== null)) {
     setRadiusSearch(null);
     setAiSummary(null);
@@ -221,6 +271,8 @@ export function MapPage({
 
   const regionName = useRegionName(map);
   const overlayRef = useRef<HTMLDivElement>(null);
+  // 지도 위 버튼 줄이다. 폰에서는 이 줄이 검색 줄과 조건 칩 아래에 놓이므로, 이 줄의 아래 끝까지 지도가 가려진다.
+  const mapButtonsRef = useRef<HTMLDivElement>(null);
   // 검색 칸에 입력하던 중에 지도를 건드려도 쓰던 검색어가 사라지지 않게, 오버레이 안에 포커스가 있으면 숨기지 않는다.
   const keepOverlay = useCallback(() => overlayRef.current?.contains(document.activeElement) ?? false, []);
   const mapMoving = useMapMoving(map, keepOverlay);
@@ -252,7 +304,7 @@ export function MapPage({
 
     let cancelled = false;
     let created: MapView | null = null;
-    createMapView(element, INITIAL_VIEW).then(
+    createMapView(element, readMapScreen().view ?? INITIAL_VIEW).then(
       (view) => {
         if (cancelled) {
           view.destroy();
@@ -284,6 +336,38 @@ export function MapPage({
     observer.observe(host);
     return () => observer.disconnect();
   }, [map]);
+
+  useEffect(() => {
+    rememberMapScreen({ spotFilters, basecampFilters: filters, radiusSearch, aiSummary });
+  }, [spotFilters, filters, radiusSearch, aiSummary]);
+
+  // 지도가 멈출 때마다 위치를 적어 둔다. 다른 화면에 다녀오면 이 위치에서 지도를 다시 연다.
+  useEffect(() => {
+    if (!map) return;
+    return map.onIdle(() => rememberMapScreen({ view: { center: map.getCenter(), level: map.getLevel() } }));
+  }, [map]);
+
+  // 장소 상세를 열면 그 장소의 핀 끝이 가리는 것 없이 보이는 지도 구간의 가운데에 오게 옮긴다.
+  // 폰에서는 위쪽 검색 줄·지도 버튼과 아래쪽 시트 사이가 그 구간이다.
+  // 글·행사·베이스캠프의 장소 링크나 공유받은 주소로 들어오면 지도가 전국 축척으로 열리므로, 동네가 보이는 수준까지 확대한다.
+  // 이미 더 확대해 둔 지도는 축소하지 않는다. 옮긴 뒤 지도가 멈추면 평소처럼 영역 조회가 핀을 다시 그린다.
+  const moveToSpot = useEffectEvent((position: LatLng) => {
+    const host = hostRef.current;
+    if (!map || !host) return;
+    // 상세가 열리며 하단 탭이 사라지면 지도 칸이 커진다. 크기 변화 알림이 오기 전일 수 있어서 지도에 먼저 알리고 잰다.
+    map.relayout();
+    const level = Math.min(map.getLevel(), SPOT_FOCUS_LEVEL);
+    const { top, bottom } = openMapSpan(host, mapButtonsRef.current, snap);
+    map.panTo(centerPlacing(map, position, level, host.getBoundingClientRect().height, (top + bottom) / 2), level);
+  });
+  useEffect(() => {
+    if (map && spotFocus) moveToSpot(spotFocus.position);
+  }, [map, spotFocus]);
+
+  // 켜 둔 장소 조건에 걸러진 장소도 상세를 보는 동안에는 지도에 핀이 보이게 한다.
+  useEffect(() => {
+    map?.showSelectedSpot(spotFocus);
+  }, [map, spotFocus]);
 
   useEffect(() => {
     if (!map) return;
@@ -579,7 +663,14 @@ export function MapPage({
               onPreview={previewEnabled ? setPreviewId : undefined}
             />
           ) : (
-            <SpotDetailPanel key={spotId} spotId={spotId} onBack={() => navigate('/map')} />
+            <SpotDetailPanel
+              key={spotId}
+              spotId={spotId}
+              onBack={() => navigate('/map')}
+              onLoaded={(detail) =>
+                setSpotFocus((previous) => (previous?.id === detail.spotId ? previous : selectedSpotMarker(detail)))
+              }
+            />
           )}
         </Sheet>
 
@@ -645,7 +736,7 @@ export function MapPage({
             {/* 모바일은 검색 줄을 지도 위 맨 위에 띄우고, 데스크톱은 왼쪽 패널 도구 줄이 맡는다. */}
             <div className="flex flex-col gap-2 lg:hidden">{renderControls(false)}</div>
             {map && (
-              <div className="flex flex-wrap justify-end gap-2 lg:justify-start">
+              <div ref={mapButtonsRef} className="flex flex-wrap justify-end gap-2 lg:justify-start">
                 {!reporting && !basecampMode && !opening && <ReportButton />}
                 <button
                   type="button"
