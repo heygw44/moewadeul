@@ -2,17 +2,7 @@ import type { ReactNode } from 'react';
 import { BrandMark } from '../../components/BrandMark';
 import { useSession } from '../../features/member/session';
 import { Link } from '../router';
-
-// 화면에 보여 주는 데이터의 출처다. 장소·경계는 공공데이터, 날씨·일몰은 기상청·천문연, 바탕 지도는 카카오맵이다.
-const DATA_SOURCES = [
-  '한국관광공사 고캠핑',
-  '산림청 국립자연휴양림관리소',
-  '전국휴양림표준데이터',
-  '한국보호지역통합DB(KDPA)',
-  '기상청',
-  '한국천문연구원',
-  '카카오맵',
-];
+import { DATA_SOURCES } from './dataSources';
 
 const LINK_CLASS = 'inline-flex min-h-11 items-center text-sm text-ink-muted hover:text-ink hover:underline lg:min-h-8';
 
