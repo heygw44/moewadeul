@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import type { ReactNode } from 'react';
 import { applyToBasecamp, cancelMyApplication, fetchBasecampDetail, leaveBasecamp } from '../../api/basecamps';
 import { ApiError } from '../../api/client';
@@ -33,6 +33,8 @@ import {
 type BasecampDetailPanelProps = {
   basecampId: number;
   onBack: () => void;
+  // 베이스캠프를 불러오면 알린다. 지도 화면은 베이스캠프 장소로 지도를 옮기고 핀을 그린다.
+  onLoaded?: (detail: BasecampDetail) => void;
 };
 
 type DetailResult = { basecampId: number; detail: BasecampDetail } | { basecampId: number; error: unknown };
@@ -50,7 +52,7 @@ const CONFIRMED_SAFETY_RULES = [
   '야영한 자리에는 흔적을 남기지 마세요.',
 ];
 
-export function BasecampDetailPanel({ basecampId, onBack }: BasecampDetailPanelProps) {
+export function BasecampDetailPanel({ basecampId, onBack, onLoaded }: BasecampDetailPanelProps) {
   const session = useSession();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
@@ -74,7 +76,13 @@ export function BasecampDetailPanel({ basecampId, onBack }: BasecampDetailPanelP
 
   const current = result && result.basecampId === basecampId ? result : null;
   const showSkeleton = useDelayedFlag(current === null);
-  const loadedTitle = current && 'detail' in current ? current.detail.title : null;
+  const loadedDetail = current && 'detail' in current ? current.detail : null;
+  const loadedTitle = loadedDetail?.title ?? null;
+
+  const reportLoaded = useEffectEvent((detail: BasecampDetail) => onLoaded?.(detail));
+  useEffect(() => {
+    if (loadedDetail !== null) reportLoaded(loadedDetail);
+  }, [loadedDetail]);
 
   useEffect(() => {
     if (loadedTitle === null) return;

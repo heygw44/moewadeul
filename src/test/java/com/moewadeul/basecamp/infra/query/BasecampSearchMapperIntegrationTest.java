@@ -385,13 +385,14 @@ class BasecampSearchMapperIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-12] 장소 요약은 장소의 이름과 유형을 읽고, 없는 장소는 null이다")
+    @DisplayName("[F-12] 장소 요약은 장소의 이름·유형·좌표를 읽고, 없는 장소는 null이다")
     void spotSummary() {
         // given
-        long spotId = insertSpot("능선 끝 평지", new Coordinate(37.5, 127.5));
+        long spotId = insertSpot("능선 끝 평지", new Coordinate(37.5, 127.25));
 
         // when & then
-        assertThat(mapper.selectSpotSummary(spotId)).isEqualTo(new SpotSummaryRow(spotId, "능선 끝 평지", "BAKJI"));
+        assertThat(mapper.selectSpotSummary(spotId))
+                .isEqualTo(new SpotSummaryRow(spotId, "능선 끝 평지", "BAKJI", 37.5, 127.25));
         assertThat(mapper.selectSpotSummary(spotId + 1000)).isNull();
     }
 

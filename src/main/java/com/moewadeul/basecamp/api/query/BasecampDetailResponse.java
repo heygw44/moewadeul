@@ -17,8 +17,9 @@ public sealed interface BasecampDetailResponse {
     String SAFETY_NOTICE = "출발 전 일정을 가족이나 지인과 공유하세요. 플랫폼 밖 송금 요구는 신고해 주세요.";
 
     static BasecampDetailResponse from(BasecampDetail detail, boolean loggedIn) {
-        SpotResponse spot = new SpotResponse(
-                detail.spot().spotId(), detail.spot().name(), detail.spot().type());
+        BasecampDetail.SpotSummary summary = detail.spot();
+        SpotResponse spot =
+                new SpotResponse(summary.spotId(), summary.name(), summary.type(), summary.lat(), summary.lng());
         if (!loggedIn) {
             return anonymous(detail, spot);
         }
@@ -112,7 +113,8 @@ public sealed interface BasecampDetailResponse {
             @JsonInclude(JsonInclude.Include.NON_NULL) List<String> unmetReasons)
             implements BasecampDetailResponse {}
 
-    record SpotResponse(long spotId, String name, String type) {}
+    /** 장소 요약이다. 화면은 lat·lng로 상세를 열 때 지도를 그 장소로 옮긴다. 장소 좌표는 공개 값이라 모든 요청자에게 같다. */
+    record SpotResponse(long spotId, String name, String type, double lat, double lng) {}
 
     record AnonymousLeader(long memberId, String nickname) {}
 

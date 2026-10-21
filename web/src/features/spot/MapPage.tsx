@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import type { AiInterpretResponse, NearbySpot, SpotDetail } from '../../api/types';
+import type { AiInterpretResponse, BasecampDetail, NearbySpot, SpotDetail } from '../../api/types';
 import { BottomTabBar } from '../../app/layout/BottomTabBar';
 import { SiteHeader } from '../../app/layout/SiteHeader';
 import { Link, navigate } from '../../app/router';
@@ -112,6 +112,19 @@ function selectedSpotMarker(detail: SpotDetail): SpotMarkerData {
   };
 }
 
+// 베이스캠프 상세 응답으로 그 장소의 핀을 만든다. 베이스캠프 화면의 다른 핀처럼 공원 경계 경고와 휴장은 표시하지 않는다.
+function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData {
+  const { spot } = detail;
+  return {
+    id: spot.spotId,
+    kind: spot.type,
+    name: spot.name,
+    position: { lat: spot.lat, lng: spot.lng },
+    warning: false,
+    closed: false,
+  };
+}
+
 function sheetTop(snap: SheetSnap, aboveBottomNav: boolean): string {
   if (snap === 'full' || !aboveBottomNav) return `${SHEET_TOP_DVH[snap]}dvh`;
   return `calc(${SHEET_TOP_DVH[snap]}dvh + var(--bottom-nav-h))`;
@@ -217,9 +230,16 @@ export function MapPage({
   // AI가 반경을 읽어 냈을 때의 반경 검색이다. 값이 있으면 지도 영역 대신 이 기준점에서 가까운 순으로 장소를 보여 준다.
   const [radiusSearch, setRadiusSearch] = useState<RadiusSearch | null>(() => readMapScreen().radiusSearch);
   const [aiSummary, setAiSummary] = useState<AiSummary | null>(() => readMapScreen().aiSummary);
-  // 장소 상세가 불러온 장소다. 지도를 그 장소로 옮기고 핀을 그릴 때 쓰고, 다른 장소로 바뀌면 버린다.
-  const [spotFocus, setSpotFocus] = useState<SpotMarkerData | null>(null);
-  if (spotFocus !== null && spotFocus.id !== spotId) setSpotFocus(null);
+  // 장소 상세나 베이스캠프 상세가 불러온 장소다. 지도를 그 장소로 옮기고 핀을 그릴 때 쓴다.
+  // key는 어느 상세 화면의 장소인지이고, 다른 화면으로 바뀌면 버린다.
+  const focusKey = spotId !== undefined ? `spot:${spotId}` : basecampId !== undefined ? `basecamp:${basecampId}` : null;
+  const [spotFocus, setSpotFocus] = useState<{ key: string; marker: SpotMarkerData } | null>(null);
+  if (spotFocus !== null && spotFocus.key !== focusKey) setSpotFocus(null);
+  const focusedSpot = spotFocus?.marker ?? null;
+  // 상세 응답을 다시 받아도(신청 뒤 새로 고침 등) 같은 화면이면 지도를 다시 옮기지 않는다.
+  const focusOn = (key: string | null, marker: SpotMarkerData) => {
+    if (key !== null) setSpotFocus((previous) => (previous?.key === key ? previous : { key, marker }));
+  };
   // 지도에서 장소 마커를 눌러 고른 장소다. 베이스캠프 목록을 그 장소로 거른다.
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
   // 데스크톱에서 목록을 둔 채 지도 위 근거 판으로 보고 있는 장소다.
@@ -347,7 +367,7 @@ export function MapPage({
     return map.onIdle(() => rememberMapScreen({ view: { center: map.getCenter(), level: map.getLevel() } }));
   }, [map]);
 
-  // 장소 상세를 열면 그 장소의 핀 끝이 가리는 것 없이 보이는 지도 구간의 가운데에 오게 옮긴다.
+  // 장소 상세나 베이스캠프 상세를 열면 그 장소의 핀 끝이 가리는 것 없이 보이는 지도 구간의 가운데에 오게 옮긴다.
   // 폰에서는 위쪽 검색 줄·지도 버튼과 아래쪽 시트 사이가 그 구간이다.
   // 글·행사·베이스캠프의 장소 링크나 공유받은 주소로 들어오면 지도가 전국 축척으로 열리므로, 동네가 보이는 수준까지 확대한다.
   // 이미 더 확대해 둔 지도는 축소하지 않는다. 옮긴 뒤 지도가 멈추면 평소처럼 영역 조회가 핀을 다시 그린다.
@@ -361,13 +381,13 @@ export function MapPage({
     map.panTo(centerPlacing(map, position, level, host.getBoundingClientRect().height, (top + bottom) / 2), level);
   });
   useEffect(() => {
-    if (map && spotFocus) moveToSpot(spotFocus.position);
-  }, [map, spotFocus]);
+    if (map && focusedSpot) moveToSpot(focusedSpot.position);
+  }, [map, focusedSpot]);
 
-  // 켜 둔 장소 조건에 걸러진 장소도 상세를 보는 동안에는 지도에 핀이 보이게 한다.
+  // 장소 조건에 걸러졌거나 모집 중인 베이스캠프가 없어서 마커에 없는 장소도, 상세를 보는 동안에는 지도에 핀이 보이게 한다.
   useEffect(() => {
-    map?.showSelectedSpot(spotFocus);
-  }, [map, spotFocus]);
+    map?.showSelectedSpot(focusedSpot);
+  }, [map, focusedSpot]);
 
   useEffect(() => {
     if (!map) return;
@@ -470,9 +490,11 @@ export function MapPage({
     };
   }, [map]);
 
+  // 베이스캠프 상세에서는 그 베이스캠프의 장소를, 목록에서는 마커로 거른 장소를 고른 핀으로 그린다.
+  const basecampSelectedId = basecampId !== undefined ? (focusedSpot?.id ?? null) : spotFilterId;
   useEffect(() => {
-    map?.setSelected(basecampMode ? spotFilterId : opening ? (openSpotId ?? null) : (spotId ?? previewId));
-  }, [map, spotId, basecampMode, spotFilterId, opening, openSpotId, previewId]);
+    map?.setSelected(basecampMode ? basecampSelectedId : opening ? (openSpotId ?? null) : (spotId ?? previewId));
+  }, [map, spotId, basecampMode, basecampSelectedId, opening, openSpotId, previewId]);
 
   useEffect(() => {
     map?.setTerrain(terrainOn);
@@ -631,7 +653,12 @@ export function MapPage({
           {opening && openSpotId !== undefined ? (
             <BasecampOpenPanel key={openSpotId} spotId={openSpotId} onBack={() => navigate(`/spots/${openSpotId}`)} />
           ) : basecampId !== undefined ? (
-            <BasecampDetailPanel key={basecampId} basecampId={basecampId} onBack={() => navigate('/basecamps')} />
+            <BasecampDetailPanel
+              key={basecampId}
+              basecampId={basecampId}
+              onBack={() => navigate('/basecamps')}
+              onLoaded={(detail) => focusOn(focusKey, basecampSpotMarker(detail))}
+            />
           ) : basecampMode ? (
             <BasecampListPanel
               result={basecamps}
@@ -667,9 +694,7 @@ export function MapPage({
               key={spotId}
               spotId={spotId}
               onBack={() => navigate('/map')}
-              onLoaded={(detail) =>
-                setSpotFocus((previous) => (previous?.id === detail.spotId ? previous : selectedSpotMarker(detail)))
-              }
+              onLoaded={(detail) => focusOn(focusKey, selectedSpotMarker(detail))}
             />
           )}
         </Sheet>

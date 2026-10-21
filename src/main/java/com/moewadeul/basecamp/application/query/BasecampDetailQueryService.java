@@ -62,7 +62,7 @@ public class BasecampDetailQueryService {
                 basecamp.getId(),
                 basecamp.getTitle(),
                 basecamp.getDescription(),
-                new BasecampDetail.SpotSummary(spot.spotId(), spot.name(), spot.type()),
+                new BasecampDetail.SpotSummary(spot.spotId(), spot.name(), spot.type(), spot.lat(), spot.lng()),
                 basecamp.getStartDate(),
                 basecamp.getEndDate(),
                 basecamp.getCapacity().getValue(),

@@ -139,10 +139,13 @@
           AND b.status = 'CONFIRMED'
     </select>
 
+    <!-- SRID 4326 점에서 ST_Latitude는 위도를, ST_Longitude는 경도를 꺼낸다. 검색 결과의 장소 좌표와 같은 방식이다. -->
     <select id="selectSpotSummary" resultType="com.moewadeul.basecamp.infra.query.SpotSummaryRow">
         SELECT s.id AS spot_id,
                s.name AS name,
-               s.type AS type
+               s.type AS type,
+               ST_Latitude(s.location) AS lat,
+               ST_Longitude(s.location) AS lng
         FROM spot s
         WHERE s.id = #{spotId}
     </select>
