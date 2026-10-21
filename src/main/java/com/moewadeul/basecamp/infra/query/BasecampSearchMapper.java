@@ -30,6 +30,6 @@ public interface BasecampSearchMapper {
     /** 호출하면 viewerId인 회원이 ACTIVE 멤버로 들어 있는 확정된 베이스캠프의 일정을 읽는다. */
     List<ConfirmedScheduleRow> selectConfirmedSchedules(@Param("viewerId") long viewerId);
 
-    /** 호출하면 spotId인 장소의 이름과 유형을 읽는다. 장소의 상태는 거르지 않고, 없으면 null이다. */
+    /** 호출하면 spotId인 장소의 이름·유형·좌표를 읽는다. 장소의 상태는 거르지 않고, 없으면 null이다. */
     SpotSummaryRow selectSpotSummary(@Param("spotId") long spotId);
 }

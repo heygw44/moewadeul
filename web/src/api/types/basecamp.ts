@@ -67,6 +67,8 @@ export interface BasecampDetailSpot {
   spotId: number;
   name: string;
   type: SpotType;
+  lat: number;
+  lng: number;
 }
 
 export interface BasecampLeader {

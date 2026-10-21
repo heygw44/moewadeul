@@ -461,7 +461,7 @@ class BasecampQueryControllerTest {
                 77L,
                 "굴업도 주말 1박",
                 "함께 가요",
-                new BasecampDetail.SpotSummary(101L, "개머리언덕", "BAKJI"),
+                new BasecampDetail.SpotSummary(101L, "개머리언덕", "BAKJI", 37.0712, 125.9893),
                 LocalDate.of(2026, 11, 7),
                 LocalDate.of(2026, 11, 8),
                 4,
