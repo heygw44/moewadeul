@@ -22,6 +22,11 @@ public interface ProgramQueryMapper {
             @Param("offset") long offset,
             @Param("limit") int limit);
 
+    /**
+     * 호출하면 취소되지 않은 행사 중 신청 오픈 시각이 now보다 늦은 것 가운데 가장 이른 시각을 읽는다. 그런 행사가 없으면 null이다.
+     */
+    Instant selectNextApplyOpenAt(@Param("now") Instant now);
+
     /** 호출하면 programId인 행사를 취소 여부와 상관없이 읽는다. 없으면 null이다. */
     ProgramDetailRow selectDetail(@Param("programId") long programId);
 

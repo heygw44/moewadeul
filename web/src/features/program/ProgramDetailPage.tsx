@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ApiError, newIdempotencyKey } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
@@ -26,6 +26,7 @@ import { formatKstDateTime } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
+import { useApplyPhaseRefresh } from './useApplyPhaseRefresh';
 import { useNow } from './useNow';
 
 type LoadResult = { programId: number; detail: ProgramDetail } | { programId: number; error: unknown };
@@ -65,7 +66,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
     document.title = loadedTitle ? `${loadedTitle} · 뫼와들` : '공식 행사 · 뫼와들';
   }, [loadedTitle]);
 
-  const reload = () => setAttempt((value) => value + 1);
+  const reload = useCallback(() => setAttempt((value) => value + 1), []);
 
   let body: ReactNode;
   if (current === null) {
@@ -106,6 +107,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
   }
 
   const detail = current !== null && 'detail' in current ? current.detail : null;
+  useApplyPhaseRefresh(detail, reload);
   // 장소는 본문 근거 목록이, 취소는 본문 안내가 알리므로 제목 아래에는 상태와 숙박 여부만 둔다.
   const meta = detail ? (
     <MetaLine
