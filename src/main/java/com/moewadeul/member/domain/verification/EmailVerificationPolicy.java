@@ -21,6 +21,9 @@ public final class EmailVerificationPolicy {
     public static final Duration IP_WINDOW = Duration.ofHours(1);
     public static final int IP_LIMIT = 20;
 
+    /** 인증 기록을 보관하는 기간이다. 재발송 한도는 최근 24시간만 세고 코드는 10분만 유효해서, 이보다 오래된 기록은 쓰는 곳이 없다. */
+    public static final Duration RECORD_RETENTION = Duration.ofDays(7);
+
     private EmailVerificationPolicy() {}
 
     /**
