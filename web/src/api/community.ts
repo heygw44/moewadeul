@@ -51,8 +51,8 @@ export function getPost(postId: number, signal?: AbortSignal): Promise<Community
   return apiFetch<CommunityPostDetail>(`/api/community/posts/${postId}`, { signal });
 }
 
-export function createPost(req: CommunityPostCreateRequest): Promise<{ postId: number }> {
-  return apiFetch<{ postId: number }>('/api/community/posts', { method: 'POST', body: req });
+export function createPost(req: CommunityPostCreateRequest, idempotencyKey: string): Promise<{ postId: number }> {
+  return apiFetch<{ postId: number }>('/api/community/posts', { method: 'POST', body: req, idempotencyKey });
 }
 
 export function updatePost(postId: number, req: CommunityPostUpdateRequest): Promise<CommunityPostDetail> {
@@ -71,8 +71,16 @@ export function listComments(postId: number, page: number, signal?: AbortSignal)
   });
 }
 
-export function createComment(postId: number, req: CommunityCommentCreateRequest): Promise<{ commentId: number }> {
-  return apiFetch<{ commentId: number }>(`/api/community/posts/${postId}/comments`, { method: 'POST', body: req });
+export function createComment(
+  postId: number,
+  req: CommunityCommentCreateRequest,
+  idempotencyKey: string,
+): Promise<{ commentId: number }> {
+  return apiFetch<{ commentId: number }>(`/api/community/posts/${postId}/comments`, {
+    method: 'POST',
+    body: req,
+    idempotencyKey,
+  });
 }
 
 export function updateComment(commentId: number, req: { content: string }): Promise<CommunityComment> {

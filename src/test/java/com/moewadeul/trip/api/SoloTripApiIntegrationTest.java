@@ -14,6 +14,7 @@ import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.infra.SpotJpaRepository;
 import jakarta.servlet.http.Cookie;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -84,6 +85,27 @@ class SoloTripApiIntegrationTest {
         // then
         assertThat(deleted).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(afterDelete).bodyJson().extractingPath("$").asList().isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-23][NFR-03] 같은 Idempotency-Key로 일정을 두 번 보내면 일정은 하나만 만들고, 두 번째에도 처음 soloTripId를 응답한다")
+    void sameKeyRegistersOneTrip() {
+        // given
+        long spotId = saveSpot();
+        Cookie session = verifiedSession(saveMember());
+        String key = UUID.randomUUID().toString();
+        String body = body(spotId, "2026-11-07", "2026-11-09");
+
+        // when
+        MvcTestResult first = sendWithKey(session, key, body);
+        MvcTestResult second = sendWithKey(session, key, body);
+
+        // then
+        assertThat(first).hasStatus(HttpStatus.CREATED);
+        assertThat(second).hasStatus(HttpStatus.CREATED);
+        assertThat(tripIdOf(second)).isEqualTo(tripIdOf(first));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM solo_trip", Integer.class))
+                .isEqualTo(1);
     }
 
     @Test
@@ -187,11 +209,24 @@ class SoloTripApiIntegrationTest {
     }
 
     private MvcTestResult send(MockMvcTester.MockMvcRequestBuilder builder, Cookie session, String body) {
-        MockMvcTester.MockMvcRequestBuilder request = builder.with(csrf()).cookie(session);
+        MockMvcTester.MockMvcRequestBuilder request = builder.with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", UUID.randomUUID().toString());
         if (body != null) {
             request = request.contentType(MediaType.APPLICATION_JSON).content(body);
         }
         return request.exchange();
+    }
+
+    private MvcTestResult sendWithKey(Cookie session, String key, String body) {
+        return mvc.post()
+                .uri("/api/solo-trips")
+                .with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .exchange();
     }
 
     private static int tripIdOf(MvcTestResult created) {

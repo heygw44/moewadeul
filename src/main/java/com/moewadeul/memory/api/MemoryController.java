@@ -1,5 +1,7 @@
 package com.moewadeul.memory.api;
 
+import com.moewadeul.common.idempotency.IdempotencyExecutor;
+import com.moewadeul.common.idempotency.IdempotentRequest;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.memory.application.MemoryCommandService;
 import com.moewadeul.memory.application.MemoryQueryService;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,15 +25,22 @@ class MemoryController {
 
     private final MemoryCommandService memoryCommandService;
     private final MemoryQueryService memoryQueryService;
+    private final IdempotencyExecutor idempotencyExecutor;
 
-    MemoryController(MemoryCommandService memoryCommandService, MemoryQueryService memoryQueryService) {
+    MemoryController(
+            MemoryCommandService memoryCommandService,
+            MemoryQueryService memoryQueryService,
+            IdempotencyExecutor idempotencyExecutor) {
         this.memoryCommandService = memoryCommandService;
         this.memoryQueryService = memoryQueryService;
+        this.idempotencyExecutor = idempotencyExecutor;
     }
 
     @Operation(
             summary = "추억 기록 등록",
             description = "이메일 인증을 마친 회원이 다녀온 곳을 기록한다. 201과 함께 memoryId를 준다. "
+                    + "Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. "
+                    + "같은 키로 다시 보내면 기록을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. "
                     + "lat(-90~90), lng(-180~180), visitedDate(한국 날짜, 오늘보다 뒤일 수 없음), nights(0~30)는 꼭 보낸다. "
                     + "content는 선택이고, 보내면 공백뿐일 수 없으며 2,000자 이하다. visibility는 PRIVATE(기본)나 PUBLIC이다. "
                     + "spotId를 보내면 지도에 보이는(ACTIVE) 장소여야 하고, 좌표는 보낸 값을 그대로 저장한다. "
@@ -39,8 +49,15 @@ class MemoryController {
     @PostMapping("/api/memories")
     @ResponseStatus(HttpStatus.CREATED)
     MemoryCreatedResponse write(
-            @AuthenticationPrincipal LoginMember loginMember, @Valid @RequestBody MemoryCreateRequest request) {
-        return new MemoryCreatedResponse(memoryCommandService.write(loginMember.memberId(), request.toCommand()));
+            @AuthenticationPrincipal LoginMember loginMember,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody MemoryCreateRequest request) {
+        long memberId = loginMember.memberId();
+        return idempotencyExecutor.execute(
+                new IdempotentRequest(memberId, idempotencyKey, "POST /api/memories", request),
+                HttpStatus.CREATED,
+                MemoryCreatedResponse.class,
+                () -> new MemoryCreatedResponse(memoryCommandService.write(memberId, request.toCommand())));
     }
 
     @Operation(

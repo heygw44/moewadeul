@@ -13,8 +13,8 @@ import type {
   Page,
 } from './types';
 
-export function createMemory(req: MemoryCreateRequest): Promise<{ memoryId: number }> {
-  return apiFetch<{ memoryId: number }>('/api/memories', { method: 'POST', body: req });
+export function createMemory(req: MemoryCreateRequest, idempotencyKey: string): Promise<{ memoryId: number }> {
+  return apiFetch<{ memoryId: number }>('/api/memories', { method: 'POST', body: req, idempotencyKey });
 }
 
 // 남의 비공개 기록이면 서버가 없는 기록과 같은 404로 응답한다.

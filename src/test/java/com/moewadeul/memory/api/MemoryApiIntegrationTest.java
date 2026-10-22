@@ -17,6 +17,7 @@ import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.infra.SpotJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -92,6 +93,27 @@ class MemoryApiIntegrationTest {
                 .asString()
                 .isNotBlank();
         assertThat(detail).bodyJson().doesNotHavePath("$.spot");
+    }
+
+    @Test
+    @DisplayName("[F-33][NFR-03] 사진이 붙은 기록을 같은 Idempotency-Key로 두 번 보내면 기록은 하나만 만들고, 두 번째에도 처음 memoryId를 응답한다")
+    void sameKeyCreatesOneMemoryEvenWithPhotos() {
+        // given
+        Cookie session = verifiedSession(saveMember());
+        int imageId = uploadedImage(session);
+        String key = UUID.randomUUID().toString();
+        String body = publicBodyWithImages(YESTERDAY, imageId);
+
+        // when
+        MvcTestResult first = sendWithKey(session, key, body);
+        MvcTestResult second = sendWithKey(session, key, body);
+
+        // then
+        assertThat(first).hasStatus(HttpStatus.CREATED);
+        assertThat(second).hasStatus(HttpStatus.CREATED);
+        assertThat(idOf(second, "$.memoryId")).isEqualTo(idOf(first, "$.memoryId"));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory", Integer.class))
+                .isEqualTo(1);
     }
 
     @Test
@@ -488,6 +510,17 @@ class MemoryApiIntegrationTest {
         assertThat(list).bodyJson().extractingPath("$[1].excerpt").isEqualTo("물가 옆 평지");
     }
 
+    private MvcTestResult sendWithKey(Cookie session, String key, String body) {
+        return mvc.post()
+                .uri("/api/memories")
+                .with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .exchange();
+    }
+
     private void assertInvalid(Cookie session, String body, String field) {
         MvcTestResult result = send(mvc.post().uri("/api/memories"), session, body);
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
@@ -554,7 +587,9 @@ class MemoryApiIntegrationTest {
     }
 
     private MvcTestResult send(MockMvcTester.MockMvcRequestBuilder builder, Cookie session, String body) {
-        MockMvcTester.MockMvcRequestBuilder request = builder.with(csrf()).cookie(session);
+        MockMvcTester.MockMvcRequestBuilder request = builder.with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", UUID.randomUUID().toString());
         if (body != null) {
             request = request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
+import { createIdempotentRunner } from '../../api/idempotency';
 import { createSoloTrip } from '../../api/soloTrips';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
@@ -97,6 +98,7 @@ function SoloTripForm({
   const [fieldErrors, setFieldErrors] = useState<TripFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [idempotentRunner] = useState(createIdempotentRunner);
 
   function changeStart(value: string) {
     setStartDate(value);
@@ -127,7 +129,8 @@ function SoloTripForm({
 
     setSubmitting(true);
     try {
-      await createSoloTrip({ spotId, startDate, endDate });
+      const request = { spotId, startDate, endDate };
+      await idempotentRunner.run(request, (key) => createSoloTrip(request, key));
       onRegistered();
     } catch (error) {
       setSubmitting(false);

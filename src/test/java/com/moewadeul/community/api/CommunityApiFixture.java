@@ -8,6 +8,7 @@ import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -93,11 +94,25 @@ public final class CommunityApiFixture {
     }
 
     public MvcTestResult send(MockMvcTester.MockMvcRequestBuilder builder, Cookie session, String body) {
-        MockMvcTester.MockMvcRequestBuilder request = builder.with(csrf()).cookie(session);
+        MockMvcTester.MockMvcRequestBuilder request = builder.with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", UUID.randomUUID().toString());
         if (body != null) {
             request = request.contentType(MediaType.APPLICATION_JSON).content(body);
         }
         return request.exchange();
+    }
+
+    // 같은 Idempotency-Key로 여러 번 보내 보려고 키를 직접 정해 POST한다.
+    public MvcTestResult postWithKey(String uri, Cookie session, String key, String body) {
+        return mvc.post()
+                .uri(uri)
+                .with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .exchange();
     }
 
     // 글을 쓰고 201을 확인한 뒤 postId를 돌려준다.

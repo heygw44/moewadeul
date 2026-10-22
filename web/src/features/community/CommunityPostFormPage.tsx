@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { createPost, getPost, requestImageUpload, updatePost } from '../../api/community';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
+import { createIdempotentRunner } from '../../api/idempotency';
 import { fetchSpotDetail } from '../../api/spots';
 import type { CommunityPostDetail, CommunityPostUpdateRequest } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
@@ -225,6 +226,7 @@ function PostForm(props: PostFormProps) {
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [idempotentRunner] = useState(createIdempotentRunner);
   useDraftCapture<PostDraft>(pathname + search, memberId, {
     title,
     content,
@@ -274,12 +276,13 @@ function PostForm(props: PostFormProps) {
     setSubmitting(true);
     try {
       if (props.mode === 'create') {
-        const created = await createPost({
+        const request = {
           title: title.trim(),
           content: content.trim(),
           spotId: spot?.spotId,
           imageIds,
-        });
+        };
+        const created = await idempotentRunner.run(request, (key) => createPost(request, key));
         navigate(`/community/${created.postId}`);
         return;
       }

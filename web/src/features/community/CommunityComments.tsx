@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { createComment, deleteComment, listComments, updateComment } from '../../api/community';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
+import { createIdempotentRunner } from '../../api/idempotency';
 import type { CommunityComment } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
@@ -48,6 +49,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
   const [deleting, setDeleting] = useState<number | null>(null);
   const [reporting, setReporting] = useState<CommunityReportTarget | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [idempotentRunner] = useState(createIdempotentRunner);
   const controllerRef = useRef<AbortController | null>(null);
   const showSkeleton = useDelayedFlag(list === null && listError === null);
 
@@ -111,7 +113,8 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
       <div className="rounded-sheet bg-fill p-4">
         <NewCommentArea
           onSubmit={async (content) => {
-            await createComment(postId, { content });
+            const request = { postId, content };
+            await idempotentRunner.run(request, (key) => createComment(postId, { content }, key));
             await refreshAfterChange('댓글을 남겼어요.');
           }}
         />
@@ -174,7 +177,8 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                 }}
                 onCancelReply={() => setReplyingId(null)}
                 onSubmitReply={async (content) => {
-                  await createComment(postId, { content, parentId: comment.commentId });
+                  const body = { content, parentId: comment.commentId };
+                  await idempotentRunner.run({ postId, ...body }, (key) => createComment(postId, body, key));
                   await refreshAfterChange('답글을 남겼어요.');
                 }}
               />
@@ -206,7 +210,8 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                         }}
                         onCancelReply={() => setReplyingId(null)}
                         onSubmitReply={async (content) => {
-                          await createComment(postId, { content, parentId: reply.commentId });
+                          const body = { content, parentId: reply.commentId };
+                          await idempotentRunner.run({ postId, ...body }, (key) => createComment(postId, body, key));
                           await refreshAfterChange('답글을 남겼어요.');
                         }}
                       />

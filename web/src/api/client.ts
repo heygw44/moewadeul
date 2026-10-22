@@ -44,7 +44,7 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
 }
 
 // 행사 신청·결제처럼 서버가 중복 처리를 막아야 하는 요청에 붙인다.
-// 사용자 행동 한 번에 하나를 만들고, 같은 행동을 다시 보낼 때는 같은 키를 쓴다.
+// 사용자 행동 한 번에 하나를 만들고, 같은 행동을 다시 보낼 때는 같은 키를 쓴다. 만들기 요청(기록·글·댓글·일정·베이스캠프)은 idempotency.ts의 실행기가 키를 정한다.
 export function newIdempotencyKey(): string {
   return crypto.randomUUID();
 }
