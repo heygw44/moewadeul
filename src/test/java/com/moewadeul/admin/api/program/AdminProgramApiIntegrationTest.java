@@ -342,7 +342,9 @@ class AdminProgramApiIntegrationTest {
                 now.minus(Duration.ofHours(1)), now.plus(Duration.ofDays(5)), now.plus(Duration.ofDays(7)), 10)));
         assertThat(post(ADMIN_PROGRAMS + "/" + canceled + "/cancel")).hasStatus(HttpStatus.OK);
         clock.advance(Duration.ofHours(2));
-        insertApplication(open, "PENDING_PAYMENT", now);
+        insertApplication(open, "PENDING_PAYMENT", clock.instant());
+        insertApplicationFor(
+                open, fixture.saveVerifiedMember(TestSequence.nickname()), "PENDING_PAYMENT", clock.instant());
         insertApplication(open, "CONFIRMED", now);
         insertApplication(open, "EXPIRED", now);
         insertApplication(open, "CANCELED", now);

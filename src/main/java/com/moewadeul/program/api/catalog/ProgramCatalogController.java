@@ -23,7 +23,7 @@ class ProgramCatalogController {
             description = "취소되지 않은 행사를 행사 시작 시각이 이른 순서로 돌려준다(시작 시각이 같으면 programId 순서). 로그인하지 않아도 조회할 수 있다. "
                     + "status를 보내면 UPCOMING(신청 시작 전), OPEN(신청 시작 시각 이상, 마감 시각 미만), CLOSED(마감 시각 이후) 중 그 단계의 행사만 준다. "
                     + "항목마다 programId, title, locationText, spotId(지도 장소와 연결하지 않았으면 null), startAt, endAt, applyOpenAt, applyCloseAt, "
-                    + "capacity, remainingSeats(정원에서 결제 대기·확정 신청 수를 뺀 값, 0 미만이면 0), fee, overnight, status가 있다. "
+                    + "capacity, remainingSeats(정원에서 확정 신청과 결제 기한이 남은 결제 대기 신청의 수를 뺀 값, 0 미만이면 0), fee, overnight, status가 있다. "
                     + "page는 0부터 시작하고 기본값은 0이다. size는 1~50이고 기본값은 20이다. 응답에는 전체 개수가 없고 다음 페이지가 있는지만 hasNext로 알려 준다. "
                     + "status가 허용 값이 아니거나 page·size가 범위를 벗어나면 400 INVALID_INPUT이다.")
     @GetMapping("/api/programs")
