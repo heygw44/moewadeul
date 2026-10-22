@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { toUserMessage } from '../api/errors';
 import type { ImageUpload, ImageUploadRequest } from '../api/types';
@@ -8,6 +8,10 @@ import { createThumbnail } from './createThumbnail';
 // 서버 규칙과 같은 값이다. 커뮤니티 글과 장소 후기가 같은 형식·크기 제한을 쓰고, 장수만 다르다.
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
+
+// 한꺼번에 올리는 사진 수의 상한이다. 업로드 URL은 올리기 직전에 받고, 저장소는 업로드가 끝난 시각을 URL 만료 시각과 비교한다.
+// 그래서 한 장이 걸리는 시간은 같이 올리는 장수에 비례하고, 장수가 많아도 뒤에 기다린 사진의 URL은 늦게 받아 만료되지 않는다.
+const MAX_CONCURRENT_UPLOADS = 3;
 
 export type UploadImageItem = {
   key: string;
@@ -80,9 +84,30 @@ export function useImageUploads({
     setImages((previous) => previous.map((image) => (image.key === key ? { ...image, ...patch } : image)));
   }
 
-  // 올리는 도중에 이미지를 뺐다면 patchImage가 아무것도 바꾸지 않는다.
-  async function upload(key: string, file: File) {
+  const waiting = useRef<{ key: string; file: File }[]>([]);
+  const running = useRef(0);
+
+  // 대기열에서 상한까지만 꺼내 올린다. 한 장이 끝나면 다음 장을 꺼낸다.
+  function drain() {
+    while (running.current < MAX_CONCURRENT_UPLOADS) {
+      const next = waiting.current.shift();
+      if (!next) return;
+      running.current += 1;
+      void upload(next.key, next.file).finally(() => {
+        running.current -= 1;
+        drain();
+      });
+    }
+  }
+
+  function enqueue(key: string, file: File) {
     patchImage(key, { status: 'uploading', error: undefined });
+    waiting.current.push({ key, file });
+    drain();
+  }
+
+  // 올리는 도중에 이미지를 뺐다면 patchImage가 아무것도 바꾸지 않는다. upload는 예외를 던지지 않는다.
+  async function upload(key: string, file: File) {
     try {
       const thumbnailBlob = thumbnail ? await createThumbnail(file) : null;
       const target = await requestUpload({
@@ -123,7 +148,7 @@ export function useImageUploads({
     if (accepted.length === 0) return;
     setImages((previous) => [...previous, ...accepted]);
     for (const item of accepted) {
-      if (item.file) void upload(item.key, item.file);
+      if (item.file) enqueue(item.key, item.file);
     }
   }
 
@@ -141,6 +166,7 @@ export function useImageUploads({
   }
 
   function remove(key: string) {
+    waiting.current = waiting.current.filter((item) => item.key !== key);
     setImages((previous) => previous.filter((image) => image.key !== key));
     setMessages([]);
   }
@@ -155,7 +181,7 @@ export function useImageUploads({
     imageIds: images.flatMap((image) => (image.imageId === undefined ? [] : [image.imageId])),
     handleFiles,
     retry: (image) => {
-      if (image.file) void upload(image.key, image.file);
+      if (image.file) enqueue(image.key, image.file);
     },
     moveForward,
     remove,
