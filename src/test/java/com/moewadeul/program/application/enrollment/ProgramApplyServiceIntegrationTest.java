@@ -10,8 +10,10 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
+import com.moewadeul.program.application.catalog.ProgramQueryService;
 import com.moewadeul.program.domain.ProgramErrorCode;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +32,15 @@ class ProgramApplyServiceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private ProgramQueryService programQueryService;
+
+    @Autowired
+    private ProgramPaymentService programPaymentService;
+
+    @Autowired
+    private MutableClock clock;
 
     private ProgramApplyFixture fixture;
 
@@ -182,6 +193,39 @@ class ProgramApplyServiceIntegrationTest {
         jdbc.update("UPDATE program_application SET status = 'CANCELED' WHERE id = ?", firstResult.applicationId());
 
         assertThat(programApplyService.apply(second, programId).status()).isEqualTo("PENDING_PAYMENT");
+    }
+
+    @Test
+    @DisplayName("[F-18][PG-05] 결제 기한이 지난 결제 대기 신청은 만료 작업이 돌기 전에도 정원을 차지하지 않고, 그 신청은 결제할 수 없다")
+    void overduePendingApplicationDoesNotHoldSeatBeforeExpiryRuns() {
+        // given
+        long programId = fixture.saveProgram(1, false);
+        long first = fixture.saveMember();
+        long second = fixture.saveMember();
+        ProgramApplyResult firstResult = programApplyService.apply(first, programId);
+        Instant due = firstResult.paymentDueAt();
+
+        // when, then: 기한 1밀리초 전에는 자리가 차 있다
+        clock.setInstant(due.minusMillis(1));
+        assertThat(programQueryService.detail(programId, null).remainingSeats()).isZero();
+        assertErrorCode(() -> programApplyService.apply(second, programId), ProgramErrorCode.PROGRAM_SOLD_OUT);
+
+        // when, then: 기한 정각에는 만료 작업이 돌지 않았어도 자리가 돌아와 새 신청이 성공한다
+        clock.setInstant(due);
+        assertThat(programQueryService.detail(programId, null).remainingSeats()).isEqualTo(1);
+        ProgramApplyResult secondResult = programApplyService.apply(second, programId);
+        assertThat(secondResult.status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(programQueryService.detail(programId, null).remainingSeats()).isZero();
+        assertThat(fixture.applicationStatus(firstResult.applicationId())).isEqualTo("PENDING_PAYMENT");
+
+        // then: 기한이 지난 첫 신청은 결제할 수 없어서 확정 신청이 정원을 넘지 않는다
+        assertErrorCode(
+                () -> programPaymentService.pay(first, firstResult.applicationId()),
+                ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED);
+        assertThat(programPaymentService
+                        .pay(second, secondResult.applicationId())
+                        .status())
+                .isEqualTo("CONFIRMED");
     }
 
     private static void assertErrorCode(Runnable action, ErrorCode expected) {

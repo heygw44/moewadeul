@@ -53,11 +53,12 @@ public class ProgramQueryService {
      */
     @Transactional(readOnly = true)
     public ProgramDetail detail(long programId, Long viewerId) {
-        ProgramDetailRow row = programQueryMapper.selectDetail(programId);
+        Instant now = clock.instant();
+        ProgramDetailRow row = programQueryMapper.selectDetail(programId, now);
         if (row == null) {
             throw new BusinessException(CommonErrorCode.NOT_FOUND);
         }
-        return toDetail(row, clock.instant(), findMyApplication(programId, viewerId));
+        return toDetail(row, now, findMyApplication(programId, viewerId));
     }
 
     /**

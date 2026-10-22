@@ -8,9 +8,9 @@ import org.apache.ibatis.annotations.Param;
 public interface ProgramApplicationMapper {
 
     /**
-     * 호출하면 claim의 행사에 남은 자리(결제 대기·확정 신청 수가 정원보다 적음)가 있을 때만 결제 대기 신청을 넣고 1을 돌려준다.
+     * 호출하면 claim의 행사에 남은 자리가 있을 때만 결제 대기 신청을 넣고 1을 돌려준다. 남은 자리는 정원에서 확정 신청과
+     * claim의 now 이후에 결제 기한이 끝나는 결제 대기 신청을 뺀 수다. 기한이 지난 결제 대기 신청은 아직 만료 처리 전이어도 세지 않는다.
      * 자리가 없으면 아무것도 넣지 않고 0을 돌려준다. 1을 돌려줄 때 만들어진 신청 ID가 claim의 id에 채워진다.
-     * 호출하는 쪽은 먼저 행사 행을 잠가서 같은 행사의 다른 신청이 이 문장과 겹치지 않게 해야 한다.
      */
     int insertIfSeatAvailable(SeatClaim claim);
 
