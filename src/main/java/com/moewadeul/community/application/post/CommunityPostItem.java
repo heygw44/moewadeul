@@ -10,7 +10,7 @@ import java.util.List;
  * @param text 목록에서는 본문 앞 100자, 상세에서는 본문 전체
  * @param spotId 연결한 장소가 없거나 ACTIVE가 아니면 null
  * @param spotName spotId가 null이면 null
- * @param thumbnailUrl 목록에서 글 안 순서가 가장 앞선 이미지의 조회 URL. 이미지가 없거나 상세이면 null
+ * @param thumbnailUrl 목록에서 글 안 순서가 가장 앞선 이미지의 썸네일 조회 URL(썸네일이 없으면 원본 조회 URL). 이미지가 없거나 상세이면 null
  * @param imageCount 글에 붙은 이미지 수
  * @param images 상세에서 글 안 순서대로 담은 이미지. 목록이거나 이미지가 없으면 빈 목록
  * @param likeCount 좋아요 수

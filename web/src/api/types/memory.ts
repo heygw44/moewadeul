@@ -95,7 +95,9 @@ export interface MemoryFeedItem {
   visitedDate: string;
   nights: number;
   excerpt?: string;
-  images: MemoryImage[];
+  // 첫 사진의 작은 썸네일 URL이다. 썸네일이 없던 예전 사진은 원본 URL이 오고, 사진이 없으면 빠진다.
+  thumbnailUrl?: string;
+  imageCount: number;
   likeCount: number;
   likedByMe?: boolean;
   createdAt: string;

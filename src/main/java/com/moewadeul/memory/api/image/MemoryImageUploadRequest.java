@@ -1,5 +1,6 @@
 package com.moewadeul.memory.api.image;
 
+import com.moewadeul.memory.application.image.MemoryImageUploadCommand;
 import com.moewadeul.memory.domain.image.MemoryImage;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -14,4 +15,13 @@ public record MemoryImageUploadRequest(
         @NotNull(message = "사진 크기를 입력해 주세요.")
         @Min(value = 1, message = "사진 크기는 1바이트 이상이어야 해요.")
         @Max(value = MemoryImage.MAX_SIZE_BYTES, message = "사진 크기는 5MB(5242880바이트) 이하여야 해요.")
-        Long sizeBytes) {}
+        Long sizeBytes,
+
+        @Min(value = 1, message = "썸네일 크기는 1바이트 이상이어야 해요.")
+        @Max(value = MemoryImage.MAX_THUMBNAIL_SIZE_BYTES, message = "썸네일 크기는 256KB 이하여야 해요.")
+        Long thumbnailSizeBytes) {
+
+    MemoryImageUploadCommand toCommand() {
+        return new MemoryImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
+    }
+}

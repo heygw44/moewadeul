@@ -4,7 +4,7 @@
 
     <!-- 기록 안 순서(display_order)는 기록에 붙은 사진에만 있고, 기록마다 0부터 겹치지 않게 채운다. -->
     <select id="selectByMemoryIds" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
-        SELECT id AS image_id, memory_id, object_key
+        SELECT id AS image_id, memory_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM memory_image
         WHERE memory_id IN
         <foreach collection="memoryIds" item="memoryId" open="(" separator="," close=")">#{memoryId}</foreach>
@@ -12,7 +12,7 @@
     </select>
 
     <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
-        SELECT id AS image_id, memory_id, object_key
+        SELECT id AS image_id, memory_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM memory_image
         WHERE memory_id IS NULL
           AND created_at &lt; #{createdBefore}
@@ -21,7 +21,7 @@
     </select>
 
     <select id="selectUnattachedByMember" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
-        SELECT id AS image_id, memory_id, object_key
+        SELECT id AS image_id, memory_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM memory_image
         WHERE member_id = #{memberId}
           AND memory_id IS NULL

@@ -245,6 +245,7 @@ function MemoryForm(props: MemoryFormProps) {
     initial: initial?.images,
     restored: draft?.images,
     requestUpload: requestMemoryImageUpload,
+    thumbnail: true,
   });
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
   const [formError, setFormError] = useState<ApiError | string | null>(null);

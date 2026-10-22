@@ -56,7 +56,7 @@ public record AdminMemoryPageResponse(List<Item> content, int page, int size, bo
         }
     }
 
-    /** 기록 안 순서대로 담는다. url은 응답마다 새로 서명한 조회 URL이다. */
+    /** 기록 안 순서대로 담는다. url은 사전 서명한 조회 URL이다. */
     public record Image(long imageId, String url) {}
 
     public record ReasonCounts(

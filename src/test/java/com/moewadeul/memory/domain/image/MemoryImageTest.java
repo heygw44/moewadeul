@@ -61,4 +61,52 @@ class MemoryImageTest {
         assertThat(image.isAttached()).isFalse();
         assertThat(image.getDisplayOrder()).isNull();
     }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 썸네일 크기는 1바이트부터 256KB(262144바이트)까지 허용한다")
+    void thumbnailSizeBoundaries() {
+        assertThat(MemoryImage.isAllowedThumbnailSize(0)).isFalse();
+        assertThat(MemoryImage.isAllowedThumbnailSize(1)).isTrue();
+        assertThat(MemoryImage.isAllowedThumbnailSize(262_144L)).isTrue();
+        assertThat(MemoryImage.isAllowedThumbnailSize(262_145L)).isFalse();
+        assertThatThrownBy(() -> withThumbnail("memory/7/key_thumb.jpg", 0))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> withThumbnail("memory/7/key_thumb.jpg", 262_145L))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 썸네일과 함께 만든 사진은 썸네일 키와 크기를 갖고, 썸네일 없이 만든 사진은 둘 다 없다")
+    void issuesWithOrWithoutThumbnail() {
+        // when
+        MemoryImage smallest = withThumbnail("memory/7/key_thumb.jpg", 1);
+        MemoryImage largest = withThumbnail("memory/7/key_thumb.jpg", 262_144L);
+        MemoryImage plain = MemoryImage.issue(7L, "memory/7/key.png", "image/png", 1000L, NOW);
+
+        // then
+        assertThat(smallest.hasThumbnail()).isTrue();
+        assertThat(smallest.getThumbnailObjectKey()).isEqualTo("memory/7/key_thumb.jpg");
+        assertThat(smallest.getThumbnailSizeBytes()).isEqualTo(1);
+        assertThat(largest.getThumbnailSizeBytes()).isEqualTo(262_144);
+        assertThat(plain.hasThumbnail()).isFalse();
+        assertThat(plain.getThumbnailObjectKey()).isNull();
+        assertThat(plain.getThumbnailSizeBytes()).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 썸네일 키가 비었으면 만들지 않는다")
+    void rejectsBlankThumbnailKey() {
+        assertThatThrownBy(() -> withThumbnail(" ", 100)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> withThumbnail(null, 100)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static MemoryImage withThumbnail(String thumbnailKey, long thumbnailSizeBytes) {
+        return MemoryImage.issue(
+                7L,
+                "memory/7/key.png",
+                "image/png",
+                1000L,
+                NOW,
+                new MemoryImage.Thumbnail(thumbnailKey, thumbnailSizeBytes));
+    }
 }

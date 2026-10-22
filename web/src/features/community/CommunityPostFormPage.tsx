@@ -220,6 +220,7 @@ function PostForm(props: PostFormProps) {
     initial: initialPost?.images,
     restored: draft?.images,
     requestUpload: requestImageUpload,
+    thumbnail: true,
   });
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
   const [formError, setFormError] = useState<ApiError | string | null>(null);

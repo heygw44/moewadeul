@@ -1,5 +1,6 @@
 package com.moewadeul.community.application.image;
 
+import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
 import java.time.Instant;
 import java.util.Map;
 
@@ -9,5 +10,11 @@ import java.util.Map;
  * @param imageId 글을 쓰거나 고칠 때 imageIds에 넣을 이미지 ID
  * @param headers 서명에 들어간 Content-Type과 Content-Length
  * @param expiresAt uploadUrl을 더 쓸 수 없게 되는 시각
+ * @param thumbnailUpload 썸네일을 올릴 URL과 헤더. 요청에 썸네일 크기가 없었으면 null이다
  */
-public record CommunityImageUpload(long imageId, String uploadUrl, Map<String, String> headers, Instant expiresAt) {}
+public record CommunityImageUpload(
+        long imageId,
+        String uploadUrl,
+        Map<String, String> headers,
+        Instant expiresAt,
+        PresignedUpload thumbnailUpload) {}

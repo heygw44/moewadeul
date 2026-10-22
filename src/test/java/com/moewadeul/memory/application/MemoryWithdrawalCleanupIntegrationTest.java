@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.memory.application.image.MemoryImageUploadCommand;
 import com.moewadeul.memory.application.image.MemoryImageUploadService;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
@@ -23,6 +24,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
     private static final String PASSWORD = "Valid-pass1";
     private static final LocalDate YESTERDAY = LocalDate.of(2026, 10, 4);
     private static final long SIZE = 1024;
+    private static final long THUMBNAIL_SIZE = 64;
 
     @Autowired
     private WithdrawalService withdrawalService;
@@ -53,14 +55,15 @@ class MemoryWithdrawalCleanupIntegrationTest {
 
     @Test
     @DisplayName(
-            "[F-33][PV-10] 회원이 탈퇴하고 발행기가 돌면 그 회원의 기록과 사진(방금 올린 사진 포함)이 저장소까지 모두 지워지고, 기록에 달린 좋아요도 함께 지워지며, 다른 회원의 기록은 남는다")
+            "[F-33][PV-10] 회원이 탈퇴하고 발행기가 돌면 그 회원의 기록과 사진(방금 올린 사진 포함)이 썸네일과 함께 저장소까지 모두 지워지고, 기록에 달린 좋아요도 함께 지워지며, 다른 회원의 기록은 남는다")
     void withdrawalDeletesMemoriesAndImages() {
         // given
         long member = saveMember();
         long other = saveMember();
         long attached = uploaded(member);
         long justUploaded = uploaded(member);
-        List<String> keys = List.of(keyOf(attached), keyOf(justUploaded));
+        List<String> keys =
+                List.of(keyOf(attached), thumbnailKeyOf(attached), keyOf(justUploaded), thumbnailKeyOf(justUploaded));
         commandService.write(member, write(List.of(attached)));
         commandService.write(member, write(List.of()));
         long othersImage = uploaded(other);
@@ -114,11 +117,18 @@ class MemoryWithdrawalCleanupIntegrationTest {
         return new MemoryWriteCommand(null, 37.25, 127.25, YESTERDAY, 1, null, "PUBLIC", imageIds);
     }
 
-    // 업로드 URL을 발급하고, 회원이 그 URL로 파일을 올린 것처럼 테스트 저장소에 객체를 둔다.
+    // 썸네일과 함께 업로드 URL을 발급하고, 회원이 두 URL로 파일을 올린 것처럼 테스트 저장소에 객체를 둔다.
     private long uploaded(long ownerId) {
-        long imageId = uploadService.issue(ownerId, "image/png", SIZE).imageId();
+        long imageId = uploadService
+                .issue(ownerId, new MemoryImageUploadCommand("image/png", SIZE, THUMBNAIL_SIZE))
+                .imageId();
         storage.markUploaded(keyOf(imageId), SIZE);
+        storage.markUploaded(thumbnailKeyOf(imageId), THUMBNAIL_SIZE);
         return imageId;
+    }
+
+    private String thumbnailKeyOf(long imageId) {
+        return jdbc.queryForObject("SELECT thumbnail_object_key FROM memory_image WHERE id = ?", String.class, imageId);
     }
 
     private String keyOf(long imageId) {
