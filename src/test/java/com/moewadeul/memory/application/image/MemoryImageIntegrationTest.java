@@ -31,6 +31,7 @@ class MemoryImageIntegrationTest {
 
     private static final LocalDate YESTERDAY = LocalDate.of(2026, 10, 4);
     private static final long SIZE = 1024;
+    private static final long THUMBNAIL_SIZE = 64;
 
     @Autowired
     private MemoryImageUploadService uploadService;
@@ -64,7 +65,7 @@ class MemoryImageIntegrationTest {
     @DisplayName("[F-33][MM-05] 업로드 URL을 발급하면 기록에 붙지 않은 행을 만들고, 객체 키는 memory/회원 ID/로 시작한다")
     void issueCreatesUnattachedRow() {
         // when
-        MemoryImageUpload upload = uploadService.issue(memberId, "image/webp", SIZE);
+        MemoryImageUpload upload = uploadService.issue(memberId, command("image/webp", SIZE));
 
         // then
         assertThat(keyOf(upload.imageId()))
@@ -72,13 +73,65 @@ class MemoryImageIntegrationTest {
                 .endsWith(".webp");
         assertThat(memoryIdOf(upload.imageId())).isNull();
         assertThat(upload.headers()).containsEntry("Content-Type", "image/webp");
+        assertThat(upload.thumbnailUpload()).isNull();
+        assertThat(thumbnailKeyOf(upload.imageId())).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 썸네일 크기를 보내면 원본과 같은 UUID에 _thumb.jpg를 붙인 키로 JPEG 썸네일 업로드 URL도 발급한다")
+    void issueWithThumbnailCreatesThumbnailKey() {
+        // when
+        MemoryImageUpload upload = uploadService.issue(memberId, withThumbnail("image/png", SIZE, THUMBNAIL_SIZE));
+
+        // then
+        String key = keyOf(upload.imageId());
+        String thumbnailKey = thumbnailKeyOf(upload.imageId());
+        assertThat(thumbnailKey).isEqualTo(key.substring(0, key.length() - ".png".length()) + "_thumb.jpg");
+        assertThat(upload.thumbnailUpload().url()).contains(thumbnailKey);
+        assertThat(upload.thumbnailUpload().headers())
+                .containsEntry("Content-Type", "image/jpeg")
+                .containsEntry("Content-Length", String.valueOf(THUMBNAIL_SIZE));
+        assertThat(jdbc.queryForObject(
+                        "SELECT thumbnail_size_bytes FROM memory_image WHERE id = ?", Long.class, upload.imageId()))
+                .isEqualTo(THUMBNAIL_SIZE);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 썸네일 크기가 0이거나 256KB를 넘으면 thumbnailSizeBytes 필드의 INVALID_INPUT으로 거부한다")
+    void issueRejectsThumbnailSize() {
+        assertInvalid(() -> uploadService.issue(memberId, withThumbnail("image/png", SIZE, 0)), "thumbnailSizeBytes");
+        assertInvalid(
+                () -> uploadService.issue(memberId, withThumbnail("image/png", SIZE, 256L * 1024 + 1)),
+                "thumbnailSizeBytes");
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 썸네일 URL도 발급한 사진은 썸네일이 올라오지 않았거나 크기가 다르면 거부하고, 원본과 썸네일이 모두 올라오면 붙인다")
+    void attachRequiresThumbnailWhenIssued() {
+        // given
+        long missing = issueWithThumbnail();
+        storage.markUploaded(keyOf(missing), SIZE);
+        long wrongSize = issueWithThumbnail();
+        storage.markUploaded(keyOf(wrongSize), SIZE);
+        storage.markUploaded(thumbnailKeyOf(wrongSize), THUMBNAIL_SIZE + 1);
+        long complete = issueWithThumbnail();
+        storage.markUploaded(keyOf(complete), SIZE);
+        storage.markUploaded(thumbnailKeyOf(complete), THUMBNAIL_SIZE);
+
+        // when
+        long memoryId = commandService.write(memberId, write(List.of(complete)));
+
+        // then
+        assertInvalid(() -> commandService.write(memberId, write(List.of(missing))), "imageIds");
+        assertInvalid(() -> commandService.write(memberId, write(List.of(wrongSize))), "imageIds");
+        assertThat(memoryIdOf(complete)).isEqualTo(memoryId);
     }
 
     @Test
     @DisplayName("[F-33][MM-05] 허용하지 않는 형식이나 5MB를 넘는 크기는 INVALID_INPUT으로 거부한다")
     void issueRejectsTypeAndSize() {
-        assertInvalid(() -> uploadService.issue(memberId, "image/gif", SIZE), "contentType");
-        assertInvalid(() -> uploadService.issue(memberId, "image/png", 5L * 1024 * 1024 + 1), "sizeBytes");
+        assertInvalid(() -> uploadService.issue(memberId, command("image/gif", SIZE)), "contentType");
+        assertInvalid(() -> uploadService.issue(memberId, command("image/png", 5L * 1024 * 1024 + 1)), "sizeBytes");
     }
 
     @Test
@@ -88,7 +141,8 @@ class MemoryImageIntegrationTest {
         List<Long> ten = uploadedImages(10);
         List<Long> eleven = uploadedImages(11);
         long mine = uploaded(memberId);
-        long notUploaded = uploadService.issue(memberId, "image/png", SIZE).imageId();
+        long notUploaded =
+                uploadService.issue(memberId, command("image/png", SIZE)).imageId();
         long attached = uploaded(memberId);
         commandService.write(memberId, write(List.of(attached)));
 
@@ -153,6 +207,45 @@ class MemoryImageIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-33][MM-05] 정리 작업은 썸네일이 있는 사진의 원본과 썸네일 객체를 모두 지운다")
+    void cleanupDeletesOriginalAndThumbnail() {
+        // given
+        long image = issueWithThumbnail();
+        String key = keyOf(image);
+        String thumbnailKey = thumbnailKeyOf(image);
+        storage.markUploaded(key, SIZE);
+        storage.markUploaded(thumbnailKey, THUMBNAIL_SIZE);
+        clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
+
+        // when
+        MemoryImageCleanupService.Result result = cleanupService.deleteUnattached();
+
+        // then
+        assertThat(result.deletedRows()).isEqualTo(1);
+        assertThat(result.storageFailures()).isZero();
+        assertThat(storage.deletedKeys()).containsExactly(key, thumbnailKey);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 정리 작업은 원본 객체 삭제가 실패해도 썸네일 객체를 지우고 실패를 한 번 센다")
+    void cleanupDeletesThumbnailEvenWhenOriginalDeleteFails() {
+        // given
+        long image = issueWithThumbnail();
+        String key = keyOf(image);
+        String thumbnailKey = thumbnailKeyOf(image);
+        storage.failDeleteOf(key);
+        clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
+
+        // when
+        MemoryImageCleanupService.Result result = cleanupService.deleteUnattached();
+
+        // then
+        assertThat(result.deletedRows()).isEqualTo(1);
+        assertThat(result.storageFailures()).isEqualTo(1);
+        assertThat(storage.deletedKeys()).containsExactly(thumbnailKey);
+    }
+
+    @Test
     @DisplayName("[F-33][MM-05] 오래됐어도 기록에 붙은 사진은 정리 작업이 지우지 않는다")
     void cleanupKeepsAttachedImages() {
         // given
@@ -169,6 +262,20 @@ class MemoryImageIntegrationTest {
         assertThat(storage.hasObject(keyOf(attached))).isTrue();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory_image WHERE id = ?", Integer.class, unattached))
                 .isZero();
+    }
+
+    private static MemoryImageUploadCommand command(String contentType, long sizeBytes) {
+        return new MemoryImageUploadCommand(contentType, sizeBytes, null);
+    }
+
+    private static MemoryImageUploadCommand withThumbnail(String contentType, long sizeBytes, long thumbnailSizeBytes) {
+        return new MemoryImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
+    }
+
+    private long issueWithThumbnail() {
+        return uploadService
+                .issue(memberId, withThumbnail("image/jpeg", SIZE, THUMBNAIL_SIZE))
+                .imageId();
     }
 
     private static MemoryWriteCommand write(List<Long> imageIds) {
@@ -205,13 +312,17 @@ class MemoryImageIntegrationTest {
 
     // 업로드 URL을 발급하고, 회원이 그 URL로 파일을 올린 것처럼 테스트 저장소에 객체를 둔다.
     private long uploaded(long ownerId) {
-        long imageId = uploadService.issue(ownerId, "image/jpeg", SIZE).imageId();
+        long imageId = uploadService.issue(ownerId, command("image/jpeg", SIZE)).imageId();
         storage.markUploaded(keyOf(imageId), SIZE);
         return imageId;
     }
 
     private String keyOf(long imageId) {
         return jdbc.queryForObject("SELECT object_key FROM memory_image WHERE id = ?", String.class, imageId);
+    }
+
+    private String thumbnailKeyOf(long imageId) {
+        return jdbc.queryForObject("SELECT thumbnail_object_key FROM memory_image WHERE id = ?", String.class, imageId);
     }
 
     private Long memoryIdOf(long imageId) {

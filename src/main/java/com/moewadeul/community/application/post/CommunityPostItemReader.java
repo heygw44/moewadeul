@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * DB에서 읽은 글 행을 응답용 {@link CommunityPostItem}으로 만든다. 이미지는 저장소 객체 키로 읽어서, 응답마다 새로 서명한 조회 URL로 바꾼다.
+ * DB에서 읽은 글 행을 응답용 {@link CommunityPostItem}으로 만든다. 이미지는 저장소 객체 키로 읽어서, 사전 서명한 조회 URL로 바꾼다.
  * 서명은 서버 안에서 계산하고 저장소를 부르지 않는다. 호출하는 쪽이 읽기 트랜잭션을 연다.
  */
 @Component
@@ -21,7 +21,7 @@ class CommunityPostItemReader {
     private final CommunityImageMapper communityImageMapper;
     private final ImageStorage imageStorage;
 
-    /** 호출하면 목록 항목을 만든다. 첫 이미지의 조회 URL(thumbnailUrl)과 이미지 수를 담고, images는 비운다. */
+    /** 호출하면 목록 항목을 만든다. 첫 이미지의 썸네일 조회 URL(thumbnailUrl, 썸네일이 없으면 원본 조회 URL)과 이미지 수를 담고, images는 비운다. */
     CommunityPostItem toListItem(CommunityPostRow row) {
         String thumbnailUrl = row.thumbnailKey() == null ? null : imageStorage.presignView(row.thumbnailKey());
         return CommunityPostItem.from(row, thumbnailUrl, List.of());

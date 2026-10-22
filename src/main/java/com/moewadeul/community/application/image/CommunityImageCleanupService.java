@@ -63,15 +63,24 @@ public class CommunityImageCleanupService {
         return new Result(deletedRows, storageFailures);
     }
 
-    // 키와 URL에는 회원 ID와 서명이 들어 있어서 로그에 남기지 않고 이미지 ID만 남긴다.
+    // 원본을 지운 뒤 썸네일이 있으면 썸네일도 지운다. 원본 삭제가 실패해도 썸네일 삭제는 시도하고, 둘 중 하나라도 실패하면 실패로 센다.
     private boolean deleteObject(CommunityImageRow row) {
+        boolean deleted = deleteObject(row.imageId(), row.objectKey());
+        if (row.thumbnailKey() == null) {
+            return deleted;
+        }
+        return deleteObject(row.imageId(), row.thumbnailKey()) && deleted;
+    }
+
+    // 키와 URL에는 회원 ID와 서명이 들어 있어서 로그에 남기지 않고 이미지 ID만 남긴다.
+    private boolean deleteObject(long imageId, String objectKey) {
         try {
-            imageStorage.delete(row.objectKey());
+            imageStorage.delete(objectKey);
             return true;
         } catch (RuntimeException e) {
             log.warn(
                     "community image object delete failed imageId={} cause={}",
-                    row.imageId(),
+                    imageId,
                     e.getClass().getSimpleName());
             return false;
         }

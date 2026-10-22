@@ -3,6 +3,7 @@ import type { ChangeEvent } from 'react';
 import { toUserMessage } from '../api/errors';
 import type { ImageUpload, ImageUploadRequest } from '../api/types';
 import { putImage } from '../api/uploads';
+import { createThumbnail } from './createThumbnail';
 
 // 서버 규칙과 같은 값이다. 커뮤니티 글과 장소 후기가 같은 형식·크기 제한을 쓰고, 장수만 다르다.
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -34,6 +35,8 @@ type UseImageUploadsOptions = {
   restored?: UploadImageItem[];
   // 업로드 URL을 받는 API다. 커뮤니티와 후기가 엔드포인트만 다르다.
   requestUpload: (req: ImageUploadRequest) => Promise<ImageUpload>;
+  // 켜면 목록 화면에 쓸 작은 썸네일을 만들어 원본과 함께 올린다. 썸네일을 못 만들면 원본만 올린다.
+  thumbnail?: boolean;
 };
 
 export type ImageUploads = {
@@ -52,7 +55,13 @@ export type ImageUploads = {
 };
 
 // 파일을 고르면 형식·크기·장수를 먼저 거르고, 통과한 파일마다 업로드 URL을 받아 저장소에 바로 올린다.
-export function useImageUploads({ max, initial = [], restored, requestUpload }: UseImageUploadsOptions): ImageUploads {
+export function useImageUploads({
+  max,
+  initial = [],
+  restored,
+  requestUpload,
+  thumbnail = false,
+}: UseImageUploadsOptions): ImageUploads {
   const [images, setImages] = useState<UploadImageItem[]>(
     () =>
       restored ??
@@ -75,7 +84,13 @@ export function useImageUploads({ max, initial = [], restored, requestUpload }: 
   async function upload(key: string, file: File) {
     patchImage(key, { status: 'uploading', error: undefined });
     try {
-      const target = await requestUpload({ contentType: file.type, sizeBytes: file.size });
+      const thumbnailBlob = thumbnail ? await createThumbnail(file) : null;
+      const target = await requestUpload({
+        contentType: file.type,
+        sizeBytes: file.size,
+        ...(thumbnailBlob ? { thumbnailSizeBytes: thumbnailBlob.size } : {}),
+      });
+      if (thumbnailBlob && target.thumbnailUpload) await putImage(target.thumbnailUpload, thumbnailBlob);
       await putImage(target, file);
       patchImage(key, { status: 'done', imageId: target.imageId });
     } catch (error) {

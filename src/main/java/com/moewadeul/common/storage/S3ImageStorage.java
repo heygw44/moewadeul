@@ -1,5 +1,7 @@
 package com.moewadeul.common.storage;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.external.ExternalApiMetrics;
@@ -41,6 +43,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 public class S3ImageStorage implements ImageStorage, DisposableBean {
 
     private static final int MAX_ATTEMPTS = 2;
+    private static final long VIEW_URL_CACHE_MAX_SIZE = 10_000;
     private static final String CONTENT_TYPE = "Content-Type";
     private static final String CONTENT_LENGTH = "Content-Length";
     private static final String API = "s3";
@@ -49,6 +52,7 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
     private final S3Client s3Client;
     private final S3Presigner presigner;
     private final ExternalCallLimit headLimit;
+    private final Cache<String, String> viewUrls;
 
     @Autowired
     public S3ImageStorage(
@@ -69,6 +73,10 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
         this.s3Client = s3Client;
         this.presigner = presigner;
         this.headLimit = headLimit;
+        this.viewUrls = Caffeine.newBuilder()
+                .expireAfterWrite(properties.viewUrlSigningInterval())
+                .maximumSize(VIEW_URL_CACHE_MAX_SIZE)
+                .build();
     }
 
     private static S3Client buildClient(ImageStorageProperties properties) {
@@ -128,15 +136,25 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
         return new BusinessException(CommonErrorCode.IMAGE_STORAGE_UNAVAILABLE);
     }
 
+    /**
+     * 호출하면 key의 조회 URL을 준다. 서명 시각이 URL에 들어가서 매번 새로 서명하면 URL이 달라지고, 브라우저는 같은 사진을 다시 받는다. 그래서 같은
+     * 객체의 URL은 서명 구간 동안 한 번만 서명해 두고 그대로 돌려준다. 구간 끝에 가까워서 받은 URL도 조회 유효 시간만큼은 쓸 수 있도록 서명 유효 시간에
+     * 구간 길이를 더한다. 응답에는 같은 시간만큼 브라우저가 캐시하도록 {@code Cache-Control}을 서명에 넣는다.
+     */
     @Override
     public String presignView(String key) {
+        return viewUrls.get(key, this::signView);
+    }
+
+    private String signView(String key) {
         Duration ttl = properties.viewUrlTtl();
         return presigner
                 .presignGetObject(GetObjectPresignRequest.builder()
-                        .signatureDuration(ttl)
+                        .signatureDuration(ttl.plus(properties.viewUrlSigningInterval()))
                         .getObjectRequest(GetObjectRequest.builder()
                                 .bucket(properties.bucket())
                                 .key(key)
+                                .responseCacheControl("private, max-age=" + ttl.toSeconds())
                                 .build())
                         .build())
                 .url()

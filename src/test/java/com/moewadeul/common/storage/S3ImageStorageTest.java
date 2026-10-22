@@ -60,6 +60,7 @@ class S3ImageStorageTest {
                 "ap-northeast-2",
                 Duration.ofMinutes(10),
                 Duration.ofHours(1),
+                Duration.ofMinutes(30),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(5));
         storage = new S3ImageStorage(
@@ -103,14 +104,28 @@ class S3ImageStorageTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-06] 조회 URL은 서명을 담고 객체 키를 경로로 가리킨다")
+    @DisplayName("[F-29][CM-06] 조회 URL은 서명을 담고 객체 키를 경로로 가리키며, 서명 유효 시간은 조회 유효 시간에 서명 구간을 더한 값이다")
     void presignViewContainsSignature() {
         // when
         String url = storage.presignView(KEY);
 
         // then
         assertThat(url).startsWith("https://" + BUCKET + ".s3.ap-northeast-2.amazonaws.com/" + KEY + "?");
-        assertThat(url).contains("X-Amz-Signature=").contains("X-Amz-Expires=3600");
+        assertThat(url).contains("X-Amz-Signature=").contains("X-Amz-Expires=5400");
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-06] 같은 객체의 조회 URL을 서명 구간 안에 다시 받으면 같은 URL이고, 브라우저가 캐시하도록 Cache-Control이 서명에 들어간다")
+    void presignViewReturnsSameUrlWithinInterval() throws InterruptedException {
+        // when
+        String first = storage.presignView(KEY);
+        Thread.sleep(1100);
+        String second = storage.presignView(KEY);
+
+        // then
+        assertThat(second).isEqualTo(first);
+        assertThat(first).contains("response-cache-control=private").contains("max-age%3D3600");
+        assertThat(storage.presignView(KEY.replace("0001", "0002"))).isNotEqualTo(first);
     }
 
     @Test
@@ -180,6 +195,7 @@ class S3ImageStorageTest {
                 "ap-northeast-2",
                 Duration.ofMinutes(10),
                 Duration.ofHours(1),
+                Duration.ofMinutes(30),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(5));
         return new S3ImageStorage(
