@@ -43,9 +43,12 @@ export function fetchBasecampDetail(basecampId: number, signal?: AbortSignal): P
   return apiFetch<BasecampDetail>(`/api/basecamps/${basecampId}`, { signal });
 }
 
-// 베이스캠프 API는 Idempotency-Key를 받지 않는다.
-export function openBasecamp(body: BasecampOpenRequest, signal?: AbortSignal): Promise<BasecampOpenResponse> {
-  return apiFetch<BasecampOpenResponse>('/api/basecamps', { method: 'POST', body, signal });
+export function openBasecamp(
+  body: BasecampOpenRequest,
+  idempotencyKey: string,
+  signal?: AbortSignal,
+): Promise<BasecampOpenResponse> {
+  return apiFetch<BasecampOpenResponse>('/api/basecamps', { method: 'POST', body, idempotencyKey, signal });
 }
 
 export function applyToBasecamp(

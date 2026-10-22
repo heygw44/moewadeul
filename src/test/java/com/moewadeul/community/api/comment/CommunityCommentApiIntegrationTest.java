@@ -12,6 +12,7 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -92,6 +93,27 @@ class CommunityCommentApiIntegrationTest {
                 }
                 """.formatted(
                         commentId, author.getId(), replyId, replier.getId()));
+    }
+
+    @Test
+    @DisplayName("[F-29][NFR-03] 같은 Idempotency-Key로 댓글을 두 번 쓰면 댓글은 하나만 만들고, 두 번째에도 처음 응답을 그대로 돌려준다")
+    void sameKeyWritesOneComment() throws Exception {
+        // given
+        Cookie session = fixture.verifiedSession(fixture.saveMember("새벽능선"));
+        long postId = fixture.writePost(session, "제목", "본문", null);
+        String key = UUID.randomUUID().toString();
+        String body = "{\"content\":\"좋은 글이에요\"}";
+
+        // when
+        MvcTestResult first = fixture.postWithKey(commentsUri(postId), session, key, body);
+        MvcTestResult second = fixture.postWithKey(commentsUri(postId), session, key, body);
+
+        // then
+        assertThat(first).hasStatus(HttpStatus.CREATED);
+        assertThat(second).hasStatus(HttpStatus.CREATED);
+        assertThat(second.getResponse().getContentAsString())
+                .isEqualTo(first.getResponse().getContentAsString());
+        assertThat(fixture.commentCount()).isEqualTo(1);
     }
 
     @Test

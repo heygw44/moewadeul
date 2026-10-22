@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
+import { createIdempotentRunner } from '../../api/idempotency';
 import { createMemory, getMemory, requestMemoryImageUpload, updateMemory } from '../../api/memories';
 import { fetchSpotDetail } from '../../api/spots';
 import type { MemoryDetail, MemoryUpdateRequest, MemoryVisibility } from '../../api/types';
@@ -250,6 +251,7 @@ function MemoryForm(props: MemoryFormProps) {
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [idempotentRunner] = useState(createIdempotentRunner);
   useDraftCapture<MemoryDraft>(pathname + search, memberId, {
     visitedDate,
     nights,
@@ -304,7 +306,7 @@ function MemoryForm(props: MemoryFormProps) {
     try {
       if (props.mode === 'create') {
         if (props.position === null) return;
-        const created = await createMemory({
+        const request = {
           lat: props.position.lat,
           lng: props.position.lng,
           visitedDate,
@@ -313,7 +315,8 @@ function MemoryForm(props: MemoryFormProps) {
           visibility,
           spotId: spot?.spotId,
           imageIds,
-        });
+        };
+        const created = await idempotentRunner.run(request, (key) => createMemory(request, key));
         navigate(`/memories/${created.memoryId}`);
         return;
       }

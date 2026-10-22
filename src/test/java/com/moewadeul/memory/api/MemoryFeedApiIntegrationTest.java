@@ -15,6 +15,7 @@ import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.infra.SpotJpaRepository;
 import jakarta.servlet.http.Cookie;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -350,7 +351,10 @@ class MemoryFeedApiIntegrationTest {
     }
 
     private MvcTestResult send(MockMvcTester.MockMvcRequestBuilder builder, Cookie session) {
-        return builder.with(csrf()).cookie(session).exchange();
+        return builder.with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .exchange();
     }
 
     private long saveSpot() {

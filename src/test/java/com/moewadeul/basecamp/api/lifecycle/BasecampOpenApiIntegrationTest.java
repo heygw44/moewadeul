@@ -16,6 +16,7 @@ import com.moewadeul.spot.infra.SpotJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -92,6 +93,26 @@ class BasecampOpenApiIntegrationTest {
         assertThat(((Number) members.get(0).get("member_id")).longValue()).isEqualTo(leader.getId());
         assertThat(members.get(0).get("role")).isEqualTo("LEADER");
         assertThat(members.get(0).get("status")).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("[F-12][NFR-03] 같은 Idempotency-Key로 베이스캠프를 두 번 열면 하나만 만들고, 두 번째에도 처음 basecampId를 응답한다")
+    void sameKeyOpensOneBasecamp() {
+        // given
+        long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
+        Cookie session = identityVerifiedSession(saveMember(), "FEMALE");
+        String key = UUID.randomUUID().toString();
+        String body = bodyWith(spotId, "2026-10-20", "2026-10-22", "\"capacity\":4");
+
+        // when
+        MvcTestResult first = sendWithKey(session, key, body);
+        MvcTestResult second = sendWithKey(session, key, body);
+
+        // then
+        assertThat(first).hasStatus(HttpStatus.CREATED);
+        assertThat(second).hasStatus(HttpStatus.CREATED);
+        assertThat(basecampIdOf(second)).isEqualTo(basecampIdOf(first));
+        assertThat(countBasecamps()).isEqualTo(1);
     }
 
     @Test
@@ -288,10 +309,15 @@ class BasecampOpenApiIntegrationTest {
     }
 
     private MvcTestResult send(Cookie session, String body) {
+        return sendWithKey(session, UUID.randomUUID().toString(), body);
+    }
+
+    private MvcTestResult sendWithKey(Cookie session, String key, String body) {
         return mvc.post()
                 .uri(BASECAMPS)
                 .with(csrf())
                 .cookie(session)
+                .header("Idempotency-Key", key)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body)
                 .exchange();

@@ -1,5 +1,7 @@
 package com.moewadeul.community.api.post;
 
+import com.moewadeul.common.idempotency.IdempotencyExecutor;
+import com.moewadeul.common.idempotency.IdempotentRequest;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostQueryService;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,12 +26,15 @@ class CommunityPostController {
 
     private final CommunityPostCommandService communityPostCommandService;
     private final CommunityPostQueryService communityPostQueryService;
+    private final IdempotencyExecutor idempotencyExecutor;
 
     CommunityPostController(
             CommunityPostCommandService communityPostCommandService,
-            CommunityPostQueryService communityPostQueryService) {
+            CommunityPostQueryService communityPostQueryService,
+            IdempotencyExecutor idempotencyExecutor) {
         this.communityPostCommandService = communityPostCommandService;
         this.communityPostQueryService = communityPostQueryService;
+        this.idempotencyExecutor = idempotencyExecutor;
     }
 
     @Operation(
@@ -70,15 +76,24 @@ class CommunityPostController {
     @Operation(
             summary = "커뮤니티 글 작성",
             description = "이메일 인증을 마친 회원이 제목과 본문으로 글을 쓴다. 글은 분류 없이 한 게시판에 올라간다. 201과 함께 postId를 준다. "
+                    + "Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. "
+                    + "같은 키로 다시 보내면 글을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. "
                     + "제목은 공백뿐일 수 없고 100자 이하이며, "
                     + "본문은 공백뿐일 수 없고 10,000자 이하다. 어기면 400 INVALID_INPUT이다. "
                     + "spotId는 선택이다. 보내면 그 장소가 지도에 보이는(ACTIVE) 상태여야 하고, 없거나 ACTIVE가 아니면 400 INVALID_INPUT이다.")
     @PostMapping("/api/community/posts")
     @ResponseStatus(HttpStatus.CREATED)
     CommunityPostCreatedResponse write(
-            @AuthenticationPrincipal LoginMember loginMember, @Valid @RequestBody CommunityPostCreateRequest request) {
-        return new CommunityPostCreatedResponse(
-                communityPostCommandService.write(loginMember.memberId(), request.toCommand()));
+            @AuthenticationPrincipal LoginMember loginMember,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody CommunityPostCreateRequest request) {
+        long memberId = loginMember.memberId();
+        return idempotencyExecutor.execute(
+                new IdempotentRequest(memberId, idempotencyKey, "POST /api/community/posts", request),
+                HttpStatus.CREATED,
+                CommunityPostCreatedResponse.class,
+                () -> new CommunityPostCreatedResponse(
+                        communityPostCommandService.write(memberId, request.toCommand())));
     }
 
     @Operation(

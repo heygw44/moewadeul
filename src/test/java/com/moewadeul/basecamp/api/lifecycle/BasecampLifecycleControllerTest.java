@@ -22,9 +22,13 @@ import com.moewadeul.basecamp.domain.BasecampException;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.idempotency.IdempotencyExecutor;
+import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Stream;
@@ -36,7 +40,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -48,7 +54,13 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(BasecampLifecycleController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class})
+@Import({
+    GlobalExceptionHandler.class,
+    TraceIdFilter.class,
+    SecurityConfig.class,
+    IdempotencyExecutor.class,
+    BasecampLifecycleControllerTest.ClockConfig.class
+})
 class BasecampLifecycleControllerTest {
 
     private static final long MEMBER_ID = 7L;
@@ -68,6 +80,9 @@ class BasecampLifecycleControllerTest {
 
     @MockitoBean
     private BasecampEditService basecampEditService;
+
+    @MockitoBean
+    private IdempotencyRecordJpaRepository idempotencyRecordRepository;
 
     @Test
     @DisplayName("[F-12] 베이스캠프를 열면 201과 basecampId·status를 응답하고, 요청 값과 로그인한 회원의 ID를 서비스에 넘긴다")
@@ -458,11 +473,30 @@ class BasecampLifecycleControllerTest {
         return "{\"spotId\":101,\"description\":\"함께 가요\"," + dates() + "," + String.join(",", overrides) + "}";
     }
 
+    @Test
+    @DisplayName("[F-12][NFR-03] Idempotency-Key 헤더가 없으면 400 IDEMPOTENCY_KEY_REQUIRED이고 서비스를 부르지 않는다")
+    void openRequiresIdempotencyKey() {
+        // when
+        MvcTestResult result = mvc.post()
+                .uri(BASECAMPS)
+                .with(verified())
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(VALID_BODY)
+                .exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("IDEMPOTENCY_KEY_REQUIRED");
+        verifyNoInteractions(basecampOpenService);
+    }
+
     private MvcTestResult post(RequestPostProcessor login, String requestBody) {
         return mvc.post()
                 .uri(BASECAMPS)
                 .with(login)
                 .with(csrf())
+                .header("Idempotency-Key", "key-1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody)
                 .exchange();
@@ -483,5 +517,14 @@ class BasecampLifecycleControllerTest {
         LoginMember loginMember = new LoginMember(MEMBER_ID, "USER", false);
         return authentication(UsernamePasswordAuthenticationToken.authenticated(
                 loginMember, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class ClockConfig {
+
+        @Bean
+        Clock clock() {
+            return MutableClock.atDefaultInstant();
+        }
     }
 }
