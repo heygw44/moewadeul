@@ -4,6 +4,7 @@ import com.moewadeul.community.application.post.CommunityPostWriteCommand;
 import com.moewadeul.community.domain.post.CommunityPost;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
@@ -20,7 +21,7 @@ public record CommunityPostCreateRequest(
         Long spotId,
 
         @Schema(description = "붙일 이미지 ID. 최대 5개이고 배열 순서가 글 안 순서다. 붙이지 않으면 보내지 않는다.")
-        List<Long> imageIds) {
+        List<@NotNull(message = "이미지 ID는 비워 둘 수 없어요.") Long> imageIds) {
 
     CommunityPostWriteCommand toCommand() {
         return new CommunityPostWriteCommand(title, content, spotId, imageIds);

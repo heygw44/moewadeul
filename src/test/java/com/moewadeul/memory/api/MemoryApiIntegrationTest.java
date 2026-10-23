@@ -479,6 +479,26 @@ class MemoryApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-33][MM-05] imageIds에 null이 들어 있으면 500이 아니라 400 INVALID_INPUT이고 기록은 저장하지 않는다")
+    void rejectsNullImageId() {
+        // given
+        Cookie owner = verifiedSession(saveMember());
+
+        // when
+        MvcTestResult result = send(
+                mvc.post().uri("/api/memories"),
+                owner,
+                "{\"lat\":37.1,\"lng\":127.1,\"visitedDate\":\"%s\",\"nights\":1,\"imageIds\":[null]}"
+                        .formatted(YESTERDAY));
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory", Integer.class))
+                .isZero();
+    }
+
+    @Test
     @DisplayName("[F-33] 내 기록 목록은 공개·비공개 기록을 모두 정확한 좌표와 함께 방문일이 늦은 순서로 주고, 남의 기록은 넣지 않는다")
     void listsOwnMemoriesNewestVisitFirst() {
         // given

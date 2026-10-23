@@ -55,7 +55,7 @@ public class MemoryQueryService {
     @Transactional(readOnly = true)
     public MemoryFeedPage listFeed(int page, int size, Long viewerId) {
         // 다음 쪽이 있는지 알려고 한 건 더 읽는다.
-        List<MemoryFeedRow> rows = memoryMapper.selectPublicFeed(viewerId, size + 1, page * size);
+        List<MemoryFeedRow> rows = memoryMapper.selectPublicFeed(viewerId, size + 1, (long) page * size);
         boolean hasNext = rows.size() > size;
         List<MemoryFeedRow> pageRows = hasNext ? rows.subList(0, size) : rows;
         List<MemoryFeedItem> content = pageRows.stream().map(this::toFeedItem).toList();

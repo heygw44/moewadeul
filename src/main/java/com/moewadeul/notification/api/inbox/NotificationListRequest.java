@@ -5,16 +5,23 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
 public record NotificationListRequest(
-        @Schema(description = "페이지 번호. 0부터 시작하고 생략하면 0이다.") @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.")
+        @Schema(
+                description =
+                        "페이지 번호. 0부터 시작하고 생략하면 0이다. 건너뛸 건수(page × size)가 int 범위를 넘지 않도록 " + MAX_PAGE + " 이하여야 한다.")
+        @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.")
+        @Max(value = MAX_PAGE, message = "페이지 번호는 " + MAX_PAGE + " 이하여야 해요.")
         Integer page,
 
         @Schema(description = "페이지 크기. 1~50이고 생략하면 20이다.")
         @Min(value = 1, message = "페이지 크기는 1 이상이어야 해요.")
-        @Max(value = 50, message = "페이지 크기는 50 이하여야 해요.")
+        @Max(value = MAX_SIZE, message = "페이지 크기는 " + MAX_SIZE + " 이하여야 해요.")
         Integer size) {
 
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 20;
+    private static final int MAX_SIZE = 50;
+    // Spring Data는 건너뛸 건수(page × size)를 int로 다룬다. 크기를 최대로 보내도 그 값이 int 범위 안에 들어오는 가장 큰 쪽 번호다.
+    private static final int MAX_PAGE = Integer.MAX_VALUE / MAX_SIZE;
 
     int pageOrDefault() {
         return page == null ? DEFAULT_PAGE : page;

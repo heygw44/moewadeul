@@ -143,6 +143,17 @@ class MemoryFeedApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-33] 피드의 page가 아주 커서 건너뛸 건수가 int 범위를 넘어도 500이 아니라 빈 목록을 준다")
+    void feedWithHugePageReturnsEmptyContent() {
+        MvcTestResult result =
+                mvc.get().uri("/api/memories/feed?page=2147483647&size=20").exchange();
+
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().extractingPath("$.content").asList().isEmpty();
+        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+    }
+
+    @Test
     @DisplayName("[F-33][MM-09] 피드의 likedByMe는 로그인한 사람에게만 있고, 비회원에게는 필드가 없다")
     void feedLikedByMeOnlyForLoggedInViewer() {
         // given

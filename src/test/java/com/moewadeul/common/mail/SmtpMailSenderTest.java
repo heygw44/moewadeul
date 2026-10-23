@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willAnswer;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -15,7 +16,10 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
 import java.net.SocketTimeoutException;
+import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,8 +38,10 @@ class SmtpMailSenderTest {
     private static final String SUBJECT = "[뫼와들] 이메일 인증 코드";
     private static final String BODY = "인증 코드는 123456입니다.";
 
+    private static final Duration SEND_TIMEOUT = Duration.ofSeconds(20);
+
     private final JavaMailSender javaMailSender = mock(JavaMailSender.class);
-    private final SmtpMailSender mailSender = new SmtpMailSender(javaMailSender, FROM, FROM_NAME);
+    private final SmtpMailSender mailSender = new SmtpMailSender(javaMailSender, FROM, FROM_NAME, SEND_TIMEOUT);
 
     @BeforeEach
     void stubMimeMessageCreation() {
@@ -142,6 +148,34 @@ class SmtpMailSenderTest {
                 new AuthenticationFailedException("535 5.7.8 Username and Password not accepted");
 
         assertThat(failureOf(new MailAuthenticationException(rejected))).isFalse();
+    }
+
+    @Test
+    @DisplayName("[F-20] 메일 한 통을 보내는 시간이 상한을 넘으면 일시적인 실패로 끝내고 보내던 스레드를 멈춘다")
+    void failsTransientlyAndStopsSendingWhenSendExceedsTimeout() throws Exception {
+        // given: 서버가 응답하지 않아 send가 끝나지 않는다.
+        CountDownLatch sendingInterrupted = new CountDownLatch(1);
+        willAnswer(invocation -> {
+                    try {
+                        Thread.sleep(Duration.ofSeconds(30));
+                    } catch (InterruptedException e) {
+                        sendingInterrupted.countDown();
+                    }
+                    return null;
+                })
+                .given(javaMailSender)
+                .send(any(MimeMessage.class));
+        SmtpMailSender limited = new SmtpMailSender(javaMailSender, FROM, FROM_NAME, Duration.ofMillis(100));
+
+        // when & then
+        assertThatThrownBy(() -> limited.send(new MailMessage(RECIPIENT, SUBJECT, BODY)))
+                .isInstanceOfSatisfying(
+                        MailDeliveryException.class,
+                        e -> assertThat(e.isTransientFailure()).isTrue())
+                .message()
+                .doesNotContain(RECIPIENT);
+        assertThat(sendingInterrupted.await(5, TimeUnit.SECONDS)).isTrue();
+        limited.destroy();
     }
 
     @Test

@@ -195,6 +195,19 @@ class BakjiControllerTest {
     }
 
     @Test
+    @DisplayName("[F-07] 위도나 경도를 문자열 \"NaN\"으로 보내면 500이 아니라 400 INVALID_INPUT이다")
+    void nonFiniteCoordinateReturnsBadRequest() {
+        // when
+        MvcTestResult result = post(
+                verified(), "{\"name\":\"이름\",\"lat\":\"NaN\",\"lng\":128.7,\"hasWater\":true,\"hasToilet\":false}");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        verifyNoInteractions(bakjiCommandService, bakjiEditService);
+    }
+
+    @Test
     @DisplayName("[F-07] 로그인하지 않은 사용자가 제보하면 401 AUTHENTICATION_REQUIRED를 응답한다")
     void anonymousReportIsUnauthorized() {
         // when

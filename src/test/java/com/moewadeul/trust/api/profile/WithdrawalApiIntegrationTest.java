@@ -11,6 +11,7 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
 import com.moewadeul.trust.application.identity.CiRetentionCleanupService;
+import com.moewadeul.trust.application.profile.MemberProfileQueryService;
 import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
 import com.moewadeul.trust.application.sanction.SanctionConfirmService;
 import com.moewadeul.trust.domain.sanction.SanctionType;
@@ -56,6 +57,9 @@ class WithdrawalApiIntegrationTest {
 
     @Autowired
     private CiRetentionCleanupService ciRetentionCleanupService;
+
+    @Autowired
+    private MemberProfileQueryService memberProfileQueryService;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -317,6 +321,47 @@ class WithdrawalApiIntegrationTest {
                 .extractingPath("$.members[?(@.memberId == %d)].nickname".formatted(member.getId()))
                 .asList()
                 .containsExactly(anonymized);
+    }
+
+    @Test
+    @DisplayName("[F-01][PV-01] 본인확인을 마친 회원이 탈퇴해도 그 회원이 멤버인 베이스캠프 상세는 200이고, 탈퇴 회원의 연령대와 성별은 비어 있다")
+    void basecampDetailWithWithdrawnVerifiedMemberStillResponds() {
+        // given: 본인확인을 마친 회원이 모집 중인 베이스캠프의 멤버다.
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        verifyIdentity(session, "key-" + TestSequence.next());
+        long basecamp = fixture.saveBasecamp("RECRUITING", null);
+        fixture.insertMember(basecamp, member.getId(), "MEMBER", "ACTIVE");
+
+        // when: 탈퇴하면 본인확인 기록의 출생연도와 성별은 지워지지만 행은 CI 보관 기한까지 남는다.
+        withdraw(session, PASSWORD);
+        Cookie viewerSession = login(saveActiveMember());
+        MvcTestResult anonymousDetail =
+                mvc.get().uri("/api/basecamps/" + basecamp).exchange();
+        MvcTestResult memberDetail = mvc.get()
+                .uri("/api/basecamps/" + basecamp)
+                .cookie(viewerSession)
+                .exchange();
+        String memberPath = "$.members[?(@.memberId == %d)]".formatted(member.getId());
+
+        // then: 로그인한 조회자에게만 나가는 연령대·성별 필드는 비어 있다.
+        assertThat(identityColumn(member, "gender")).isNull();
+        assertThat(anonymousDetail).hasStatus(HttpStatus.OK);
+        assertThat(memberDetail).hasStatus(HttpStatus.OK);
+        assertThat(memberDetail)
+                .bodyJson()
+                .extractingPath(memberPath + ".genderVerified")
+                .asList()
+                .containsExactly(false);
+        assertThat(memberDetail)
+                .bodyJson()
+                .extractingPath(memberPath + ".ageGroupVerified")
+                .asList()
+                .containsExactly(false);
+        assertThat(memberProfileQueryService
+                        .findIncludingWithdrawn(member.getId())
+                        .gender())
+                .isNull();
     }
 
     @Test
