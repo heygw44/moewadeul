@@ -65,7 +65,8 @@ public class MemberReportApplier {
         if (context.alreadyReported()) {
             throw new BusinessException(TrustErrorCode.REPORT_DUPLICATED);
         }
-        Instant suspensionEndsAt = command.type().isUrgent() ? suspendTarget(command.targetMemberId(), now) : null;
+        Instant suspensionEndsAt =
+                command.type().isUrgent() ? suspendTarget(reporterId, command.targetMemberId(), now) : null;
         MemberReport report = save(MemberReport.receive(
                 reporterId,
                 command.targetMemberId(),
@@ -117,9 +118,13 @@ public class MemberReportApplier {
         }
     }
 
-    // 신고와 제재 행을 넣기 전에 대상 회원 행의 쓰기 잠금부터 잡는다. 행을 넣으면 외래 키 때문에 회원 행에 읽기 잠금이 먼저 걸리는데,
+    // 신고와 제재 행을 넣기 전에 회원 행의 쓰기 잠금부터 잡는다. 행을 넣으면 외래 키 때문에 신고자와 대상의 회원 행에 읽기 잠금이 걸리는데,
     // 서로 다른 신고자가 같은 대상을 동시에 신고하면 둘 다 읽기 잠금을 쥔 채 쓰기 잠금을 기다리다가 데드락이 난다.
-    private Instant suspendTarget(long targetMemberId, Instant now) {
+    // 두 회원이 동시에 서로를 신고하는 경우에는 한쪽이 대상 행을, 다른 쪽이 신고자 행을 먼저 잡아 서로를 기다린다.
+    // 그래서 두 행을 항상 ID가 작은 쪽부터 잡아, 어느 신고든 같은 순서로 기다리게 한다.
+    private Instant suspendTarget(long reporterId, long targetMemberId, Instant now) {
+        memberSuspensionService.lockForSanction(Math.min(reporterId, targetMemberId));
+        memberSuspensionService.lockForSanction(Math.max(reporterId, targetMemberId));
         Instant endsAt = now.plus(Sanction.TEMPORARY_SUSPENSION);
         memberSuspensionService.suspendTemporarily(targetMemberId, endsAt);
         return endsAt;
