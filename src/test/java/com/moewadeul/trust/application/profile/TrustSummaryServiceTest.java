@@ -138,6 +138,24 @@ class TrustSummaryServiceTest {
     }
 
     @Test
+    @DisplayName("[PV-01][TR-01] 탈퇴해서 출생연도·성별을 지운 본인확인 기록이면 상세는 오류 없이 단계 0이고 연령대·성별이 없다")
+    void detailOfWithdrawnRecordHasNoVerifiedValues() {
+        // given: 회원이 탈퇴해서 본인확인 기록의 출생연도와 성별이 지워졌다. CI 해시는 보관 기한까지 남는다.
+        stubRecord(NO_RECORD);
+        IdentityVerification withdrawn = recordBornIn(2000);
+        withdrawn.withdraw(MutableClock.DEFAULT_INSTANT.plus(Duration.ofDays(30)), MutableClock.DEFAULT_INSTANT);
+        when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(withdrawn));
+
+        // when
+        TrustDetail detail = serviceAt("2026-10-05T03:00:00Z").detail(MEMBER_ID);
+
+        // then
+        assertThat(detail.trustLevel()).isZero();
+        assertThat(detail.verifiedAgeGroup()).isNull();
+        assertThat(detail.verifiedGender()).isNull();
+    }
+
+    @Test
     @DisplayName("[TR-01][F-15] 상세는 동행 기록으로 단계 2를 판정하고 완료 동행·비율·임박 탈퇴·대표 태그를 채운다")
     void detailFillsCompanionRecord() {
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2007)));
