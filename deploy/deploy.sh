@@ -174,7 +174,10 @@ start() {
 }
 
 # Alloy의 MySQL 수집기가 쓰는 계정을 만들고 비밀번호를 Parameter Store 값에 맞춘다. 배포할 때마다 실행해도 결과가 같다.
-# 권한은 서버 상태(PROCESS, REPLICATION CLIENT)와 performance_schema 읽기뿐이라 앱 데이터는 읽지 못한다.
+# 권한은 서버 상태(PROCESS, REPLICATION CLIENT)와 performance_schema 읽기다. 앱 테이블(회원, 장소 등)은 읽지 못한다.
+# 다만 PROCESS 권한이 있으면 SHOW PROCESSLIST로 실행 중인 SQL 문장을 읽을 수 있고, 그 문장에는 값(로그인 이메일 등)이 들어 있을 수 있다.
+# 수집기의 기본 수집 항목(info_schema.innodb_cmp 등)이 PROCESS 권한을 요구하므로 이 권한은 뺄 수 없다.
+# 그래서 이 계정의 비밀번호는 Alloy 컨테이너와 서버 안에서만 쓰고, MySQL 포트는 밖에 열지 않는다.
 # root 비밀번호는 명령 인자가 아니라 MYSQL_PWD 환경 변수로, SQL은 표준 입력으로 넘겨서 프로세스 목록에 남지 않게 한다.
 # 실패해도 서비스는 정상이고 MySQL 지표만 빠지므로, 배포를 실패로 만들지 않고 로그만 남긴다.
 ensure_exporter_user() {
@@ -231,8 +234,11 @@ install_backup_timer() {
     fi
     log "백업 타이머 확인 완료: $(systemctl show moewadeul-backup.timer -p NextElapseUSecRealtime --value)"
     if [[ ! -f "$BACKUP_METRICS_FILE" ]]; then
-        systemctl start --no-block moewadeul-backup.service
-        log "첫 백업을 시작했다. 결과는 journalctl -u moewadeul-backup 으로 본다"
+        if systemctl start --no-block moewadeul-backup.service; then
+            log "첫 백업을 시작했다. 결과는 journalctl -u moewadeul-backup 으로 본다"
+        else
+            log "첫 백업을 시작하지 못했다. 서비스는 정상이고, 백업이 멈추면 Grafana 알림이 알린다"
+        fi
     fi
 }
 
@@ -252,7 +258,9 @@ main() {
     log "배포 시작: $tag (직전에 성공한 태그: ${previous:-없음})"
 
     write_env "$tag"
-    if ! compose pull --quiet || ! check_image_architecture "$tag"; then
+    # app과 caddy만 받는다. MySQL 이미지(mysql:8.4)는 배포할 때마다 받지 않는다. 받으면 업스트림에 8.4.x 패치가 나온 날
+    # 앱 배포가 DB 컨테이너를 새 버전으로 다시 만들고, 배포를 되돌려도 MySQL 버전은 돌아가지 않는다. MySQL을 올릴 때는 서버에서 직접 받는다.
+    if ! compose pull --quiet app caddy || ! check_image_architecture "$tag"; then
         log "이미지를 받지 못했거나 아키텍처가 맞지 않는다. 실행 중인 컨테이너는 그대로 둔다"
         [[ -n "$previous" ]] && write_env "$previous"
         exit 1
@@ -264,7 +272,8 @@ main() {
         sync_alloy_config
         install_backup_timer
         # 사흘 넘게 쓰지 않은 이미지를 지워 디스크를 확보한다. 되돌릴 이미지가 지워져도 GHCR에서 다시 받는다.
-        docker image prune -af --filter "until=72h" > /dev/null
+        # 지우지 못해도 이미 성공한 배포를 실패로 보고하지 않는다. set -e가 여기서 스크립트를 끝내지 않게 || 로 받는다.
+        docker image prune -af --filter "until=72h" > /dev/null || log "오래된 이미지를 지우지 못했다. 배포는 성공했다"
         log "배포 성공: $tag"
         exit 0
     fi
