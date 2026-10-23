@@ -23,6 +23,19 @@
         </foreach>
     </update>
 
+    <!-- 임대 만료 시각이 집을 때 건 값 그대로인 행만 푼다. 임대가 끝난 뒤 다른 발행기가 같은 행을 다시 집었으면 만료 시각이 새 값이라서 건너뛴다. -->
+    <update id="releaseLease">
+        UPDATE outbox_event
+        SET locked_until = NULL,
+            updated_at = #{now}
+        WHERE status = 'PENDING'
+          AND locked_until = #{lockedUntil}
+          AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
     <select id="selectByIds" resultType="com.moewadeul.outbox.infra.OutboxMessageRow">
         SELECT id, event_type, aggregate_type, aggregate_id, payload, created_at
         FROM outbox_event

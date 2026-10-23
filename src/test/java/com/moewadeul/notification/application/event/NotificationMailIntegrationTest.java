@@ -4,8 +4,10 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.mail.MailMessage;
+import com.moewadeul.common.mail.MailSender;
 import com.moewadeul.common.mail.TestMailSender;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -50,6 +53,12 @@ class NotificationMailIntegrationTest {
 
     @Autowired
     private NotificationMailProperties properties;
+
+    @Autowired
+    private NotificationMailStore mailStore;
+
+    @Value("${moewadeul.web.base-url}")
+    private String baseUrl;
 
     @Autowired
     private TestMailSender mailSender;
@@ -363,6 +372,94 @@ class NotificationMailIntegrationTest {
         assertThat(beforeLeaseEnds).isZero();
         assertThat(afterLeaseEnds).isEqualTo(1);
         assertThat(mailSender.sent()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("[F-20][NFR-04] 앱이 종료를 시작하면 발송 작업은 보내던 메일 한 통만 마치고 멈추고, 보내지 않은 메일은 임대를 풀어 다음 발송 작업이 바로 집는다")
+    void stopsAfterCurrentMailOnShutdownAndReleasesLeaseOfUnsentMails() {
+        // given
+        List<Long> memberIds = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            memberIds.add(saveActiveMember().getId());
+        }
+        recordConfirmed(3L, memberIds);
+        publisher.publishPending();
+        ShutdownSignal signal = new ShutdownSignal();
+        List<MailMessage> sentByStoppingMailer = new ArrayList<>();
+        // 첫 메일을 보내는 도중에 앱이 종료를 시작한 상황이다.
+        MailSender shutdownStartingSender = message -> {
+            sentByStoppingMailer.add(message);
+            signal.request();
+        };
+        NotificationMailer stoppingMailer =
+                new NotificationMailer(mailStore, shutdownStartingSender, clock, baseUrl, signal);
+
+        // when
+        int handled = stoppingMailer.sendDue();
+
+        // then
+        assertThat(handled).isEqualTo(1);
+        assertThat(sentByStoppingMailer).hasSize(1);
+        assertThat(countByEmailStatus("SENT")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM notification WHERE email_status = 'PENDING' AND email_next_attempt_at IS NULL",
+                        Integer.class))
+                .isEqualTo(2);
+
+        // when: 새로 뜬 앱의 발송 작업은 임대 시간이 지나기를 기다리지 않는다.
+        int afterRestart = mailer.sendDue();
+
+        // then
+        assertThat(afterRestart).isEqualTo(2);
+        assertThat(mailSender.sent()).hasSize(2);
+        assertThat(countByEmailStatus("SENT")).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("[F-20][NFR-04] 종료가 이미 시작됐으면 발송 작업은 메일을 집지 않아서 임대도 걸리지 않는다")
+    void doesNotClaimMailsAfterShutdownStarted() {
+        // given
+        recordApproved(saveActiveMember().getId(), 3L);
+        publisher.publishPending();
+        ShutdownSignal signal = new ShutdownSignal();
+        signal.request();
+        NotificationMailer stoppedMailer = new NotificationMailer(mailStore, mailSender, clock, baseUrl, signal);
+
+        // when
+        int handled = stoppedMailer.sendDue();
+
+        // then
+        assertThat(handled).isZero();
+        assertThat(mailSender.sent()).isEmpty();
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM notification WHERE email_next_attempt_at IS NULL", Integer.class))
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-20][NFR-04] 임대가 끝난 뒤 다른 발송 작업이 다시 집은 메일은, 처음 집은 발송 작업이 임대를 풀려 해도 풀리지 않는다")
+    void releaseLeaseKeepsMailsThatAnotherSenderClaimedAgain() {
+        // given
+        recordApproved(saveActiveMember().getId(), 3L);
+        publisher.publishPending();
+        long notificationId = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
+        NotificationMailStore.Claim first = mailStore.claim(clock.instant());
+        clock.advance(properties.lease().plusSeconds(1));
+        NotificationMailStore.Claim second = mailStore.claim(clock.instant());
+
+        // when
+        int releasedByFirst = mailStore.releaseLease(first.leaseUntil(), List.of(notificationId));
+
+        // then
+        assertThat(releasedByFirst).isZero();
+        assertThat(nextAttemptAt()).isEqualTo(second.leaseUntil());
+
+        // when
+        int releasedBySecond = mailStore.releaseLease(second.leaseUntil(), List.of(notificationId));
+
+        // then
+        assertThat(releasedBySecond).isEqualTo(1);
+        assertThat(mailStore.claim(clock.instant()).targets()).hasSize(1);
     }
 
     @Test

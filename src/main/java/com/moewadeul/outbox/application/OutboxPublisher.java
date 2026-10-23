@@ -3,6 +3,7 @@ package com.moewadeul.outbox.application;
 import com.moewadeul.common.mail.MailDeliveryException;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
+import com.moewadeul.common.scheduling.ShutdownSignal;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
@@ -22,25 +23,55 @@ public class OutboxPublisher {
     private final OutboxEventStore store;
     private final Clock clock;
     private final Map<String, OutboxEventHandler> handlersByEventType;
+    private final ShutdownSignal shutdownSignal;
 
-    public OutboxPublisher(OutboxEventStore store, Clock clock, List<OutboxEventHandler> handlers) {
+    public OutboxPublisher(
+            OutboxEventStore store, Clock clock, List<OutboxEventHandler> handlers, ShutdownSignal shutdownSignal) {
         this.store = store;
         this.clock = clock;
         this.handlersByEventType = indexByEventType(handlers);
+        this.shutdownSignal = shutdownSignal;
     }
 
     /**
      * 호출하면 발행할 이벤트를 집어 이벤트마다 처리기를 호출하고, 성공하면 PUBLISHED로, 실패하면 시도 횟수를 올려 표시한다.
      * 한 이벤트가 실패해도 나머지 이벤트는 계속 처리한다.
      *
+     * <p>앱이 종료를 시작하면 처리하던 이벤트 하나만 마치고 멈춘다. 집어 두고 처리하지 않은 이벤트는 임대를 풀어서, 새로 뜬 앱이
+     * 임대 시간을 기다리지 않고 바로 집게 한다. 종료가 이미 시작됐으면 이벤트를 집지 않는다.
+     *
      * @return 이번에 집어서 처리한 이벤트 수(실패한 이벤트 포함)
      */
     public int publishPending() {
-        List<OutboxMessage> messages = store.claim(clock.instant());
-        for (OutboxMessage message : messages) {
-            publish(message);
+        if (shutdownSignal.isRequested()) {
+            return 0;
         }
-        return messages.size();
+        OutboxEventStore.Claim claim = store.claim(clock.instant());
+        List<OutboxMessage> messages = claim.messages();
+        int processed = 0;
+        while (processed < messages.size() && !shutdownSignal.isRequested()) {
+            publish(messages.get(processed));
+            processed++;
+        }
+        if (processed < messages.size()) {
+            releaseUnprocessed(claim, processed);
+        }
+        return processed;
+    }
+
+    private void releaseUnprocessed(OutboxEventStore.Claim claim, int processed) {
+        List<Long> unprocessedIds = claim
+                .messages()
+                .subList(processed, claim.messages().size())
+                .stream()
+                .map(OutboxMessage::eventId)
+                .toList();
+        int released = store.releaseLease(claim.leaseUntil(), unprocessedIds);
+        log.info(
+                "outbox publisher stopped for shutdown processed={} unprocessed={} released={}",
+                processed,
+                unprocessedIds.size(),
+                released);
     }
 
     private void publish(OutboxMessage message) {

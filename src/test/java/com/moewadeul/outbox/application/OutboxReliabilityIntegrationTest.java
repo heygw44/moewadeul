@@ -3,7 +3,10 @@ package com.moewadeul.outbox.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.outbox.OutboxMessage;
+import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.sql.Timestamp;
@@ -259,7 +262,7 @@ class OutboxReliabilityIntegrationTest {
         // given
         long eventId = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
         // 처리기를 호출하는 도중에 다른 발행기가 같은 이벤트를 만난 상황이다. 집기만 하고 처리하지 않은 채로 둔다.
-        assertThat(store.claim(clock.instant())).hasSize(1);
+        assertThat(store.claim(clock.instant()).messages()).hasSize(1);
 
         // when
         clock.advance(properties.lease().minusSeconds(1));
@@ -277,6 +280,90 @@ class OutboxReliabilityIntegrationTest {
         assertThat(afterExpiry).isEqualTo(1);
         assertThat(handler.calledEventIds()).containsExactly(eventId);
         assertThat(findEvent(eventId).get("status")).isEqualTo("PUBLISHED");
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 앱이 종료를 시작하면 발행기는 처리하던 이벤트 하나만 마치고 멈추고, 처리하지 않은 이벤트는 임대를 풀어 다음 발행기가 바로 집는다")
+    void stopsAfterCurrentEventOnShutdownAndReleasesLeaseOfUnprocessedEvents() {
+        // given
+        List<Long> eventIds = recordEvents(3, RecordingOutboxEventHandler.EVENT_TYPE);
+        ShutdownSignal signal = new ShutdownSignal();
+        List<Long> handledByStoppingPublisher = new ArrayList<>();
+        // 첫 이벤트를 처리하는 도중에 앱이 종료를 시작한 상황이다.
+        OutboxEventHandler shutdownStartingHandler = new OutboxEventHandler() {
+            @Override
+            public String eventType() {
+                return RecordingOutboxEventHandler.EVENT_TYPE;
+            }
+
+            @Override
+            public void handle(OutboxMessage message) {
+                handledByStoppingPublisher.add(message.eventId());
+                signal.request();
+            }
+        };
+        OutboxPublisher stoppingPublisher = new OutboxPublisher(store, clock, List.of(shutdownStartingHandler), signal);
+
+        // when
+        int processed = stoppingPublisher.publishPending();
+
+        // then
+        assertThat(processed).isEqualTo(1);
+        assertThat(handledByStoppingPublisher).containsExactly(eventIds.get(0));
+        assertThat(findEvent(eventIds.get(0)).get("status")).isEqualTo("PUBLISHED");
+        assertThat(findEvent(eventIds.get(1)).get("locked_until")).isNull();
+        assertThat(findEvent(eventIds.get(2)).get("locked_until")).isNull();
+
+        // when: 새로 뜬 앱의 발행기는 임대 시간이 지나기를 기다리지 않는다.
+        int afterRestart = publisher.publishPending();
+
+        // then
+        assertThat(afterRestart).isEqualTo(2);
+        assertThat(handler.calledEventIds()).containsExactly(eventIds.get(1), eventIds.get(2));
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 종료가 이미 시작됐으면 발행기는 이벤트를 집지 않아서 임대도 걸리지 않는다")
+    void doesNotClaimEventsAfterShutdownStarted() {
+        // given
+        List<Long> eventIds = recordEvents(2, RecordingOutboxEventHandler.EVENT_TYPE);
+        ShutdownSignal signal = new ShutdownSignal();
+        signal.request();
+        OutboxPublisher stoppedPublisher = new OutboxPublisher(store, clock, List.of(handler), signal);
+
+        // when
+        int processed = stoppedPublisher.publishPending();
+
+        // then
+        assertThat(processed).isZero();
+        assertThat(handler.callCount()).isZero();
+        assertThat(findEvent(eventIds.get(0)).get("locked_until")).isNull();
+        assertThat(findEvent(eventIds.get(1)).get("locked_until")).isNull();
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 임대가 끝난 뒤 다른 발행기가 다시 집은 이벤트는, 처음 집은 발행기가 임대를 풀려 해도 풀리지 않는다")
+    void releaseLeaseKeepsEventsThatAnotherPublisherClaimedAgain() {
+        // given
+        List<Long> eventIds = recordEvents(2, RecordingOutboxEventHandler.EVENT_TYPE);
+        OutboxEventStore.Claim first = store.claim(clock.instant());
+        clock.advance(properties.lease().plusSeconds(1));
+        OutboxEventStore.Claim second = store.claim(clock.instant());
+
+        // when
+        int releasedByFirst = store.releaseLease(first.leaseUntil(), eventIds);
+
+        // then
+        assertThat(releasedByFirst).isZero();
+        assertThat(lockedUntil(eventIds.get(0))).isEqualTo(second.leaseUntil());
+        assertThat(store.claim(clock.instant()).messages()).isEmpty();
+
+        // when
+        int releasedBySecond = store.releaseLease(second.leaseUntil(), eventIds);
+
+        // then
+        assertThat(releasedBySecond).isEqualTo(2);
+        assertThat(store.claim(clock.instant()).messages()).hasSize(2);
     }
 
     private List<Long> recordEvents(int count, String eventType) {
