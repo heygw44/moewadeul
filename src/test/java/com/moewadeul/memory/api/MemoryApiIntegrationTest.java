@@ -16,6 +16,9 @@ import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.infra.SpotJpaRepository;
 import jakarta.servlet.http.Cookie;
+import java.util.Arrays;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +38,7 @@ class MemoryApiIntegrationTest {
     private static final String SESSION_COOKIE = "SESSION";
     private static final String LOCAL_IP = "127.0.0.1";
     private static final long IMAGE_SIZE = 1024;
+    private static final long THUMBNAIL_SIZE = 64;
 
     // 기본 시각(2026-10-05 한국 정오)의 오늘과 어제다.
     private static final String TODAY = "2026-10-05";
@@ -89,6 +93,27 @@ class MemoryApiIntegrationTest {
                 .asString()
                 .isNotBlank();
         assertThat(detail).bodyJson().doesNotHavePath("$.spot");
+    }
+
+    @Test
+    @DisplayName("[F-33][NFR-03] 사진이 붙은 기록을 같은 Idempotency-Key로 두 번 보내면 기록은 하나만 만들고, 두 번째에도 처음 memoryId를 응답한다")
+    void sameKeyCreatesOneMemoryEvenWithPhotos() {
+        // given
+        Cookie session = verifiedSession(saveMember());
+        int imageId = uploadedImage(session);
+        String key = UUID.randomUUID().toString();
+        String body = publicBodyWithImages(YESTERDAY, imageId);
+
+        // when
+        MvcTestResult first = sendWithKey(session, key, body);
+        MvcTestResult second = sendWithKey(session, key, body);
+
+        // then
+        assertThat(first).hasStatus(HttpStatus.CREATED);
+        assertThat(second).hasStatus(HttpStatus.CREATED);
+        assertThat(idOf(second, "$.memoryId")).isEqualTo(idOf(first, "$.memoryId"));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory", Integer.class))
+                .isEqualTo(1);
     }
 
     @Test
@@ -318,6 +343,119 @@ class MemoryApiIntegrationTest {
     }
 
     @Test
+    @DisplayName(
+            "[F-33][MM-05] 썸네일 크기를 보내면 _thumb.jpg 키의 썸네일 업로드 URL을 더 주고, 보내지 않으면 thumbnailUpload 필드가 없으며, 256KB를 넘으면 400이다")
+    void issuesThumbnailUploadOnlyWhenRequested() {
+        // given
+        Cookie session = verifiedSession(saveMember());
+
+        // when
+        MvcTestResult withThumbnail = send(
+                mvc.post().uri("/api/memories/images"),
+                session,
+                "{\"contentType\":\"image/png\",\"sizeBytes\":%d,\"thumbnailSizeBytes\":%d}"
+                        .formatted(IMAGE_SIZE, THUMBNAIL_SIZE));
+        MvcTestResult plain = send(
+                mvc.post().uri("/api/memories/images"),
+                session,
+                "{\"contentType\":\"image/png\",\"sizeBytes\":%d}".formatted(IMAGE_SIZE));
+        MvcTestResult tooLarge = send(
+                mvc.post().uri("/api/memories/images"),
+                session,
+                "{\"contentType\":\"image/png\",\"sizeBytes\":%d,\"thumbnailSizeBytes\":262145}".formatted(IMAGE_SIZE));
+
+        // then
+        assertThat(withThumbnail).hasStatus(HttpStatus.CREATED);
+        String thumbnailKey = thumbnailKeyOf(idOf(withThumbnail, "$.imageId"));
+        assertThat(thumbnailKey).endsWith("_thumb.jpg");
+        assertThat(withThumbnail)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.uploadUrl")
+                .isEqualTo("https://upload.test.invalid/" + thumbnailKey + "?signed=1");
+        assertThat(withThumbnail)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.method")
+                .isEqualTo("PUT");
+        assertThat(withThumbnail)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.headers.Content-Type")
+                .isEqualTo("image/jpeg");
+        assertThat(withThumbnail)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.headers.Content-Length")
+                .isEqualTo(String.valueOf(THUMBNAIL_SIZE));
+        assertThat(plain).hasStatus(HttpStatus.CREATED);
+        assertThat(plain).bodyJson().doesNotHavePath("$.thumbnailUpload");
+        assertThat(tooLarge).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(tooLarge).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("thumbnailSizeBytes");
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 썸네일 URL도 받은 사진은 썸네일을 올리지 않으면 붙일 수 없고, 둘 다 올리면 붙인다")
+    void attachRequiresUploadedThumbnail() {
+        // given
+        Cookie session = verifiedSession(saveMember());
+        int missingThumbnail = issuedWithThumbnail(session);
+        storage.markUploaded(keyOf(missingThumbnail), IMAGE_SIZE);
+        int complete = uploadedImageWithThumbnail(session);
+
+        // when
+        MvcTestResult rejected = send(
+                mvc.post().uri("/api/memories"),
+                session,
+                "{\"lat\":37.1,\"lng\":127.1,\"visitedDate\":\"%s\",\"nights\":1,\"imageIds\":[%d]}"
+                        .formatted(YESTERDAY, missingThumbnail));
+        MvcTestResult created = send(
+                mvc.post().uri("/api/memories"),
+                session,
+                "{\"lat\":37.1,\"lng\":127.1,\"visitedDate\":\"%s\",\"nights\":1,\"imageIds\":[%d]}"
+                        .formatted(YESTERDAY, complete));
+
+        // then
+        assertThat(rejected).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(rejected).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("imageIds");
+        assertThat(created).hasStatus(HttpStatus.CREATED);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05][MM-08] 목록과 피드의 thumbnailUrl은 첫 사진에 썸네일이 있으면 썸네일 키를, 없으면 원본 키를 서명하고, 상세는 원본을 준다")
+    void listsSignThumbnailKeyWithOriginalFallback() {
+        // given
+        Cookie session = verifiedSession(saveMember());
+        int withThumbnail = uploadedImageWithThumbnail(session);
+        int plain = uploadedImage(session);
+        int plainFirst = uploadedImage(session);
+        int memoryWithThumbnail = idOf(
+                send(
+                        mvc.post().uri("/api/memories"),
+                        session,
+                        publicBodyWithImages("2026-10-03", withThumbnail, plain)),
+                "$.memoryId");
+        send(mvc.post().uri("/api/memories"), session, publicBodyWithImages(YESTERDAY, plainFirst));
+
+        // when
+        MvcTestResult mine = mvc.get().uri("/api/me/memories").cookie(session).exchange();
+        MvcTestResult feed = mvc.get().uri("/api/memories/feed").exchange();
+        MvcTestResult detail = mvc.get()
+                .uri("/api/memories/" + memoryWithThumbnail)
+                .cookie(session)
+                .exchange();
+
+        // then
+        String thumbnailUrl = viewUrl(thumbnailKeyOf(withThumbnail));
+        String originalUrl = viewUrl(keyOf(plainFirst));
+        assertThat(mine).bodyJson().extractingPath("$[0].thumbnailUrl").isEqualTo(originalUrl);
+        assertThat(mine).bodyJson().extractingPath("$[1].thumbnailUrl").isEqualTo(thumbnailUrl);
+        assertThat(feed).bodyJson().extractingPath("$.content[0].thumbnailUrl").isEqualTo(originalUrl);
+        assertThat(feed).bodyJson().extractingPath("$.content[0].imageCount").isEqualTo(1);
+        assertThat(feed).bodyJson().extractingPath("$.content[1].memoryId").isEqualTo(memoryWithThumbnail);
+        assertThat(feed).bodyJson().extractingPath("$.content[1].thumbnailUrl").isEqualTo(thumbnailUrl);
+        assertThat(feed).bodyJson().extractingPath("$.content[1].imageCount").isEqualTo(2);
+        assertThat(feed).bodyJson().doesNotHavePath("$.content[1].images");
+        assertThat(detail).bodyJson().extractingPath("$.images[0].url").isEqualTo(viewUrl(keyOf(withThumbnail)));
+    }
+
+    @Test
     @DisplayName("[F-33][MM-05] 다른 회원이 올린 사진을 붙이면 400 INVALID_INPUT(imageIds)이고 기록은 저장하지 않는다")
     void rejectsOthersImage() {
         // given
@@ -372,6 +510,17 @@ class MemoryApiIntegrationTest {
         assertThat(list).bodyJson().extractingPath("$[1].excerpt").isEqualTo("물가 옆 평지");
     }
 
+    private MvcTestResult sendWithKey(Cookie session, String key, String body) {
+        return mvc.post()
+                .uri("/api/memories")
+                .with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .exchange();
+    }
+
     private void assertInvalid(Cookie session, String body, String field) {
         MvcTestResult result = send(mvc.post().uri("/api/memories"), session, body);
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
@@ -401,12 +550,46 @@ class MemoryApiIntegrationTest {
         return imageId;
     }
 
+    // 썸네일과 함께 업로드 URL을 받고, 회원이 두 URL로 파일을 올린 것처럼 테스트 저장소에 객체를 둔다.
+    private int uploadedImageWithThumbnail(Cookie session) {
+        int imageId = issuedWithThumbnail(session);
+        storage.markUploaded(keyOf(imageId), IMAGE_SIZE);
+        storage.markUploaded(thumbnailKeyOf(imageId), THUMBNAIL_SIZE);
+        return imageId;
+    }
+
+    private int issuedWithThumbnail(Cookie session) {
+        MvcTestResult issued = send(
+                mvc.post().uri("/api/memories/images"),
+                session,
+                "{\"contentType\":\"image/jpeg\",\"sizeBytes\":%d,\"thumbnailSizeBytes\":%d}"
+                        .formatted(IMAGE_SIZE, THUMBNAIL_SIZE));
+        assertThat(issued).hasStatus(HttpStatus.CREATED);
+        return idOf(issued, "$.imageId");
+    }
+
+    private static String publicBodyWithImages(String visitedDate, int... imageIds) {
+        String ids = Arrays.stream(imageIds).mapToObj(String::valueOf).collect(Collectors.joining(","));
+        return "{\"lat\":37.1,\"lng\":127.1,\"visitedDate\":\"%s\",\"nights\":1,\"visibility\":\"PUBLIC\",\"imageIds\":[%s]}"
+                .formatted(visitedDate, ids);
+    }
+
+    private static String viewUrl(String key) {
+        return "https://view.test.invalid/" + key + "?signed=1";
+    }
+
+    private String thumbnailKeyOf(int imageId) {
+        return jdbc.queryForObject("SELECT thumbnail_object_key FROM memory_image WHERE id = ?", String.class, imageId);
+    }
+
     private String keyOf(int imageId) {
         return jdbc.queryForObject("SELECT object_key FROM memory_image WHERE id = ?", String.class, imageId);
     }
 
     private MvcTestResult send(MockMvcTester.MockMvcRequestBuilder builder, Cookie session, String body) {
-        MockMvcTester.MockMvcRequestBuilder request = builder.with(csrf()).cookie(session);
+        MockMvcTester.MockMvcRequestBuilder request = builder.with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", UUID.randomUUID().toString());
         if (body != null) {
             request = request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

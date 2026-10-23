@@ -16,6 +16,8 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -28,15 +30,23 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import tools.jackson.databind.json.JsonMapper;
 
 @IntegrationTest
 class KmaClientIntegrationTest {
@@ -45,6 +55,10 @@ class KmaClientIntegrationTest {
     private static final String MID_LAND_FCST_PATH = "/1360000/MidFcstInfoService/getMidLandFcst";
     private static final String MID_TA_PATH = "/1360000/MidFcstInfoService/getMidTa";
     private static final String SERVICE_KEY = "test+key/value==";
+    private static final int CONCURRENT_REQUESTS = 100;
+    private static final int[] NEAR_TIMEOUT_DELAYS_MILLIS = {
+        940, 960, 980, 1000, 940, 960, 980, 1000, 940, 960, 980, 1000
+    };
     private static final String ENCODED_SERVICE_KEY = "test%2Bkey%2Fvalue%3D%3D";
     private static final String REQUEST_TIMER = "moewadeul.external.api.requests";
     private static final String RECOVERED = "recovered";
@@ -59,6 +73,15 @@ class KmaClientIntegrationTest {
 
     @Autowired
     private MeterRegistry meterRegistry;
+
+    @Autowired
+    private KmaProperties kmaProperties;
+
+    @Autowired
+    private JsonMapper jsonMapper;
+
+    @Autowired
+    private ExternalApiMetrics metrics;
 
     @Test
     @DisplayName("[F-09] 단기예보 응답의 항목을 원천 값 그대로 읽는다")
@@ -310,6 +333,49 @@ class KmaClientIntegrationTest {
                 .untilAsserted(() -> assertThat(requestCount(MID_TA_PATH)).isEqualTo(2));
     }
 
+    @Test
+    @DisplayName("[F-09][NFR-05] 압축된 응답을 읽는 도중 응답 대기 시간이 지나도, 모든 요청이 정상 응답이나 다시 보낼 수 있는 예외로 끝난다")
+    void everyRequestEndsWithRetryableFailureWhenReadTimeoutHitsDuringCompressedBody() throws Exception {
+        // given: 테스트 프로필의 응답 대기 시간은 1초다. WireMock은 gzip을 받겠다는 요청에만 본문을 압축해서 보낸다.
+        // 응답이 대기 시간 경계 근처에 끝나게 지연을 두면, 압축을 받는 클라이언트에서는 일부 요청의 본문이 압축을 푸는 도중에 닫힌다.
+        // 그 경쟁은 드물어서 동시 요청 100건을 지연을 바꿔 가며 여러 번 보낸다. 압축을 받던 때는 이 조건 1,200건 중 약 10건이 예외로 끝났다.
+        // 이 경쟁을 보려면 요청 100건이 동시에 나가야 하므로, 동시 호출 수 한도를 넘지 않는 클라이언트를 따로 만들어 쓴다.
+        KmaClient unlimited =
+                new KmaClient(kmaProperties, new ExternalApiProperties(CONCURRENT_REQUESTS), jsonMapper, metrics);
+        List<String> unexpected = new CopyOnWriteArrayList<>();
+        ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_REQUESTS);
+
+        // when
+        for (int delayMillis : NEAR_TIMEOUT_DELAYS_MILLIS) {
+            wireMock.resetAll();
+            stub(VILAGE_FCST_PATH, okJson(readFixture("vilage-fcst.json")).withFixedDelay(delayMillis));
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < CONCURRENT_REQUESTS; i++) {
+                futures.add(executor.submit(() -> callRecordingUnexpected(unlimited, unexpected)));
+            }
+            for (Future<?> future : futures) {
+                future.get(30, TimeUnit.SECONDS);
+            }
+        }
+        executor.shutdown();
+        assertThat(executor.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+
+        // then
+        assertThat(unexpected).isEmpty();
+    }
+
+    private void callRecordingUnexpected(KmaClient target, List<String> unexpected) {
+        try {
+            target.getVilageFcst(BASE, 60, 127);
+        } catch (KmaApiException e) {
+            if (!e.isRetryable()) {
+                unexpected.add("다시 보낼 수 없는 실패: " + e.getMessage());
+            }
+        } catch (RuntimeException e) {
+            unexpected.add(e.getClass().getName() + ": " + e.getMessage());
+        }
+    }
+
     private void stub(String path, ResponseDefinitionBuilder response) {
         wireMock.stubFor(get(urlPathEqualTo(path)).willReturn(response));
     }
@@ -353,6 +419,45 @@ class KmaClientIntegrationTest {
         // then
         assertThat(thrown).hasMessageContaining("I/O 오류");
         assertNoServiceKey(thrown);
+    }
+
+    @Test
+    @DisplayName("[NFR-05] 기상청이 느릴 때 동시 호출이 한도(10)를 넘으면, 넘는 호출은 기다리지 않고 기상청을 부르지 않은 채 다시 보낼 수 없는 예외로 끝난다")
+    void rejectsCallsBeyondConcurrentLimitWithoutCallingKma() throws Exception {
+        // given: 테스트 프로필의 응답 대기 시간은 1초다. 응답이 0.5초 걸려서 먼저 들어간 10건이 그동안 자리를 쥔다. 느린 CI 러너에서도 대기 시간을 넘지 않게 여유를 둔다.
+        int threads = 30;
+        stub(MID_TA_PATH, okJson(readFixture("mid-ta.json")).withFixedDelay(500));
+        long successBefore = timerCount("getMidTa", "success");
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        CountDownLatch ready = new CountDownLatch(threads);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<String>> futures = new ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+            futures.add(executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                try {
+                    client.getMidTa("11B10101", TM_FC);
+                    return "OK";
+                } catch (KmaApiException e) {
+                    return e.isRetryable() ? "RETRYABLE" : "REJECTED";
+                }
+            }));
+        }
+
+        // when
+        ready.await();
+        start.countDown();
+        List<String> outcomes = new ArrayList<>();
+        for (Future<String> future : futures) {
+            outcomes.add(future.get(30, TimeUnit.SECONDS));
+        }
+        executor.shutdown();
+
+        // then
+        assertThat(outcomes).containsOnly("OK", "REJECTED");
+        assertThat(outcomes.stream().filter("OK"::equals).count()).isBetween(1L, 10L);
+        assertThat(timerCount("getMidTa", "success") - successBefore).isBetween(1L, 10L);
     }
 
     // 키가 예외에 남으면 로그와 오류 추적 도구로 비밀값이 새어 나간다. 서버는 이 예외를 스택 트레이스째 로그에 남기므로,

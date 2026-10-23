@@ -30,6 +30,7 @@ public class ProgramQueryService {
     /**
      * 호출하면 취소되지 않은 행사를 query.phase로 거르고 행사 시작 시각이 이른 순서로 한 페이지 읽는다.
      * 다음 페이지가 있는지 알려고 한 건을 더 읽고, 그 건은 결과에서 뺀다. 그래서 전체 개수를 세는 쿼리를 따로 보내지 않는다.
+     * 화면이 신청이 열리는 순간을 알 수 있게, 필터와 페이지와 상관없이 가장 가까운 신청 오픈 시각도 함께 읽는다.
      */
     @Transactional(readOnly = true)
     public ProgramPage list(ProgramListQuery query) {
@@ -42,7 +43,8 @@ public class ProgramQueryService {
                 .limit(query.size())
                 .map(row -> toSummary(row, now))
                 .toList();
-        return new ProgramPage(content, query.page(), query.size(), hasNext);
+        Instant nextApplyOpenAt = programQueryMapper.selectNextApplyOpenAt(now);
+        return new ProgramPage(content, query.page(), query.size(), hasNext, nextApplyOpenAt);
     }
 
     /**
@@ -51,11 +53,12 @@ public class ProgramQueryService {
      */
     @Transactional(readOnly = true)
     public ProgramDetail detail(long programId, Long viewerId) {
-        ProgramDetailRow row = programQueryMapper.selectDetail(programId);
+        Instant now = clock.instant();
+        ProgramDetailRow row = programQueryMapper.selectDetail(programId, now);
         if (row == null) {
             throw new BusinessException(CommonErrorCode.NOT_FOUND);
         }
-        return toDetail(row, clock.instant(), findMyApplication(programId, viewerId));
+        return toDetail(row, now, findMyApplication(programId, viewerId));
     }
 
     /**

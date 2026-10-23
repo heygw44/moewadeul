@@ -39,7 +39,7 @@ public record MemoryDetailResponse(
         }
     }
 
-    /** 기록 안 순서대로 담는다. 사진이 없으면 빈 배열이다. url은 응답마다 새로 서명한 조회 URL이다. */
+    /** 기록 안 순서대로 담는다. 사진이 없으면 빈 배열이다. url은 사전 서명한 조회 URL이다. */
     public record Image(long imageId, String url) {}
 
     static MemoryDetailResponse from(MemoryView view) {

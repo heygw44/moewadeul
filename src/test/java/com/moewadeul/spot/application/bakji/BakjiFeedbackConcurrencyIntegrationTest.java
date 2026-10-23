@@ -2,6 +2,7 @@ package com.moewadeul.spot.application.bakji;
 
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -12,6 +13,7 @@ import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import com.moewadeul.spot.infra.SpotJpaRepository;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,8 +27,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @IntegrationTest
 class BakjiFeedbackConcurrencyIntegrationTest {
@@ -46,6 +51,9 @@ class BakjiFeedbackConcurrencyIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     @RepeatedTest(5)
     @DisplayName("[F-08] 신고 3건인 박지에 서로 다른 회원 2명이 동시에 신고하면 둘 다 저장하고 박지가 PENDING_REVIEW가 된다")
@@ -137,6 +145,50 @@ class BakjiFeedbackConcurrencyIntegrationTest {
         assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM bakji_confirmation WHERE spot_id = ?", Integer.class, spotId))
                 .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-08] 다른 트랜잭션이 박지 행을 잠근 채 놓지 않으면 신고는 MySQL 기본값 50초가 아니라 약 5초 기다린 뒤 잠금 대기 실패로 끝난다")
+    void reportGivesUpWaitingForLockedBakjiAfterAboutFiveSeconds() throws Exception {
+        // given: 다른 스레드가 박지 행을 잠그고, 테스트가 풀어 줄 때까지 커밋하지 않는다.
+        long spotId = saveBakji();
+        long memberId = saveMember();
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        ExecutorService holder = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> holding = holder.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                jdbc.queryForObject("SELECT id FROM spot WHERE id = ? FOR UPDATE", Long.class, spotId);
+                locked.countDown();
+                awaitQuietly(release);
+            }));
+            assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // when
+            long startedAt = System.nanoTime();
+            Throwable thrown = catchThrowable(() -> bakjiFeedbackService.reportProblem(memberId, spotId, REPORT));
+            Duration waited = Duration.ofNanos(System.nanoTime() - startedAt);
+
+            // then: 잠금 대기 제한이 없으면 MySQL 기본값인 50초를 기다린다.
+            assertThat(thrown).isInstanceOf(PessimisticLockingFailureException.class);
+            assertThat(waited).isBetween(Duration.ofSeconds(4), Duration.ofSeconds(15));
+            release.countDown();
+            holding.get(10, TimeUnit.SECONDS);
+            assertThat(reportCount(spotId)).isZero();
+        } finally {
+            release.countDown();
+            holder.shutdown();
+            assertThat(holder.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    private static void awaitQuietly(CountDownLatch latch) {
+        try {
+            assertThat(latch.await(60, TimeUnit.SECONDS)).isTrue();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
     }
 
     private static List<Long> sameMember(long memberId) {

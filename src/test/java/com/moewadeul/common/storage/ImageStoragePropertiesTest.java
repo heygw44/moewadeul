@@ -18,6 +18,7 @@ class ImageStoragePropertiesTest {
                 "ap-northeast-2",
                 uploadTtl,
                 Duration.ofHours(1),
+                Duration.ofMinutes(30),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(5));
     }
@@ -52,5 +53,21 @@ class ImageStoragePropertiesTest {
                 .hasMessageContaining("uploadUrlTtl");
         assertThatThrownBy(() -> properties("s3", "bucket", Duration.ofSeconds(-1)))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-06] 조회 URL 유효 시간과 서명 구간의 합이 S3 한도인 7일을 넘으면 예외로 시작을 막는다")
+    void viewUrlValidityBeyondSevenDaysFails() {
+        assertThatThrownBy(() -> new ImageStorageProperties(
+                        "s3",
+                        "bucket",
+                        "ap-northeast-2",
+                        TEN_MINUTES,
+                        Duration.ofDays(7),
+                        Duration.ofMinutes(1),
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(5)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("viewUrlTtl");
     }
 }

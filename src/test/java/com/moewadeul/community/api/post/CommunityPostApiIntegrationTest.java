@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.assertj.core.api.AbstractListAssert;
 import org.assertj.core.api.ObjectAssert;
 import org.junit.jupiter.api.BeforeEach;
@@ -105,6 +106,25 @@ class CommunityPostApiIntegrationTest {
                   "updatedAt": "2026-10-05T03:00:00Z"
                 }
                 """.formatted(postId, author.getId(), spotId));
+    }
+
+    @Test
+    @DisplayName("[F-29][NFR-03] 같은 Idempotency-Key로 글을 두 번 쓰면 글은 하나만 만들고, 두 번째에도 처음 postId를 응답한다")
+    void sameKeyWritesOnePost() {
+        // given
+        Cookie session = fixture.verifiedSession(fixture.saveMember("새벽능선"));
+        String key = UUID.randomUUID().toString();
+        String body = "{\"title\":\"텐트 후기\",\"content\":\"가볍다\"}";
+
+        // when
+        MvcTestResult first = fixture.postWithKey(POSTS, session, key, body);
+        MvcTestResult second = fixture.postWithKey(POSTS, session, key, body);
+
+        // then
+        assertThat(first).hasStatus(HttpStatus.CREATED);
+        assertThat(second).hasStatus(HttpStatus.CREATED);
+        assertThat(postIdOf(second)).isEqualTo(postIdOf(first));
+        assertThat(fixture.postCount()).isEqualTo(1);
     }
 
     @Test

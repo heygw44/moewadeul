@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>한 회원은 한 번만 본인확인할 수 있고, 같은 CI는 한 계정에만 연결된다. 이 클래스는 조회로 먼저 거르고, 두 요청이 동시에 들어와 조회를 모두
  * 통과하면 저장할 때 DB가 던지는 유니크 제약 위반을 같은 오류 코드로 바꾼다. 저장하다가 DB 교착 상태로 롤백되는 경우는
- * {@link IdentityVerificationService}가 트랜잭션 밖에서 다시 실행한다.
+ * {@link IdentityVerificationService}가 트랜잭션 밖에서 다시 실행한다(최대 3번).
  */
 @Service
 @RequiredArgsConstructor

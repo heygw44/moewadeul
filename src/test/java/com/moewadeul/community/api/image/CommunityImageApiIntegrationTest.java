@@ -34,6 +34,7 @@ class CommunityImageApiIntegrationTest {
 
     private static final String IMAGES = "/api/community/images";
     private static final long SIZE = 2483011L;
+    private static final long THUMBNAIL_SIZE = 48000L;
 
     @Autowired
     private MockMvcTester mvc;
@@ -82,6 +83,86 @@ class CommunityImageApiIntegrationTest {
         assertThat(postIdOfImage(imageId)).isNull();
         assertThat(jdbc.queryForObject("SELECT member_id FROM community_image WHERE id = ?", Long.class, imageId))
                 .isEqualTo(author.getId());
+        assertThat(result).bodyJson().doesNotHavePath("$.thumbnailUpload");
+        assertThat(thumbnailKeyOf(imageId)).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-06] 썸네일 크기를 보내면 같은 UUID에 _thumb.jpg를 붙인 키로 JPEG 썸네일 업로드 URL을 더 응답한다")
+    void issueUploadUrlWithThumbnail() {
+        // when
+        MvcTestResult result = fixture.send(
+                mvc.post().uri(IMAGES),
+                session,
+                "{\"contentType\":\"image/png\",\"sizeBytes\":%d,\"thumbnailSizeBytes\":%d}"
+                        .formatted(SIZE, THUMBNAIL_SIZE));
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.CREATED);
+        long imageId = idOf(result);
+        String key = keyOf(imageId);
+        assertThat(thumbnailKeyOf(imageId)).isEqualTo(key.substring(0, key.length() - ".png".length()) + "_thumb.jpg");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.uploadUrl")
+                .isEqualTo("https://upload.test.invalid/" + thumbnailKeyOf(imageId) + "?signed=1");
+        assertThat(result).bodyJson().extractingPath("$.thumbnailUpload.method").isEqualTo("PUT");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.headers.Content-Type")
+                .isEqualTo("image/jpeg");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.headers.Content-Length")
+                .isEqualTo(String.valueOf(THUMBNAIL_SIZE));
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-06] 썸네일 URL도 받은 이미지는 썸네일이 올라오지 않았거나 크기가 다르면 400 imageIds 오류이고, 둘 다 올라오면 붙는다")
+    void attachRequiresUploadedThumbnail() {
+        // given
+        long missingThumbnail = issueImageWithThumbnail(session);
+        storage.markUploaded(keyOf(missingThumbnail), SIZE);
+        long wrongThumbnail = issueImageWithThumbnail(session);
+        storage.markUploaded(keyOf(wrongThumbnail), SIZE);
+        storage.markUploaded(thumbnailKeyOf(wrongThumbnail), THUMBNAIL_SIZE + 1);
+        long complete = uploadedImageWithThumbnail(session);
+
+        // when
+        MvcTestResult missing = writePost(session, List.of(missingThumbnail));
+        MvcTestResult different = writePost(session, List.of(wrongThumbnail));
+        MvcTestResult created = writePost(session, List.of(complete));
+
+        // then
+        assertImageIdsRejected(missing);
+        assertImageIdsRejected(different);
+        assertThat(created).hasStatus(HttpStatus.CREATED);
+        assertThat(postIdOfImage(complete)).isEqualTo(postIdOf(created));
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-06] 목록 thumbnailUrl은 첫 이미지에 썸네일이 있으면 썸네일 키를, 없으면 원본 키를 서명하고, 상세 images는 원본을 준다")
+    void listSignsThumbnailKeyWithOriginalFallback() {
+        // given
+        long withThumbnail = uploadedImageWithThumbnail(session);
+        long plain = uploadedImage(session, SIZE);
+        long plainFirst = uploadedImage(session, SIZE);
+        long postWithThumbnail = postIdOf(writePost(session, List.of(withThumbnail, plain)));
+        long postWithoutThumbnail = postIdOf(writePost(session, List.of(plainFirst)));
+
+        // when
+        MvcTestResult list = mvc.get().uri(POSTS).exchange();
+        MvcTestResult detail = mvc.get().uri(POSTS + "/" + postWithThumbnail).exchange();
+
+        // then
+        assertThat(list).bodyJson().extractingPath("$.content[0].postId").isEqualTo((int) postWithoutThumbnail);
+        assertThat(list).bodyJson().extractingPath("$.content[0].thumbnailUrl").isEqualTo(viewUrl(keyOf(plainFirst)));
+        assertThat(list).bodyJson().extractingPath("$.content[1].postId").isEqualTo((int) postWithThumbnail);
+        assertThat(list)
+                .bodyJson()
+                .extractingPath("$.content[1].thumbnailUrl")
+                .isEqualTo(viewUrl(thumbnailKeyOf(withThumbnail)));
+        assertThat(detail).bodyJson().extractingPath("$.images[0].url").isEqualTo(viewUrl(keyOf(withThumbnail)));
     }
 
     @Test
@@ -344,6 +425,33 @@ class CommunityImageApiIntegrationTest {
                 mvc.post().uri(IMAGES), cookie, "{\"contentType\":\"image/jpeg\",\"sizeBytes\":" + sizeBytes + "}");
         assertThat(result).hasStatus(HttpStatus.CREATED);
         return idOf(result);
+    }
+
+    private long issueImageWithThumbnail(Cookie cookie) {
+        MvcTestResult result = fixture.send(
+                mvc.post().uri(IMAGES),
+                cookie,
+                "{\"contentType\":\"image/jpeg\",\"sizeBytes\":%d,\"thumbnailSizeBytes\":%d}"
+                        .formatted(SIZE, THUMBNAIL_SIZE));
+        assertThat(result).hasStatus(HttpStatus.CREATED);
+        return idOf(result);
+    }
+
+    // 썸네일과 함께 업로드 URL을 받고, 저장소에 원본과 썸네일이 올라온 것으로 표시한다.
+    private long uploadedImageWithThumbnail(Cookie cookie) {
+        long imageId = issueImageWithThumbnail(cookie);
+        storage.markUploaded(keyOf(imageId), SIZE);
+        storage.markUploaded(thumbnailKeyOf(imageId), THUMBNAIL_SIZE);
+        return imageId;
+    }
+
+    private static String viewUrl(String key) {
+        return "https://view.test.invalid/" + key + "?signed=1";
+    }
+
+    private String thumbnailKeyOf(long imageId) {
+        return jdbc.queryForObject(
+                "SELECT thumbnail_object_key FROM community_image WHERE id = ?", String.class, imageId);
     }
 
     // 업로드 URL을 받고, 저장소에 그 크기의 객체가 올라온 것으로 표시한다.

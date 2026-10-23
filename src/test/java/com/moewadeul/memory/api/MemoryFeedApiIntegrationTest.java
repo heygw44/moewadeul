@@ -15,6 +15,7 @@ import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.infra.SpotJpaRepository;
 import jakarta.servlet.http.Cookie;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,11 +81,9 @@ class MemoryFeedApiIntegrationTest {
                 .extractingPath("$.content[0].author.memberId")
                 .isEqualTo(author.getId().intValue());
         assertThat(feed).bodyJson().extractingPath("$.content[0].likeCount").isEqualTo(0);
-        assertThat(feed)
-                .bodyJson()
-                .extractingPath("$.content[0].images")
-                .asList()
-                .isEmpty();
+        assertThat(feed).bodyJson().doesNotHavePath("$.content[0].images");
+        assertThat(feed).bodyJson().doesNotHavePath("$.content[0].thumbnailUrl");
+        assertThat(feed).bodyJson().extractingPath("$.content[0].imageCount").isEqualTo(0);
         assertThat(feed).bodyJson().extractingPath("$.page").isEqualTo(0);
         assertThat(feed).bodyJson().extractingPath("$.size").isEqualTo(20);
         assertThat(feed).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
@@ -352,7 +351,10 @@ class MemoryFeedApiIntegrationTest {
     }
 
     private MvcTestResult send(MockMvcTester.MockMvcRequestBuilder builder, Cookie session) {
-        return builder.with(csrf()).cookie(session).exchange();
+        return builder.with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .exchange();
     }
 
     private long saveSpot() {

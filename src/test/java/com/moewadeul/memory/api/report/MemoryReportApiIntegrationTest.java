@@ -13,6 +13,7 @@ import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -276,7 +277,10 @@ class MemoryReportApiIntegrationTest {
     }
 
     private MvcTestResult send(MockMvcTester.MockMvcRequestBuilder builder, Cookie session) {
-        return builder.with(csrf()).cookie(session).exchange();
+        return builder.with(csrf())
+                .cookie(session)
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .exchange();
     }
 
     private Member saveMember() {

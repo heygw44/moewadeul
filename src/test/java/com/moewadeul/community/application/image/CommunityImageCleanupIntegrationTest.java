@@ -138,6 +138,25 @@ class CommunityImageCleanupIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-06] 썸네일이 있는 이미지는 원본과 썸네일 객체를 모두 지우고, 원본 삭제가 실패해도 썸네일은 지우며 실패를 한 번 센다")
+    void deletesOriginalAndThumbnailObjects() {
+        // given
+        Instant old = clock.instant().minus(Duration.ofDays(2));
+        long withThumbnail = insertImageWithThumbnail(old);
+        long failingOriginal = insertImageWithThumbnail(old);
+        storage.failDeleteOf(keyOf(failingOriginal));
+
+        // when
+        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+
+        // then
+        assertThat(result.deletedRows()).isEqualTo(2);
+        assertThat(result.storageFailures()).isEqualTo(1);
+        assertThat(storage.deletedKeys())
+                .containsExactly(keyOf(withThumbnail), thumbnailKeyOf(withThumbnail), thumbnailKeyOf(failingOriginal));
+    }
+
+    @Test
     @DisplayName("[F-29][CM-06] 한 번에 읽는 상한보다 대상이 많아도 모두 지운다")
     void deletesBeyondBatchSize() {
         // given
@@ -167,6 +186,20 @@ class CommunityImageCleanupIntegrationTest {
         long imageId = jdbc.queryForObject("SELECT MAX(id) FROM community_image", Long.class);
         keys.put(imageId, key);
         return imageId;
+    }
+
+    private long insertImageWithThumbnail(Instant createdAt) {
+        long imageId = insertImage(createdAt);
+        jdbc.update(
+                "UPDATE community_image SET thumbnail_object_key = ?, thumbnail_size_bytes = 100 WHERE id = ?",
+                thumbnailKeyOf(imageId),
+                imageId);
+        return imageId;
+    }
+
+    private String thumbnailKeyOf(long imageId) {
+        String key = keyOf(imageId);
+        return key.substring(0, key.length() - ".jpg".length()) + "_thumb.jpg";
     }
 
     // 지워진 이미지의 키도 확인해야 해서 행을 만들 때 기록해 둔다.

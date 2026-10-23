@@ -34,11 +34,17 @@ public interface NotificationMailMapper {
     int markSent(@Param("id") long id, @Param("now") Instant now);
 
     /**
-     * 호출하면 PENDING인 그 알림의 실패 횟수를 1 올린다. 올린 횟수가 maxAttempts에 닿으면 FAILED로 바꾸고, 아니면 retryAt까지 집지
-     * 않게 한다. 이미 다른 상태면 0이다.
+     * 호출하면 PENDING인 그 알림의 실패 횟수를 1 올린다. 일시적인 실패가 아니고 올린 횟수가 maxAttempts에 닿으면 FAILED로 바꾼다.
+     * 아니면 now에서 retryDelayMillis × 2^(올리기 전 실패 횟수) 뒤까지(retryMaxDelayMillis를 넘기지 않음) 집지 않게 한다.
+     * 이미 다른 상태면 0이다.
      */
     int markFailedAttempt(
-            @Param("id") long id, @Param("maxAttempts") int maxAttempts, @Param("retryAt") Instant retryAt);
+            @Param("id") long id,
+            @Param("transientFailure") boolean transientFailure,
+            @Param("maxAttempts") int maxAttempts,
+            @Param("retryDelayMillis") long retryDelayMillis,
+            @Param("retryMaxDelayMillis") long retryMaxDelayMillis,
+            @Param("now") Instant now);
 
     /**
      * 호출하면 memberIds 가운데 type 종류의 메일을 지금 보낼 수 있는 회원의 ID를 읽는다. 조건은 {@link #selectDueForUpdate}의

@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { createPost, getPost, requestImageUpload, updatePost } from '../../api/community';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
+import { createIdempotentRunner } from '../../api/idempotency';
 import { fetchSpotDetail } from '../../api/spots';
 import type { CommunityPostDetail, CommunityPostUpdateRequest } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
@@ -16,7 +17,9 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { useImageUploads } from '../../components/useImageUploads';
+import { restorableImages, useImageUploads } from '../../components/useImageUploads';
+import type { UploadImageItem } from '../../components/useImageUploads';
+import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { parseSpotId, SECONDARY_LINK_CLASS } from './communityLabels';
@@ -201,16 +204,35 @@ type PostFormProps = { initialSpot: LinkedSpot | null } & (
   { mode: 'create' } | { mode: 'edit'; post: CommunityPostDetail }
 );
 
+// 세션이 끊겨 로그인 화면으로 넘어갈 때 보관하는 값이다. 로그인한 뒤 돌아오면 폼이 이 값으로 다시 채운다.
+type PostDraft = { title: string; content: string; spot: LinkedSpot | null; images: UploadImageItem[] };
+
 function PostForm(props: PostFormProps) {
   const mode: FormMode = props.mode;
   const initialPost = props.mode === 'edit' ? props.post : null;
-  const [title, setTitle] = useState(initialPost?.title ?? '');
-  const [content, setContent] = useState(initialPost?.content ?? '');
-  const [spot, setSpot] = useState<LinkedSpot | null>(props.initialSpot);
-  const uploads = useImageUploads({ max: MAX_IMAGES, initial: initialPost?.images, requestUpload: requestImageUpload });
+  const { pathname, search } = useLocation();
+  const memberId = useSession().me?.memberId;
+  const draft = useRestoredDraft<PostDraft>(pathname + search, memberId);
+  const [title, setTitle] = useState(draft?.title ?? initialPost?.title ?? '');
+  const [content, setContent] = useState(draft?.content ?? initialPost?.content ?? '');
+  const [spot, setSpot] = useState<LinkedSpot | null>(draft ? draft.spot : props.initialSpot);
+  const uploads = useImageUploads({
+    max: MAX_IMAGES,
+    initial: initialPost?.images,
+    restored: draft?.images,
+    requestUpload: requestImageUpload,
+    thumbnail: true,
+  });
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [idempotentRunner] = useState(createIdempotentRunner);
+  useDraftCapture<PostDraft>(pathname + search, memberId, {
+    title,
+    content,
+    spot,
+    images: restorableImages(uploads.images),
+  });
 
   // 새로 연결한 장소(주소의 spotId)는 이름을 모르므로 한 번 받아 칩에 보여 준다. 받지 못하면 이름 없이 둔다.
   const unnamedSpotId = spot !== null && spot.name === null ? spot.spotId : null;
@@ -254,12 +276,13 @@ function PostForm(props: PostFormProps) {
     setSubmitting(true);
     try {
       if (props.mode === 'create') {
-        const created = await createPost({
+        const request = {
           title: title.trim(),
           content: content.trim(),
           spotId: spot?.spotId,
           imageIds,
-        });
+        };
+        const created = await idempotentRunner.run(request, (key) => createPost(request, key));
         navigate(`/community/${created.postId}`);
         return;
       }

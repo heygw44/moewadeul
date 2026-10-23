@@ -2,13 +2,15 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.program.infra.catalog.ProgramQueryMapper">
 
-    <!-- 남은 자리는 정원에서 정원을 차지하는 신청(결제 대기, 확정)의 수를 뺀 값이다. 신청이 정원보다 많아도 응답이 음수가 되지 않게 0에서 멈춘다. -->
+    <!-- 남은 자리는 정원에서 정원을 차지하는 신청의 수를 뺀 값이다. 정원을 차지하는 신청은 확정 신청과, 결제 기한이 now보다 늦은 결제 대기 신청이다.
+         기한이 지난 결제 대기 신청은 만료 작업이 상태를 바꾸기 전이어도 자리를 차지하지 않는다. 신청이 정원보다 많아도 응답이 음수가 되지 않게 0에서 멈춘다. -->
     <sql id="remainingSeats">
         GREATEST(
             p.capacity - (SELECT COUNT(*)
                           FROM program_application a
                           WHERE a.program_id = p.id
-                            AND a.status IN ('PENDING_PAYMENT', 'CONFIRMED')),
+                            AND a.status IN ('PENDING_PAYMENT', 'CONFIRMED')
+                            AND (a.status = 'CONFIRMED' OR a.payment_due_at &gt; #{now})),
             0)
     </sql>
 
@@ -42,6 +44,14 @@
         </if>
         ORDER BY p.start_at, p.id
         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 목록 단계 UPCOMING과 같은 기준(now가 신청 시작 시각보다 이름)이라서, 이 값이 지나면 UPCOMING 행사 하나가 OPEN으로 넘어간다. -->
+    <select id="selectNextApplyOpenAt" resultType="java.time.Instant">
+        SELECT MIN(p.apply_open_at)
+        FROM program p
+        WHERE p.status = 'SCHEDULED'
+          AND #{now} &lt; p.apply_open_at
     </select>
 
     <select id="selectDetail" resultType="com.moewadeul.program.infra.catalog.ProgramDetailRow">

@@ -4,6 +4,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { openBasecamp } from '../../api/basecamps';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
+import { createIdempotentRunner } from '../../api/idempotency';
 import { fetchSpotDetail } from '../../api/spots';
 import type { BasecampOpenRequest, JoinCondition, SpotDetail } from '../../api/types';
 import { Link, navigate } from '../../app/router';
@@ -208,6 +209,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [idempotentRunner] = useState(createIdempotentRunner);
   const controllerRef = useRef<AbortController | null>(null);
 
   // 요청 중에 화면을 벗어나면 응답을 기다리지 않는다.
@@ -267,7 +269,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
     controllerRef.current = controller;
     setSubmitting(true);
     try {
-      const response = await openBasecamp(request, controller.signal);
+      const response = await idempotentRunner.run(request, (key) => openBasecamp(request, key, controller.signal));
       if (controller.signal.aborted) return;
       navigate(`/basecamps/${response.basecampId}`);
     } catch (error) {

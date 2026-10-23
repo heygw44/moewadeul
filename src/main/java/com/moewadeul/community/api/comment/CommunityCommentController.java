@@ -1,5 +1,7 @@
 package com.moewadeul.community.api.comment;
 
+import com.moewadeul.common.idempotency.IdempotencyExecutor;
+import com.moewadeul.common.idempotency.IdempotentRequest;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.community.application.comment.CommunityCommentCommandService;
 import com.moewadeul.community.application.comment.CommunityCommentQueryService;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,12 +26,15 @@ class CommunityCommentController {
 
     private final CommunityCommentCommandService communityCommentCommandService;
     private final CommunityCommentQueryService communityCommentQueryService;
+    private final IdempotencyExecutor idempotencyExecutor;
 
     CommunityCommentController(
             CommunityCommentCommandService communityCommentCommandService,
-            CommunityCommentQueryService communityCommentQueryService) {
+            CommunityCommentQueryService communityCommentQueryService,
+            IdempotencyExecutor idempotencyExecutor) {
         this.communityCommentCommandService = communityCommentCommandService;
         this.communityCommentQueryService = communityCommentQueryService;
+        this.idempotencyExecutor = idempotencyExecutor;
     }
 
     @Operation(
@@ -52,6 +58,8 @@ class CommunityCommentController {
     @Operation(
             summary = "커뮤니티 댓글 작성",
             description = "이메일 인증을 마친 회원이 글에 댓글이나 답글을 쓴다. 201과 함께 commentId를 준다. "
+                    + "Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. "
+                    + "같은 키로 다시 보내면 댓글을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. "
                     + "content는 공백뿐일 수 없고 1,000자 이하이며, 어기면 400 INVALID_INPUT이다. "
                     + "parentId는 선택이고, 보내면 그 댓글에 다는 답글이 된다. 부모 댓글이 없거나, 다른 글의 댓글이거나, "
                     + "ACTIVE가 아니거나, 그 자체가 답글이면 400 INVALID_INPUT이다. "
@@ -61,9 +69,16 @@ class CommunityCommentController {
     CommunityCommentCreatedResponse write(
             @AuthenticationPrincipal LoginMember loginMember,
             @PathVariable long postId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody CommunityCommentCreateRequest request) {
-        return new CommunityCommentCreatedResponse(
-                communityCommentCommandService.write(loginMember.memberId(), postId, request.toCommand()));
+        long memberId = loginMember.memberId();
+        return idempotencyExecutor.execute(
+                new IdempotentRequest(
+                        memberId, idempotencyKey, "POST /api/community/posts/" + postId + "/comments", request),
+                HttpStatus.CREATED,
+                CommunityCommentCreatedResponse.class,
+                () -> new CommunityCommentCreatedResponse(
+                        communityCommentCommandService.write(memberId, postId, request.toCommand())));
     }
 
     @Operation(

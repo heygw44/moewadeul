@@ -1,6 +1,8 @@
 package com.moewadeul.weather.infra;
 
 import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.external.ExternalApiProperties;
+import com.moewadeul.common.external.ExternalCallLimit;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
@@ -72,12 +74,18 @@ public class KmaClient {
     private final String serviceKey;
     private final JsonMapper jsonMapper;
     private final ExternalApiMetrics metrics;
+    private final ExternalCallLimit callLimit;
 
-    public KmaClient(KmaProperties properties, JsonMapper jsonMapper, ExternalApiMetrics metrics) {
+    public KmaClient(
+            KmaProperties properties,
+            ExternalApiProperties externalApiProperties,
+            JsonMapper jsonMapper,
+            ExternalApiMetrics metrics) {
         this.restClient = createRestClient(properties);
         this.serviceKey = properties.serviceKey();
         this.jsonMapper = jsonMapper;
         this.metrics = metrics;
+        this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
     }
 
     /**
@@ -137,7 +145,15 @@ public class KmaClient {
         return variables;
     }
 
+    // 동시 호출 수 한도는 재시도까지 한 호출로 묶어 잡는다. 한도가 차 있으면 기다리지 않고 바로 실패로 끝낸다.
     private <T> T fetch(String operation, String uri, Map<String, Object> variables, Function<JsonNode, T> parser) {
+        return callLimit.call(
+                () -> fetchWithRetry(operation, uri, variables, parser),
+                () -> new KmaApiException(describe(operation, "동시 호출 수가 한도에 닿아 호출하지 않았다")));
+    }
+
+    private <T> T fetchWithRetry(
+            String operation, String uri, Map<String, Object> variables, Function<JsonNode, T> parser) {
         try {
             return fetchOnce(operation, uri, variables, parser);
         } catch (KmaApiException e) {
@@ -313,6 +329,9 @@ public class KmaClient {
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(properties.readTimeout());
+        // 압축 응답을 받으면, 응답 대기 시간이 지나 다른 스레드가 본문을 닫는 순간 압축 해제기가 IOException이 아닌 IllegalStateException을
+        // 던질 수 있다. 그 예외는 RestClient가 I/O 오류로 감싸지 않아서 이 클라이언트의 실패 처리를 건너뛴다. 그래서 압축을 받지 않는다.
+        requestFactory.enableCompression(false);
         return RestClient.builder()
                 .uriBuilderFactory(uriBuilderFactory)
                 .requestFactory(requestFactory)

@@ -116,8 +116,8 @@ export function MemoryFeedPage() {
 function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
   // 조회 URL이 만료되는 등 사진을 못 불러오면 사진 없는 칸 모양으로 바꾼다.
   const [imageFailed, setImageFailed] = useState(false);
-  const photoCount = item.images.length;
-  const cover = imageFailed ? undefined : item.images[0];
+  const photoCount = item.imageCount;
+  const coverUrl = imageFailed ? undefined : item.thumbnailUrl;
   const label = [
     `${item.author.nickname}님의 기록`,
     formatLocalDate(item.visitedDate),
@@ -133,11 +133,12 @@ function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
       aria-label={label}
       className="group relative block aspect-square overflow-hidden rounded-sheet bg-fill focus-visible:outline-offset-[-2px]"
     >
-      {cover ? (
+      {coverUrl ? (
         <img
-          src={cover.url}
+          src={coverUrl}
           alt=""
           loading="lazy"
+          decoding="async"
           onError={() => setImageFailed(true)}
           className="h-full w-full object-cover"
         />

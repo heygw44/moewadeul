@@ -77,14 +77,20 @@ class CommunityImageAttachmentChecker {
         return postId != null && image.isAttachedTo(postId);
     }
 
+    // 썸네일 URL도 함께 발급한 이미지는 썸네일까지 올라와야 붙일 수 있다. 썸네일만 빠져도 원본이 없을 때와 같은 메시지로 거부한다.
     private void requireUploaded(CommunityImage image) {
-        boolean uploaded = imageStorage
-                .findObjectSize(image.getObjectKey())
-                .filter(size -> size == image.getSizeBytes())
-                .isPresent();
+        boolean uploaded = isUploaded(image.getObjectKey(), image.getSizeBytes())
+                && (!image.hasThumbnail() || isUploaded(image.getThumbnailObjectKey(), image.getThumbnailSizeBytes()));
         if (!uploaded) {
             throw invalid(UNUSABLE_MESSAGE);
         }
+    }
+
+    private boolean isUploaded(String objectKey, long sizeBytes) {
+        return imageStorage
+                .findObjectSize(objectKey)
+                .filter(size -> size == sizeBytes)
+                .isPresent();
     }
 
     static InvalidFieldException invalid(String reason) {

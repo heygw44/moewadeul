@@ -39,6 +39,14 @@
         </choose>
     </sql>
 
+    <!-- 목록은 원본 대신 썸네일을 보여 준다. thumbnail_key는 기록 안 순서가 가장 앞선 사진의 썸네일 키이고,
+         썸네일 없이 올린 사진이면 원본 키다. 사진이 없으면 NULL이다. image_count는 기록에 붙은 사진 수다. -->
+    <sql id="thumbnailColumns">
+        (SELECT COALESCE(i.thumbnail_object_key, i.object_key)
+         FROM memory_image i WHERE i.memory_id = r.id ORDER BY i.display_order LIMIT 1) AS thumbnail_key,
+        (SELECT COUNT(*) FROM memory_image i2 WHERE i2.memory_id = r.id) AS image_count
+    </sql>
+
     <!-- 공개 피드는 공개(PUBLIC)이면서 정상(ACTIVE)인 기록만 읽고 id가 큰 것부터 준다. 신고로 검토 대기가 되거나 관리자가 숨긴 기록은 뺀다. 호출하는 쪽이 다음 페이지 유무를 알려고 한 건 더 읽는다.
          탈퇴한 회원의 기록은 탈퇴할 때 행째 지워지므로 따로 거르지 않는다. -->
     <select id="selectPublicFeed" resultType="com.moewadeul.memory.infra.MemoryFeedRow">
@@ -52,6 +60,7 @@
                r.visited_date AS visited_date,
                r.nights AS nights,
                LEFT(r.content, 100) AS excerpt,
+               <include refid="thumbnailColumns"/>,
                (SELECT COUNT(*) FROM memory_like l WHERE l.memory_id = r.id) AS like_count,
                <include refid="likedByMe"/>,
                r.created_at AS created_at
@@ -69,8 +78,7 @@
         SELECT EXISTS (SELECT 1 FROM member WHERE id = #{memberId} AND status &lt;&gt; 'WITHDRAWN')
     </select>
 
-    <!-- 목록은 글 전체를 읽지 않고 앞 100자만 읽는다. thumbnail_key는 기록 안 순서가 가장 앞선 사진의 저장소 객체 키이고,
-         사진이 없으면 NULL이다. 장소는 상세와 같은 규칙으로 ACTIVE일 때만 조인한다.
+    <!-- 목록은 글 전체를 읽지 않고 앞 100자만 읽는다. 장소는 상세와 같은 규칙으로 ACTIVE일 때만 조인한다.
          visibility를 넘기면 그 공개 범위이면서 정상(ACTIVE)인 기록만 읽는다. 다른 사람에게 보여 주는 조회라서 검토 대기·숨김 기록을 뺀다.
          null이면 작성자 본인의 조회라서 공개 범위와 상태에 상관없이 모두 읽는다. -->
     <select id="selectByMember" resultType="com.moewadeul.memory.infra.MemorySummaryRow">
@@ -84,8 +92,7 @@
                LEFT(r.content, 100) AS excerpt,
                r.visibility AS visibility,
                r.status AS status,
-               (SELECT i.object_key FROM memory_image i WHERE i.memory_id = r.id ORDER BY i.display_order LIMIT 1) AS thumbnail_key,
-               (SELECT COUNT(*) FROM memory_image i2 WHERE i2.memory_id = r.id) AS image_count,
+               <include refid="thumbnailColumns"/>,
                (SELECT COUNT(*) FROM memory_like l WHERE l.memory_id = r.id) AS like_count,
                r.created_at AS created_at
         FROM memory r

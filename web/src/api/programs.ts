@@ -6,9 +6,9 @@ import type {
   ProgramApplyResponse,
   ProgramCancelResponse,
   ProgramDetail,
+  ProgramPage,
   ProgramPayResponse,
   ProgramStatus,
-  ProgramSummary,
 } from './types';
 
 // 목록 필터에는 취소된 행사가 없다. 서버가 취소된 행사를 목록에서 뺀다.
@@ -18,8 +18,8 @@ export function listPrograms(
   status: ProgramListStatus | undefined,
   page: number,
   signal?: AbortSignal,
-): Promise<Page<ProgramSummary>> {
-  return apiFetch<Page<ProgramSummary>>('/api/programs', { query: { status, page }, signal });
+): Promise<ProgramPage> {
+  return apiFetch<ProgramPage>('/api/programs', { query: { status, page }, signal });
 }
 
 export function getProgram(programId: number, signal?: AbortSignal): Promise<ProgramDetail> {

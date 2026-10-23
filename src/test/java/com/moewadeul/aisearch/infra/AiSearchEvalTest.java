@@ -6,6 +6,7 @@ import com.moewadeul.aisearch.application.SpotQueryConditions;
 import com.moewadeul.aisearch.application.SpotQueryInterpretation;
 import com.moewadeul.aisearch.application.SpotQueryInterpretationException;
 import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.external.ExternalApiProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,7 +53,10 @@ class AiSearchEvalTest {
         OpenAiProperties properties = new OpenAiProperties(
                 "https://api.openai.com/v1", apiKey, "gpt-4.1-mini", Duration.ofSeconds(1), Duration.ofSeconds(5), 300);
         OpenAiSpotQueryInterpreter interpreter = new OpenAiSpotQueryInterpreter(
-                properties, jsonMapper, new ExternalApiMetrics(new SimpleMeterRegistry()));
+                properties,
+                new ExternalApiProperties(10),
+                jsonMapper,
+                new ExternalApiMetrics(new SimpleMeterRegistry()));
 
         List<JsonNode> cases = loadCases();
         Map<String, Integer> fieldCorrect = new LinkedHashMap<>();

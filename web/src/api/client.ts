@@ -44,7 +44,7 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
 }
 
 // 행사 신청·결제처럼 서버가 중복 처리를 막아야 하는 요청에 붙인다.
-// 사용자 행동 한 번에 하나를 만들고, 같은 행동을 다시 보낼 때는 같은 키를 쓴다.
+// 사용자 행동 한 번에 하나를 만들고, 같은 행동을 다시 보낼 때는 같은 키를 쓴다. 만들기 요청(기록·글·댓글·일정·베이스캠프)은 idempotency.ts의 실행기가 키를 정한다.
 export function newIdempotencyKey(): string {
   return crypto.randomUUID();
 }
@@ -197,6 +197,36 @@ function parseJson(text: string): unknown {
   }
 }
 
+// 약한 망에서 응답이 오지 않으면 화면이 끝없이 기다리므로 GET에는 제한 시간을 둔다. 넘기면 요청을 끊고 실패로 끝내서 화면이 다시 시도 경로를 보여 준다.
+// GET은 다시 보내도 서버 상태가 바뀌지 않는다. 하지만 POST·PUT·PATCH·DELETE는 서버가 처리를 마쳤는데 화면만 실패로 볼 수 있어서 두지 않는다.
+// 서버에서 가장 오래 걸리는 외부 호출(연결 1초 + 응답 5초)보다 넉넉하게 잡았다.
+const GET_TIMEOUT_MS = 15_000;
+
+// 호출하는 쪽의 취소 신호를 그대로 따르면서, 제한 시간이 지나면 따로 끊는 신호를 만든다.
+// 어느 쪽이 끊었는지는 expired()로 구분한다.
+function startDeadline(callerSignal: AbortSignal | undefined, timeoutMs: number) {
+  const controller = new AbortController();
+  let expired = false;
+  const followCaller = () => controller.abort(callerSignal?.reason);
+  if (callerSignal?.aborted) {
+    followCaller();
+  } else {
+    callerSignal?.addEventListener('abort', followCaller, { once: true });
+  }
+  const timer = setTimeout(() => {
+    expired = true;
+    controller.abort();
+  }, timeoutMs);
+  return {
+    signal: controller.signal,
+    expired: () => expired,
+    clear: () => {
+      clearTimeout(timer);
+      callerSignal?.removeEventListener('abort', followCaller);
+    },
+  };
+}
+
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? 'GET';
   const headers = new Headers({ Accept: 'application/json' });
@@ -218,26 +248,32 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     }
   }
 
+  const deadline = method === 'GET' ? startDeadline(options.signal, GET_TIMEOUT_MS) : null;
   let response: Response;
+  let text: string;
   try {
     response = await fetch(buildUrl(path, options.query), {
       method,
       headers,
       credentials: 'same-origin',
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: options.signal,
+      signal: deadline?.signal ?? options.signal,
     });
+    recordServerClock(response);
+    text = response.status === 204 ? '' : await response.text();
   } catch (error) {
+    if (deadline?.expired()) {
+      throw new ApiError(0, 'REQUEST_TIMEOUT', null);
+    }
     // 호출하는 쪽이 요청을 취소한 경우는 오류 화면을 띄우지 않도록 그대로 넘긴다.
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error;
     }
-    // 서버에 닿지 못해서 본문이 없다. 화면 문구는 오류 코드 표의 네트워크 문구를 쓴다.
+    // 서버에 닿지 못했거나 본문을 받다가 끊겼다. 화면 문구는 오류 코드 표의 네트워크 문구를 쓴다.
     throw new ApiError(0, 'NETWORK_ERROR', null);
+  } finally {
+    deadline?.clear();
   }
-
-  recordServerClock(response);
-  const text = response.status === 204 ? '' : await response.text();
 
   if (response.ok) {
     if (text === '') {

@@ -3,10 +3,15 @@ import type { ChangeEvent } from 'react';
 import { toUserMessage } from '../api/errors';
 import type { ImageUpload, ImageUploadRequest } from '../api/types';
 import { putImage } from '../api/uploads';
+import { createThumbnail } from './createThumbnail';
 
 // 서버 규칙과 같은 값이다. 커뮤니티 글과 장소 후기가 같은 형식·크기 제한을 쓰고, 장수만 다르다.
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
+
+// 한꺼번에 올리는 사진 수의 상한이다. 업로드 URL은 올리기 직전에 받고, 저장소는 업로드가 끝난 시각을 URL 만료 시각과 비교한다.
+// 그래서 한 장이 걸리는 시간은 같이 올리는 장수에 비례하고, 장수가 많아도 뒤에 기다린 사진의 URL은 늦게 받아 만료되지 않는다.
+const MAX_CONCURRENT_UPLOADS = 3;
 
 export type UploadImageItem = {
   key: string;
@@ -19,11 +24,23 @@ export type UploadImageItem = {
   error?: string;
 };
 
+// 세션이 끊겨 폼을 잠시 떠날 때 보관할 사진이다. 올리기를 마친 사진과 올리지 못해 다시 올릴 수 있는 사진만 남기고, 올리는 중인 사진은 뺀다.
+export function restorableImages(images: UploadImageItem[]): UploadImageItem[] {
+  return images.filter((image) => image.status === 'done' || (image.status === 'failed' && image.file !== undefined));
+}
+
+// 같은 화면에서 보관했다가 되살린 사진의 key와 새로 고른 사진의 key가 겹치지 않도록, 훅 인스턴스와 무관하게 센다.
+let nextKey = 0;
+
 type UseImageUploadsOptions = {
   max: number;
   initial?: { imageId: number; url: string }[];
+  // 보관해 둔 초안에서 되살린 사진이다. 있으면 initial 대신 이 목록으로 시작한다.
+  restored?: UploadImageItem[];
   // 업로드 URL을 받는 API다. 커뮤니티와 후기가 엔드포인트만 다르다.
   requestUpload: (req: ImageUploadRequest) => Promise<ImageUpload>;
+  // 켜면 목록 화면에 쓸 작은 썸네일을 만들어 원본과 함께 올린다. 썸네일을 못 만들면 원본만 올린다.
+  thumbnail?: boolean;
 };
 
 export type ImageUploads = {
@@ -42,12 +59,24 @@ export type ImageUploads = {
 };
 
 // 파일을 고르면 형식·크기·장수를 먼저 거르고, 통과한 파일마다 업로드 URL을 받아 저장소에 바로 올린다.
-export function useImageUploads({ max, initial = [], requestUpload }: UseImageUploadsOptions): ImageUploads {
-  const [images, setImages] = useState<UploadImageItem[]>(() =>
-    initial.map((image) => ({ key: `saved-${image.imageId}`, imageId: image.imageId, url: image.url, status: 'done' })),
+export function useImageUploads({
+  max,
+  initial = [],
+  restored,
+  requestUpload,
+  thumbnail = false,
+}: UseImageUploadsOptions): ImageUploads {
+  const [images, setImages] = useState<UploadImageItem[]>(
+    () =>
+      restored ??
+      initial.map((image) => ({
+        key: `saved-${image.imageId}`,
+        imageId: image.imageId,
+        url: image.url,
+        status: 'done' as const,
+      })),
   );
   const [messages, setMessages] = useState<string[]>([]);
-  const nextKey = useRef(0);
 
   const slotsLeft = max - images.length;
 
@@ -55,11 +84,38 @@ export function useImageUploads({ max, initial = [], requestUpload }: UseImageUp
     setImages((previous) => previous.map((image) => (image.key === key ? { ...image, ...patch } : image)));
   }
 
-  // 올리는 도중에 이미지를 뺐다면 patchImage가 아무것도 바꾸지 않는다.
-  async function upload(key: string, file: File) {
+  const waiting = useRef<{ key: string; file: File }[]>([]);
+  const running = useRef(0);
+
+  // 대기열에서 상한까지만 꺼내 올린다. 한 장이 끝나면 다음 장을 꺼낸다.
+  function drain() {
+    while (running.current < MAX_CONCURRENT_UPLOADS) {
+      const next = waiting.current.shift();
+      if (!next) return;
+      running.current += 1;
+      void upload(next.key, next.file).finally(() => {
+        running.current -= 1;
+        drain();
+      });
+    }
+  }
+
+  function enqueue(key: string, file: File) {
     patchImage(key, { status: 'uploading', error: undefined });
+    waiting.current.push({ key, file });
+    drain();
+  }
+
+  // 올리는 도중에 이미지를 뺐다면 patchImage가 아무것도 바꾸지 않는다. upload는 예외를 던지지 않는다.
+  async function upload(key: string, file: File) {
     try {
-      const target = await requestUpload({ contentType: file.type, sizeBytes: file.size });
+      const thumbnailBlob = thumbnail ? await createThumbnail(file) : null;
+      const target = await requestUpload({
+        contentType: file.type,
+        sizeBytes: file.size,
+        ...(thumbnailBlob ? { thumbnailSizeBytes: thumbnailBlob.size } : {}),
+      });
+      if (thumbnailBlob && target.thumbnailUpload) await putImage(target.thumbnailUpload, thumbnailBlob);
       await putImage(target, file);
       patchImage(key, { status: 'done', imageId: target.imageId });
     } catch (error) {
@@ -85,14 +141,14 @@ export function useImageUploads({ max, initial = [], requestUpload }: UseImageUp
         rejected.push(`${file.name}: 사진은 ${max}장까지 올릴 수 있어요. 다른 사진을 빼고 올려 주세요.`);
       } else {
         room -= 1;
-        accepted.push({ key: `new-${nextKey.current++}`, file, status: 'uploading' });
+        accepted.push({ key: `new-${nextKey++}`, file, status: 'uploading' });
       }
     }
     setMessages(rejected);
     if (accepted.length === 0) return;
     setImages((previous) => [...previous, ...accepted]);
     for (const item of accepted) {
-      if (item.file) void upload(item.key, item.file);
+      if (item.file) enqueue(item.key, item.file);
     }
   }
 
@@ -110,6 +166,7 @@ export function useImageUploads({ max, initial = [], requestUpload }: UseImageUp
   }
 
   function remove(key: string) {
+    waiting.current = waiting.current.filter((item) => item.key !== key);
     setImages((previous) => previous.filter((image) => image.key !== key));
     setMessages([]);
   }
@@ -124,7 +181,7 @@ export function useImageUploads({ max, initial = [], requestUpload }: UseImageUp
     imageIds: images.flatMap((image) => (image.imageId === undefined ? [] : [image.imageId])),
     handleFiles,
     retry: (image) => {
-      if (image.file) void upload(image.key, image.file);
+      if (image.file) enqueue(image.key, image.file);
     },
     moveForward,
     remove,

@@ -11,6 +11,12 @@ spring:
         # 시각은 UTC로 저장한다. JVM 기본 시간대와 무관하게 드라이버가 UTC로 변환해야
         # MyBatis가 쓴 Instant가 밀리지 않는다.
         connectionTimeZone: UTC
+        # MySQL의 잠금 대기 기본값은 50초다. 한 행을 오래 잡은 트랜잭션이 있으면 그 행을 쓰려는 요청이 최대 50초 동안 DB 커넥션을 쥐고 기다린다.
+        # 풀이 10개라서 그런 요청 10개면 장소와 상관없는 지도 조회도 커넥션을 얻지 못한다. 박지 한 곳을 60초 잠그고 신고 20건을 보냈을 때
+        # 신고는 모두 500이 됐고, 신고 시작 약 10초 뒤부터 50초 사이에는 성공한 지도 응답이 없었다.
+        # 그래서 앱 커넥션의 잠금 대기를 5초로 줄인다. 시간이 지나면 MySQL이 잠금 대기 오류(1205)를 내고 그 요청만 실패하며 커넥션을 돌려준다.
+        # 비용: 5초를 넘게 기다려야 성공하던 쓰기가 실패한다. 앱의 정리 작업과 관리자 적재도 같은 풀을 쓰므로 같은 제한을 받는다.
+        sessionVariables: innodb_lock_wait_timeout=5
   task:
     scheduling:
       pool:
@@ -26,6 +32,11 @@ spring:
     hibernate:
       # 스키마는 Flyway만 만든다. 엔티티가 스키마와 어긋나면 Hibernate가 시작할 때 검증에 실패한다.
       ddl-auto: validate
+  mvc:
+    # Spring MVC는 요청이 끝날 때마다 처리 결과 이벤트를 내면서 세션 ID를 함께 담으려고 세션을 연다.
+    # 그래서 로그인한 회원의 요청은 지도 조회처럼 로그인 정보를 쓰지 않아도 세션 행을 읽고 마지막 접근 시각을 다시 쓴다.
+    # 이 이벤트를 받는 곳이 없으므로 끈다. 세션을 건드리는 또 다른 곳인 리다이렉트 값 저장은 FlashMapConfig가 끈다.
+    publish-request-handled-events: false
   session:
     jdbc:
       # SPRING_SESSION 테이블은 Flyway가 만든다. Spring Session이 스키마 스크립트를 따로 실행하지 않게 끈다.

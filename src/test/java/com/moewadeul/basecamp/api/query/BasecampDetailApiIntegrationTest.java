@@ -87,6 +87,8 @@ class BasecampDetailApiIntegrationTest {
         assertThat(result).bodyJson().extractingPath("$.description").isEqualTo("함께 가요");
         assertThat(result).bodyJson().extractingPath("$.spot.name").isEqualTo("개머리언덕");
         assertThat(result).bodyJson().extractingPath("$.spot.type").isEqualTo("BAKJI");
+        assertThat(result).bodyJson().extractingPath("$.spot.lat").isEqualTo(37.25);
+        assertThat(result).bodyJson().extractingPath("$.spot.lng").isEqualTo(127.25);
         assertThat(result).bodyJson().extractingPath("$.status").isEqualTo("CONFIRMED");
         assertThat(result).bodyJson().extractingPath("$.capacity").isEqualTo(4);
         assertThat(result).bodyJson().extractingPath("$.headcount").isEqualTo(2);
@@ -119,6 +121,8 @@ class BasecampDetailApiIntegrationTest {
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(result).bodyJson().extractingPath("$.myRelation").isEqualTo("NONE");
+        assertThat(result).bodyJson().extractingPath("$.spot.lat").isEqualTo(37.25);
+        assertThat(result).bodyJson().extractingPath("$.spot.lng").isEqualTo(127.25);
         assertThat(result).bodyJson().extractingPath("$.leader.memberId").isEqualTo((int) (long) leader.getId());
         assertThat(result).bodyJson().extractingPath("$.leader.trustLevel").isEqualTo(1);
         assertThat(result).bodyJson().extractingPath("$.members[0].role").isEqualTo("LEADER");

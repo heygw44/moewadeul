@@ -49,7 +49,8 @@ class CommunityImageAttachConcurrencyIntegrationTest {
     void sameImageAttachedByConcurrentPostsSucceedsOnce() throws Exception {
         // given
         long memberId = memberRepository.saveAndFlush(aMember().build()).getId();
-        CommunityImageUpload upload = uploadService.issue(memberId, "image/jpeg", 1000L);
+        CommunityImageUpload upload =
+                uploadService.issue(memberId, new CommunityImageUploadCommand("image/jpeg", 1000L, null));
         storage.markUploaded(keyOf(upload.imageId()), 1000L);
         List<Callable<Object>> tasks = new ArrayList<>();
         for (int i = 0; i < THREADS; i++) {

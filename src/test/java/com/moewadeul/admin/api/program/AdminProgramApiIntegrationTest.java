@@ -342,7 +342,9 @@ class AdminProgramApiIntegrationTest {
                 now.minus(Duration.ofHours(1)), now.plus(Duration.ofDays(5)), now.plus(Duration.ofDays(7)), 10)));
         assertThat(post(ADMIN_PROGRAMS + "/" + canceled + "/cancel")).hasStatus(HttpStatus.OK);
         clock.advance(Duration.ofHours(2));
-        insertApplication(open, "PENDING_PAYMENT", now);
+        insertApplication(open, "PENDING_PAYMENT", clock.instant());
+        insertApplicationFor(
+                open, fixture.saveVerifiedMember(TestSequence.nickname()), "PENDING_PAYMENT", clock.instant());
         insertApplication(open, "CONFIRMED", now);
         insertApplication(open, "EXPIRED", now);
         insertApplication(open, "CANCELED", now);
@@ -376,6 +378,36 @@ class AdminProgramApiIntegrationTest {
         assertThat(canceledDetail).hasStatus(HttpStatus.OK);
         assertThat(canceledDetail).bodyJson().extractingPath("$.status").isEqualTo("CANCELED");
         assertThat(mvc.get().uri(PROGRAMS + "/999999").exchange()).hasStatus(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("[F-17] 목록의 nextApplyOpenAt은 취소되지 않은 행사 중 가장 이른 신청 오픈 시각이고, 필터와 페이지에 상관없으며, 지난 시각은 빼고 없으면 키가 없다")
+    void listReportsEarliestUpcomingApplyOpenAt() {
+        // given
+        Instant now = clock.instant();
+        Instant early = now.plus(Duration.ofDays(1));
+        Instant late = now.plus(Duration.ofDays(3));
+        programId(createProgram(body(now.minus(Duration.ofHours(1)), 10, null)));
+        programId(createProgram(body(late, 10, null)));
+        programId(createProgram(body(early, 10, null)));
+        long canceled = programId(createProgram(body(now.plus(Duration.ofHours(2)), 10, null)));
+        assertThat(post(ADMIN_PROGRAMS + "/" + canceled + "/cancel")).hasStatus(HttpStatus.OK);
+
+        // when
+        MvcTestResult all = mvc.get().uri(PROGRAMS).exchange();
+        MvcTestResult onlyOpen = mvc.get().uri(PROGRAMS + "?status=OPEN").exchange();
+        MvcTestResult secondPage = mvc.get().uri(PROGRAMS + "?size=1&page=1").exchange();
+        clock.advance(Duration.ofDays(1));
+        MvcTestResult afterEarly = mvc.get().uri(PROGRAMS).exchange();
+        clock.advance(Duration.ofDays(2));
+        MvcTestResult afterAll = mvc.get().uri(PROGRAMS).exchange();
+
+        // then
+        for (MvcTestResult result : List.of(all, onlyOpen, secondPage)) {
+            assertThat(result).bodyJson().extractingPath("$.nextApplyOpenAt").isEqualTo(early.toString());
+        }
+        assertThat(afterEarly).bodyJson().extractingPath("$.nextApplyOpenAt").isEqualTo(late.toString());
+        assertThat(afterAll).bodyJson().doesNotHavePath("$.nextApplyOpenAt");
     }
 
     @Test

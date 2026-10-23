@@ -1,3 +1,5 @@
+import type { Page } from './page';
+
 export type ProgramStatus = 'UPCOMING' | 'OPEN' | 'CLOSED' | 'CANCELED';
 
 export interface ProgramSummary {
@@ -15,6 +17,11 @@ export interface ProgramSummary {
   fee: number;
   overnight: boolean;
   status: ProgramStatus;
+}
+
+// 목록 응답에는 가장 가까운 신청 오픈 시각이 더 들어 있다. 신청이 열릴 행사가 없으면 필드가 없다.
+export interface ProgramPage extends Page<ProgramSummary> {
+  nextApplyOpenAt?: string;
 }
 
 export type ProgramApplicationStatus = 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELED' | 'EXPIRED';

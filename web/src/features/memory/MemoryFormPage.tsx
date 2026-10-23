@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
+import { createIdempotentRunner } from '../../api/idempotency';
 import { createMemory, getMemory, requestMemoryImageUpload, updateMemory } from '../../api/memories';
 import { fetchSpotDetail } from '../../api/spots';
 import type { MemoryDetail, MemoryUpdateRequest, MemoryVisibility } from '../../api/types';
@@ -18,10 +19,12 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { useImageUploads } from '../../components/useImageUploads';
+import { restorableImages, useImageUploads } from '../../components/useImageUploads';
+import type { UploadImageItem } from '../../components/useImageUploads';
 import { todayKst } from '../../lib/datetime';
 import type { LatLng } from '../../map/types';
 import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { LocationLabel } from '../spot/LocationLabel';
@@ -217,22 +220,46 @@ type MemoryFormProps = { position: LatLng | null; initialSpot: LinkedSpot | null
   { mode: 'create' } | { mode: 'edit'; memory: MemoryDetail }
 );
 
+// 세션이 끊겨 로그인 화면으로 넘어갈 때 보관하는 값이다. 로그인한 뒤 돌아오면 폼이 이 값으로 다시 채운다.
+type MemoryDraft = {
+  visitedDate: string;
+  nights: string;
+  content: string;
+  visibility: MemoryVisibility;
+  spot: LinkedSpot | null;
+  images: UploadImageItem[];
+};
+
 function MemoryForm(props: MemoryFormProps) {
   const initial = props.mode === 'edit' ? props.memory : null;
   const today = todayKst();
-  const [visitedDate, setVisitedDate] = useState(initial?.visitedDate ?? today);
-  const [nights, setNights] = useState(String(initial?.nights ?? 1));
-  const [content, setContent] = useState(initial?.content ?? '');
-  const [visibility, setVisibility] = useState<MemoryVisibility>(initial?.visibility ?? 'PRIVATE');
-  const [spot, setSpot] = useState<LinkedSpot | null>(props.initialSpot);
+  const { pathname, search } = useLocation();
+  const memberId = useSession().me?.memberId;
+  const draft = useRestoredDraft<MemoryDraft>(pathname + search, memberId);
+  const [visitedDate, setVisitedDate] = useState(draft?.visitedDate ?? initial?.visitedDate ?? today);
+  const [nights, setNights] = useState(draft?.nights ?? String(initial?.nights ?? 1));
+  const [content, setContent] = useState(draft?.content ?? initial?.content ?? '');
+  const [visibility, setVisibility] = useState<MemoryVisibility>(draft?.visibility ?? initial?.visibility ?? 'PRIVATE');
+  const [spot, setSpot] = useState<LinkedSpot | null>(draft ? draft.spot : props.initialSpot);
   const uploads = useImageUploads({
     max: MEMORY_MAX_IMAGES,
     initial: initial?.images,
+    restored: draft?.images,
     requestUpload: requestMemoryImageUpload,
+    thumbnail: true,
   });
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [idempotentRunner] = useState(createIdempotentRunner);
+  useDraftCapture<MemoryDraft>(pathname + search, memberId, {
+    visitedDate,
+    nights,
+    content,
+    visibility,
+    spot,
+    images: restorableImages(uploads.images),
+  });
 
   // 장소 상세에서 넘어오면 장소 이름을 모르므로 한 번 받아 보여 준다. 받지 못하면 이름 없이 둔다.
   const unnamedSpotId = spot !== null && spot.name === null ? spot.spotId : null;
@@ -279,7 +306,7 @@ function MemoryForm(props: MemoryFormProps) {
     try {
       if (props.mode === 'create') {
         if (props.position === null) return;
-        const created = await createMemory({
+        const request = {
           lat: props.position.lat,
           lng: props.position.lng,
           visitedDate,
@@ -288,7 +315,8 @@ function MemoryForm(props: MemoryFormProps) {
           visibility,
           spotId: spot?.spotId,
           imageIds,
-        });
+        };
+        const created = await idempotentRunner.run(request, (key) => createMemory(request, key));
         navigate(`/memories/${created.memoryId}`);
         return;
       }
