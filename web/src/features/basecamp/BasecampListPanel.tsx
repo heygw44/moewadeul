@@ -2,7 +2,7 @@ import type { BasecampSearchItem } from '../../api/types';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
@@ -13,6 +13,7 @@ import {
   headcountText,
   joinConditionSummary,
   nightsBetween,
+  OFF_PLATFORM_PAYMENT_REMINDER,
   unmetReasonText,
 } from './basecampLabels';
 import type { BasecampsInView } from './useBasecampsInView';
@@ -63,9 +64,11 @@ export function BasecampListPanel({
         <>
           {result.status === 'error' && result.error && (
             <div className="flex flex-col gap-3 px-4 pt-4">
-              <Notice tone="danger" title="베이스캠프를 불러오지 못했어요">
-                {result.error}
-              </Notice>
+              <ErrorNotice
+                title="베이스캠프를 불러오지 못했어요"
+                error={result.error}
+                traceId={result.traceId ?? undefined}
+              />
               <div>
                 <Button variant="secondary" onClick={result.retry}>
                   다시 불러오기
@@ -102,9 +105,10 @@ export function BasecampListPanel({
           {result.hasNext && (
             <div className="flex flex-col gap-2 px-4 py-4">
               {result.moreError && (
-                <p role="alert" className="text-sm text-danger">
-                  {result.moreError}
-                </p>
+                <div role="alert" className="flex flex-col gap-1">
+                  <p className="text-sm text-danger">{result.moreError}</p>
+                  {result.traceId && <p className="font-mono text-xs text-ink-muted">문의 번호 {result.traceId}</p>}
+                </div>
               )}
               <Button variant="secondary" fullWidth loading={result.loadingMore} onClick={result.loadMore}>
                 더 보기
@@ -113,6 +117,8 @@ export function BasecampListPanel({
           )}
         </>
       )}
+
+      <p className="px-4 pt-2 pb-4 text-sm text-ink-muted lg:px-5">{OFF_PLATFORM_PAYMENT_REMINDER}</p>
     </div>
   );
 }

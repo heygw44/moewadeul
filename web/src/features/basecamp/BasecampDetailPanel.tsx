@@ -2,7 +2,6 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import type { ReactNode } from 'react';
 import { applyToBasecamp, cancelMyApplication, fetchBasecampDetail, leaveBasecamp } from '../../api/basecamps';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import type { BasecampDetail, BasecampMember, JoinUnmetReason } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
@@ -10,6 +9,7 @@ import { buttonClassName } from '../../components/buttonClass';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/icons';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
@@ -108,9 +108,7 @@ export function BasecampDetailPanel({ basecampId, onBack, onLoaded }: BasecampDe
   } else {
     body = (
       <div className="flex flex-col gap-3 px-4 py-4">
-        <Notice tone="danger" title="베이스캠프를 불러오지 못했어요">
-          {toUserMessage(current.error)}
-        </Notice>
+        <ErrorNotice title="베이스캠프를 불러오지 못했어요" error={current.error} />
         <div>
           <Button variant="secondary" onClick={reload}>
             다시 불러오기
@@ -448,7 +446,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   const [dialog, setDialog] = useState<Pending>(null);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<{ title: string; message: string } | null>(null);
+  const [error, setError] = useState<{ title: string; cause: unknown } | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
   async function run(action: () => Promise<unknown>, successText: string, failTitle: string) {
@@ -459,7 +457,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
       await action();
       setDone(successText);
     } catch (caught) {
-      setError({ title: failTitle, message: toUserMessage(caught) });
+      setError({ title: failTitle, cause: caught });
     } finally {
       setSubmitting(false);
       setDialog(null);
@@ -563,9 +561,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
       )}
       {error && (
         <div role="alert">
-          <Notice tone="danger" title={error.title}>
-            <p>{error.message}</p>
-          </Notice>
+          <ErrorNotice title={error.title} error={error.cause} />
         </div>
       )}
       {content}

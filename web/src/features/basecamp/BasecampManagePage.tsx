@@ -14,7 +14,6 @@ import {
   updateBasecampContact,
 } from '../../api/basecamps';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import type { BasecampApplicationItem, BasecampDetail, BasecampMember, KickReason } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { StatusText } from '../../components/StatusText';
@@ -23,6 +22,7 @@ import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { BackLink } from '../../components/BackLink';
 import { PageCard, PageLayout } from '../../components/PageLayout';
@@ -57,7 +57,7 @@ type ApplicationsState = {
   items: BasecampApplicationItem[];
   page: number;
   hasNext: boolean;
-  error: string | null;
+  error: { cause: unknown } | null;
 };
 
 type DialogState =
@@ -77,7 +77,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const [dialog, setDialog] = useState<DialogState>(null);
   const [kickReason, setKickReason] = useState<KickReason | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<{ title: string; message: string } | null>(null);
+  const [error, setError] = useState<{ title: string; cause: unknown } | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
   useEffect(() => {
@@ -133,7 +133,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
           items: previous?.basecampId === basecampId ? previous.items : [],
           page: previous?.page ?? 0,
           hasNext: false,
-          error: toUserMessage(caught),
+          error: { cause: caught },
         }));
       },
     );
@@ -152,7 +152,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
       await action();
       setDone(successText);
     } catch (caught) {
-      setError({ title: failTitle, message: toUserMessage(caught) });
+      setError({ title: failTitle, cause: caught });
     } finally {
       setSubmitting(false);
       setDialog(null);
@@ -178,7 +178,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
           : previous,
       );
     } catch (caught) {
-      setApplications((previous) => (previous ? { ...previous, error: toUserMessage(caught) } : previous));
+      setApplications((previous) => (previous ? { ...previous, error: { cause: caught } } : previous));
     } finally {
       setLoadingMore(false);
     }
@@ -198,9 +198,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
         </PageCard>
       ) : (
         <div className="flex flex-col gap-3">
-          <Notice tone="danger" title="베이스캠프를 불러오지 못했어요">
-            <p>{toUserMessage(current.error)}</p>
-          </Notice>
+          <ErrorNotice title="베이스캠프를 불러오지 못했어요" error={current.error} />
           <div>
             <Button variant="secondary" onClick={reload}>
               다시 불러오기
@@ -233,9 +231,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
         )}
         {error && (
           <div role="alert">
-            <Notice tone="danger" title={error.title}>
-              <p>{error.message}</p>
-            </Notice>
+            <ErrorNotice title={error.title} error={error.cause} />
           </div>
         )}
         <HeaderCard detail={view} />
@@ -510,9 +506,7 @@ function ApplicationsCard({
         <>
           {state.error && (
             <div className="flex flex-col gap-2">
-              <Notice tone="danger" title="신청 목록을 불러오지 못했어요">
-                <p>{state.error}</p>
-              </Notice>
+              <ErrorNotice title="신청 목록을 불러오지 못했어요" error={state.error.cause} />
               <div>
                 <Button variant="secondary" onClick={onRetry}>
                   다시 불러오기
@@ -657,7 +651,7 @@ function validateContact(value: string): string | null {
 function ContactCard({ detail, onSaved }: { detail: BasecampDetail; onSaved: () => void }) {
   const [value, setValue] = useState(detail.contactInfo ?? '');
   const [fieldError, setFieldError] = useState<string | undefined>();
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause?: unknown; message?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -677,9 +671,9 @@ function ContactCard({ detail, onSaved }: { detail: BasecampDetail; onSaved: () 
       if (caught instanceof ApiError && caught.code === 'INVALID_INPUT' && caught.fieldErrors.length > 0) {
         const own = caught.fieldErrors.find((item) => item.field === 'contactInfo');
         if (own) setFieldError(own.reason);
-        else setFormError(caught.fieldErrors.map((item) => item.reason).join(' '));
+        else setFormError({ message: caught.fieldErrors.map((item) => item.reason).join(' ') });
       } else {
-        setFormError(toUserMessage(caught));
+        setFormError({ cause: caught });
       }
     } finally {
       setSubmitting(false);
@@ -691,9 +685,7 @@ function ContactCard({ detail, onSaved }: { detail: BasecampDetail; onSaved: () 
       <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-3">
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="저장하지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="저장하지 못했어요" error={formError.cause} message={formError.message} />
           </div>
         )}
         <TextField

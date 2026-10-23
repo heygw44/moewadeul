@@ -4,7 +4,7 @@ import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import { changePassword } from '../../api/members';
 import { Button } from '../../components/Button';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { PageCard } from '../../components/PageLayout';
 import { PasswordField } from '../../components/PasswordField';
 import {
@@ -35,7 +35,7 @@ export function PasswordChangeForm() {
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [changed, setChanged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const lock = useRetryCountdown();
@@ -70,7 +70,7 @@ export function PasswordChangeForm() {
 
   function handleError(error: unknown) {
     if (!(error instanceof ApiError)) {
-      setFormError(toUserMessage(error));
+      setFormError({ cause: error });
       return;
     }
     if (error.code === 'INVALID_INPUT' && error.fieldErrors.length > 0) {
@@ -81,7 +81,7 @@ export function PasswordChangeForm() {
         else others.push(reason);
       }
       setFieldErrors(errors);
-      if (others.length > 0) setFormError(others.join(' '));
+      if (others.length > 0) setFormError({ cause: others.join(' ') });
       return;
     }
     const field = FIELD_BY_CODE[error.code];
@@ -92,7 +92,7 @@ export function PasswordChangeForm() {
     if (error.code === 'LOGIN_LOCKED' && error.retryAfterSeconds !== undefined) {
       lock.start(error.retryAfterSeconds);
     }
-    setFormError(toUserMessage(error));
+    setFormError({ cause: error });
   }
 
   function handleConfirmBlur() {
@@ -114,9 +114,7 @@ export function PasswordChangeForm() {
         <p className="text-sm text-ink-muted">비밀번호를 바꾸면 이 기기 말고 다른 기기에서는 모두 로그아웃돼요.</p>
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="비밀번호를 바꾸지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="비밀번호를 바꾸지 못했어요" error={formError.cause} />
           </div>
         )}
         <PasswordField

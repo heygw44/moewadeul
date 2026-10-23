@@ -7,7 +7,7 @@ import type { Me, SelfAgeGroup, SelfGender } from '../../api/types';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { PageCard } from '../../components/PageLayout';
 import { TextField } from '../../components/TextField';
 import { AGE_GROUP_LABELS, GENDER_LABELS } from './memberLabels';
@@ -43,7 +43,7 @@ export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void })
   const [ageGroup, setAgeGroup] = useState<AgeChoice>(me.selfAgeGroup ?? NOT_SET);
   const [gender, setGender] = useState<GenderChoice>(me.selfGender ?? NOT_SET);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [saved, setSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const unverified = me.status === 'UNVERIFIED';
@@ -92,14 +92,14 @@ export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void })
         else others.push(reason);
       }
       setFieldErrors(errors);
-      if (others.length > 0) setFormError(others.join(' '));
+      if (others.length > 0) setFormError({ cause: others.join(' ') });
       return;
     }
     if (error instanceof ApiError && error.code === 'MEMBER_NICKNAME_DUPLICATED') {
       setFieldErrors({ nickname: toUserMessage(error) });
       return;
     }
-    setFormError(toUserMessage(error));
+    setFormError({ cause: error });
   }
 
   return (
@@ -111,9 +111,7 @@ export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void })
         </p>
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="저장하지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="저장하지 못했어요" error={formError.cause} />
           </div>
         )}
         <TextField

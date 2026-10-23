@@ -21,6 +21,9 @@ export const BASECAMP_STATUS_GUIDE: Record<BasecampStatus, string> = {
   CANCELED: '취소된 베이스캠프예요.',
 };
 
+// 베이스캠프 목록과 열기 화면에 늘 보여 주는 안내다. 상세·관리 화면은 서버가 내려 주는 안전 안내 문구로 같은 뜻을 전한다.
+export const OFF_PLATFORM_PAYMENT_REMINDER = '플랫폼 밖 송금 요구는 신고해 주세요.';
+
 export const AGE_GROUP_STEPS = [20, 30, 40, 50, 60] as const;
 
 export function ageGroupStepLabel(step: number): string {

@@ -61,10 +61,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // 세션이 끊기면(401) 로그인 화면으로 보내고, 로그인한 뒤 지금 보던 화면으로 돌아오도록 경로를 next에 담는다.
   // 로그인·가입 화면에서는 이미 그 화면에 있으므로 옮기지 않는다.
   // 쓰던 폼이 있으면 상태를 지우기 전에 값을 보관한다. 상태를 지우면 폼이 사라져서 값을 읽을 수 없다.
+  // 지도 화면 기억은 비운다. 다음에 로그인하는 사람이 다른 회원일 수 있어서 앞사람의 조건과 AI 요약을 남기지 않는다.
   useEffect(() => {
     setUnauthorizedHandler(() => {
       keepFormDraft();
       setState(ANONYMOUS);
+      forgetMapScreen();
       const { pathname, search } = window.location;
       if (pathname === '/login' || pathname === '/signup') return;
       navigate(`/login?next=${encodeURIComponent(pathname + search)}`, { replace: true });
@@ -72,9 +74,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, []);
 
+  // 탈퇴처럼 서버가 세션을 지운 뒤 다시 확인했을 때 로그인하지 않은 상태로 돌아오면 지도 화면 기억도 함께 비운다.
   const refresh = useCallback(async () => {
     const me = await fetchMe();
     setState(me ? { status: 'authenticated', me } : ANONYMOUS);
+    if (!me) forgetMapScreen();
     return me;
   }, []);
 

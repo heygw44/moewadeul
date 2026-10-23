@@ -9,6 +9,7 @@ import type { SpotType } from '../../api/types';
 import { ActiveFilterChips } from '../../components/ActiveFilterChips';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Sheet } from '../../components/Sheet';
@@ -973,9 +974,7 @@ function SpotList({
     <div className="flex flex-col">
       {area.status === 'error' && area.error && (
         <div className="flex flex-col gap-3 px-4 pt-4">
-          <Notice tone="danger" title="장소를 불러오지 못했어요">
-            {area.error}
-          </Notice>
+          <ErrorNotice title="장소를 불러오지 못했어요" error={area.error} traceId={area.traceId ?? undefined} />
           <div>
             <Button variant="secondary" onClick={area.retry}>
               다시 불러오기
@@ -1050,9 +1049,7 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
     <div className="flex flex-col">
       {nearby.status === 'error' && nearby.error && (
         <div className="flex flex-col gap-3 px-4 pt-4">
-          <Notice tone="danger" title="장소를 불러오지 못했어요">
-            {nearby.error}
-          </Notice>
+          <ErrorNotice title="장소를 불러오지 못했어요" error={nearby.error} traceId={nearby.traceId ?? undefined} />
           <div>
             <Button variant="secondary" onClick={nearby.retry}>
               다시 불러오기
@@ -1076,9 +1073,10 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
       {nearby.hasNext && (
         <div className="flex flex-col gap-2 px-4 py-4">
           {nearby.moreError && (
-            <p role="alert" className="text-sm text-danger">
-              {nearby.moreError}
-            </p>
+            <div role="alert" className="flex flex-col gap-1">
+              <p className="text-sm text-danger">{nearby.moreError}</p>
+              {nearby.traceId && <p className="font-mono text-xs text-ink-muted">문의 번호 {nearby.traceId}</p>}
+            </div>
           )}
           <Button variant="secondary" fullWidth loading={nearby.loadingMore} onClick={nearby.loadMore}>
             더 보기

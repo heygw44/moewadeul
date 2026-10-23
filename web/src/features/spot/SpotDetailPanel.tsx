@@ -1,7 +1,6 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import { fetchSpotDetail } from '../../api/spots';
 import type {
   BakjiDetail,
@@ -17,6 +16,7 @@ import { buttonClassName } from '../../components/buttonClass';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
 import { Icon } from '../../components/icons';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
@@ -104,9 +104,7 @@ export function SpotDetailPanel({ spotId, onBack, onLoaded }: SpotDetailPanelPro
   } else {
     body = (
       <div className="flex flex-col gap-3">
-        <Notice tone="danger" title="장소 정보를 불러오지 못했어요">
-          {toUserMessage(current.error)}
-        </Notice>
+        <ErrorNotice title="장소 정보를 불러오지 못했어요" error={current.error} />
         <div>
           <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
             다시 불러오기
@@ -336,11 +334,11 @@ function BakjiSection({
   );
 }
 
-// 링크로 열 수 있는 http(s) 주소만 링크로 만든다. 원천 값에 scheme이 없거나 다른 scheme이면 글자로만 보여 준다.
+// 링크로 열 수 있는 https 주소만 링크로 만든다. 원천 값에 scheme이 없거나 http 같은 다른 scheme이면 글자로만 보여 준다.
 function parseHomepage(homepage: string): URL | null {
   try {
     const url = new URL(homepage);
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
+    return url.protocol === 'https:' ? url : null;
   } catch {
     return null;
   }

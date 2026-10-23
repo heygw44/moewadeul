@@ -138,3 +138,9 @@ export function toUserMessage(error: unknown): string {
   }
   return UNEXPECTED_ERROR_MESSAGE;
 }
+
+// 서버가 5xx로 답한 예상 못 한 오류의 추적 ID다. 회원이 문의할 때 알려 주면 운영자가 서버 로그를 찾는다.
+// 4xx는 회원이 고칠 수 있는 오류라서 ID를 보여 주지 않는다.
+export function serverTraceId(error: unknown): string | undefined {
+  return error instanceof ApiError && error.status >= 500 ? error.traceId : undefined;
+}

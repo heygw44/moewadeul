@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import { verifyIdentity } from '../../api/trust';
 import type { IdentityVerificationResponse, SelfGender } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
@@ -45,7 +45,7 @@ export function IdentityVerificationPage() {
   const [gender, setGender] = useState<SelfGender | null>(null);
   const [demoIdentityKey, setDemoIdentityKey] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<IdentityVerificationResponse | null>(null);
 
@@ -122,14 +122,14 @@ export function IdentityVerificationPage() {
         else others.push(reason);
       }
       setFieldErrors(errors);
-      if (others.length > 0) setFormError(others.join(' '));
+      if (others.length > 0) setFormError({ cause: others.join(' ') });
       return;
     }
     if (error instanceof ApiError && error.code === 'IDENTITY_ALREADY_VERIFIED') {
       // 다른 기기에서 먼저 마쳤다. 세션을 새로 읽으면 "이미 마쳤어요" 화면으로 바뀐다.
       void session.refresh().catch(() => null);
     }
-    setFormError(toUserMessage(error));
+    setFormError({ cause: error });
   }
 
   // 다른 인증 화면의 아래 줄 링크와 같은 모양으로 두어 판 왼쪽 끝과 맞춘다.
@@ -233,9 +233,7 @@ export function IdentityVerificationPage() {
         />
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="본인확인하지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="본인확인하지 못했어요" error={formError.cause} />
           </div>
         )}
         <Button type="submit" fullWidth loading={submitting}>

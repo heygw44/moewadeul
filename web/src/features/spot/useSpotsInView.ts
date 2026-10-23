@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchSpotsInArea } from '../../api/spots';
-import { toUserMessage } from '../../api/errors';
+import { serverTraceId, toUserMessage } from '../../api/errors';
 import type { SpotCluster, SpotMarker, SpotSetting, SpotType } from '../../api/types';
 import type { MapView } from '../../map/types';
 import { distanceKm } from '../../lib/geo';
@@ -17,6 +17,7 @@ export type SpotsInView = {
   clusters: SpotCluster[];
   status: AreaStatus;
   error: string | null;
+  traceId: string | null;
   retry(): void;
 };
 
@@ -25,9 +26,11 @@ type AreaState = {
   clusters: SpotCluster[];
   status: AreaStatus;
   error: string | null;
+  // error가 5xx 응답이면 그 추적 ID다. 목록 화면이 문의 번호로 보여 준다.
+  traceId: string | null;
 };
 
-const INITIAL_STATE: AreaState = { markers: [], clusters: [], status: 'idle', error: null };
+const INITIAL_STATE: AreaState = { markers: [], clusters: [], status: 'idle', error: null, traceId: null };
 
 // 지도 이동이 멈출 때마다 지금 보이는 영역의 장소를 받는다.
 // 빠르게 여러 번 움직이면 앞선 요청을 취소해서 마지막 영역의 응답만 화면에 남긴다.
@@ -91,19 +94,24 @@ export function useSpotsInView(
               count: cluster.count,
             })),
           );
-          setState({ markers: listed, clusters: response.clusters, status: 'ready', error: null });
+          setState({ markers: listed, clusters: response.clusters, status: 'ready', error: null, traceId: null });
         },
         (error: unknown) => {
           // 취소한 요청의 실패는 새 요청이 이어받으므로 화면에 반영하지 않는다.
           if (controller.signal.aborted) return;
-          setState((previous) => ({ ...previous, status: 'error', error: toUserMessage(error) }));
+          setState((previous) => ({
+            ...previous,
+            status: 'error',
+            error: toUserMessage(error),
+            traceId: serverTraceId(error) ?? null,
+          }));
         },
       );
     };
 
     // 지도를 움직였거나 다시 불러오기를 눌렀을 때는 이전 결과를 남긴 채 불러오는 중으로 바꾼다.
     const reload = () => {
-      setState((previous) => ({ ...previous, status: 'loading', error: null }));
+      setState((previous) => ({ ...previous, status: 'loading', error: null, traceId: null }));
       request();
     };
 

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { toUserMessage } from '../../api/errors';
 import { fetchMyTrust } from '../../api/trust';
 import type { Me, MyTrust } from '../../api/types';
 import { Link, navigate } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/icons';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { BoardSection, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
@@ -104,7 +104,7 @@ function BoardRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-type TrustResult = { key: string; trust: MyTrust } | { key: string; error: string };
+type TrustResult = { key: string; trust: MyTrust } | { key: string; error: { cause: unknown } };
 
 function TrustCard({ me }: { me: Me }) {
   const [attempt, setAttempt] = useState(0);
@@ -119,7 +119,7 @@ function TrustCard({ me }: { me: Me }) {
         if (!controller.signal.aborted) setResult({ key, trust });
       },
       (cause: unknown) => {
-        if (!controller.signal.aborted) setResult({ key, error: toUserMessage(cause) });
+        if (!controller.signal.aborted) setResult({ key, error: { cause } });
       },
     );
     return () => controller.abort();
@@ -157,9 +157,7 @@ function TrustCard({ me }: { me: Me }) {
       )}
       {error && (
         <div className="flex flex-col gap-2">
-          <Notice tone="danger" title="신뢰 단계를 불러오지 못했어요">
-            <p>{error}</p>
-          </Notice>
+          <ErrorNotice title="신뢰 단계를 불러오지 못했어요" error={error.cause} />
           <div>
             <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
               다시 불러오기

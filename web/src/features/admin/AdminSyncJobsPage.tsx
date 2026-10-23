@@ -4,6 +4,7 @@ import type { SyncJobRun, SyncJobStatus, SyncJobType } from '../../api/types';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { StatusText } from '../../components/StatusText';
@@ -49,7 +50,20 @@ const POLL_INTERVAL_MS = 10_000;
 
 type CardEntry = { latest: SyncJobRun | null; lastSuccess: SyncJobRun | null };
 type CardsState = Record<SyncJobType, CardEntry>;
-type HistoryState = { items: SyncJobRun[]; page: number; hasNext: boolean; error: string | null };
+type HistoryState = {
+  items: SyncJobRun[];
+  page: number;
+  hasNext: boolean;
+  filter: SyncJobType | null;
+  error: Failure | null;
+};
+
+// 요청이 실패했을 때 화면에 보여 줄 문구와 원래 오류다. 원래 오류는 서버 오류의 문의 번호를 꺼내는 데 쓴다.
+type Failure = { message: string; error: unknown };
+
+function toFailure(error: unknown): Failure {
+  return { message: adminErrorMessage(error), error };
+}
 
 async function loadCards(signal: AbortSignal): Promise<CardsState> {
   const pages = await Promise.all(
@@ -79,10 +93,12 @@ function SyncJobs() {
   const [filter, setFilter] = useState<SyncJobType | null>(null);
   const [tick, setTick] = useState(0);
   const [cards, setCards] = useState<CardsState | null>(null);
-  const [cardsError, setCardsError] = useState<string | null>(null);
+  const [cardsError, setCardsError] = useState<Failure | null>(null);
   const [history, setHistory] = useState<HistoryState | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const inFlight = useRef(0);
+  const pollRef = useRef(false);
+  const historyPageRef = useRef(0);
   const showCardSkeleton = useDelayedFlag(cards === null && cardsError === null);
   const showHistorySkeleton = useDelayedFlag(history === null);
 
@@ -99,7 +115,7 @@ function SyncJobs() {
           setCardsError(null);
         },
         (caught: unknown) => {
-          if (!controller.signal.aborted) setCardsError(adminErrorMessage(caught));
+          if (!controller.signal.aborted) setCardsError(toFailure(caught));
         },
       )
       .finally(() => {
@@ -109,23 +125,36 @@ function SyncJobs() {
   }, [tick]);
 
   useEffect(() => {
+    historyPageRef.current = history?.page ?? 0;
+  }, [history]);
+
+  useEffect(() => {
+    // 주기적으로 다시 읽는 경우에 사용자가 더 보기로 불러 둔 목록은 건드리지 않는다. 첫 쪽만 보고 있을 때만 새로 읽는다.
+    const polled = pollRef.current;
+    pollRef.current = false;
+    if (polled && historyPageRef.current > 0) return;
     const controller = new AbortController();
     inFlight.current += 1;
     fetchSyncJobRuns({ jobType: filter ?? undefined, page: 0 }, controller.signal)
       .then(
         (page) => {
           if (!controller.signal.aborted) {
-            setHistory({ items: page.content, page: page.page, hasNext: page.hasNext, error: null });
+            setHistory({ items: page.content, page: page.page, hasNext: page.hasNext, filter, error: null });
           }
         },
         (caught: unknown) => {
           if (!controller.signal.aborted) {
-            setHistory((previous) => ({
-              items: previous?.items ?? [],
-              page: previous?.page ?? 0,
-              hasNext: previous?.hasNext ?? false,
-              error: adminErrorMessage(caught),
-            }));
+            setHistory((previous) => {
+              // 다른 필터의 목록을 새 필터의 목록으로 오인하지 않도록 같은 필터일 때만 이어 쓴다.
+              const same = previous !== null && previous.filter === filter;
+              return {
+                items: same ? previous.items : [],
+                page: same ? previous.page : 0,
+                hasNext: same ? previous.hasNext : false,
+                filter,
+                error: toFailure(caught),
+              };
+            });
           }
         },
       )
@@ -139,23 +168,37 @@ function SyncJobs() {
   useEffect(() => {
     if (!anyRunning) return;
     const timer = window.setInterval(() => {
-      if (inFlight.current === 0) setTick((value) => value + 1);
+      if (inFlight.current === 0) {
+        pollRef.current = true;
+        setTick((value) => value + 1);
+      }
     }, POLL_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [anyRunning]);
 
   async function loadMore() {
     if (!history || loadingMore) return;
+    // 요청을 보내는 동안 필터가 바뀌거나 목록이 첫 쪽으로 돌아갈 수 있어서, 시작한 때의 필터와 쪽을 기억한다.
+    const startFilter = filter;
+    const startPage = history.page;
+    const stillCurrent = (previous: HistoryState | null): previous is HistoryState =>
+      previous !== null && previous.filter === startFilter && previous.page === startPage;
     setLoadingMore(true);
     try {
-      const next = await fetchSyncJobRuns({ jobType: filter ?? undefined, page: history.page + 1 });
+      const next = await fetchSyncJobRuns({ jobType: startFilter ?? undefined, page: startPage + 1 });
       setHistory((previous) =>
-        previous
-          ? { items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null }
+        stillCurrent(previous)
+          ? {
+              items: [...previous.items, ...next.content],
+              page: next.page,
+              hasNext: next.hasNext,
+              filter: startFilter,
+              error: null,
+            }
           : previous,
       );
     } catch (caught) {
-      setHistory((previous) => (previous ? { ...previous, error: adminErrorMessage(caught) } : previous));
+      setHistory((previous) => (stillCurrent(previous) ? { ...previous, error: toFailure(caught) } : previous));
     } finally {
       setLoadingMore(false);
     }
@@ -180,9 +223,7 @@ function SyncJobs() {
         {anyRunning && <p className="text-sm text-ink-muted">실행 중인 작업이 있어서 10초마다 새로 읽어요.</p>}
         {cardsError && (
           <div role="alert" className="flex flex-col gap-3">
-            <Notice tone="danger" title="작업 상태를 불러오지 못했어요">
-              <p>{cardsError}</p>
-            </Notice>
+            <ErrorNotice title="작업 상태를 불러오지 못했어요" error={cardsError.error} message={cardsError.message} />
             {cards === null && (
               <div>
                 <Button variant="secondary" onClick={reload}>
@@ -223,9 +264,11 @@ function SyncJobs() {
         />
         {history?.error && (
           <div role="alert" className="flex flex-col gap-3">
-            <Notice tone="danger" title="실행 기록을 불러오지 못했어요">
-              <p>{history.error}</p>
-            </Notice>
+            <ErrorNotice
+              title="실행 기록을 불러오지 못했어요"
+              error={history.error.error}
+              message={history.error.message}
+            />
             {history.items.length === 0 && (
               <div>
                 <Button variant="secondary" onClick={reload}>
@@ -290,7 +333,7 @@ function JobCard({
 }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const label = JOB_LABELS[jobType];
   const running = latest?.status === 'RUNNING';
 
@@ -303,7 +346,7 @@ function JobCard({
       setConfirm(false);
       onStarted();
     } catch (caught) {
-      setError(adminErrorMessage(caught));
+      setError(toFailure(caught));
       setConfirm(false);
       // 이미 실행 중이라는 응답이면 화면의 상태가 낡은 것이므로 다시 읽어서 버튼을 끈다.
       onStarted();
@@ -344,9 +387,7 @@ function JobCard({
       {jobType === 'PARK_BOUNDARY' && <p className="text-sm text-ink-muted">성공하면 박지 재판정이 이어서 실행돼요</p>}
       {error && (
         <div role="alert">
-          <Notice tone="danger" title="작업을 실행하지 못했어요">
-            <p>{error}</p>
-          </Notice>
+          <ErrorNotice title="작업을 실행하지 못했어요" error={error.error} message={error.message} />
         </div>
       )}
       <div>

@@ -6,6 +6,7 @@ import { createIdempotentRunner } from '../../api/idempotency';
 import { createSoloTrip } from '../../api/soloTrips';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { TextField } from '../../components/TextField';
 import { addDaysToLocalDate, todayKst } from '../../lib/datetime';
@@ -96,7 +97,7 @@ function SoloTripForm({
   const [startDate, setStartDate] = useState(minStart);
   const [endDate, setEndDate] = useState(addDaysToLocalDate(minStart, 1));
   const [fieldErrors, setFieldErrors] = useState<TripFieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
 
@@ -138,7 +139,7 @@ function SoloTripForm({
         setFieldErrors({ startDate: toUserMessage(error) });
         return;
       }
-      setFormError(toUserMessage(error));
+      setFormError({ cause: error });
     }
   }
 
@@ -151,9 +152,7 @@ function SoloTripForm({
     >
       {formError && (
         <div role="alert">
-          <Notice tone="danger" title="일정을 등록하지 못했어요">
-            <p>{formError}</p>
-          </Notice>
+          <ErrorNotice title="일정을 등록하지 못했어요" error={formError.cause} />
         </div>
       )}
       <TextField

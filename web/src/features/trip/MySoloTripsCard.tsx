@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react';
-import { toUserMessage } from '../../api/errors';
 import { deleteSoloTrip, fetchMySoloTrips } from '../../api/soloTrips';
 import type { SoloTrip } from '../../api/types';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { BoardSection } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
 
 // 어느 시도의 결과인지 함께 기억해서, 다시 불러오는 동안 이전 결과를 보여 주지 않는다.
-type TripsResult = { attempt: number; trips: SoloTrip[] } | { attempt: number; error: string };
+type TripsResult = { attempt: number; trips: SoloTrip[] } | { attempt: number; error: { cause: unknown } };
 
 export function MySoloTripsCard() {
   const [attempt, setAttempt] = useState(0);
@@ -26,7 +25,7 @@ export function MySoloTripsCard() {
         if (!controller.signal.aborted) setResult({ attempt, trips });
       },
       (cause: unknown) => {
-        if (!controller.signal.aborted) setResult({ attempt, error: toUserMessage(cause) });
+        if (!controller.signal.aborted) setResult({ attempt, error: { cause } });
       },
     );
     return () => controller.abort();
@@ -44,9 +43,7 @@ export function MySoloTripsCard() {
           showSkeleton && <Skeleton className="h-16 w-full" />
         ) : 'error' in current ? (
           <div className="flex flex-col gap-2">
-            <Notice tone="danger" title="일정을 불러오지 못했어요">
-              <p>{current.error}</p>
-            </Notice>
+            <ErrorNotice title="일정을 불러오지 못했어요" error={current.error.cause} />
             <div>
               <Button variant="secondary" onClick={reload}>
                 다시 불러오기
@@ -105,7 +102,7 @@ function DeleteTripDialog({
   onDeleted: () => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ cause: unknown } | null>(null);
 
   async function handleDelete() {
     if (submitting) return;
@@ -116,7 +113,7 @@ function DeleteTripDialog({
       onDeleted();
     } catch (cause) {
       setSubmitting(false);
-      setError(toUserMessage(cause));
+      setError({ cause });
     }
   }
 
@@ -128,9 +125,7 @@ function DeleteTripDialog({
         </p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="삭제하지 못했어요">
-              <p>{error}</p>
-            </Notice>
+            <ErrorNotice title="삭제하지 못했어요" error={error.cause} />
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-2">

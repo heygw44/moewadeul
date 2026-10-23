@@ -64,7 +64,7 @@ const MAX_ANIMATED_LEVEL_STEP = 2;
 // 영역에 맞출 때 장소가 화면 가장자리에 붙지 않도록 둘레에 두는 여백(px)이다.
 const FIT_PADDING_PX = 48;
 // 반경 원의 색이다. 숲색 판 토큰(brand)과 같은 값이고, 지도 SDK에는 CSS 변수를 넘길 수 없어서 값을 적는다.
-const RADIUS_COLOR = '#1d3b2c';
+const RADIUS_COLOR = '#2c6a45';
 
 interface DrawnPin {
   overlay: kakao.maps.CustomOverlay;
