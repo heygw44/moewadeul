@@ -2,7 +2,9 @@
 # 운영 MySQL을 덤프해 압축한 뒤 S3 백업 버킷에 올린다. systemd 타이머(moewadeul-backup.timer)가 매일 새벽 root로 실행한다.
 #
 # - 앱 계정으로 --single-transaction 덤프를 뜬다. InnoDB 테이블을 잠그지 않고 덤프를 시작한 시점의 일관된 상태를 읽는다.
-# - 세션 테이블(SPRING_SESSION*)은 뺀다. 로그인 정보가 들어 있고, 복원한 뒤에는 회원이 다시 로그인하면 되기 때문이다.
+# - 세션 테이블(SPRING_SESSION*)은 데이터만 뺀다. 로그인 정보가 들어 있고, 복원한 뒤에는 회원이 다시 로그인하면 되기 때문이다.
+#   mysqldump의 --ignore-table은 데이터뿐 아니라 테이블 정의까지 빼므로, 정의는 --no-data로 따로 덧붙인다.
+#   정의가 없으면 복원한 DB에서 앱은 뜨지만 로그인이 모두 실패한다. 스키마 초기화를 Flyway가 맡아서 앱이 다시 만들어 주지 않는다.
 # - 성공하면 마지막 성공 시각·크기·걸린 시간을 지표 파일로 남긴다. 수집 에이전트가 이 파일을 읽고,
 #   Grafana 알림이 마지막 성공 시각이 26시간을 넘기면 알린다. 그래서 실패를 따로 알리지 않아도 백업이 멈추면 알림이 온다.
 # - S3 버킷의 수명 주기 규칙이 7일 지난 백업을 지운다. 서버의 인스턴스 역할에는 삭제 권한을 주지 않는다.
@@ -85,10 +87,16 @@ main() {
     # 비밀번호는 명령 인자가 아니라 MYSQL_PWD 환경 변수로 넘겨 프로세스 목록에 남지 않게 한다.
     # mysqldump는 트리거를 기본으로 담지만 프로시저는 --routines를 줘야 담는다. 지도 묶음 집계 트리거가 프로시저를 부르므로,
     # 프로시저 없이 복구하면 장소를 쓸 때마다 트리거가 실패한다.
-    MYSQL_PWD="$db_password" docker exec -e MYSQL_PWD "$container" \
-        mysqldump -u"$db_user" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --routines \
-        --ignore-table="$db_name.SPRING_SESSION" --ignore-table="$db_name.SPRING_SESSION_ATTRIBUTES" \
-        "$db_name" | gzip -9 > "$DUMP_FILE"
+    {
+        MYSQL_PWD="$db_password" docker exec -e MYSQL_PWD "$container" \
+            mysqldump -u"$db_user" --single-transaction --quick --no-tablespaces --set-gtid-purged=OFF --routines \
+            --ignore-table="$db_name.SPRING_SESSION" --ignore-table="$db_name.SPRING_SESSION_ATTRIBUTES" \
+            "$db_name"
+        # 외래 키가 있는 속성 테이블이 뒤에 오도록 SPRING_SESSION을 먼저 적는다.
+        MYSQL_PWD="$db_password" docker exec -e MYSQL_PWD "$container" \
+            mysqldump -u"$db_user" --single-transaction --no-tablespaces --set-gtid-purged=OFF --no-data \
+            "$db_name" SPRING_SESSION SPRING_SESSION_ATTRIBUTES
+    } | gzip -9 > "$DUMP_FILE"
 
     # 덤프가 중간에 끊기면 마지막 줄의 완료 표시가 없다. 압축 파일이 깨졌거나 표시가 없으면 올리지 않는다.
     gzip -t "$DUMP_FILE"
