@@ -643,6 +643,24 @@ class CommunityPostControllerTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-06] 글을 쓸 때 imageIds에 null이 들어 있으면 서비스를 부르지 않고 400 INVALID_INPUT이다")
+    void writeRejectsNullImageId() {
+        // when
+        MvcTestResult result =
+                send(mvc.post().uri(POSTS), verified(), "{\"title\":\"안녕\",\"content\":\"반가워요\",\"imageIds\":[null]}");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].field")
+                .asString()
+                .startsWith("imageIds");
+        verifyNoInteractions(communityPostCommandService);
+    }
+
+    @Test
     @DisplayName("[F-29][CM-06] 수정에서 imageIds를 보내면 요청에 있는 필드로, null로 보내면 값이 null인 필드로 서비스에 넘긴다")
     void updatePassesImageIdsAsPatchField() {
         // given

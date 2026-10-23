@@ -13,6 +13,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
@@ -22,6 +23,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -33,7 +35,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
  * 호출마다 제한 시간을 걸고 재시도는 한 번만 한다. 로그에는 키나 URL을 남기지 않는다. 키에 회원 ID가 들어 있고, URL에는 서명이 들어 있기 때문이다.
  *
  * <p>객체 크기 확인은 사용자 요청 스레드에서 S3 응답을 기다린다. 그래서 동시에 보내는 확인 수를 제한하고, 한도를 넘거나 S3가 시간 안에
- * 답하지 않으면 503 {@code IMAGE_STORAGE_UNAVAILABLE}로 끝낸다.
+ * 답하지 않거나 5xx로 답하면 503 {@code IMAGE_STORAGE_UNAVAILABLE}로 끝낸다.
  */
 @Component
 @ConditionalOnProperty(
@@ -125,11 +127,21 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
         } catch (NoSuchKeyException e) {
             return Optional.empty();
         } catch (SdkClientException e) {
-            // 시간 초과나 연결 실패다. S3가 오류 코드를 돌려준 경우(권한 없음 등)는 설정 결함이라 그대로 던져 500으로 남긴다.
-            BusinessException unavailable = unavailable();
-            unavailable.initCause(e);
-            throw unavailable;
+            // 시간 초과나 연결 실패다.
+            throw unavailable(e);
+        } catch (S3Exception e) {
+            // S3가 5xx로 답한 것은 저장소 쪽 문제라서 곧 나아질 수 있다. 권한 없음 같은 4xx는 설정 결함이라 그대로 던져 500으로 남긴다.
+            if (e.statusCode() >= HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+                throw unavailable(e);
+            }
+            throw e;
         }
+    }
+
+    private static BusinessException unavailable(Throwable cause) {
+        BusinessException unavailable = unavailable();
+        unavailable.initCause(cause);
+        return unavailable;
     }
 
     private static BusinessException unavailable() {

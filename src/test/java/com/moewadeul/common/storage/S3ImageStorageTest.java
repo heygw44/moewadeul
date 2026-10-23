@@ -36,6 +36,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 class S3ImageStorageTest {
@@ -154,6 +155,37 @@ class S3ImageStorageTest {
 
         // when & then
         assertThat(storageWith(s3Client, 10).findObjectSize(KEY)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[NFR-05] S3가 5xx로 답하면 500이 아니라 503 IMAGE_STORAGE_UNAVAILABLE로 끝낸다")
+    void findObjectSizeMapsServerErrorTo503() {
+        // given
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenThrow(S3Exception.builder()
+                        .statusCode(503)
+                        .message("slow down")
+                        .build());
+
+        // when & then
+        assertThatThrownBy(() -> storageWith(s3Client, 10).findObjectSize(KEY))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_STORAGE_UNAVAILABLE));
+    }
+
+    @Test
+    @DisplayName("[NFR-05] S3가 권한 없음 같은 4xx로 답하면 설정 결함이라 S3 예외를 그대로 던진다")
+    void findObjectSizeKeepsClientErrorAsIs() {
+        // given
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenThrow(
+                        S3Exception.builder().statusCode(403).message("denied").build());
+
+        // when & then
+        assertThatThrownBy(() -> storageWith(s3Client, 10).findObjectSize(KEY)).isInstanceOf(S3Exception.class);
     }
 
     @Test

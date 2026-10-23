@@ -125,6 +125,18 @@ class NotificationControllerTest {
     }
 
     @Test
+    @DisplayName("[F-20] 건너뛸 건수가 int 범위를 넘는 큰 page는 500이 아니라 400 INVALID_INPUT이다")
+    void listRejectsPageBeyondIntOffset() {
+        MvcTestResult result =
+                mvc.get().uri(PATH + "?page=50000000&size=50").with(login()).exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("page");
+        verifyNoInteractions(notificationQueryService);
+    }
+
+    @Test
     @DisplayName("[F-20] 안 읽은 알림 수는 count 필드로 응답한다")
     void unreadCountReturnsCount() {
         when(notificationQueryService.countUnread(MEMBER_ID)).thenReturn(3L);
