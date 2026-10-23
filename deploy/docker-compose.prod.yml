@@ -60,6 +60,8 @@ services:
     stop_grace_period: 40s
 
   mysql:
+    # 배포 스크립트는 app과 caddy 이미지만 받는다. 그래서 8.4 패치가 새로 나와도 앱 배포가 DB 컨테이너를 다시 만들지 않는다.
+    # MySQL을 올릴 때는 서버에서 docker compose pull mysql로 받고, 백업을 확인한 뒤 up -d로 다시 만든다.
     image: mysql:8.4
     restart: unless-stopped
     environment:

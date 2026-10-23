@@ -21,6 +21,19 @@
 		# header는 try_files가 경로를 바꾸기 전의 요청 경로로 매칭하므로, /spots/1 같은 화면 경로에도 붙는다.
 		@notAssets not path /assets/*
 		header @notAssets Cache-Control "no-cache"
+
+		# index.html과 정적 파일은 Caddy가 직접 내보내므로, 앱이 /api 응답에 붙이는 보안 헤더가 여기에는 붙지 않는다. 그래서 여기서 붙인다.
+		# X-Frame-Options와 frame-ancestors는 다른 사이트가 이 화면을 iframe에 넣지 못하게 한다(클릭재킹 방지).
+		# 나머지 지시어는 나중에 XSS가 생겨도 외부 스크립트를 불러오거나 데이터를 밖으로 보내지 못하게 막는다.
+		# 외부에서 받는 것은 카카오 지도 SDK와 S3의 사진(보기·올리기)뿐이다. 카카오 쪽 주소는 지도 화면을 실제 브라우저로 열어 확인했다.
+		# - 스크립트: dapi.kakao.com이 sdk.js를 주고, sdk.js가 t1.kakaocdn.net에서 본체와 검색 라이브러리를 받는다.
+		# - 지도 타일과 아이콘 이미지: mts.kakaocdn.net, t1.kakaocdn.net
+		# - style-src의 'unsafe-inline': 카카오 지도 SDK가 요소에 style 속성을 직접 써서, 막으면 브라우저가 위반으로 보고한다.
+		# - script-src에 'unsafe-eval'은 넣지 않는다. SDK가 eval을 한 번 부르지만 막아도 지도, 지형 겹치기, 지역 검색이 모두 동작한다.
+		#   그래서 브라우저 콘솔에 위반 오류가 하나 남지만 무시해도 된다.
+		# - S3 사진은 사전 서명 주소(https://{버킷}.s3.ap-northeast-2.amazonaws.com/...)로 읽고 올린다.
+		header X-Frame-Options "DENY"
+		header Content-Security-Policy "default-src 'self'; script-src 'self' https://dapi.kakao.com https://*.kakaocdn.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.kakaocdn.net https://*.s3.ap-northeast-2.amazonaws.com; connect-src 'self' https://dapi.kakao.com https://*.s3.ap-northeast-2.amazonaws.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		# 화면 경로(/spots/1 등)는 파일이 없으므로 index.html을 주고, 라우팅은 프론트엔드가 한다.
 		try_files {path} /index.html
 		file_server
