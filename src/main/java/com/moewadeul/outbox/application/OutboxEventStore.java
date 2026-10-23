@@ -5,6 +5,7 @@ import com.moewadeul.outbox.infra.OutboxEventMapper;
 import com.moewadeul.outbox.infra.OutboxMessageRow;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +28,29 @@ public class OutboxEventStore {
      * 다른 발행기가 같은 이벤트를 집지 못하게 막는다.
      */
     @Transactional
-    public List<OutboxMessage> claim(Instant now) {
+    public Claim claim(Instant now) {
         List<Long> ids = mapper.selectClaimableIds(now, properties.batchSize());
+        // 컬럼이 마이크로초까지만 저장하므로, 나노초가 붙은 시각은 저장한 값과 같은지 비교할 때 어긋날 수 있다.
+        Instant leaseUntil = now.plus(properties.lease()).truncatedTo(ChronoUnit.MICROS);
         if (ids.isEmpty()) {
-            return List.of();
+            return new Claim(leaseUntil, List.of());
         }
-        mapper.lease(ids, now.plus(properties.lease()), now);
-        return mapper.selectByIds(ids).stream().map(OutboxEventStore::toMessage).toList();
+        mapper.lease(ids, leaseUntil, now);
+        return new Claim(
+                leaseUntil,
+                mapper.selectByIds(ids).stream()
+                        .map(OutboxEventStore::toMessage)
+                        .toList());
+    }
+
+    /**
+     * 호출하면 집었지만 처리하지 않은 이벤트의 임대를 풀어, 다른 발행기가 바로 집게 하고 푼 행 수를 돌려준다. 임대 만료 시각이
+     * {@code leaseUntil} 그대로인 행만 푼다. 처리가 임대 시간보다 길어져 다른 발행기가 이미 다시 집은 이벤트는 그 발행기의 임대를
+     * 지켜야 하기 때문이다.
+     */
+    @Transactional
+    public int releaseLease(Instant leaseUntil, List<Long> eventIds) {
+        return mapper.releaseLease(eventIds, leaseUntil, clock.instant());
     }
 
     @Transactional
@@ -69,4 +86,11 @@ public class OutboxEventStore {
         return new OutboxMessage(
                 row.id(), row.eventType(), row.aggregateType(), row.aggregateId(), row.payload(), row.createdAt());
     }
+
+    /**
+     * 한 번 집은 이벤트와, 그 임대가 끝나는 시각이다.
+     *
+     * @param leaseUntil 집은 발행기가 건 임대 만료 시각. 처리하지 못한 이벤트의 임대를 풀 때 자기 임대인지 알아보는 데 쓴다
+     */
+    public record Claim(Instant leaseUntil, List<OutboxMessage> messages) {}
 }

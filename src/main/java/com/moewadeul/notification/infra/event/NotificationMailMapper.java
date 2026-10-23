@@ -27,6 +27,12 @@ public interface NotificationMailMapper {
     /** 호출하면 PENDING인 그 알림들의 다음 시도 시각을 leaseUntil로 미뤄, 다른 발송 작업이 그때까지 집지 못하게 한다. */
     int lease(@Param("ids") Collection<Long> ids, @Param("leaseUntil") Instant leaseUntil);
 
+    /**
+     * 호출하면 PENDING인 그 알림들 가운데 다음 시도 시각이 leaseUntil과 같은 알림의 다음 시도 시각을 비우고 갱신된 행 수를 돌려준다.
+     * 시각이 다르면 다른 발송 작업이 그 알림을 다시 집은 것이라서 건드리지 않는다.
+     */
+    int releaseLease(@Param("ids") Collection<Long> ids, @Param("leaseUntil") Instant leaseUntil);
+
     /** 호출하면 PENDING인 그 알림들을 SKIPPED로 바꾼다. */
     int markSkipped(@Param("ids") Collection<Long> ids);
 

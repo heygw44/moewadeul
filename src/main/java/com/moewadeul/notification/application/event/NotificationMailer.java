@@ -2,6 +2,7 @@ package com.moewadeul.notification.application.event;
 
 import com.moewadeul.common.mail.MailDeliveryException;
 import com.moewadeul.common.mail.MailSender;
+import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.notification.infra.event.NotificationMailRow;
 import java.time.Clock;
 import java.util.List;
@@ -27,29 +28,56 @@ class NotificationMailer {
     private final MailSender mailSender;
     private final Clock clock;
     private final String baseUrl;
+    private final ShutdownSignal shutdownSignal;
 
     NotificationMailer(
             NotificationMailStore store,
             MailSender mailSender,
             Clock clock,
-            @Value("${moewadeul.web.base-url}") String baseUrl) {
+            @Value("${moewadeul.web.base-url}") String baseUrl,
+            ShutdownSignal shutdownSignal) {
         this.store = store;
         this.mailSender = mailSender;
         this.clock = clock;
         this.baseUrl = baseUrl;
+        this.shutdownSignal = shutdownSignal;
     }
 
     /**
      * 호출하면 보낼 차례인 알림 메일을 한 번 집어 모두 보낸다. 한 통이 실패해도 나머지는 계속 보낸다.
      *
+     * <p>앱이 종료를 시작하면 보내던 메일 한 통만 마치고 멈춘다. 집어 두고 보내지 않은 알림은 임대를 풀어서, 새로 뜬 앱이 임대 시간을
+     * 기다리지 않고 바로 집게 한다. 종료가 이미 시작됐으면 알림을 집지 않는다.
+     *
      * @return 이번에 집어서 보내려 한 메일 수(실패 포함)
      */
     int sendDue() {
-        List<NotificationMailRow> targets = store.claim(clock.instant());
-        for (NotificationMailRow target : targets) {
-            sendOne(target);
+        if (shutdownSignal.isRequested()) {
+            return 0;
         }
-        return targets.size();
+        NotificationMailStore.Claim claim = store.claim(clock.instant());
+        List<NotificationMailRow> targets = claim.targets();
+        int handled = 0;
+        while (handled < targets.size() && !shutdownSignal.isRequested()) {
+            sendOne(targets.get(handled));
+            handled++;
+        }
+        if (handled < targets.size()) {
+            releaseUnsent(claim, handled);
+        }
+        return handled;
+    }
+
+    private void releaseUnsent(NotificationMailStore.Claim claim, int handled) {
+        List<Long> unsentIds = claim.targets().subList(handled, claim.targets().size()).stream()
+                .map(NotificationMailRow::notificationId)
+                .toList();
+        int released = store.releaseLease(claim.leaseUntil(), unsentIds);
+        log.info(
+                "notification mailer stopped for shutdown handled={} unsent={} released={}",
+                handled,
+                unsentIds.size(),
+                released);
     }
 
     // 발송기 구현마다 던지는 예외가 다르고, 한 통의 실패가 나머지 발송을 막으면 안 된다. 그래서 여기서만 RuntimeException을 통째로 잡는다.

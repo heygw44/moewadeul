@@ -21,6 +21,13 @@ public interface OutboxEventMapper {
     /** 호출하면 ids의 행에 임대 만료 시각을 기록하고 갱신된 행 수를 돌려준다. ids가 비어 있으면 호출하지 않는다. */
     int lease(@Param("ids") List<Long> ids, @Param("lockedUntil") Instant lockedUntil, @Param("now") Instant now);
 
+    /**
+     * 호출하면 ids 가운데 PENDING이고 임대 만료 시각이 lockedUntil과 같은 행의 임대를 비우고 갱신된 행 수를 돌려준다. 만료 시각이 다르면
+     * 다른 발행기가 그 행을 다시 집은 것이라서 건드리지 않는다. ids가 비어 있으면 호출하지 않는다.
+     */
+    int releaseLease(
+            @Param("ids") List<Long> ids, @Param("lockedUntil") Instant lockedUntil, @Param("now") Instant now);
+
     /** 호출하면 ids의 행을 ID 순으로 읽는다. ids가 비어 있으면 호출하지 않는다. */
     List<OutboxMessageRow> selectByIds(@Param("ids") List<Long> ids);
 
