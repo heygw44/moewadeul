@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import { withdraw } from '../../api/members';
 import { navigate } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { PageCard } from '../../components/PageLayout';
 import { PasswordField } from '../../components/PasswordField';
@@ -35,7 +35,7 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
   const session = useSession();
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -63,7 +63,7 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
 
   function handleError(error: unknown) {
     if (!(error instanceof ApiError)) {
-      setFormError(toUserMessage(error));
+      setFormError({ cause: error });
       return;
     }
     if (error.code === 'LOGIN_FAILED') {
@@ -79,7 +79,7 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
       void session.refresh().catch(() => null);
       return;
     }
-    setFormError(toUserMessage(error));
+    setFormError({ cause: error });
   }
 
   return (
@@ -94,9 +94,7 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
         </Notice>
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="탈퇴하지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="탈퇴하지 못했어요" error={formError.cause} />
           </div>
         )}
         <PasswordField

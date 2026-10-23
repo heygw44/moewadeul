@@ -17,7 +17,7 @@ import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { Dialog } from '../../components/Dialog';
 import { ImageUploadField } from '../../components/ImageUploadField';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
@@ -57,7 +57,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
   const [list, setList] = useState<ListState | null>(null);
   // 처음 목록은 effect가 받고, 더 보기·다시 불러오기는 버튼을 누른 쪽이 받는다. 이 값은 버튼으로 받는 중인지만 나타낸다.
   const [loading, setLoading] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
+  const [listError, setListError] = useState<{ cause: unknown } | null>(null);
   const [writing, setWriting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<SpotReview | null>(null);
@@ -82,7 +82,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
         }));
       } catch (error) {
         if (controller.signal.aborted) return;
-        setListError(toUserMessage(error));
+        setListError({ cause: error });
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -99,7 +99,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
           setList({ reviews: result.content, page: result.page, hasNext: result.hasNext });
       },
       (error: unknown) => {
-        if (!controller.signal.aborted) setListError(toUserMessage(error));
+        if (!controller.signal.aborted) setListError({ cause: error });
       },
     );
     return () => {
@@ -159,9 +159,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
 
       {listError && (
         <div role="alert" className="mt-3 flex flex-col gap-2">
-          <Notice tone="danger" title="후기를 불러오지 못했어요">
-            <p>{listError}</p>
-          </Notice>
+          <ErrorNotice title="후기를 불러오지 못했어요" error={listError.cause} />
           <div>
             <Button variant="secondary" onClick={() => void loadPage(list?.page ?? 0)}>
               다시 불러오기
@@ -337,7 +335,7 @@ function ReviewForm({
   const [rating, setRating] = useState<string | null>(initial ? String(initial.rating) : null);
   const [content, setContent] = useState(initial?.content ?? '');
   const [fieldErrors, setFieldErrors] = useState<ReviewFieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const uploads = useImageUploads({
     max: MAX_IMAGES,
@@ -383,14 +381,14 @@ function ReviewForm({
         else others.push(reason);
       }
       setFieldErrors(errors);
-      if (others.length > 0) setFormError(others.join(' '));
+      if (others.length > 0) setFormError({ cause: others.join(' ') });
       return;
     }
     if (error instanceof ApiError && error.code === 'SPOT_REVIEW_DUPLICATED') {
       setFieldErrors({ visitedDate: toUserMessage(error) });
       return;
     }
-    setFormError(toUserMessage(error));
+    setFormError({ cause: error });
   }
 
   const title = mode === 'create' ? '후기 쓰기' : '후기 수정';
@@ -403,9 +401,10 @@ function ReviewForm({
     >
       {formError && (
         <div role="alert">
-          <Notice tone="danger" title={mode === 'create' ? '후기를 남기지 못했어요' : '후기를 수정하지 못했어요'}>
-            <p>{formError}</p>
-          </Notice>
+          <ErrorNotice
+            title={mode === 'create' ? '후기를 남기지 못했어요' : '후기를 수정하지 못했어요'}
+            error={formError.cause}
+          />
         </div>
       )}
       {mode === 'create' ? (
@@ -478,7 +477,7 @@ function DeleteDialog({
   onDeleted: () => Promise<void>;
 }) {
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ cause: unknown } | null>(null);
 
   async function handleDelete() {
     if (submitting) return;
@@ -489,7 +488,7 @@ function DeleteDialog({
       await onDeleted();
     } catch (cause) {
       setSubmitting(false);
-      setError(toUserMessage(cause));
+      setError({ cause });
     }
   }
 
@@ -501,9 +500,7 @@ function DeleteDialog({
         </p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="삭제하지 못했어요">
-              <p>{error}</p>
-            </Notice>
+            <ErrorNotice title="삭제하지 못했어요" error={error.cause} />
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-2">

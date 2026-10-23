@@ -8,7 +8,7 @@ import { Button } from '../../components/Button';
 import { EmailField } from '../../components/EmailField';
 import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { PasswordField } from '../../components/PasswordField';
 import { AuthLayout } from './AuthLayout';
 import {
@@ -66,7 +66,7 @@ function BackToLogin() {
 function RequestStep() {
   const [email, setEmail] = useState<EmailValue>(EMPTY_EMAIL);
   const [emailError, setEmailError] = useState<string | undefined>();
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const wait = useRetryCountdown();
@@ -96,20 +96,20 @@ function RequestStep() {
 
   function handleError(error: unknown) {
     if (!(error instanceof ApiError)) {
-      setFormError(toUserMessage(error));
+      setFormError({ cause: error });
       return;
     }
     if (error.code === 'INVALID_INPUT' && error.fieldErrors.length > 0) {
       const emailReason = error.fieldErrors.find(({ field }) => field === 'email')?.reason;
       const others = error.fieldErrors.filter(({ field }) => field !== 'email').map(({ reason }) => reason);
       setEmailError(emailReason);
-      if (others.length > 0) setFormError(others.join(' '));
+      if (others.length > 0) setFormError({ cause: others.join(' ') });
       return;
     }
     if (error.code === 'PASSWORD_RESET_LIMITED' && error.retryAfterSeconds !== undefined) {
       wait.start(error.retryAfterSeconds);
     }
-    setFormError(toUserMessage(error));
+    setFormError({ cause: error });
   }
 
   return (
@@ -122,9 +122,7 @@ function RequestStep() {
         <EmailField autoFocus value={email} onChange={setEmail} error={emailError} />
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="재설정 링크를 보내지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="재설정 링크를 보내지 못했어요" error={formError.cause} />
           </div>
         )}
         {sent && (
@@ -159,8 +157,8 @@ function ConfirmStep({ token, onTokenInvalid }: { token: string; onTokenInvalid:
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [fieldErrors, setFieldErrors] = useState<ConfirmErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [tokenInvalidMessage, setTokenInvalidMessage] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
+  const [tokenInvalid, setTokenInvalid] = useState<{ cause: unknown } | null>(null);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -193,7 +191,7 @@ function ConfirmStep({ token, onTokenInvalid }: { token: string; onTokenInvalid:
 
   function handleError(error: unknown) {
     if (!(error instanceof ApiError)) {
-      setFormError(toUserMessage(error));
+      setFormError({ cause: error });
       return;
     }
     if (error.code === 'INVALID_INPUT' && error.fieldErrors.length > 0) {
@@ -204,7 +202,7 @@ function ConfirmStep({ token, onTokenInvalid }: { token: string; onTokenInvalid:
         else others.push(reason);
       }
       setFieldErrors(errors);
-      if (others.length > 0) setFormError(others.join(' '));
+      if (others.length > 0) setFormError({ cause: others.join(' ') });
       return;
     }
     if (error.code === 'MEMBER_PASSWORD_POLICY') {
@@ -212,10 +210,10 @@ function ConfirmStep({ token, onTokenInvalid }: { token: string; onTokenInvalid:
       return;
     }
     if (error.code === 'PASSWORD_RESET_TOKEN_INVALID') {
-      setTokenInvalidMessage(toUserMessage(error));
+      setTokenInvalid({ cause: error });
       return;
     }
-    setFormError(toUserMessage(error));
+    setFormError({ cause: error });
   }
 
   if (done) {
@@ -231,13 +229,11 @@ function ConfirmStep({ token, onTokenInvalid }: { token: string; onTokenInvalid:
     );
   }
 
-  if (tokenInvalidMessage !== null) {
+  if (tokenInvalid !== null) {
     return (
       <AuthLayout title="비밀번호 재설정" footer={<BackToLogin />}>
         <div role="alert">
-          <Notice tone="danger" title="이 링크로는 비밀번호를 바꿀 수 없어요">
-            <p>{tokenInvalidMessage}</p>
-          </Notice>
+          <ErrorNotice title="이 링크로는 비밀번호를 바꿀 수 없어요" error={tokenInvalid.cause} />
         </div>
         <Button type="button" fullWidth onClick={onTokenInvalid}>
           재설정 링크 다시 받기
@@ -280,9 +276,7 @@ function ConfirmStep({ token, onTokenInvalid }: { token: string; onTokenInvalid:
         />
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="비밀번호를 바꾸지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="비밀번호를 바꾸지 못했어요" error={formError.cause} />
           </div>
         )}
         <Button type="submit" fullWidth loading={submitting}>

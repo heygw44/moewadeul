@@ -3,7 +3,7 @@ import { buttonClassName } from '../../components/buttonClass';
 import type { FormEvent, ReactNode } from 'react';
 import { openBasecamp } from '../../api/basecamps';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
+import { serverTraceId, toUserMessage } from '../../api/errors';
 import { createIdempotentRunner } from '../../api/idempotency';
 import { fetchSpotDetail } from '../../api/spots';
 import type { BasecampOpenRequest, JoinCondition, SpotDetail } from '../../api/types';
@@ -14,6 +14,7 @@ import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/icons';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { SelectField } from '../../components/SelectField';
 import { Skeleton } from '../../components/Skeleton';
@@ -24,7 +25,7 @@ import { addDaysToLocalDate, todayKst } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { ParkWarningNotice } from '../spot/ParkWarningNotice';
-import { AGE_GROUP_STEPS, ageGroupStepLabel } from './basecampLabels';
+import { AGE_GROUP_STEPS, ageGroupStepLabel, OFF_PLATFORM_PAYMENT_REMINDER } from './basecampLabels';
 
 type BasecampOpenPanelProps = {
   spotId: number;
@@ -113,9 +114,7 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
       current.error instanceof ApiError && current.error.code === 'NOT_FOUND' ? (
         <EmptyState title="장소를 찾을 수 없어요" description="삭제됐거나 숨겨진 장소예요." />
       ) : (
-        <Notice tone="danger" title="장소 정보를 불러오지 못했어요">
-          {toUserMessage(current.error)}
-        </Notice>
+        <ErrorNotice title="장소 정보를 불러오지 못했어요" error={current.error} />
       );
   } else if (current.detail.parkWarning.warned) {
     body = (
@@ -207,7 +206,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
   const [ageMax, setAgeMax] = useState('');
   const [sameGenderOnly, setSameGenderOnly] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ message: string; traceId?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
   const controllerRef = useRef<AbortController | null>(null);
@@ -291,14 +290,14 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
       const errors: FieldErrors = {};
       for (const [field, list] of Object.entries(reasons)) errors[field as FormField] = mergeReasons(list);
       setFieldErrors(errors);
-      if (others.length > 0) setFormError(others.join(' '));
+      if (others.length > 0) setFormError({ message: others.join(' ') });
       return;
     }
     if (error instanceof ApiError && error.code === 'INVALID_INPUT' && error.serverMessage !== '') {
-      setFormError(error.serverMessage);
+      setFormError({ message: error.serverMessage });
       return;
     }
-    setFormError(toUserMessage(error));
+    setFormError({ message: toUserMessage(error), traceId: serverTraceId(error) });
   }
 
   return (
@@ -306,13 +305,12 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-bold tracking-tight text-ink">베이스캠프 열기</h2>
         <p className="text-sm text-ink-muted">장소: {spotName}</p>
+        <p className="text-sm text-ink-muted">{OFF_PLATFORM_PAYMENT_REMINDER}</p>
       </div>
 
       {formError && (
         <div role="alert">
-          <Notice tone="danger" title="베이스캠프를 열지 못했어요">
-            <p>{formError}</p>
-          </Notice>
+          <ErrorNotice title="베이스캠프를 열지 못했어요" error={formError.message} traceId={formError.traceId} />
         </div>
       )}
 

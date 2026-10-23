@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { resendVerification, verifyEmail } from '../../api/auth';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
@@ -25,7 +25,7 @@ const CODE_ERROR_CODES: Record<string, true> = {
   EMAIL_CODE_ATTEMPTS_EXCEEDED: true,
 };
 
-type ResendNotice = { tone: 'info' | 'danger'; title: string; message?: string };
+type ResendNotice = { tone: 'info'; title: string } | { tone: 'danger'; title: string; cause: unknown };
 
 export function VerifyEmailPage() {
   const { search } = useLocation();
@@ -36,7 +36,7 @@ export function VerifyEmailPage() {
 
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | undefined>(undefined);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState<ResendNotice | null>(null);
@@ -79,7 +79,7 @@ export function VerifyEmailPage() {
       } else if (error instanceof ApiError && error.code === 'INVALID_INPUT' && error.fieldErrors.length > 0) {
         setCodeError(error.fieldErrors.map((item) => item.reason).join(' '));
       } else {
-        setFormError(toUserMessage(error));
+        setFormError({ cause: error });
       }
     }
   }
@@ -100,7 +100,7 @@ export function VerifyEmailPage() {
       if (error instanceof ApiError && error.code === 'EMAIL_ALREADY_VERIFIED') {
         await session.refresh().catch(() => null);
       } else {
-        setResendNotice({ tone: 'danger', title: '코드를 다시 보내지 못했어요', message: toUserMessage(error) });
+        setResendNotice({ tone: 'danger', title: '코드를 다시 보내지 못했어요', cause: error });
       }
     } finally {
       setResending(false);
@@ -167,9 +167,7 @@ export function VerifyEmailPage() {
         />
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="인증하지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="인증하지 못했어요" error={formError.cause} />
           </div>
         )}
         <Button type="submit" fullWidth loading={submitting}>
@@ -178,9 +176,11 @@ export function VerifyEmailPage() {
       </form>
       {resendNotice && (
         <div role="status">
-          <Notice tone={resendNotice.tone} title={resendNotice.title}>
-            {resendNotice.message && <p>{resendNotice.message}</p>}
-          </Notice>
+          {resendNotice.tone === 'danger' ? (
+            <ErrorNotice title={resendNotice.title} error={resendNotice.cause} />
+          ) : (
+            <Notice tone="info" title={resendNotice.title} />
+          )}
         </div>
       )}
       <Button

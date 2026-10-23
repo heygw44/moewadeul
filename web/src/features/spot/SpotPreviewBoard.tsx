@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { toUserMessage } from '../../api/errors';
+import { serverTraceId, toUserMessage } from '../../api/errors';
 import { fetchSpotDetail } from '../../api/spots';
 import type { SpotDetail } from '../../api/types';
 import { Link } from '../../app/router';
@@ -84,9 +84,12 @@ export function SpotPreviewBoard({ spotId, onClose }: SpotPreviewBoardProps) {
           </div>
         )
       ) : detail === null ? (
-        <p role="alert" className="p-5 text-sm text-danger">
-          {'error' in current ? toUserMessage(current.error) : null}
-        </p>
+        <div role="alert" className="flex flex-col gap-1 p-5">
+          <p className="text-sm text-danger">{'error' in current ? toUserMessage(current.error) : null}</p>
+          {'error' in current && serverTraceId(current.error) && (
+            <p className="font-mono text-xs text-ink-muted">문의 번호 {serverTraceId(current.error)}</p>
+          )}
+        </div>
       ) : (
         <>
           <dl className="mx-3 flex flex-col gap-0.5 rounded-sheet bg-fill py-1.5">

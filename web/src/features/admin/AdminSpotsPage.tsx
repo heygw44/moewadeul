@@ -1,20 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { fetchAdminSpots, hideSpot, restoreSpot } from '../../api/admin';
-import type { AdminSpotStatus, AdminSpotSummary, BakjiReportReason } from '../../api/types';
-import { Link } from '../../app/router';
+import type { AdminSpotStatus, AdminSpotSummary, BakjiReportReason, Page } from '../../api/types';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
-import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
+import { usePagedList } from '../program/usePagedList';
+import { LocationLabel } from '../spot/LocationLabel';
 import { REPORT_REASON_LABELS, SPOT_TYPE_META } from '../spot/spotLabels';
 import { AdminPage } from './AdminGate';
 import { AdminSegments } from './AdminSegments';
 import { adminErrorMessage } from './adminErrors';
-import { buttonClassName } from '../../components/buttonClass';
 
 const TABS: ReadonlyArray<{ status: AdminSpotStatus; label: string }> = [
   { status: 'PENDING_REVIEW', label: '검토 대기' },
@@ -23,7 +23,9 @@ const TABS: ReadonlyArray<{ status: AdminSpotStatus; label: string }> = [
 
 const REASONS: BakjiReportReason[] = ['ILLEGAL_AREA', 'CLOSED', 'FALSE_INFO'];
 
-type ListState = { items: AdminSpotSummary[]; page: number; hasNext: boolean; error: string | null };
+function fetchSpots(status: AdminSpotStatus, page: number, signal?: AbortSignal): Promise<Page<AdminSpotSummary>> {
+  return fetchAdminSpots({ status, page }, signal);
+}
 
 export function AdminSpotsPage() {
   return (
@@ -35,50 +37,8 @@ export function AdminSpotsPage() {
 
 function SpotReview() {
   const [tab, setTab] = useState<AdminSpotStatus>('PENDING_REVIEW');
-  const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<ListState | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const showSkeleton = useDelayedFlag(state === null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchAdminSpots({ status: tab, page: 0 }, controller.signal).then(
-      (page) => {
-        if (!controller.signal.aborted) {
-          setState({ items: page.content, page: page.page, hasNext: page.hasNext, error: null });
-        }
-      },
-      (caught: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({ items: [], page: 0, hasNext: false, error: adminErrorMessage(caught) });
-        }
-      },
-    );
-    return () => controller.abort();
-  }, [tab, attempt]);
-
-  async function loadMore() {
-    if (!state || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const next = await fetchAdminSpots({ status: tab, page: state.page + 1 });
-      setState((previous) =>
-        previous
-          ? { items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null }
-          : previous,
-      );
-    } catch (caught) {
-      setState((previous) => (previous ? { ...previous, error: adminErrorMessage(caught) } : previous));
-    } finally {
-      setLoadingMore(false);
-    }
-  }
-
-  function removeItem(spotId: number) {
-    setState((previous) =>
-      previous ? { ...previous, items: previous.items.filter((item) => item.spotId !== spotId) } : previous,
-    );
-  }
+  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, fetchSpots);
+  const showSkeleton = useDelayedFlag(current === null);
 
   return (
     <section className="flex flex-col gap-4" aria-label="박지 검토 목록">
@@ -86,47 +46,36 @@ function SpotReview() {
         label="목록 종류"
         segments={TABS.map((item) => ({ value: item.status, label: item.label }))}
         value={tab}
-        onChange={(status) => {
-          setState(null);
-          setTab(status);
-        }}
+        onChange={setTab}
       />
-      {state?.error && (
+      {current?.error && (
         <div role="alert" className="flex flex-col gap-3">
-          <Notice tone="danger" title="박지를 불러오지 못했어요">
-            <p>{state.error}</p>
-          </Notice>
-          {state.items.length === 0 && (
+          <ErrorNotice title="박지를 불러오지 못했어요" error={current.error} traceId={current.traceId ?? undefined} />
+          {current.items.length === 0 && (
             <div>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setState(null);
-                  setAttempt((value) => value + 1);
-                }}
-              >
+              <Button variant="secondary" onClick={retry}>
                 다시 불러오기
               </Button>
             </div>
           )}
         </div>
       )}
-      {state === null && showSkeleton && <Skeleton className="h-40 w-full" />}
-      {state !== null && state.items.length === 0 && !state.error && (
+      {current === null && showSkeleton && <Skeleton className="h-40 w-full" />}
+      {current !== null && current.items.length === 0 && !current.error && (
         <EmptyState
           framed
           title={tab === 'PENDING_REVIEW' ? '검토를 기다리는 박지가 없어요' : '숨긴 박지가 없어요'}
           description={tab === 'PENDING_REVIEW' ? '신고가 쌓인 박지가 여기에 모여요.' : '숨긴 박지가 여기에 모여요.'}
         />
       )}
-      {state !== null && state.items.length > 0 && (
+      {current !== null && current.items.length > 0 && (
         <ul className="flex flex-col gap-3">
-          {state.items.map((item) => (
-            <SpotCard key={item.spotId} item={item} tab={tab} onDone={() => removeItem(item.spotId)} />
+          {current.items.map((item) => (
+            <SpotCard key={item.spotId} item={item} tab={tab} onDone={reload} />
           ))}
         </ul>
       )}
-      {state?.hasNext && (
+      {current?.hasNext && (
         <div>
           <Button variant="secondary" loading={loadingMore} onClick={() => void loadMore()}>
             더 보기
@@ -142,7 +91,7 @@ type Action = 'hide' | 'restore';
 function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpotStatus; onDone: () => void }) {
   const [confirmHide, setConfirmHide] = useState(false);
   const [busy, setBusy] = useState<Action | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const meta = SPOT_TYPE_META[item.type];
 
   async function run(action: Action) {
@@ -154,7 +103,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       else await restoreSpot(item.spotId);
       onDone();
     } catch (caught) {
-      setError(adminErrorMessage(caught));
+      setError(caught);
       setConfirmHide(false);
       setBusy(null);
     }
@@ -175,6 +124,10 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-ink-muted">제보자</dt>
         <dd className="text-ink">{item.reporter ? item.reporter.nickname : '공공데이터'}</dd>
+        <dt className="text-ink-muted">위치</dt>
+        <dd>
+          <LocationLabel position={{ lat: item.lat, lng: item.lng }} />
+        </dd>
         <dt className="text-ink-muted">검토 전 신고</dt>
         <dd className="font-mono tabular-nums text-ink">
           {item.reportCount}건
@@ -203,17 +156,12 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
           </ul>
         </div>
       )}
-      {error && (
+      {error !== null && (
         <div role="alert">
-          <Notice tone="danger" title="상태를 바꾸지 못했어요">
-            <p>{error}</p>
-          </Notice>
+          <ErrorNotice title="상태를 바꾸지 못했어요" error={error} message={adminErrorMessage(error)} />
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Link to={`/spots/${item.spotId}`} className={buttonClassName('secondary')}>
-          장소 보기
-        </Link>
         {tab === 'PENDING_REVIEW' && (
           <Button variant="danger" disabled={busy !== null} onClick={() => setConfirmHide(true)}>
             숨기기

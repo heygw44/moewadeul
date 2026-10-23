@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import { fetchMyBasecamps } from '../../api/basecamps';
-import { toUserMessage } from '../../api/errors';
 import type { MyBasecampItem, MyBasecampRelation } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ListPanel } from '../../components/HubLayout';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
@@ -39,7 +38,7 @@ type ListState = {
   items: MyBasecampItem[];
   page: number;
   hasNext: boolean;
-  error: string | null;
+  error: { cause: unknown } | null;
 };
 
 export function MyBasecampsPage() {
@@ -71,7 +70,7 @@ export function MyBasecampsPage() {
       },
       (caught: unknown) => {
         if (!controller.signal.aborted) {
-          setState({ filter, items: [], page: 0, hasNext: false, error: toUserMessage(caught) });
+          setState({ filter, items: [], page: 0, hasNext: false, error: { cause: caught } });
         }
       },
     );
@@ -98,7 +97,7 @@ export function MyBasecampsPage() {
           : previous,
       );
     } catch (caught) {
-      setState((previous) => (previous?.filter === filter ? { ...previous, error: toUserMessage(caught) } : previous));
+      setState((previous) => (previous?.filter === filter ? { ...previous, error: { cause: caught } } : previous));
     } finally {
       setLoadingMore(false);
     }
@@ -119,9 +118,7 @@ export function MyBasecampsPage() {
           <>
             {current.error && (
               <div className="flex flex-col gap-3">
-                <Notice tone="danger" title="내 베이스캠프를 불러오지 못했어요">
-                  <p>{current.error}</p>
-                </Notice>
+                <ErrorNotice title="내 베이스캠프를 불러오지 못했어요" error={current.error.cause} />
                 {current.items.length === 0 && (
                   <div>
                     <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>

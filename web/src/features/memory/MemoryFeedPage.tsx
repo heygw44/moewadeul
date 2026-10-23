@@ -6,7 +6,7 @@ import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { HubLayout } from '../../components/HubLayout';
 import { Icon } from '../../components/icons';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
@@ -48,9 +48,7 @@ export function MemoryFeedPage() {
   } else if (current.error !== null && current.items.length === 0) {
     body = (
       <div role="alert" className="flex flex-col gap-3">
-        <Notice tone="danger" title="기록을 불러오지 못했어요">
-          {current.error}
-        </Notice>
+        <ErrorNotice title="기록을 불러오지 못했어요" error={current.error} traceId={current.traceId ?? undefined} />
         <div>
           <Button variant="secondary" onClick={feed.retry}>
             다시 불러오기

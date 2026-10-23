@@ -37,7 +37,7 @@ export function rememberMapScreen(patch: Partial<MapScreenMemory>): void {
   memory = { ...memory, ...patch };
 }
 
-// 로그아웃하면 지운다. 같은 탭에서 다음에 로그인한 사람에게 앞사람의 조건과 AI 요약이 보이지 않게 하기 위해서다.
+// 로그아웃하거나 세션이 끊기거나 탈퇴하면 지운다. 같은 탭에서 다음에 로그인한 사람에게 앞사람의 조건과 AI 요약이 보이지 않게 하기 위해서다.
 export function forgetMapScreen(): void {
   memory = EMPTY;
 }

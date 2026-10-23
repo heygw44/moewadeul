@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { login } from '../../api/auth';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
+import { serverTraceId, toUserMessage } from '../../api/errors';
 import type { Me } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmailField } from '../../components/EmailField';
 import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { TextField } from '../../components/TextField';
 import { formatKstDateTime } from '../../lib/datetime';
 import { AuthLayout } from './AuthLayout';
@@ -20,7 +20,7 @@ import { useRetryCountdown } from './useRetryCountdown';
 
 type LoginField = 'email' | 'password';
 
-type FormError = { message: string; detail?: string };
+type FormError = { message: string; detail?: string; traceId?: string };
 
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
@@ -80,7 +80,7 @@ export function LoginPage() {
 
   function handleError(error: unknown) {
     if (!(error instanceof ApiError)) {
-      setFormError({ message: toUserMessage(error) });
+      setFormError({ message: toUserMessage(error), traceId: serverTraceId(error) });
       return;
     }
     if (error.code === 'INVALID_INPUT' && error.fieldErrors.length > 0) {
@@ -101,6 +101,7 @@ export function LoginPage() {
     setFormError({
       message: error.message,
       detail: suspendedUntil ? `${formatKstDateTime(suspendedUntil)}까지 이용이 제한돼요.` : undefined,
+      traceId: serverTraceId(error),
     });
   }
 
@@ -132,10 +133,9 @@ export function LoginPage() {
         </Link>
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="로그인하지 못했어요">
-              <p>{formError.message}</p>
+            <ErrorNotice title="로그인하지 못했어요" error={formError.message} traceId={formError.traceId}>
               {formError.detail && <p className="mt-1">{formError.detail}</p>}
-            </Notice>
+            </ErrorNotice>
           </div>
         )}
         <Button

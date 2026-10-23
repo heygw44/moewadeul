@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { fetchAdminMemories, hideMemory, restoreMemory } from '../../api/admin';
-import type { AdminMemoryStatus, AdminMemorySummary, CommunityReportReason } from '../../api/types';
+import type { AdminMemoryStatus, AdminMemorySummary, CommunityReportReason, Page } from '../../api/types';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
-import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime, formatLocalDate } from '../../lib/datetime';
+import { usePagedList } from '../program/usePagedList';
 import { REPORT_REASON_OPTIONS } from '../community/communityLabels';
 import { ApproxLocationLabel } from '../memory/ApproxLocationLabel';
 import { nightsLabel } from '../memory/memoryLabels';
@@ -29,7 +30,13 @@ const REASON_LABELS = Object.fromEntries(REPORT_REASON_OPTIONS.map((option) => [
 // 관리자 화면에는 사진을 몇 장만 작게 보여 준다. 나머지는 장 수로 알린다.
 const MAX_THUMBNAILS = 4;
 
-type ListState = { items: AdminMemorySummary[]; page: number; hasNext: boolean; error: string | null };
+function fetchMemories(
+  status: AdminMemoryStatus,
+  page: number,
+  signal?: AbortSignal,
+): Promise<Page<AdminMemorySummary>> {
+  return fetchAdminMemories({ status, page }, signal);
+}
 
 export function AdminMemoriesPage() {
   return (
@@ -42,50 +49,8 @@ export function AdminMemoriesPage() {
 // 관리자도 비공개 기록은 보지 못해서, 서버가 공개 기록만 준다. 위치도 대략 위치만 온다.
 function MemoryReview() {
   const [tab, setTab] = useState<AdminMemoryStatus>('PENDING_REVIEW');
-  const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<ListState | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const showSkeleton = useDelayedFlag(state === null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchAdminMemories({ status: tab, page: 0 }, controller.signal).then(
-      (page) => {
-        if (!controller.signal.aborted) {
-          setState({ items: page.content, page: page.page, hasNext: page.hasNext, error: null });
-        }
-      },
-      (caught: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({ items: [], page: 0, hasNext: false, error: adminErrorMessage(caught) });
-        }
-      },
-    );
-    return () => controller.abort();
-  }, [tab, attempt]);
-
-  async function loadMore() {
-    if (!state || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const next = await fetchAdminMemories({ status: tab, page: state.page + 1 });
-      setState((previous) =>
-        previous
-          ? { items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null }
-          : previous,
-      );
-    } catch (caught) {
-      setState((previous) => (previous ? { ...previous, error: adminErrorMessage(caught) } : previous));
-    } finally {
-      setLoadingMore(false);
-    }
-  }
-
-  function removeItem(memoryId: number) {
-    setState((previous) =>
-      previous ? { ...previous, items: previous.items.filter((item) => item.memoryId !== memoryId) } : previous,
-    );
-  }
+  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, fetchMemories);
+  const showSkeleton = useDelayedFlag(current === null);
 
   return (
     <section className="flex flex-col gap-4" aria-label="기록 검토 목록">
@@ -93,47 +58,36 @@ function MemoryReview() {
         label="목록 종류"
         segments={TABS.map((item) => ({ value: item.status, label: item.label }))}
         value={tab}
-        onChange={(status) => {
-          setState(null);
-          setTab(status);
-        }}
+        onChange={setTab}
       />
-      {state?.error && (
+      {current?.error && (
         <div role="alert" className="flex flex-col gap-3">
-          <Notice tone="danger" title="기록을 불러오지 못했어요">
-            <p>{state.error}</p>
-          </Notice>
-          {state.items.length === 0 && (
+          <ErrorNotice title="기록을 불러오지 못했어요" error={current.error} traceId={current.traceId ?? undefined} />
+          {current.items.length === 0 && (
             <div>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setState(null);
-                  setAttempt((value) => value + 1);
-                }}
-              >
+              <Button variant="secondary" onClick={retry}>
                 다시 불러오기
               </Button>
             </div>
           )}
         </div>
       )}
-      {state === null && showSkeleton && <Skeleton className="h-40 w-full" />}
-      {state !== null && state.items.length === 0 && !state.error && (
+      {current === null && showSkeleton && <Skeleton className="h-40 w-full" />}
+      {current !== null && current.items.length === 0 && !current.error && (
         <EmptyState
           framed
           title={tab === 'PENDING_REVIEW' ? '검토를 기다리는 기록이 없어요' : '숨긴 기록이 없어요'}
           description={tab === 'PENDING_REVIEW' ? '신고가 쌓인 기록이 여기에 모여요.' : '숨긴 기록이 여기에 모여요.'}
         />
       )}
-      {state !== null && state.items.length > 0 && (
+      {current !== null && current.items.length > 0 && (
         <ul className="flex flex-col gap-3">
-          {state.items.map((item) => (
-            <MemoryCard key={item.memoryId} item={item} tab={tab} onDone={() => removeItem(item.memoryId)} />
+          {current.items.map((item) => (
+            <MemoryCard key={item.memoryId} item={item} tab={tab} onDone={reload} />
           ))}
         </ul>
       )}
-      {state?.hasNext && (
+      {current?.hasNext && (
         <div>
           <Button variant="secondary" loading={loadingMore} onClick={() => void loadMore()}>
             더 보기
@@ -149,7 +103,7 @@ type Action = 'hide' | 'restore';
 function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: AdminMemoryStatus; onDone: () => void }) {
   const [confirmHide, setConfirmHide] = useState(false);
   const [busy, setBusy] = useState<Action | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const thumbnails = item.images.slice(0, MAX_THUMBNAILS);
 
   async function run(action: Action) {
@@ -161,7 +115,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
       else await restoreMemory(item.memoryId);
       onDone();
     } catch (caught) {
-      setError(adminErrorMessage(caught));
+      setError(caught);
       setConfirmHide(false);
       setBusy(null);
     }
@@ -229,11 +183,9 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
           </ul>
         </div>
       )}
-      {error && (
+      {error !== null && (
         <div role="alert">
-          <Notice tone="danger" title="상태를 바꾸지 못했어요">
-            <p>{error}</p>
-          </Notice>
+          <ErrorNotice title="상태를 바꾸지 못했어요" error={error} message={adminErrorMessage(error)} />
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">

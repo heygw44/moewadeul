@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import {
   createCompanionReview,
   fetchPendingCompanionReviews,
@@ -20,6 +19,7 @@ import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
@@ -92,7 +92,8 @@ export function CompanionReviewsPage() {
   );
 }
 
-type PendingResult = { attempt: number; items: PendingCompanionReview[] } | { attempt: number; error: string };
+type PendingResult =
+  { attempt: number; items: PendingCompanionReview[] } | { attempt: number; error: { cause: unknown } };
 
 function PendingTab({ trustLevel }: { trustLevel: number }) {
   const [attempt, setAttempt] = useState(0);
@@ -111,7 +112,7 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
         if (!controller.signal.aborted) setResult({ attempt, items });
       },
       (caught: unknown) => {
-        if (!controller.signal.aborted) setResult({ attempt, error: toUserMessage(caught) });
+        if (!controller.signal.aborted) setResult({ attempt, error: { cause: caught } });
       },
     );
     return () => controller.abort();
@@ -137,9 +138,7 @@ function PendingTab({ trustLevel }: { trustLevel: number }) {
   if ('error' in current) {
     return (
       <div className="flex flex-col gap-3">
-        <Notice tone="danger" title="쓸 후기를 불러오지 못했어요">
-          <p>{current.error}</p>
-        </Notice>
+        <ErrorNotice title="쓸 후기를 불러오지 못했어요" error={current.error.cause} />
         <div>
           <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
             다시 불러오기
@@ -223,7 +222,7 @@ function WriteDialog({
   const [tags, setTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ cause: unknown } | null>(null);
   const [commentError, setCommentError] = useState<string | undefined>();
 
   function toggleTag(tag: string, checked: boolean) {
@@ -246,7 +245,7 @@ function WriteDialog({
     } catch (caught) {
       const own = caught instanceof ApiError ? caught.fieldErrors.find((item) => item.field === 'comment') : undefined;
       if (own) setCommentError(own.reason);
-      else setError(toUserMessage(caught));
+      else setError({ cause: caught });
       setSubmitting(false);
     }
   }
@@ -257,9 +256,7 @@ function WriteDialog({
         <p className="text-sm text-ink-muted">{review.basecampTitle}</p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="후기를 남기지 못했어요">
-              <p>{error}</p>
-            </Notice>
+            <ErrorNotice title="후기를 남기지 못했어요" error={error.cause} />
           </div>
         )}
         <ChoiceGroup
@@ -314,7 +311,7 @@ type ReceivedState = {
   items: ReceivedCompanionReview[];
   page: number;
   hasNext: boolean;
-  error: string | null;
+  error: { cause: unknown } | null;
 };
 
 function ReceivedTab() {
@@ -331,7 +328,7 @@ function ReceivedTab() {
           setState({ items: page.content, page: page.page, hasNext: page.hasNext, error: null });
       },
       (caught: unknown) => {
-        if (!controller.signal.aborted) setState({ items: [], page: 0, hasNext: false, error: toUserMessage(caught) });
+        if (!controller.signal.aborted) setState({ items: [], page: 0, hasNext: false, error: { cause: caught } });
       },
     );
     return () => controller.abort();
@@ -350,7 +347,7 @@ function ReceivedTab() {
           : previous,
       );
     } catch (caught) {
-      setState((previous) => (previous ? { ...previous, error: toUserMessage(caught) } : previous));
+      setState((previous) => (previous ? { ...previous, error: { cause: caught } } : previous));
     } finally {
       setLoadingMore(false);
     }
@@ -362,9 +359,7 @@ function ReceivedTab() {
     <>
       {state.error && (
         <div className="flex flex-col gap-3">
-          <Notice tone="danger" title="받은 후기를 불러오지 못했어요">
-            <p>{state.error}</p>
-          </Notice>
+          <ErrorNotice title="받은 후기를 불러오지 못했어요" error={state.error.cause} />
           {state.items.length === 0 && (
             <div>
               <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>

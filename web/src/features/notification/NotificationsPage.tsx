@@ -6,13 +6,12 @@ import {
   markNotificationRead,
   updateNotificationSettings,
 } from '../../api/notifications';
-import { toUserMessage } from '../../api/errors';
 import type { NotificationItem, NotificationSetting, NotificationType } from '../../api/types';
 import { navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { EmptyState } from '../../components/EmptyState';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { ListPanel } from '../../components/HubLayout';
 import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
@@ -53,7 +52,7 @@ type ListState = {
   items: NotificationItem[];
   page: number;
   hasNext: boolean;
-  error: string | null;
+  error: { cause: unknown } | null;
 };
 
 function NotificationList() {
@@ -61,7 +60,7 @@ function NotificationList() {
   const [attempt, setAttempt] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<{ cause: unknown } | null>(null);
   const showSkeleton = useDelayedFlag(state === null);
 
   useEffect(() => {
@@ -73,7 +72,7 @@ function NotificationList() {
         }
       },
       (caught: unknown) => {
-        if (!controller.signal.aborted) setState({ items: [], page: 0, hasNext: false, error: toUserMessage(caught) });
+        if (!controller.signal.aborted) setState({ items: [], page: 0, hasNext: false, error: { cause: caught } });
       },
     );
     return () => controller.abort();
@@ -90,7 +89,7 @@ function NotificationList() {
           : previous,
       );
     } catch (caught) {
-      setState((previous) => (previous ? { ...previous, error: toUserMessage(caught) } : previous));
+      setState((previous) => (previous ? { ...previous, error: { cause: caught } } : previous));
     } finally {
       setLoadingMore(false);
     }
@@ -121,7 +120,7 @@ function NotificationList() {
     } catch (caught) {
       // 읽음 처리에 실패해도 이동할 곳이 있으면 이동한다. 이동할 곳이 없을 때만 오류를 보여 준다.
       if (!item.link || !isInternalPath(item.link)) {
-        setActionError(toUserMessage(caught));
+        setActionError({ cause: caught });
         return;
       }
     }
@@ -142,7 +141,7 @@ function NotificationList() {
       );
       void refreshUnreadCount();
     } catch (caught) {
-      setActionError(toUserMessage(caught));
+      setActionError({ cause: caught });
     } finally {
       setMarkingAll(false);
     }
@@ -158,6 +157,7 @@ function NotificationList() {
   }
 
   const hasUnread = state.items.some((item) => item.readAt === null);
+  const shownError = state.error ?? actionError;
 
   return (
     <PageLayout
@@ -171,11 +171,12 @@ function NotificationList() {
       }
     >
       <section className="flex flex-col gap-3" aria-label="알림 목록">
-        {(state.error || actionError) && (
+        {shownError && (
           <div role="alert" className="flex flex-col gap-3">
-            <Notice tone="danger" title={state.error ? '알림을 불러오지 못했어요' : '읽음으로 바꾸지 못했어요'}>
-              <p>{state.error ?? actionError}</p>
-            </Notice>
+            <ErrorNotice
+              title={state.error ? '알림을 불러오지 못했어요' : '읽음으로 바꾸지 못했어요'}
+              error={shownError.cause}
+            />
             {state.error && state.items.length === 0 && (
               <div>
                 <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
@@ -237,7 +238,7 @@ function NotificationRow({ item, onOpen }: { item: NotificationItem; onOpen: () 
 
 type SettingsState =
   | { status: 'loading' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; cause: unknown }
   | { status: 'ready'; enabled: Record<NotificationType, boolean> };
 
 function toEnabledMap(items: NotificationSetting[]): Record<NotificationType, boolean> {
@@ -249,7 +250,7 @@ function toEnabledMap(items: NotificationSetting[]): Record<NotificationType, bo
   return map;
 }
 
-type SaveResult = 'saved' | { failed: string } | null;
+type SaveResult = 'saved' | { failed: unknown } | null;
 
 function EmailSettingsCard() {
   const [state, setState] = useState<SettingsState>({ status: 'loading' });
@@ -264,7 +265,7 @@ function EmailSettingsCard() {
         if (!controller.signal.aborted) setState({ status: 'ready', enabled: toEnabledMap(items) });
       },
       (caught: unknown) => {
-        if (!controller.signal.aborted) setState({ status: 'error', message: toUserMessage(caught) });
+        if (!controller.signal.aborted) setState({ status: 'error', cause: caught });
       },
     );
     return () => controller.abort();
@@ -288,7 +289,7 @@ function EmailSettingsCard() {
       setState({ status: 'ready', enabled: toEnabledMap(saved) });
       setResult('saved');
     } catch (caught) {
-      setResult({ failed: toUserMessage(caught) });
+      setResult({ failed: caught });
     } finally {
       setSaving(false);
     }
@@ -300,9 +301,7 @@ function EmailSettingsCard() {
       {state.status === 'loading' && <Skeleton className="h-40 w-full" />}
       {state.status === 'error' && (
         <div className="flex flex-col gap-2">
-          <Notice tone="danger" title="이메일 수신 설정을 불러오지 못했어요">
-            <p>{state.message}</p>
-          </Notice>
+          <ErrorNotice title="이메일 수신 설정을 불러오지 못했어요" error={state.cause} />
           <div>
             <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
               다시 불러오기
@@ -332,9 +331,7 @@ function EmailSettingsCard() {
           )}
           {result !== null && result !== 'saved' && (
             <div role="alert">
-              <Notice tone="danger" title="저장하지 못했어요">
-                <p>{result.failed}</p>
-              </Notice>
+              <ErrorNotice title="저장하지 못했어요" error={result.failed} />
             </div>
           )}
           <div>
