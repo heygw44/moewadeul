@@ -43,6 +43,18 @@
         </foreach>
     </update>
 
+    <!-- 다음 시도 시각이 집을 때 건 임대 끝 시각 그대로인 알림만 푼다. 임대가 끝난 뒤 다른 발송 작업이 다시 집었으면 시각이 새 값이라서 건너뛴다. -->
+    <update id="releaseLease">
+        UPDATE notification
+        SET email_next_attempt_at = NULL
+        WHERE email_status = 'PENDING'
+          AND email_next_attempt_at = #{leaseUntil}
+          AND id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
     <update id="markSkipped">
         UPDATE notification
         SET email_status = 'SKIPPED',

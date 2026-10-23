@@ -5,6 +5,7 @@ import com.moewadeul.notification.infra.event.NotificationMailMapper;
 import com.moewadeul.notification.infra.event.NotificationMailRow;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +29,7 @@ class NotificationMailStore {
      * 설정 시간이 지날 때까지 다른 발송 작업이 같은 알림을 집지 못하게 막는다.
      */
     @Transactional
-    List<NotificationMailRow> claim(Instant now) {
+    Claim claim(Instant now) {
         List<NotificationMailRow> rows = mailMapper.selectDueForUpdate(
                 now, properties.batchSize(), NotificationEventTypes.DEFAULT_EMAIL_ENABLED);
         List<Long> skipped = rows.stream()
@@ -40,11 +41,23 @@ class NotificationMailStore {
         if (!skipped.isEmpty()) {
             mailMapper.markSkipped(skipped);
         }
+        // 컬럼이 마이크로초까지만 저장하므로, 나노초가 붙은 시각은 저장한 값과 같은지 비교할 때 어긋날 수 있다.
+        Instant leaseUntil = now.plus(properties.lease()).truncatedTo(ChronoUnit.MICROS);
         if (!targets.isEmpty()) {
             mailMapper.lease(
-                    targets.stream().map(NotificationMailRow::notificationId).toList(), now.plus(properties.lease()));
+                    targets.stream().map(NotificationMailRow::notificationId).toList(), leaseUntil);
         }
-        return targets;
+        return new Claim(leaseUntil, targets);
+    }
+
+    /**
+     * 호출하면 집었지만 보내지 않은 알림의 임대를 풀어, 다른 발송 작업이 바로 집게 하고 푼 행 수를 돌려준다. 다음 시도 시각이
+     * {@code leaseUntil} 그대로인 알림만 푼다. 보내는 데 임대 시간보다 오래 걸려 다른 발송 작업이 이미 다시 집은 알림은 그 작업의
+     * 임대를 지켜야 하기 때문이다.
+     */
+    @Transactional
+    int releaseLease(Instant leaseUntil, List<Long> notificationIds) {
+        return mailMapper.releaseLease(notificationIds, leaseUntil);
     }
 
     /** 호출하면 그 알림의 메일 상태를 SENT로 바꾸고 보낸 시각을 지금으로 기록한다. */
@@ -74,4 +87,11 @@ class NotificationMailStore {
             log.warn("notification mail was not pending when marking failed notificationId={}", notificationId);
         }
     }
+
+    /**
+     * 한 번 집어서 보낼 수 있는 알림과, 그 임대가 끝나는 시각이다.
+     *
+     * @param leaseUntil 집은 발송 작업이 건 임대 끝 시각. 보내지 못한 알림의 임대를 풀 때 자기 임대인지 알아보는 데 쓴다
+     */
+    record Claim(Instant leaseUntil, List<NotificationMailRow> targets) {}
 }
