@@ -130,6 +130,9 @@ moewadeul:
     from: ${spring.mail.username:}
     # 받는 사람의 메일함에 주소 대신 보이는 발신자 이름이다.
     from-name: ${MAIL_FROM_NAME:뫼와들}
+    # 메일 한 통을 보내는 데 걸리는 시간의 상한이다. 위의 연결·읽기·쓰기 제한 시간은 SMTP 명령마다 따로 걸려서, 서버가 명령마다 늦게 답하면
+    # 한 통이 1분 가까이 걸릴 수 있다. 앱이 종료를 시작하면 Spring이 실행 중인 작업을 30초까지만 기다리므로, 그보다 짧게 둔다.
+    send-timeout: ${MAIL_SEND_TIMEOUT:20s}
   web:
     # 메일 안의 링크에 쓰는 프론트엔드 주소다. 로컬 기본값은 Vite 개발 서버다.
     base-url: ${WEB_BASE_URL:http://localhost:5173}
