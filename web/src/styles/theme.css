@@ -73,6 +73,8 @@
   --animate-line-up: line-up 1.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   /* 랜딩의 데이터 출처 줄·용어 줄이 옆으로 흐른다. 목록을 두 번 이어 붙이고 절반만큼 옮기면 처음과 같은 모습이라 끊기지 않는다 */
   --animate-marquee: marquee 56s linear infinite;
+  /* 랜딩 첫 화면의 능선과 해가 처음 나타날 때 아래에서 올라온다. 거리는 쓰는 쪽이 --rise-from으로, 시간과 지연은 style로 정한다 */
+  --animate-scene-rise: scene-rise 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 
   @keyframes rise {
     from {
@@ -99,6 +101,14 @@
     }
     to {
       transform: translateX(-50%);
+    }
+  }
+  @keyframes scene-rise {
+    from {
+      transform: translateY(var(--rise-from, 20%));
+    }
+    to {
+      transform: none;
     }
   }
 }
