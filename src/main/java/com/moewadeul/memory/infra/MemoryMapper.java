@@ -26,7 +26,7 @@ public interface MemoryMapper {
      * 호출하면 공개이면서 ACTIVE인 기록을 ID가 큰 순서로 offset건 건너뛰고 limit건 읽는다. viewerId가 null이면(비회원) 좋아요를 눌렀는지는 비워 둔다.
      */
     List<MemoryFeedRow> selectPublicFeed(
-            @Param("viewerId") Long viewerId, @Param("limit") int limit, @Param("offset") int offset);
+            @Param("viewerId") Long viewerId, @Param("limit") int limit, @Param("offset") long offset);
 
     /** 호출하면 memberId인 회원이 있고 탈퇴하지 않았으면 true다. */
     boolean existsActiveMember(@Param("memberId") long memberId);
