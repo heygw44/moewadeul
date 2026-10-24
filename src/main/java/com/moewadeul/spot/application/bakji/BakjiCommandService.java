@@ -83,12 +83,12 @@ public class BakjiCommandService {
      *
      * <p>좌표가 실제로 바뀔 때만 서비스가 새 좌표로 공원 경계를 다시 판정한다. 같은 좌표를 다시 보내면 판정은 그대로다.
      *
-     * <p>박지 행을 잠그지 않고 읽으므로, 그 사이 다른 쓰기가 먼저 커밋하면 커밋할 때 낙관적 잠금 충돌로 실패한다. 다시 시도는 {@link BakjiEditService}가
-     * 한다. 컨트롤러는 그 서비스를 부른다.
+     * <p>박지 행을 잠그지 않고 읽으므로, 그 사이 다른 쓰기가 먼저 커밋하면 커밋할 때 낙관적 잠금 충돌로 실패한다. 제보 상세만 고치는 요청도 같다. 다시
+     * 시도는 {@link BakjiEditService}가 한다. 컨트롤러는 그 서비스를 부른다.
      */
     @Transactional
     public BakjiSubmission update(long memberId, long spotId, BakjiUpdateCommand command) {
-        Spot spot = loadActiveBakji(spotId);
+        Spot spot = loadActiveBakjiToUpdate(spotId, command);
         BakjiDetail detail = loadOwnDetail(spotId, memberId);
         Instant now = clock.instant();
         applySpotChanges(spot, command, now);
@@ -109,6 +109,29 @@ public class BakjiCommandService {
                 .findById(spotId)
                 .filter(Spot::isActiveBakji)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+    }
+
+    // 제보 상세만 고치는 요청은 박지 행을 바꾸지 않는다. 그래서 그대로 두면 JPA가 박지 행의 낙관적 잠금 번호를 검사하지 않고, 읽은 뒤 관리자가
+    // 숨기거나 신고가 쌓여 검토 대기로 바뀌어도 수정이 그대로 커밋된다. 이를 막으려고 서비스는 상세를 고치는 요청이면 커밋할 때 박지 행의 번호를
+    // 올리도록 읽는다. 번호만 다시 읽어 비교하는 방식(OPTIMISTIC)은 쓰지 않는다. REPEATABLE READ에서는 일반 SELECT가 트랜잭션 처음의
+    // 스냅샷을 읽어서, 그 사이 커밋된 번호를 보지 못하기 때문이다. 이름이나 좌표만 고치는 요청은 박지 행을 쓸 때 JPA가 번호를 검사하고,
+    // 아무 필드도 없는 요청은 아무것도 쓰지 않으므로 둘 다 번호를 따로 올리지 않는다.
+    private Spot loadActiveBakjiToUpdate(long spotId, BakjiUpdateCommand command) {
+        if (!changesDetail(command)) {
+            return loadActiveBakji(spotId);
+        }
+        return spotRepository
+                .findByIdForVersionIncrement(spotId)
+                .filter(Spot::isActiveBakji)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+    }
+
+    private static boolean changesDetail(BakjiUpdateCommand command) {
+        return command.description().present()
+                || command.hasWater().present()
+                || command.hasToilet().present()
+                || command.signalLevel().present()
+                || command.groundType().present();
     }
 
     // 박지에 상세 행이 없는 것은 데이터가 어긋난 경우라서, 박지가 없는 경우와 같이 NOT_FOUND로 거부한다.

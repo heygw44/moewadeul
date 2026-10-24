@@ -24,4 +24,11 @@ public interface SpotJpaRepository extends JpaRepository<Spot, Long>, SpotReposi
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Spot s WHERE s.id = :id")
     Optional<Spot> findByIdForUpdate(@Param("id") long id);
+
+    // 커밋 직전에 Hibernate가 version을 조건으로 건 UPDATE로 번호를 올린다. UPDATE는 커밋된 최신 행을 보므로, REPEATABLE READ에서도
+    // 읽은 뒤 커밋된 다른 쓰기를 알아차린다.
+    @Override
+    @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
+    @Query("SELECT s FROM Spot s WHERE s.id = :id")
+    Optional<Spot> findByIdForVersionIncrement(@Param("id") long id);
 }
