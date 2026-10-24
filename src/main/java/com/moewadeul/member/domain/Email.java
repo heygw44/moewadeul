@@ -10,6 +10,8 @@ public final class Email {
     private static final char AT = '@';
     private static final char DOT = '.';
     private static final char IP_LITERAL_START = '[';
+    private static final char FIRST_PRINTABLE_ASCII = '!';
+    private static final char LAST_PRINTABLE_ASCII = '~';
 
     private final String value;
 
@@ -21,7 +23,8 @@ public final class Email {
         if (raw == null) {
             throw new IllegalArgumentException("이메일이 null입니다.");
         }
-        boolean acceptable = domainOf(raw).filter(Email::isMailableDomain).isPresent();
+        boolean acceptable = isAsciiAddress(raw)
+                && domainOf(raw).filter(Email::isMailableDomain).isPresent();
         if (!acceptable) {
             throw new IllegalArgumentException("이메일 형식이 올바르지 않습니다.");
         }
@@ -44,6 +47,15 @@ public final class Email {
      */
     public static boolean isMailableDomain(String domain) {
         return domain.indexOf(DOT) >= 0 && domain.indexOf(IP_LITERAL_START) < 0;
+    }
+
+    /**
+     * 호출하면 주소의 모든 글자가 공백과 제어 문자를 뺀 ASCII인지 알려 준다. DB의 이메일 비교(대소문자만 구분 없음)는 전각 문자({@code ｖ})와
+     * 보이지 않는 문자(zero-width space, soft hyphen)를 같은 글자로 본다. 그래서 이런 변형으로 같은 회원을 가리키면서 이메일마다 세는
+     * 요청 한도를 피할 수 있다. 주소를 ASCII로 좁히면 {@link #of}가 소문자로 바꾼 값과 DB가 같다고 보는 값이 일치한다.
+     */
+    public static boolean isAsciiAddress(String raw) {
+        return raw.chars().allMatch(c -> c >= FIRST_PRINTABLE_ASCII && c <= LAST_PRINTABLE_ASCII);
     }
 
     public String value() {

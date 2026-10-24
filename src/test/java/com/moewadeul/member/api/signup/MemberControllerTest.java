@@ -207,6 +207,22 @@ class MemberControllerTest {
     }
 
     @ParameterizedTest
+    @ValueSource(
+            strings = {"ｖictim@example.com", "hiker@ｅxample.com", "hik\u200Ber@example.com", "hik\u00ADer@example.com"})
+    @DisplayName("[F-01][EV-06] 전각 문자나 보이지 않는 문자가 든 이메일이면 email 필드 오류 하나로 400을 응답한다")
+    void nonAsciiEmailReturnsSingleFieldError(String email) {
+        MvcTestResult result = post(email, VALID_PASSWORD, "hiker");
+
+        assertInvalidInput(result, "email");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[?(@.field=='email')]")
+                .asList()
+                .hasSize(1);
+        verifyNoInteractions(memberSignupService);
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"not-an-email", "hiker@", "hiker@localhost", "hiker@[127.0.0.1]"})
     @DisplayName("[F-01] 이메일이 틀려도 email 필드 오류는 하나만 응답한다")
     void invalidEmailReportsSingleFieldError(String email) {

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -17,11 +18,13 @@ import com.moewadeul.member.domain.signup.DisposableEmailDomain;
 import com.moewadeul.member.domain.signup.DisposableEmailDomainSource;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.member.infra.signup.DisposableEmailDomainJpaRepository;
+import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @IntegrationTest
@@ -42,6 +45,12 @@ class MemberSignupServiceIntegrationTest {
     @Autowired
     PasswordEncoder passwordEncoder;
 
+    @Autowired
+    MutableClock clock;
+
+    @Autowired
+    JdbcTemplate jdbc;
+
     @Test
     @DisplayName("[F-01] 유효한 입력이면 UNVERIFIED USER 회원이 시계 시각으로 저장된다")
     void signUpStoresUnverifiedUser() {
@@ -60,6 +69,58 @@ class MemberSignupServiceIntegrationTest {
         assertThat(member.getRole()).isEqualTo(MemberRole.USER);
         assertThat(member.getEmail()).isEqualTo(email);
         assertThat(member.getCreatedAt()).isEqualTo(MutableClock.DEFAULT_INSTANT);
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-03] 같은 IP의 인증 메일 발송 요청이 한 시간에 20건이면 가입은 SIGNUP_LIMITED이고 회원도 발송 요청도 만들지 않는다")
+    void signupIsRejectedWhenIpReachedHourlyLimit() {
+        // given: 한 IP에서 가입 20건이 성공했고 발송 요청은 아직 처리 전이다
+        for (int signedUp = 0; signedUp < 20; signedUp++) {
+            memberSignupService.signUp(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP));
+        }
+
+        // when & then: 같은 IP의 21번째 가입은 거부하고 남은 시간을 알려 준다
+        assertThatThrownBy(() -> memberSignupService.signUp(
+                        new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP)))
+                .isInstanceOfSatisfying(RateLimitedException.class, e -> {
+                    assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.SIGNUP_LIMITED);
+                    assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(1));
+                });
+        assertThat(countRows("member")).isEqualTo(20);
+        assertThat(countRows("outbox_event")).isEqualTo(20);
+
+        // when & then: 다른 IP는 가입할 수 있고, 한 시간이 지나면 같은 IP도 가입할 수 있다
+        memberSignupService.signUp(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), "203.0.113.8"));
+        clock.advance(Duration.ofHours(1));
+        memberSignupService.signUp(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP));
+        assertThat(countRows("member")).isEqualTo(22);
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-03] 같은 IP의 가입 요청이 19건이면 20번째 가입은 받는다")
+    void signupIsAcceptedWhenIpIsOneBelowHourlyLimit() {
+        // given
+        for (int signedUp = 0; signedUp < 19; signedUp++) {
+            memberSignupService.signUp(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP));
+        }
+
+        // when
+        SignupResult result = memberSignupService.signUp(
+                new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP));
+
+        // then
+        assertThat(result.memberId()).isNotNull();
+        assertThat(countRows("member")).isEqualTo(20);
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-06] ASCII가 아닌 글자가 든 이메일은 가입 서비스에서 거부하고 회원을 만들지 않는다")
+    void nonAsciiEmailIsRejected() {
+        // when & then
+        assertThatThrownBy(() -> memberSignupService.signUp(
+                        new SignupCommand("ｖictim@example.com", VALID_PASSWORD, nickname(), REQUEST_IP)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(countRows("member")).isZero();
     }
 
     @Test
@@ -94,22 +155,6 @@ class MemberSignupServiceIntegrationTest {
                         MemberException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
         assertThat(memberJpaRepository.count()).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("[F-01][EV-06] 악센트만 다른 이메일은 다른 이메일이라 둘 다 가입된다")
-    void emailsDifferingOnlyByAccentAreDistinct() {
-        // given
-        memberSignupService.signUp(new SignupCommand("tomás@example.com", VALID_PASSWORD, nickname(), REQUEST_IP));
-
-        // when
-        SignupResult second = memberSignupService.signUp(
-                new SignupCommand("tomas@example.com", VALID_PASSWORD, nickname(), REQUEST_IP));
-
-        // then
-        assertThat(memberJpaRepository.findById(second.memberId()).orElseThrow().getEmail())
-                .isEqualTo("tomas@example.com");
-        assertThat(memberJpaRepository.count()).isEqualTo(2);
     }
 
     @ParameterizedTest
@@ -182,6 +227,10 @@ class MemberSignupServiceIntegrationTest {
                 .isInstanceOfSatisfying(
                         MemberException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_DISPOSABLE_EMAIL));
+    }
+
+    private int countRows(String table) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class);
     }
 
     private String nickname() {

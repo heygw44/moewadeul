@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -193,7 +194,7 @@ class ProgramPaymentNotificationIntegrationTest {
     // 쓰기 요청은 이메일 인증을 마친 회원만 보낼 수 있어서 인증 코드를 발급받아 인증한다.
     private Cookie verifyEmail(Member member, Cookie loggedIn) {
         String code = emailVerificationService
-                .issueFor(member.getId(), "127.0.0.1")
+                .issueFor(member.getId(), "127.0.0.1", TestSequence.next())
                 .orElseThrow()
                 .code();
         MvcTestResult verified = mvc.post()

@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -304,7 +305,7 @@ class MemoryReportApiIntegrationTest {
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService
-                .issueFor(member.getId(), LOCAL_IP)
+                .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
         MvcTestResult verified = mvc.post()

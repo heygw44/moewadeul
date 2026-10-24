@@ -19,4 +19,20 @@
           AND verified_at IS NULL
           AND attempt_count &lt; #{maxAttempts}
     </update>
+
+    <select id="summarizeQueuedSendsByIpSince" resultType="com.moewadeul.member.domain.verification.SendWindow">
+        SELECT COUNT(*) AS count,
+               MIN(o.created_at) AS oldestSentAt
+        FROM outbox_event o
+        WHERE o.event_type = #{eventType}
+          AND o.aggregate_type = #{aggregateType}
+          AND o.status = #{status}
+          AND o.created_at &gt; #{since}
+          AND JSON_UNQUOTE(JSON_EXTRACT(o.payload, '$.requestIp')) = #{requestIp}
+          AND NOT EXISTS (
+              SELECT 1
+              FROM email_verification v
+              WHERE v.outbox_event_id = o.id
+          )
+    </select>
 </mapper>

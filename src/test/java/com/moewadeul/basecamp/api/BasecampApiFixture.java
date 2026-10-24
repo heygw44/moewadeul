@@ -4,6 +4,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -74,7 +75,7 @@ public final class BasecampApiFixture {
     public Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService
-                .issueFor(member.getId(), LOCAL_IP)
+                .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
         MvcTestResult verified = mvc.post()

@@ -5,6 +5,7 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -114,7 +115,7 @@ class ProgramApplicationOwnerApiIntegrationTest {
         Cookie session = result.getResponse().getCookie(SESSION_COOKIE);
         assertThat(session).isNotNull();
         String code = emailVerificationService
-                .issueFor(member.getId(), "127.0.0.1")
+                .issueFor(member.getId(), "127.0.0.1", TestSequence.next())
                 .orElseThrow()
                 .code();
         MvcTestResult verified = mvc.post()

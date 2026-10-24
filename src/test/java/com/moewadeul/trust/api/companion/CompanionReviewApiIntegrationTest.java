@@ -4,6 +4,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
@@ -104,7 +105,7 @@ class CompanionReviewApiIntegrationTest {
     private Cookie verifiedSession(long memberId) {
         Cookie session = login(memberId);
         String code = emailVerificationService
-                .issueFor(memberId, LOCAL_IP)
+                .issueFor(memberId, LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
         MvcTestResult verified = mvc.post()
