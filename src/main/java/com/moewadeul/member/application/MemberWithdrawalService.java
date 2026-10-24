@@ -5,7 +5,10 @@ import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberStatus;
+import com.moewadeul.member.infra.password.PasswordResetTokenMapper;
 import java.time.Clock;
+import java.time.Instant;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,6 +25,7 @@ public class MemberWithdrawalService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordResetTokenMapper passwordResetTokenMapper;
     private final Clock clock;
 
     /**
@@ -43,7 +47,8 @@ public class MemberWithdrawalService {
     }
 
     /**
-     * 호출하면 memberId인 회원의 행을 쓰기 잠금으로 읽고 탈퇴 처리한다. 반드시 호출한 쪽의 트랜잭션 안에서 불러야 하고,
+     * 호출하면 memberId인 회원의 행을 쓰기 잠금으로 읽고 탈퇴 처리한 뒤, 그 회원의 사용하지 않은 비밀번호 재설정 토큰을 모두 무효로 만든다.
+     * 토큰이 남아 있으면 탈퇴한 회원의 행에 비밀번호 해시가 다시 생기기 때문이다. 반드시 호출한 쪽의 트랜잭션 안에서 불러야 하고,
      * 트랜잭션이 없으면 예외가 난다. 같은 트랜잭션에서 제재 확정과 같은 순서로 회원 행을 가장 먼저 잠그라는 뜻이다.
      * 회원이 없거나 이미 탈퇴했으면 {@code LOGIN_FAILED}로 거부한다. 이 경우 두 탈퇴 요청이 겹쳤을 때 늦은 쪽이 이미 끝난 탈퇴를 다시 하지 않게 한다.
      */
@@ -53,6 +58,20 @@ public class MemberWithdrawalService {
         if (member == null || member.getStatus() == MemberStatus.WITHDRAWN) {
             throw new MemberException(MemberErrorCode.LOGIN_FAILED);
         }
-        member.withdraw(clock.instant());
+        Instant now = clock.instant();
+        member.withdraw(now);
+        passwordResetTokenMapper.invalidateUnusedTokens(memberId, now);
+    }
+
+    /**
+     * 호출하면 memberId인 회원이 탈퇴했을 때 그 탈퇴 시각을 돌려준다. 회원이 없거나 탈퇴하지 않았으면 비어 있다. 잠금 없이 읽으므로,
+     * 호출하는 쪽이 이미 회원 행을 잠갔을 때 쓴다.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Instant> findWithdrawnAt(long memberId) {
+        return memberRepository
+                .findById(memberId)
+                .filter(member -> member.getStatus() == MemberStatus.WITHDRAWN)
+                .map(Member::getWithdrawnAt);
     }
 }

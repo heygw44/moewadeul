@@ -348,6 +348,67 @@ class PasswordResetApiIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName(
+            "[F-01][PV-01] 재설정 토큰을 받은 회원이 탈퇴하면 그 토큰은 사용 처리되고, 확인하면 400 PASSWORD_RESET_TOKEN_INVALID이며 비밀번호 해시는 NULL로 남는다")
+    void withdrawalInvalidatesIssuedToken() {
+        // given
+        Member member = saveMember();
+        String token = issueToken(member);
+        Cookie session = login(member);
+        MvcTestResult withdrawal = mvc.delete()
+                .uri("/api/me")
+                .with(csrf())
+                .cookie(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"%s\"}".formatted(OLD_PASSWORD))
+                .exchange();
+        assertThat(withdrawal).hasStatus(HttpStatus.NO_CONTENT);
+
+        // when
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(token, NEW_PASSWORD), null);
+
+        // then
+        assertThat(count("password_reset_token WHERE member_id = ? AND used_at IS NULL", member.getId()))
+                .isZero();
+        assertThat(confirm).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(confirm).bodyJson().extractingPath("$.code").isEqualTo(INVALID_TOKEN);
+        assertWithdrawnWithoutPassword(member);
+    }
+
+    @Test
+    @DisplayName("[F-01][PV-01] 탈퇴한 뒤에 만들어진 재설정 토큰으로 확인해도 400 PASSWORD_RESET_TOKEN_INVALID이고 비밀번호 해시는 NULL로 남는다")
+    void tokenOfWithdrawnMemberIsRejected() {
+        // given: 토큰 발급 경로는 탈퇴 회원을 거르지만, 확인 단계도 탈퇴 회원의 토큰을 스스로 거부해야 한다. 그래서 토큰을 직접 저장한다.
+        Member member = saveMember();
+        Cookie session = login(member);
+        MvcTestResult withdrawal = mvc.delete()
+                .uri("/api/me")
+                .with(csrf())
+                .cookie(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"%s\"}".formatted(OLD_PASSWORD))
+                .exchange();
+        assertThat(withdrawal).hasStatus(HttpStatus.NO_CONTENT);
+        String token = issueToken(member);
+
+        // when
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(token, NEW_PASSWORD), null);
+
+        // then
+        assertThat(confirm).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(confirm).bodyJson().extractingPath("$.code").isEqualTo(INVALID_TOKEN);
+        assertWithdrawnWithoutPassword(member);
+    }
+
+    private void assertWithdrawnWithoutPassword(Member member) {
+        Map<String, Object> row = jdbc.queryForMap(
+                "SELECT status, password_hash, password_changed_at FROM member WHERE id = ?", member.getId());
+        assertThat(row.get("status")).isEqualTo("WITHDRAWN");
+        assertThat(row.get("password_hash")).isNull();
+        assertThat(row.get("password_changed_at")).isNull();
+    }
+
     private Member saveMember() {
         return memberRepository.save(aMember()
                 .email(TestSequence.email())
