@@ -26,9 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
  * 요청은 잠금을 기다린 뒤 이미 숨긴 상태를 보고 거부된다. 장소가 없거나 제보자가 지운 장소이면 존재를 드러내지 않으려고 NOT_FOUND로
  * 거부하고, 상태 전이를 할 수 없으면 SPOT_INVALID_STATE로 거부한다.
  *
- * <p>공공데이터 장소는 원천 삭제 표시를 지운다. 동기화가 원천에서 사라진 장소를 숨기면서 이 표시를 남기는데, 표시가 남아 있으면 관리자가
- * 바꾼 상태를 동기화가 다시 되돌릴 수 있기 때문이다. 이 서비스는 장소 행을 잠근 뒤에 표시 행을 바꾼다. 동기화의 원천 삭제도 같은 순서로
- * 잠그므로, 두 작업이 같은 장소에 동시에 와도 한쪽이 다른 쪽의 커밋을 기다릴 뿐 데드락이 나지 않는다.
+ * <p>공공데이터 장소는 원천 삭제 표시(source_removed_at)로 동기화의 숨김을 조정한다. 동기화는 ACTIVE이면서 표시가 없는 장소만 원천 삭제로
+ * 숨기고, 표시가 있는 장소는 원천에 다시 나타날 때만 되살린다. 그래서 관리자가 숨길 때는 표시를 지운다. 표시를 남겨 두면 그 장소가 원천에 다시
+ * 나타났을 때 동기화가 관리자의 숨김을 되돌린다. 반대로 복구할 때는 표시가 없으면 지금 시각으로 남긴다. 표시가 있는 ACTIVE 장소는 관리자가 다시
+ * 공개한 장소로 보고 동기화가 숨기지 않기 때문이다. 표시가 없으면 원천이 다음 날에도 삭제로 알려 올 때 동기화가 그 장소를 다시 숨긴다. 이미 있는
+ * 표시는 그대로 둔다. 두 메서드 모두 장소 행을 잠근 뒤에 표시 행을 바꾼다. 동기화의 원천 삭제도 같은 순서로 잠그므로, 두 작업이 같은 장소에
+ * 동시에 와도 한쪽이 다른 쪽의 커밋을 기다릴 뿐 데드락이 나지 않는다.
  */
 @Slf4j
 @Service
@@ -61,14 +64,17 @@ public class SpotModerationService {
         return new SpotStatusResult(spotId, spot.getStatus().name());
     }
 
-    /** 호출하면 검토 대기나 HIDDEN 장소를 ACTIVE로 바꾸고, 그 장소의 검토 전 신고를 모두 검토를 마친 것으로 표시한 뒤 감사 로그를 남긴다. */
+    /**
+     * 호출하면 검토 대기나 HIDDEN 장소를 ACTIVE로 바꾸고, 그 장소의 검토 전 신고를 모두 검토를 마친 것으로 표시한 뒤 감사 로그를 남긴다. 공공데이터
+     * 장소에 원천 삭제 표시가 없으면 지금 시각으로 남기고, 있으면 그대로 둔다.
+     */
     @Transactional
     public SpotStatusResult restore(long spotId, long adminId) {
         Spot spot = lockSpot(spotId);
         SpotStatus before = spot.getStatus();
         Instant now = clock.instant();
         spot.restore(now);
-        clearSourceRemovedIfPublicData(spot, now);
+        markSourceRemovedIfPublicData(spot, now);
         // 이 쿼리가 실행되기 전에 JPA가 위의 상태 변경을 플러시한다. 신고 엔티티는 읽지 않아서 영속성 컨텍스트를 비울 필요가 없다.
         int reviewedReportCount = bakjiReportRepository.markReviewed(spotId, now);
         adminAuditRecorder.record(
@@ -93,6 +99,12 @@ public class SpotModerationService {
     private void clearSourceRemovedIfPublicData(Spot spot, Instant now) {
         if (spot.isPublicData()) {
             publicSpotMapper.clearSourceRemoved(List.of(spot.getId()), now);
+        }
+    }
+
+    private void markSourceRemovedIfPublicData(Spot spot, Instant now) {
+        if (spot.isPublicData()) {
+            publicSpotMapper.markSourceRemovedIfAbsent(List.of(spot.getId()), now);
         }
     }
 }

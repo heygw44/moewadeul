@@ -11,6 +11,8 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.application.bakji.BakjiFeedbackService;
 import com.moewadeul.spot.application.bakji.BakjiProblemReportCommand;
+import com.moewadeul.spot.application.publicspot.PublicSpotSource;
+import com.moewadeul.spot.application.publicspot.PublicSpotSyncService;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import com.moewadeul.trust.application.CompanionReviewFixture;
 import jakarta.servlet.http.Cookie;
@@ -55,6 +57,9 @@ class AdminSpotReviewApiIntegrationTest {
 
     @Autowired
     private BakjiFeedbackService bakjiFeedbackService;
+
+    @Autowired
+    private PublicSpotSyncService publicSpotSyncService;
 
     private CompanionReviewFixture fixture;
     private long adminId;
@@ -285,8 +290,8 @@ class AdminSpotReviewApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-06][F-21] 원천 삭제로 숨겨진 공공데이터 장소를 복구하면 ACTIVE가 되고 source_removed_at이 비워진다")
-    void restoreClearsSourceRemovedOfPublicSpot() {
+    @DisplayName("[F-06][F-21] 원천 삭제로 숨겨진 공공데이터 장소를 복구하면 ACTIVE가 되고 source_removed_at은 그대로 남는다")
+    void restoreKeepsSourceRemovedOfPublicSpot() {
         // given
         long spotId = insertCampsite("HIDDEN", BASE);
         jdbc.update("UPDATE public_spot_detail SET source_removed_at = ? WHERE spot_id = ?", BASE, spotId);
@@ -297,11 +302,51 @@ class AdminSpotReviewApiIntegrationTest {
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
-        assertThat(sourceRemovedAt(spotId)).isNull();
+        assertThat(sourceRemovedAt(spotId)).isNotNull();
         String detail =
                 jdbc.queryForObject("SELECT detail FROM admin_audit_log WHERE action = 'SPOT_RESTORE'", String.class);
         assertThat((String) JsonPath.read(detail, "$.spotType")).isEqualTo("CAMPSITE");
         assertThat((Integer) JsonPath.read(detail, "$.reviewedReportCount")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-06][F-21] 동기화가 원천 삭제로 숨긴 장소를 관리자가 복구하면 다음 동기화가 같은 삭제 항목을 받아도 다시 숨기지 않는다")
+    void restoredPublicSpotIsNotHiddenAgainBySameRemoval() {
+        // given
+        long spotId = insertCampsite("ACTIVE", BASE);
+        String externalId = jdbc.queryForObject(
+                "SELECT external_id FROM public_spot_detail WHERE spot_id = ?", String.class, spotId);
+        assertThat(publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, List.of(externalId)))
+                .isEqualTo(1);
+        assertThat(statusOf(spotId)).isEqualTo("HIDDEN");
+        assertThat(post(SPOTS + "/" + spotId + "/restore")).hasStatus(HttpStatus.OK);
+
+        // when
+        int hiddenAgain = publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, List.of(externalId));
+
+        // then
+        assertThat(hiddenAgain).isZero();
+        assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("[F-06][F-21] 관리자가 숨겼다가 복구한 공공데이터 장소는 원천 삭제 표시를 새로 받아 삭제 항목이 와도 다시 숨지 않는다")
+    void adminHiddenThenRestoredPublicSpotIsNotHiddenBySourceRemoval() {
+        // given
+        long spotId = insertCampsite("ACTIVE", BASE);
+        String externalId = jdbc.queryForObject(
+                "SELECT external_id FROM public_spot_detail WHERE spot_id = ?", String.class, spotId);
+        assertThat(post(SPOTS + "/" + spotId + "/hide")).hasStatus(HttpStatus.OK);
+        assertThat(sourceRemovedAt(spotId)).isNull();
+
+        // when
+        assertThat(post(SPOTS + "/" + spotId + "/restore")).hasStatus(HttpStatus.OK);
+        int hiddenBySync = publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, List.of(externalId));
+
+        // then
+        assertThat(sourceRemovedAt(spotId)).isNotNull();
+        assertThat(hiddenBySync).isZero();
+        assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
     }
 
     @Test
