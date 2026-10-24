@@ -79,6 +79,12 @@ public interface PublicSpotMapper {
     /** 호출하면 spotIds의 public_spot_detail에 원천 삭제로 숨긴 시각을 now로 기록하고 updated_at도 now로 바꾼다. */
     int markSourceRemoved(@Param("spotIds") Collection<Long> spotIds, @Param("now") Instant now);
 
+    /**
+     * 호출하면 spotIds 중 원천 삭제 표시(source_removed_at)가 없는 행에만 표시를 now로 기록하고 updated_at도 now로 바꾼다. 이미 표시가 있는 행은
+     * 건드리지 않는다. 관리자가 복구한 장소를 동기화가 다시 숨기지 않도록 표시를 남길 때 쓴다.
+     */
+    int markSourceRemovedIfAbsent(@Param("spotIds") Collection<Long> spotIds, @Param("now") Instant now);
+
     /** 호출하면 spotIds 장소가 가진 입지를 읽는다. 입지가 없는 장소는 결과에 나오지 않는다. */
     List<PublicSpotSettingRow> selectSettings(@Param("spotIds") Collection<Long> spotIds);
 

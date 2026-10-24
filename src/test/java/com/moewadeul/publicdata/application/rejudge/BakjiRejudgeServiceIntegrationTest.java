@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.publicdata.application.SyncJobRunService;
 import com.moewadeul.publicdata.application.park.ParkBoundaryLoadService;
 import com.moewadeul.publicdata.domain.SyncJobType;
@@ -11,8 +12,8 @@ import com.moewadeul.spot.application.park.BakjiRejudgeChunk;
 import com.moewadeul.spot.application.park.ParkAreaJudgeService;
 import com.moewadeul.spot.infra.park.ParkAreaJudgeMapper;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import org.junit.jupiter.api.DisplayName;
@@ -62,7 +64,7 @@ class BakjiRejudgeServiceIntegrationTest {
     private PlatformTransactionManager transactionManager;
 
     @Autowired
-    private Clock clock;
+    private MutableClock clock;
 
     @Test
     @DisplayName("[F-06] 공원 경계를 바꾼 뒤 재판정하면 박지의 공원 경고가 새 경계와 일치한다")
@@ -225,6 +227,58 @@ class BakjiRejudgeServiceIntegrationTest {
         assertThat(jdbcTemplate.queryForList(
                         "SELECT status FROM sync_job_run WHERE job_type = 'BAKJI_REJUDGE' ORDER BY id", String.class))
                 .containsExactly("FAILED", "COMPLETED");
+    }
+
+    @Test
+    @DisplayName("[F-06] 재판정이 도는 사이에 공원 경계 적재가 끝나면 재판정을 마친 뒤 처음부터 다시 판정해, 앞 묶음에서 옛 경계로 판정한 박지에도 경고를 붙인다")
+    void rejudgeRepeatsWhenBoundaryLoadFinishesWhileRunning() throws IOException {
+        // given: 첫 박지는 새 경계 안에 있고, 옛 경계 안이 아니다. 첫 묶음에서 옛 경계로 판정한다.
+        parkBoundaryLoadService.load(fixture(FIXTURE)).orElseThrow();
+        long bukhansanId = idOf("북한산");
+        long first = insertBakji("새 경계 안 박지", 37.65, 127.15);
+        insertBakji("경계 밖 박지", 35.0, 129.0);
+        AtomicBoolean loaded = new AtomicBoolean();
+        BakjiRejudgeService service = serviceWithChunkSize(1, (afterId, limit) -> {
+            if (afterId == first && loaded.compareAndSet(false, true)) {
+                clock.advance(Duration.ofMinutes(1));
+                loadNewerBoundary();
+            }
+        });
+
+        // when
+        BakjiRejudgeResult result = service.rejudge().orElseThrow();
+
+        // then: 두 번째 판정이 첫 박지의 경고를 새 경계로 붙였다. 결과는 마지막 판정의 것이다.
+        assertThat(result).isEqualTo(new BakjiRejudgeResult(2, 1, 0));
+        assertWarned(first, bukhansanId);
+        assertThat(jdbcTemplate.queryForList(
+                        "SELECT status FROM sync_job_run WHERE job_type = 'BAKJI_REJUDGE' ORDER BY id", String.class))
+                .containsExactly("COMPLETED", "COMPLETED");
+    }
+
+    @Test
+    @DisplayName("[F-06] 공원 경계 적재가 재판정을 시작하기 전에 끝났으면 재판정을 다시 시작하지 않는다")
+    void rejudgeDoesNotRepeatWhenBoundaryLoadFinishedBeforeItStarted() throws IOException {
+        // given
+        parkBoundaryLoadService.load(fixture(FIXTURE)).orElseThrow();
+        insertBakji("박지", 37.65, 126.95);
+        clock.advance(Duration.ofMinutes(1));
+
+        // when
+        bakjiRejudgeService.rejudge().orElseThrow();
+
+        // then
+        assertThat(jdbcTemplate.queryForList(
+                        "SELECT status FROM sync_job_run WHERE job_type = 'BAKJI_REJUDGE'", String.class))
+                .containsExactly("COMPLETED");
+    }
+
+    private void loadNewerBoundary() {
+        try {
+            parkBoundaryLoadService.load(fixture(NEWER_FIXTURE)).orElseThrow();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     // 묶음 크기를 바꾼 재판정 서비스를 만든다. 묶음 판정은 실제 빈에 맡기되, 묶음마다 판정하기 전에 beforeChunk를 부른다.
