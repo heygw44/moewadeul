@@ -186,6 +186,26 @@ class AdminProgramApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-17][PG-01] 신청이 들어온 행사는 신청 시작 시각을 미래로 옮긴 뒤에도 정원을 줄이면 409 PROGRAM_CAPACITY_DECREASE이다")
+    void capacityCannotDecreaseAfterPostponingApplyOpenOfProgramWithApplications() {
+        // given
+        Instant now = clock.instant();
+        long programId = programId(createProgram(body(now.minus(Duration.ofHours(1)), 2, null)));
+        insertApplication(programId, "CONFIRMED", now);
+        insertApplication(programId, "CONFIRMED", now);
+        MvcTestResult postpone = patch(programId, "{\"applyOpenAt\":\"" + now.plus(Duration.ofDays(1)) + "\"}");
+
+        // when
+        MvcTestResult decrease = patch(programId, "{\"capacity\":1}");
+
+        // then
+        assertThat(postpone).hasStatus(HttpStatus.OK);
+        assertThat(decrease).hasStatus(HttpStatus.CONFLICT);
+        assertThat(decrease).bodyJson().extractingPath("$.code").isEqualTo("PROGRAM_CAPACITY_DECREASE");
+        assertThat(capacityOf(programId)).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("[F-17] 수정은 보낸 필드만 바꾸고, 고친 뒤의 시각 순서가 틀리면 400이며, spotId를 null로 보내면 연결을 끊는다")
     void reviseMergesFieldsAndValidates() {
         // given

@@ -116,7 +116,7 @@ class ProgramTest {
     void allowsCapacityDecreaseBeforeApplyOpen() {
         Program program = create(details());
 
-        ProgramChange change = program.revise(revision().capacity(10).build(), NOW);
+        ProgramChange change = program.revise(revision().capacity(10).build(), NOW, false);
 
         assertThat(program.getCapacity()).isEqualTo(10);
         assertThat(change.changedFields()).containsExactly("capacity");
@@ -131,7 +131,7 @@ class ProgramTest {
         Program program = create(details());
         Instant afterOpen = program.getApplyOpenAt();
 
-        assertThatThrownBy(() -> program.revise(revision().capacity(19).build(), afterOpen))
+        assertThatThrownBy(() -> program.revise(revision().capacity(19).build(), afterOpen, false))
                 .isInstanceOfSatisfying(
                         ProgramException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE));
@@ -144,8 +144,8 @@ class ProgramTest {
         Program program = create(details());
         Instant afterOpen = program.getApplyOpenAt().plusSeconds(1);
 
-        ProgramChange increase = program.revise(revision().capacity(30).build(), afterOpen);
-        ProgramChange same = program.revise(revision().capacity(30).fee(5000).build(), afterOpen);
+        ProgramChange increase = program.revise(revision().capacity(30).build(), afterOpen, false);
+        ProgramChange same = program.revise(revision().capacity(30).fee(5000).build(), afterOpen, false);
 
         assertThat(program.getCapacity()).isEqualTo(30);
         assertThat(increase.capacityAfter()).isEqualTo(30);
@@ -163,10 +163,24 @@ class ProgramTest {
                 .capacity(10)
                 .build();
 
-        assertThatThrownBy(() -> program.revise(postponeAndShrink, afterOpen))
+        assertThatThrownBy(() -> program.revise(postponeAndShrink, afterOpen, false))
                 .isInstanceOfSatisfying(
                         ProgramException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE));
+    }
+
+    @Test
+    @DisplayName("[F-17][PG-01] 신청 시작 시각이 아직 오지 않았어도 신청이 하나라도 있으면 정원을 줄일 수 없고, 늘리는 것은 허용한다")
+    void rejectsCapacityDecreaseWhenApplicationsExistBeforeApplyOpen() {
+        Program program = create(details());
+
+        assertThatThrownBy(() -> program.revise(revision().capacity(19).build(), NOW, true))
+                .isInstanceOfSatisfying(
+                        ProgramException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE));
+        assertThat(program.getCapacity()).isEqualTo(20);
+        program.revise(revision().capacity(21).build(), NOW, true);
+        assertThat(program.getCapacity()).isEqualTo(21);
     }
 
     @Test
@@ -174,7 +188,7 @@ class ProgramTest {
     void reviseKeepsUntouchedFields() {
         Program program = create(details());
 
-        ProgramChange change = program.revise(revision().title("새 제목").fee(0).build(), NOW);
+        ProgramChange change = program.revise(revision().title("새 제목").fee(0).build(), NOW, false);
 
         assertThat(program.getTitle()).isEqualTo("새 제목");
         assertThat(program.getFee()).isZero();
@@ -188,11 +202,11 @@ class ProgramTest {
     void reviseHandlesSpotPatchField() {
         Program program = create(detailWithSpot(7L));
 
-        program.revise(revision().title("바뀐 제목").build(), NOW);
+        program.revise(revision().title("바뀐 제목").build(), NOW, false);
         assertThat(program.getSpotId()).isEqualTo(7L);
 
         ProgramChange change =
-                program.revise(revision().spotId(PatchField.of(null)).build(), NOW);
+                program.revise(revision().spotId(PatchField.of(null)).build(), NOW, false);
 
         assertThat(program.getSpotId()).isNull();
         assertThat(change.changedFields()).containsExactly("spotId");
@@ -208,13 +222,14 @@ class ProgramTest {
                         revision()
                                 .applyCloseAt(program.getStartAt().plusSeconds(1))
                                 .build(),
-                        NOW))
+                        NOW,
+                        false))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> program.revise(
-                        revision().endAt(program.getStartAt().minusSeconds(1)).build(), NOW))
+                        revision().endAt(program.getStartAt().minusSeconds(1)).build(), NOW, false))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() ->
-                        program.revise(revision().capacity(0).title("바뀌면 안 됨").build(), NOW))
+                        program.revise(revision().capacity(0).title("바뀌면 안 됨").build(), NOW, false))
                 .isInstanceOf(IllegalArgumentException.class);
 
         assertThat(program.getApplyCloseAt()).isEqualTo(originalClose);
@@ -227,7 +242,7 @@ class ProgramTest {
         Program program = create(details());
         program.cancel(NOW);
 
-        assertThatThrownBy(() -> program.revise(revision().title("새 제목").build(), NOW))
+        assertThatThrownBy(() -> program.revise(revision().title("새 제목").build(), NOW, false))
                 .isInstanceOfSatisfying(
                         ProgramException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
