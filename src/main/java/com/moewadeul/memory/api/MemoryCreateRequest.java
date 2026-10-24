@@ -48,7 +48,7 @@ public record MemoryCreateRequest(
         Long spotId,
 
         @Schema(description = "붙일 사진 ID. 최대 10개이고 배열 순서가 기록 안 순서다. 없으면 사진 없이 쓴다.")
-        List<Long> imageIds) {
+        List<@NotNull(message = "사진 ID는 비워 둘 수 없어요.") Long> imageIds) {
 
     MemoryWriteCommand toCommand() {
         return new MemoryWriteCommand(spotId, lat, lng, visitedDate, nights, content, visibility, imageIds);

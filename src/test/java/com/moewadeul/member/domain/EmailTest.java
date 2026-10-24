@@ -46,6 +46,32 @@ class EmailTest {
         assertThatThrownBy(() -> Email.of(raw)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "ｖictim@example.com",
+                "victim@ｅxample.com",
+                "Ｖictim@example.com",
+                "vic\u200Btim@example.com",
+                "vic\u00ADtim@example.com",
+                "vic\u200Dtim@example.com",
+                "victim@exam\u00ADple.com",
+                "vic tim@example.com",
+                "vic\ttim@example.com",
+                "빅팀@example.com",
+                "victim@예시.com"
+            })
+    @DisplayName("[F-01][EV-06] 전각 문자, 보이지 않는 문자, 공백, 한글처럼 ASCII가 아닌 글자가 든 주소는 IllegalArgumentException이다")
+    void of_rejectsNonAsciiAddress(String raw) {
+        assertThatThrownBy(() -> Email.of(raw)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-06] ASCII 기호가 든 주소는 받고, 도메인은 IDN을 변환한 punycode로만 쓸 수 있다")
+    void of_acceptsAsciiSymbolsAndPunycodeDomain() {
+        assertThat(Email.of("User.Name+tag_1@xn--9n2bp8q.com").value()).isEqualTo("user.name+tag_1@xn--9n2bp8q.com");
+    }
+
     @Test
     @DisplayName("[F-01][ID-01] 대소문자만 다른 이메일은 같다")
     void equals_isCaseInsensitive() {

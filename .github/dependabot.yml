@@ -27,6 +27,9 @@ updates:
         applies-to: version-updates
         patterns: ["*"]
 
+  # 외부 액션은 태그가 아니라 커밋 SHA로 고정하고, 뒤에 버전 주석(# v7.0.1)을 단다. 태그는 작성자가 다른 커밋으로 옮길 수 있어서,
+  # 배포 역할(id-token)과 패키지 쓰기 권한을 가진 작업에 바뀐 코드가 그대로 들어올 수 있기 때문이다.
+  # Dependabot은 SHA와 버전 주석을 함께 새 릴리즈로 올리는 PR을 만든다.
   - package-ecosystem: github-actions
     directory: /
     target-branch: develop

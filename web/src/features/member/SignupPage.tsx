@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { login, signUp } from '../../api/auth';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
+import { serverTraceId, toUserMessage } from '../../api/errors';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmailField } from '../../components/EmailField';
 import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { PasswordField } from '../../components/PasswordField';
 import { TextField } from '../../components/TextField';
 import { AuthLayout } from './AuthLayout';
@@ -49,7 +49,7 @@ export function SignupPage() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [nickname, setNickname] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<SignupField, string>>>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ message: string; traceId?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export function SignupPage() {
 
   function handleError(error: unknown) {
     if (!(error instanceof ApiError)) {
-      setFormError(toUserMessage(error));
+      setFormError({ message: toUserMessage(error) });
       return;
     }
     const field = FIELD_BY_CODE[error.code];
@@ -125,10 +125,10 @@ export function SignupPage() {
         else others.push(item.reason);
       }
       setFieldErrors(errors);
-      if (others.length > 0) setFormError(others.join(' '));
+      if (others.length > 0) setFormError({ message: others.join(' ') });
       return;
     }
-    setFormError(error.message);
+    setFormError({ message: error.message, traceId: serverTraceId(error) });
   }
 
   return (
@@ -176,9 +176,7 @@ export function SignupPage() {
         />
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="가입하지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="가입하지 못했어요" error={formError.message} traceId={formError.traceId} />
           </div>
         )}
         <Button type="submit" fullWidth loading={submitting}>

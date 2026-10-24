@@ -9,6 +9,7 @@ import type { SpotType } from '../../api/types';
 import { ActiveFilterChips } from '../../components/ActiveFilterChips';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Sheet } from '../../components/Sheet';
@@ -33,6 +34,7 @@ import type { BasecampFilters } from '../basecamp/basecampFilters';
 import type { BasecampsInView } from '../basecamp/useBasecampsInView';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
+import { BakjiEditPanel } from './BakjiEditPanel';
 import { BakjiReportPanel } from './BakjiReportPanel';
 import { MapLegend } from './MapLegend';
 import { MapRegionChip } from './MapRegionChip';
@@ -113,8 +115,10 @@ function selectedSpotMarker(detail: SpotDetail): SpotMarkerData {
 }
 
 // 베이스캠프 상세 응답으로 그 장소의 핀을 만든다. 베이스캠프 화면의 다른 핀처럼 공원 경계 경고와 휴장은 표시하지 않는다.
-function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData {
+// 장소가 지도에서 내려가 응답에 장소가 없으면 null이고, 지도는 옮기지 않는다.
+function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData | null {
   const { spot } = detail;
+  if (spot === undefined) return null;
   return {
     id: spot.spotId,
     kind: spot.type,
@@ -182,13 +186,15 @@ type MapPageProps = {
   basecampId?: number;
   // basecampOpen에서 베이스캠프를 열 장소다.
   openSpotId?: number;
-  // report는 지도를 눌러 박지 위치를 찍는 제보 화면이고, basecamps는 베이스캠프 목록과 상세,
-  // basecampOpen은 장소에서 베이스캠프를 여는 화면이다.
-  mode?: 'browse' | 'report' | 'basecamps' | 'basecampOpen';
+  // report는 지도를 눌러 박지 위치를 찍는 제보 화면이고, bakjiEdit는 제보한 박지의 위치와 정보를 고치는 화면이다.
+  // basecamps는 베이스캠프 목록과 상세, basecampOpen은 장소에서 베이스캠프를 여는 화면이다.
+  mode?: 'browse' | 'report' | 'bakjiEdit' | 'basecamps' | 'basecampOpen';
   // report에서 처음 찍어 둘 박지 위치다. 지도 메뉴에서 근처에 장소가 없는 곳을 골랐을 때 넘어온다.
   initialDraft?: LatLng;
   // report에서 제보가 끝난 뒤 갈 곳이다. basecamp면 새 박지에서 베이스캠프 열기 폼을 연다.
   nextAfterReport?: 'basecamp';
+  // bakjiEdit에서 고칠 박지의 장소 ID다.
+  editSpotId?: number;
 };
 
 export function MapPage({
@@ -198,12 +204,16 @@ export function MapPage({
   mode = 'browse',
   initialDraft,
   nextAfterReport,
+  editSpotId,
 }: MapPageProps) {
   const reporting = mode === 'report';
+  const editing = mode === 'bakjiEdit' && editSpotId !== undefined;
+  // 제보와 수정은 둘 다 지도를 눌러 박지 위치를 찍는다.
+  const placing = reporting || editing;
   const basecampMode = mode === 'basecamps';
   const opening = mode === 'basecampOpen';
   // 시트에 목록이 아니라 상세·폼이 열려 있는지다.
-  const contentOpen = spotId !== undefined || reporting || basecampId !== undefined || opening;
+  const contentOpen = spotId !== undefined || placing || basecampId !== undefined || opening;
   const session = useSession();
   const hostRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapView | null>(null);
@@ -232,13 +242,22 @@ export function MapPage({
   const [aiSummary, setAiSummary] = useState<AiSummary | null>(() => readMapScreen().aiSummary);
   // 장소 상세나 베이스캠프 상세가 불러온 장소다. 지도를 그 장소로 옮기고 핀을 그릴 때 쓴다.
   // key는 어느 상세 화면의 장소인지이고, 다른 화면으로 바뀌면 버린다.
-  const focusKey = spotId !== undefined ? `spot:${spotId}` : basecampId !== undefined ? `basecamp:${basecampId}` : null;
+  const focusKey =
+    spotId !== undefined
+      ? `spot:${spotId}`
+      : basecampId !== undefined
+        ? `basecamp:${basecampId}`
+        : editing
+          ? `edit:${editSpotId}`
+          : null;
   const [spotFocus, setSpotFocus] = useState<{ key: string; marker: SpotMarkerData } | null>(null);
   if (spotFocus !== null && spotFocus.key !== focusKey) setSpotFocus(null);
   const focusedSpot = spotFocus?.marker ?? null;
-  // 상세 응답을 다시 받아도(신청 뒤 새로 고침 등) 같은 화면이면 지도를 다시 옮기지 않는다.
-  const focusOn = (key: string | null, marker: SpotMarkerData) => {
-    if (key !== null) setSpotFocus((previous) => (previous?.key === key ? previous : { key, marker }));
+  // 상세 응답을 다시 받아도(신청 뒤 새로 고침 등) 같은 화면이면 지도를 다시 옮기지 않는다. 그릴 장소가 없으면 지도를 그대로 둔다.
+  const focusOn = (key: string | null, marker: SpotMarkerData | null) => {
+    if (key !== null && marker !== null) {
+      setSpotFocus((previous) => (previous?.key === key ? previous : { key, marker }));
+    }
   };
   // 지도에서 장소 마커를 눌러 고른 장소다. 베이스캠프 목록을 그 장소로 거른다.
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
@@ -297,8 +316,8 @@ export function MapPage({
   const keepOverlay = useCallback(() => overlayRef.current?.contains(document.activeElement) ?? false, []);
   const mapMoving = useMapMoving(map, keepOverlay);
 
-  // 제보 화면을 벗어나면 이전 제보의 완료 상태를 버린다. 그래야 다시 들어왔을 때 지도를 눌러 위치를 찍을 수 있다.
-  if (!reporting && submitted) setSubmitted(false);
+  // 제보·수정 화면을 벗어나면 이전 결과의 완료 상태를 버린다. 그래야 다시 들어왔을 때 지도를 눌러 위치를 찍을 수 있다.
+  if (!placing && submitted) setSubmitted(false);
 
   // 제보 화면을 좌표와 함께 열면 그 자리에 임시 핀을 찍어 둔다. 제보 화면을 벗어나면 다음에 다시 찍도록 잊는다.
   const initialDraftKey = reporting && initialDraft ? `${initialDraft.lat},${initialDraft.lng}` : null;
@@ -385,15 +404,16 @@ export function MapPage({
   }, [map, focusedSpot]);
 
   // 장소 조건에 걸러졌거나 모집 중인 베이스캠프가 없어서 마커에 없는 장소도, 상세를 보는 동안에는 지도에 핀이 보이게 한다.
+  // 박지를 고칠 때는 위치 핀이 그 자리를 보여 주므로 고른 핀을 겹쳐 그리지 않는다.
   useEffect(() => {
-    map?.showSelectedSpot(focusedSpot);
-  }, [map, focusedSpot]);
+    map?.showSelectedSpot(editing ? null : focusedSpot);
+  }, [map, focusedSpot, editing]);
 
   useEffect(() => {
     if (!map) return;
-    // 제보 중에는 핀을 눌러도 화면을 옮기지 않는다. 위치를 찍다가 실수로 상세로 나가지 않게 하기 위해서다.
+    // 제보·수정 중에는 핀을 눌러도 화면을 옮기지 않는다. 위치를 찍다가 실수로 상세로 나가지 않게 하기 위해서다.
     const offMarker = map.onMarkerClick((id) => {
-      if (reporting) return;
+      if (placing) return;
       if (basecampMode) {
         // 베이스캠프 화면에서는 마커가 장소의 베이스캠프 목록을 거르는 스위치다. 같은 마커를 다시 누르면 푼다.
         setSpotFilterId((previous) => (previous === id ? null : id));
@@ -413,18 +433,18 @@ export function MapPage({
       offMarker();
       offCluster();
     };
-  }, [map, reporting, basecampMode, basecampId, previewEnabled]);
+  }, [map, placing, basecampMode, basecampId, previewEnabled]);
 
-  // 제보 화면에서만 지도를 눌러 박지 위치를 찍는다. 화면을 벗어나면 임시 핀을 지우고 찍은 위치도 버린다.
+  // 제보·수정 화면에서만 지도를 눌러 박지 위치를 찍는다. 화면을 벗어나면 임시 핀을 지우고 찍은 위치도 버린다.
   useEffect(() => {
-    if (!map || !reporting || submitted) return;
+    if (!map || !placing || submitted) return;
     const offClick = map.onMapClick(setDraft);
     return () => {
       offClick();
       map.showDraft(null);
       setDraft(null);
     };
-  }, [map, reporting, submitted]);
+  }, [map, placing, submitted]);
 
   useEffect(() => {
     map?.showDraft(draft);
@@ -504,13 +524,15 @@ export function MapPage({
   useEffect(() => {
     if (spotId !== undefined || basecampId !== undefined) return;
     if (reporting) document.title = '박지 제보 · 뫼와들';
+    else if (editing) document.title = '박지 수정 · 뫼와들';
     else if (opening) document.title = '베이스캠프 열기 · 뫼와들';
     else if (basecampMode) document.title = '베이스캠프 · 뫼와들';
     else document.title = '지도 · 뫼와들';
-  }, [spotId, basecampId, reporting, opening, basecampMode]);
+  }, [spotId, basecampId, reporting, editing, opening, basecampMode]);
 
   let sheetLabel = '장소 목록';
   if (reporting) sheetLabel = '박지 제보';
+  else if (editing) sheetLabel = '박지 수정';
   else if (opening) sheetLabel = '베이스캠프 열기';
   else if (basecampId !== undefined) sheetLabel = '베이스캠프 상세';
   else if (basecampMode) sheetLabel = '베이스캠프 목록';
@@ -679,6 +701,24 @@ export function MapPage({
                 area.retry();
               }}
             />
+          ) : editing ? (
+            <BakjiEditPanel
+              key={editSpotId}
+              spotId={editSpotId}
+              draft={draft}
+              onCancel={() => navigate(`/spots/${editSpotId}`)}
+              onLoaded={(detail) => {
+                // 지금 위치에 위치 핀을 찍어 두고 지도를 그곳으로 옮긴다. 지도를 누르면 새 위치로 바뀐다.
+                setDraft({ lat: detail.lat, lng: detail.lng });
+                focusOn(focusKey, selectedSpotMarker(detail));
+              }}
+              onSubmitted={() => {
+                // 고친 이름·위치가 지도에 보이도록 마커를 다시 불러오고, 저장이 끝났으니 위치 핀은 치운다.
+                setSubmitted(true);
+                setDraft(null);
+                area.retry();
+              }}
+            />
           ) : spotId === undefined && radiusActive ? (
             <NearbyList nearby={nearby} waitingForMap={map === null && mapFailure === null} />
           ) : spotId === undefined ? (
@@ -695,6 +735,7 @@ export function MapPage({
               spotId={spotId}
               onBack={() => navigate('/map')}
               onLoaded={(detail) => focusOn(focusKey, selectedSpotMarker(detail))}
+              onBakjiDeleted={area.retry}
             />
           )}
         </Sheet>
@@ -762,7 +803,7 @@ export function MapPage({
             <div className="flex flex-col gap-2 lg:hidden">{renderControls(false)}</div>
             {map && (
               <div ref={mapButtonsRef} className="flex flex-wrap justify-end gap-2 lg:justify-start">
-                {!reporting && !basecampMode && !opening && <ReportButton />}
+                {!placing && !basecampMode && !opening && <ReportButton />}
                 <button
                   type="button"
                   aria-pressed={terrainOn}
@@ -973,9 +1014,7 @@ function SpotList({
     <div className="flex flex-col">
       {area.status === 'error' && area.error && (
         <div className="flex flex-col gap-3 px-4 pt-4">
-          <Notice tone="danger" title="장소를 불러오지 못했어요">
-            {area.error}
-          </Notice>
+          <ErrorNotice title="장소를 불러오지 못했어요" error={area.error} traceId={area.traceId ?? undefined} />
           <div>
             <Button variant="secondary" onClick={area.retry}>
               다시 불러오기
@@ -1050,9 +1089,7 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
     <div className="flex flex-col">
       {nearby.status === 'error' && nearby.error && (
         <div className="flex flex-col gap-3 px-4 pt-4">
-          <Notice tone="danger" title="장소를 불러오지 못했어요">
-            {nearby.error}
-          </Notice>
+          <ErrorNotice title="장소를 불러오지 못했어요" error={nearby.error} traceId={nearby.traceId ?? undefined} />
           <div>
             <Button variant="secondary" onClick={nearby.retry}>
               다시 불러오기
@@ -1076,9 +1113,10 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
       {nearby.hasNext && (
         <div className="flex flex-col gap-2 px-4 py-4">
           {nearby.moreError && (
-            <p role="alert" className="text-sm text-danger">
-              {nearby.moreError}
-            </p>
+            <div role="alert" className="flex flex-col gap-1">
+              <p className="text-sm text-danger">{nearby.moreError}</p>
+              {nearby.traceId && <p className="font-mono text-xs text-ink-muted">문의 번호 {nearby.traceId}</p>}
+            </div>
           )}
           <Button variant="secondary" fullWidth loading={nearby.loadingMore} onClick={nearby.loadMore}>
             더 보기

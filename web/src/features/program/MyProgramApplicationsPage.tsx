@@ -7,7 +7,7 @@ import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ListPanel } from '../../components/HubLayout';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
@@ -60,9 +60,11 @@ export function MyProgramApplicationsPage() {
           <>
             {current.error && (
               <div className="flex flex-col gap-3">
-                <Notice tone="danger" title="내 행사 신청을 불러오지 못했어요">
-                  <p>{current.error}</p>
-                </Notice>
+                <ErrorNotice
+                  title="내 행사 신청을 불러오지 못했어요"
+                  error={current.error}
+                  traceId={current.traceId ?? undefined}
+                />
                 {current.items.length === 0 && (
                   <div>
                     <Button variant="secondary" onClick={retry}>

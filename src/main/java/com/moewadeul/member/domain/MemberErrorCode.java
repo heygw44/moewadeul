@@ -18,6 +18,7 @@ public enum MemberErrorCode implements ErrorCode {
     EMAIL_CODE_ATTEMPTS_EXCEEDED(HttpStatus.BAD_REQUEST, "인증 코드를 5번 틀렸어요. 코드를 다시 받아 주세요."),
     EMAIL_ALREADY_VERIFIED(HttpStatus.CONFLICT, "이미 이메일 인증을 마쳤어요."),
     EMAIL_RESEND_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "인증 코드를 너무 자주 요청했어요. 잠시 뒤 다시 시도해 주세요."),
+    SIGNUP_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "가입 요청이 너무 많아요. 잠시 뒤 다시 시도해 주세요."),
     PASSWORD_RESET_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "만료됐거나 이미 쓴 재설정 링크예요. 비밀번호 재설정을 다시 요청해 주세요."),
     PASSWORD_RESET_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "비밀번호 재설정을 너무 자주 요청했어요. 잠시 뒤 다시 시도해 주세요.");
 

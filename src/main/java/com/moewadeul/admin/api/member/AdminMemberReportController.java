@@ -100,8 +100,9 @@ class AdminMemberReportController {
 
     @Operation(
             summary = "신고 기각",
-            description = "검토 중인 신고를 기각(DISMISSED)한다. 그 신고가 만든 임시 정지가 적용 중이면 해제하고 회원의 정지 상태를 "
-                    + "남은 정지에 맞춰 다시 정한다. 본문은 생략할 수 있다. 신고가 없으면 404 NOT_FOUND, 검토 중이 아니면 409 REPORT_INVALID_STATE이다.")
+            description =
+                    "검토 중인 신고를 기각(DISMISSED)한다. 그 신고가 만든 임시 정지는 적용 중이든 이미 만료됐든 해제하고, 적용 중이던 것이 있으면 "
+                            + "회원의 정지 상태를 남은 정지에 맞춰 다시 정한다. 본문은 생략할 수 있다. 신고가 없으면 404 NOT_FOUND, 검토 중이 아니면 409 REPORT_INVALID_STATE이다.")
     @PostMapping("/{id}/dismiss")
     MemberReportStatusResponse dismiss(
             @PathVariable long id,

@@ -402,6 +402,67 @@ class BasecampDetailApiIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("[F-12][BC-09] 장소가 숨김·검토 대기·삭제이면 비로그인 상세는 200이고 spot 필드만 없다")
+    void anonymousDetailOmitsSpotWhenSpotIsNotActive() {
+        for (String spotStatus : new String[] {"HIDDEN", "PENDING_REVIEW", "DELETED"}) {
+            // given
+            long hiddenSpotId = fixture.insertSpot("숨길 박지 " + spotStatus, 37.5, 127.5);
+            long id = fixture.insertBasecamp(leader, hiddenSpotId, "RECRUITING", BasecampApiFixture.DEFAULT_START_DATE);
+            fixture.setSpotStatus(hiddenSpotId, spotStatus);
+
+            // when
+            MvcTestResult result = mvc.get().uri("/api/basecamps/" + id).exchange();
+
+            // then
+            assertThat(result).hasStatus(HttpStatus.OK);
+            assertThat(result).bodyJson().doesNotHavePath("$.spot");
+            assertThat(result).bodyJson().extractingPath("$.basecampId").isEqualTo((int) id);
+            assertThat(result).bodyJson().extractingPath("$.status").isEqualTo("RECRUITING");
+            assertThat(result).bodyJson().extractingPath("$.leader.nickname").isEqualTo(leader.getNickname());
+            assertThat(result).bodyJson().extractingPath("$.safetyNotice").isNotNull();
+            String body = new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+            assertThat(body).doesNotContain("숨길 박지");
+        }
+    }
+
+    @Test
+    @DisplayName("[F-12][BC-09] 장소가 숨겨진 모집 중 베이스캠프는 신청할 수 있는 회원에게도 spot과 canApply·unmetReasons 필드가 없다")
+    void loggedInDetailOmitsSpotAndEligibilityWhenSpotIsHidden() {
+        // given
+        long id = basecamp("RECRUITING");
+        fixture.setSpotStatus(spotId, "HIDDEN");
+
+        // when
+        MvcTestResult result =
+                mvc.get().uri("/api/basecamps/" + id).cookie(memberSession).exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().doesNotHavePath("$.spot");
+        assertThat(result).bodyJson().doesNotHavePath("$.canApply");
+        assertThat(result).bodyJson().doesNotHavePath("$.unmetReasons");
+        assertThat(result).bodyJson().extractingPath("$.myRelation").isEqualTo("NONE");
+    }
+
+    @Test
+    @DisplayName("[F-12][BC-09][BC-23] 장소가 숨겨져도 확정된 베이스캠프의 멤버는 spot 없이 연락 수단을 그대로 본다")
+    void confirmedMemberStillSeesContactWhenSpotIsHidden() {
+        // given
+        long id = confirmedBasecampWithContact();
+        fixture.setSpotStatus(spotId, "HIDDEN");
+
+        // when
+        MvcTestResult result =
+                mvc.get().uri("/api/basecamps/" + id).cookie(memberSession).exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().doesNotHavePath("$.spot");
+        assertThat(result).bodyJson().extractingPath("$.myRelation").isEqualTo("MEMBER");
+        assertThat(result).bodyJson().extractingPath("$.contactInfo").isEqualTo(CONTACT);
+    }
+
     private long basecamp(String status) {
         return fixture.insertBasecamp(leader, spotId, status, BasecampApiFixture.DEFAULT_START_DATE);
     }

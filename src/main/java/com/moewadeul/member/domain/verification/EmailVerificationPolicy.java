@@ -70,12 +70,23 @@ public final class EmailVerificationPolicy {
         return Stream.of(
                         intervalRemaining(history, now),
                         limitRemaining(history.sentInDay(), DAILY_LIMIT, history.oldestSentInDay(), DAILY_WINDOW, now),
-                        limitRemaining(
-                                history.sentByIpInHour(), IP_LIMIT, history.oldestSentByIpInHour(), IP_WINDOW, now),
+                        ipBlockedFor(history.sentByIpInHour(), history.oldestSentByIpInHour(), now),
                         pendingRemaining(history))
                 .flatMap(Optional::stream)
                 .filter(remaining -> remaining.isPositive())
                 .max(Duration::compareTo);
+    }
+
+    /**
+     * 호출하면 한 IP가 최근 {@link #IP_WINDOW} 안에 요청한 발송 횟수가 {@link #IP_LIMIT}에 닿았을 때 풀리기까지 남은 시간을 돌려준다.
+     * 닿지 않았으면 비어 있다. 가입의 첫 발송과 재발송이 이 한도를 함께 쓴다.
+     *
+     * @param sentByIpInHour 이 IP가 그 구간에 요청한 발송 횟수
+     * @param oldestSentByIpInHour 그 구간에서 가장 오래된 발송 시각. 횟수가 0이면 null이다.
+     */
+    public static Optional<Duration> ipBlockedFor(int sentByIpInHour, Instant oldestSentByIpInHour, Instant now) {
+        return limitRemaining(sentByIpInHour, IP_LIMIT, oldestSentByIpInHour, IP_WINDOW, now)
+                .filter(remaining -> remaining.isPositive());
     }
 
     private static Optional<Duration> intervalRemaining(ResendHistory history, Instant now) {

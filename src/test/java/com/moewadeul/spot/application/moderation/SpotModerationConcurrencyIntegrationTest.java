@@ -184,7 +184,7 @@ class SpotModerationConcurrencyIntegrationTest {
     }
 
     @RepeatedTest(20)
-    @DisplayName("[F-06][F-21] 관리자가 숨긴 공공데이터 장소의 복구와 동기화 원천 삭제가 동시에 와도 데드락 없이 복구는 성공하고, 결과는 순서에 맞게 일관된다")
+    @DisplayName("[F-06][F-21] 관리자가 숨긴 공공데이터 장소의 복구와 동기화 원천 삭제가 동시에 와도 데드락 없이 복구는 성공하고, 동기화는 그 장소를 숨기지 않는다")
     void restoreRacingSourceRemovalStaysConsistent() throws Exception {
         // given
         long spotId = savePublicSpot();
@@ -198,17 +198,11 @@ class SpotModerationConcurrencyIntegrationTest {
             return null;
         }));
 
-        // then
+        // then: 숨김 상태일 때는 동기화의 후보가 아니고, 복구가 커밋된 뒤에는 장소가 ACTIVE이면서 표시를 가져 후보에서 빠진다.
         assertThat(failures).isEmpty();
-        if (hiddenBySync.get() == 0) {
-            // 동기화가 후보를 읽을 때 아직 숨김 상태라 건드리지 않았다.
-            assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
-            assertThat(sourceRemovedAt(spotId)).isNull();
-        } else {
-            // 복구가 먼저 커밋된 뒤 동기화가 다시 숨기고 원천 삭제로 표시했다.
-            assertThat(statusOf(spotId)).isEqualTo("HIDDEN");
-            assertThat(sourceRemovedAt(spotId)).isNotNull();
-        }
+        assertThat(hiddenBySync.get()).isZero();
+        assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
+        assertThat(sourceRemovedAt(spotId)).isNotNull();
     }
 
     private long savePublicSpot() {

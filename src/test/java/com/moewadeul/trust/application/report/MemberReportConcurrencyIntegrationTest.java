@@ -111,6 +111,38 @@ class MemberReportConcurrencyIntegrationTest {
                 .isEqualTo("SUSPENDED");
     }
 
+    @RepeatedTest(5)
+    @DisplayName("[F-16][NFR-08] 두 회원이 동시에 서로를 긴급 신고하면 교착 없이 두 신고와 임시 정지 기록이 모두 남는다")
+    void mutualUrgentReportsBothSucceed() throws Exception {
+        // given: 같은 베이스캠프의 두 회원이 서로를 성희롱·위협으로 신고한다.
+        Scenario scenario = scenario();
+        long[] reporters = {scenario.reporterId, scenario.targetId};
+        long[] targets = {scenario.targetId, scenario.reporterId};
+        AtomicInteger turn = new AtomicInteger();
+
+        // when
+        List<Throwable> failures = runTwice(() -> {
+            int index = turn.getAndIncrement();
+            return reportService.report(reporters[index], urgentCommand(targets[index], scenario.basecampId));
+        });
+
+        // then
+        assertThat(failures).isEmpty();
+        assertThat(count("member_report")).isEqualTo(2);
+        assertThat(count("sanction")).isEqualTo(2);
+        assertThat(jdbc.queryForList(
+                        "SELECT status FROM member WHERE id IN (?, ?)",
+                        String.class,
+                        scenario.reporterId,
+                        scenario.targetId))
+                .containsExactly("SUSPENDED", "SUSPENDED");
+    }
+
+    private static MemberReportCommand urgentCommand(long targetId, long basecampId) {
+        return new MemberReportCommand(
+                targetId, basecampId, ReportKind.MEMBER, null, ReportType.HARASSMENT_OR_THREAT, "위협했다");
+    }
+
     private Scenario scenario() {
         CompanionReviewFixture fixture = new CompanionReviewFixture(jdbc, memberRepository);
         long basecampId = fixture.saveBasecamp("COMPLETED", MutableClock.DEFAULT_INSTANT);

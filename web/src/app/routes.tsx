@@ -64,6 +64,14 @@ export const routes: RouteDef[] = [
       );
     },
   },
+  {
+    path: '/bakjis/:spotId/edit',
+    // 세그먼트 수가 달라서 '/bakjis/new'와 겹치지 않는다. 제보한 회원인지는 수정 화면과 서버가 확인한다.
+    render: (params) => {
+      const spotId = toPositiveId(params.spotId);
+      return spotId === null ? <NotFoundPage /> : <MapPage mode="bakjiEdit" editSpotId={spotId} />;
+    },
+  },
   { path: '/basecamps', render: () => <MapPage mode="basecamps" /> },
   {
     path: '/basecamps/new',

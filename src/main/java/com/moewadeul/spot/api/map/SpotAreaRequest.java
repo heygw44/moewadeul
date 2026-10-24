@@ -47,6 +47,9 @@ public record SpotAreaRequest(
         Boolean excludeWarning,
         Boolean hideClosed) {
 
+    // 한 화면의 가로세로 비율을 훨씬 넘는 값이다. 가로로 긴 32:9 모니터도 도 단위로는 4~5배 안쪽이다.
+    private static final double MAX_SIDE_RATIO = 10;
+
     // 위도나 경도가 빠졌으면 @NotNull이 따로 오류를 내므로, 여기서는 둘 다 있을 때만 순서를 본다.
     @AssertTrue(message = "남서쪽 위도는 북동쪽 위도보다 작아야 해요.")
     public boolean isLatitudeOrdered() {
@@ -56,6 +59,21 @@ public record SpotAreaRequest(
     @AssertTrue(message = "남서쪽 경도는 북동쪽 경도보다 작아야 해요.")
     public boolean isLongitudeOrdered() {
         return swLng == null || neLng == null || swLng < neLng;
+    }
+
+    // 영역이 가늘고 길면 서버가 그 영역을 덮는 격자 행을 수만 개 만들어 조회 한 번이 장소 테이블 전체를 훑는다.
+    // 순서가 틀린 영역은 위 검사가 따로 오류를 내므로, 여기서는 두 변이 양수일 때만 비율을 본다.
+    @AssertTrue(message = "지도 영역이 너무 가늘고 길어요. 긴 변은 짧은 변의 10배 이하여야 해요.")
+    public boolean isAreaProportioned() {
+        if (swLat == null || swLng == null || neLat == null || neLng == null) {
+            return true;
+        }
+        double height = neLat - swLat;
+        double width = neLng - swLng;
+        if (height <= 0 || width <= 0) {
+            return true;
+        }
+        return Math.max(height, width) <= Math.min(height, width) * MAX_SIDE_RATIO;
     }
 
     SpotAreaQuery toQuery() {

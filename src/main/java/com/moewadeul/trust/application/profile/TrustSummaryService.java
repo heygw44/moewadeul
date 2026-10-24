@@ -61,8 +61,9 @@ public class TrustSummaryService {
         String verifiedAgeGroup = found.flatMap(verification -> verification.ageGroupIn(currentYear))
                 .map(Enum::name)
                 .orElse(null);
+        // 탈퇴한 회원의 본인확인 기록은 CI 해시 보관 기한까지 남지만 성별은 이미 지워져 있다.
         String verifiedGender =
-                found.map(verification -> verification.getGender().name()).orElse(null);
+                found.map(IdentityVerification::getGender).map(Enum::name).orElse(null);
         return new TrustDetail(
                 found.isPresent(),
                 adult,

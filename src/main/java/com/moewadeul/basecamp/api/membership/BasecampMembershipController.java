@@ -41,7 +41,7 @@ class BasecampMembershipController {
                     + "모집 중이 아니면 409 BASECAMP_INVALID_STATE, 이미 대기 중이거나 멤버(캠프 리더 포함)이면 409 BASECAMP_ALREADY_APPLIED, "
                     + "거절·탈퇴·강퇴된 적이 있으면 409 BASECAMP_REAPPLY_NOT_ALLOWED, "
                     + "합류 조건(최소 신뢰 단계 2, 본인확인한 연령대, 본인확인한 성별)을 충족하지 못하면 403 BASECAMP_CONDITION_NOT_MET, "
-                    + "같은 기간에 확정된 다른 베이스캠프의 멤버이면 409 BASECAMP_DATE_CONFLICT, "
+                    + "같은 기간에 진행 중인(모집 중·마감·확정) 다른 베이스캠프의 ACTIVE 멤버이면 409 BASECAMP_DATE_CONFLICT, "
                     + "대기 신청이 이미 20건이면 409 BASECAMP_PENDING_LIMIT이다.")
     @PostMapping("/api/basecamps/{basecampId}/applications")
     @ResponseStatus(HttpStatus.CREATED)
@@ -70,6 +70,7 @@ class BasecampMembershipController {
             summary = "베이스캠프 합류 신청 목록",
             description =
                     "캠프 리더가 자기 베이스캠프에 들어온 합류 신청을 신청이 오래된 순서로 돌려준다(신청 시각이 같으면 신청 ID 순서). "
+                            + "신청 시각(appliedAt)은 가장 최근에 신청한 시각이라서, 취소했다가 다시 신청한 사람은 다시 신청한 시각으로 정렬되어 뒤로 간다. "
                             + "status를 생략하면 결정을 기다리는 PENDING 신청만 주고, PENDING, APPROVED, REJECTED, CANCELED, EXPIRED 중 하나를 보내면 그 상태만 준다. "
                             + "page는 0부터 시작하고 기본값은 0이다. size는 1~50이고 기본값은 20이다. 응답에는 전체 개수가 없고 다음 페이지가 있는지만 hasNext로 알려 준다. "
                             + "항목마다 applicationId, status, message, appliedAt과 신청자 프로필(memberId, nickname, ageGroup, ageGroupVerified, gender, "
@@ -92,7 +93,7 @@ class BasecampMembershipController {
                     + "베이스캠프가 없으면 404 NOT_FOUND, 캠프 리더가 아니면 403 ACCESS_DENIED, 이 베이스캠프의 신청이 아니면 404 NOT_FOUND, "
                     + "모집 중이 아니거나 신청이 대기 중이 아니면 409 BASECAMP_INVALID_STATE, 정원이 이미 차 있으면 409 BASECAMP_FULL, "
                     + "신청자가 지금 합류 조건(최소 신뢰 단계, 본인확인한 연령대, 본인확인한 성별)을 충족하지 못하면 403 BASECAMP_CONDITION_NOT_MET, "
-                    + "신청자가 같은 기간에 확정된 다른 베이스캠프의 멤버이면 409 BASECAMP_DATE_CONFLICT이다.")
+                    + "신청자가 같은 기간에 진행 중인(모집 중·마감·확정) 다른 베이스캠프의 ACTIVE 멤버이면 409 BASECAMP_DATE_CONFLICT이다.")
     @PostMapping("/api/basecamps/{basecampId}/applications/{applicationId}/approve")
     BasecampApproveResponse approveApplication(
             @AuthenticationPrincipal LoginMember loginMember,

@@ -40,7 +40,11 @@ import java.lang.annotation.Target;
             if (request == null || request.lat() == null || request.lng() == null) {
                 return true;
             }
-            if (Math.abs(request.lat()) > MAX_ABS_LATITUDE || Math.abs(request.lng()) > MAX_ABS_LONGITUDE) {
+            // NaN은 크기 비교가 모두 거짓이라 아래 범위 검사를 통과하고 GeoPoint가 예외를 던진다. 비유한 값은 필드 제약이 거부한다.
+            if (!Double.isFinite(request.lat())
+                    || !Double.isFinite(request.lng())
+                    || Math.abs(request.lat()) > MAX_ABS_LATITUDE
+                    || Math.abs(request.lng()) > MAX_ABS_LONGITUDE) {
                 return true;
             }
             if (WeatherGrid.covers(new GeoPoint(request.lat(), request.lng()))) {

@@ -25,6 +25,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   MEMBER_EMAIL_DUPLICATED: '이미 가입된 이메일이에요. 로그인하거나 다른 이메일을 써 주세요.',
   MEMBER_NICKNAME_DUPLICATED: '다른 회원이 쓰는 닉네임이에요. 다른 닉네임을 정해 주세요.',
   MEMBER_DISPOSABLE_EMAIL: '일회용 이메일은 쓸 수 없어요. 평소 쓰는 이메일을 입력해 주세요.',
+  SIGNUP_LIMITED: '이 네트워크에서 가입 요청이 너무 많아요. 잠시 뒤 다시 가입해 주세요.',
   MEMBER_PASSWORD_POLICY: '비밀번호 규칙에 맞지 않아요. 입력란 아래 안내에 맞춰 다시 정해 주세요.',
   MEMBER_CURRENT_PASSWORD_MISMATCH: '현재 비밀번호가 맞지 않아요. 다시 입력해 주세요.',
   MEMBER_PASSWORD_UNCHANGED: '지금 쓰는 비밀번호와 같아요. 다른 비밀번호를 정해 주세요.',
@@ -69,7 +70,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   BASECAMP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안에서, 일정은 1~3박으로 골라 주세요.',
   BASECAMP_WARNING_SPOT: '공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.',
   BASECAMP_CONDITION_NOT_MET: '이 베이스캠프의 합류 조건에 맞지 않아요. 다른 베이스캠프를 찾아 주세요.',
-  BASECAMP_DATE_CONFLICT: '같은 날짜에 확정된 다른 베이스캠프가 있어요. 다른 날짜를 골라 주세요.',
+  BASECAMP_DATE_CONFLICT: '같은 날짜에 이미 합류한 다른 베이스캠프가 있어서 함께할 수 없어요.',
   BASECAMP_REAPPLY_NOT_ALLOWED: '이 베이스캠프에는 다시 합류 신청할 수 없어요. 다른 베이스캠프를 찾아 주세요.',
   BASECAMP_PENDING_LIMIT:
     '답을 기다리는 합류 신청이 너무 많아요. 내 베이스캠프에서 신청을 취소한 뒤 다시 신청해 주세요.',
@@ -137,4 +138,10 @@ export function toUserMessage(error: unknown): string {
     return error.message;
   }
   return UNEXPECTED_ERROR_MESSAGE;
+}
+
+// 서버가 5xx로 답한 예상 못 한 오류의 추적 ID다. 회원이 문의할 때 알려 주면 운영자가 서버 로그를 찾는다.
+// 4xx는 회원이 고칠 수 있는 오류라서 ID를 보여 주지 않는다.
+export function serverTraceId(error: unknown): string | undefined {
+  return error instanceof ApiError && error.status >= 500 ? error.traceId : undefined;
 }

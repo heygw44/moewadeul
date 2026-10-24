@@ -25,6 +25,7 @@
         FROM memory_image
         WHERE member_id = #{memberId}
           AND memory_id IS NULL
+          AND id &gt; #{afterId}
         ORDER BY id
         LIMIT #{limit}
     </select>

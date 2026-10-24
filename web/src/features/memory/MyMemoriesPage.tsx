@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { toUserMessage } from '../../api/errors';
 import { fetchMyMemories } from '../../api/memories';
 import type { MemorySummary } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { HubLayout } from '../../components/HubLayout';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
@@ -92,9 +91,7 @@ export function MyMemoriesPage() {
   } else if ('error' in current) {
     body = (
       <div role="alert" className="flex flex-col gap-3">
-        <Notice tone="danger" title="기록을 불러오지 못했어요">
-          {toUserMessage(current.error)}
-        </Notice>
+        <ErrorNotice title="기록을 불러오지 못했어요" error={current.error} />
         <div>
           <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
             다시 불러오기

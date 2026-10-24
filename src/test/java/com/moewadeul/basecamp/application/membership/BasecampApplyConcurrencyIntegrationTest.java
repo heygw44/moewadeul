@@ -172,10 +172,11 @@ class BasecampApplyConcurrencyIntegrationTest {
     private void savePendingApplications(long basecampId, int count) {
         for (int i = 0; i < count; i++) {
             jdbc.update(
-                    "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, created_at, updated_at)"
-                            + " VALUES (?, ?, 'PENDING', ?, ?)",
+                    "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, applied_at, created_at,"
+                            + " updated_at) VALUES (?, ?, 'PENDING', ?, ?, ?)",
                     basecampId,
                     saveMember(),
+                    AT_DEFAULT_INSTANT,
                     AT_DEFAULT_INSTANT,
                     AT_DEFAULT_INSTANT);
         }

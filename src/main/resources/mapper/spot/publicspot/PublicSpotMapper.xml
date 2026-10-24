@@ -256,4 +256,16 @@
         </foreach>
     </update>
 
+    <!-- 표시가 이미 있는 행은 건드리지 않는다. 그래야 동기화가 남긴 숨긴 시각이 관리자 복구로 덮이지 않는다. -->
+    <update id="markSourceRemovedIfAbsent">
+        UPDATE public_spot_detail
+        SET source_removed_at = #{now},
+            updated_at = #{now}
+        WHERE source_removed_at IS NULL
+          AND spot_id IN
+        <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
+            #{spotId}
+        </foreach>
+    </update>
+
 </mapper>

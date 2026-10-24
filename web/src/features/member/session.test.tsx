@@ -2,6 +2,8 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { apiFetch } from '../../api/client';
+import { readMapScreen, rememberMapScreen } from '../spot/mapScreenMemory';
 import { SessionProvider, useSession } from './session';
 
 // React가 act 밖의 상태 변경을 경고하지 않도록 테스트 환경임을 알린다.
@@ -27,6 +29,16 @@ function json(status: number, body: unknown) {
 function Probe() {
   const session = useSession();
   return <p data-testid="probe">{session.status}</p>;
+}
+
+// 화면 안에서 세션을 다시 확인하는 버튼이다(탈퇴한 뒤 화면이 하는 일과 같다).
+function RefreshButton() {
+  const session = useSession();
+  return (
+    <button type="button" onClick={() => void session.refresh().catch(() => null)}>
+      세션 확인
+    </button>
+  );
 }
 
 describe('SessionProvider', () => {
@@ -128,5 +140,55 @@ describe('SessionProvider', () => {
 
     expect(alertText()).toBeNull();
     expect(probe()).toBe('anonymous');
+  });
+
+  describe('앞 회원의 지도 화면 기억', () => {
+    async function mountWithRefreshButton() {
+      await act(async () => {
+        root.render(
+          <SessionProvider>
+            <RefreshButton />
+          </SessionProvider>,
+        );
+      });
+      await advance(0);
+    }
+
+    const REMEMBERED = { radiusSearch: { center: { lat: 37.5, lng: 127 }, radiusKm: 5, label: '서울' } };
+
+    it('로그인한 채 요청이 401을 받으면 지운다', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) =>
+          url === '/api/me' ? json(200, ME) : json(401, { code: 'AUTHENTICATION_REQUIRED', message: 'x' }),
+        ),
+      );
+      await mountWithRefreshButton();
+      rememberMapScreen(REMEMBERED);
+
+      await act(async () => {
+        await apiFetch('/api/spots').catch(() => null);
+      });
+
+      expect(readMapScreen().radiusSearch).toBeNull();
+    });
+
+    it('세션을 다시 확인해 로그인하지 않은 상태가 되면(탈퇴 뒤) 지운다', async () => {
+      let signedIn = true;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => (signedIn ? json(200, ME) : json(401, { code: 'AUTHENTICATION_REQUIRED', message: 'x' }))),
+      );
+      await mountWithRefreshButton();
+      rememberMapScreen(REMEMBERED);
+      signedIn = false;
+
+      await act(async () => {
+        container.querySelector('button')?.click();
+      });
+      await advance(0);
+
+      expect(readMapScreen().radiusSearch).toBeNull();
+    });
   });
 });

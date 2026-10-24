@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { toUserMessage } from '../../api/errors';
+import { serverTraceId, toUserMessage } from '../../api/errors';
 import { searchBasecamps } from '../../api/basecamps';
 import type { BasecampSearchItem, SpotType } from '../../api/types';
 import type { MapView, SpotMarkerData } from '../../map/types';
@@ -17,6 +17,8 @@ export type BasecampsInView = {
   hasNext: boolean;
   status: SearchStatus;
   error: string | null;
+  // error나 moreError가 5xx 응답이면 그 추적 ID다. 목록 화면이 문의 번호로 보여 준다.
+  traceId: string | null;
   loadingMore: boolean;
   moreError: string | null;
   retry(): void;
@@ -29,6 +31,8 @@ type SearchState = {
   hasNext: boolean;
   status: SearchStatus;
   error: string | null;
+  // error나 moreError가 5xx 응답이면 그 추적 ID다. 목록 화면이 문의 번호로 보여 준다.
+  traceId: string | null;
   loadingMore: boolean;
   moreError: string | null;
 };
@@ -39,6 +43,7 @@ const INITIAL_STATE: SearchState = {
   hasNext: false,
   status: 'idle',
   error: null,
+  traceId: null,
   loadingMore: false,
   moreError: null,
 };
@@ -128,6 +133,7 @@ export function useBasecampsInView(
             hasNext: response.hasNext,
             status: 'ready',
             error: null,
+            traceId: null,
             loadingMore: false,
             moreError: null,
           });
@@ -135,13 +141,19 @@ export function useBasecampsInView(
         (error: unknown) => {
           // 취소한 요청의 실패는 새 요청이 이어받으므로 화면에 반영하지 않는다.
           if (controller.signal.aborted) return;
-          setState((previous) => ({ ...previous, status: 'error', error: toUserMessage(error), loadingMore: false }));
+          setState((previous) => ({
+            ...previous,
+            status: 'error',
+            error: toUserMessage(error),
+            traceId: serverTraceId(error) ?? null,
+            loadingMore: false,
+          }));
         },
       );
     };
 
     const reload = () => {
-      setState((previous) => ({ ...previous, status: 'loading', error: null, moreError: null }));
+      setState((previous) => ({ ...previous, status: 'loading', error: null, moreError: null, traceId: null }));
       request();
     };
 
@@ -152,7 +164,7 @@ export function useBasecampsInView(
       if (!area || !current.hasNext || current.loadingMore || current.status !== 'ready') return;
       const controller = new AbortController();
       moreControllerRef.current = controller;
-      setState((previous) => ({ ...previous, loadingMore: true, moreError: null }));
+      setState((previous) => ({ ...previous, loadingMore: true, moreError: null, traceId: null }));
 
       searchBasecamps({ ...area, ...filterQuery, page: current.page + 1 }, controller.signal).then(
         (response) => {
@@ -166,13 +178,19 @@ export function useBasecampsInView(
             hasNext: response.hasNext,
             status: 'ready',
             error: null,
+            traceId: null,
             loadingMore: false,
             moreError: null,
           });
         },
         (error: unknown) => {
           if (controller.signal.aborted) return;
-          setState((previous) => ({ ...previous, loadingMore: false, moreError: toUserMessage(error) }));
+          setState((previous) => ({
+            ...previous,
+            loadingMore: false,
+            moreError: toUserMessage(error),
+            traceId: serverTraceId(error) ?? null,
+          }));
         },
       );
     };

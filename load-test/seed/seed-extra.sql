@@ -242,10 +242,11 @@ BEGIN
     FROM lt_slot t JOIN lt_bc b ON b.s = t.s
     WHERE t.kind IN ('ACTIVE', 'LEFT');
 
-    INSERT IGNORE INTO basecamp_application (basecamp_id, applicant_id, message, status, decided_at, created_at, updated_at)
+    INSERT IGNORE INTO basecamp_application (basecamp_id, applicant_id, message, status, decided_at, applied_at, created_at, updated_at)
     SELECT b.basecamp_id, t.member_id, '함께 가고 싶어요.',
            CASE t.kind WHEN 'ACTIVE' THEN 'APPROVED' WHEN 'LEFT' THEN 'APPROVED' ELSE t.kind END,
            IF(t.kind = 'PENDING', NULL, b.created_at + INTERVAL t.k MINUTE),
+           b.created_at + INTERVAL t.k MINUTE - INTERVAL 30 SECOND,
            b.created_at + INTERVAL t.k MINUTE - INTERVAL 30 SECOND, b.created_at + INTERVAL t.k MINUTE
     FROM lt_slot t JOIN lt_bc b ON b.s = t.s
     WHERE t.k > 0;

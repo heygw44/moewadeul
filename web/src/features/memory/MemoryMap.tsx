@@ -82,33 +82,35 @@ export function MemoryMap({
     view?.setSelected(selectedId);
   }, [view, selectedId, pins]);
 
-  if (failure) {
-    return (
-      <div className="flex flex-col gap-3">
-        <Notice tone="info" title="지도를 볼 수 없어요">
-          {failure.reason === 'NO_KEY' ? (
-            <p>아래 목록에서 기록을 열어 볼 수 있어요.</p>
-          ) : (
-            <p>아래 목록에서 기록을 열어 볼 수 있어요.</p>
-          )}
-        </Notice>
-        {failure.reason !== 'NO_KEY' && (
-          <div>
-            <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
-              지도 다시 불러오기
-            </Button>
-          </div>
-        )}
-      </div>
-    );
+  // 다시 시도할 때 지도를 만들 요소가 있어야 하므로, 실패해도 지도 칸은 숨기기만 하고 화면에서 빼지 않는다.
+  function retryMap() {
+    setFailure(null);
+    setAttempt((value) => value + 1);
   }
 
   return (
-    <div
-      ref={hostRef}
-      role="region"
-      aria-label="기록 지도"
-      className="relative h-72 w-full overflow-hidden rounded-sheet bg-fill sm:h-96"
-    />
+    <>
+      {failure && (
+        <div className="flex flex-col gap-3">
+          <Notice tone="info" title="지도를 볼 수 없어요">
+            <p>아래 목록에서 기록을 열어 볼 수 있어요.</p>
+          </Notice>
+          {failure.reason !== 'NO_KEY' && (
+            <div>
+              <Button variant="secondary" onClick={retryMap}>
+                지도 다시 불러오기
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+      <div
+        ref={hostRef}
+        hidden={failure !== null}
+        role="region"
+        aria-label="기록 지도"
+        className="relative h-72 w-full overflow-hidden rounded-sheet bg-fill sm:h-96"
+      />
+    </>
   );
 }

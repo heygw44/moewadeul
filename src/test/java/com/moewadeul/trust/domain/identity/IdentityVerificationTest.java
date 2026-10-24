@@ -122,6 +122,36 @@ class IdentityVerificationTest {
         assertThatThrownBy(() -> verification.withdraw(NOW, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    @DisplayName("[PV-05] 탈퇴한 회원에게 제재가 확정되면 보관 기한을 탈퇴 시각부터 365일 뒤로 늘리고 수정 시각을 적는다")
+    void extendsRetentionFromWithdrawalTime() {
+        IdentityVerification verification = verificationBornIn(1995);
+        Instant withdrawnAt = NOW.plus(Duration.ofDays(3));
+        verification.withdraw(IdentityVerification.ciRetainedUntil(withdrawnAt, false), withdrawnAt);
+        Instant sanctionedAt = withdrawnAt.plus(Duration.ofDays(10));
+
+        verification.extendRetentionForSanction(withdrawnAt, sanctionedAt);
+
+        assertThat(verification.getCiRetainedUntil()).isEqualTo(withdrawnAt.plus(Duration.ofDays(365)));
+        assertThat(verification.getUpdatedAt()).isEqualTo(sanctionedAt);
+    }
+
+    @Test
+    @DisplayName("[PV-05] 탈퇴하지 않아 보관 기한이 없는 기록과 이미 365일 뒤까지 남기는 기록은 제재가 확정돼도 바꾸지 않는다")
+    void doesNotChangeRetentionWhenNotWithdrawnOrAlreadyExtended() {
+        IdentityVerification active = verificationBornIn(1995);
+        IdentityVerification alreadyExtended = verificationBornIn(1995);
+        alreadyExtended.withdraw(IdentityVerification.ciRetainedUntil(NOW, true), NOW);
+
+        active.extendRetentionForSanction(NOW, NOW.plusSeconds(60));
+        alreadyExtended.extendRetentionForSanction(NOW, NOW.plusSeconds(60));
+
+        assertThat(active.getCiRetainedUntil()).isNull();
+        assertThat(active.getUpdatedAt()).isEqualTo(NOW);
+        assertThat(alreadyExtended.getCiRetainedUntil()).isEqualTo(NOW.plus(Duration.ofDays(365)));
+        assertThat(alreadyExtended.getUpdatedAt()).isEqualTo(NOW);
+    }
+
     private static IdentityVerification verificationBornIn(int birthYear) {
         return IdentityVerification.verify(
                 1L, new VerifiedIdentity("ci", birthYear, Gender.FEMALE), CI_HASH, IdentityProviderType.FAKE, NOW);

@@ -363,8 +363,8 @@ class BasecampSearchMapperIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-12][BC-06] 회원이 ACTIVE 멤버로 들어 있는 확정된 베이스캠프의 일정만 읽는다")
-    void confirmedSchedulesOfActiveMembership() {
+    @DisplayName("[F-12][BC-06] 회원이 ACTIVE 멤버로 들어 있는 모집 중·마감·확정 베이스캠프의 일정만 읽는다")
+    void inProgressSchedulesOfActiveMembership() {
         // given
         Member leader = saveMember();
         Member viewer = saveMember();
@@ -375,25 +375,44 @@ class BasecampSearchMapperIntegrationTest {
         insertMemberRow(confirmedLeft, viewer, "MEMBER", "LEFT");
         long recruitingMember = insertBasecamp(leader, spotId, "RECRUITING", DAY, 4);
         insertMemberRow(recruitingMember, viewer, "MEMBER", "ACTIVE");
+        long closedMember = insertBasecamp(leader, spotId, "CLOSED", DAY, 4);
+        insertMemberRow(closedMember, viewer, "MEMBER", "ACTIVE");
+        long completedMember = insertBasecamp(leader, spotId, "COMPLETED", DAY, 4);
+        insertMemberRow(completedMember, viewer, "MEMBER", "ACTIVE");
+        long canceledMember = insertBasecamp(leader, spotId, "CANCELED", DAY, 4);
+        insertMemberRow(canceledMember, viewer, "MEMBER", "ACTIVE");
         insertBasecamp(leader, spotId, "CONFIRMED", DAY, 4);
 
         // when
-        List<ConfirmedScheduleRow> rows = mapper.selectConfirmedSchedules(viewer.getId());
+        List<InProgressScheduleRow> rows = mapper.selectInProgressSchedules(viewer.getId());
 
         // then
-        assertThat(rows).containsExactly(new ConfirmedScheduleRow(confirmedMember, DAY, DAY.plusDays(2)));
+        assertThat(rows)
+                .containsExactlyInAnyOrder(
+                        new InProgressScheduleRow(confirmedMember, DAY, DAY.plusDays(2)),
+                        new InProgressScheduleRow(recruitingMember, DAY, DAY.plusDays(2)),
+                        new InProgressScheduleRow(closedMember, DAY, DAY.plusDays(2)));
     }
 
     @Test
-    @DisplayName("[F-12] 장소 요약은 장소의 이름·유형·좌표를 읽고, 없는 장소는 null이다")
+    @DisplayName("[F-12][BC-09] 장소 요약은 ACTIVE 장소의 이름·유형·좌표를 읽고, 없거나 숨김·검토 대기·삭제인 장소는 null이다")
     void spotSummary() {
         // given
         long spotId = insertSpot("능선 끝 평지", new Coordinate(37.5, 127.25));
+        long hiddenSpot = insertSpot("숨김 장소", new Coordinate(37.5, 127.5));
+        long pendingSpot = insertSpot("검토 대기 장소", new Coordinate(37.5, 127.5));
+        long deletedSpot = insertSpot("삭제 장소", new Coordinate(37.5, 127.5));
+        jdbc.update("UPDATE spot SET status = 'HIDDEN' WHERE id = ?", hiddenSpot);
+        jdbc.update("UPDATE spot SET status = 'PENDING_REVIEW' WHERE id = ?", pendingSpot);
+        jdbc.update("UPDATE spot SET status = 'DELETED' WHERE id = ?", deletedSpot);
 
         // when & then
         assertThat(mapper.selectSpotSummary(spotId))
                 .isEqualTo(new SpotSummaryRow(spotId, "능선 끝 평지", "BAKJI", 37.5, 127.25));
         assertThat(mapper.selectSpotSummary(spotId + 1000)).isNull();
+        assertThat(mapper.selectSpotSummary(hiddenSpot)).isNull();
+        assertThat(mapper.selectSpotSummary(pendingSpot)).isNull();
+        assertThat(mapper.selectSpotSummary(deletedSpot)).isNull();
     }
 
     // 상세 조건 없이 지역·출발일·남은 자리만 거는 조건이다.
@@ -504,8 +523,9 @@ class BasecampSearchMapperIntegrationTest {
 
     private void insertApplicationRow(long basecampId, Member applicant, String status) {
         jdbc.update(
-                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ?, '2026-10-05 03:00:00', '2026-10-05 03:00:00')",
+                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, applied_at, created_at,"
+                        + " updated_at) VALUES (?, ?, ?, '2026-10-05 03:00:00', '2026-10-05 03:00:00',"
+                        + " '2026-10-05 03:00:00')",
                 basecampId,
                 applicant.getId(),
                 status);

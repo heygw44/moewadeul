@@ -3,10 +3,15 @@ package com.moewadeul.common.trace;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.FilterChain;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -58,6 +63,35 @@ class TraceIdFilterTest {
                         filter.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(), failingChain))
                 .isInstanceOf(IllegalStateException.class);
         assertThat(MDC.get(TraceIdFilter.MDC_KEY)).isNull();
+    }
+
+    @Test
+    @DisplayName("체인에서 예외가 나면 추적 ID가 MDC에 있는 채로 ERROR 로그를 남기고 예외를 다시 던진다")
+    void logsFilterStageExceptionWithTraceId() {
+        // given
+        Logger filterLogger = (Logger) LoggerFactory.getLogger(TraceIdFilter.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        filterLogger.addAppender(appender);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain failingChain = (req, res) -> {
+            throw new IllegalStateException("pool exhausted");
+        };
+
+        try {
+            // when
+            assertThatThrownBy(() -> filter.doFilter(new MockHttpServletRequest(), response, failingChain))
+                    .isInstanceOf(IllegalStateException.class);
+        } finally {
+            filterLogger.detachAppender(appender);
+        }
+
+        // then
+        assertThat(appender.list).singleElement().satisfies(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.ERROR);
+            assertThat(event.getMDCPropertyMap())
+                    .containsEntry(TraceIdFilter.MDC_KEY, response.getHeader(TraceIdFilter.HEADER));
+        });
     }
 
     @Test

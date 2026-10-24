@@ -7,7 +7,9 @@ import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
 import com.moewadeul.program.domain.ProgramException;
 import com.moewadeul.program.domain.ProgramRepository;
+import com.moewadeul.program.infra.enrollment.ExpiryTarget;
 import com.moewadeul.program.infra.enrollment.ProgramApplicationMapper;
+import com.moewadeul.program.infra.enrollment.ProgramPaymentExpiryMapper;
 import com.moewadeul.program.infra.enrollment.SeatClaim;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.time.Clock;
@@ -32,6 +34,8 @@ public class ProgramApplyService {
 
     private final ProgramRepository programRepository;
     private final ProgramApplicationMapper programApplicationMapper;
+    private final ProgramPaymentExpiryMapper expiryMapper;
+    private final ProgramPaymentExpiryApplier expiryApplier;
     private final TrustSummaryService trustSummaryService;
     private final Clock clock;
 
@@ -46,6 +50,9 @@ public class ProgramApplyService {
      *   <li>이미 결제 대기·확정 신청이 있으면 PROGRAM_ALREADY_APPLIED
      *   <li>남은 자리가 없으면 PROGRAM_SOLD_OUT
      * </ol>
+     *
+     * <p>본인의 결제 기한이 지난 결제 대기 신청이 아직 만료 작업을 기다리고 있으면, 활성 신청을 검사하기 전에 같은 트랜잭션에서 먼저 만료시킨다.
+     * 그렇지 않으면 기한이 지나 자리가 이미 풀렸는데도 본인만 PROGRAM_ALREADY_APPLIED를 받고, 다른 회원이 그 자리를 먼저 가져간다.
      */
     @Transactional
     public ProgramApplyResult apply(long memberId, long programId) {
@@ -55,6 +62,7 @@ public class ProgramApplyService {
         Instant now = clock.instant();
         program.requireApplicableAt(now);
         requireTrustLevel(program, memberId);
+        expireOwnOverdueApplication(programId, memberId, now);
         if (programApplicationMapper.existsActive(programId, memberId)) {
             throw new ProgramException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
         }
@@ -76,6 +84,15 @@ public class ProgramApplyService {
         int trustLevel = trustSummaryService.summarize(memberId).trustLevel();
         if (!program.isTrustLevelSufficient(trustLevel)) {
             throw new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
+        }
+    }
+
+    // 기한이 지난 결제 대기 신청은 결제할 수 없고 자리도 이미 풀렸다. 만료 작업이 아직 돌지 않았다는 이유로 본인의 재신청을 막지 않는다.
+    // 만료 처리는 만료 작업과 같은 조건부 UPDATE라서, 그 사이 결제가 먼저 확정했다면 아무것도 바꾸지 않고 이어지는 활성 신청 검사가 거부한다.
+    private void expireOwnOverdueApplication(long programId, long memberId, Instant now) {
+        ExpiryTarget overdue = expiryMapper.selectOverdueByMember(programId, memberId, now);
+        if (overdue != null) {
+            expiryApplier.expire(overdue, now);
         }
     }
 

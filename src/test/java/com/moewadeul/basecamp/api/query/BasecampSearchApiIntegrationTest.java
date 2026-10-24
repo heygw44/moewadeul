@@ -240,6 +240,34 @@ class BasecampSearchApiIntegrationTest {
     }
 
     @Test
+    @DisplayName(
+            "[F-12][BC-06] 모집 중인 베이스캠프의 ACTIVE 멤버는 기간이 겹치는 다른 베이스캠프에 DATE_CONFLICT가 나오고, 자기 베이스캠프에는 ALREADY_JOINED만 나온다")
+    void dateConflictWithRecruitingMembership() {
+        // given
+        Member viewer = fixture.saveMember();
+        Cookie session = fixture.identityVerifiedSession(viewer, "MALE");
+        long joined = fixture.insertBasecamp(fixture.saveMember(), spotId, "RECRUITING", START);
+        fixture.insertMemberRow(joined, viewer, "MEMBER", "ACTIVE");
+        long overlapping = fixture.insertBasecamp(leader, spotId, "RECRUITING", START.plusDays(1));
+
+        // when
+        MvcTestResult result = mvc.get().uri(SEARCH).cookie(session).exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().extractingPath("$.content[0].basecampId").isEqualTo((int) joined);
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.content[0].unmetReasons")
+                .isEqualTo(List.of("ALREADY_JOINED"));
+        assertThat(result).bodyJson().extractingPath("$.content[1].basecampId").isEqualTo((int) overlapping);
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.content[1].unmetReasons")
+                .isEqualTo(List.of("DATE_CONFLICT"));
+    }
+
+    @Test
     @DisplayName("[F-12] 지도 영역·출발일·남은 자리 조건과 페이지를 보내면 조건에 맞는 베이스캠프만 한 페이지씩 준다")
     void areaDateVacancyAndPaging() {
         // given

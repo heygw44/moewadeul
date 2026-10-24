@@ -95,7 +95,8 @@ export interface BasecampDetail {
   basecampId: number;
   title: string;
   description: string;
-  spot: BasecampDetailSpot;
+  // 장소가 지도에 보이는(ACTIVE) 동안만 온다. 숨김·삭제·검토 대기 장소이면 서버가 필드를 뺀다.
+  spot?: BasecampDetailSpot;
   startDate: string;
   endDate: string;
   capacity: number;

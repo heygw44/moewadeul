@@ -7,7 +7,7 @@ import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { HubLayout, ListPanel } from '../../components/HubLayout';
 import { EmptyState } from '../../components/EmptyState';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
@@ -54,9 +54,7 @@ export function ProgramListPage() {
     >
       {current?.error && (
         <div className="flex flex-col gap-3">
-          <Notice tone="danger" title="행사를 불러오지 못했어요">
-            <p>{current.error}</p>
-          </Notice>
+          <ErrorNotice title="행사를 불러오지 못했어요" error={current.error} traceId={current.traceId ?? undefined} />
           {current.items.length === 0 && (
             <div>
               <Button variant="secondary" onClick={retry}>

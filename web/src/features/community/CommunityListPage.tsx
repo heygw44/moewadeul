@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { listPosts } from '../../api/community';
-import { toUserMessage } from '../../api/errors';
 import { fetchSpotDetail } from '../../api/spots';
 import type { CommunityPostSummary, CommunitySearchType, NumberedPage } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { AsideSection, HubLayout, ListPanel } from '../../components/HubLayout';
 import { Icon } from '../../components/icons';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Pagination } from '../../components/Pagination';
 import { SelectField } from '../../components/SelectField';
 import { Skeleton } from '../../components/Skeleton';
@@ -85,7 +84,7 @@ function listPath({ spotId, tab, searchType, keyword, page }: ListQuery): string
   return query ? `/community?${query}` : '/community';
 }
 
-type PageResult = { key: string; data: NumberedPage<CommunityPostSummary> | null; error: string | null };
+type PageResult = { key: string; data: NumberedPage<CommunityPostSummary> | null; error: { cause: unknown } | null };
 
 // 조건이나 페이지가 바뀌면 이전 요청을 취소하고 그 페이지만 새로 받는다.
 function usePostPage(query: ListQuery) {
@@ -107,7 +106,7 @@ function usePostPage(query: ListQuery) {
         if (!controller.signal.aborted) setResult({ key, data, error: null });
       },
       (caught: unknown) => {
-        if (!controller.signal.aborted) setResult({ key, data: null, error: toUserMessage(caught) });
+        if (!controller.signal.aborted) setResult({ key, data: null, error: { cause: caught } });
       },
     );
     return () => controller.abort();
@@ -153,9 +152,7 @@ export function CommunityListPage() {
       )}
       {current?.error && (
         <div role="alert" className="flex flex-col gap-3">
-          <Notice tone="danger" title="글을 불러오지 못했어요">
-            <p>{current.error}</p>
-          </Notice>
+          <ErrorNotice title="글을 불러오지 못했어요" error={current.error.cause} />
           <div>
             <Button variant="secondary" onClick={retry}>
               다시 불러오기

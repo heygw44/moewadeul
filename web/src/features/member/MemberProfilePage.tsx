@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import { fetchMemberProfile } from '../../api/members';
 import type { MemberProfile } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Evidence } from '../../components/Evidence';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
@@ -64,9 +63,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   } else {
     body = (
       <div className="flex flex-col gap-3">
-        <Notice tone="danger" title="프로필을 불러오지 못했어요">
-          {toUserMessage(current.error)}
-        </Notice>
+        <ErrorNotice title="프로필을 불러오지 못했어요" error={current.error} />
         <div>
           <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
             다시 불러오기

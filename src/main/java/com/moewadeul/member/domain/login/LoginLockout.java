@@ -1,7 +1,11 @@
 package com.moewadeul.member.domain.login;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +23,20 @@ public final class LoginLockout {
     /** 호출하면 실패를 셀 구간의 시작 시각을 돌려준다. 이 시각과 같거나 더 이른 실패는 세지 않는다. */
     public static Instant windowStart(Instant now) {
         return now.minus(WINDOW);
+    }
+
+    /**
+     * 호출하면 이메일 하나의 로그인 시도를 한 줄로 세우는 잠금 행의 키를 돌려준다. 원문 대신 SHA-256 소문자 16진수 64자를 쓴다.
+     * 가입하지 않은 이메일도 같은 방식으로 잠그므로, 응답 차이로 가입 여부가 드러나지 않는다.
+     */
+    public static String attemptKey(String attemptedEmail) {
+        try {
+            byte[] digest =
+                    MessageDigest.getInstance("SHA-256").digest(attemptedEmail.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256을 쓸 수 없습니다.", e);
+        }
     }
 
     /**

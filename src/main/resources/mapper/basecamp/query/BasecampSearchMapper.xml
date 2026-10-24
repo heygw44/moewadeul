@@ -128,7 +128,7 @@
           AND (m.id IS NOT NULL OR a.id IS NOT NULL)
     </select>
 
-    <select id="selectConfirmedSchedules" resultType="com.moewadeul.basecamp.infra.query.ConfirmedScheduleRow">
+    <select id="selectInProgressSchedules" resultType="com.moewadeul.basecamp.infra.query.InProgressScheduleRow">
         SELECT b.id AS basecamp_id,
                b.start_date AS start_date,
                b.end_date AS end_date
@@ -136,10 +136,11 @@
         JOIN basecamp_member m ON m.basecamp_id = b.id
         WHERE m.member_id = #{viewerId}
           AND m.status = 'ACTIVE'
-          AND b.status = 'CONFIRMED'
+          AND b.status IN ('RECRUITING', 'CLOSED', 'CONFIRMED')
     </select>
 
-    <!-- SRID 4326 점에서 ST_Latitude는 위도를, ST_Longitude는 경도를 꺼낸다. 검색 결과의 장소 좌표와 같은 방식이다. -->
+    <!-- SRID 4326 점에서 ST_Latitude는 위도를, ST_Longitude는 경도를 꺼낸다. 검색 결과의 장소 좌표와 같은 방식이다.
+         숨김·삭제·검토 대기 장소는 상세에 드러내지 않으므로 ACTIVE 장소만 읽는다. -->
     <select id="selectSpotSummary" resultType="com.moewadeul.basecamp.infra.query.SpotSummaryRow">
         SELECT s.id AS spot_id,
                s.name AS name,
@@ -148,6 +149,7 @@
                ST_Longitude(s.location) AS lng
         FROM spot s
         WHERE s.id = #{spotId}
+          AND s.status = 'ACTIVE'
     </select>
 
 </mapper>

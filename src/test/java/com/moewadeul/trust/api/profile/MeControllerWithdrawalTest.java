@@ -58,7 +58,7 @@ class MeControllerWithdrawalTest {
         MvcTestResult result = delete("{\"password\":\"Valid-pass1\"}", login());
 
         assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
-        verify(withdrawalService).withdraw(MEMBER_ID, "Valid-pass1");
+        verify(withdrawalService).withdraw(MEMBER_ID, "Valid-pass1", "127.0.0.1");
         verify(loginSessionManager).logout(any(), any());
     }
 

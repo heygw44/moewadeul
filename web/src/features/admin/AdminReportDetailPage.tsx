@@ -8,7 +8,7 @@ import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { Dialog } from '../../components/Dialog';
 import { Evidence } from '../../components/Evidence';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { PageCard } from '../../components/PageLayout';
 import { SelectField } from '../../components/SelectField';
 import { Skeleton } from '../../components/Skeleton';
@@ -39,8 +39,15 @@ const SANCTION_OPTIONS = [
   { value: 'PERMANENT', label: '영구 정지' },
 ];
 
+// 요청이 실패했을 때 화면에 보여 줄 문구와 원래 오류다. 원래 오류는 서버 오류의 문의 번호를 꺼내는 데 쓴다.
+type Failure = { message: string; error: unknown };
+
+function toFailure(error: unknown): Failure {
+  return { message: adminErrorMessage(error), error };
+}
+
 type DetailState =
-  { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; detail: AdminReportDetail };
+  { status: 'loading' } | ({ status: 'error' } & Failure) | { status: 'ready'; detail: AdminReportDetail };
 
 export function AdminReportDetailPage({ reportId }: { reportId: number }) {
   return (
@@ -62,7 +69,7 @@ function ReportDetail({ reportId }: { reportId: number }) {
         if (!controller.signal.aborted) setState({ status: 'ready', detail });
       },
       (caught: unknown) => {
-        if (!controller.signal.aborted) setState({ status: 'error', message: adminErrorMessage(caught) });
+        if (!controller.signal.aborted) setState({ status: 'error', ...toFailure(caught) });
       },
     );
     return () => controller.abort();
@@ -78,9 +85,7 @@ function ReportDetail({ reportId }: { reportId: number }) {
   if (state.status === 'error') {
     return (
       <div role="alert" className="flex flex-col gap-3">
-        <Notice tone="danger" title="신고를 불러오지 못했어요">
-          <p>{state.message}</p>
-        </Notice>
+        <ErrorNotice title="신고를 불러오지 못했어요" error={state.error} message={state.message} />
         <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
@@ -214,7 +219,7 @@ function ActionCard({ detail, onChanged }: { detail: AdminReportDetail; onChange
 
 function StartReviewCard({ reportId, onChanged }: { reportId: number; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   async function start() {
     if (busy) return;
@@ -224,7 +229,7 @@ function StartReviewCard({ reportId, onChanged }: { reportId: number; onChanged:
       await startReportReview(reportId);
       onChanged();
     } catch (caught) {
-      setError(adminErrorMessage(caught));
+      setError(toFailure(caught));
     } finally {
       setBusy(false);
     }
@@ -235,9 +240,7 @@ function StartReviewCard({ reportId, onChanged }: { reportId: number; onChanged:
       <p className="text-sm text-ink-muted">검토를 시작하면 조치나 기각을 고를 수 있어요.</p>
       {error && (
         <div role="alert">
-          <Notice tone="danger" title="검토를 시작하지 못했어요">
-            <p>{error}</p>
-          </Notice>
+          <ErrorNotice title="검토를 시작하지 못했어요" error={error.error} message={error.message} />
         </div>
       )}
       <div>
@@ -252,9 +255,9 @@ function StartReviewCard({ reportId, onChanged }: { reportId: number; onChanged:
 type FormErrors = { reason?: string; note?: string };
 
 // 서버 필드 이름은 sanction.reason처럼 경로가 붙어 올 수 있어서 마지막 조각으로 구분한다.
-function toFormErrors(error: unknown): { fields: FormErrors; rest: string | null } {
+function toFormErrors(error: unknown): { fields: FormErrors; rest: Failure | null } {
   if (!(error instanceof ApiError) || error.fieldErrors.length === 0) {
-    return { fields: {}, rest: adminErrorMessage(error) };
+    return { fields: {}, rest: toFailure(error) };
   }
   const fields: FormErrors = {};
   const others: string[] = [];
@@ -264,7 +267,7 @@ function toFormErrors(error: unknown): { fields: FormErrors; rest: string | null
     else if (name === 'note') fields.note = reason;
     else others.push(reason);
   }
-  return { fields, rest: others.length > 0 ? others.join(' ') : null };
+  return { fields, rest: others.length > 0 ? { message: others.join(' '), error } : null };
 }
 
 function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onChanged: () => void }) {
@@ -276,7 +279,7 @@ function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onCh
   const [dismissing, setDismissing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<Failure | null>(null);
 
   const hasSanction = sanction !== NO_SANCTION;
   const trimmedReason = reason.trim();
@@ -317,9 +320,7 @@ function TakeActionCard({ detail, onChanged }: { detail: AdminReportDetail; onCh
       </p>
       {formError && (
         <div role="alert">
-          <Notice tone="danger" title="조치하지 못했어요">
-            <p>{formError}</p>
-          </Notice>
+          <ErrorNotice title="조치하지 못했어요" error={formError.error} message={formError.message} />
         </div>
       )}
       <SelectField
@@ -410,7 +411,7 @@ function DismissDialog({ reportId, onClose, onDone }: { reportId: number; onClos
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [noteError, setNoteError] = useState<string | undefined>();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   async function dismiss() {
     if (busy) return;
@@ -434,9 +435,7 @@ function DismissDialog({ reportId, onClose, onDone }: { reportId: number; onClos
         <p className="text-base text-ink">신고를 받아들이지 않아요. 이 신고로 임시 정지가 걸려 있으면 함께 풀려요.</p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="기각하지 못했어요">
-              <p>{error}</p>
-            </Notice>
+            <ErrorNotice title="기각하지 못했어요" error={error.error} message={error.message} />
           </div>
         )}
         <TextArea
@@ -522,7 +521,7 @@ function LiftDialog({
   onDone: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
 
   async function lift() {
     if (busy) return;
@@ -532,7 +531,7 @@ function LiftDialog({
       await liftSanction(sanction.sanctionId);
       onDone();
     } catch (caught) {
-      setError(adminErrorMessage(caught));
+      setError(toFailure(caught));
       setBusy(false);
     }
   }
@@ -546,9 +545,7 @@ function LiftDialog({
         </p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="해제하지 못했어요">
-              <p>{error}</p>
-            </Notice>
+            <ErrorNotice title="해제하지 못했어요" error={error.error} message={error.message} />
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-2">

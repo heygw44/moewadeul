@@ -2,7 +2,6 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import type { ReactNode } from 'react';
 import { applyToBasecamp, cancelMyApplication, fetchBasecampDetail, leaveBasecamp } from '../../api/basecamps';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import type { BasecampDetail, BasecampMember, JoinUnmetReason } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
@@ -10,6 +9,7 @@ import { buttonClassName } from '../../components/buttonClass';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/icons';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
@@ -45,6 +45,8 @@ const SECTION_TITLE_CLASS = 'mb-3 text-[1.1875rem] font-extrabold tracking-[-0.0
 const BOARD_CLASS = 'overflow-hidden rounded-sheet bg-fill';
 const MESSAGE_MAX = 500;
 const ACTION_LINK_CLASS = buttonClassName('secondary');
+const SPOT_UNAVAILABLE_TEXT = '이 장소는 지금 지도에서 볼 수 없어요.';
+const APPLY_CLOSED_BY_SPOT_TEXT = '장소를 지도에서 볼 수 없는 동안에는 합류 신청을 받지 않아요.';
 
 const CONFIRMED_SAFETY_RULES = [
   '출발 전에 일정을 가족이나 지인에게 알려 주세요.',
@@ -108,9 +110,7 @@ export function BasecampDetailPanel({ basecampId, onBack, onLoaded }: BasecampDe
   } else {
     body = (
       <div className="flex flex-col gap-3 px-4 py-4">
-        <Notice tone="danger" title="베이스캠프를 불러오지 못했어요">
-          {toUserMessage(current.error)}
-        </Notice>
+        <ErrorNotice title="베이스캠프를 불러오지 못했어요" error={current.error} />
         <div>
           <Button variant="secondary" onClick={reload}>
             다시 불러오기
@@ -154,6 +154,7 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
   const session = useSession();
   const status = BASECAMP_STATUS_META[detail.status];
   const isMember = detail.myRelation === 'MEMBER' || detail.myRelation === 'LEADER';
+  const { spot } = detail;
 
   return (
     <>
@@ -198,22 +199,24 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
           <h3 id="basecamp-spot-title" className={SECTION_TITLE_CLASS}>
             장소
           </h3>
-          <Link
-            to={`/spots/${detail.spot.spotId}`}
-            className={`${BOARD_CLASS} flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-fill-strong`}
-          >
-            <span
-              aria-hidden="true"
-              className={`flex size-7 shrink-0 items-center justify-center rounded-full text-white ${detail.spot.type === 'BAKJI' ? 'bg-bakji' : 'bg-brand'}`}
+          {spot ? (
+            <Link
+              to={`/spots/${spot.spotId}`}
+              className={`${BOARD_CLASS} flex min-h-14 items-center gap-3 px-4 py-3 hover:bg-fill-strong`}
             >
-              <Icon
-                name={detail.spot.type === 'BAKJI' ? 'backpack' : detail.spot.type === 'FOREST' ? 'tree' : 'tent'}
-                size={16}
-              />
-            </span>
-            <span className="min-w-0 flex-1 truncate text-base font-bold text-ink">{detail.spot.name}</span>
-            <Icon name="chevronRight" size={20} className="shrink-0 text-ink-muted" />
-          </Link>
+              <span
+                aria-hidden="true"
+                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-white ${spot.type === 'BAKJI' ? 'bg-bakji' : 'bg-brand'}`}
+              >
+                <Icon name={spot.type === 'BAKJI' ? 'backpack' : spot.type === 'FOREST' ? 'tree' : 'tent'} size={16} />
+              </span>
+              <span className="min-w-0 flex-1 truncate text-base font-bold text-ink">{spot.name}</span>
+              <Icon name="chevronRight" size={20} className="shrink-0 text-ink-muted" />
+            </Link>
+          ) : (
+            // 장소가 숨겨지거나 삭제되거나 검토를 기다리면 서버가 장소 정보를 주지 않는다.
+            <p className={`${BOARD_CLASS} px-4 py-3 text-base text-ink-muted`}>{SPOT_UNAVAILABLE_TEXT}</p>
+          )}
         </section>
 
         <section className={SECTION_CLASS} aria-labelledby="basecamp-members-title">
@@ -448,7 +451,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   const [dialog, setDialog] = useState<Pending>(null);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<{ title: string; message: string } | null>(null);
+  const [error, setError] = useState<{ title: string; cause: unknown } | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
   async function run(action: () => Promise<unknown>, successText: string, failTitle: string) {
@@ -459,7 +462,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
       await action();
       setDone(successText);
     } catch (caught) {
-      setError({ title: failTitle, message: toUserMessage(caught) });
+      setError({ title: failTitle, cause: caught });
     } finally {
       setSubmitting(false);
       setDialog(null);
@@ -474,12 +477,14 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   } else if (session.status === 'anonymous' || session.me === null) {
     // 비회원에게도 합류 신청 버튼을 그대로 보여 주고, 누르면 로그인한 뒤 이 화면으로 돌아오게 한다.
     content =
-      detail.status === 'RECRUITING' ? (
+      detail.status !== 'RECRUITING' ? (
+        <p className="text-base text-ink">{BASECAMP_STATUS_GUIDE[detail.status]}</p>
+      ) : detail.spot === undefined ? (
+        <p className="text-base text-ink">{APPLY_CLOSED_BY_SPOT_TEXT}</p>
+      ) : (
         <Link to={withNext('/login', pathname + search)} className={`${buttonClassName('primary')} w-full`}>
           합류 신청
         </Link>
-      ) : (
-        <p className="text-base text-ink">{BASECAMP_STATUS_GUIDE[detail.status]}</p>
       );
   } else if (session.me.status === 'UNVERIFIED') {
     content = (
@@ -535,6 +540,9 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
     );
   } else if (detail.status !== 'RECRUITING') {
     content = <p className="text-base text-ink">{BASECAMP_STATUS_GUIDE[detail.status]}</p>;
+  } else if (detail.spot === undefined) {
+    // 장소가 지도에서 내려가면 서버가 새 합류 신청을 거부하고 신청 자격도 주지 않는다.
+    content = <p className="text-base text-ink">{APPLY_CLOSED_BY_SPOT_TEXT}</p>;
   } else if (detail.canApply === true) {
     content = (
       <Button fullWidth onClick={() => setDialog('apply')}>
@@ -563,9 +571,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
       )}
       {error && (
         <div role="alert">
-          <Notice tone="danger" title={error.title}>
-            <p>{error.message}</p>
-          </Notice>
+          <ErrorNotice title={error.title} error={error.cause} />
         </div>
       )}
       {content}

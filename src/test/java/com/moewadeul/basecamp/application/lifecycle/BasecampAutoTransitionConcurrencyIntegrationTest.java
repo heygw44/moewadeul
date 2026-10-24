@@ -124,7 +124,8 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
                 () -> transitionService.cancel(basecampId, leaderId),
                 () -> countIfTrue(applier.processDayBeforeDeparture(basecampId, AUTO_NOW), autoProcessed)));
 
-        // 확정된 베이스캠프도 캠프 리더가 취소할 수 있으므로, 어느 순서로 실행되든 취소는 성공한다.
+        // 확정된 베이스캠프도 출발일 전날까지는 캠프 리더가 취소할 수 있다. 서비스 시계는 출발일보다 훨씬 이른 날이라서,
+        // 어느 순서로 실행되든 취소는 성공한다.
         assertThat(failures).isEmpty();
         assertThat(jdbc.queryForMap("SELECT status, cancel_reason FROM basecamp WHERE id = ?", basecampId))
                 .containsEntry("status", "CANCELED")

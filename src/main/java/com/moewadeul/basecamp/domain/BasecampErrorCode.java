@@ -9,7 +9,7 @@ public enum BasecampErrorCode implements ErrorCode {
     BASECAMP_SCHEDULE_INVALID(HttpStatus.BAD_REQUEST, "출발일은 내일부터 60일 안이고 일정은 1~3박이어야 해요."),
     BASECAMP_WARNING_SPOT(HttpStatus.BAD_REQUEST, "공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요."),
     BASECAMP_CONDITION_NOT_MET(HttpStatus.FORBIDDEN, "캠프 리더가 건 합류 조건을 충족하지 못했어요."),
-    BASECAMP_DATE_CONFLICT(HttpStatus.CONFLICT, "같은 기간에 확정된 다른 베이스캠프의 멤버예요."),
+    BASECAMP_DATE_CONFLICT(HttpStatus.CONFLICT, "같은 기간에 이미 멤버로 들어간 다른 베이스캠프가 있어요."),
     BASECAMP_PENDING_LIMIT(HttpStatus.CONFLICT, "이 베이스캠프에 결정을 기다리는 신청이 가득 찼어요."),
     BASECAMP_REAPPLY_NOT_ALLOWED(HttpStatus.CONFLICT, "거절·탈퇴·강퇴된 베이스캠프에는 다시 신청할 수 없어요."),
     BASECAMP_ALREADY_APPLIED(HttpStatus.CONFLICT, "이미 신청 중이거나 멤버인 베이스캠프예요."),

@@ -104,6 +104,7 @@ class SpotReviewConcurrencyIntegrationTest {
         return index % 5 + 1;
     }
 
+    // 회원마다 후기를 하나씩만 쓰므로, 회원별 평균을 다시 평균 낸 상세의 값이 모든 행의 단순 평균과 같다.
     private double averageOfRows(long spotId) {
         Double average = jdbc.queryForObject(
                 "SELECT ROUND(AVG(rating), 1) FROM spot_review WHERE spot_id = ?", Double.class, spotId);

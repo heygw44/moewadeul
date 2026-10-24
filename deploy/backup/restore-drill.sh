@@ -16,7 +16,9 @@ readonly S3_PREFIX=mysql
 readonly DRILL_CONTAINER=moewadeul-restore-drill
 readonly DRILL_DB=restore_drill
 readonly MYSQL_IMAGE=mysql:8.4
-readonly CHECK_TABLES=(flyway_schema_history member spot public_spot_detail bakji_detail protected_area spot_review identity_verification outbox_event)
+# 임시 MySQL이 연결을 받을 때까지 기다리는 상한(초). 넘으면 복구 연습을 실패로 끝낸다.
+readonly READY_TIMEOUT_SECONDS=300
+readonly CHECK_TABLES=(flyway_schema_history member spot public_spot_detail bakji_detail protected_area spot_review identity_verification outbox_event SPRING_SESSION SPRING_SESSION_ATTRIBUTES)
 
 log() {
     echo "[restore-drill $(date -u +%H:%M:%S)] $*"
@@ -75,7 +77,19 @@ main() {
         "$MYSQL_IMAGE" --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci \
         --default-time-zone=+00:00 > /dev/null
     # 초기화 중인 임시 서버는 소켓만 열고 TCP는 막아 둔다. 그래서 TCP로 접속이 되면 준비가 끝난 것이다.
+    # 컨테이너가 메모리 부족 등으로 죽으면 접속은 영원히 안 되므로, 기다리는 동안 컨테이너가 살아 있는지와 시간 상한을 함께 본다.
+    local ready_deadline=$((SECONDS + READY_TIMEOUT_SECONDS)) state
     until docker exec -e MYSQL_PWD "$DRILL_CONTAINER" mysqladmin ping -h 127.0.0.1 -uroot --silent > /dev/null 2>&1; do
+        state="$(docker inspect --format '{{.State.Running}} OOMKilled={{.State.OOMKilled}}' "$DRILL_CONTAINER" 2> /dev/null || echo 'false')"
+        if [[ "$state" != true\ * ]]; then
+            log "임시 MySQL 컨테이너가 끝났다(상태: $state). 마지막 로그:"
+            docker logs --tail 20 "$DRILL_CONTAINER" 2>&1 || true
+            exit 1
+        fi
+        if ((SECONDS >= ready_deadline)); then
+            log "임시 MySQL이 ${READY_TIMEOUT_SECONDS}초 안에 연결을 받지 않았다"
+            exit 1
+        fi
         sleep 2
     done
     t_ready="$(date +%s)"

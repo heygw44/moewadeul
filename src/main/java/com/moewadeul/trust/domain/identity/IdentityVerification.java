@@ -121,6 +121,26 @@ public class IdentityVerification {
         this.updatedAt = now;
     }
 
+    /**
+     * 호출하면 탈퇴한 회원에게 제재가 확정됐을 때 CI 해시 보관 기한을 탈퇴 시각 withdrawnAt부터 제재 이력이 있는 회원의 기간으로 늘린다.
+     * 탈퇴 때 정한 기한은 제재 이력이 없다고 보고 정한 값이라서, 탈퇴한 뒤에 제재가 확정되면 다시 정해야 한다.
+     * 탈퇴하지 않아 기한이 없거나 이미 그 기한 이상이면 바꾸지 않는다. 기한을 줄이지는 않는다.
+     */
+    public void extendRetentionForSanction(Instant withdrawnAt, Instant now) {
+        if (withdrawnAt == null || now == null) {
+            throw new IllegalArgumentException("탈퇴 시각이나 수정 시각이 null입니다.");
+        }
+        if (ciRetainedUntil == null) {
+            return;
+        }
+        Instant extended = ciRetainedUntil(withdrawnAt, true);
+        if (!ciRetainedUntil.isBefore(extended)) {
+            return;
+        }
+        this.ciRetainedUntil = extended;
+        this.updatedAt = now;
+    }
+
     /** currentYear가 속한 해에 성인이면 true다. 출생연도가 없으면(탈퇴 뒤) 성인으로 보지 않는다. */
     public boolean isAdult(Year currentYear) {
         return birthYear != null && birthYear + ADULT_AGE <= currentYear.getValue();

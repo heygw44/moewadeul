@@ -23,6 +23,11 @@ import org.springframework.stereotype.Service;
  * <p>도중에 실패하면 앞 묶음의 판정은 커밋된 채 남는다. 그래도 다음 실행은 남은 진행 위치에서 잇지 않고 처음부터 다시 판정한다. 실패한 뒤 경계를 다시
  * 적재했으면 진행 위치 앞의 박지도 새 경계로 다시 판정해야 하기 때문이다.
  *
+ * <p>재판정이 도는 사이에 공원 경계 적재가 끝나면, 그 재판정은 적재 전에 처리한 박지를 옛 경계로 판정한 채 남긴다. 그리고 적재가 이어서 시작하려던
+ * 재판정은 이미 도는 재판정 때문에 시작하지 못한다. 그래서 서비스는 재판정을 마칠 때마다 그 실행이 시작된 뒤에 경계 적재가 끝났는지 보고, 끝났으면
+ * 새 실행 기록으로 처음부터 다시 판정한다. 그 사이에 다른 재판정이 이미 시작했으면 그 재판정이 자기 시작 시각을 기준으로 같은 확인을 하므로 다시
+ * 시작하지 않는다.
+ *
  * <p>이 서비스는 트랜잭션을 열지 않는다. 실행 기록과 묶음 판정은 각 서비스의 트랜잭션에서 따로 커밋한다. 그래서 재판정이 실패해도 실패한 실행 기록은 남는다.
  */
 @Slf4j
@@ -36,8 +41,9 @@ public class BakjiRejudgeService {
     private final Clock clock;
 
     /**
-     * 호출하면 실행 기록을 시작하고, 박지를 한 번 재판정한 결과를 돌려준다. 다른 재판정이 진행 중이라 시작하지 않았으면 빈 값을 돌려준다. 실패하면 실행
-     * 기록을 FAILED로 남기고 받은 예외를 그대로 다시 던진다.
+     * 호출하면 실행 기록을 시작하고, 박지를 재판정한 결과를 돌려준다. 재판정이 도는 사이에 공원 경계 적재가 끝났으면 처음부터 다시 판정하고 마지막
+     * 판정의 결과를 돌려준다. 다른 재판정이 진행 중이라 시작하지 않았으면 빈 값을 돌려준다. 실패하면 실행 기록을 FAILED로 남기고 받은 예외를 그대로
+     * 다시 던진다.
      */
     public Optional<BakjiRejudgeResult> rejudge() {
         return syncJobRunService
@@ -46,12 +52,36 @@ public class BakjiRejudgeService {
     }
 
     /**
-     * 호출하면 이미 시작한 실행 기록 start로 박지를 재판정하고, 성공하면 실행 기록을 COMPLETED로 바꾼다. 실행 기록을 새로 시작하지 않으므로, 호출하는 쪽이
+     * 호출하면 이미 시작한 실행 기록 start로 박지를 재판정하고, 성공하면 실행 기록을 COMPLETED로 바꾼다. 재판정이 도는 사이에 공원 경계 적재가
+     * 끝났으면 새 실행 기록을 시작해 처음부터 다시 판정하고, 마지막 판정의 결과를 돌려준다. 첫 실행 기록은 새로 시작하지 않으므로, 호출하는 쪽이
      * {@link SyncJobRunService#begin}으로 BAKJI_REJUDGE 실행을 먼저 시작해 둬야 한다. 실패하면 실행 기록을 FAILED로 남기고 받은 예외를 그대로 다시
      * 던진다.
      */
     public BakjiRejudgeResult run(SyncJobStart start) {
-        long runId = start.runId();
+        SyncJobStart current = start;
+        while (true) {
+            BakjiRejudgeResult result = runOnce(current.runId());
+            Optional<SyncJobStart> next = beginAgainIfBoundaryReloaded(current.runId());
+            if (next.isEmpty()) {
+                return result;
+            }
+            current = next.get();
+        }
+    }
+
+    private Optional<SyncJobStart> beginAgainIfBoundaryReloaded(long finishedRunId) {
+        if (!syncJobRunService.hasCompletedSinceStartOf(SyncJobType.PARK_BOUNDARY, finishedRunId)) {
+            return Optional.empty();
+        }
+        Optional<SyncJobStart> next = syncJobRunService.begin(SyncJobType.BAKJI_REJUDGE, properties.staleAfter());
+        log.info(
+                "bakji rejudge repeats because park boundary was loaded while it ran runId={} repeated={}",
+                finishedRunId,
+                next.isPresent());
+        return next;
+    }
+
+    private BakjiRejudgeResult runOnce(long runId) {
         try {
             log.info("bakji rejudge started runId={}", runId);
             BakjiRejudgeCounts counts = rejudgeAll(runId);

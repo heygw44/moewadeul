@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberBuilder;
 import com.moewadeul.member.domain.MemberErrorCode;
@@ -135,7 +136,7 @@ class EmailVerificationConcurrencyIntegrationTest {
 
     private String issueCode(Member member) {
         return emailVerificationService
-                .issueFor(member.getId(), IP)
+                .issueFor(member.getId(), IP, TestSequence.next())
                 .orElseThrow(() -> new AssertionError("미인증 회원인데 코드를 발급하지 않았습니다."))
                 .code();
     }

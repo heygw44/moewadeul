@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import { deleteMemory, getMemory } from '../../api/memories';
 import type { MemoryDetail } from '../../api/types';
 import { Link, navigate } from '../../app/router';
@@ -9,6 +8,7 @@ import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { HubLayout } from '../../components/HubLayout';
 import { Icon } from '../../components/icons';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { StatusText } from '../../components/StatusText';
@@ -122,9 +122,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   return (
     <HubLayout title="기록" breadcrumb={breadcrumb} width="narrow">
       <div className="flex flex-col gap-3">
-        <Notice tone="danger" title="기록을 불러오지 못했어요">
-          {toUserMessage(current.error)}
-        </Notice>
+        <ErrorNotice title="기록을 불러오지 못했어요" error={current.error} />
         <div>
           <Button variant="secondary" onClick={reload}>
             다시 불러오기
@@ -276,7 +274,7 @@ function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImage
 
 function DeleteMemoryDialog({ memoryId, onClose }: { memoryId: number; onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ cause: unknown } | null>(null);
 
   async function handleDelete() {
     if (submitting) return;
@@ -287,7 +285,7 @@ function DeleteMemoryDialog({ memoryId, onClose }: { memoryId: number; onClose: 
       navigate('/me/memories');
     } catch (cause) {
       setSubmitting(false);
-      setError(toUserMessage(cause));
+      setError({ cause });
     }
   }
 
@@ -297,9 +295,7 @@ function DeleteMemoryDialog({ memoryId, onClose }: { memoryId: number; onClose: 
         <p className="text-base text-ink">삭제한 기록은 되돌릴 수 없어요. 사진도 함께 사라져요.</p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="삭제하지 못했어요">
-              <p>{error}</p>
-            </Notice>
+            <ErrorNotice title="삭제하지 못했어요" error={error.cause} />
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-2">

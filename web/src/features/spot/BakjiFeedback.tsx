@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { confirmBakji, reportBakji } from '../../api/bakjis';
 import { ApiError } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
 import type { BakjiProblemReportRequest, BakjiReportReason } from '../../api/types';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { Dialog } from '../../components/Dialog';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { TextArea } from '../../components/TextArea';
 import { useSession } from '../member/session';
 import { GatedButton } from '../member/GatedButton';
@@ -32,7 +31,7 @@ export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
   const session = useSession();
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState<'new' | 'already' | null>(null);
-  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<{ cause: unknown } | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reported, setReported] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
@@ -58,7 +57,7 @@ export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
       if (error instanceof ApiError && error.code === 'BAKJI_ALREADY_CONFIRMED') {
         setConfirmed('already');
       } else {
-        setConfirmError(toUserMessage(error));
+        setConfirmError({ cause: error });
       }
     } finally {
       if (!controller.signal.aborted) setConfirming(false);
@@ -83,9 +82,7 @@ export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
       )}
       {confirmError && (
         <div role="alert">
-          <Notice tone="danger" title="확인을 남기지 못했어요">
-            <p>{confirmError}</p>
-          </Notice>
+          <ErrorNotice title="확인을 남기지 못했어요" error={confirmError.cause} />
         </div>
       )}
       {reported && (
@@ -121,7 +118,7 @@ function ReportDialog({
   const [content, setContent] = useState('');
   const [reasonError, setReasonError] = useState<string | undefined>();
   const [contentError, setContentError] = useState<string | undefined>();
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -164,10 +161,10 @@ function ReportDialog({
         else if (field === 'content') setContentError(message);
         else others.push(message);
       }
-      if (others.length > 0) setFormError(others.join(' '));
+      if (others.length > 0) setFormError({ cause: others.join(' ') });
       return;
     }
-    setFormError(toUserMessage(error));
+    setFormError({ cause: error });
   }
 
   return (
@@ -176,9 +173,7 @@ function ReportDialog({
         <p className="text-sm text-ink-muted">신고는 되돌릴 수 없어요. 사유를 골라 주세요.</p>
         {formError && (
           <div role="alert">
-            <Notice tone="danger" title="신고하지 못했어요">
-              <p>{formError}</p>
-            </Notice>
+            <ErrorNotice title="신고하지 못했어요" error={formError.cause} />
           </div>
         )}
         <ChoiceGroup

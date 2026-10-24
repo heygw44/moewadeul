@@ -35,7 +35,7 @@ class BasecampQueryController {
                     + "로그인한 요청자의 응답에는 항목마다 canApply와 unmetReasons가 있다. unmetReasons는 신청할 수 없는 이유 코드의 목록이고, "
                     + "신청할 수 있으면 빈 목록이며 그때 canApply는 true다. 비로그인 요청자의 응답에는 두 필드가 없다. "
                     + "이유 코드는 TRUST_LEVEL(신뢰 단계 부족), AGE_GROUP(본인확인한 연령대가 없거나 범위 밖), GENDER(본인확인한 성별이 없거나 "
-                    + "동성만 받는 조건과 다름), DATE_CONFLICT(같은 기간에 확정된 다른 베이스캠프의 멤버), ALREADY_JOINED(이미 멤버이거나 대기 중인 신청이 있음), "
+                    + "동성만 받는 조건과 다름), DATE_CONFLICT(같은 기간에 진행 중인 다른 베이스캠프의 ACTIVE 멤버), ALREADY_JOINED(이미 멤버이거나 대기 중인 신청이 있음), "
                     + "REAPPLY_NOT_ALLOWED(거절·탈퇴·강퇴된 적이 있음)이고, 이 순서로 나온다. "
                     + "지역이 없거나 두 묶음을 모두 보냈거나 일부만 보냈을 때, 값이 범위를 벗어났을 때, 반경이 50을 넘을 때, "
                     + "fromDate가 toDate보다 늦을 때, 날짜 형식이 틀렸을 때는 400 INVALID_INPUT으로 응답한다.")

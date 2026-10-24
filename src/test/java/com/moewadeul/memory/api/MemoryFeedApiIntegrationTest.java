@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -140,6 +141,17 @@ class MemoryFeedApiIntegrationTest {
         assertThat(tooBig).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
         assertThat(zero).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(negative).hasStatus(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("[F-33] 피드의 page가 아주 커서 건너뛸 건수가 int 범위를 넘어도 500이 아니라 빈 목록을 준다")
+    void feedWithHugePageReturnsEmptyContent() {
+        MvcTestResult result =
+                mvc.get().uri("/api/memories/feed?page=2147483647&size=20").exchange();
+
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().extractingPath("$.content").asList().isEmpty();
+        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
     }
 
     @Test
@@ -382,7 +394,7 @@ class MemoryFeedApiIntegrationTest {
         Cookie session = login.getResponse().getCookie(SESSION_COOKIE);
         assertThat(session).isNotNull();
         String code = emailVerificationService
-                .issueFor(member.getId(), LOCAL_IP)
+                .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
         MvcTestResult verified = mvc.post()

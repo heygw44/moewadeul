@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
  * 기록에 붙지 않은 사진을 행과 저장소 객체까지 지운다. 기록에서 뗀 사진과 기록을 지워 떨어진 사진도 같은 대상이다.
  *
  * <p>평소에는 만든 지 24시간이 지난 사진만 지운다. 회원이 탈퇴하면 그 회원의 기록을 먼저 지운 뒤, 그 회원이 올린 붙지 않은 사진을 시간과
- * 상관없이 모두 지운다.
+ * 상관없이 모두 지운다. 이때는 평소와 반대로 객체를 먼저 지우고 행을 나중에 지운다({@link #deleteUnattachedOf} 참고).
  *
  * <p>이 서비스는 트랜잭션을 열지 않는다. 저장소 삭제는 느릴 수 있어서 DB 트랜잭션과 행 잠금을 쥔 채 기다리면 안 되기 때문이다. 사진마다 행을
  * 먼저 조건부로 지우고({@code memory_id}가 아직 NULL일 때만), 지웠을 때만 저장소 객체를 지운다. 읽은 뒤 지우기 전에 누군가 그 사진을 기록에
@@ -53,17 +53,48 @@ public class MemoryImageCleanupService {
     }
 
     /**
-     * 호출하면 memberId인 회원이 올렸고 기록에 붙지 않은 사진을 만든 시각과 상관없이 모두 지운다. 탈퇴한 회원의 기록을 지운 뒤에 부른다. 저장소 삭제가
-     * 실패했을 때의 처리는 {@link #deleteUnattached}와 같다.
+     * 호출하면 memberId인 회원이 올렸고 기록에 붙지 않은 사진을 만든 시각과 상관없이 모두 지운다. 탈퇴한 회원의 기록을 지운 뒤에 부른다.
+     *
+     * <p>{@link #deleteUnattached}와 순서가 반대다. 저장소 객체를 먼저 지우고, 지운 사진의 행만 뒤따라 지운다. 객체를 지우지 못한 사진은
+     * 행을 남기고 {@link Result#storageFailures}로 센다. 탈퇴한 회원의 사진은 개인의 위치와 사진이라 반드시 파기해야 하는데, 행이 없으면
+     * 그 객체를 다시 찾을 방법이 없기 때문이다. 호출하는 쪽이 실패 수를 보고 같은 회원으로 다시 부르면 남은 사진만 다시 지운다.
+     * 탈퇴한 회원은 세션이 모두 지워져 로그인할 수 없으므로 사진을 기록에 새로 붙이는 요청이 없다. 그래서 객체를 먼저 지워도 기록에 붙은 사진의
+     * 파일이 사라지지 않는다.
      */
     public Result deleteUnattachedOf(long memberId) {
-        Result result = deleteInBatches(() -> memoryImageMapper.selectUnattachedByMember(memberId, BATCH_SIZE));
+        int deletedRows = 0;
+        int storageFailures = 0;
+        long lastImageId = 0;
+        List<MemoryImageRow> batch;
+        do {
+            batch = memoryImageMapper.selectUnattachedByMember(memberId, lastImageId, BATCH_SIZE);
+            Result batchResult = deleteObjectsThenRows(batch);
+            deletedRows += batchResult.deletedRows();
+            storageFailures += batchResult.storageFailures();
+            if (!batch.isEmpty()) {
+                lastImageId = batch.get(batch.size() - 1).imageId();
+            }
+        } while (batch.size() == BATCH_SIZE);
         log.info(
                 "memory image cleanup memberId={} deletedRows={} storageFailures={}",
                 memberId,
-                result.deletedRows(),
-                result.storageFailures());
-        return result;
+                deletedRows,
+                storageFailures);
+        return new Result(deletedRows, storageFailures);
+    }
+
+    // 객체를 지우지 못한 사진은 행을 그대로 둔다. 읽는 쪽이 마지막으로 읽은 ID 뒤부터 이어서 읽으므로, 같은 호출 안에서 같은 사진을 다시 읽지 않는다.
+    private Result deleteObjectsThenRows(List<MemoryImageRow> batch) {
+        int deletedRows = 0;
+        int storageFailures = 0;
+        for (MemoryImageRow row : batch) {
+            if (!deleteObject(row)) {
+                storageFailures++;
+                continue;
+            }
+            deletedRows += memoryImageMapper.deleteIfUnattached(row.imageId());
+        }
+        return new Result(deletedRows, storageFailures);
     }
 
     // 한 묶음을 가득 읽었고 그중 하나라도 지웠을 동안 다음 묶음을 읽는다. 하나도 지우지 못한 묶음에서 멈춰야, 다른 요청이 그 사이에 붙인 사진만
@@ -118,7 +149,7 @@ public class MemoryImageCleanupService {
      * 정리 결과.
      *
      * @param deletedRows 지운 사진 행 수
-     * @param storageFailures 행은 지웠지만 저장소 객체를 지우지 못한 수
+     * @param storageFailures 저장소 객체를 지우지 못한 사진 수. 평소 정리에서는 행을 이미 지운 사진이고, 탈퇴 정리에서는 행을 남겨 둔 사진이다
      */
     public record Result(int deletedRows, int storageFailures) {}
 }

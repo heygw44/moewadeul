@@ -76,7 +76,7 @@ class MemberMetricsIntegrationTest {
         // given
         long memberId = signUp(TestSequence.email()).memberId();
         String code = emailVerificationService
-                .issueFor(memberId, REQUEST_IP)
+                .issueFor(memberId, REQUEST_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
         String wrongCode = code.equals("000000") ? "111111" : "000000";

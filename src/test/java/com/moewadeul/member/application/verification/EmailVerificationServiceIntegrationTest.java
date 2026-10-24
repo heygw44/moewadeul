@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberBuilder;
 import com.moewadeul.member.domain.MemberErrorCode;
@@ -95,8 +96,10 @@ class EmailVerificationServiceIntegrationTest {
         long rowsBefore = countVerificationRows();
 
         // when & then
-        assertThat(emailVerificationService.issueFor(activeMember.getId(), IP)).isEmpty();
-        assertThat(emailVerificationService.issueFor(Long.MAX_VALUE, IP)).isEmpty();
+        assertThat(emailVerificationService.issueFor(activeMember.getId(), IP, TestSequence.next()))
+                .isEmpty();
+        assertThat(emailVerificationService.issueFor(Long.MAX_VALUE, IP, TestSequence.next()))
+                .isEmpty();
         assertThat(countVerificationRows()).isEqualTo(rowsBefore);
     }
 
@@ -387,6 +390,74 @@ class EmailVerificationServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-01][EV-03] 같은 발송 요청 이벤트로 코드를 다시 발급하면 행은 하나이고, 새 코드만 유효하며 시도 횟수와 만료는 새 코드 기준이다")
+    void reissueForSameEventReplacesCodeInSameRow() {
+        // given
+        Member member = newMember();
+        long eventId = TestSequence.next();
+        Instant firstIssuedAt = clock.instant();
+        String firstCode = emailVerificationService
+                .issueFor(member.getId(), IP, eventId)
+                .orElseThrow()
+                .code();
+        assertThatThrownBy(() -> emailVerificationService.verify(member.getId(), wrongCodeFor(firstCode)))
+                .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_CODE_INVALID);
+        clock.advance(Duration.ofMinutes(5));
+
+        // when
+        String secondCode = emailVerificationService
+                .issueFor(member.getId(), IP, eventId)
+                .orElseThrow()
+                .code();
+
+        // then
+        assertThat(countVerificationRows()).isEqualTo(1);
+        assertThat(latestAttemptCount(member)).isZero();
+        assertThat(queryInstant("SELECT expires_at FROM email_verification WHERE member_id = ?", member.getId()))
+                .isEqualTo(clock.instant().plus(Duration.ofMinutes(10)));
+        assertThat(queryInstant("SELECT created_at FROM email_verification WHERE member_id = ?", member.getId()))
+                .isEqualTo(firstIssuedAt);
+        assertThat(emailVerificationService.verify(member.getId(), secondCode).status())
+                .isEqualTo(MemberStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-03] 같은 IP에서 처리하지 않은 발송 요청이 20건이면 코드 행이 없어도 IP 한도에 걸린다")
+    void queuedSendRequestsCountTowardIpLimit() {
+        // given: 서로 다른 회원 20명이 같은 IP로 재발송을 요청했고 아직 처리기가 코드 행을 만들지 않았다
+        for (int requested = 0; requested < 20; requested++) {
+            emailVerificationService.requestResend(newMember().getId(), IP);
+        }
+        Member another = newMember();
+
+        // when & then
+        assertThat(countVerificationRows()).isZero();
+        assertResendLimited(another, IP, Duration.ofHours(1));
+        assertThat(emailVerificationService.ipBlockedFor(IP)).contains(Duration.ofHours(1));
+        assertThat(emailVerificationService.ipBlockedFor(OTHER_IP)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-03] 코드 행을 이미 만든 발송 요청은 아직 PENDING이어도 IP 한도에 한 번만 센다")
+    void requestWithIssuedRowIsCountedOnceTowardIpLimit() {
+        // given: 코드 행 18개와, 요청해서 코드 행까지 만들었지만 이벤트는 아직 PENDING인 요청 1건
+        for (int sent = 0; sent < 18; sent++) {
+            issue(newMember());
+        }
+        Member requester = newMember();
+        emailVerificationService.requestResend(requester.getId(), IP);
+        emailVerificationService.issueFor(requester.getId(), IP, eventIdOf(requester));
+        Member another = newMember();
+
+        // when
+        emailVerificationService.requestResend(another.getId(), IP);
+
+        // then: 19번째까지는 막지 않고, 20번째 요청이 기록되면 한도에 닿는다
+        assertThat(countEvents(another)).isEqualTo(1);
+        assertThat(emailVerificationService.ipBlockedFor(IP)).isPresent();
+    }
+
+    @Test
     @DisplayName("[F-01][EV-03] 이미 인증한 회원의 재발송 요청은 EMAIL_ALREADY_VERIFIED이고 이벤트를 기록하지 않는다")
     void resendAfterVerifiedIsAlreadyVerified() {
         // given
@@ -431,7 +502,7 @@ class EmailVerificationServiceIntegrationTest {
 
     private String issue(Member member) {
         return emailVerificationService
-                .issueFor(member.getId(), IP)
+                .issueFor(member.getId(), IP, TestSequence.next())
                 .orElseThrow(() -> new AssertionError("미인증 회원인데 코드를 발급하지 않았습니다."))
                 .code();
     }
@@ -475,6 +546,14 @@ class EmailVerificationServiceIntegrationTest {
     private long countEvents(Member member) {
         return jdbc.queryForObject(
                 "SELECT COUNT(*) FROM outbox_event WHERE event_type = ? AND aggregate_id = ?",
+                Long.class,
+                EVENT_TYPE,
+                member.getId());
+    }
+
+    private long eventIdOf(Member member) {
+        return jdbc.queryForObject(
+                "SELECT id FROM outbox_event WHERE event_type = ? AND aggregate_id = ?",
                 Long.class,
                 EVENT_TYPE,
                 member.getId());

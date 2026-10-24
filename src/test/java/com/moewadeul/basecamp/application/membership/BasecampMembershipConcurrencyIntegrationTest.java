@@ -130,17 +130,19 @@ class BasecampMembershipConcurrencyIntegrationTest {
         long memberId = saveVerifiedMember();
         insertMember(basecampId, memberId, "MEMBER");
         jdbc.update(
-                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, created_at, updated_at)"
-                        + " VALUES (?, ?, 'APPROVED', ?, ?)",
+                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, applied_at, created_at,"
+                        + " updated_at) VALUES (?, ?, 'APPROVED', ?, ?, ?)",
                 basecampId,
                 memberId,
                 AT_DEFAULT_INSTANT,
+                AT_DEFAULT_INSTANT,
                 AT_DEFAULT_INSTANT);
         jdbc.update(
-                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, created_at, updated_at)"
-                        + " VALUES (?, ?, 'PENDING', ?, ?)",
+                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, applied_at, created_at,"
+                        + " updated_at) VALUES (?, ?, 'PENDING', ?, ?, ?)",
                 basecampId,
                 saveVerifiedMember(),
+                AT_DEFAULT_INSTANT,
                 AT_DEFAULT_INSTANT,
                 AT_DEFAULT_INSTANT);
         long applicationId = jdbc.queryForObject("SELECT MAX(id) FROM basecamp_application", Long.class);

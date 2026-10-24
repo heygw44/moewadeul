@@ -21,6 +21,9 @@ export const BASECAMP_STATUS_GUIDE: Record<BasecampStatus, string> = {
   CANCELED: '취소된 베이스캠프예요.',
 };
 
+// 베이스캠프 목록과 열기 화면에 늘 보여 주는 안내다. 상세·관리 화면은 서버가 내려 주는 안전 안내 문구로 같은 뜻을 전한다.
+export const OFF_PLATFORM_PAYMENT_REMINDER = '플랫폼 밖 송금 요구는 신고해 주세요.';
+
 export const AGE_GROUP_STEPS = [20, 30, 40, 50, 60] as const;
 
 export function ageGroupStepLabel(step: number): string {
@@ -62,7 +65,7 @@ const UNMET_REASON_TEXT: Record<JoinUnmetReason, UnmetReasonText> = {
   TRUST_LEVEL: { reason: '필요한 신뢰 단계에 못 미쳐요.' },
   AGE_GROUP: { reason: '연령대 조건에 맞지 않아요.', guide: IDENTITY_VALUE_GUIDE },
   GENDER: { reason: '성별 조건에 맞지 않아요.', guide: IDENTITY_VALUE_GUIDE },
-  DATE_CONFLICT: { reason: '같은 날짜에 확정된 다른 베이스캠프가 있어요.' },
+  DATE_CONFLICT: { reason: '같은 날짜에 이미 합류한 다른 베이스캠프가 있어요.' },
   ALREADY_JOINED: { reason: '이미 신청했거나 합류한 베이스캠프예요.' },
   REAPPLY_NOT_ALLOWED: { reason: '거절·강퇴되거나 직접 탈퇴한 적이 있어 다시 신청할 수 없어요.' },
 };

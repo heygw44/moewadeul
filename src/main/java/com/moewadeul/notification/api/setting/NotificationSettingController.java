@@ -41,8 +41,11 @@ class NotificationSettingController {
     @PutMapping
     List<NotificationSettingResponse> replace(
             @AuthenticationPrincipal LoginMember loginMember,
-            @RequestBody @Size(max = NotificationSettingService.TYPE_COUNT)
-                    List<@NotNull @Valid NotificationSettingRequest> requests) {
+            @RequestBody
+                    @Size(
+                            max = NotificationSettingService.TYPE_COUNT,
+                            message = "알림 설정은 " + NotificationSettingService.TYPE_COUNT + "개까지 보낼 수 있어요.")
+                    List<@NotNull(message = "알림 설정 항목은 비워 둘 수 없어요.") @Valid NotificationSettingRequest> requests) {
         List<NotificationSettingItem> items =
                 requests.stream().map(NotificationSettingRequest::toItem).toList();
         return toResponses(notificationSettingService.replace(loginMember.memberId(), items));

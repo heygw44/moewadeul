@@ -155,12 +155,33 @@ public class Sanction {
      * SANCTION_INVALID_STATE 예외를 던진다. 회원의 정지 상태를 다시 계산하는 일은 호출하는 쪽이 한다.
      */
     public void lift(long adminId, Instant now) {
-        if (now == null) {
-            throw new IllegalArgumentException("제재를 해제하는 시각이 null입니다.");
-        }
+        requireNow(now);
         if (status != SanctionStatus.ACTIVE) {
             throw new BusinessException(TrustErrorCode.SANCTION_INVALID_STATE);
         }
+        markLifted(adminId, now);
+    }
+
+    /**
+     * 호출하면 기각된 신고가 만든 임시 정지를 해제 상태로 바꾸고 기각한 관리자와 시각을 남긴다. 적용 중인 임시 정지뿐 아니라 72시간이 지나
+     * 이미 만료된 임시 정지도 바꾼다. 기각된 신고의 임시 정지는 제재 이력에 남기지 않으므로, 만료됐다는 이유로 이력에 남으면 안 되기 때문이다.
+     * 임시 정지가 아니거나 이미 해제됐으면 SANCTION_INVALID_STATE 예외를 던진다. 회원의 정지 상태를 다시 계산하는 일은 호출하는 쪽이 한다.
+     */
+    public void liftForDismissedReport(long adminId, Instant now) {
+        requireNow(now);
+        if (type != SanctionType.TEMPORARY_72H || status == SanctionStatus.LIFTED) {
+            throw new BusinessException(TrustErrorCode.SANCTION_INVALID_STATE);
+        }
+        markLifted(adminId, now);
+    }
+
+    private static void requireNow(Instant now) {
+        if (now == null) {
+            throw new IllegalArgumentException("제재를 해제하는 시각이 null입니다.");
+        }
+    }
+
+    private void markLifted(long adminId, Instant now) {
         this.status = SanctionStatus.LIFTED;
         this.liftedBy = adminId;
         this.liftedAt = now;

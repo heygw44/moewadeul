@@ -9,7 +9,7 @@ import { AsideSection, HubLayout } from '../../components/HubLayout';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/icons';
-import { Notice } from '../../components/Notice';
+import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime, formatRelativeKst } from '../../lib/datetime';
@@ -121,9 +121,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   return (
     <HubLayout title="커뮤니티" breadcrumb={<BackToCommunity />} aside={asideNode}>
       <div className="flex flex-col gap-3">
-        <Notice tone="danger" title="글을 불러오지 못했어요">
-          {toUserMessage(current.error)}
-        </Notice>
+        <ErrorNotice title="글을 불러오지 못했어요" error={current.error} />
         <div>
           <Button variant="secondary" onClick={reload}>
             다시 불러오기
@@ -372,7 +370,7 @@ function LikeButton({
 
 function DeletePostDialog({ postId, onClose }: { postId: number; onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ cause: unknown } | null>(null);
 
   async function handleDelete() {
     if (submitting) return;
@@ -383,7 +381,7 @@ function DeletePostDialog({ postId, onClose }: { postId: number; onClose: () => 
       navigate('/community');
     } catch (cause) {
       setSubmitting(false);
-      setError(toUserMessage(cause));
+      setError({ cause });
     }
   }
 
@@ -393,9 +391,7 @@ function DeletePostDialog({ postId, onClose }: { postId: number; onClose: () => 
         <p className="text-base text-ink">삭제한 글은 되돌릴 수 없어요. 댓글도 함께 사라져요.</p>
         {error && (
           <div role="alert">
-            <Notice tone="danger" title="삭제하지 못했어요">
-              <p>{error}</p>
-            </Notice>
+            <ErrorNotice title="삭제하지 못했어요" error={error.cause} />
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-2">

@@ -36,7 +36,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * 박지 수정과 박지 재판정, 관리자 숨김이 같은 박지 행에서 겹칠 때 마지막에 남는 값을 확인한다.
+ * 박지 수정과 박지 재판정, 관리자 숨김, 신고가 같은 박지 행에서 겹칠 때 마지막에 남는 값을 확인한다.
  *
  * <p>동시에 출발시키는 것만으로는 원하는 순서가 잘 나오지 않는다. 그래서 테스트는 한 트랜잭션을 정해 둔 지점에서 멈추고, 그사이 다른 쪽을 실행한 뒤
  * 멈춘 트랜잭션을 이어 간다. 박지 수정은 박지 행을 읽은 직후(제보 상세를 읽을 때), 재판정은 박지 좌표를 모두 읽은 직후에 멈춘다.
@@ -60,6 +60,9 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
 
     @Autowired
     private BakjiEditService bakjiEditService;
+
+    @Autowired
+    private BakjiFeedbackService bakjiFeedbackService;
 
     @Autowired
     private ParkAreaJudgeService parkAreaJudgeService;
@@ -149,6 +152,52 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.NOT_FOUND));
     }
 
+    @RepeatedTest(REPETITIONS)
+    @DisplayName("[F-07][F-21] 설명만 고치는 박지 수정이 관리자 숨김과 겹치면, 박지는 숨김 상태로 남고 수정은 NOT_FOUND로 거부된다")
+    void describeDuringHideKeepsHiddenAndRejectsUpdate() throws Exception {
+        long spotId = report(OUTSIDE_LNG);
+        long adminId = memberRepository.saveAndFlush(aMember().build()).getId();
+        pauseUpdateAfterReadingSpot();
+
+        Future<?> update = executor.submit(() -> bakjiEditService.update(reporterId, spotId, describe("새 설명")));
+        awaitPaused();
+        Throwable updateFailure = runInMiddle(() -> spotModerationService.hide(spotId, adminId), update);
+
+        assertThat(statusOf(spotId)).isEqualTo("HIDDEN");
+        assertThat(descriptionOf(spotId)).isNull();
+        assertThat(updateFailure)
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.NOT_FOUND));
+    }
+
+    @RepeatedTest(REPETITIONS)
+    @DisplayName("[F-07][F-08] 설명만 고치는 박지 수정이 다섯 번째 신고와 겹치면, 박지는 검토 대기로 남고 수정은 NOT_FOUND로 거부된다")
+    void describeDuringFifthReportKeepsPendingReviewAndRejectsUpdate() throws Exception {
+        long spotId = report(OUTSIDE_LNG);
+        for (int i = 0; i < 4; i++) {
+            reportProblemBy(memberRepository.saveAndFlush(aMember().build()).getId(), spotId);
+        }
+        long fifthReporterId = memberRepository.saveAndFlush(aMember().build()).getId();
+        pauseUpdateAfterReadingSpot();
+
+        Future<?> update = executor.submit(() -> bakjiEditService.update(reporterId, spotId, describe("새 설명")));
+        awaitPaused();
+        Throwable updateFailure = runInMiddle(
+                () -> {
+                    reportProblemBy(fifthReporterId, spotId);
+                    return null;
+                },
+                update);
+
+        assertThat(statusOf(spotId)).isEqualTo("PENDING_REVIEW");
+        assertThat(descriptionOf(spotId)).isNull();
+        assertThat(updateFailure)
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.NOT_FOUND));
+    }
+
     // 재판정 작업처럼 박지를 묶음마다 끝까지 판정한다.
     private Void rejudgeAll() {
         Instant now = clock.instant();
@@ -167,6 +216,10 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
         return bakjiCommandService
                 .report(reporterId, new BakjiReportCommand("능선 끝 평지", LAT, lng, null, true, false, null, null))
                 .spotId();
+    }
+
+    private void reportProblemBy(long memberId, long spotId) {
+        bakjiFeedbackService.reportProblem(memberId, spotId, new BakjiProblemReportCommand("FALSE_INFO", null));
     }
 
     // 박지 수정은 박지 행을 읽은 다음 제보 상세를 읽는다. 그래서 제보 상세를 읽기 직전에 멈추면 박지 행을 읽은 직후에 멈춘다.
@@ -228,6 +281,18 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
                 PatchField.absent());
     }
 
+    private static BakjiUpdateCommand describe(String description) {
+        return new BakjiUpdateCommand(
+                PatchField.absent(),
+                PatchField.absent(),
+                PatchField.absent(),
+                PatchField.of(description),
+                PatchField.absent(),
+                PatchField.absent(),
+                PatchField.absent(),
+                PatchField.absent());
+    }
+
     private static BakjiUpdateCommand moveTo(double lng) {
         return new BakjiUpdateCommand(
                 PatchField.absent(),
@@ -263,6 +328,10 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
 
     private String statusOf(long spotId) {
         return jdbc.queryForObject("SELECT status FROM spot WHERE id = ?", String.class, spotId);
+    }
+
+    private String descriptionOf(long spotId) {
+        return jdbc.queryForObject("SELECT description FROM bakji_detail WHERE spot_id = ?", String.class, spotId);
     }
 
     private double lngOf(long spotId) {

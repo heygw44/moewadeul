@@ -17,6 +17,8 @@ import com.moewadeul.trust.application.report.MemberReportService;
 import com.moewadeul.trust.application.report.ReportContentCleanupService;
 import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
 import com.moewadeul.trust.application.sanction.SanctionConfirmService;
+import com.moewadeul.trust.application.sanction.SanctionExpiryService;
+import com.moewadeul.trust.application.withdrawal.WithdrawalApplier;
 import com.moewadeul.trust.domain.report.ReportKind;
 import com.moewadeul.trust.domain.report.ReportType;
 import com.moewadeul.trust.domain.sanction.SanctionType;
@@ -82,6 +84,12 @@ class AdminReportSanctionApiIntegrationTest {
 
     @Autowired
     private OutboxPublisher outboxPublisher;
+
+    @Autowired
+    private SanctionExpiryService sanctionExpiryService;
+
+    @Autowired
+    private WithdrawalApplier withdrawalApplier;
 
     private CompanionReviewFixture fixture;
     private MemberReportFixture reportFixture;
@@ -241,6 +249,52 @@ class AdminReportSanctionApiIntegrationTest {
         assertThat(sanctionStatuses(dismissedTarget)).containsExactly("LIFTED");
         assertThat(detail).hasStatus(HttpStatus.OK);
         assertThat((List<?>) json(detail, "$.sanctionHistory")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-21][SN-05][PV-05] 72시간이 지나 만료된 임시 정지의 신고를 기각해도 LIFTED가 되어, 탈퇴할 때 제재 이력으로 세지 않고 CI 해시를 30일만 남긴다")
+    void dismissingAfterTemporarySuspensionExpiredLiftsItAndKeepsCiForThirtyDays() {
+        long dismissedTarget = fixture.saveVerifiedMember(TestSequence.nickname());
+        long reportId = urgentReport(dismissedTarget);
+        post(REPORTS + "/" + reportId + "/start-review", null);
+        clock.advance(Duration.ofHours(73));
+        sanctionExpiryService.run();
+        assertThat(sanctionStatuses(dismissedTarget)).containsExactly("EXPIRED");
+
+        MvcTestResult dismissed = post(REPORTS + "/" + reportId + "/dismiss", null);
+        withdrawalApplier.apply(dismissedTarget);
+
+        assertThat(dismissed).hasStatus(HttpStatus.OK);
+        assertThat(sanctionStatuses(dismissedTarget)).containsExactly("LIFTED");
+        assertThat(jdbc.queryForObject(
+                        "SELECT ci_retained_until FROM identity_verification WHERE member_id = ?",
+                        LocalDateTime.class,
+                        dismissedTarget))
+                .isEqualTo(LocalDateTime.ofInstant(clock.instant().plus(Duration.ofDays(30)), ZoneOffset.UTC));
+    }
+
+    @Test
+    @DisplayName("[F-21][SN-05] 조치한 신고의 임시 정지는 만료된 뒤에도 EXPIRED로 남아 제재 이력으로 센다")
+    void actionedReportKeepsExpiredTemporarySuspension() {
+        long target = fixture.saveVerifiedMember(TestSequence.nickname());
+        long reportId = urgentReport(target);
+        post(REPORTS + "/" + reportId + "/start-review", null);
+        post(REPORTS + "/" + reportId + "/action", "{\"sanction\":{\"type\":\"WARNING\",\"reason\":\"위협 발언\"}}");
+        clock.advance(Duration.ofHours(73));
+        sanctionExpiryService.run();
+
+        withdrawalApplier.apply(target);
+
+        assertThat(jdbc.queryForObject(
+                        "SELECT status FROM sanction WHERE report_id = ? AND type = 'TEMPORARY_72H'",
+                        String.class,
+                        reportId))
+                .isEqualTo("EXPIRED");
+        assertThat(jdbc.queryForObject(
+                        "SELECT ci_retained_until FROM identity_verification WHERE member_id = ?",
+                        LocalDateTime.class,
+                        target))
+                .isEqualTo(LocalDateTime.ofInstant(clock.instant().plus(Duration.ofDays(365)), ZoneOffset.UTC));
     }
 
     @Test
@@ -587,6 +641,30 @@ class AdminReportSanctionApiIntegrationTest {
         assertThat(jdbc.queryForObject(
                         "SELECT detail FROM admin_audit_log WHERE action = 'REPORT_DISMISS'", String.class))
                 .doesNotContain("liftedSanctionId");
+    }
+
+    @Test
+    @DisplayName("[SN-05] 신청만 한 신고자의 긴급 신고는 임시 정지가 없어서, 기각해도 대상 회원의 상태를 건드리지 않고 기각된다")
+    void dismissUrgentReportWithoutSuspension() {
+        long applicant = fixture.saveVerifiedMember(TestSequence.nickname());
+        long newBasecamp = fixture.saveBasecamp("COMPLETED", BASE);
+        fixture.insertApplication(newBasecamp, applicant, "CANCELED");
+        fixture.insertMember(newBasecamp, targetId, "MEMBER", "ACTIVE");
+        String statusBefore = memberStatus(targetId);
+        long reportId = memberReportService.report(
+                applicant,
+                new MemberReportCommand(
+                        targetId, newBasecamp, ReportKind.MEMBER, null, ReportType.HARASSMENT_OR_THREAT, "위협했다"));
+        post(REPORTS + "/" + reportId + "/start-review", null);
+
+        MvcTestResult result = post(REPORTS + "/" + reportId + "/dismiss", null);
+
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(jdbc.queryForObject("SELECT status FROM member_report WHERE id = ?", String.class, reportId))
+                .isEqualTo("DISMISSED");
+        assertThat(memberStatus(targetId)).isEqualTo(statusBefore);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sanction WHERE report_id = ?", Integer.class, reportId))
+                .isZero();
     }
 
     @Test

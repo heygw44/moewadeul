@@ -11,6 +11,7 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
 import com.moewadeul.trust.application.identity.CiRetentionCleanupService;
+import com.moewadeul.trust.application.profile.MemberProfileQueryService;
 import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
 import com.moewadeul.trust.application.sanction.SanctionConfirmService;
 import com.moewadeul.trust.domain.sanction.SanctionType;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -56,6 +58,9 @@ class WithdrawalApiIntegrationTest {
 
     @Autowired
     private CiRetentionCleanupService ciRetentionCleanupService;
+
+    @Autowired
+    private MemberProfileQueryService memberProfileQueryService;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -198,6 +203,44 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-16][PV-05] 탈퇴한 뒤에 제재가 확정되면 CI 해시를 탈퇴 시각부터 365일 뒤까지 남겨, 31일째 정리 작업이 지우지 않고 재가입도 막는다")
+    void sanctionAfterWithdrawalExtendsCiRetention() {
+        long adminId = fixture.saveVerifiedMember(TestSequence.nickname());
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        String demoKey = "key-" + TestSequence.next();
+        verifyIdentity(session, demoKey);
+        withdraw(session, PASSWORD);
+        Instant withdrawnAt = clock.instant();
+        clock.advance(Duration.ofDays(10));
+
+        sanctionConfirmService.confirm(
+                new SanctionConfirmCommand(member.getId(), null, SanctionType.PERMANENT, "금전 요구", adminId));
+
+        assertThat(retainedUntil(member))
+                .isEqualTo(LocalDateTime.ofInstant(withdrawnAt.plus(Duration.ofDays(365)), ZoneOffset.UTC));
+        clock.advance(Duration.ofDays(21));
+        ciRetentionCleanupService.deleteRetentionExpired();
+        assertThat(count("identity_verification WHERE member_id = ?", member.getId()))
+                .isEqualTo(1);
+        Member other = saveActiveMember();
+        assertThat(identityRequest(login(other), demoKey)).hasStatus(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @DisplayName("[F-16][PV-05] 탈퇴하지 않은 회원에게 제재가 확정돼도 보관 기한은 비어 있다")
+    void sanctionOfActiveMemberLeavesCiRetentionEmpty() {
+        long adminId = fixture.saveVerifiedMember(TestSequence.nickname());
+        Member member = saveActiveMember();
+        verifyIdentity(login(member), "key-" + TestSequence.next());
+
+        sanctionConfirmService.confirm(
+                new SanctionConfirmCommand(member.getId(), null, SanctionType.WARNING, "욕설", adminId));
+
+        assertThat(retainedUntil(member)).isNull();
+    }
+
+    @Test
     @DisplayName("[F-11][PV-05] CI 해시가 남아 있는 동안 같은 사람이 다른 계정으로 본인확인하면 409 IDENTITY_CI_DUPLICATED이다")
     void sameIdentityCannotVerifyWhileCiIsRetained() {
         Member first = saveActiveMember();
@@ -320,6 +363,47 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-01][PV-01] 본인확인을 마친 회원이 탈퇴해도 그 회원이 멤버인 베이스캠프 상세는 200이고, 탈퇴 회원의 연령대와 성별은 비어 있다")
+    void basecampDetailWithWithdrawnVerifiedMemberStillResponds() {
+        // given: 본인확인을 마친 회원이 모집 중인 베이스캠프의 멤버다.
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        verifyIdentity(session, "key-" + TestSequence.next());
+        long basecamp = fixture.saveBasecamp("RECRUITING", null);
+        fixture.insertMember(basecamp, member.getId(), "MEMBER", "ACTIVE");
+
+        // when: 탈퇴하면 본인확인 기록의 출생연도와 성별은 지워지지만 행은 CI 보관 기한까지 남는다.
+        withdraw(session, PASSWORD);
+        Cookie viewerSession = login(saveActiveMember());
+        MvcTestResult anonymousDetail =
+                mvc.get().uri("/api/basecamps/" + basecamp).exchange();
+        MvcTestResult memberDetail = mvc.get()
+                .uri("/api/basecamps/" + basecamp)
+                .cookie(viewerSession)
+                .exchange();
+        String memberPath = "$.members[?(@.memberId == %d)]".formatted(member.getId());
+
+        // then: 로그인한 조회자에게만 나가는 연령대·성별 필드는 비어 있다.
+        assertThat(identityColumn(member, "gender")).isNull();
+        assertThat(anonymousDetail).hasStatus(HttpStatus.OK);
+        assertThat(memberDetail).hasStatus(HttpStatus.OK);
+        assertThat(memberDetail)
+                .bodyJson()
+                .extractingPath(memberPath + ".genderVerified")
+                .asList()
+                .containsExactly(false);
+        assertThat(memberDetail)
+                .bodyJson()
+                .extractingPath(memberPath + ".ageGroupVerified")
+                .asList()
+                .containsExactly(false);
+        assertThat(memberProfileQueryService
+                        .findIncludingWithdrawn(member.getId())
+                        .gender())
+                .isNull();
+    }
+
+    @Test
     @DisplayName("[F-01][PW-02] 탈퇴하면 기기가 여러 대여도 그 회원의 세션이 모두 지워져 옛 쿠키는 401이고, 응답이 SESSION 쿠키를 만료시킨다")
     void allSessionsAreRemoved() {
         Member member = saveActiveMember();
@@ -343,13 +427,12 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01][PW-03] 비밀번호가 틀리면 401 LOGIN_FAILED이고 회원 정보와 세션은 그대로이며 로그인 실패로 세지 않는다")
-    void wrongPasswordChangesNothing() {
+    @DisplayName("[F-01][PW-03][PW-08] 비밀번호가 틀리면 401 LOGIN_FAILED이고 회원 정보와 세션은 그대로이며 로그인 실패로 기록한다")
+    void wrongPasswordChangesNothingButIsRecordedAsFailure() {
         Member member = saveActiveMember();
         Cookie session = login(member);
-        int loginHistoryBefore = count("login_history WHERE member_id = ?", member.getId());
 
-        for (int attempt = 0; attempt < 6; attempt++) {
+        for (int attempt = 0; attempt < 4; attempt++) {
             MvcTestResult result = withdraw(session, WRONG_PASSWORD);
 
             assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
@@ -360,10 +443,52 @@ class WithdrawalApiIntegrationTest {
         assertThat(column(member, "email")).isEqualTo(member.getEmail());
         assertThat(column(member, "nickname")).isEqualTo(member.getNickname());
         assertThat(sessionCount(member)).isEqualTo(1);
-        assertThat(count("login_history WHERE member_id = ?", member.getId())).isEqualTo(loginHistoryBefore);
+        assertThat(count("login_history WHERE member_id = ? AND success = FALSE", member.getId()))
+                .isEqualTo(4);
         assertThat(count("outbox_event WHERE event_type LIKE 'WITHDRAWAL%'")).isZero();
         MvcTestResult loginAgain = postJson("/api/auth/login", loginBody(member.getEmail(), PASSWORD), null);
         assertThat(loginAgain).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("[F-01][PW-03][PW-08] 비밀번호를 5번 틀리면 올바른 비밀번호를 보내도 429 LOGIN_LOCKED와 Retry-After를 받고 탈퇴하지 않는다")
+    void repeatedMismatchLocksWithdrawalAndLogin() {
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertThat(withdraw(session, WRONG_PASSWORD)).hasStatus(HttpStatus.UNAUTHORIZED);
+        }
+
+        MvcTestResult lockedWithRightPassword = withdraw(session, PASSWORD);
+        MvcTestResult lockedLogin = postJson("/api/auth/login", loginBody(member.getEmail(), PASSWORD), null);
+
+        assertThat(lockedWithRightPassword).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(lockedWithRightPassword).bodyJson().extractingPath("$.code").isEqualTo("LOGIN_LOCKED");
+        assertThat(lockedWithRightPassword.getResponse().getHeader(HttpHeaders.RETRY_AFTER))
+                .isNotBlank();
+        assertThat(lockedLogin).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(column(member, "status")).isEqualTo("ACTIVE");
+        assertThat(sessionCount(member)).isEqualTo(1);
+        assertThat(count("login_history WHERE member_id = ? AND success = FALSE", member.getId()))
+                .isEqualTo(5);
+        assertThat(count("outbox_event WHERE event_type LIKE 'WITHDRAWAL%'")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-01][PW-03][PW-08] 로그인 실패로 잠긴 회원은 올바른 비밀번호로도 탈퇴하지 못하고, 잠금이 풀리면 탈퇴할 수 있다")
+    void loginLockoutBlocksWithdrawalUntilItExpires() {
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertThat(postJson("/api/auth/login", loginBody(member.getEmail(), WRONG_PASSWORD), null))
+                    .hasStatus(HttpStatus.UNAUTHORIZED);
+        }
+
+        assertThat(withdraw(session, PASSWORD)).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        clock.advance(Duration.ofMinutes(11));
+
+        assertThat(withdraw(session, PASSWORD)).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(column(member, "status")).isEqualTo("WITHDRAWN");
     }
 
     @Test
