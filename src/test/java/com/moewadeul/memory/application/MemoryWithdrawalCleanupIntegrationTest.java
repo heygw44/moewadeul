@@ -26,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 class MemoryWithdrawalCleanupIntegrationTest {
 
     private static final String PASSWORD = "Valid-pass1";
+    private static final String REQUEST_IP = "203.0.113.7";
     private static final LocalDate YESTERDAY = LocalDate.of(2026, 10, 4);
     private static final long SIZE = 1024;
     private static final long THUMBNAIL_SIZE = 64;
@@ -84,7 +85,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
                 other);
 
         // when
-        withdrawalService.withdraw(member, PASSWORD);
+        withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
         outboxPublisher.publishPending();
 
         // then
@@ -170,7 +171,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
         long image = uploaded(member);
         String key = keyOf(image);
         storage.failDeleteOf(key);
-        withdrawalService.withdraw(member, PASSWORD);
+        withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
 
         // when
         outboxPublisher.publishPending();

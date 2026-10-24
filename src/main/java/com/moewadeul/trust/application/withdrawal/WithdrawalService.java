@@ -26,11 +26,13 @@ public class WithdrawalService {
 
     /**
      * 호출하면 비밀번호를 확인한 뒤 회원을 탈퇴 처리하고, 트랜잭션이 커밋된 뒤에 그 회원의 세션을 모두 지운다.
-     * 비밀번호가 틀리면 {@code LOGIN_FAILED}로 거부하고 아무것도 바꾸지 않는다. 커밋 뒤 세션 삭제가 실패하면 탈퇴는 이미 끝난 상태이고
-     * 예전 세션이 남을 수 있다.
+     * 비밀번호가 틀리면 로그인 실패로 기록하고 {@code LOGIN_FAILED}로 거부하며 회원 정보는 바꾸지 않는다. 실패가 쌓여 잠겨 있으면
+     * {@code LOGIN_LOCKED}로 거부한다. 커밋 뒤 세션 삭제가 실패하면 탈퇴는 이미 끝난 상태이고 예전 세션이 남을 수 있다.
+     *
+     * @param ip 비밀번호가 틀렸을 때 실패 기록에 남길 요청 IP
      */
-    public void withdraw(long memberId, String password) {
-        memberWithdrawalService.verifyPassword(memberId, password);
+    public void withdraw(long memberId, String password, String ip) {
+        memberWithdrawalService.verifyPassword(memberId, password, ip);
         withdrawalApplier.apply(memberId);
         memberSessions.invalidateAll(memberId);
         log.info("member withdrawn memberId={}", memberId);
