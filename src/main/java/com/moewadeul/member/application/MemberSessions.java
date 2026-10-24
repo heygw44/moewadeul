@@ -33,4 +33,9 @@ public class MemberSessions {
                 .filter(sessionId -> !sessionId.equals(keptSessionId))
                 .forEach(sessionRepository::deleteById);
     }
+
+    /** 호출하면 그 세션 하나를 지운다. 없는 세션이면 아무 일도 하지 않는다. {@link #invalidateAll}과 같은 이유로 DB 트랜잭션 안에서 부르지 않는다. */
+    public void invalidate(String sessionId) {
+        sessionRepository.deleteById(sessionId);
+    }
 }
