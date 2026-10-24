@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
  *
  * <p>이 클래스는 트랜잭션을 열지 않는다. 대상 ID를 나눠 읽은 뒤 베이스캠프마다 {@link BasecampAutoTransitionApplier}를 불러
  * 베이스캠프 하나를 트랜잭션 하나로 처리한다. 한 베이스캠프가 실패해도 나머지는 계속 처리하고, 실패한 것은 다음 실행에서 다시 집는다.
+ * 실패한 베이스캠프의 수는 결과에 담아 돌려주므로, 호출하는 쪽이 그 수로 작업 실패 지표를 올린다.
  */
 @Slf4j
 @Service
@@ -36,41 +37,49 @@ public class BasecampAutoTransitionService {
     public Result run() {
         Instant now = clock.instant();
         LocalDate today = LocalDate.ofInstant(now, KoreaTime.ZONE);
-        int completed = processAll(
+        Outcome completed = processAll(
                 (afterId, limit) -> autoTransitionMapper.selectDueForCompletionIds(today, afterId, limit),
                 basecampId -> applier.complete(basecampId, today, now));
         LocalDate dueStartDate = today.plusDays(1);
-        int departed = processAll(
+        Outcome departed = processAll(
                 (afterId, limit) -> autoTransitionMapper.selectDueForDepartureIds(dueStartDate, afterId, limit),
                 basecampId -> applier.processDayBeforeDeparture(basecampId, now));
-        log.info("basecamp auto transition completed={} departureProcessed={}", completed, departed);
-        return new Result(completed, departed);
+        int failed = completed.failed() + departed.failed();
+        log.info(
+                "basecamp auto transition completed={} departureProcessed={} failed={}",
+                completed.processed(),
+                departed.processed(),
+                failed);
+        return new Result(completed.processed(), departed.processed(), failed);
     }
 
-    private int processAll(BiFunction<Long, Integer, List<Long>> selector, BasecampProcessor processor) {
+    private Outcome processAll(BiFunction<Long, Integer, List<Long>> selector, BasecampProcessor processor) {
         int processed = 0;
+        int failed = 0;
         long afterId = 0;
         while (true) {
             List<Long> ids = selector.apply(afterId, BATCH_SIZE);
             for (long basecampId : ids) {
-                if (processOne(processor, basecampId)) {
-                    processed++;
+                switch (processOne(processor, basecampId)) {
+                    case PROCESSED -> processed++;
+                    case FAILED -> failed++;
+                    case UNCHANGED -> {}
                 }
             }
             if (ids.size() < BATCH_SIZE) {
-                return processed;
+                return new Outcome(processed, failed);
             }
             afterId = ids.get(ids.size() - 1);
         }
     }
 
     // 한 베이스캠프의 실패가 다른 베이스캠프의 처리를 막지 않게 여기서 잡는다. 실패한 베이스캠프는 상태가 그대로라 다음 실행의 대상이 된다.
-    private boolean processOne(BasecampProcessor processor, long basecampId) {
+    private ItemResult processOne(BasecampProcessor processor, long basecampId) {
         try {
-            return processor.process(basecampId);
+            return processor.process(basecampId) ? ItemResult.PROCESSED : ItemResult.UNCHANGED;
         } catch (RuntimeException e) {
             log.error("basecamp auto transition failed basecampId={}", basecampId, e);
-            return false;
+            return ItemResult.FAILED;
         }
     }
 
@@ -80,9 +89,19 @@ public class BasecampAutoTransitionService {
         boolean process(long basecampId);
     }
 
+    // 바뀐 것이 없는 경우(다른 쪽이 먼저 처리함)와 예외로 실패한 경우를 가른다. 앞의 것은 정상이고 뒤의 것만 실패 지표에 올린다.
+    private enum ItemResult {
+        PROCESSED,
+        UNCHANGED,
+        FAILED
+    }
+
+    private record Outcome(int processed, int failed) {}
+
     /**
      * @param completed 이번 실행에서 완료한 베이스캠프 수
      * @param departureProcessed 이번 실행에서 확정하거나 취소한 베이스캠프 수
+     * @param failed 이번 실행에서 예외로 처리하지 못한 베이스캠프 수. 상태가 그대로라 다음 실행에서 다시 처리한다
      */
-    public record Result(int completed, int departureProcessed) {}
+    public record Result(int completed, int departureProcessed, int failed) {}
 }

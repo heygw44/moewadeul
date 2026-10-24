@@ -33,7 +33,11 @@ public class ProgramPaymentExpiryScheduler {
     @Scheduled(cron = "${moewadeul.program.payment-expiry.cron:0 * * * * *}", zone = KoreaTime.ZONE_ID)
     public void expire() {
         try {
-            expiryService.run();
+            ProgramPaymentExpiryService.Result result = expiryService.run();
+            // 신청 하나의 실패는 서비스가 로그만 남기고 계속 처리한다. 그래서 실행이 끝난 뒤 실패가 하나라도 있으면 실패 한 번으로 센다.
+            if (result.failed() > 0) {
+                scheduledJobMetrics.recordFailure(JOB_NAME);
+            }
         } catch (Exception e) {
             // 대상을 읽다가 실패하는 경우처럼 어떤 예외든 이번 실행의 실패 하나로 끝내고 다음 주기에 다시 실행한다.
             // 그래서 작업 이름이 드러나는 ERROR 로그를 직접 남기고 실패 수를 올린다. 예외를 삼키는 곳은 호출 경로의 맨 끝인 여기뿐이다.
