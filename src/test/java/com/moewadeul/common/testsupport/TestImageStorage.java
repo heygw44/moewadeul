@@ -60,6 +60,11 @@ public class TestImageStorage implements ImageStorage {
         failingDeletes.add(key);
     }
 
+    /** 호출하면 failDeleteOf로 실패시킨 key의 삭제가 다시 성공한다. */
+    public void allowDeleteOf(String key) {
+        failingDeletes.remove(key);
+    }
+
     /** 성공한 삭제만 지운 순서대로 돌려준다. 실패시킨 삭제는 포함하지 않는다. */
     public List<String> deletedKeys() {
         return List.copyOf(deletedKeys);

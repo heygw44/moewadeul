@@ -18,8 +18,12 @@ public interface MemoryImageMapper {
     List<MemoryImageRow> selectUnattachedCreatedBefore(
             @Param("createdBefore") Instant createdBefore, @Param("limit") int limit);
 
-    /** 호출하면 memberId인 회원이 올렸고 기록에 붙지 않은 사진을 만든 시각과 상관없이 ID 오름차순으로 최대 limit건 읽는다. */
-    List<MemoryImageRow> selectUnattachedByMember(@Param("memberId") long memberId, @Param("limit") int limit);
+    /**
+     * 호출하면 memberId인 회원이 올렸고 기록에 붙지 않은 사진 중 ID가 afterId보다 큰 것을 만든 시각과 상관없이 ID 오름차순으로 최대 limit건 읽는다.
+     * 처음부터 읽으려면 afterId에 0을 넘긴다.
+     */
+    List<MemoryImageRow> selectUnattachedByMember(
+            @Param("memberId") long memberId, @Param("afterId") long afterId, @Param("limit") int limit);
 
     /** 호출하면 imageId인 사진이 아직 기록에 붙지 않았을 때만 행을 지우고, 지운 행 수(0 또는 1)를 돌려준다. */
     int deleteIfUnattached(@Param("imageId") long imageId);

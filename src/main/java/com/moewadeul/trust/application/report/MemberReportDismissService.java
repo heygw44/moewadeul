@@ -14,6 +14,7 @@ import com.moewadeul.trust.domain.report.MemberReportRepository;
 import com.moewadeul.trust.domain.report.ReportStatus;
 import com.moewadeul.trust.domain.sanction.Sanction;
 import com.moewadeul.trust.domain.sanction.SanctionRepository;
+import com.moewadeul.trust.domain.sanction.SanctionStatus;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -37,7 +38,8 @@ public class MemberReportDismissService {
     private final Clock clock;
 
     /**
-     * 호출하면 검토 중인 신고를 기각한다. 그 신고가 만든 임시 정지가 적용 중이면 해제하고, 회원의 정지 상태를 남은 정지에 맞춰 다시 정한다.
+     * 호출하면 검토 중인 신고를 기각한다. 그 신고가 만든 임시 정지를 해제하고, 적용 중인 것이 있었으면 회원의 정지 상태를 남은 정지에 맞춰 다시 정한다.
+     * 72시간이 지나 이미 만료된 임시 정지도 해제한다. 기각된 신고의 임시 정지는 제재 이력에 남기지 않기 때문이다.
      * 같은 회원에게 다른 임시 정지나 확정 정지가 남아 있으면 회원은 정지 상태로 남는다. 세션은 지우지 않는다. 풀리는 쪽이라 막을 것이 없다.
      *
      * <p>신고 행, 회원 행, 제재 행 순서로 잠근다. 신고가 없으면 NOT_FOUND, 검토 중이 아니면 REPORT_INVALID_STATE로 거부한다.
@@ -69,14 +71,19 @@ public class MemberReportDismissService {
         return new MemberReportStatusResult(reportId, report.getStatus().name());
     }
 
-    // 임시 정지가 없으면(긴급 신고가 아니거나 이미 자연 만료됐으면) 회원의 정지 상태를 다시 계산할 이유가 없다.
+    // 임시 정지가 없으면(긴급 신고가 아니면) 바꿀 것이 없다. 이미 만료된 임시 정지는 회원의 정지에 영향이 없으므로, 적용 중인 것을 풀었을 때만
+    // 회원의 정지 상태를 다시 계산한다.
     private Long liftTemporarySuspensions(MemberReport report, long adminId, Instant now) {
-        List<Sanction> temporaries = sanctionRepository.findActiveTemporaryByReportId(report.getId());
+        List<Sanction> temporaries = sanctionRepository.findUnliftedTemporaryByReportId(report.getId());
         if (temporaries.isEmpty()) {
             return null;
         }
-        temporaries.forEach(sanction -> sanction.lift(adminId, now));
-        suspensionResyncer.resync(report.getTargetMemberId());
+        boolean wasSuspending =
+                temporaries.stream().anyMatch(sanction -> sanction.getStatus() == SanctionStatus.ACTIVE);
+        temporaries.forEach(sanction -> sanction.liftForDismissedReport(adminId, now));
+        if (wasSuspending) {
+            suspensionResyncer.resync(report.getTargetMemberId());
+        }
         return temporaries.get(0).getId();
     }
 }

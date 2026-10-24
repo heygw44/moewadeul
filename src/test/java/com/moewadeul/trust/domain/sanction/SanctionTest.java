@@ -7,6 +7,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -118,6 +119,42 @@ class SanctionTest {
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.SANCTION_INVALID_STATE));
         assertThat(expired.getLiftedBy()).isNull();
+    }
+
+    @Test
+    @DisplayName("[SN-05] 기각한 신고의 임시 정지는 적용 중이든 이미 만료됐든 LIFTED가 되고 기각한 관리자와 시각을 남긴다")
+    void liftForDismissedReportLiftsActiveAndExpiredTemporary() {
+        Sanction active = Sanction.temporary(11L, 5L, NOW);
+        Sanction expired = Sanction.temporary(11L, 6L, NOW);
+        ReflectionTestUtils.setField(expired, "status", SanctionStatus.EXPIRED);
+        Instant later = NOW.plusSeconds(3600 * 100);
+
+        active.liftForDismissedReport(98L, later);
+        expired.liftForDismissedReport(98L, later);
+
+        for (Sanction sanction : List.of(active, expired)) {
+            assertThat(sanction.getStatus()).isEqualTo(SanctionStatus.LIFTED);
+            assertThat(sanction.getLiftedBy()).isEqualTo(98L);
+            assertThat(sanction.getLiftedAt()).isEqualTo(later);
+        }
+    }
+
+    @Test
+    @DisplayName("[SN-05] 이미 해제된 임시 정지와 임시 정지가 아닌 제재는 기각으로 해제하지 못한다")
+    void liftForDismissedReportRejectsLiftedOrConfirmedSanction() {
+        Sanction lifted = Sanction.temporary(11L, 5L, NOW);
+        lifted.liftForDismissedReport(98L, NOW);
+        Sanction warning = Sanction.confirm(11L, null, SanctionType.WARNING, 1, "욕설", NOW, 99L);
+
+        assertThatThrownBy(() -> lifted.liftForDismissedReport(98L, NOW))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.SANCTION_INVALID_STATE));
+        assertThatThrownBy(() -> warning.liftForDismissedReport(98L, NOW))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.SANCTION_INVALID_STATE));
+        assertThat(warning.getStatus()).isEqualTo(SanctionStatus.ACTIVE);
     }
 
     @Test

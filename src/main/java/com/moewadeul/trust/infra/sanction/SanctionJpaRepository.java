@@ -68,7 +68,7 @@ public interface SanctionJpaRepository extends JpaRepository<Sanction, Long>, Sa
             select s from Sanction s
             where s.reportId = :reportId
               and s.type = com.moewadeul.trust.domain.sanction.SanctionType.TEMPORARY_72H
-              and s.status = com.moewadeul.trust.domain.sanction.SanctionStatus.ACTIVE
+              and s.status <> com.moewadeul.trust.domain.sanction.SanctionStatus.LIFTED
             """)
-    List<Sanction> findActiveTemporaryByReportId(@Param("reportId") long reportId);
+    List<Sanction> findUnliftedTemporaryByReportId(@Param("reportId") long reportId);
 }

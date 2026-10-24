@@ -31,6 +31,9 @@ public interface SanctionRepository {
     /** 호출하면 그 회원에게 적용 중(ACTIVE)인 정지 제재를 모두 돌려준다. 경고는 넣지 않고, 종료 시각이 지났어도 아직 만료 처리 전이면 넣는다. */
     List<Sanction> findActiveSuspensions(long memberId);
 
-    /** 호출하면 그 신고가 만든 적용 중인 임시 정지(72시간)를 모두 돌려준다. 긴급 신고를 접수하면 하나가 생긴다. */
-    List<Sanction> findActiveTemporaryByReportId(long reportId);
+    /**
+     * 호출하면 그 신고가 만든 해제되지 않은 임시 정지(72시간)를 모두 돌려준다. 적용 중인 것과 72시간이 지나 이미 만료된 것을 함께 넣는다.
+     * 긴급 신고를 접수하면 하나가 생긴다.
+     */
+    List<Sanction> findUnliftedTemporaryByReportId(long reportId);
 }

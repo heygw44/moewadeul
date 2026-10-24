@@ -2,16 +2,20 @@ package com.moewadeul.memory.application;
 
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.memory.application.image.MemoryImageUploadCommand;
 import com.moewadeul.memory.application.image.MemoryImageUploadService;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +56,9 @@ class MemoryWithdrawalCleanupIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private MutableClock clock;
 
     @Test
     @DisplayName(
@@ -96,21 +103,101 @@ class MemoryWithdrawalCleanupIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-33][PV-10] 저장소 삭제가 실패해도 행은 지우고 넘어가며, 같은 회원으로 다시 정리해도 결과가 같다")
-    void cleanupIsRepeatable() {
+    @DisplayName("[F-33][PV-10] 사진 객체를 지우지 못하면 그 사진 행을 남기고 예외를 던지며, 다른 사진은 계속 지우고, 저장소가 돌아온 뒤 다시 정리하면 객체와 행이 모두 지워진다")
+    void failedObjectDeleteKeepsRowUntilRetrySucceeds() {
         // given
         long member = saveMember();
-        long image = uploaded(member);
-        commandService.write(member, write(List.of(image)));
-        storage.failDeleteOf(keyOf(image));
+        long failing = uploaded(member);
+        long other = uploaded(member);
+        commandService.write(member, write(List.of(failing)));
+        String failingKey = keyOf(failing);
+        String failingThumbnailKey = thumbnailKeyOf(failing);
+        String otherKey = keyOf(other);
+        storage.failDeleteOf(failingKey);
 
         // when
-        cleanupService.cleanUp(member);
-        cleanupService.cleanUp(member);
+        assertThatThrownBy(() -> cleanupService.cleanUp(member)).isInstanceOf(IllegalStateException.class);
 
         // then
         assertThat(count("memory WHERE member_id = ?", member)).isZero();
+        assertThat(count("memory_image WHERE id = ?", failing)).isEqualTo(1);
+        assertThat(count("memory_image WHERE id = ?", other)).isZero();
+        assertThat(storage.hasObject(failingKey)).isTrue();
+        assertThat(storage.hasObject(otherKey)).isFalse();
+
+        // when
+        storage.allowDeleteOf(failingKey);
+        cleanupService.cleanUp(member);
+
+        // then
         assertThat(count("memory_image WHERE member_id = ?", member)).isZero();
+        assertThat(storage.hasObject(failingKey)).isFalse();
+        assertThat(storage.hasObject(failingThumbnailKey)).isFalse();
+    }
+
+    @Test
+    @DisplayName("[F-33][PV-10] 원본은 지웠지만 썸네일 객체를 지우지 못하면 그 사진 행을 남기고, 다시 정리하면 썸네일과 행이 지워진다")
+    void failedThumbnailDeleteKeepsRow() {
+        // given
+        long member = saveMember();
+        long image = uploaded(member);
+        String key = keyOf(image);
+        String thumbnailKey = thumbnailKeyOf(image);
+        storage.failDeleteOf(thumbnailKey);
+
+        // when
+        assertThatThrownBy(() -> cleanupService.cleanUp(member)).isInstanceOf(IllegalStateException.class);
+
+        // then
+        assertThat(count("memory_image WHERE id = ?", image)).isEqualTo(1);
+        assertThat(storage.hasObject(key)).isFalse();
+        assertThat(storage.hasObject(thumbnailKey)).isTrue();
+
+        // when
+        storage.allowDeleteOf(thumbnailKey);
+        cleanupService.cleanUp(member);
+
+        // then
+        assertThat(count("memory_image WHERE id = ?", image)).isZero();
+        assertThat(storage.hasObject(thumbnailKey)).isFalse();
+    }
+
+    @Test
+    @DisplayName("[F-33][PV-10] 탈퇴 정리 중 저장소 삭제가 실패하면 이벤트는 발행 완료가 되지 않고 남아, 저장소가 돌아온 뒤 재시도에서 사진이 모두 지워진다")
+    void outboxEventRetriesUntilObjectsAreDeleted() {
+        // given
+        long member = saveMember();
+        long image = uploaded(member);
+        String key = keyOf(image);
+        storage.failDeleteOf(key);
+        withdrawalService.withdraw(member, PASSWORD);
+
+        // when
+        outboxPublisher.publishPending();
+
+        // then
+        Map<String, Object> event = cleanupEvent(member);
+        assertThat(event.get("status")).isEqualTo("PENDING");
+        assertThat(((Number) event.get("attempt_count")).intValue()).isEqualTo(1);
+        assertThat(count("memory_image WHERE id = ?", image)).isEqualTo(1);
+        assertThat(storage.hasObject(key)).isTrue();
+
+        // when
+        storage.allowDeleteOf(key);
+        clock.advance(Duration.ofHours(1));
+        outboxPublisher.publishPending();
+
+        // then
+        assertThat(cleanupEvent(member).get("status")).isEqualTo("PUBLISHED");
+        assertThat(count("memory_image WHERE id = ?", image)).isZero();
+        assertThat(storage.hasObject(key)).isFalse();
+    }
+
+    private Map<String, Object> cleanupEvent(long memberId) {
+        return jdbc.queryForMap(
+                "SELECT status, attempt_count FROM outbox_event"
+                        + " WHERE event_type = 'WITHDRAWAL_MEMORY_CLEANUP' AND aggregate_id = ?",
+                memberId);
     }
 
     private static MemoryWriteCommand write(List<Long> imageIds) {

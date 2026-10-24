@@ -202,6 +202,44 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-16][PV-05] 탈퇴한 뒤에 제재가 확정되면 CI 해시를 탈퇴 시각부터 365일 뒤까지 남겨, 31일째 정리 작업이 지우지 않고 재가입도 막는다")
+    void sanctionAfterWithdrawalExtendsCiRetention() {
+        long adminId = fixture.saveVerifiedMember(TestSequence.nickname());
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        String demoKey = "key-" + TestSequence.next();
+        verifyIdentity(session, demoKey);
+        withdraw(session, PASSWORD);
+        Instant withdrawnAt = clock.instant();
+        clock.advance(Duration.ofDays(10));
+
+        sanctionConfirmService.confirm(
+                new SanctionConfirmCommand(member.getId(), null, SanctionType.PERMANENT, "금전 요구", adminId));
+
+        assertThat(retainedUntil(member))
+                .isEqualTo(LocalDateTime.ofInstant(withdrawnAt.plus(Duration.ofDays(365)), ZoneOffset.UTC));
+        clock.advance(Duration.ofDays(21));
+        ciRetentionCleanupService.deleteRetentionExpired();
+        assertThat(count("identity_verification WHERE member_id = ?", member.getId()))
+                .isEqualTo(1);
+        Member other = saveActiveMember();
+        assertThat(identityRequest(login(other), demoKey)).hasStatus(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @DisplayName("[F-16][PV-05] 탈퇴하지 않은 회원에게 제재가 확정돼도 보관 기한은 비어 있다")
+    void sanctionOfActiveMemberLeavesCiRetentionEmpty() {
+        long adminId = fixture.saveVerifiedMember(TestSequence.nickname());
+        Member member = saveActiveMember();
+        verifyIdentity(login(member), "key-" + TestSequence.next());
+
+        sanctionConfirmService.confirm(
+                new SanctionConfirmCommand(member.getId(), null, SanctionType.WARNING, "욕설", adminId));
+
+        assertThat(retainedUntil(member)).isNull();
+    }
+
+    @Test
     @DisplayName("[F-11][PV-05] CI 해시가 남아 있는 동안 같은 사람이 다른 계정으로 본인확인하면 409 IDENTITY_CI_DUPLICATED이다")
     void sameIdentityCannotVerifyWhileCiIsRetained() {
         Member first = saveActiveMember();
