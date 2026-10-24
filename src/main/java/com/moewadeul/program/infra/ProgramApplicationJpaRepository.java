@@ -72,4 +72,18 @@ public interface ProgramApplicationJpaRepository
               and a.reviewRequestedAt is null
             """)
     int requestReviewForConfirmed(@Param("memberId") long memberId, @Param("now") Instant now);
+
+    @Override
+    boolean existsByProgramId(long programId);
+
+    // 신청 쿼리(insertIfSeatAvailable)와 남은 자리 조회가 세는 기준과 같다. 기한이 지난 결제 대기 신청은 만료 처리 전이어도 세지 않는다.
+    @Override
+    @Query("""
+            select count(a) from ProgramApplication a
+            where a.programId = :programId
+              and (a.status = com.moewadeul.program.domain.ProgramApplicationStatus.CONFIRMED
+                   or (a.status = com.moewadeul.program.domain.ProgramApplicationStatus.PENDING_PAYMENT
+                       and a.paymentDueAt > :now))
+            """)
+    long countSeatHolders(@Param("programId") long programId, @Param("now") Instant now);
 }

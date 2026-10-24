@@ -228,6 +228,41 @@ class ProgramApplyServiceIntegrationTest {
                 .isEqualTo("CONFIRMED");
     }
 
+    @Test
+    @DisplayName("[F-18][PG-03][PG-05] 본인의 결제 기한이 지난 결제 대기 신청은 만료 작업 전에도 재신청하면 먼저 만료되고 새 신청이 성공한다")
+    void memberCanApplyAgainWhenOwnApplicationIsOverdueBeforeExpiryRuns() {
+        // given
+        long programId = fixture.saveProgram(1, false);
+        long memberId = fixture.saveMember();
+        ProgramApplyResult first = programApplyService.apply(memberId, programId);
+        clock.setInstant(first.paymentDueAt());
+
+        // when
+        ProgramApplyResult second = programApplyService.apply(memberId, programId);
+
+        // then
+        assertThat(second.status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(second.applicationId()).isNotEqualTo(first.applicationId());
+        assertThat(fixture.applicationStatus(first.applicationId())).isEqualTo("EXPIRED");
+        assertThat(fixture.outboxCount("PROGRAM_APPLICATION_EXPIRED", first.applicationId()))
+                .isEqualTo(1);
+        assertThat(fixture.activeCount(programId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-18][PG-03] 본인의 결제 기한이 아직 남은 결제 대기 신청은 만료시키지 않고 PROGRAM_ALREADY_APPLIED이다")
+    void doesNotExpireOwnApplicationBeforeDue() {
+        // given
+        long programId = fixture.saveProgram(2, false);
+        long memberId = fixture.saveMember();
+        ProgramApplyResult first = programApplyService.apply(memberId, programId);
+        clock.setInstant(first.paymentDueAt().minusMillis(1));
+
+        // when, then
+        assertErrorCode(() -> programApplyService.apply(memberId, programId), ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
+        assertThat(fixture.applicationStatus(first.applicationId())).isEqualTo("PENDING_PAYMENT");
+    }
+
     private static void assertErrorCode(Runnable action, ErrorCode expected) {
         assertThatThrownBy(action::run)
                 .isInstanceOfSatisfying(

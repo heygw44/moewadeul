@@ -96,6 +96,50 @@ class ProgramSeatReleaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-20][PG-07] 결제 기한이 지난 자리를 다른 회원이 먼저 신청해 가져갔으면, 뒤늦게 만료 처리해도 남은 자리가 없으므로 이벤트가 없다")
+    void expiryRecordsNothingWhenSeatAlreadyTaken() {
+        // given
+        long programId = fixture.saveProgram(1, false);
+        long expiring = fixture.saveMember();
+        long newcomer = fixture.saveMember();
+        long waiting = fixture.saveMember();
+        long expiringApplicationId =
+                fixture.saveApplication(programId, expiring, "PENDING_PAYMENT", NOW.minus(Duration.ofMinutes(1)));
+        fixture.saveApplication(programId, newcomer, "PENDING_PAYMENT");
+        fixture.saveVacancyAlert(programId, waiting);
+
+        // when
+        expiryService.run();
+
+        // then
+        assertThat(fixture.applicationStatus(expiringApplicationId)).isEqualTo("EXPIRED");
+        assertThat(fixture.seatReleasedPayloads(programId)).isEmpty();
+        assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 결제 기한이 지난 신청을 본인이 취소했는데 그 자리를 다른 회원이 이미 가져갔으면 이벤트가 없다")
+    void userCancelRecordsNothingWhenSeatAlreadyTaken() {
+        // given
+        long programId = fixture.saveProgram(1, false);
+        long canceler = fixture.saveMember();
+        long newcomer = fixture.saveMember();
+        long waiting = fixture.saveMember();
+        long cancelApplicationId =
+                fixture.saveApplication(programId, canceler, "PENDING_PAYMENT", NOW.minus(Duration.ofMinutes(1)));
+        fixture.saveApplication(programId, newcomer, "PENDING_PAYMENT");
+        fixture.saveVacancyAlert(programId, waiting);
+
+        // when
+        programPaymentService.cancel(canceler, cancelApplicationId);
+
+        // then
+        assertThat(fixture.applicationStatus(cancelApplicationId)).isEqualTo("CANCELED");
+        assertThat(fixture.seatReleasedPayloads(programId)).isEmpty();
+        assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isNull();
+    }
+
+    @Test
     @DisplayName("[F-20][PG-07] 마지막 알림 뒤 30분이 되기 전에 자리가 또 돌아오면 이미 알린 회원은 빠지고 그 뒤에 알림을 신청한 회원만 대상이다")
     void releaseWithinRenotifyIntervalSkipsRecentlyNotified() {
         // given

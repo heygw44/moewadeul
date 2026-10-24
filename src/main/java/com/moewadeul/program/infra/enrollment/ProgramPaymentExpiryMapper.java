@@ -14,6 +14,13 @@ public interface ProgramPaymentExpiryMapper {
     List<ExpiryTarget> selectDueTargets(
             @Param("now") Instant now, @Param("afterId") long afterId, @Param("limit") int limit);
 
+    /**
+     * 호출하면 memberId인 회원이 programId인 행사에 가진 결제 기한이 now 이하인 결제 대기 신청을 읽는다. 없으면 null이다.
+     * 회원은 행사마다 활성 신청을 하나만 가질 수 있어서 결과는 최대 한 건이다.
+     */
+    ExpiryTarget selectOverdueByMember(
+            @Param("programId") long programId, @Param("memberId") long memberId, @Param("now") Instant now);
+
     /** 호출하면 결제 기한이 now 이하인 결제 대기 신청 하나를 만료로 바꾸고 바뀐 행 수를 돌려준다. 이미 다른 상태이면 0이다. */
     int expireIfDue(@Param("id") long id, @Param("now") Instant now);
 }

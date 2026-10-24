@@ -33,4 +33,13 @@ public interface ProgramApplicationRepository {
      * 이미 시각이 있는 신청은 건드리지 않으므로 다시 호출해도 처음 시각이 남는다. 이 쿼리로 바꾼 신청의 엔티티는 같은 트랜잭션에서 계속 쓰지 않는다.
      */
     int requestReviewForConfirmed(long memberId, Instant now);
+
+    /** 호출하면 programId인 행사에 신청이 상태와 상관없이 하나라도 있는지 돌려준다. 잠금은 잡지 않는다. */
+    boolean existsByProgramId(long programId);
+
+    /**
+     * 호출하면 programId인 행사에서 now 시점에 자리를 차지한 신청 수를 돌려준다. 확정 신청과, 결제 기한이 now보다 뒤인 결제 대기 신청이다.
+     * 결제 기한이 지난 결제 대기 신청은 아직 만료 처리 전이어도 세지 않는다. 같은 트랜잭션에서 엔티티로 바꾼 신청 상태도 센다.
+     */
+    long countSeatHolders(long programId, Instant now);
 }

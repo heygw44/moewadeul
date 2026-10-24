@@ -2,6 +2,7 @@ package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.domain.Program;
+import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramPhase;
 import com.moewadeul.program.domain.ProgramVacancyAlertRepository;
 import java.time.Duration;
@@ -27,12 +28,15 @@ public class ProgramSeatReleaseRecorder {
     static final Duration RENOTIFY_INTERVAL = Duration.ofMinutes(30);
 
     private final ProgramVacancyAlertRepository vacancyAlertRepository;
+    private final ProgramApplicationRepository applicationRepository;
     private final OutboxEventRecorder outboxEventRecorder;
 
     /**
      * 호출하면 알림 대상 회원이 있을 때 알림 시각을 now로 적고 이벤트를 기록한다. 대상은 알림 신청자 중 결제 대기·확정 신청이 없고,
      * 최근 30분 안에 빈자리 알림을 받지 않은 회원이다.
      * 취소됐거나 신청 마감 시각이 지난 행사는 자리가 돌아와도 새로 신청받지 않으므로 아무것도 하지 않는다. 대상이 없을 때도 마찬가지다.
+     * 자리가 돌아왔어도 그 사이 다른 회원이 먼저 신청해 남은 자리가 없으면 알릴 자리가 없으므로 아무것도 하지 않는다.
+     * 결제 기한이 지난 자리는 만료 작업이 상태를 바꾸기 전에도 신청을 받을 수 있어서, 만료 작업이 돌 때는 이미 다른 회원이 가져간 뒤일 수 있다.
      */
     public void record(Program program, Instant now) {
         ProgramPhase phase = program.phaseAt(now);
@@ -43,6 +47,10 @@ public class ProgramSeatReleaseRecorder {
         Instant notifiedBefore = now.minus(RENOTIFY_INTERVAL);
         // 먼저 잠그지 않고 읽는다. 만료가 몰리면 첫 반환이 커밋한 뒤의 반환은 모두 여기서 대상이 비어 잠금 없이 끝난다.
         if (vacancyAlertRepository.findAlertTargets(programId, notifiedBefore).isEmpty()) {
+            return;
+        }
+        // 대상이 있어도 남은 자리가 없으면 알리지 않는다. 알림함 알림과 메일이 나가 하루 메일 한도만 쓰고, 알림을 받은 회원은 신청할 수 없다.
+        if (applicationRepository.countSeatHolders(programId, now) >= program.getCapacity()) {
             return;
         }
         // 대상이 있으면 잠금 읽기로 다시 고른다. 두 반환이 같은 순간에 오면 둘 다 커밋 전의 알림 시각을 보고 같은 회원에게 알릴 수 있다.
