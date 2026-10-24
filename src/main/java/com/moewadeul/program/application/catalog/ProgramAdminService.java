@@ -70,7 +70,8 @@ public class ProgramAdminService {
 
     /**
      * 호출하면 programId인 행사를 command에서 null이 아닌 필드로 고치고, 고친 뒤의 상세를 돌려준다(myApplication은 없다).
-     * 취소된 행사는 PROGRAM_INVALID_STATE, 신청 시작 뒤의 정원 축소는 PROGRAM_CAPACITY_DECREASE로 거부한다.
+     * 취소된 행사는 PROGRAM_INVALID_STATE로 거부한다. 신청 시작 뒤이거나 신청이 하나라도 들어온 행사의 정원 축소는
+     * PROGRAM_CAPACITY_DECREASE로 거부한다. 신청 기록은 행사 행을 잠근 뒤에 읽으므로, 신청과 겹쳐도 먼저 커밋된 신청이 보인다.
      */
     @Transactional
     public ProgramDetail revise(long adminId, long programId, ProgramReviseCommand command) {
@@ -78,7 +79,8 @@ public class ProgramAdminService {
         if (command.spotId().present()) {
             requireVisibleSpot(command.spotId().value());
         }
-        ProgramChange change = revise(program, command, clock.instant());
+        boolean applicationsExist = programApplicationRepository.existsByProgramId(programId);
+        ProgramChange change = revise(program, command, clock.instant(), applicationsExist);
         programRepository.saveAndFlush(program);
         adminAuditRecorder.record(
                 adminId,
@@ -214,7 +216,8 @@ public class ProgramAdminService {
         }
     }
 
-    private static ProgramChange revise(Program program, ProgramReviseCommand command, Instant now) {
+    private static ProgramChange revise(
+            Program program, ProgramReviseCommand command, Instant now, boolean applicationsExist) {
         ProgramRevision revision = new ProgramRevision(
                 command.title(),
                 command.description(),
@@ -229,7 +232,7 @@ public class ProgramAdminService {
                 command.paymentDeadlineMinutes(),
                 command.overnight());
         try {
-            return program.revise(revision, now);
+            return program.revise(revision, now, applicationsExist);
         } catch (IllegalArgumentException e) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, e.getMessage());
         }

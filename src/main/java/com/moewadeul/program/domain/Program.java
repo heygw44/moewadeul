@@ -142,11 +142,12 @@ public class Program {
     /**
      * 호출하면 revision에서 null이 아닌 필드로 행사를 고치고, 바뀐 내용을 돌려준다. 고친 뒤의 값으로 범위와 시각 순서를 다시 검사한다.
      *
-     * <p>취소된 행사이면 PROGRAM_INVALID_STATE를 던진다. 신청 시작 시각이 now 이전인데 정원을 줄이면 PROGRAM_CAPACITY_DECREASE를 던진다.
-     * 신청자가 이미 들어왔을 수 있어서 줄일 수 없고, 늘리는 것은 허용한다. 이 비교는 수정 전의 신청 시작 시각으로 한다.
+     * <p>취소된 행사이면 PROGRAM_INVALID_STATE를 던진다. 수정 전의 신청 시작 시각이 now 이전이거나 이 행사에 신청이 하나라도 있는데
+     * 정원을 줄이면 PROGRAM_CAPACITY_DECREASE를 던진다. 신청자가 이미 들어왔을 수 있어서 줄일 수 없고, 늘리는 것은 허용한다.
+     * 신청 시작 시각을 미래로 미룬 뒤에 줄이는 요청도 막아야 하므로, 호출하는 쪽이 신청 기록이 있는지를 applicationsExist로 알려 준다.
      * 값이 범위를 벗어나거나 시각 순서가 맞지 않으면 {@link IllegalArgumentException}을 던진다. 이 경우 행사는 바뀌지 않는다.
      */
-    public ProgramChange revise(ProgramRevision revision, Instant now) {
+    public ProgramChange revise(ProgramRevision revision, Instant now, boolean applicationsExist) {
         if (revision == null || now == null) {
             throw new IllegalArgumentException("행사를 고치는 데 필요한 값이 null입니다.");
         }
@@ -154,7 +155,7 @@ public class Program {
             throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
         int newCapacity = revision.capacity() == null ? capacity : revision.capacity();
-        if (!now.isBefore(applyOpenAt) && newCapacity < capacity) {
+        if ((applicationsExist || !now.isBefore(applyOpenAt)) && newCapacity < capacity) {
             throw new ProgramException(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE);
         }
         Program merged = merge(revision);
