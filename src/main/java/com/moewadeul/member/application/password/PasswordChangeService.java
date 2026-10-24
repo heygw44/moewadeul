@@ -74,11 +74,13 @@ public class PasswordChangeService {
         }
     }
 
+    // 비교는 트랜잭션 밖에서 하므로 그사이 같은 이메일의 다른 요청이 실패를 쌓아 잠겼을 수 있다.
+    // 잠겨 있으면 현재 비밀번호가 맞았어도 바꾸지 않고 LOGIN_LOCKED로 거부한다.
     private void verifyCurrentPassword(Member member, PasswordChangeCommand command) {
-        if (passwordEncoder.matches(command.currentPassword(), member.getPasswordHash())) {
-            return;
+        boolean matched = passwordEncoder.matches(command.currentPassword(), member.getPasswordHash());
+        loginAttemptService.settle(member.getId(), member.getEmail(), command.ip(), matched);
+        if (!matched) {
+            throw new MemberException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH);
         }
-        loginAttemptService.recordFailure(member.getId(), member.getEmail(), command.ip());
-        throw new MemberException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH);
     }
 }

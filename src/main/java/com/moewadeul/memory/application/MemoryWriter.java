@@ -11,6 +11,7 @@ import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +51,7 @@ class MemoryWriter {
 
     @Transactional
     public MemoryView revise(long memberId, long memoryId, MemoryReviseCommand command) {
-        Memory memory = loadOwnMemory(memberId, memoryId);
+        Memory memory = lockOwnMemory(memberId, memoryId);
         Instant now = clock.instant();
         MemoryDetails details = command.mergeInto(memory.details()).toDetails(today(now));
         if (command.linksNewSpot(memory.getSpotId())) {
@@ -71,7 +72,7 @@ class MemoryWriter {
     // 기록 행을 지우면 FK가 붙은 사진의 기록 ID를 NULL로 바꾸므로, 사진은 붙지 않은 업로드가 되어 정리 작업이 지운다.
     @Transactional
     public void delete(long memberId, long memoryId) {
-        memoryRepository.delete(loadOwnMemory(memberId, memoryId));
+        memoryRepository.delete(lockOwnMemory(memberId, memoryId));
     }
 
     /** 호출하면 memoryId인 기록이 있고 memberId가 쓴 기록인지 확인한다. 없으면 NOT_FOUND로, 남의 기록이면 ACCESS_DENIED로 거부한다. */
@@ -86,9 +87,18 @@ class MemoryWriter {
         return memoryMapper.deleteByMember(memberId);
     }
 
+    // 숨김·신고 처리와 같은 기록 행 잠금을 첫 쿼리로 잡는다. 잠그지 않고 읽으면 그사이 커밋된 HIDDEN·검토 대기 상태를 이 트랜잭션이
+    // 행 전체를 쓰면서 ACTIVE로 되돌린다. 같은 기록의 사진을 바꾸는 요청끼리도 이 잠금으로 줄을 서므로, 늦은 요청은 먼저 붙은 사진을 보고 떼어 낸다.
+    private Memory lockOwnMemory(long memberId, long memoryId) {
+        return requireOwn(memoryRepository.findByIdForUpdate(memoryId), memberId);
+    }
+
     private Memory loadOwnMemory(long memberId, long memoryId) {
-        Memory memory =
-                memoryRepository.findById(memoryId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return requireOwn(memoryRepository.findById(memoryId), memberId);
+    }
+
+    private static Memory requireOwn(Optional<Memory> found, long memberId) {
+        Memory memory = found.orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         if (!memory.isWrittenBy(memberId)) {
             throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }

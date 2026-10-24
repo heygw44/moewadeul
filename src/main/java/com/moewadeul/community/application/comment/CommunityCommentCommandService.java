@@ -90,8 +90,10 @@ public class CommunityCommentCommandService {
     }
 
     private CommunityComment loadOwnActiveComment(long memberId, long commentId) {
+        // 숨김·신고 처리와 같은 댓글 행 잠금을 첫 쿼리로 잡는다. 잠그지 않고 읽으면 그사이 커밋된 HIDDEN·검토 대기 상태를
+        // 이 트랜잭션이 행 전체를 쓰면서 ACTIVE로 되돌린다. 신고 처리처럼 글은 잠그지 않고 읽기만 한다.
         CommunityComment comment = communityCommentRepository
-                .findById(commentId)
+                .findByIdForUpdate(commentId)
                 .filter(CommunityComment::isActive)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         requireActivePost(comment.getPostId());

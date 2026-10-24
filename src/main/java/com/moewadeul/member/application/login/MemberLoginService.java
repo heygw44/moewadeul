@@ -2,6 +2,7 @@ package com.moewadeul.member.application.login;
 
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.member.application.LoginAttemptService;
+import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
@@ -14,6 +15,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +35,7 @@ public class MemberLoginService {
     private final LoginAttemptService loginAttemptService;
     private final PasswordEncoder passwordEncoder;
     private final MemberSuspensionService memberSuspensionService;
+    private final MemberSessions memberSessions;
     private final Clock clock;
 
     // 가입하지 않은 이메일로 시도해도 비밀번호 비교를 한 번 한다. 그렇지 않으면 BCrypt를 건너뛴 만큼 응답이 빨라져서,
@@ -44,11 +47,13 @@ public class MemberLoginService {
             LoginAttemptService loginAttemptService,
             PasswordEncoder passwordEncoder,
             MemberSuspensionService memberSuspensionService,
+            MemberSessions memberSessions,
             Clock clock) {
         this.memberRepository = memberRepository;
         this.loginAttemptService = loginAttemptService;
         this.passwordEncoder = passwordEncoder;
         this.memberSuspensionService = memberSuspensionService;
+        this.memberSessions = memberSessions;
         this.clock = clock;
         this.dummyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
@@ -60,7 +65,44 @@ public class MemberLoginService {
         Member member = releaseIfSuspensionEnded(authenticated);
         rejectIfSuspended(member);
         loginAttemptService.recordSuccess(member.getId(), attemptedEmail, command.ip());
-        return new LoginResult(member.getId(), member.getNickname(), member.getStatus(), member.getRole());
+        return new LoginResult(
+                member.getId(),
+                member.getNickname(),
+                member.getStatus(),
+                member.getRole(),
+                member.getPasswordChangedAt());
+    }
+
+    /**
+     * 호출하면 로그인한 뒤에 그 회원이 여전히 로그인할 수 있는지 DB에서 다시 읽어 확인한다. 세션을 만든 직후에 부른다.
+     * 비밀번호 재설정, 이용 정지, 탈퇴는 커밋한 뒤 그 회원의 세션을 한 번만 지운다. 로그인 요청이 비밀번호를 비교하는 사이에
+     * 이 일이 끝났다면 그때는 지울 세션이 없었으므로, 뒤늦게 만든 세션이 그대로 남는다. 그래서 세션을 만든 뒤에 회원을 다시 읽어
+     * 바뀐 것이 보이면 호출하는 쪽이 세션을 버리게 예외를 던진다.
+     *
+     * @param loggedIn {@link #login}이 돌려준 결과
+     * @throws MemberException 탈퇴했거나 로그인한 뒤에 비밀번호가 바뀌었으면 LOGIN_FAILED
+     * @throws MemberSuspendedException 로그인한 뒤에 이용이 정지됐으면 MEMBER_SUSPENDED
+     */
+    public void ensureStillLoginable(LoginResult loggedIn) {
+        Member current = memberRepository
+                .findById(loggedIn.memberId())
+                .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN)
+                .filter(found -> Objects.equals(found.getPasswordChangedAt(), loggedIn.passwordChangedAt()))
+                .orElseThrow(() -> new MemberException(MemberErrorCode.LOGIN_FAILED));
+        rejectIfSuspended(current);
+    }
+
+    /**
+     * 호출하면 {@link #ensureStillLoginable}로 다시 확인하고, 로그인할 수 없게 바뀌었으면 그 세션을 저장소에서 지운다. 세션을 저장소에 저장한
+     * 뒤에 부른다. 컨트롤러 안에서 확인한 뒤 응답을 커밋해 세션을 저장하기까지 사이에 재설정이나 정지가 끝나도, 이 호출이 저장된 세션을 본다.
+     * 재설정·정지가 세션을 지우는 시점이 이 확인보다 앞이면 이 호출이 바뀐 것을 읽고, 뒤이면 그쪽이 저장된 세션을 지우므로 세션이 남지 않는다.
+     */
+    public void revokeSessionIfMemberChanged(LoginResult loggedIn, String sessionId) {
+        try {
+            ensureStillLoginable(loggedIn);
+        } catch (MemberException e) {
+            memberSessions.invalidate(sessionId);
+        }
     }
 
     // 이메일 형식이 올바르지 않아도 500이 아니라 일반 로그인 실패로 다룬다. 그래서 형식 검사에서 거부된 값은
@@ -88,10 +130,12 @@ public class MemberLoginService {
                 .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN)
                 .orElse(null);
         String passwordHash = member != null ? member.getPasswordHash() : dummyPasswordHash;
-        boolean passwordMatched = passwordEncoder.matches(command.password(), passwordHash);
-        if (member == null || !passwordMatched) {
-            Long memberId = member != null ? member.getId() : null;
-            loginAttemptService.recordFailure(memberId, attemptedEmail, command.ip());
+        boolean authenticated = passwordEncoder.matches(command.password(), passwordHash) && member != null;
+        // 비교는 트랜잭션 밖에서 했으므로 그사이 같은 이메일의 다른 요청이 실패를 쌓아 잠겼을 수 있다.
+        // 잠겨 있으면 비밀번호가 맞았어도 로그인시키지 않고 LOGIN_LOCKED로 거부한다.
+        Long memberId = member != null ? member.getId() : null;
+        loginAttemptService.settle(memberId, attemptedEmail, command.ip(), authenticated);
+        if (!authenticated) {
             throw new MemberException(MemberErrorCode.LOGIN_FAILED);
         }
         return member;
