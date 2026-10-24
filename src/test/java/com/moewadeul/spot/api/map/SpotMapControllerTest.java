@@ -241,6 +241,32 @@ class SpotMapControllerTest {
         assertInvalidInput(result, field);
     }
 
+    @ParameterizedTest
+    @CsvSource({"-90, 127, 90, 127.000001", "37, 127, 37.01, 128", "37, 127, 37.5, 132.01", "37, 127, 47.01, 128"})
+    @DisplayName("[F-03][NFR-03] 긴 변이 짧은 변의 10배를 넘는 가늘고 긴 영역이면 400 INVALID_INPUT을 응답하고 조회하지 않는다")
+    void tooNarrowAreaReturnsFieldError(String swLat, String swLng, String neLat, String neLng) {
+        // when
+        MvcTestResult result = get(params(swLat, swLng, neLat, neLng, "7"));
+
+        // then
+        assertInvalidInput(result, "areaProportioned");
+    }
+
+    @Test
+    @DisplayName("[F-03][NFR-03] 긴 변이 짧은 변의 정확히 10배인 영역은 가로로 길든 세로로 길든 받는다")
+    void areaWithSideRatioOfTenIsAccepted() {
+        // given
+        whenServiceReturnsEmpty();
+
+        // when
+        MvcTestResult wide = get(params("37", "127", "37.5", "132", "7"));
+        MvcTestResult tall = get(params("37", "127", "42", "127.5", "7"));
+
+        // then
+        assertThat(wide).hasStatus(HttpStatus.OK);
+        assertThat(tall).hasStatus(HttpStatus.OK);
+    }
+
     @Test
     @DisplayName("[F-31] 쉼표로 구분한 입지를 영역 조회 조건에 넣는다")
     void settingsAreParsedIntoAreaQuery() {
