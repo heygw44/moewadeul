@@ -12,11 +12,13 @@ import com.moewadeul.member.domain.signup.DisposableEmailDomain;
 import com.moewadeul.member.domain.signup.DisposableEmailDomainSource;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.member.infra.signup.DisposableEmailDomainJpaRepository;
+import java.time.Duration;
 import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
@@ -118,6 +120,45 @@ class MemberSignupApiIntegrationTest {
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
         assertThat(result).bodyJson().extractingPath("$.traceId").asString().isNotBlank();
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-06] ASCII가 아닌 글자가 든 이메일로 가입하면 400 INVALID_INPUT이고 fieldErrors에 email이 있으며 회원이 만들어지지 않는다")
+    void nonAsciiEmailReturnsBadRequest() {
+        MvcTestResult fullWidth =
+                post("ｖictim" + TestSequence.next() + "@example.com", VALID_PASSWORD, TestSequence.nickname());
+        MvcTestResult invisible =
+                post("vic\\u200Btim" + TestSequence.next() + "@example.com", VALID_PASSWORD, TestSequence.nickname());
+
+        assertThat(fullWidth).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(fullWidth).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(fullWidth)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].field")
+                .isEqualTo("email");
+        assertThat(invisible).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(invisible)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].field")
+                .isEqualTo("email");
+        assertThat(memberRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-03] 같은 IP에서 가입이 20건 있으면 21번째는 429 SIGNUP_LIMITED이고 Retry-After가 있다")
+    void twentyFirstSignupFromSameIpIsLimited() {
+        for (int signedUp = 0; signedUp < 20; signedUp++) {
+            assertThat(post(TestSequence.email(), VALID_PASSWORD, TestSequence.nickname()))
+                    .hasStatus(HttpStatus.CREATED);
+        }
+
+        MvcTestResult limited = post(TestSequence.email(), VALID_PASSWORD, TestSequence.nickname());
+
+        assertThat(limited).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(limited).bodyJson().extractingPath("$.code").isEqualTo("SIGNUP_LIMITED");
+        assertThat(Long.parseLong(limited.getResponse().getHeader(HttpHeaders.RETRY_AFTER)))
+                .isBetween(1L, Duration.ofHours(1).toSeconds());
+        assertThat(memberRepository.count()).isEqualTo(20);
     }
 
     private MvcTestResult post(String email, String password, String nickname) {

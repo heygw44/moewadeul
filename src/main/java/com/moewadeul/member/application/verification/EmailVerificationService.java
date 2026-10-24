@@ -54,25 +54,45 @@ public class EmailVerificationService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     /**
-     * 호출하면 새 인증 코드를 만들고 해시만 저장한 뒤, 코드 원값과 받을 이메일을 돌려준다.
+     * 호출하면 발송 요청 이벤트 하나에 코드 행을 하나만 두고, 새 인증 코드를 만들어 해시만 저장한 뒤 코드 원값과 받을 이메일을 돌려준다.
+     * 같은 이벤트를 다시 처리하면(메일 발송이 실패해 발행기가 다시 집은 경우 등) 새 행을 만들지 않고 같은 행의 코드를 바꾼다.
+     * 그래서 메일 서버가 멈춘 동안 재시도해도 재발송 한도에 드는 횟수가 늘지 않는다. 바꾼 뒤에는 새 코드만 유효하다.
      * 회원이 없거나 이미 인증을 마쳤거나 탈퇴했으면 아무것도 저장하지 않고 빈 값을 돌려준다.
-     * 이전 코드는 지우지 않지만 가장 나중에 발급한 코드만 {@link #verify}에서 유효하다.
+     * 다른 이벤트로 만든 이전 코드는 지우지 않지만 가장 나중에 발급한 코드만 {@link #verify}에서 유효하다.
      */
     @Transactional
-    public Optional<IssuedVerification> issueFor(long memberId, String requestIp) {
+    public Optional<IssuedVerification> issueFor(long memberId, String requestIp, long outboxEventId) {
         requireRequestIp(requestIp);
         return memberRepository
                 .findById(memberId)
                 .filter(EmailVerificationService::isUnverified)
-                .map(member -> issue(member, requestIp));
+                .map(member -> issue(member, requestIp, outboxEventId));
     }
 
-    private IssuedVerification issue(Member member, String requestIp) {
+    private IssuedVerification issue(Member member, String requestIp, long outboxEventId) {
         VerificationCode code = VerificationCode.generate(secureRandom);
         String codeHash = VerificationCode.hash(member.getId(), code.value());
-        emailVerificationRepository.save(
-                EmailVerification.issue(member.getId(), codeHash, requestIp, Instant.now(clock)));
+        Instant now = Instant.now(clock);
+        emailVerificationRepository
+                .findByOutboxEventId(outboxEventId)
+                .ifPresentOrElse(
+                        existing -> existing.reissue(codeHash, now),
+                        () -> emailVerificationRepository.save(
+                                EmailVerification.issue(member.getId(), outboxEventId, codeHash, requestIp, now)));
         return new IssuedVerification(member.getEmail(), code.value());
+    }
+
+    /**
+     * 호출하면 그 IP가 최근 한 시간에 요청한 인증 메일 발송 수를 세어, 한도에 닿았으면 풀리기까지 남은 시간을 돌려준다.
+     * 닿지 않았으면 비어 있다. 가입의 첫 발송이 재발송과 같은 IP 한도를 쓰도록 가입 서비스가 이벤트를 기록하기 전에 부른다.
+     * 회원 행이 없어서 잠글 수 없으므로, 동시에 들어온 요청은 한도를 DB 커넥션 수만큼 넘길 수 있다.
+     */
+    @Transactional
+    public Optional<Duration> ipBlockedFor(String requestIp) {
+        requireRequestIp(requestIp);
+        Instant now = Instant.now(clock);
+        SendWindow byIp = summarizeSentByIp(requestIp, now);
+        return EmailVerificationPolicy.ipBlockedFor(Math.toIntExact(byIp.count()), byIp.oldestSentAt(), now);
     }
 
     /**
@@ -177,8 +197,7 @@ public class EmailVerificationService {
     private ResendHistory loadResendHistory(long memberId, String requestIp, Instant now) {
         SendWindow daily = emailVerificationRepository.summarizeSentToMemberSince(
                 memberId, now.minus(EmailVerificationPolicy.DAILY_WINDOW));
-        SendWindow byIp = emailVerificationRepository.summarizeSentByIpSince(
-                requestIp, now.minus(EmailVerificationPolicy.IP_WINDOW));
+        SendWindow byIp = summarizeSentByIp(requestIp, now);
         return new ResendHistory(
                 emailVerificationRepository.findLastSentAt(memberId).orElse(null),
                 Math.toIntExact(daily.count()),
@@ -186,6 +205,19 @@ public class EmailVerificationService {
                 Math.toIntExact(byIp.count()),
                 byIp.oldestSentAt(),
                 hasPendingSendRequest(memberId));
+    }
+
+    // 이미 코드 행을 만든 요청과 아직 코드 행이 없는 대기 요청은 서로 겹치지 않는다. 그래서 두 수를 더해도 한 요청을 두 번 세지 않는다.
+    private SendWindow summarizeSentByIp(String requestIp, Instant now) {
+        Instant since = now.minus(EmailVerificationPolicy.IP_WINDOW);
+        SendWindow issued = emailVerificationRepository.summarizeSentByIpSince(requestIp, since);
+        SendWindow queued = emailVerificationMapper.summarizeQueuedSendsByIpSince(
+                EmailVerificationEvents.EVENT_TYPE,
+                EmailVerificationEvents.AGGREGATE_TYPE,
+                OutboxEventStatus.PENDING,
+                requestIp,
+                since);
+        return issued.plus(queued);
     }
 
     private boolean hasPendingSendRequest(long memberId) {

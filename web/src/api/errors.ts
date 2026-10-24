@@ -25,6 +25,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   MEMBER_EMAIL_DUPLICATED: '이미 가입된 이메일이에요. 로그인하거나 다른 이메일을 써 주세요.',
   MEMBER_NICKNAME_DUPLICATED: '다른 회원이 쓰는 닉네임이에요. 다른 닉네임을 정해 주세요.',
   MEMBER_DISPOSABLE_EMAIL: '일회용 이메일은 쓸 수 없어요. 평소 쓰는 이메일을 입력해 주세요.',
+  SIGNUP_LIMITED: '이 네트워크에서 가입 요청이 너무 많아요. 잠시 뒤 다시 가입해 주세요.',
   MEMBER_PASSWORD_POLICY: '비밀번호 규칙에 맞지 않아요. 입력란 아래 안내에 맞춰 다시 정해 주세요.',
   MEMBER_CURRENT_PASSWORD_MISMATCH: '현재 비밀번호가 맞지 않아요. 다시 입력해 주세요.',
   MEMBER_PASSWORD_UNCHANGED: '지금 쓰는 비밀번호와 같아요. 다른 비밀번호를 정해 주세요.',

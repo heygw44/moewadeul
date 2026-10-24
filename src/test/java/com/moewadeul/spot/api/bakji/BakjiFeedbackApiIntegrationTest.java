@@ -322,7 +322,7 @@ class BakjiFeedbackApiIntegrationTest {
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService
-                .issueFor(member.getId(), LOCAL_IP)
+                .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
         MvcTestResult verified = mvc.post()

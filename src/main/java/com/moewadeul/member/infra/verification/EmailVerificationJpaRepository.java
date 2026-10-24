@@ -21,6 +21,9 @@ public interface EmailVerificationJpaRepository
     Optional<EmailVerification> findFirstByMemberIdOrderByIdDesc(long memberId);
 
     @Override
+    Optional<EmailVerification> findByOutboxEventId(long outboxEventId);
+
+    @Override
     default Optional<EmailVerification> findLatestByMemberId(long memberId) {
         return findFirstByMemberIdOrderByIdDesc(memberId);
     }

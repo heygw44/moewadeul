@@ -280,7 +280,7 @@ class EmailVerificationApiIntegrationTest {
     // 코드 원값은 발송 처리기가 메일을 보내기 직전에 만들어 메모리에서 메일로만 나간다. 테스트는 같은 서비스를 직접 불러 그 값을 받는다.
     private String issueCode(Member member) {
         return emailVerificationService
-                .issueFor(member.getId(), LOCAL_IP)
+                .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
     }

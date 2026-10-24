@@ -167,6 +167,27 @@ class PasswordResetRequestLimitApiIntegrationTest {
         assertThat(postRequest(TestSequence.email(), CLIENT_IP)).hasStatus(HttpStatus.NO_CONTENT);
     }
 
+    @Test
+    @DisplayName("[F-02][PW-05][EV-06] 가입한 이메일의 글자 폭만 바꾼 변형은 400이고 한도에 세지 않으며 메일을 보내지 않는다")
+    void fullWidthVariantOfRegisteredEmailIsBadRequest() {
+        // given
+        String suffix = String.valueOf(TestSequence.next());
+        Member member = memberRepository.save(aMember()
+                .email("victim" + suffix + "@example.com")
+                .now(clock.instant())
+                .build());
+        String fullWidthVariant = "ｖ" + member.getEmail().substring(1);
+
+        // when
+        MvcTestResult variant = postRequest(fullWidthVariant, CLIENT_IP);
+
+        // then
+        assertThat(variant).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(variant).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(count("password_reset_throttle")).isZero();
+        assertThat(count("outbox_event")).isZero();
+    }
+
     private MvcTestResult postRequest(String email, String remoteAddress) {
         return mvc.post()
                 .uri(REQUEST_PATH)

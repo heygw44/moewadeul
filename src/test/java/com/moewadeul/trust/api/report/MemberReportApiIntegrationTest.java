@@ -356,7 +356,7 @@ class MemberReportApiIntegrationTest {
     private Cookie verifiedSession(long memberId) {
         Cookie session = login(memberId);
         String code = emailVerificationService
-                .issueFor(memberId, LOCAL_IP)
+                .issueFor(memberId, LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
         MvcTestResult verified = mvc.post()

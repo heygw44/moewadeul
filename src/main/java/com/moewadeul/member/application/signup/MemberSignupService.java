@@ -1,9 +1,11 @@
 package com.moewadeul.member.application.signup;
 
+import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.EmailVerificationEvents;
 import com.moewadeul.member.application.MemberMetrics;
 import com.moewadeul.member.application.MemberUniqueConstraintTranslator;
+import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
@@ -12,7 +14,9 @@ import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.Password;
 import com.moewadeul.member.domain.signup.DisposableEmailDomainRepository;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +33,7 @@ public class MemberSignupService {
     private final Clock clock;
     private final OutboxEventRecorder outboxEventRecorder;
     private final MemberMetrics memberMetrics;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public SignupResult signUp(SignupCommand command) {
@@ -37,6 +42,7 @@ public class MemberSignupService {
         Member.requireValidNickname(command.nickname());
         rejectDisposableDomain(email);
         rejectDuplicates(email, command.nickname());
+        rejectIfIpLimited(command.requestIp());
 
         String passwordHash = passwordEncoder.encode(password.value());
         Member member = Member.register(email, passwordHash, command.nickname(), Instant.now(clock));
@@ -48,6 +54,15 @@ public class MemberSignupService {
                 new EmailVerificationEvents.Payload(command.requestIp()));
         memberMetrics.recordSignup();
         return new SignupResult(saved.getId(), saved.getStatus());
+    }
+
+    // 가입의 첫 인증 메일도 재발송과 같은 IP 시간당 한도를 쓴다. 한 IP가 가입을 쏟아내서 메일 서비스의 하루 발송 한도를 다 쓰고
+    // 다른 회원의 인증·재설정 메일까지 못 나가게 하는 일을 막는다. 비용이 큰 비밀번호 해시 전에 거른다.
+    private void rejectIfIpLimited(String requestIp) {
+        Optional<Duration> blockedFor = emailVerificationService.ipBlockedFor(requestIp);
+        if (blockedFor.isPresent()) {
+            throw new RateLimitedException(MemberErrorCode.SIGNUP_LIMITED, blockedFor.get());
+        }
     }
 
     private void rejectDisposableDomain(Email email) {
