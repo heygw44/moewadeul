@@ -1,7 +1,8 @@
 package com.moewadeul.trust.domain.report;
 
 /**
- * 신고 유형. 유형마다 신고 종류가 정해져 있다. 성희롱·위협만 긴급 신고라서, 접수하는 즉시 대상 회원을 임시 정지한다.
+ * 신고 유형. 유형마다 신고 종류가 정해져 있다. 성희롱·위협만 긴급 신고라서 관리자가 먼저 검토한다. 신고자와 대상이 둘 다 그 베이스캠프의
+ * 멤버였던 적이 있으면 서버가 접수하는 즉시 대상 회원을 임시 정지한다.
  */
 public enum ReportType {
     NO_SHOW(ReportKind.MEMBER, false),

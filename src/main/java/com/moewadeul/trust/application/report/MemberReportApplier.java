@@ -34,8 +34,9 @@ public class MemberReportApplier {
     private final Clock clock;
 
     /**
-     * 호출하면 reporterId인 회원의 신고를 접수 상태로 저장한다. 긴급 유형이면 같은 트랜잭션에서 대상 회원을 72시간 임시 정지하고
-     * 그 기록을 남긴다.
+     * 호출하면 reporterId인 회원의 신고를 접수 상태로 저장한다. 긴급 유형은 언제나 긴급 신고로 저장하고, 신고자와 대상이 둘 다
+     * 그 베이스캠프의 멤버였던 적이 있으면(상태 무관, 캠프 리더 포함) 같은 트랜잭션에서 대상 회원을 72시간 임시 정지하고 그 기록을 남긴다.
+     * 어느 한쪽이라도 합류 신청만 했다면 신청만으로 상대를 바로 정지시킬 수 없도록 임시 정지는 하지 않는다.
      *
      * <p>다음 순서로 검사하고 처음 걸린 이유로 거부한다.
      * <ol>
@@ -65,8 +66,9 @@ public class MemberReportApplier {
         if (context.alreadyReported()) {
             throw new BusinessException(TrustErrorCode.REPORT_DUPLICATED);
         }
-        Instant suspensionEndsAt =
-                command.type().isUrgent() ? suspendTarget(reporterId, command.targetMemberId(), now) : null;
+        Instant suspensionEndsAt = command.type().isUrgent() && context.bothMembers()
+                ? suspendTarget(reporterId, command.targetMemberId(), now)
+                : null;
         MemberReport report = save(MemberReport.receive(
                 reporterId,
                 command.targetMemberId(),

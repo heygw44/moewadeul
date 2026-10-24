@@ -644,6 +644,30 @@ class AdminReportSanctionApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[SN-05] 신청만 한 신고자의 긴급 신고는 임시 정지가 없어서, 기각해도 대상 회원의 상태를 건드리지 않고 기각된다")
+    void dismissUrgentReportWithoutSuspension() {
+        long applicant = fixture.saveVerifiedMember(TestSequence.nickname());
+        long newBasecamp = fixture.saveBasecamp("COMPLETED", BASE);
+        fixture.insertApplication(newBasecamp, applicant, "CANCELED");
+        fixture.insertMember(newBasecamp, targetId, "MEMBER", "ACTIVE");
+        String statusBefore = memberStatus(targetId);
+        long reportId = memberReportService.report(
+                applicant,
+                new MemberReportCommand(
+                        targetId, newBasecamp, ReportKind.MEMBER, null, ReportType.HARASSMENT_OR_THREAT, "위협했다"));
+        post(REPORTS + "/" + reportId + "/start-review", null);
+
+        MvcTestResult result = post(REPORTS + "/" + reportId + "/dismiss", null);
+
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(jdbc.queryForObject("SELECT status FROM member_report WHERE id = ?", String.class, reportId))
+                .isEqualTo("DISMISSED");
+        assertThat(memberStatus(targetId)).isEqualTo(statusBefore);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sanction WHERE report_id = ?", Integer.class, reportId))
+                .isZero();
+    }
+
+    @Test
     @DisplayName("[SN-05] 긴급 신고를 조치하면 그 신고의 임시 정지는 해제하지 않고 그대로 둔다")
     void actionLeavesTemporarySuspensionAlone() {
         long reportId = urgentReport(targetId);
