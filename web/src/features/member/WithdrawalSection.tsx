@@ -11,6 +11,7 @@ import { PageCard } from '../../components/PageLayout';
 import { PasswordField } from '../../components/PasswordField';
 import { PASSWORD_REQUIRED } from './requiredMessages';
 import { useSession } from './session';
+import { useRetryCountdown } from './useRetryCountdown';
 
 const WRONG_PASSWORD = '비밀번호가 맞지 않아요. 다시 입력해 주세요.';
 
@@ -37,10 +38,11 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<{ cause: unknown } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const lock = useRetryCountdown();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting) return;
+    if (submitting || lock.secondsLeft > 0) return;
     setFormError(null);
     if (password === '') {
       setPasswordError(PASSWORD_REQUIRED);
@@ -69,6 +71,9 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
     if (error.code === 'LOGIN_FAILED') {
       setPasswordError(WRONG_PASSWORD);
       return;
+    }
+    if (error.code === 'LOGIN_LOCKED' && error.retryAfterSeconds !== undefined) {
+      lock.start(error.retryAfterSeconds);
     }
     if (error.code === 'INVALID_INPUT') {
       setPasswordError(error.fieldErrors.find(({ field }) => field === 'password')?.reason ?? PASSWORD_REQUIRED);
@@ -109,7 +114,13 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
           <Button variant="secondary" disabled={submitting} onClick={onClose}>
             돌아가기
           </Button>
-          <Button type="submit" variant="danger" loading={submitting}>
+          <Button
+            type="submit"
+            variant="danger"
+            loading={submitting}
+            disabled={lock.secondsLeft > 0}
+            disabledReason={lock.secondsLeft > 0 ? `${lock.secondsLeft}초 뒤에 다시 시도할 수 있어요` : undefined}
+          >
             탈퇴하기
           </Button>
         </div>

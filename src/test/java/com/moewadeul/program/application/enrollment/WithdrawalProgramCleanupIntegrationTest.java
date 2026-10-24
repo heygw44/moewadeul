@@ -24,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 class WithdrawalProgramCleanupIntegrationTest {
 
     private static final String PASSWORD = "Valid-pass1";
+    private static final String REQUEST_IP = "203.0.113.7";
 
     @Autowired
     private WithdrawalService withdrawalService;
@@ -65,7 +66,7 @@ class WithdrawalProgramCleanupIntegrationTest {
         long otherPending = fixture.saveApplication(programB, waiting, "PENDING_PAYMENT");
         fixture.saveVacancyAlert(programA, waiting);
 
-        withdrawalService.withdraw(member, PASSWORD);
+        withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
         assertThat(fixture.applicationStatus(pending)).isEqualTo("PENDING_PAYMENT");
         outboxPublisher.publishPending();
         outboxPublisher.publishPending();
@@ -98,7 +99,7 @@ class WithdrawalProgramCleanupIntegrationTest {
         long pending = fixture.saveApplication(programA, member, "PENDING_PAYMENT");
         long confirmed = fixture.saveApplication(programB, member, "CONFIRMED");
         fixture.saveVacancyAlert(programA, waiting);
-        withdrawalService.withdraw(member, PASSWORD);
+        withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
         outboxPublisher.publishPending();
         LocalDateTime firstReviewAt = reviewRequestedAt(confirmed);
         LocalDateTime firstCanceledAt = canceledAt(pending);

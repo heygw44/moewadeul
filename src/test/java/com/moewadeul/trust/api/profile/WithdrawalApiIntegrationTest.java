@@ -27,6 +27,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -426,13 +427,12 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01][PW-03] 비밀번호가 틀리면 401 LOGIN_FAILED이고 회원 정보와 세션은 그대로이며 로그인 실패로 세지 않는다")
-    void wrongPasswordChangesNothing() {
+    @DisplayName("[F-01][PW-03][PW-08] 비밀번호가 틀리면 401 LOGIN_FAILED이고 회원 정보와 세션은 그대로이며 로그인 실패로 기록한다")
+    void wrongPasswordChangesNothingButIsRecordedAsFailure() {
         Member member = saveActiveMember();
         Cookie session = login(member);
-        int loginHistoryBefore = count("login_history WHERE member_id = ?", member.getId());
 
-        for (int attempt = 0; attempt < 6; attempt++) {
+        for (int attempt = 0; attempt < 4; attempt++) {
             MvcTestResult result = withdraw(session, WRONG_PASSWORD);
 
             assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
@@ -443,10 +443,52 @@ class WithdrawalApiIntegrationTest {
         assertThat(column(member, "email")).isEqualTo(member.getEmail());
         assertThat(column(member, "nickname")).isEqualTo(member.getNickname());
         assertThat(sessionCount(member)).isEqualTo(1);
-        assertThat(count("login_history WHERE member_id = ?", member.getId())).isEqualTo(loginHistoryBefore);
+        assertThat(count("login_history WHERE member_id = ? AND success = FALSE", member.getId()))
+                .isEqualTo(4);
         assertThat(count("outbox_event WHERE event_type LIKE 'WITHDRAWAL%'")).isZero();
         MvcTestResult loginAgain = postJson("/api/auth/login", loginBody(member.getEmail(), PASSWORD), null);
         assertThat(loginAgain).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("[F-01][PW-03][PW-08] 비밀번호를 5번 틀리면 올바른 비밀번호를 보내도 429 LOGIN_LOCKED와 Retry-After를 받고 탈퇴하지 않는다")
+    void repeatedMismatchLocksWithdrawalAndLogin() {
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertThat(withdraw(session, WRONG_PASSWORD)).hasStatus(HttpStatus.UNAUTHORIZED);
+        }
+
+        MvcTestResult lockedWithRightPassword = withdraw(session, PASSWORD);
+        MvcTestResult lockedLogin = postJson("/api/auth/login", loginBody(member.getEmail(), PASSWORD), null);
+
+        assertThat(lockedWithRightPassword).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(lockedWithRightPassword).bodyJson().extractingPath("$.code").isEqualTo("LOGIN_LOCKED");
+        assertThat(lockedWithRightPassword.getResponse().getHeader(HttpHeaders.RETRY_AFTER))
+                .isNotBlank();
+        assertThat(lockedLogin).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(column(member, "status")).isEqualTo("ACTIVE");
+        assertThat(sessionCount(member)).isEqualTo(1);
+        assertThat(count("login_history WHERE member_id = ? AND success = FALSE", member.getId()))
+                .isEqualTo(5);
+        assertThat(count("outbox_event WHERE event_type LIKE 'WITHDRAWAL%'")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-01][PW-03][PW-08] 로그인 실패로 잠긴 회원은 올바른 비밀번호로도 탈퇴하지 못하고, 잠금이 풀리면 탈퇴할 수 있다")
+    void loginLockoutBlocksWithdrawalUntilItExpires() {
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertThat(postJson("/api/auth/login", loginBody(member.getEmail(), WRONG_PASSWORD), null))
+                    .hasStatus(HttpStatus.UNAUTHORIZED);
+        }
+
+        assertThat(withdraw(session, PASSWORD)).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        clock.advance(Duration.ofMinutes(11));
+
+        assertThat(withdraw(session, PASSWORD)).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(column(member, "status")).isEqualTo("WITHDRAWN");
     }
 
     @Test

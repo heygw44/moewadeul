@@ -62,7 +62,7 @@ class CommunityCommentController {
                     + "같은 키로 다시 보내면 댓글을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. "
                     + "content는 공백뿐일 수 없고 1,000자 이하이며, 어기면 400 INVALID_INPUT이다. "
                     + "parentId는 선택이고, 보내면 그 댓글에 다는 답글이 된다. 부모 댓글이 없거나, 다른 글의 댓글이거나, "
-                    + "ACTIVE가 아니거나, 그 자체가 답글이면 400 INVALID_INPUT이다. "
+                    + "ACTIVE가 아니면 400 INVALID_INPUT이다. 답글에 답해도 되고, 그러면 새 답글은 그 답글의 최상위 댓글 아래에 저장된다. "
                     + "글이 없거나 ACTIVE가 아니면 404 NOT_FOUND다.")
     @PostMapping("/api/community/posts/{postId}/comments")
     @ResponseStatus(HttpStatus.CREATED)

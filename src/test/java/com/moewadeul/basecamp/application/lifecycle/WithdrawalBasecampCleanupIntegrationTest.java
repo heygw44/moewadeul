@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 class WithdrawalBasecampCleanupIntegrationTest {
 
     private static final String PASSWORD = "Valid-pass1";
+    private static final String REQUEST_IP = "203.0.113.7";
 
     @Autowired
     private WithdrawalService withdrawalService;
@@ -57,7 +58,7 @@ class WithdrawalBasecampCleanupIntegrationTest {
         long applicant = fixture.saveVerifiedMember(TestSequence.nickname());
         fixture.insertApplication(basecamp, applicant, "PENDING");
 
-        withdrawalService.withdraw(leader, PASSWORD);
+        withdrawalService.withdraw(leader, PASSWORD, REQUEST_IP);
         assertThat(basecampStatus(basecamp)).isEqualTo("RECRUITING");
         outboxPublisher.publishPending();
 
@@ -79,7 +80,7 @@ class WithdrawalBasecampCleanupIntegrationTest {
         jdbc.update("UPDATE basecamp SET closed_reason = 'AUTO_FULL' WHERE id = ?", autoClosed);
         fixture.insertMember(autoClosed, member, "MEMBER", "ACTIVE");
 
-        withdrawalService.withdraw(member, PASSWORD);
+        withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
         outboxPublisher.publishPending();
 
         assertThat(memberRow(confirmed, member)).isEqualTo("LEFT:0");
@@ -97,7 +98,7 @@ class WithdrawalBasecampCleanupIntegrationTest {
         fixture.insertApplication(basecamp, applicant, "PENDING");
         long unrelated = fixture.saveBasecamp("RECRUITING", null);
 
-        withdrawalService.withdraw(applicant, PASSWORD);
+        withdrawalService.withdraw(applicant, PASSWORD, REQUEST_IP);
         outboxPublisher.publishPending();
 
         assertThat(jdbc.queryForObject(
@@ -119,8 +120,8 @@ class WithdrawalBasecampCleanupIntegrationTest {
         long member = saveMemberWithPassword();
         long joined = fixture.saveBasecamp("CONFIRMED", null);
         fixture.insertMember(joined, member, "MEMBER", "ACTIVE");
-        withdrawalService.withdraw(leader, PASSWORD);
-        withdrawalService.withdraw(member, PASSWORD);
+        withdrawalService.withdraw(leader, PASSWORD, REQUEST_IP);
+        withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
         outboxPublisher.publishPending();
         int eventsBefore = count("outbox_event WHERE event_type LIKE 'BASECAMP_%'");
         Object updatedAtBefore =

@@ -34,6 +34,19 @@ export interface BakjiCreateRequest {
   groundType?: GroundType;
 }
 
+// 수정은 바꾼 필드만 보낸다. 서버는 빠진 필드를 그대로 두고, null을 보낸 필드(설명·통신 상태·바닥)는 지운다.
+// 좌표는 lat, lng를 함께 보내야 한다.
+export interface BakjiUpdateRequest {
+  name?: string;
+  lat?: number;
+  lng?: number;
+  description?: string | null;
+  hasWater?: boolean;
+  hasToilet?: boolean;
+  signalLevel?: SignalLevel | null;
+  groundType?: GroundType | null;
+}
+
 export interface DuplicateCandidate {
   spotId: number;
   name: string;

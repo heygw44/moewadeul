@@ -26,6 +26,7 @@ import { UnverifiedNote } from '../member/GatedButton';
 import { SpotReviews } from '../review/SpotReviews';
 import { SoloTripSection } from '../trip/SoloTripSection';
 import { BakjiFeedback } from './BakjiFeedback';
+import { BakjiOwnerActions } from './BakjiOwnerActions';
 import { ParkWarningNotice } from './ParkWarningNotice';
 import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META, sourceLabel } from './spotLabels';
 import { useSpotWeather } from './useSpotWeather';
@@ -36,6 +37,8 @@ type SpotDetailPanelProps = {
   onBack: () => void;
   // 장소 정보를 불러오면 알린다. 지도 화면은 이 장소로 지도를 옮기고 핀을 그린다.
   onLoaded?: (detail: SpotDetail) => void;
+  // 제보한 회원이 박지를 지우면 알린다. 지도 화면은 지운 박지가 사라지도록 마커를 다시 불러온다.
+  onBakjiDeleted?: () => void;
 };
 
 // 어느 요청(장소, 시도 횟수)의 결과인지 함께 기억해서, 장소를 바꾸면 이전 결과를 곧바로 버린다.
@@ -57,7 +60,7 @@ function formatValue(value: number | null, unit: string): string {
   return value === null ? '-' : `${value}${unit}`;
 }
 
-export function SpotDetailPanel({ spotId, onBack, onLoaded }: SpotDetailPanelProps) {
+export function SpotDetailPanel({ spotId, onBack, onLoaded, onBakjiDeleted }: SpotDetailPanelProps) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
   // 날씨는 상세와 같은 때에 따로 요청한다. 상세가 먼저 오면 근거부터 그리고, 날씨 칸만 날씨를 기다린다.
@@ -98,7 +101,7 @@ export function SpotDetailPanel({ spotId, onBack, onLoaded }: SpotDetailPanelPro
   if (current === null) {
     body = showSkeleton ? <DetailSkeleton /> : null;
   } else if ('detail' in current) {
-    body = <DetailContent detail={current.detail} weather={weather} />;
+    body = <DetailContent detail={current.detail} weather={weather} onBakjiDeleted={onBakjiDeleted} />;
   } else if (current.error instanceof ApiError && current.error.code === 'NOT_FOUND') {
     body = <EmptyState title="장소를 찾을 수 없어요" description="삭제됐거나 숨겨진 장소예요." />;
   } else {
@@ -144,7 +147,15 @@ function DetailSkeleton() {
   );
 }
 
-function DetailContent({ detail, weather }: { detail: SpotDetail; weather: SpotWeatherState }) {
+function DetailContent({
+  detail,
+  weather,
+  onBakjiDeleted,
+}: {
+  detail: SpotDetail;
+  weather: SpotWeatherState;
+  onBakjiDeleted?: () => void;
+}) {
   const meta = SPOT_TYPE_META[detail.type];
   const publicDetail = detail.publicDetail;
   const bakji = detail.bakji;
@@ -190,6 +201,7 @@ function DetailContent({ detail, weather }: { detail: SpotDetail; weather: SpotW
 
       {bakji && (
         <BakjiSection bakji={bakji} confirmationCount={confirmationCount}>
+          <BakjiOwnerActions spotId={detail.spotId} reporterId={bakji.reporter.memberId} onDeleted={onBakjiDeleted} />
           <BakjiFeedback spotId={detail.spotId} onConfirmed={setConfirmationCount} />
         </BakjiSection>
       )}
