@@ -2,9 +2,11 @@ package com.moewadeul.publicdata.application;
 
 import com.moewadeul.publicdata.domain.SyncJobRun;
 import com.moewadeul.publicdata.domain.SyncJobRunRepository;
+import com.moewadeul.publicdata.domain.SyncJobStatus;
 import com.moewadeul.publicdata.domain.SyncJobType;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,6 +101,17 @@ public class SyncJobRunService {
     @Transactional
     public void fail(long runId, String message) {
         getRun(runId).fail(message, clock.instant());
+    }
+
+    /**
+     * 호출하면 runId 실행이 시작된 뒤에 jobType 실행이 성공으로 끝났는지 돌려준다. 어떤 작업이 도는 사이에 다른 작업이 끝났는지, 예를 들어 재판정이
+     * 도는 사이에 공원 경계 적재가 끝났는지 알려는 호출이 쓴다. 두 시각이 같으면 뒤에 끝난 것으로 세지 않는다.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasCompletedSinceStartOf(SyncJobType jobType, long runId) {
+        Instant startedAt = getRun(runId).getStartedAt();
+        return syncJobRunRepository.existsByJobTypeAndStatusAndFinishedAtAfter(
+                jobType, SyncJobStatus.COMPLETED, startedAt);
     }
 
     private SyncJobRun getRun(long runId) {

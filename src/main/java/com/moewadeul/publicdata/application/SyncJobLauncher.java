@@ -104,11 +104,14 @@ public class SyncJobLauncher {
     }
 
     // 경계가 바뀌면 박지의 공원 경고도 새 경계로 맞춰야 하므로, 적재가 성공한 뒤에만 재판정을 시작한다. 적재가 예외를 던지면 재판정은 시작하지 않는다.
-    // 다른 재판정이 이미 돌고 있으면 새로 시작하지 않고 WARN 로그만 남긴다.
+    // 다른 재판정이 이미 돌고 있으면 새로 시작하지 않는다. 그 재판정이 마칠 때 이 적재가 자기 시작 뒤에 끝난 것을 보고 처음부터 다시 판정하므로,
+    // 여기서는 INFO 로그만 남긴다.
     private void loadParkBoundaryThenRejudge(SyncJobStart start) {
         parkBoundaryLoadService.run(start);
         if (bakjiRejudgeService.rejudge().isEmpty()) {
-            log.warn("bakji rejudge skipped because another rejudge is running parkBoundaryRunId={}", start.runId());
+            log.info(
+                    "bakji rejudge not started because one is running, it repeats itself parkBoundaryRunId={}",
+                    start.runId());
         }
     }
 
