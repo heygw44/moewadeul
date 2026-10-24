@@ -107,11 +107,12 @@ public final class CompanionReviewFixture {
     /** 합류 신청 행을 넣는다. 신청 상태가 무엇이든 그 회원은 베이스캠프에 신청한 이력이 있는 회원이다. */
     public void insertApplication(long basecampId, long applicantId, String status) {
         jdbc.update(
-                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, applied_at, created_at,"
+                        + " updated_at) VALUES (?, ?, ?, ?, ?, ?)",
                 basecampId,
                 applicantId,
                 status,
+                AT,
                 AT,
                 AT);
     }

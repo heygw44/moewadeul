@@ -65,7 +65,7 @@ const UNMET_REASON_TEXT: Record<JoinUnmetReason, UnmetReasonText> = {
   TRUST_LEVEL: { reason: '필요한 신뢰 단계에 못 미쳐요.' },
   AGE_GROUP: { reason: '연령대 조건에 맞지 않아요.', guide: IDENTITY_VALUE_GUIDE },
   GENDER: { reason: '성별 조건에 맞지 않아요.', guide: IDENTITY_VALUE_GUIDE },
-  DATE_CONFLICT: { reason: '같은 날짜에 확정된 다른 베이스캠프가 있어요.' },
+  DATE_CONFLICT: { reason: '같은 날짜에 이미 합류한 다른 베이스캠프가 있어요.' },
   ALREADY_JOINED: { reason: '이미 신청했거나 합류한 베이스캠프예요.' },
   REAPPLY_NOT_ALLOWED: { reason: '거절·강퇴되거나 직접 탈퇴한 적이 있어 다시 신청할 수 없어요.' },
 };

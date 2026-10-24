@@ -29,7 +29,7 @@ import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { formatKstDateTime } from '../../lib/datetime';
+import { formatKstDateTime, todayKst } from '../../lib/datetime';
 import { trustLevelBadge } from '../member/memberLabels';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -434,6 +434,8 @@ function StatusActions({
 }) {
   const open = detail.status === 'RECRUITING' || detail.status === 'CLOSED';
   const enoughMembers = detail.headcount >= MIN_CONFIRM_HEADCOUNT;
+  // 서버는 출발일 0시(한국 시간)부터 캠프 리더의 취소를 거부한다. 출발한 뒤에는 동행이 실제로 이뤄지기 때문이다.
+  const departed = todayKst() >= detail.startDate;
   return (
     <PageCard title="모집 상태">
       <div className="flex flex-wrap items-start gap-2">
@@ -470,7 +472,12 @@ function StatusActions({
             확정
           </Button>
         )}
-        <Button variant="danger" disabled={submitting} onClick={() => onDialog({ kind: 'cancel' })}>
+        <Button
+          variant="danger"
+          disabled={submitting || departed}
+          disabledReason={departed ? '출발일부터는 베이스캠프를 취소할 수 없어요.' : undefined}
+          onClick={() => onDialog({ kind: 'cancel' })}
+        >
           취소
         </Button>
       </div>

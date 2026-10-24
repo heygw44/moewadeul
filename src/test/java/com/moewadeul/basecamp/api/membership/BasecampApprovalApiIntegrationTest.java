@@ -5,10 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.api.BasecampApiFixture;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +53,9 @@ class BasecampApprovalApiIntegrationTest {
 
     @Autowired
     private JsonMapper jsonMapper;
+
+    @Autowired
+    private MutableClock clock;
 
     private BasecampApiFixture fixture;
     private Member leader;
@@ -145,6 +151,55 @@ class BasecampApprovalApiIntegrationTest {
         assertFailure(foreignApproval, HttpStatus.NOT_FOUND, "NOT_FOUND");
         assertFailure(foreignRejection, HttpStatus.NOT_FOUND, "NOT_FOUND");
         assertThat(applicationStatus(applicationId)).isEqualTo("PENDING");
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-09] 장소가 숨김·검토 대기·삭제이면 캠프 리더의 승인은 404 NOT_FOUND이고, 신청은 대기로 남으며 멤버와 이벤트가 늘지 않는다")
+    void approveOnNonActiveSpotIsNotFound() {
+        // given
+        long applicationId = pendingApplication(applicant);
+
+        for (String spotStatus : new String[] {"HIDDEN", "PENDING_REVIEW", "DELETED"}) {
+            fixture.setSpotStatus(spotId, spotStatus);
+
+            // when
+            MvcTestResult result = approve(leaderSession, basecampId, applicationId);
+
+            // then
+            assertFailure(result, HttpStatus.NOT_FOUND, "NOT_FOUND");
+            assertThat(applicationStatus(applicationId)).isEqualTo("PENDING");
+            assertThat(count("basecamp_member")).isEqualTo(1);
+            assertThat(count("outbox_event")).isZero();
+        }
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-09] 장소가 숨겨져도 캠프 리더가 아닌 회원의 승인은 ACCESS_DENIED가 먼저 걸린다")
+    void nonLeaderIsDeniedBeforeHiddenSpotCheck() {
+        // given
+        long applicationId = pendingApplication(applicant);
+        fixture.setSpotStatus(spotId, "HIDDEN");
+
+        // when
+        MvcTestResult result = approve(applicantSession, basecampId, applicationId);
+
+        // then
+        assertFailure(result, HttpStatus.FORBIDDEN, "ACCESS_DENIED");
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-09] 장소가 숨겨져도 캠프 리더는 대기 중인 신청을 거절할 수 있다")
+    void rejectStillWorksWhenSpotIsHidden() {
+        // given
+        long applicationId = pendingApplication(applicant);
+        fixture.setSpotStatus(spotId, "HIDDEN");
+
+        // when
+        MvcTestResult result = reject(leaderSession, basecampId, applicationId);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(applicationStatus(applicationId)).isEqualTo("REJECTED");
     }
 
     @Test
@@ -250,6 +305,61 @@ class BasecampApprovalApiIntegrationTest {
         assertFailure(result, HttpStatus.CONFLICT, "BASECAMP_DATE_CONFLICT");
         assertThat(applicationStatus(applicationId)).isEqualTo("PENDING");
         assertThat(count("outbox_event")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-06] 신청자가 같은 기간에 모집 중인 다른 베이스캠프의 ACTIVE 멤버이면 승인이 409 BASECAMP_DATE_CONFLICT이고 신청은 대기로 남는다")
+    void recruitingMembershipOnOverlappingDatesBlocksApproval() {
+        // given
+        long applicationId = pendingApplication(applicant);
+        long recruitingId = fixture.insertBasecamp(fixture.saveMember(), spotId, "RECRUITING", START_DATE.plusDays(2));
+        fixture.insertMemberRow(recruitingId, applicant, "MEMBER", "ACTIVE");
+
+        // when
+        MvcTestResult result = approve(leaderSession, basecampId, applicationId);
+
+        // then
+        assertFailure(result, HttpStatus.CONFLICT, "BASECAMP_DATE_CONFLICT");
+        assertThat(applicationStatus(applicationId)).isEqualTo("PENDING");
+        assertThat(memberRow(applicant)).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-06] 모집 중이거나 마감인 다른 베이스캠프의 ACTIVE 멤버라도 날짜가 겹치지 않으면 승인된다")
+    void inProgressMembershipOnOtherDatesAllowsApproval() {
+        // given
+        long applicationId = pendingApplication(applicant);
+        long recruitingId = fixture.insertBasecamp(fixture.saveMember(), spotId, "RECRUITING", START_DATE.plusDays(3));
+        fixture.insertMemberRow(recruitingId, applicant, "MEMBER", "ACTIVE");
+        long closedId = fixture.insertBasecamp(fixture.saveMember(), spotId, "CLOSED", START_DATE.minusDays(3));
+        fixture.insertMemberRow(closedId, applicant, "MEMBER", "ACTIVE");
+
+        // when
+        MvcTestResult result = approve(leaderSession, basecampId, applicationId);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(applicationStatus(applicationId)).isEqualTo("APPROVED");
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-06] 같은 기간의 다른 베이스캠프에서 탈퇴했거나, 그 베이스캠프가 취소·완료되었으면 승인을 막지 않는다")
+    void leftOrFinishedMembershipDoesNotBlockApproval() {
+        // given
+        long applicationId = pendingApplication(applicant);
+        long leftId = fixture.insertBasecamp(fixture.saveMember(), spotId, "RECRUITING", START_DATE);
+        fixture.insertMemberRow(leftId, applicant, "MEMBER", "LEFT");
+        long canceledId = fixture.insertBasecamp(fixture.saveMember(), spotId, "CANCELED", START_DATE);
+        fixture.insertMemberRow(canceledId, applicant, "MEMBER", "ACTIVE");
+        long completedId = fixture.insertBasecamp(fixture.saveMember(), spotId, "COMPLETED", START_DATE);
+        fixture.insertMemberRow(completedId, applicant, "MEMBER", "ACTIVE");
+
+        // when
+        MvcTestResult result = approve(leaderSession, basecampId, applicationId);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(applicationStatus(applicationId)).isEqualTo("APPROVED");
     }
 
     @Test
@@ -389,6 +499,28 @@ class BasecampApprovalApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-13][BC-07] 취소했다가 다시 신청한 신청은 그사이 들어온 신청보다 뒤에 오고, appliedAt은 다시 신청한 시각이다")
+    void reappliedApplicationGoesToEndOfQueue() throws Exception {
+        // given
+        Member later = fixture.saveMember();
+        Cookie laterSession = fixture.identityVerifiedSession(later, "FEMALE");
+        long reappliedId = applicationIdOf(applyByApi(applicantSession));
+        clock.advance(Duration.ofMinutes(1));
+        assertThat(cancelByApi(applicantSession)).hasStatus(HttpStatus.NO_CONTENT);
+        long laterId = applicationIdOf(applyByApi(laterSession));
+        clock.advance(Duration.ofMinutes(1));
+        Instant reappliedAt = clock.instant();
+        assertThat(applicationIdOf(applyByApi(applicantSession))).isEqualTo(reappliedId);
+
+        // when
+        JsonNode page = json(list(leaderSession, basecampId, ""));
+
+        // then
+        assertThat(ids(page)).containsExactly(laterId, reappliedId);
+        assertThat(page.get("content").get(1).get("appliedAt").asText()).isEqualTo(reappliedAt.toString());
+    }
+
+    @Test
     @DisplayName(
             "[F-13] 신청 목록은 캠프 리더만 볼 수 있다. 다른 회원은 403 ACCESS_DENIED, 없는 베이스캠프는 404 NOT_FOUND, 허용하지 않는 status는 400 INVALID_INPUT이다")
     void listAuthorizationAndValidation() {
@@ -455,8 +587,34 @@ class BasecampApprovalApiIntegrationTest {
                 .exchange();
     }
 
+    private MvcTestResult applyByApi(Cookie session) {
+        return mvc.post()
+                .uri("/api/basecamps/" + basecampId + "/applications")
+                .with(csrf())
+                .cookie(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .exchange();
+    }
+
+    private MvcTestResult cancelByApi(Cookie session) {
+        return mvc.delete()
+                .uri("/api/basecamps/" + basecampId + "/applications/me")
+                .with(csrf())
+                .cookie(session)
+                .exchange();
+    }
+
+    private long applicationIdOf(MvcTestResult created) throws Exception {
+        return json(created, HttpStatus.CREATED).get("applicationId").asLong();
+    }
+
     private JsonNode json(MvcTestResult result) throws Exception {
-        assertThat(result).hasStatus(HttpStatus.OK);
+        return json(result, HttpStatus.OK);
+    }
+
+    private JsonNode json(MvcTestResult result, HttpStatus status) throws Exception {
+        assertThat(result).hasStatus(status);
         return jsonMapper.readTree(result.getResponse().getContentAsString());
     }
 

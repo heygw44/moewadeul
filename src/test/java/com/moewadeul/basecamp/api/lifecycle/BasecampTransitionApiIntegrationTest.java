@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.api.BasecampApiFixture;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -46,6 +48,9 @@ class BasecampTransitionApiIntegrationTest {
 
     @Autowired
     private JsonMapper jsonMapper;
+
+    @Autowired
+    private MutableClock clock;
 
     private BasecampApiFixture fixture;
     private Member leader;
@@ -210,6 +215,25 @@ class BasecampTransitionApiIntegrationTest {
         // then
         assertFailure(onCanceled, HttpStatus.CONFLICT, "BASECAMP_INVALID_STATE");
         assertFailure(onCompleted, HttpStatus.CONFLICT, "BASECAMP_INVALID_STATE");
+        assertThat(fixture.outboxCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-14][BC-20] 출발일 0시(한국 시간)부터 확정된 베이스캠프를 취소하면 409 BASECAMP_INVALID_STATE이고 상태와 이벤트는 그대로다")
+    void cancelRejectsFromDepartureDate() {
+        // given
+        fixture.setStatus(basecampId, "CONFIRMED");
+        fixture.insertMemberRow(basecampId, member, "MEMBER", "ACTIVE");
+        clock.setInstant(BasecampApiFixture.DEFAULT_START_DATE
+                .atStartOfDay(KoreaTime.ZONE)
+                .toInstant());
+
+        // when
+        MvcTestResult result = post(leaderSession, "cancel");
+
+        // then
+        assertFailure(result, HttpStatus.CONFLICT, "BASECAMP_INVALID_STATE");
+        assertThat(fixture.basecampRow(basecampId)).containsEntry("status", "CONFIRMED");
         assertThat(fixture.outboxCount()).isZero();
     }
 

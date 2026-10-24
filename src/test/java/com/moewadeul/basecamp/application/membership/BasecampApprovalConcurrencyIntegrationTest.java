@@ -235,11 +235,12 @@ class BasecampApprovalConcurrencyIntegrationTest {
 
     private long insertApplication(long basecampId, long applicantId, String status) {
         jdbc.update(
-                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, applied_at, created_at,"
+                        + " updated_at) VALUES (?, ?, ?, ?, ?, ?)",
                 basecampId,
                 applicantId,
                 status,
+                AT_DEFAULT_INSTANT,
                 AT_DEFAULT_INSTANT,
                 AT_DEFAULT_INSTANT);
         return jdbc.queryForObject("SELECT MAX(id) FROM basecamp_application", Long.class);
