@@ -13,6 +13,11 @@ vi.mock('../../components/HubLayout', () => ({
   AsideSection: ({ children }: { children: ReactNode }) => <aside>{children}</aside>,
 }));
 
+// jsdom에는 실제 캔버스가 없어서, 올리기 전에 다시 만든 사진을 돌려주는 함수를 바꿔 끼운다.
+vi.mock('../../components/reencodeImage', () => ({
+  reencodeImage: async (file: File) => new Blob(['reencoded'], { type: file.type }),
+}));
+
 // React가 act 밖의 상태 변경을 경고하지 않도록 테스트 환경임을 알린다.
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 

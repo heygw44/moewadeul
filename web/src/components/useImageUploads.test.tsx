@@ -5,10 +5,13 @@ import type { ChangeEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ImageUpload } from '../api/types';
 import { putImage } from '../api/uploads';
+import { reencodeImage } from './reencodeImage';
 import { useImageUploads } from './useImageUploads';
 import type { ImageUploads } from './useImageUploads';
 
 vi.mock('../api/uploads', () => ({ putImage: vi.fn() }));
+// jsdom에는 실제 캔버스가 없어서, 다시 만든 사진을 돌려주는 함수를 바꿔 끼운다.
+vi.mock('./reencodeImage', () => ({ reencodeImage: vi.fn() }));
 
 // React가 act 밖의 상태 변경을 경고하지 않도록 테스트 환경임을 알린다.
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -56,9 +59,12 @@ describe('useImageUploads', () => {
     requests = [];
     putCalls = 0;
     requestUpload.mockClear();
+    vi.mocked(putImage).mockClear();
     vi.mocked(putImage).mockImplementation(async () => {
       putCalls += 1;
     });
+    vi.mocked(reencodeImage).mockReset();
+    vi.mocked(reencodeImage).mockImplementation(async (file) => new Blob(['reencoded'], { type: file.type }));
     container = document.createElement('div');
     document.body.appendChild(container);
     root = createRoot(container);
@@ -104,5 +110,32 @@ describe('useImageUploads', () => {
     await finish(0);
 
     expect(requestUpload).toHaveBeenCalledTimes(3);
+  });
+
+  it('저장소에는 원본 대신 다시 만든 사진을 올리고, 업로드 URL도 다시 만든 사진의 형식과 크기로 받는다', async () => {
+    const original = new File(['original-with-exif'], 'p.webp', { type: 'image/webp' });
+    const reencoded = new Blob(['jpeg-without-exif-longer'], { type: 'image/jpeg' });
+    vi.mocked(reencodeImage).mockResolvedValue(reencoded);
+
+    await choose([original]);
+    await finish(0);
+
+    expect(reencodeImage).toHaveBeenCalledWith(original, 5 * 1024 * 1024);
+    expect(requestUpload).toHaveBeenCalledWith({ contentType: 'image/jpeg', sizeBytes: reencoded.size });
+    expect(putImage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(putImage).mock.calls[0]![1]).toBe(reencoded);
+    expect(uploads.images[0]!.status).toBe('done');
+  });
+
+  it('사진을 다시 만들지 못하면 원본을 올리지 않고 실패로 둔다', async () => {
+    vi.mocked(reencodeImage).mockResolvedValue(null);
+
+    await choose(photos(1));
+
+    expect(requestUpload).not.toHaveBeenCalled();
+    expect(putImage).not.toHaveBeenCalled();
+    expect(uploads.images[0]!.status).toBe('failed');
+    expect(uploads.images[0]!.error).toBe('이 사진은 올릴 수 없어요. 빼고 다른 사진을 골라 주세요.');
+    expect(uploads.failed).toBe(true);
   });
 });
