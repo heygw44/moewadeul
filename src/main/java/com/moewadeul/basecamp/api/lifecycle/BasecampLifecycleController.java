@@ -94,10 +94,11 @@ class BasecampLifecycleController {
     @Operation(
             summary = "베이스캠프 취소",
             description =
-                    "캠프 리더가 베이스캠프를 취소하고, 200과 함께 basecampId와 status(CANCELED)를 준다. 확정된 뒤에도 취소할 수 있다. "
+                    "캠프 리더가 베이스캠프를 취소하고, 200과 함께 basecampId와 status(CANCELED)를 준다. 확정된 뒤에도 출발일 전날(한국 시간)까지는 취소할 수 있다. "
                             + "취소 사유는 LEADER로 저장하고, 남은 대기 신청은 EXPIRED가 되며, 캠프 리더를 뺀 ACTIVE 멤버에게 알릴 이벤트가 같은 트랜잭션에서 기록된다. 본문은 없다. "
                             + "다음 순서로 검사하고 처음 걸린 이유로 응답한다. "
-                            + "베이스캠프가 없으면 404 NOT_FOUND, 캠프 리더가 아니면 403 ACCESS_DENIED, 이미 완료되었거나 취소되었으면 409 BASECAMP_INVALID_STATE이다.")
+                            + "베이스캠프가 없으면 404 NOT_FOUND, 캠프 리더가 아니면 403 ACCESS_DENIED, "
+                            + "이미 완료되었거나 취소되었거나 출발일 0시(한국 시간)가 지났으면 409 BASECAMP_INVALID_STATE이다.")
     @PostMapping("/api/basecamps/{basecampId}/cancel")
     BasecampStatusResponse cancel(@AuthenticationPrincipal LoginMember loginMember, @PathVariable long basecampId) {
         return BasecampStatusResponse.from(basecampTransitionService.cancel(basecampId, loginMember.memberId()));

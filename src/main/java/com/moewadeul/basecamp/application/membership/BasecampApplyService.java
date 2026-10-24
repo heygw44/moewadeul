@@ -9,6 +9,7 @@ import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class BasecampApplyService {
 
     private final BasecampRepository basecampRepository;
     private final JoinEligibilityChecker joinEligibilityChecker;
+    private final ActiveSpotChecker activeSpotChecker;
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
 
@@ -34,12 +36,12 @@ public class BasecampApplyService {
      *
      * <p>다음 순서로 검사하고 처음 걸린 이유로 거부한다.
      * <ol>
-     *   <li>베이스캠프가 없으면 NOT_FOUND
+     *   <li>베이스캠프가 없거나, 베이스캠프의 장소가 숨김·삭제·검토 대기여서 ACTIVE가 아니면 NOT_FOUND
      *   <li>신뢰 단계가 1 미만이면 TRUST_LEVEL_INSUFFICIENT
      *   <li>모집 중이 아니면 BASECAMP_INVALID_STATE, 이미 신청했거나 멤버이면 BASECAMP_ALREADY_APPLIED,
      *       거절·탈퇴·강퇴된 적이 있으면 BASECAMP_REAPPLY_NOT_ALLOWED
      *   <li>합류 조건의 최소 신뢰 단계, 연령대, 성별을 충족하지 못하면 BASECAMP_CONDITION_NOT_MET
-     *   <li>같은 기간에 확정된 다른 베이스캠프의 멤버이면 BASECAMP_DATE_CONFLICT
+     *   <li>같은 기간에 진행 중인(모집 중·마감·확정) 다른 베이스캠프의 ACTIVE 멤버이면 BASECAMP_DATE_CONFLICT
      *   <li>대기 신청이 이미 20건이면 BASECAMP_PENDING_LIMIT
      *   <li>메시지가 500자를 넘으면 INVALID_INPUT
      * </ol>
@@ -51,6 +53,8 @@ public class BasecampApplyService {
         Basecamp basecamp = basecampRepository
                 .findByIdForUpdate(command.basecampId())
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        // 장소 상태는 잠금을 얻은 뒤에 읽는다. 숨긴 장소가 있다는 사실을 드러내지 않으려고 없는 베이스캠프와 같은 NOT_FOUND로 거부한다.
+        activeSpotChecker.requireActive(basecamp.getSpotId());
         Applicant applicant = joinEligibilityChecker.applicantOf(command.memberId());
         requireBaseTrustLevel(applicant);
         basecamp.checkApplicable(command.memberId());

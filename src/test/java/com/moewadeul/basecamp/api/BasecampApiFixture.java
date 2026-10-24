@@ -114,6 +114,11 @@ public final class BasecampApiFixture {
         return jdbc.queryForObject("SELECT MAX(id) FROM spot", Long.class);
     }
 
+    // 관리자 숨김이나 신고 누적으로 장소가 지도에서 내려간 상태를 만든다. 박지 수정과 같은 규칙대로 버전도 올린다.
+    public void setSpotStatus(long spotId, String status) {
+        jdbc.update("UPDATE spot SET status = ?, version = version + 1 WHERE id = ?", status, spotId);
+    }
+
     // 캠프 리더의 멤버 행도 함께 넣는다. 종료일은 출발일 이틀 뒤, 정원은 4명이다.
     public long insertBasecamp(Member leader, long spotId, String status, LocalDate startDate) {
         jdbc.update(
@@ -146,11 +151,12 @@ public final class BasecampApiFixture {
 
     public void insertApplicationRow(long basecampId, Member applicant, String status) {
         jdbc.update(
-                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, applied_at, created_at,"
+                        + " updated_at) VALUES (?, ?, ?, ?, ?, ?)",
                 basecampId,
                 applicant.getId(),
                 status,
+                AT_DEFAULT_INSTANT,
                 AT_DEFAULT_INSTANT,
                 AT_DEFAULT_INSTANT);
     }

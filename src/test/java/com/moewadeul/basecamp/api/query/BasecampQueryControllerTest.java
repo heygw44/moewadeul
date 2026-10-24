@@ -349,6 +349,26 @@ class BasecampQueryControllerTest {
     }
 
     @Test
+    @DisplayName("[F-12][BC-09] 서비스가 장소 요약을 주지 않으면 비로그인·로그인 상세 응답 모두 spot 필드를 뺀다")
+    void detailOmitsSpotWhenServiceGivesNone() {
+        // given
+        when(basecampDetailQueryService.find(any(), eq(77L)))
+                .thenReturn(withoutSpot(detail(BasecampRelation.NONE, null)));
+
+        // when
+        MvcTestResult anonymous = mvc.get().uri(BASECAMPS + "/77").exchange();
+        MvcTestResult loggedIn =
+                mvc.get().uri(BASECAMPS + "/77").with(unverified()).exchange();
+
+        // then
+        for (MvcTestResult result : new MvcTestResult[] {anonymous, loggedIn}) {
+            assertThat(result).hasStatus(HttpStatus.OK);
+            assertThat(result).bodyJson().doesNotHavePath("$.spot");
+            assertThat(result).bodyJson().extractingPath("$.title").isEqualTo("굴업도 주말 1박");
+        }
+    }
+
+    @Test
     @DisplayName("[F-12] 없는 베이스캠프를 조회하면 404 NOT_FOUND이고, 숫자가 아닌 ID는 400 INVALID_INPUT이다")
     void detailNotFoundAndInvalidId() {
         // given
@@ -475,6 +495,26 @@ class BasecampQueryControllerTest {
                 relation,
                 contactInfo,
                 eligibility);
+    }
+
+    // 장소가 ACTIVE가 아니어서 서비스가 장소 요약을 비운 상세를 만든다.
+    private static BasecampDetail withoutSpot(BasecampDetail detail) {
+        return new BasecampDetail(
+                detail.basecampId(),
+                detail.title(),
+                detail.description(),
+                null,
+                detail.startDate(),
+                detail.endDate(),
+                detail.capacity(),
+                detail.headcount(),
+                detail.status(),
+                detail.joinCondition(),
+                detail.leader(),
+                detail.members(),
+                detail.myRelation(),
+                detail.contactInfo(),
+                detail.eligibility());
     }
 
     // 로그인 서비스가 세션에 넣는 것과 같은 모양의 인증 정보를 만든다. 이메일 인증 권한을 붙여 인증 회원 전용 경로를 연다.

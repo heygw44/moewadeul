@@ -8,6 +8,7 @@ import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class BasecampApprovalService {
 
     private final BasecampRepository basecampRepository;
     private final JoinEligibilityChecker joinEligibilityChecker;
+    private final ActiveSpotChecker activeSpotChecker;
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
 
@@ -36,16 +38,20 @@ public class BasecampApprovalService {
      * <ol>
      *   <li>베이스캠프가 없으면 NOT_FOUND
      *   <li>요청자가 캠프 리더가 아니면 ACCESS_DENIED
+     *   <li>베이스캠프의 장소가 숨김·삭제·검토 대기여서 ACTIVE가 아니면 NOT_FOUND
      *   <li>이 베이스캠프의 신청이 아니면 NOT_FOUND
      *   <li>모집 중이 아니거나 신청이 대기 중이 아니면 BASECAMP_INVALID_STATE
      *   <li>정원이 이미 차 있으면 BASECAMP_FULL
      *   <li>신청자가 지금 합류 조건의 최소 신뢰 단계, 연령대, 성별을 충족하지 못하면 BASECAMP_CONDITION_NOT_MET
-     *   <li>신청자가 같은 기간에 확정된 다른 베이스캠프의 멤버이면 BASECAMP_DATE_CONFLICT
+     *   <li>신청자가 같은 기간에 진행 중인(모집 중·마감·확정) 다른 베이스캠프의 ACTIVE 멤버이면 BASECAMP_DATE_CONFLICT
      * </ol>
      */
     @Transactional
     public BasecampApproveResult approve(long basecampId, long applicationId, long leaderId) {
         Basecamp basecamp = lockLedBy(basecampId, leaderId);
+        // 장소가 지도에서 내려가면 새 멤버를 받지 않는다. 숨긴 장소가 있다는 사실을 드러내지 않으려고 NOT_FOUND로 거부한다.
+        // 거절은 대기 신청을 정리하는 일이라 장소 상태와 상관없이 할 수 있다.
+        activeSpotChecker.requireActive(basecamp.getSpotId());
         BasecampApplication application = basecamp.checkApprovable(applicationId);
         long applicantId = application.getApplicantId();
         Applicant applicant = joinEligibilityChecker.applicantOf(applicantId);

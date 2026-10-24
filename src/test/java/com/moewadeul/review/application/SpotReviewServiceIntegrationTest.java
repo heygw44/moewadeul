@@ -8,6 +8,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.review.domain.ReviewErrorCode;
 import com.moewadeul.spot.application.detail.SpotDetail;
@@ -109,6 +110,64 @@ class SpotReviewServiceIntegrationTest {
         // then
         assertThat(detail.rating().count()).isEqualTo(3);
         assertThat(detail.rating().average()).isEqualTo(4.3);
+    }
+
+    @Test
+    @DisplayName("[F-10] 한 회원이 방문일을 달리해 평점 1을 세 번 주고 다른 회원이 5를 주면, 평균은 회원마다 한 표라서 3.0이고 count는 후기 수 4다")
+    void averageCountsOneVotePerMember() {
+        // given
+        long spotId = saveSpot();
+        long repeater = saveMember();
+        commandService.write(repeater, spotId, write(TODAY, 1, "별로"));
+        commandService.write(repeater, spotId, write(TODAY.minusDays(1), 1, "별로"));
+        commandService.write(repeater, spotId, write(TODAY.minusDays(2), 1, "별로"));
+        commandService.write(saveMember(), spotId, write(TODAY, 5, "좋다"));
+
+        // when
+        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+
+        // then
+        assertThat(detail.rating().count()).isEqualTo(4);
+        assertThat(detail.rating().average()).isEqualTo(3.0);
+    }
+
+    @Test
+    @DisplayName("[F-10] 한 회원이 평점 2와 4를 주고 다른 회원이 5를 주면, 회원별 평균 3과 5를 다시 평균 낸 4.0이다")
+    void averageOfPerMemberAverages() {
+        // given
+        long spotId = saveSpot();
+        long twice = saveMember();
+        commandService.write(twice, spotId, write(TODAY, 2, "보통"));
+        commandService.write(twice, spotId, write(TODAY.minusDays(1), 4, "좋다"));
+        commandService.write(saveMember(), spotId, write(TODAY, 5, "좋다"));
+
+        // when
+        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+
+        // then
+        assertThat(detail.rating().count()).isEqualTo(3);
+        assertThat(detail.rating().average()).isEqualTo(4.0);
+    }
+
+    @Test
+    @DisplayName("[F-10][PV-08] 탈퇴한 두 회원의 후기는 익명화돼도 하나로 묶이지 않고 회원마다 한 표씩 평균에 들어간다")
+    void withdrawnAuthorsKeepSeparateVotes() {
+        // given: 한 회원은 평점 1과 3을, 다른 회원은 5를 주고 둘 다 탈퇴한다.
+        long spotId = saveSpot();
+        long first = saveMember();
+        long second = saveMember();
+        commandService.write(first, spotId, write(TODAY, 1, "별로"));
+        commandService.write(first, spotId, write(TODAY.minusDays(1), 3, "보통"));
+        commandService.write(second, spotId, write(TODAY, 5, "좋다"));
+        withdraw(first);
+        withdraw(second);
+
+        // when
+        SpotDetail detail = spotDetailQueryService.findDetail(spotId);
+
+        // then: 회원별 평균 2와 5의 평균이다. 세 후기를 한 표로 묶었다면 3.0이 된다.
+        assertThat(detail.rating().count()).isEqualTo(3);
+        assertThat(detail.rating().average()).isEqualTo(3.5);
     }
 
     @Test
@@ -428,6 +487,12 @@ class SpotReviewServiceIntegrationTest {
         return memberRepository
                 .saveAndFlush(aMember().nickname(nickname).build())
                 .getId();
+    }
+
+    private void withdraw(long memberId) {
+        Member member = memberRepository.findById(memberId).orElseThrow();
+        member.withdraw(MutableClock.DEFAULT_INSTANT);
+        memberRepository.saveAndFlush(member);
     }
 
     private int rowCount(long spotId) {

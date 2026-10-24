@@ -114,8 +114,10 @@ function selectedSpotMarker(detail: SpotDetail): SpotMarkerData {
 }
 
 // 베이스캠프 상세 응답으로 그 장소의 핀을 만든다. 베이스캠프 화면의 다른 핀처럼 공원 경계 경고와 휴장은 표시하지 않는다.
-function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData {
+// 장소가 지도에서 내려가 응답에 장소가 없으면 null이고, 지도는 옮기지 않는다.
+function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData | null {
   const { spot } = detail;
+  if (spot === undefined) return null;
   return {
     id: spot.spotId,
     kind: spot.type,
@@ -237,9 +239,11 @@ export function MapPage({
   const [spotFocus, setSpotFocus] = useState<{ key: string; marker: SpotMarkerData } | null>(null);
   if (spotFocus !== null && spotFocus.key !== focusKey) setSpotFocus(null);
   const focusedSpot = spotFocus?.marker ?? null;
-  // 상세 응답을 다시 받아도(신청 뒤 새로 고침 등) 같은 화면이면 지도를 다시 옮기지 않는다.
-  const focusOn = (key: string | null, marker: SpotMarkerData) => {
-    if (key !== null) setSpotFocus((previous) => (previous?.key === key ? previous : { key, marker }));
+  // 상세 응답을 다시 받아도(신청 뒤 새로 고침 등) 같은 화면이면 지도를 다시 옮기지 않는다. 그릴 장소가 없으면 지도를 그대로 둔다.
+  const focusOn = (key: string | null, marker: SpotMarkerData | null) => {
+    if (key !== null && marker !== null) {
+      setSpotFocus((previous) => (previous?.key === key ? previous : { key, marker }));
+    }
   };
   // 지도에서 장소 마커를 눌러 고른 장소다. 베이스캠프 목록을 그 장소로 거른다.
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);

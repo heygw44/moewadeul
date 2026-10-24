@@ -27,9 +27,9 @@ public interface BasecampSearchMapper {
     List<ViewerHistoryRow> selectViewerHistory(
             @Param("viewerId") long viewerId, @Param("basecampIds") List<Long> basecampIds);
 
-    /** 호출하면 viewerId인 회원이 ACTIVE 멤버로 들어 있는 확정된 베이스캠프의 일정을 읽는다. */
-    List<ConfirmedScheduleRow> selectConfirmedSchedules(@Param("viewerId") long viewerId);
+    /** 호출하면 viewerId인 회원이 ACTIVE 멤버로 들어 있고 아직 끝나지 않은(모집 중·마감·확정) 베이스캠프의 일정을 읽는다. */
+    List<InProgressScheduleRow> selectInProgressSchedules(@Param("viewerId") long viewerId);
 
-    /** 호출하면 spotId인 장소의 이름·유형·좌표를 읽는다. 장소의 상태는 거르지 않고, 없으면 null이다. */
+    /** 호출하면 spotId인 장소의 이름·유형·좌표를 읽는다. 장소가 없거나 지도에 보이는(ACTIVE) 상태가 아니면 null이다. */
     SpotSummaryRow selectSpotSummary(@Param("spotId") long spotId);
 }

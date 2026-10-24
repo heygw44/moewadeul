@@ -33,7 +33,7 @@ public interface SanctionRepository {
 
     /**
      * 호출하면 그 신고가 만든 해제되지 않은 임시 정지(72시간)를 모두 돌려준다. 적용 중인 것과 72시간이 지나 이미 만료된 것을 함께 넣는다.
-     * 긴급 신고를 접수하면 하나가 생긴다.
+     * 임시 정지를 건 긴급 신고를 접수하면 하나가 생긴다. 신고자나 대상이 신청만 했던 긴급 신고에는 없다.
      */
     List<Sanction> findUnliftedTemporaryByReportId(long reportId);
 }

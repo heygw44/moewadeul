@@ -197,6 +197,27 @@ class BasecampApplyApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-13][BC-06] 같은 기간에 모집 중이거나 마감인 다른 베이스캠프의 ACTIVE 멤버여도 409 BASECAMP_DATE_CONFLICT다")
+    void overlappingRecruitingOrClosedBasecampIsDateConflict() {
+        // given
+        long recruitingId = fixture.insertBasecamp(fixture.saveMember(), spotId, "RECRUITING", START_DATE.plusDays(1));
+        fixture.insertMemberRow(recruitingId, applicant, "MEMBER", "ACTIVE");
+        Member closedMember = fixture.saveMember();
+        Cookie closedMemberSession = fixture.identityVerifiedSession(closedMember, "MALE");
+        long closedId = fixture.insertBasecamp(fixture.saveMember(), spotId, "CLOSED", START_DATE.minusDays(2));
+        fixture.insertMemberRow(closedId, closedMember, "MEMBER", "ACTIVE");
+
+        // when
+        MvcTestResult byRecruitingMember = apply(applicantSession, basecampId, MESSAGE);
+        MvcTestResult byClosedMember = apply(closedMemberSession, basecampId, MESSAGE);
+
+        // then
+        assertFailure(byRecruitingMember, HttpStatus.CONFLICT, "BASECAMP_DATE_CONFLICT");
+        assertFailure(byClosedMember, HttpStatus.CONFLICT, "BASECAMP_DATE_CONFLICT");
+        assertNothingRecorded();
+    }
+
+    @Test
     @DisplayName("[F-13][BC-06] 확정된 베이스캠프의 종료일과 출발일이 하루만 겹쳐도 BASECAMP_DATE_CONFLICT이고, 하루 떨어지면 신청된다")
     void oneDayOverlapIsConflictButAdjacentDayIsNot() {
         // given
@@ -307,6 +328,53 @@ class BasecampApplyApiIntegrationTest {
 
         // then
         assertFailure(result, HttpStatus.NOT_FOUND, "NOT_FOUND");
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-09] 장소가 숨김·검토 대기·삭제인 베이스캠프에 신청하면 404 NOT_FOUND이고 신청 행과 이벤트를 남기지 않는다")
+    void applyToBasecampOnNonActiveSpotIsNotFound() {
+        for (String spotStatus : new String[] {"HIDDEN", "PENDING_REVIEW", "DELETED"}) {
+            // given
+            long otherSpotId = fixture.insertSpot("숨길 박지", 37.5, 127.5);
+            long id = fixture.insertBasecamp(leader, otherSpotId, "RECRUITING", START_DATE);
+            fixture.setSpotStatus(otherSpotId, spotStatus);
+
+            // when
+            MvcTestResult result = apply(applicantSession, id, MESSAGE);
+
+            // then
+            assertFailure(result, HttpStatus.NOT_FOUND, "NOT_FOUND");
+            assertNothingRecorded();
+        }
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-09] 장소가 숨겨진 베이스캠프에는 본인확인하지 않은 회원도 TRUST_LEVEL_INSUFFICIENT보다 먼저 404 NOT_FOUND를 받는다")
+    void hiddenSpotIsCheckedBeforeTrustLevel() {
+        // given
+        Cookie session = fixture.verifiedSession(fixture.saveMember());
+        fixture.setSpotStatus(spotId, "HIDDEN");
+
+        // when
+        MvcTestResult result = apply(session, basecampId, MESSAGE);
+
+        // then
+        assertFailure(result, HttpStatus.NOT_FOUND, "NOT_FOUND");
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-09] 장소가 숨겨진 뒤에도 신청자는 대기 중인 신청을 취소할 수 있다")
+    void pendingApplicationCanBeCanceledAfterSpotIsHidden() {
+        // given
+        long applicationId = applicationIdOf(apply(applicantSession, basecampId, MESSAGE));
+        fixture.setSpotStatus(spotId, "HIDDEN");
+
+        // when
+        MvcTestResult result = cancel(applicantSession, basecampId);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(statusOf(applicationId)).isEqualTo("CANCELED");
     }
 
     @Test

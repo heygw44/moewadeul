@@ -71,8 +71,8 @@ public class MemberReportDismissService {
         return new MemberReportStatusResult(reportId, report.getStatus().name());
     }
 
-    // 임시 정지가 없으면(긴급 신고가 아니면) 바꿀 것이 없다. 이미 만료된 임시 정지는 회원의 정지에 영향이 없으므로, 적용 중인 것을 풀었을 때만
-    // 회원의 정지 상태를 다시 계산한다.
+    // 임시 정지가 없으면(긴급 신고가 아니거나, 긴급 신고라도 신고자나 대상이 신청만 했으면) 바꿀 것이 없다.
+    // 이미 만료된 임시 정지는 회원의 정지에 영향이 없으므로, 적용 중인 것을 풀었을 때만 회원의 정지 상태를 다시 계산한다.
     private Long liftTemporarySuspensions(MemberReport report, long adminId, Instant now) {
         List<Sanction> temporaries = sanctionRepository.findUnliftedTemporaryByReportId(report.getId());
         if (temporaries.isEmpty()) {

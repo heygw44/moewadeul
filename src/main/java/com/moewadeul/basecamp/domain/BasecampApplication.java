@@ -50,6 +50,10 @@ public class BasecampApplication {
     @Column(name = "decided_at")
     private Instant decidedAt;
 
+    /** 가장 최근에 신청한 시각이다. 대기 순서를 정하는 기준이라서 다시 신청하면 그 시각으로 바뀐다. */
+    @Column(name = "applied_at")
+    private Instant appliedAt;
+
     @Column(name = "created_at")
     private Instant createdAt;
 
@@ -61,6 +65,7 @@ public class BasecampApplication {
         this.applicantId = applicantId;
         this.message = message;
         this.status = BasecampApplicationStatus.PENDING;
+        this.appliedAt = now;
         this.createdAt = now;
         this.updatedAt = now;
     }
@@ -101,11 +106,13 @@ public class BasecampApplication {
     }
 
     // 취소했던 신청자가 다시 신청하는 경우다. 이전 결정 시각은 의미가 없어져서 비운다.
+    // 다시 신청한 사람이 대기 순서 맨 뒤로 가도록 신청 시각도 지금으로 바꾼다.
     void resubmit(String message, Instant now) {
         requireValidMessage(message);
         this.message = message;
         this.status = BasecampApplicationStatus.PENDING;
         this.decidedAt = null;
+        this.appliedAt = now;
         this.updatedAt = now;
     }
 

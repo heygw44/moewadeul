@@ -179,8 +179,8 @@ class BasecampSchemaIntegrationTest {
 
     private void insertApplication(long basecampId, long applicantId) {
         jdbcTemplate.update(
-                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, created_at, updated_at)"
-                        + " VALUES (?, ?, 'PENDING', NOW(6), NOW(6))",
+                "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, applied_at, created_at,"
+                        + " updated_at) VALUES (?, ?, 'PENDING', NOW(6), NOW(6), NOW(6))",
                 basecampId,
                 applicantId);
     }

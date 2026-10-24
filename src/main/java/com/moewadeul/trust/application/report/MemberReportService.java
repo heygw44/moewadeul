@@ -21,8 +21,9 @@ public class MemberReportService {
     private final MemberSessions memberSessions;
 
     /**
-     * 호출하면 reporterId인 회원의 신고를 접수하고 신고 ID를 돌려준다. 성희롱·위협 신고이면 대상 회원을 72시간 임시 정지하고,
-     * 트랜잭션이 커밋된 뒤에 그 회원의 세션을 모두 지운다. 커밋 뒤 세션 삭제가 실패하면 정지는 이미 기록된 상태이고 예전 세션이 남을 수 있다.
+     * 호출하면 reporterId인 회원의 신고를 접수하고 신고 ID를 돌려준다. 성희롱·위협 신고이고 신고자와 대상이 둘 다 그 베이스캠프의
+     * 멤버였던 적이 있으면 대상 회원을 72시간 임시 정지하고, 트랜잭션이 커밋된 뒤에 그 회원의 세션을 모두 지운다. 임시 정지를 하지 않은
+     * 신고는 세션을 건드리지 않는다. 커밋 뒤 세션 삭제가 실패하면 정지는 이미 기록된 상태이고 예전 세션이 남을 수 있다.
      * 검사 순서와 오류는 {@link MemberReportApplier#apply}를 따른다.
      */
     public long report(long reporterId, MemberReportCommand command) {

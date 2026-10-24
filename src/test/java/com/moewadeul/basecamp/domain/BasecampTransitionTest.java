@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.time.KoreaTime;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -174,6 +175,35 @@ class BasecampTransitionTest {
             Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
 
             assertThatThrownBy(() -> basecamp.cancel(null, LATER)).isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("[BC-20] 확정된 베이스캠프는 출발일 전날 23:59:59(한국 시간)까지 캠프 리더가 취소할 수 있다")
+        void cancelOnDayBeforeDeparture() {
+            Basecamp basecamp = aBasecamp().inState(BasecampStatus.CONFIRMED);
+            Instant lastMoment = BasecampBuilder.DEFAULT_START_DATE
+                    .atStartOfDay(KoreaTime.ZONE)
+                    .toInstant()
+                    .minusSeconds(1);
+
+            basecamp.cancel(CancelReason.LEADER, lastMoment);
+
+            assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.CANCELED);
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = BasecampStatus.class,
+                names = {"RECRUITING", "CLOSED", "CONFIRMED"})
+        @DisplayName("[BC-20] 출발일 0시(한국 시간)부터는 캠프 리더가 취소할 수 없다")
+        void cancelFromDepartureDateFails(BasecampStatus state) {
+            Basecamp basecamp = aBasecamp().inState(state);
+            Instant departure = BasecampBuilder.DEFAULT_START_DATE
+                    .atStartOfDay(KoreaTime.ZONE)
+                    .toInstant();
+
+            assertFailsWithInvalidState(() -> basecamp.cancel(CancelReason.LEADER, departure));
+            assertThat(basecamp.getStatus()).isEqualTo(state);
         }
 
         @Test
@@ -564,10 +594,12 @@ class BasecampTransitionTest {
         }
 
         @Test
-        @DisplayName("[BC-07] 스스로 취소한 회원은 같은 신청 행이 대기로 되돌아가며 다시 신청한다")
+        @DisplayName("[BC-07] 스스로 취소한 회원은 같은 신청 행이 대기로 되돌아가며 다시 신청하고, 신청 시각은 다시 신청한 시각이 된다")
         void canceledReusesSameRow() {
             Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
             BasecampApplication original = applicationOf(basecamp, APPLICANT_ID);
+            Instant firstCreatedAt = original.getCreatedAt();
+            assertThat(original.getAppliedAt()).isEqualTo(firstCreatedAt);
             basecamp.cancelApplication(APPLICANT_ID, LATER);
             Instant resubmittedAt = LATER.plusSeconds(60);
 
@@ -576,6 +608,8 @@ class BasecampTransitionTest {
             assertThat(again).isSameAs(original);
             assertThat(again.getStatus()).isEqualTo(BasecampApplicationStatus.PENDING);
             assertThat(again.getMessage()).isEqualTo("마음이 바뀌었어요");
+            assertThat(again.getAppliedAt()).isEqualTo(resubmittedAt);
+            assertThat(again.getCreatedAt()).isEqualTo(firstCreatedAt);
             assertThat(again.getUpdatedAt()).isEqualTo(resubmittedAt);
             assertThat(basecamp.getApplications()).hasSize(2);
         }

@@ -254,12 +254,20 @@ public class Basecamp {
         markConfirmed(now);
     }
 
-    /** 호출하면 베이스캠프를 취소한다. 확정된 뒤에도 취소할 수 있다. 결정되지 않은 신청은 모두 만료된다. */
+    /**
+     * 호출하면 베이스캠프를 취소한다. 확정된 뒤에도 출발일 전날까지는 취소할 수 있다. 결정되지 않은 신청은 모두 만료된다.
+     *
+     * <p>출발일 0시(한국 시간)부터는 거부한다. 출발한 뒤에는 동행이 실제로 이뤄지므로, 멤버가 동행 후기를 쓸 자격과 완료된 동행 횟수를 잃지 않게
+     * 하려는 것이다.
+     */
     public void cancel(CancelReason reason, Instant now) {
         if (reason == null) {
             throw new IllegalArgumentException("취소 사유가 null입니다.");
         }
         requireStatus(NOT_FINISHED);
+        if (!LocalDate.ofInstant(now, KoreaTime.ZONE).isBefore(startDate)) {
+            throw new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE);
+        }
         markCanceled(reason, now);
     }
 

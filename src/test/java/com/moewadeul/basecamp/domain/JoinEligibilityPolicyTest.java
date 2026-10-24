@@ -100,7 +100,7 @@ class JoinEligibilityPolicyTest {
     }
 
     @Test
-    @DisplayName("[F-12][BC-06] 같은 기간에 확정된 다른 베이스캠프가 있으면 DATE_CONFLICT로 걸린다")
+    @DisplayName("[F-12][BC-06] 같은 기간에 진행 중인 다른 베이스캠프의 ACTIVE 멤버이면 DATE_CONFLICT로 걸린다")
     void dateConflict() {
         // when
         List<JoinUnmetReason> reasons = JoinEligibilityPolicy.unmetReasons(

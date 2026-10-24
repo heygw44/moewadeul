@@ -332,6 +332,69 @@ class MemberReportApiIntegrationTest {
                 .isEqualTo(clock.instant().plus(Duration.ofHours(72)));
     }
 
+    @Test
+    @DisplayName("[SN-05] 신청만 한 회원이 멤버를 신고하거나 멤버가 신청만 한 회원을 신고하면, 성희롱·위협 신고는 긴급으로 접수되지만 임시 정지·제재 기록·세션 삭제가 없다")
+    void harassmentReportWithApplicantDoesNotSuspend() {
+        long basecampId = fixture.saveBasecamp("RECRUITING", null);
+        long member = joinedMember(basecampId);
+        long canceledApplicant = applicant(basecampId, "CANCELED");
+        long pendingApplicant = applicant(basecampId, "PENDING");
+        Cookie memberSession = login(member);
+        Cookie applicantSession = login(pendingApplicant);
+
+        MvcTestResult byApplicant =
+                post(verifiedSession(canceledApplicant), memberReport(member, basecampId, "HARASSMENT_OR_THREAT"));
+        MvcTestResult onApplicant =
+                post(verifiedSession(member), memberReport(pendingApplicant, basecampId, "HARASSMENT_OR_THREAT"));
+
+        assertThat(byApplicant).hasStatus(HttpStatus.CREATED);
+        assertThat(onApplicant).hasStatus(HttpStatus.CREATED);
+        assertThat(count("member_report WHERE urgent = TRUE")).isEqualTo(2);
+        assertThat(count("sanction")).isZero();
+        assertThat(memberStatus(member)).isNotEqualTo("SUSPENDED");
+        assertThat(memberStatus(pendingApplicant)).isNotEqualTo("SUSPENDED");
+        assertThat(mvc.get().uri("/api/me").cookie(memberSession).exchange()).hasStatus(HttpStatus.OK);
+        assertThat(mvc.get().uri("/api/me").cookie(applicantSession).exchange()).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("[SN-05] 나간 멤버나 강퇴된 멤버가 신고해도 둘 다 멤버였던 적이 있으면 성희롱·위협 신고로 대상을 임시 정지한다")
+    void harassmentReportByFormerMembersSuspends() {
+        long basecampId = fixture.saveBasecamp("RECRUITING", null);
+        long target = joinedMember(basecampId);
+        long leaver = fixture.saveVerifiedMember(TestSequence.nickname());
+        fixture.insertMember(basecampId, leaver, "MEMBER", "LEFT");
+        long kicked = fixture.saveVerifiedMember(TestSequence.nickname());
+        fixture.insertMember(basecampId, kicked, "MEMBER", "KICKED");
+
+        MvcTestResult byLeaver =
+                post(verifiedSession(leaver), memberReport(target, basecampId, "HARASSMENT_OR_THREAT"));
+        MvcTestResult byKicked =
+                post(verifiedSession(kicked), memberReport(target, basecampId, "HARASSMENT_OR_THREAT"));
+
+        assertThat(byLeaver).hasStatus(HttpStatus.CREATED);
+        assertThat(byKicked).hasStatus(HttpStatus.CREATED);
+        assertThat(count("sanction WHERE member_id = ? AND type = 'TEMPORARY_72H'", target))
+                .isEqualTo(2);
+        assertThat(memberStatus(target)).isEqualTo("SUSPENDED");
+    }
+
+    @Test
+    @DisplayName("[SN-05] 멤버가 캠프 리더를 성희롱·위협으로 신고하면 캠프 리더도 멤버라서 임시 정지한다")
+    void harassmentReportOnLeaderSuspends() {
+        long basecampId = fixture.saveBasecamp("RECRUITING", null);
+        long leader = fixture.leaderIdOf(basecampId);
+        long reporter = joinedMember(basecampId);
+
+        MvcTestResult result =
+                post(verifiedSession(reporter), memberReport(leader, basecampId, "HARASSMENT_OR_THREAT"));
+
+        assertThat(result).hasStatus(HttpStatus.CREATED);
+        assertThat(count("sanction WHERE member_id = ? AND type = 'TEMPORARY_72H'", leader))
+                .isEqualTo(1);
+        assertThat(memberStatus(leader)).isEqualTo("SUSPENDED");
+    }
+
     private long joinedMember(long basecampId) {
         long memberId = fixture.saveVerifiedMember(TestSequence.nickname());
         fixture.insertMember(basecampId, memberId, "MEMBER", "ACTIVE");

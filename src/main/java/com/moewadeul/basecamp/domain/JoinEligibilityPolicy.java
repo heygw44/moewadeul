@@ -26,7 +26,7 @@ public final class JoinEligibilityPolicy {
      *
      * <p>연령대와 성별은 신청자가 스스로 밝힌 값이 아니라 본인확인한 값으로만 판정한다. 그래서 값이 없는 회원은 조건이 걸려 있으면 충족하지 못한 것으로 본다.
      *
-     * @param dateConflict 같은 기간에 확정된 다른 베이스캠프의 멤버이면 true
+     * @param dateConflict 같은 기간에 이미 멤버로 들어간 진행 중인 다른 베이스캠프가 있으면 true
      */
     public static List<JoinUnmetReason> unmetReasons(
             JoinCondition condition, Applicant applicant, boolean dateConflict, PriorRelation priorRelation) {

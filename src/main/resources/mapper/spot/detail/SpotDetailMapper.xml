@@ -47,7 +47,6 @@
           AND s.status = 'ACTIVE'
     </select>
 
-    <!-- 후기가 없으면 집계 함수가 행 하나를 돌려주고 COUNT는 0, AVG는 NULL이다. 평균은 소수 첫째 자리에서 반올림한다. -->
     <!-- 날씨 조회는 장소 상세와 따로 들어와서, 서버가 외부 API를 부르기 전에 ACTIVE인지와 좌표·기상청 격자만 읽는다. -->
     <select id="selectActiveWeatherLocation" resultType="com.moewadeul.spot.infra.detail.SpotWeatherLocationRow">
         SELECT ST_Latitude(s.location) AS lat,
@@ -59,11 +58,19 @@
           AND s.status = 'ACTIVE'
     </select>
 
+    <!-- 한 회원이 방문일마다 후기를 여러 개 써도 평균에는 한 표만 들어가도록, 먼저 회원마다 평점을 평균 내고 그 값들을 다시 평균 낸다.
+         평균은 소수 첫째 자리에서 반올림한다. 후기 수는 회원 수가 아니라 후기 개수다. 탈퇴한 회원의 후기도 회원 ID가 그대로 남아 있어서
+         회원마다 따로 묶인다. 후기가 없으면 바깥 집계가 행 하나를 돌려주고 SUM과 AVG가 NULL이라서, 후기 수는 COALESCE로 0을 준다. -->
     <select id="selectRating" resultType="com.moewadeul.spot.infra.detail.SpotRatingRow">
-        SELECT COUNT(*) AS count,
-               ROUND(AVG(r.rating), 1) AS average
-        FROM spot_review r
-        WHERE r.spot_id = #{spotId}
+        SELECT COALESCE(SUM(per_member.review_count), 0) AS count,
+               ROUND(AVG(per_member.member_average), 1) AS average
+        FROM (
+            SELECT COUNT(*) AS review_count,
+                   AVG(r.rating) AS member_average
+            FROM spot_review r
+            WHERE r.spot_id = #{spotId}
+            GROUP BY r.member_id
+        ) per_member
     </select>
 
     <!-- 작성 시각이 같은 후기가 있어도 어느 것이 최근인지 정해지도록 id를 보조 정렬 키로 쓴다. 작성자 닉네임은 조회할 때의 회원 값이다. -->
