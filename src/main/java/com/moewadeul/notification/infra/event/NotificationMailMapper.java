@@ -61,6 +61,12 @@ public interface NotificationMailMapper {
             @Param("memberIds") Collection<Long> memberIds,
             @Param("defaultEmailEnabled") boolean defaultEmailEnabled);
 
+    /**
+     * 호출하면 since보다 늦게 보낸 알림 메일 수를 센다. 모든 알림 종류를 합친다. 보낸 시각은 SENT 알림에만 있어서, 다른 상태의 알림은
+     * 세지 않는다.
+     */
+    int countSentAfter(@Param("since") Instant since);
+
     /** 호출하면 PENDING·FAILED 알림 수와 가장 오래된 PENDING 알림의 생성 시각을 읽는다. */
     NotificationMailBacklogRow selectBacklog();
 }

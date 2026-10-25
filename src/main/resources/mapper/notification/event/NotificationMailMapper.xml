@@ -105,6 +105,13 @@
           AND <include refid="deliverable"/>
     </select>
 
+    <!-- email_sent_at 인덱스의 구간만 읽는다. 보낸 시각은 SENT 알림에만 있으므로 상태 조건은 필요 없다. -->
+    <select id="countSentAfter" resultType="int">
+        SELECT COUNT(*)
+        FROM notification
+        WHERE email_sent_at &gt; #{since}
+    </select>
+
     <!-- (email_status, id) 인덱스의 PENDING·FAILED 구간만 읽는다. -->
     <select id="selectBacklog" resultType="com.moewadeul.notification.infra.event.NotificationMailBacklogRow">
         SELECT COALESCE(SUM(email_status = 'PENDING'), 0) AS pending_count,
