@@ -27,11 +27,22 @@ class NotificationMailStore {
      * 호출하면 지금 보낼 차례인 PENDING 알림을 한 트랜잭션에서 집고, 보낼 수 있는 알림에는 임대를 걸어 알림 ID 순으로 돌려준다.
      * 받는 회원이 그 종류의 이메일을 껐거나 메일을 받을 수 없으면 SKIPPED로 바꾸고 돌려주지 않는다. 임대는 now에서 {@code lease}
      * 설정 시간이 지날 때까지 다른 발송 작업이 같은 알림을 집지 못하게 막는다.
+     *
+     * <p>최근 24시간에 보낸 알림 메일이 상한({@link NotificationEventTypes#EMAIL_LIMIT_PER_WINDOW})에 닿았으면 아무것도 집지 않는다.
+     * 남은 자리가 한 번에 집는 수보다 적으면 남은 자리만큼만 집는다. 집지 않은 알림은 PENDING 그대로 알림 ID 순서를 지키며 기다린다.
+     * 서버가 한 대면 상한을 넘지 않는다. 발송 작업이 여러 곳에서 동시에 집으면 남은 자리를 같이 읽어서, 동시에 집는 발송 작업 수만큼
+     * 한 번에 집는 수(batchSize)까지 상한을 넘길 수 있다.
      */
     @Transactional
     Claim claim(Instant now) {
+        // 컬럼이 마이크로초까지만 저장하므로, 나노초가 붙은 시각은 저장한 값과 같은지 비교할 때 어긋날 수 있다.
+        Instant leaseUntil = now.plus(properties.lease()).truncatedTo(ChronoUnit.MICROS);
+        int remaining = remainingQuota(now);
+        if (remaining == 0) {
+            return new Claim(leaseUntil, List.of());
+        }
         List<NotificationMailRow> rows = mailMapper.selectDueForUpdate(
-                now, properties.batchSize(), NotificationEventTypes.DEFAULT_EMAIL_ENABLED);
+                now, Math.min(properties.batchSize(), remaining), NotificationEventTypes.DEFAULT_EMAIL_ENABLED);
         List<Long> skipped = rows.stream()
                 .filter(row -> !row.deliverable())
                 .map(NotificationMailRow::notificationId)
@@ -41,13 +52,17 @@ class NotificationMailStore {
         if (!skipped.isEmpty()) {
             mailMapper.markSkipped(skipped);
         }
-        // 컬럼이 마이크로초까지만 저장하므로, 나노초가 붙은 시각은 저장한 값과 같은지 비교할 때 어긋날 수 있다.
-        Instant leaseUntil = now.plus(properties.lease()).truncatedTo(ChronoUnit.MICROS);
         if (!targets.isEmpty()) {
             mailMapper.lease(
                     targets.stream().map(NotificationMailRow::notificationId).toList(), leaseUntil);
         }
         return new Claim(leaseUntil, targets);
+    }
+
+    // 보낸 메일은 SENT 알림의 보낸 시각으로 센다. 집어서 보내는 중인 메일은 아직 세지 않는다.
+    private int remainingQuota(Instant now) {
+        int sentInWindow = mailMapper.countSentAfter(now.minus(NotificationEventTypes.EMAIL_LIMIT_WINDOW));
+        return Math.max(0, NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW - sentInWindow);
     }
 
     /**

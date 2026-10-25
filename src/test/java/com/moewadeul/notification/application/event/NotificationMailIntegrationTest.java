@@ -12,6 +12,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.notification.application.NotificationEventTypes;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -534,6 +535,117 @@ class NotificationMailIntegrationTest {
         assertThat(mailSender.sent()).hasSize(30);
         assertThat(mailSender.sent()).extracting(MailMessage::to).doesNotHaveDuplicates();
         assertThat(countByEmailStatus("SENT")).isEqualTo(30);
+    }
+
+    @Test
+    @DisplayName("[F-20] 최근 24시간에 보낸 알림 메일이 상한(300통)에 닿으면 남은 자리만큼만 보내고, 나머지는 알림함에 두고 보내기를 미룬다")
+    void mailsBeyondDailyLimitStayPendingWhileInboxKeepsAll() {
+        // given
+        int remaining = 3;
+        List<Long> memberIds = saveActiveMembers(5);
+        insertSentNotifications(
+                memberIds.get(0), NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW - remaining, Duration.ofHours(1));
+        recordConfirmed(3L, memberIds);
+        publisher.publishPending();
+
+        // when
+        int handled = drain();
+
+        // then
+        assertThat(handled).isEqualTo(remaining);
+        assertThat(mailSender.sent()).hasSize(remaining);
+        assertThat(countByEmailStatus("SENT")).isEqualTo(NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW);
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(2);
+        assertThat(countByEmailStatus("SKIPPED")).isZero();
+        assertThat(countByEmailStatus("FAILED")).isZero();
+        assertThat(countNotifications()).isEqualTo(NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW - remaining + 5);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM notification WHERE email_status = 'PENDING'"
+                                + " AND email_attempt_count = 0 AND email_next_attempt_at IS NULL",
+                        Integer.class))
+                .isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[F-20] 상한 때문에 미룬 알림 메일은 이미 보낸 메일이 24시간 기간에서 빠지면 알림 순서대로 나간다")
+    void deferredMailsGoOutWhenSentMailsLeaveTheWindow() {
+        // given
+        List<Long> memberIds = saveActiveMembers(5);
+        insertSentNotifications(
+                memberIds.get(0), NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW - 3, Duration.ofHours(1));
+        recordConfirmed(3L, memberIds);
+        publisher.publishPending();
+        drain();
+        mailSender.reset();
+
+        // when: 상한이 찬 동안에는 시간이 조금 지나도 더 보내지 않는다
+        clock.advance(Duration.ofHours(22));
+        int insideWindow = drain();
+
+        // then
+        assertThat(insideWindow).isZero();
+        assertThat(mailSender.sent()).isEmpty();
+
+        // when: 24시간 전에 보낸 메일이 기간 밖으로 나간다
+        clock.advance(Duration.ofHours(2).plusSeconds(1));
+        int afterWindow = drain();
+
+        // then
+        assertThat(afterWindow).isEqualTo(2);
+        assertThat(mailSender.sent()).hasSize(2);
+        assertThat(countByEmailStatus("PENDING")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-20] 기간(24시간) 밖에서 보낸 알림 메일은 상한에 세지 않는다")
+    void mailsSentBeforeTheWindowDoNotCountTowardLimit() {
+        // given
+        List<Long> memberIds = saveActiveMembers(5);
+        insertSentNotifications(
+                memberIds.get(0),
+                NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW,
+                NotificationEventTypes.EMAIL_LIMIT_WINDOW.plusMinutes(1));
+        recordConfirmed(3L, memberIds);
+        publisher.publishPending();
+
+        // when
+        int handled = drain();
+
+        // then
+        assertThat(handled).isEqualTo(5);
+        assertThat(mailSender.sent()).hasSize(5);
+    }
+
+    private List<Long> saveActiveMembers(int count) {
+        List<Long> memberIds = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            memberIds.add(saveActiveMember().getId());
+        }
+        return memberIds;
+    }
+
+    // 이미 보낸 알림 메일을 직접 넣는다. 상한을 채우려고 회원을 수백 명 만들지 않기 위해서다.
+    private void insertSentNotifications(long memberId, int count, Duration sentAgo) {
+        Timestamp sentAt = Timestamp.from(clock.instant().minus(sentAgo));
+        List<Object[]> rows = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            rows.add(new Object[] {memberId, "seed:" + i, sentAt, sentAt});
+        }
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO notification (member_id, type, title, body, dedup_key, email_status,"
+                        + " email_attempt_count, email_sent_at, created_at)"
+                        + " VALUES (?, 'BASECAMP_CONFIRMED', '확정', '확정됐어요.', ?, 'SENT', 0, ?, ?)",
+                rows);
+    }
+
+    private int drain() {
+        int total = 0;
+        int sent;
+        do {
+            sent = mailer.sendDue();
+            total += sent;
+        } while (sent > 0);
+        return total;
     }
 
     private Member saveActiveMember() {

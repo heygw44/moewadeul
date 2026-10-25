@@ -1,5 +1,6 @@
 package com.moewadeul.notification.application;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -54,6 +55,20 @@ public final class NotificationEventTypes {
      * 몰려도 빈자리 메일은 행사마다 30분에 50통을 넘지 않는다.
      */
     public static final Map<String, Integer> EMAIL_LIMIT_PER_EVENT = Map.of(PROGRAM_SEAT_RELEASED, 50);
+
+    /**
+     * 모든 종류의 알림 메일을 합쳐 {@link #EMAIL_LIMIT_WINDOW} 동안 보낼 수 있는 수의 상한이다.
+     *
+     * <p>운영 메일 계정(Gmail)은 최근 24시간에 약 500통까지만 보낸다. 알림 메일이 이 한도를 다 쓰면 인증 코드와 비밀번호 재설정 메일이
+     * 나가지 못한다. 예를 들어 정원 1,000명 행사의 결제 대기 신청이 한꺼번에 만료되면 만료 알림 메일만 1,000통이 생긴다. 그래서 알림 메일은
+     * 300통까지만 보내고, 나머지 200통은 인증 코드와 재설정 메일 몫으로 남긴다. 상한에 닿은 알림은 알림함에는 그대로 있고, 메일은 보낸 지
+     * 24시간이 지난 메일이 기간에서 빠지는 만큼 알림 순서대로 나간다. Gmail이 달력 날짜가 아니라 최근 24시간으로 세므로 상한도 같은 방식으로
+     * 센다. 달력 날짜로 세면 자정 전후로 몰렸을 때 24시간 안에 600통까지 나갈 수 있다.
+     */
+    public static final int EMAIL_LIMIT_PER_WINDOW = 300;
+
+    /** {@link #EMAIL_LIMIT_PER_WINDOW}를 세는 기간이다. 지금 시각에서 이만큼 전까지 보낸 알림 메일을 센다. */
+    public static final Duration EMAIL_LIMIT_WINDOW = Duration.ofHours(24);
 
     private NotificationEventTypes() {}
 }
