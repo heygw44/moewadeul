@@ -15,19 +15,20 @@ import { MemberBoard, MEMBER_BOARD_LINK_CLASS } from './MemberBoard';
 import { AGE_GROUP_LABELS, companionTagLabel, GENDER_LABELS } from './memberLabels';
 import { withNext } from './nextPath';
 import { useSession } from './session';
+import { useViewerEpoch } from './useViewerEpoch';
 
 type ProfileResult =
   { memberId: number; attempt: number; profile: MemberProfile } | { memberId: number; attempt: number; error: unknown };
 
 // 다른 회원이 보는 프로필. 서버가 요청자에 맞게 필드를 빼서 주므로, 화면은 응답에 있는 값만 보여 준다.
 export function MemberProfilePage({ memberId }: { memberId: number }) {
-  const session = useSession();
+  const viewerEpoch = useViewerEpoch();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<ProfileResult | null>(null);
 
-  // 로그인 여부에 따라 서버가 주는 필드가 달라서, 세션이 바뀌면 다시 받는다.
+  // 로그인 여부에 따라 서버가 주는 필드가 달라지고, 서버는 요청의 세션 쿠키로 이를 정한다.
+  // 그래서 세션 확인을 기다리지 않고 함께 보내고, 로그인 상태가 바뀔 때(viewerEpoch)만 다시 받는다.
   useEffect(() => {
-    if (session.status === 'loading') return;
     const controller = new AbortController();
     fetchMemberProfile(memberId, controller.signal).then(
       (profile) => {
@@ -38,7 +39,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
       },
     );
     return () => controller.abort();
-  }, [memberId, attempt, session.status]);
+  }, [memberId, attempt, viewerEpoch]);
 
   const current = result && result.memberId === memberId && result.attempt === attempt ? result : null;
   const showSkeleton = useDelayedFlag(current === null);
