@@ -34,9 +34,16 @@
 		# - S3 사진은 사전 서명 주소(https://{버킷}.s3.ap-northeast-2.amazonaws.com/...)로 읽고 올린다.
 		header X-Frame-Options "DENY"
 		header Content-Security-Policy "default-src 'self'; script-src 'self' https://dapi.kakao.com https://*.kakaocdn.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.kakaocdn.net https://*.s3.ap-northeast-2.amazonaws.com; connect-src 'self' https://dapi.kakao.com https://*.s3.ap-northeast-2.amazonaws.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		# /assets/* 는 파일이 없으면 404로 끝낸다. 배포 뒤 옛 탭이 사라진 화면 코드 파일을 요청할 때 index.html(HTML)을 JS 자리에 200으로 주면,
+		# 브라우저가 그것을 1년 캐시할 수 있고 화면도 원인을 알 수 없게 깨진다. 404여야 화면이 새로고침으로 복구한다.
+		handle /assets/* {
+			file_server
+		}
 		# 화면 경로(/spots/1 등)는 파일이 없으므로 index.html을 주고, 라우팅은 프론트엔드가 한다.
-		try_files {path} /index.html
-		file_server
+		handle {
+			try_files {path} /index.html
+			file_server
+		}
 	}
 
 	header {
@@ -45,5 +52,15 @@
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		-Server
+	}
+
+	# /assets/* 의 오류(없는 파일의 404 등)는 위의 1년 캐시 헤더를 그대로 달고 나간다. 브라우저가 오류를 1년 저장하지 않게 덮어쓴다.
+	# 그 밖의 오류(앱이 죽었을 때의 502 등)는 지금처럼 Caddy 기본 응답으로 둔다.
+	handle_errors {
+		@assets path /assets/*
+		handle @assets {
+			header Cache-Control "no-store"
+			respond "{err.status_code} {err.status_text}"
+		}
 	}
 }
