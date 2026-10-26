@@ -16,6 +16,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
 import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { useSession } from '../member/session';
+import { useViewerEpoch } from '../member/useViewerEpoch';
 import { LocationLabel } from '../spot/LocationLabel';
 import { ApproxLocationLabel } from './ApproxLocationLabel';
 import { MEMORY_STATUS_LABEL, nightsLabel, VISIBILITY_LABEL } from './memoryLabels';
@@ -29,15 +30,15 @@ const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-accent underlin
 
 export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   const session = useSession();
+  const viewerEpoch = useViewerEpoch();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
   // 사진 조회 URL은 1시간 뒤 만료된다. 열어 둔 화면에서 사진이 깨지면 기록을 한 번만 다시 받아 새 URL을 얻는다.
   const imageRetried = useRef(false);
-  const sessionReady = session.status !== 'loading';
 
-  // 작성자인지에 따라 좌표가 오고 비공개 기록이 보이므로 세션을 확인한 뒤에 받는다.
+  // 작성자인지에 따라 좌표가 오고 비공개 기록이 보인다. 서버가 요청의 세션 쿠키로 정하므로 세션 확인을 기다리지 않고 함께 보낸다.
+  // 로그인 상태가 바뀔 때(viewerEpoch)만 다시 받는다.
   useEffect(() => {
-    if (!sessionReady) return;
     const controller = new AbortController();
     getMemory(memoryId, controller.signal).then(
       (memory) => {
@@ -48,7 +49,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
       },
     );
     return () => controller.abort();
-  }, [memoryId, sessionReady, attempt, session.status]);
+  }, [memoryId, attempt, viewerEpoch]);
 
   const current = result?.memoryId === memoryId ? result : null;
   const showSkeleton = useDelayedFlag(current === null);

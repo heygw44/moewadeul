@@ -11,18 +11,18 @@ import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
 import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
-import { useSession } from '../member/session';
+import { useViewerEpoch } from '../member/useViewerEpoch';
 import { usePagedList } from '../program/usePagedList';
 
 const FEED_PAGE_SIZE = 24;
 // 커뮤니티·행사와 같은 넓은 열을 써서, 넓은 화면에서는 칸이 지나치게 커지지 않게 열 수를 늘린다.
 const FEED_GRID_CLASS = 'grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
 
-// 모두에게 공개된 기록을 최신순으로 이어서 보여 준다. 좋아요 상태가 로그인에 따라 달라서 세션을 확인한 뒤에 받는다.
+// 모두에게 공개된 기록을 최신순으로 이어서 보여 준다. 좋아요 상태(likedByMe)는 서버가 요청의 세션 쿠키로 정하므로 세션 확인을 기다리지 않고 함께 받는다.
+// 로그인 상태가 바뀔 때(viewerEpoch)만 첫 쪽부터 다시 받는다.
 export function MemoryFeedPage() {
-  const session = useSession();
-  const sessionReady = session.status !== 'loading';
-  const feed = usePagedList<MemoryFeedItem, string>(sessionReady, session.status, (_filter, page, signal) =>
+  const viewerEpoch = useViewerEpoch();
+  const feed = usePagedList<MemoryFeedItem, number>(true, viewerEpoch, (_filter, page, signal) =>
     fetchMemoryFeed(page, FEED_PAGE_SIZE, signal),
   );
   const { current } = feed;

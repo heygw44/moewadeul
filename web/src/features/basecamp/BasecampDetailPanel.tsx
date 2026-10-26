@@ -20,6 +20,7 @@ import { trustLevelBadge } from '../member/memberLabels';
 import { withNext } from '../member/nextPath';
 import { MemberReportDialog } from '../report/MemberReportDialog';
 import { useSession } from '../member/session';
+import { useViewerEpoch } from '../member/useViewerEpoch';
 import {
   BASECAMP_STATUS_GUIDE,
   BASECAMP_STATUS_META,
@@ -55,15 +56,14 @@ const CONFIRMED_SAFETY_RULES = [
 ];
 
 export function BasecampDetailPanel({ basecampId, onBack, onLoaded }: BasecampDetailPanelProps) {
-  const session = useSession();
+  const viewerEpoch = useViewerEpoch();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
-  const viewerKey = session.me?.memberId ?? null;
 
-  // 로그인 여부에 따라 서버가 주는 필드가 달라서 세션이 바뀌면 다시 받는다.
+  // 로그인 여부에 따라 서버가 주는 필드가 달라지고, 서버는 요청의 세션 쿠키로 이를 정한다.
+  // 그래서 세션 확인을 기다리지 않고 함께 보내고, 로그인한 회원이 바뀔 때(viewerEpoch)만 다시 받는다.
   // 다시 받는 동안에도 이전 내용을 그대로 보여 주고, 응답이 오면 바꾼다.
   useEffect(() => {
-    if (session.status === 'loading') return;
     const controller = new AbortController();
     fetchBasecampDetail(basecampId, controller.signal).then(
       (detail) => {
@@ -74,7 +74,7 @@ export function BasecampDetailPanel({ basecampId, onBack, onLoaded }: BasecampDe
       },
     );
     return () => controller.abort();
-  }, [basecampId, attempt, session.status, viewerKey]);
+  }, [basecampId, attempt, viewerEpoch]);
 
   const current = result && result.basecampId === basecampId ? result : null;
   const showSkeleton = useDelayedFlag(current === null);
