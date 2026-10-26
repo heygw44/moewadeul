@@ -25,6 +25,7 @@ import { buttonClassName } from '../../components/buttonClass';
 import { formatKstDateTime } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
+import { useViewerEpoch } from '../member/useViewerEpoch';
 import { countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { useApplyPhaseRefresh } from './useApplyPhaseRefresh';
 import { useNow } from './useNow';
@@ -37,15 +38,13 @@ const BOARD_ROW_CLASS =
   'grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 px-4 py-2.5 text-[0.9375rem] sm:grid-cols-[8rem_minmax(0,1fr)] sm:px-5';
 
 export function ProgramDetailPage({ programId }: { programId: number }) {
-  const session = useSession();
+  const viewerEpoch = useViewerEpoch();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
-  const sessionReady = session.status !== 'loading';
 
-  // 로그인 여부에 따라 내 신청(myApplication)이 달라지므로 세션을 확인한 뒤에 받는다.
-  // 다시 받을 때는 화면을 비우지 않고 이전 내용을 둔 채 바꾼다.
+  // 내 신청(myApplication)은 서버가 요청의 세션 쿠키로 정하므로 세션 확인을 기다리지 않고 함께 보낸다.
+  // 로그인 상태가 바뀔 때(viewerEpoch)만 다시 받고, 다시 받을 때는 화면을 비우지 않고 이전 내용을 둔 채 바꾼다.
   useEffect(() => {
-    if (!sessionReady) return;
     const controller = new AbortController();
     getProgram(programId, controller.signal).then(
       (detail) => {
@@ -56,7 +55,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
       },
     );
     return () => controller.abort();
-  }, [programId, sessionReady, attempt, session.status]);
+  }, [programId, attempt, viewerEpoch]);
 
   const current = result?.programId === programId ? result : null;
   const showSkeleton = useDelayedFlag(current === null);

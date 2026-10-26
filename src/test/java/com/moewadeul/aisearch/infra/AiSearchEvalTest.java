@@ -54,7 +54,7 @@ class AiSearchEvalTest {
                 "https://api.openai.com/v1", apiKey, "gpt-4.1-mini", Duration.ofSeconds(1), Duration.ofSeconds(5), 300);
         OpenAiSpotQueryInterpreter interpreter = new OpenAiSpotQueryInterpreter(
                 properties,
-                new ExternalApiProperties(10),
+                new ExternalApiProperties(10, Duration.ZERO),
                 jsonMapper,
                 new ExternalApiMetrics(new SimpleMeterRegistry()));
 

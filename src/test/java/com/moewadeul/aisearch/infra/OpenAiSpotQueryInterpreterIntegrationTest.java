@@ -164,8 +164,8 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
                 Duration.ofSeconds(1),
                 Duration.ofMillis(300),
                 300);
-        OpenAiSpotQueryInterpreter slow =
-                new OpenAiSpotQueryInterpreter(shortTimeout, new ExternalApiProperties(10), jsonMapper, metrics);
+        OpenAiSpotQueryInterpreter slow = new OpenAiSpotQueryInterpreter(
+                shortTimeout, new ExternalApiProperties(10, Duration.ZERO), jsonMapper, metrics);
         stub(okResponse(content(), 10, 5).withFixedDelay(1500));
 
         // when & then
@@ -361,8 +361,8 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
                 Duration.ofSeconds(1),
                 Duration.ofSeconds(1),
                 300);
-        OpenAiSpotQueryInterpreter keyless =
-                new OpenAiSpotQueryInterpreter(noKey, new ExternalApiProperties(10), jsonMapper, metrics);
+        OpenAiSpotQueryInterpreter keyless = new OpenAiSpotQueryInterpreter(
+                noKey, new ExternalApiProperties(10, Duration.ZERO), jsonMapper, metrics);
 
         // when & then
         assertThatThrownBy(() -> keyless.interpret(SENTENCE)).isInstanceOf(SpotQueryInterpretationException.class);

@@ -15,6 +15,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime, formatRelativeKst } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
+import { useViewerEpoch } from '../member/useViewerEpoch';
 import { CommunityComments } from './CommunityComments';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import { SECONDARY_LINK_CLASS } from './communityLabels';
@@ -22,17 +23,15 @@ import { SECONDARY_LINK_CLASS } from './communityLabels';
 type LoadResult = { postId: number; post: CommunityPostDetail } | { postId: number; error: unknown };
 
 export function CommunityPostDetailPage({ postId }: { postId: number }) {
-  const session = useSession();
+  const viewerEpoch = useViewerEpoch();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
   // 이미지 조회 URL은 1시간 뒤 만료된다. 열어 둔 화면에서 이미지가 깨지면 글을 한 번만 다시 받아 새 URL을 얻는다.
   const imageRetried = useRef(false);
-  const sessionReady = session.status !== 'loading';
 
-  // 로그인 여부에 따라 likedByMe가 달라지므로 세션을 확인한 뒤에 받는다.
-  // 다시 받을 때는 화면을 비우지 않고 이전 내용을 둔 채 바꾼다.
+  // 요청에는 세션 쿠키가 붙고 서버가 쿠키로 likedByMe를 정하므로, 세션 확인을 기다리지 않고 함께 보낸다.
+  // 로그인 상태가 바뀔 때(viewerEpoch)만 다시 받고, 다시 받을 때는 화면을 비우지 않고 이전 내용을 둔 채 바꾼다.
   useEffect(() => {
-    if (!sessionReady) return;
     const controller = new AbortController();
     getPost(postId, controller.signal).then(
       (post) => {
@@ -43,7 +42,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
       },
     );
     return () => controller.abort();
-  }, [postId, sessionReady, attempt, session.status]);
+  }, [postId, attempt, viewerEpoch]);
 
   const current = result?.postId === postId ? result : null;
   const showSkeleton = useDelayedFlag(current === null);

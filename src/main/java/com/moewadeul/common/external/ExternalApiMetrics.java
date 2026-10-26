@@ -22,6 +22,7 @@ public class ExternalApiMetrics {
     private static final String TIMER_NAME = "moewadeul.external.api.requests";
     private static final String FALLBACK_COUNTER_NAME = "moewadeul.external.api.fallbacks";
     private static final String REJECTED_COUNTER_NAME = "moewadeul.external.api.rejected";
+    private static final String SKIPPED_COUNTER_NAME = "moewadeul.external.api.skipped";
     private static final String SUCCESS = "success";
     private static final String FAILURE = "failure";
 
@@ -69,6 +70,20 @@ public class ExternalApiMetrics {
     public void recordRejected(String api) {
         Counter.builder(REJECTED_COUNTER_NAME)
                 .description("동시 호출 수 한도에 닿아 외부 API를 부르지 않고 거부한 수")
+                .tag("api", api)
+                .register(meterRegistry)
+                .increment();
+    }
+
+    /**
+     * 외부 API가 응답하지 못해 쉬는 동안 호출하지 않고 건너뛴 호출을 센다. 건너뛴 호출은 HTTP 요청을 보내지 않으므로 {@link #record}에는 남지
+     * 않는다. 운영자는 이 지표로 외부 API 장애 때문에 기능이 빠지고 있는지 본다.
+     *
+     * @param api 외부 API 이름. 예: {@code kma}
+     */
+    public void recordSkipped(String api) {
+        Counter.builder(SKIPPED_COUNTER_NAME)
+                .description("외부 API 장애로 쉬는 동안 호출하지 않고 건너뛴 수")
                 .tag("api", api)
                 .register(meterRegistry)
                 .increment();
