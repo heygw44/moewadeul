@@ -3,10 +3,12 @@ package com.moewadeul.weather.infra;
 import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.external.ExternalCallLimit;
+import com.moewadeul.common.external.ExternalFailureCooldown;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -61,13 +63,18 @@ public class KasiClient {
     private final String serviceKey;
     private final ExternalApiMetrics metrics;
     private final ExternalCallLimit callLimit;
+    private final ExternalFailureCooldown failureCooldown;
 
     public KasiClient(
-            KasiProperties properties, ExternalApiProperties externalApiProperties, ExternalApiMetrics metrics) {
+            KasiProperties properties,
+            ExternalApiProperties externalApiProperties,
+            ExternalApiMetrics metrics,
+            Clock clock) {
         this.restClient = createRestClient(properties);
         this.serviceKey = properties.serviceKey();
         this.metrics = metrics;
         this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
+        this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 
     /**
@@ -91,10 +98,18 @@ public class KasiClient {
     }
 
     // 동시 호출 수 한도는 재시도까지 한 호출로 묶어 잡는다. 한도가 차 있으면 기다리지 않고 바로 실패로 끝낸다.
+    // 재시도까지 실패하면(응답이 없거나 5xx) 쉬는 시간 동안 천문연을 부르지 않고 바로 실패로 끝낸다. 원천이 오류 코드로 답한 경우는 천문연이 살아 있으므로 쉬지 않는다.
     private <T> T fetch(Map<String, Object> variables, Function<Element, T> parser) {
         return callLimit.call(
-                () -> fetchWithRetry(variables, parser),
+                () -> failureCooldown.call(
+                        () -> fetchWithRetry(variables, parser),
+                        KasiClient::isOutage,
+                        () -> new KasiApiException(describe("최근 호출이 재시도까지 실패해서 쉬는 중이라 호출하지 않았다"))),
                 () -> new KasiApiException(describe("동시 호출 수가 한도에 닿아 호출하지 않았다")));
+    }
+
+    private static boolean isOutage(RuntimeException e) {
+        return e instanceof KasiApiException kasiException && kasiException.isRetryable();
     }
 
     private <T> T fetchWithRetry(Map<String, Object> variables, Function<Element, T> parser) {

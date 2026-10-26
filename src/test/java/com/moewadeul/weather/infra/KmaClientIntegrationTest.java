@@ -19,6 +19,8 @@ import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
@@ -82,6 +84,9 @@ class KmaClientIntegrationTest {
 
     @Autowired
     private ExternalApiMetrics metrics;
+
+    @Autowired
+    private MutableClock clock;
 
     @Test
     @DisplayName("[F-09] 단기예보 응답의 항목을 원천 값 그대로 읽는다")
@@ -340,8 +345,12 @@ class KmaClientIntegrationTest {
         // 응답이 대기 시간 경계 근처에 끝나게 지연을 두면, 압축을 받는 클라이언트에서는 일부 요청의 본문이 압축을 푸는 도중에 닫힌다.
         // 그 경쟁은 드물어서 동시 요청 100건을 지연을 바꿔 가며 여러 번 보낸다. 압축을 받던 때는 이 조건 1,200건 중 약 10건이 예외로 끝났다.
         // 이 경쟁을 보려면 요청 100건이 동시에 나가야 하므로, 동시 호출 수 한도를 넘지 않는 클라이언트를 따로 만들어 쓴다.
-        KmaClient unlimited =
-                new KmaClient(kmaProperties, new ExternalApiProperties(CONCURRENT_REQUESTS), jsonMapper, metrics);
+        KmaClient unlimited = new KmaClient(
+                kmaProperties,
+                new ExternalApiProperties(CONCURRENT_REQUESTS, Duration.ZERO),
+                jsonMapper,
+                metrics,
+                clock);
         List<String> unexpected = new CopyOnWriteArrayList<>();
         ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_REQUESTS);
 
@@ -476,6 +485,93 @@ class KmaClientIntegrationTest {
                   "body": {"dataType": "JSON", "items": {"item": [%s]},
                   "pageNo": 1, "numOfRows": %d, "totalCount": %d}}}
                 """.formatted(items, itemCount, totalCount);
+    }
+
+    @Test
+    @DisplayName("[NFR-05][NFR-06] 기상청이 재시도까지 실패하면 쉬는 시간 동안 기상청을 부르지 않고, 쉬는 시간이 지나면 한 호출만 시험 삼아 보낸다")
+    void restsAfterOutageAndProbesWithOneCall() {
+        // given: 기상청이 계속 500을 준다.
+        KmaClient resting = clientWithCooldown();
+        stub(VILAGE_FCST_PATH, serverError());
+        double skippedBefore = skippedCount();
+
+        // when: 첫 호출은 재시도까지 두 번 보낸 뒤 실패한다. 이어지는 호출은 작업과 격자가 달라도 쉬는 중이라 기상청에 보내지 않는다.
+        KmaApiException first = catchThrowableOfType(KmaApiException.class, () -> resting.getVilageFcst(BASE, 60, 127));
+        KmaApiException otherGrid =
+                catchThrowableOfType(KmaApiException.class, () -> resting.getVilageFcst(BASE, 61, 127));
+        KmaApiException otherOperation =
+                catchThrowableOfType(KmaApiException.class, () -> resting.getMidTa("11B10101", TM_FC));
+
+        // then
+        assertThat(first.isRetryable()).isTrue();
+        assertThat(otherGrid.isRetryable()).isFalse();
+        assertThat(otherGrid).hasMessageContaining("쉬는 중");
+        assertThat(otherOperation).hasMessageContaining("쉬는 중");
+        assertThat(requestCount(VILAGE_FCST_PATH)).isEqualTo(2);
+        assertThat(requestCount(MID_TA_PATH)).isZero();
+        assertThat(skippedCount() - skippedBefore).isEqualTo(2);
+
+        // when: 쉬는 시간이 지나면 한 호출이 재시도까지 두 번 보내고, 또 실패하면 다시 쉰다.
+        clock.advance(Duration.ofSeconds(30));
+        catchThrowableOfType(KmaApiException.class, () -> resting.getVilageFcst(BASE, 60, 127));
+        KmaApiException afterProbe =
+                catchThrowableOfType(KmaApiException.class, () -> resting.getVilageFcst(BASE, 60, 127));
+
+        // then
+        assertThat(afterProbe).hasMessageContaining("쉬는 중");
+        assertThat(requestCount(VILAGE_FCST_PATH)).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("[NFR-05] 쉬는 시간이 지난 뒤 시험 호출이 성공하면 바로 정상으로 돌아와 다음 호출도 기상청에 보낸다")
+    void recoversWhenProbeSucceeds() {
+        // given: 기상청이 500을 줘서 쉬는 중이다.
+        KmaClient resting = clientWithCooldown();
+        stub(MID_TA_PATH, serverError());
+        catchThrowableOfType(KmaApiException.class, () -> resting.getMidTa("11B10101", TM_FC));
+        stub(MID_TA_PATH, okJson(readFixture("mid-ta.json")));
+        clock.advance(Duration.ofSeconds(30));
+
+        // when
+        Optional<KmaMidTermItem> probe = resting.getMidTa("11B10101", TM_FC);
+        Optional<KmaMidTermItem> next = resting.getMidTa("11B10101", TM_FC);
+
+        // then
+        assertThat(probe).isPresent();
+        assertThat(next).isPresent();
+        assertThat(requestCount(MID_TA_PATH)).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("[NFR-05] 기상청이 오류 코드로 답했다면 기상청이 살아 있으므로 쉬지 않는다")
+    void doesNotRestWhenKmaAnswersWithErrorCode() {
+        // given
+        KmaClient resting = clientWithCooldown();
+        stub(MID_TA_PATH, okJson("""
+                {"response": {"header": {"resultCode": "10", "resultMsg": "INVALID_REQUEST_PARAMETER_ERROR"}}}
+                """));
+
+        // when
+        catchThrowableOfType(KmaApiException.class, () -> resting.getMidTa("11B10101", TM_FC));
+        KmaApiException second = catchThrowableOfType(KmaApiException.class, () -> resting.getMidTa("11B10101", TM_FC));
+
+        // then
+        assertThat(second).hasMessageContaining("resultCode=10");
+        assertThat(requestCount(MID_TA_PATH)).isEqualTo(2);
+    }
+
+    // 테스트 프로필은 다른 테스트가 서로의 실패에 영향받지 않게 쉬는 시간을 0으로 둔다. 쉬는 동작을 보는 테스트는 30초를 쉬는 클라이언트를 따로 만든다.
+    private KmaClient clientWithCooldown() {
+        return new KmaClient(
+                kmaProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), jsonMapper, metrics, clock);
+    }
+
+    private double skippedCount() {
+        Counter counter = meterRegistry
+                .find("moewadeul.external.api.skipped")
+                .tag("api", "kma")
+                .counter();
+        return counter == null ? 0 : counter.count();
     }
 
     private static String readFixture(String fileName) {

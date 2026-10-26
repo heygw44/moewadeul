@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -18,8 +19,8 @@ import org.junit.jupiter.api.Test;
 class ExternalCallLimitTest {
 
     private final MeterRegistry meterRegistry = new SimpleMeterRegistry();
-    private final ExternalCallLimit limit =
-            new ExternalCallLimit("kma", new ExternalApiProperties(2), new ExternalApiMetrics(meterRegistry));
+    private final ExternalCallLimit limit = new ExternalCallLimit(
+            "kma", new ExternalApiProperties(2, Duration.ZERO), new ExternalApiMetrics(meterRegistry));
 
     @Test
     @DisplayName("[NFR-05] 자리가 모두 차 있으면 기다리지 않고 바로 거부하고, 거부한 수를 지표에 남긴다")

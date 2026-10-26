@@ -69,7 +69,9 @@ class S3ImageStorageTest {
                 mock(S3Client.class),
                 presigner,
                 new ExternalCallLimit(
-                        "s3", new ExternalApiProperties(10), new ExternalApiMetrics(new SimpleMeterRegistry())));
+                        "s3",
+                        new ExternalApiProperties(10, Duration.ZERO),
+                        new ExternalApiMetrics(new SimpleMeterRegistry())));
     }
 
     @AfterEach
@@ -236,7 +238,7 @@ class S3ImageStorageTest {
                 presigner,
                 new ExternalCallLimit(
                         "s3",
-                        new ExternalApiProperties(maxConcurrentCalls),
+                        new ExternalApiProperties(maxConcurrentCalls, Duration.ZERO),
                         new ExternalApiMetrics(new SimpleMeterRegistry())));
     }
 }
