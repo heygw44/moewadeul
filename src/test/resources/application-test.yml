@@ -6,6 +6,10 @@ logging:
     org.testcontainers: INFO
     com.github.dockerjava: WARN
 moewadeul:
+  external-api:
+    # 외부 API 테스트가 한 컨텍스트의 클라이언트를 함께 쓴다. 앞 테스트가 낸 실패 때문에 뒤 테스트의 호출을 건너뛰지 않도록 쉬는 시간을 끈다.
+    # 쉬는 동작을 보는 테스트는 쉬는 시간을 둔 클라이언트를 따로 만든다.
+    failure-cooldown: 0s
   identity:
     # 테스트에서만 쓰는 가짜 키다. 길이 하한(32바이트)을 넘기려고 길게 적었다.
     ci-hmac-key: "test-only-ci-hmac-key-not-a-real-secret-0123456789"

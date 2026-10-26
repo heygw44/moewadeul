@@ -3,9 +3,11 @@ package com.moewadeul.weather.infra;
 import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.external.ExternalCallLimit;
+import com.moewadeul.common.external.ExternalFailureCooldown;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -75,17 +77,20 @@ public class KmaClient {
     private final JsonMapper jsonMapper;
     private final ExternalApiMetrics metrics;
     private final ExternalCallLimit callLimit;
+    private final ExternalFailureCooldown failureCooldown;
 
     public KmaClient(
             KmaProperties properties,
             ExternalApiProperties externalApiProperties,
             JsonMapper jsonMapper,
-            ExternalApiMetrics metrics) {
+            ExternalApiMetrics metrics,
+            Clock clock) {
         this.restClient = createRestClient(properties);
         this.serviceKey = properties.serviceKey();
         this.jsonMapper = jsonMapper;
         this.metrics = metrics;
         this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
+        this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 
     /**
@@ -146,10 +151,18 @@ public class KmaClient {
     }
 
     // 동시 호출 수 한도는 재시도까지 한 호출로 묶어 잡는다. 한도가 차 있으면 기다리지 않고 바로 실패로 끝낸다.
+    // 재시도까지 실패하면(응답이 없거나 5xx) 쉬는 시간 동안 기상청을 부르지 않고 바로 실패로 끝낸다. 원천이 오류 코드로 답한 경우는 기상청이 살아 있으므로 쉬지 않는다.
     private <T> T fetch(String operation, String uri, Map<String, Object> variables, Function<JsonNode, T> parser) {
         return callLimit.call(
-                () -> fetchWithRetry(operation, uri, variables, parser),
+                () -> failureCooldown.call(
+                        () -> fetchWithRetry(operation, uri, variables, parser),
+                        KmaClient::isOutage,
+                        () -> new KmaApiException(describe(operation, "최근 호출이 재시도까지 실패해서 쉬는 중이라 호출하지 않았다"))),
                 () -> new KmaApiException(describe(operation, "동시 호출 수가 한도에 닿아 호출하지 않았다")));
+    }
+
+    private static boolean isOutage(RuntimeException e) {
+        return e instanceof KmaApiException kmaException && kmaException.isRetryable();
     }
 
     private <T> T fetchWithRetry(

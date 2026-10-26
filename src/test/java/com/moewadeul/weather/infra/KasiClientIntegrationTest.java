@@ -15,7 +15,10 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
@@ -56,6 +59,15 @@ class KasiClientIntegrationTest {
 
     @Autowired
     private MeterRegistry meterRegistry;
+
+    @Autowired
+    private KasiProperties kasiProperties;
+
+    @Autowired
+    private ExternalApiMetrics metrics;
+
+    @Autowired
+    private MutableClock clock;
 
     @Test
     @DisplayName("[F-09] 출몰시각 응답의 항목을 값 뒤 공백만 빼고 원천 값 그대로 읽는다")
@@ -249,6 +261,35 @@ class KasiClientIntegrationTest {
         // WireMock이 지연 응답을 다 보낸 뒤에야 요청을 기록한다. 그래서 테스트는 기록이 두 건이 될 때까지 기다린다.
         await().atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(requestCount()).isEqualTo(2));
+    }
+
+    @Test
+    @DisplayName("[NFR-05][NFR-06] 천문연이 재시도까지 실패하면 쉬는 시간 동안 천문연을 부르지 않고, 쉬는 시간이 지나면 다시 부른다")
+    void restsAfterOutage() {
+        // given: 테스트 프로필은 쉬는 시간을 0으로 두므로, 30초를 쉬는 클라이언트를 따로 만든다. 천문연이 계속 500을 준다.
+        KasiClient resting =
+                new KasiClient(kasiProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), metrics, clock);
+        stub(serverError());
+
+        // when: 첫 호출은 재시도까지 두 번 보낸 뒤 실패하고, 이어지는 호출은 쉬는 중이라 보내지 않는다.
+        KasiApiException first = catchThrowableOfType(KasiApiException.class, () -> resting.getRiseSet(DATE, LAT, LNG));
+        KasiApiException second =
+                catchThrowableOfType(KasiApiException.class, () -> resting.getRiseSet(DATE, LAT, LNG));
+
+        // then
+        assertThat(first.isRetryable()).isTrue();
+        assertThat(second).hasMessageContaining("쉬는 중");
+        assertThat(wireMock.findAll(getRequestedFor(urlPathEqualTo(RISE_SET_PATH))))
+                .hasSize(2);
+
+        // when: 쉬는 시간이 지난 뒤 천문연이 살아나면 다음 호출이 천문연에 간다.
+        clock.advance(Duration.ofSeconds(30));
+        stub(xml(readFixture("rise-set.xml")));
+
+        // then
+        assertThat(resting.getRiseSet(DATE, LAT, LNG)).isPresent();
+        assertThat(wireMock.findAll(getRequestedFor(urlPathEqualTo(RISE_SET_PATH))))
+                .hasSize(3);
     }
 
     private void stub(ResponseDefinitionBuilder response) {
