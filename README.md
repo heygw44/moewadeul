@@ -23,46 +23,10 @@
 - **Infra**: AWS EC2·S3·SSM, Docker Compose, Caddy, GitHub Actions, Grafana Cloud
 
 ## 인프라 아키텍처
-
-```mermaid
-flowchart LR
-    Browser[브라우저]
-    subgraph EC2["EC2 t4g.small (Docker Compose)"]
-        Caddy[Caddy<br/>TLS · 정적 파일]
-        App[Spring Boot]
-        MySQL[(MySQL 8.4)]
-        Alloy[Alloy]
-    end
-    Public[고캠핑 · 기상청 · 천문연]
-    OpenAI[OpenAI]
-    Mail[Gmail SMTP]
-    S3[(S3 업로드)]
-    Backup[(S3 백업)]
-    Grafana[Grafana Cloud]
-
-    Browser --> Caddy
-    Caddy -->|/api/*| App
-    App --> MySQL
-    App --> Public
-    App --> OpenAI
-    App --> Mail
-    App -->|사전 서명 URL 발급| Browser
-    Browser -->|사진 직접 업로드| S3
-    Alloy --> Grafana
-    MySQL -.->|매일 백업| Backup
-```
+<img src=".github/readme/06-infra-architecture.png" alt="인프라 아키텍처" width="900" />
 
 ## CI/CD
-
-```mermaid
-flowchart LR
-    PR[Pull Request] --> Check[GitHub Actions<br/>check · web]
-    Main[main 머지] --> Build[이미지 빌드<br/>arm64] --> GHCR[GHCR]
-    GHCR --> SSM[SSM Run Command<br/>deploy.sh]
-    SSM --> Health{상태 확인}
-    Health -->|통과| Done[배포 완료]
-    Health -->|실패| Rollback[직전 태그로 되돌림]
-```
+<img src=".github/readme/07-ci-cd.png" alt="CI/CD" width="900" />
 
 ## 🚀 로컬 실행
 
@@ -77,13 +41,6 @@ cd web && npm install && npm run dev   # http://localhost:5173
 - 지도를 보려면 `.env`의 `VITE_KAKAO_JS_KEY`가 필요합니다. 나머지 변수는 `.env.example`의 주석을 참고하세요.
 - 테스트: `./gradlew test`(Docker 불필요), `./gradlew integrationTest`(Docker 필요), `./gradlew check`(전체), `cd web && npm test`
 - 3306 포트가 이미 쓰이면 `.env`의 `DB_PORT`를 바꿉니다. DB 비밀번호를 바꿨다면 `mysql-data/`를 지우고 다시 띄웁니다.
-
-## 👤 개발자
-
-|<img src="https://github.com/heygw44.png" width="125" />|
-|:---------:|
-|[heygw44](https://github.com/heygw44)|
-|Full Stack|
 
 ## 📑 데이터 출처
 
