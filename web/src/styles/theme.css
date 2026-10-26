@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* Pretendard Variable의 @font-face는 index.html의 <link>로 불러오는 CSS에 들어 있다 */
+/* Pretendard Variable의 @font-face는 styles/fonts/pretendard의 CSS에 있고, app/fonts.ts가 첫 화면을 그린 뒤에 받는다 */
 
 @theme {
   /* Tailwind 기본 팔레트(stone, slate, blue 등)를 지워서 프로젝트 토큰만 쓰게 한다 */
