@@ -28,6 +28,12 @@ public interface PublicSpotMapper {
             @Param("source") String source, @Param("spots") List<PublicSpotInsertRow> spots, @Param("now") Instant now);
 
     /**
+     * 호출하면 spotIds의 spot 행을 상태와 상관없이 ID 순서로 잠그며 읽고, 잠근 행의 ID를 돌려준다. 같은 장소의 public_spot_detail 행보다 먼저
+     * 잠가야 한다.
+     */
+    List<Long> lockSpots(@Param("spotIds") Collection<Long> spotIds);
+
+    /**
      * 호출하면 spot의 이름, 주소, 좌표, 기상청 격자를 새 값으로 바꾼다. 상태, 공원 경고, 생성 시각은 건드리지 않는다. 그래서 관리자가 숨긴 장소는
      * 동기화 뒤에도 숨겨진 채로 남는다.
      */
