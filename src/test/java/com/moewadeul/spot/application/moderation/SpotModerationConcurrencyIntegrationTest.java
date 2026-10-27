@@ -205,7 +205,41 @@ class SpotModerationConcurrencyIntegrationTest {
         assertThat(sourceRemovedAt(spotId)).isNotNull();
     }
 
+    @RepeatedTest(50)
+    @DisplayName("[F-06][F-21] 원천 삭제로 숨긴 공공데이터 장소의 관리자 복구와 재등장 적재가 동시에 와도 데드락 없이 장소는 ACTIVE이고 삭제 표시는 지워진다")
+    void restoreRacingResurfacingUpsertStaysConsistent() throws Exception {
+        // given
+        long spotId = savePublicSpot();
+        long admin = saveMember();
+        publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, List.of(EXTERNAL_ID));
+
+        // when
+        List<Throwable> failures = runConcurrently(List.of(() -> spotModerationService.restore(spotId, admin), () -> {
+            upsertPublicSpot();
+            return null;
+        }));
+
+        // then: 적재가 먼저 되돌렸으면 관리자 복구는 잠금을 기다린 뒤 이미 공개된 상태를 보고 거부된다.
+        if (!failures.isEmpty()) {
+            assertThat(failures).hasSize(1);
+            assertThat(failures.get(0))
+                    .isInstanceOfSatisfying(
+                            BusinessException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(SpotErrorCode.SPOT_INVALID_STATE));
+        }
+        assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
+        assertThat(sourceRemovedAt(spotId)).isNull();
+    }
+
     private long savePublicSpot() {
+        upsertPublicSpot();
+        return jdbc.queryForObject(
+                "SELECT spot_id FROM public_spot_detail WHERE source = 'GOCAMPING' AND external_id = ?",
+                Long.class,
+                EXTERNAL_ID);
+    }
+
+    private void upsertPublicSpot() {
         publicSpotSyncService.upsert(
                 PublicSpotSource.GOCAMPING,
                 List.of(new PublicSpotCommand(
@@ -223,10 +257,6 @@ class SpotModerationConcurrencyIntegrationTest {
                         null,
                         null,
                         Set.of())));
-        return jdbc.queryForObject(
-                "SELECT spot_id FROM public_spot_detail WHERE source = 'GOCAMPING' AND external_id = ?",
-                Long.class,
-                EXTERNAL_ID);
     }
 
     private Timestamp sourceRemovedAt(long spotId) {

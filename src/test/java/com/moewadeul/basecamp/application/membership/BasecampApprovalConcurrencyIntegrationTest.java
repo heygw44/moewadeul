@@ -105,6 +105,37 @@ class BasecampApprovalConcurrencyIntegrationTest {
         assertThat(eventCount("BASECAMP_APPROVED")).isZero();
     }
 
+    @RepeatedTest(10)
+    @DisplayName(
+            "[F-13] 날짜가 겹치는 두 베이스캠프의 캠프 리더가 같은 신청자를 동시에 승인하면 1건만 성공하고 나머지는 BASECAMP_DATE_CONFLICT이며 ACTIVE 멤버 행은 1개다")
+    void onlyOneOfTwoOverlappingApprovalsOfSameApplicantSucceeds() throws Exception {
+        // given: saveBasecamp는 늘 같은 기간으로 만들므로 두 베이스캠프의 일정이 겹친다.
+        long applicantId = saveVerifiedMember();
+        long firstLeader = saveMember();
+        long firstBasecamp = saveBasecamp(firstLeader, 4);
+        insertMember(firstBasecamp, firstLeader, "LEADER");
+        long firstApplication = insertApplication(firstBasecamp, applicantId, "PENDING");
+        long secondLeader = saveMember();
+        long secondBasecamp = saveBasecamp(secondLeader, 4);
+        insertMember(secondBasecamp, secondLeader, "LEADER");
+        long secondApplication = insertApplication(secondBasecamp, applicantId, "PENDING");
+
+        // when
+        List<Throwable> failures = runConcurrently(List.of(
+                () -> basecampApprovalService.approve(firstBasecamp, firstApplication, firstLeader),
+                () -> basecampApprovalService.approve(secondBasecamp, secondApplication, secondLeader)));
+
+        // then
+        assertThat(failures)
+                .hasSize(1)
+                .allSatisfy(failure -> assertErrorCode(failure, BasecampErrorCode.BASECAMP_DATE_CONFLICT));
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM basecamp_member WHERE member_id = ? AND status = 'ACTIVE'",
+                        Integer.class,
+                        applicantId))
+                .isEqualTo(1);
+    }
+
     private List<Callable<Object>> approvals(Scenario scenario) {
         List<Callable<Object>> tasks = new ArrayList<>();
         for (long applicationId : scenario.applicationIds()) {
