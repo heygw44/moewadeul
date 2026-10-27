@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { fetchAdminMemberReports } from '../../api/admin';
 import type { AdminReportSummary, Page, ReportStatus } from '../../api/types';
 import { Link } from '../../app/router';
@@ -44,10 +44,10 @@ function ReportList() {
   const [status, setStatus] = useState<string>(ALL);
   const [urgentOnly, setUrgentOnly] = useState(false);
 
-  const filter = useMemo<ReportFilter>(
-    () => ({ status: status === ALL ? undefined : (status as ReportStatus), urgent: urgentOnly ? true : undefined }),
-    [status, urgentOnly],
-  );
+  const filter: ReportFilter = {
+    status: status === ALL ? undefined : (status as ReportStatus),
+    urgent: urgentOnly ? true : undefined,
+  };
   const { current, loadingMore, loadMore, retry } = usePagedList(true, filter, fetchReports);
   const showSkeleton = useDelayedFlag(current === null);
 

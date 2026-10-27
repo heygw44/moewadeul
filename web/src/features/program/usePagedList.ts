@@ -21,7 +21,23 @@ export interface PagedList<T, F> {
   reload: () => void;
 }
 
-export function usePagedList<T, F>(enabled: boolean, filter: F, fetcher: Fetcher<T, F>): PagedList<T, F> {
+type FilterValue = string | number | Readonly<Record<string, string | number | boolean | undefined>>;
+
+function useValueStable<V extends FilterValue>(value: V): V {
+  const [stable, setStable] = useState(value);
+  if (JSON.stringify(stable) !== JSON.stringify(value)) {
+    setStable(value);
+    return value;
+  }
+  return stable;
+}
+
+export function usePagedList<T, F extends FilterValue>(
+  enabled: boolean,
+  nextFilter: F,
+  fetcher: Fetcher<T, F>,
+): PagedList<T, F> {
+  const filter = useValueStable(nextFilter);
   const [state, setState] = useState<ListState<T, F> | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
