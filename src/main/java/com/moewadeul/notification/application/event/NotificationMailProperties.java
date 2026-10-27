@@ -12,7 +12,7 @@ public record NotificationMailProperties(
         Duration pollDelay,
 
         @DefaultValue("20") int batchSize,
-        @DefaultValue("5m") Duration lease,
+        @DefaultValue("10m") Duration lease,
         @DefaultValue("30s") Duration retryDelay,
         @DefaultValue("10m") Duration retryMaxDelay,
         @DefaultValue("10") int maxAttempts) {
