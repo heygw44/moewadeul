@@ -61,7 +61,9 @@ class SpotReviewWriter {
 
     @Transactional
     public void delete(long memberId, long reviewId) {
-        spotReviewRepository.delete(loadOwnReview(memberId, reviewId));
+        SpotReview review = loadOwnReview(memberId, reviewId);
+        reviewImageAttacher.replace(memberId, reviewId, List.of());
+        spotReviewRepository.delete(review);
     }
 
     @Transactional(readOnly = true)
