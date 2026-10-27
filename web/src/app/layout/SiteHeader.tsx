@@ -12,9 +12,7 @@ import { Link, useLocation } from '../router';
 import { activeNavKey, NAV_ITEMS } from './navItems';
 
 type SiteHeaderProps = {
-  // 하단 탭이 없는 화면(랜딩·404)에서 켠다. 모바일에서도 계정 표시와 메뉴 버튼을 머리글에 둔다.
   mobileAccount?: boolean;
-  // 로그인·가입 화면처럼 계정 표시가 그 화면의 할 일과 겹치는 곳에서 켠다. 알림·계정 자리를 비운다.
   minimal?: boolean;
   className?: string;
 };
@@ -22,22 +20,15 @@ type SiteHeaderProps = {
 const PRIMARY_KEYS = new Set(['map', 'basecamps', 'footprints', 'community', 'programs']);
 const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => PRIMARY_KEYS.has(item.key));
 
-// 지도가 없는 화면과 데스크톱 지도 화면 위에 붙는 한 줄 머리글이다. 흰 바탕에 먹 글자이고, 쉴 때는 선과 그림자가 없다.
-// 왼쪽부터 서비스 이름, 메뉴, 오른쪽 끝에 알림·계정을 둔다.
-// 지도 화면을 포함한 모든 화면에서 가운데 최대 폭(max-w-screen-xl) 안에 둔다. 그래서 메뉴로 화면을 오가도 로고와 메뉴 자리가 움직이지 않는다.
-// 모바일에서는 메뉴를 접어 두고 메뉴 버튼으로 펼친다. 메뉴 버튼은 하단 탭이 없는 랜딩·404(mobileAccount)에만 둔다.
-// 하단 탭이 있는 화면에서 메뉴 버튼까지 두면 같은 다섯 메뉴가 한 화면에 두 번 있게 된다.
 export function SiteHeader({ mobileAccount = false, minimal = false, className = '' }: SiteHeaderProps) {
   const { pathname, search } = useLocation();
   const session = useSession();
   const count = useUnreadCount();
   const signedIn = session.status === 'authenticated' && session.me !== null;
   const active = activeNavKey(pathname);
-  // 메뉴를 펼친 경로를 기억한다. 메뉴를 눌러 다른 화면으로 가면 경로가 달라지므로 메뉴가 닫힌 것으로 본다.
   const [openedAt, setOpenedAt] = useState<string | null>(null);
   const menuOpen = openedAt === pathname;
   const scrolled = useScrolled();
-  // 맨 위에서는 바탕과 이어지게 선을 숨기고, 스크롤하거나 메뉴를 펼치면 내용과 머리글을 나누려고 선을 보인다.
   const showLine = scrolled || menuOpen;
 
   useEffect(() => {
@@ -58,8 +49,6 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
           <BrandMark className="text-[1.3125rem]" />
         </Link>
 
-        {/* 데스크톱 메뉴는 서비스 이름 바로 옆에 둔다. 지금 메뉴는 먹색 알약으로 뒤집고, 나머지는 보조 글자색이다.
-            굵기는 모두 같게 둔다. 지금 메뉴만 굵게 하면 메뉴를 옮길 때 글자 폭이 바뀌어 옆 메뉴가 밀린다. */}
         {!minimal && (
           <nav aria-label="주 메뉴" className="hidden items-center gap-1.5 lg:flex">
             {PRIMARY_ITEMS.map((item) => {
@@ -102,7 +91,6 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
                 aria-current={pathname === '/me' ? 'page' : undefined}
                 className="inline-flex min-h-11 min-w-11 items-center justify-center lg:hidden"
               >
-                {/* 좁은 머리글에서 닉네임 대신 첫 글자를 원 안에 둔다. 전체 닉네임은 aria-label이 읽는다. */}
                 <span
                   aria-hidden="true"
                   className="grid size-9 place-items-center rounded-full bg-fill-strong text-sm font-bold text-brand-strong"
@@ -173,7 +161,6 @@ export function SiteHeader({ mobileAccount = false, minimal = false, className =
   );
 }
 
-// 창이 맨 위에서 내려왔는지 알려 준다.
 function useScrolled(): boolean {
   const [scrolled, setScrolled] = useState(false);
 

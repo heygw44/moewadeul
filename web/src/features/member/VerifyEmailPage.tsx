@@ -15,10 +15,8 @@ import { useSession } from './session';
 import { useRetryCountdown } from './useRetryCountdown';
 import { buttonClassName } from '../../components/buttonClass';
 
-// 코드를 다시 받은 뒤 이 시간 동안은 재발송 버튼을 잠근다.
 const RESEND_COOLDOWN_SECONDS = 60;
 
-// 이 오류들은 입력한 코드 때문이라서 입력란 아래에 보여 준다.
 const CODE_ERROR_CODES: Record<string, true> = {
   EMAIL_CODE_INVALID: true,
   EMAIL_CODE_EXPIRED: true,
@@ -45,7 +43,6 @@ export function VerifyEmailPage() {
     document.title = '이메일 인증 · 뫼와들';
   }, []);
 
-  // 인증 코드는 로그인한 세션으로 확인하므로, 로그인하지 않았으면 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') {
       navigate(withNext('/login', withNext('/verify-email', next)), { replace: true });
@@ -74,7 +71,6 @@ export function VerifyEmailPage() {
       if (error instanceof ApiError && CODE_ERROR_CODES[error.code]) {
         setCodeError(error.message);
       } else if (error instanceof ApiError && error.code === 'EMAIL_ALREADY_VERIFIED') {
-        // 다른 기기에서 먼저 인증했다. 세션을 새로 읽으면 "이미 인증을 마쳤어요" 화면으로 바뀐다.
         await session.refresh().catch(() => null);
       } else if (error instanceof ApiError && error.code === 'INVALID_INPUT' && error.fieldErrors.length > 0) {
         setCodeError(error.fieldErrors.map((item) => item.reason).join(' '));

@@ -44,7 +44,6 @@ type TrustChoice = 'NONE' | '1' | '2';
 const TITLE_MAX = 100;
 const DESCRIPTION_MAX = 2000;
 
-// 출발일은 내일부터 60일 뒤까지, 귀가일은 출발일로부터 1~3박이다.
 const MAX_DAYS_AHEAD = 60;
 const MIN_NIGHTS = 1;
 const MAX_NIGHTS = 3;
@@ -79,7 +78,6 @@ const SERVER_FIELD_MAP: Record<string, FormField> = {
 
 const PRIMARY_LINK_CLASS = buttonClassName('primary');
 
-// 서버가 같은 필드의 오류를 여러 개 알려 줘도 한 곳에 중복 없이 모아 보여 준다.
 function mergeReasons(reasons: string[]): string {
   return [...new Set(reasons)].join(' ');
 }
@@ -211,7 +209,6 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
   const [idempotentRunner] = useState(createIdempotentRunner);
   const controllerRef = useRef<AbortController | null>(null);
 
-  // 요청 중에 화면을 벗어나면 응답을 기다리지 않는다.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   const endMin = startDate === '' ? undefined : addDaysToLocalDate(startDate, MIN_NIGHTS);

@@ -39,7 +39,6 @@ const SANCTION_OPTIONS = [
   { value: 'PERMANENT', label: '영구 정지' },
 ];
 
-// 요청이 실패했을 때 화면에 보여 줄 문구와 원래 오류다. 원래 오류는 서버 오류의 문의 번호를 꺼내는 데 쓴다.
 type Failure = { message: string; error: unknown };
 
 function toFailure(error: unknown): Failure {
@@ -75,7 +74,6 @@ function ReportDetail({ reportId }: { reportId: number }) {
     return () => controller.abort();
   }, [reportId, attempt]);
 
-  // 처리가 끝나면 상세를 다시 불러와서 상태, 처리 메모, 제재 이력을 서버 값으로 맞춘다.
   function reload() {
     setAttempt((value) => value + 1);
   }
@@ -148,7 +146,6 @@ function SummaryCard({ detail }: { detail: AdminReportDetail }) {
       />
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium text-ink">신고 내용</p>
-        {/* 신고자가 쓴 글이라 HTML로 넣지 않고 글자로만 그린다. */}
         <p className="whitespace-pre-line break-words text-base text-ink">{detail.content}</p>
       </div>
     </PageCard>
@@ -254,7 +251,6 @@ function StartReviewCard({ reportId, onChanged }: { reportId: number; onChanged:
 
 type FormErrors = { reason?: string; note?: string };
 
-// 서버 필드 이름은 sanction.reason처럼 경로가 붙어 올 수 있어서 마지막 조각으로 구분한다.
 function toFormErrors(error: unknown): { fields: FormErrors; rest: Failure | null } {
   if (!(error instanceof ApiError) || error.fieldErrors.length === 0) {
     return { fields: {}, rest: toFailure(error) };

@@ -9,7 +9,6 @@ import { MemoryMap } from './MemoryMap';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
-// 카카오 SDK는 테스트 환경에서 불러올 수 없어서 지도를 만드는 함수만 바꾼다.
 vi.mock('../../map/MemoryMapView', () => ({ createMemoryMapView: vi.fn() }));
 
 function fakeView(): MemoryMapView {
@@ -66,7 +65,6 @@ describe('MemoryMap', () => {
     expect(createView).toHaveBeenCalledTimes(2);
     expect(container.textContent).not.toContain('지도를 볼 수 없어요');
     expect(view.showPins).toHaveBeenCalled();
-    // 두 번째 시도는 새 요소에 만들고, 첫 시도의 요소는 남지 않는다.
     expect(createView.mock.calls[1]?.[0]).not.toBe(createView.mock.calls[0]?.[0]);
     expect(container.querySelector('[role="region"]')?.children).toHaveLength(1);
   });

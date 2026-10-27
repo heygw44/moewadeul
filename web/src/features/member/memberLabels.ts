@@ -15,7 +15,6 @@ export const GENDER_LABELS: Record<SelfGender, string> = {
   MALE: '남성',
 };
 
-// 신뢰 단계 배지. 0은 이메일 인증, 1은 본인확인, 2는 동행 기록까지 쌓인 신뢰 회원이다.
 const TRUST_LEVEL_BADGES: ReadonlyArray<{ label: string; tone: StatusTone; icon?: IconName }> = [
   { label: '이메일 인증', tone: 'neutral' },
   { label: '본인확인', tone: 'info', icon: 'check' },
@@ -26,18 +25,15 @@ export function trustLevelBadge(level: number): { label: string; tone: StatusTon
   return TRUST_LEVEL_BADGES[level] ?? TRUST_LEVEL_BADGES[0]!;
 }
 
-// 회원 판의 설명 줄이다. 단계마다 무엇을 마친 회원인지 적는다.
 const TRUST_LEVEL_CAPTIONS = ['이메일 인증을 마친 회원', '본인확인을 마친 성인 회원', '동행 기록이 쌓인 신뢰 회원'];
 
 export function trustLevelCaption(level: number): string {
   return TRUST_LEVEL_CAPTIONS[level] ?? TRUST_LEVEL_CAPTIONS[0]!;
 }
 
-// 동행 후기를 쓸 때 고르는 태그. 긍정과 부정을 나눠 보여 준다.
 export const POSITIVE_COMPANION_TAGS = ['ON_TIME', 'LEAVE_NO_TRACE', 'CONSIDERATE', 'WELL_PREPARED'] as const;
 export const NEGATIVE_COMPANION_TAGS = ['LATE', 'NO_SHOW', 'LITTERING'] as const;
 
-// 동행 후기 태그. 서버가 아직 모르는 값을 주면 받은 코드를 그대로 보여 준다.
 const COMPANION_TAG_LABELS: Record<string, string> = {
   ON_TIME: '시간 약속',
   LEAVE_NO_TRACE: '흔적 남기지 않기 실천',

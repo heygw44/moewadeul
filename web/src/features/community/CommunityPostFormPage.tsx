@@ -24,7 +24,6 @@ import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { parseSpotId, SECONDARY_LINK_CLASS } from './communityLabels';
 
-// 서버 규칙과 같은 값이다.
 const TITLE_MAX = 100;
 const CONTENT_MAX = 10000;
 const MAX_IMAGES = 5;
@@ -43,7 +42,6 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
     document.title = props.mode === 'create' ? '글쓰기 · 뫼와들' : '글 수정 · 뫼와들';
   }, [props.mode]);
 
-  // 글쓰기는 로그인한 세션으로만 할 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
@@ -153,7 +151,6 @@ function EditLoader({ postId, myMemberId }: { postId: number; myMemberId: number
   }, [postId, attempt]);
 
   const notMine = result !== null && 'post' in result && result.post.author.memberId !== myMemberId;
-  // 작성자가 아니면 고칠 수 없으므로 글 상세로 돌려보낸다.
   useEffect(() => {
     if (notMine) navigate(`/community/${postId}`, { replace: true });
   }, [notMine, postId]);
@@ -204,7 +201,6 @@ type PostFormProps = { initialSpot: LinkedSpot | null } & (
   { mode: 'create' } | { mode: 'edit'; post: CommunityPostDetail }
 );
 
-// 세션이 끊겨 로그인 화면으로 넘어갈 때 보관하는 값이다. 로그인한 뒤 돌아오면 폼이 이 값으로 다시 채운다.
 type PostDraft = { title: string; content: string; spot: LinkedSpot | null; images: UploadImageItem[] };
 
 function PostForm(props: PostFormProps) {
@@ -234,7 +230,6 @@ function PostForm(props: PostFormProps) {
     images: restorableImages(uploads.images),
   });
 
-  // 새로 연결한 장소(주소의 spotId)는 이름을 모르므로 한 번 받아 칩에 보여 준다. 받지 못하면 이름 없이 둔다.
   const unnamedSpotId = spot !== null && spot.name === null ? spot.spotId : null;
   useEffect(() => {
     if (unnamedSpotId === null) return;

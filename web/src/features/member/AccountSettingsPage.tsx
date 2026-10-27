@@ -12,7 +12,6 @@ import { WithdrawalSection } from './WithdrawalSection';
 const TITLE = '계정 설정';
 const DESCRIPTION = '프로필과 비밀번호를 바꾸거나 회원 탈퇴를 할 수 있어요.';
 
-// 계정을 고치는 기능을 한 화면에 모은다. 내 정보 화면에는 이 화면으로 가는 바로 가기만 둔다.
 export function AccountSettingsPage() {
   const session = useSession();
   const showSkeleton = useDelayedFlag(session.status === 'loading');

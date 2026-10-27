@@ -1,6 +1,5 @@
 import type { NotificationType } from '../../api/types';
 
-// 서버가 정한 순서 그대로 둔다. 이메일 수신 설정 화면이 이 순서로 보여 준다.
 export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   'BASECAMP_APPLIED',
   'BASECAMP_APPROVED',

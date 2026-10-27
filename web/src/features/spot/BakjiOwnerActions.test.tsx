@@ -6,7 +6,6 @@ import type { Mock } from 'vitest';
 import { SessionProvider } from '../member/session';
 import { BakjiOwnerActions } from './BakjiOwnerActions';
 
-// React가 act 밖의 상태 변경을 경고하지 않도록 테스트 환경임을 알린다.
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const SPOT_ID = 7;
@@ -48,7 +47,6 @@ describe('박지 상세의 수정·삭제', () => {
     deleteCalls = 0;
     onDeleted = vi.fn();
     window.history.replaceState(null, '', `/spots/${SPOT_ID}`);
-    // jsdom에는 모달 다이얼로그가 없어서 여닫는 함수만 채운다.
     HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
       this.open = true;
     });

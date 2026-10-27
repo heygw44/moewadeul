@@ -13,7 +13,6 @@ function render(element: React.ReactElement): HTMLDivElement {
   return container;
 }
 
-// 요소 하나를 태그 이름과 속성(이름 순)으로 적어 두 쪽을 비교한다.
 function describeShape(element: Element): string {
   const attrs = [...element.attributes]
     .map((attr) => `${attr.name}=${attr.value}`)
@@ -23,7 +22,6 @@ function describeShape(element: Element): string {
 }
 
 describe('Icon', () => {
-  // 지도 마커는 같은 모양 문자열을 HTML로 그린다. 화면 쪽이 읽지 못하는 꼴이 생기면 아이콘이 비어 보이므로 모두 맞춰 본다.
   it.each(Object.keys(ICON_PATHS) as IconName[])('%s는 모양 문자열이 HTML로 그려질 때와 같은 요소를 그린다', (name) => {
     const expected = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     expected.innerHTML = ICON_PATHS[name];

@@ -4,7 +4,6 @@ export type SignalLevel = 'NONE' | 'WEAK' | 'GOOD';
 
 export interface BakjiReporter {
   memberId: number;
-  // 제보자가 탈퇴했으면 서버가 익명화한 닉네임을 준다.
   nickname: string;
 }
 
@@ -12,17 +11,14 @@ export interface BakjiDetail {
   description: string | null;
   hasWater: boolean;
   hasToilet: boolean;
-  // 제보자가 통신 상태를 남기지 않았으면 null이다.
   signalLevel: SignalLevel | null;
   confirmationCount: number;
   reporter: BakjiReporter;
-  // 관할 기관에 야영 가능 여부를 확인하라는 안내. 공원 경계 경고 박지에는 서버가 주지 않는다.
   notice?: string;
 }
 
 export type GroundType = 'SOIL' | 'GRASS' | 'GRAVEL' | 'SAND' | 'ROCK' | 'DECK';
 
-// 모르는 선택 항목(description, signalLevel, groundType)은 필드를 빼고 보낸다.
 export interface BakjiCreateRequest {
   name: string;
   lat: number;
@@ -34,8 +30,6 @@ export interface BakjiCreateRequest {
   groundType?: GroundType;
 }
 
-// 수정은 바꾼 필드만 보낸다. 서버는 빠진 필드를 그대로 두고, null을 보낸 필드(설명·통신 상태·바닥)는 지운다.
-// 좌표는 lat, lng를 함께 보내야 한다.
 export interface BakjiUpdateRequest {
   name?: string;
   lat?: number;
@@ -57,7 +51,6 @@ export interface BakjiSubmissionResponse {
   spotId: number;
   parkWarning: ParkWarning;
   guide: string;
-  // 장소 상세의 bakji.notice와 같은 안내. 경고 박지에는 서버가 주지 않는다.
   notice?: string;
   duplicateCandidates: DuplicateCandidate[];
 }

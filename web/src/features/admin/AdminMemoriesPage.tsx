@@ -27,7 +27,6 @@ const REASON_LABELS = Object.fromEntries(REPORT_REASON_OPTIONS.map((option) => [
   string
 >;
 
-// 관리자 화면에는 사진을 몇 장만 작게 보여 준다. 나머지는 장 수로 알린다.
 const MAX_THUMBNAILS = 4;
 
 function fetchMemories(
@@ -46,7 +45,6 @@ export function AdminMemoriesPage() {
   );
 }
 
-// 관리자도 비공개 기록은 보지 못해서, 서버가 공개 기록만 준다. 위치도 대략 위치만 온다.
 function MemoryReview() {
   const [tab, setTab] = useState<AdminMemoryStatus>('PENDING_REVIEW');
   const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, fetchMemories);

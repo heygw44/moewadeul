@@ -6,7 +6,6 @@ import { apiFetch } from '../../api/client';
 import { readMapScreen, rememberMapScreen } from '../spot/mapScreenMemory';
 import { SessionProvider, useSession } from './session';
 
-// React가 act 밖의 상태 변경을 경고하지 않도록 테스트 환경임을 알린다.
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const ME = {
@@ -25,13 +24,11 @@ function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-// 로그인이 필요한 화면처럼 세션 상태만 읽어 그린다.
 function Probe() {
   const session = useSession();
   return <p data-testid="probe">{session.status}</p>;
 }
 
-// 화면 안에서 세션을 다시 확인하는 버튼이다(탈퇴한 뒤 화면이 하는 일과 같다).
 function RefreshButton() {
   const session = useSession();
   return (

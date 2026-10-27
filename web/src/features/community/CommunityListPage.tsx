@@ -18,13 +18,11 @@ import { formatRelativeKst } from '../../lib/datetime';
 import { useSession } from '../member/session';
 import { LINK_BUTTON_CLASS, parseSpotId, UNVERIFIED_WRITE_REASON } from './communityLabels';
 
-// 주소의 page는 사람이 읽는 1부터 시작하는 번호다. 서버에는 1을 빼서 보낸다.
 type ListTab = 'all' | 'popular';
 type ListQuery = {
   spotId: number | null;
   tab: ListTab;
   searchType: CommunitySearchType;
-  // 앞뒤 공백을 지운 검색어. null이면 검색하지 않는다.
   keyword: string | null;
   page: number;
 };
@@ -43,7 +41,6 @@ function parseSearchType(raw: string | null): CommunitySearchType {
   return SEARCH_TYPES.find((option) => option.value === raw)?.value ?? 'TITLE_CONTENT';
 }
 
-// 주소를 손으로 고쳐 길이를 벗어난 검색어가 들어오면 검색하지 않는 것으로 본다.
 function parseKeyword(raw: string | null): string | null {
   const keyword = raw?.trim() ?? '';
   return keyword.length >= KEYWORD_MIN && keyword.length <= KEYWORD_MAX ? keyword : null;
@@ -86,7 +83,6 @@ function listPath({ spotId, tab, searchType, keyword, page }: ListQuery): string
 
 type PageResult = { key: string; data: NumberedPage<CommunityPostSummary> | null; error: { cause: unknown } | null };
 
-// 조건이나 페이지가 바뀌면 이전 요청을 취소하고 그 페이지만 새로 받는다.
 function usePostPage(query: ListQuery) {
   const [result, setResult] = useState<PageResult | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -224,7 +220,6 @@ type SearchBarProps = {
   onSearch: (searchType: CommunitySearchType, keyword: string | null) => void;
 };
 
-// 주소의 검색 조건이 바뀌면 부모가 key를 바꿔 입력 상태를 새로 만든다. 길이는 서버도 다시 검사한다.
 function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
   const [type, setType] = useState<CommunitySearchType>(searchType);
   const [text, setText] = useState(keyword ?? '');
@@ -243,7 +238,6 @@ function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
 
   return (
     <form role="search" aria-label="글 검색" onSubmit={handleSubmit} className="flex flex-col gap-1">
-      {/* 검색 줄은 지도 패널 검색 칸처럼 세이지 알약으로 그린다. 오류가 있으면 입력란의 오류 테두리가 그대로 보인다. */}
       <div className="flex items-start gap-2 [&_input]:rounded-control [&_input]:bg-fill [&_input]:pl-5 [&_input:not([aria-invalid])]:border-transparent [&_select]:rounded-control [&_select]:border-transparent [&_select]:bg-fill [&_select]:pl-5">
         <SelectField
           label="검색 대상"
@@ -278,7 +272,6 @@ function SearchBar({ searchType, keyword, onSearch }: SearchBarProps) {
           <span>{error}</span>
         </p>
       )}
-      {/* 서버는 최근 글 1만 개 안에서만 검색한다. 오래된 글이 안 나오는 이유를 알 수 있게 검색 중에만 보여 준다. */}
       {!error && keyword !== null && <p className="text-sm text-ink-muted">최근 글 1만 개 안에서 찾았어요.</p>}
     </form>
   );
@@ -305,7 +298,6 @@ function PopularEmpty() {
   );
 }
 
-// 글쓰기 버튼은 머리 띠에 있으므로 여기에는 상황만 적는다.
 function CommunityEmpty() {
   return (
     <div className="flex flex-col items-start gap-3 p-6">
@@ -336,8 +328,6 @@ function CommunityAside() {
   );
 }
 
-// 비회원에게는 글쓰기 버튼을 두지 않는다. 로그인과 회원가입은 머리글에서 한다.
-// 이메일 미인증 회원에게는 막힌 이유를 보여 준다. 쓰기 권한은 서버가 다시 확인한다.
 function WriteAction({ spotId }: { spotId: number | null }) {
   const session = useSession();
   const target = spotId === null ? '/community/new' : `/community/new?spotId=${spotId}`;
@@ -357,7 +347,6 @@ function WriteAction({ spotId }: { spotId: number | null }) {
   );
 }
 
-// 장소 이름은 처음 한 번만 받는다. 받지 못하면 이름 없이 "장소 관련 글"로 보여 준다.
 function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => void }) {
   const [name, setName] = useState<string | null>(null);
 
@@ -387,8 +376,6 @@ function SpotFilterLine({ spotId, onRemove }: { spotId: number; onRemove: () => 
   );
 }
 
-// 제목, 본문 앞부분 두 줄, 정보 한 줄(글쓴이 · 작성일 · 좋아요 · 댓글 · 조회)을 쌓고, 사진이 있으면 오른쪽에 대표 사진을 둔다.
-// 회원이 올린 사진이라 색이나 모양을 바꾸지 않고 칸에 맞춰 자르기만 한다. 사진을 받지 못하면 칸을 비우지 않고 뺀다.
 function PostRow({ item }: { item: CommunityPostSummary }) {
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const thumbnail = item.thumbnailUrl && !thumbnailFailed ? item.thumbnailUrl : null;

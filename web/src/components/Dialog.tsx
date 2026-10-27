@@ -8,8 +8,6 @@ type DialogProps = {
   children: ReactNode;
 };
 
-// 네이티브 <dialog>를 모달로 연다. 포커스를 안에 가두고 뒤쪽을 비활성으로 만드는 일은 브라우저가 한다.
-// 이 컴포넌트는 화면에 있는 동안이 곧 열려 있는 동안이다. 닫으려면 호출하는 쪽이 그리지 않으면 된다.
 export function Dialog({ title, onClose, children }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -17,7 +15,6 @@ export function Dialog({ title, onClose, children }: DialogProps) {
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    // 열기 전에 포커스가 있던 자리(보통 다이얼로그를 연 버튼)를 기억했다가 닫을 때 돌려준다.
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog.showModal();
     return () => {
@@ -30,7 +27,6 @@ export function Dialog({ title, onClose, children }: DialogProps) {
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      // Esc를 누르면 브라우저가 먼저 닫아 버리지 않게 막고, 닫는 일은 호출하는 쪽 상태에 맡긴다.
       onCancel={(event) => {
         event.preventDefault();
         onClose();

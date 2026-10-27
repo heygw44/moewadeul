@@ -1,7 +1,3 @@
-// 사진을 촬영 방향대로 돌려 캔버스에 그린다. 긴 변이 maxEdge를 넘으면 그 길이로 줄이고, 작은 사진은 키우지 않는다.
-// 넓이가 maxPixels를 넘으면 가로세로 비율을 지키며 그 안에 들어갈 만큼만 줄인다.
-// 캔버스에는 픽셀만 남아서, 여기서 다시 만든 파일에는 원본의 메타데이터(촬영 위치 포함)가 들어가지 않는다.
-// 브라우저가 캔버스를 만들지 못하면 null을 돌려주고, 사진을 읽지 못하면 예외를 던진다.
 export async function drawOriented(
   file: Blob,
   maxEdge = Infinity,
@@ -14,7 +10,6 @@ export async function drawOriented(
     let width = Math.max(1, Math.round(bitmap.width * scale));
     let height = Math.max(1, Math.round(bitmap.height * scale));
     if (width * height > maxPixels) {
-      // 내림해야 줄인 넓이가 상한을 넘지 않는다.
       const shrink = Math.sqrt(maxPixels / (width * height));
       width = Math.max(1, Math.floor(width * shrink));
       height = Math.max(1, Math.floor(height * shrink));

@@ -20,8 +20,6 @@ function toggled<T>(values: T[], value: T): T[] {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 }
 
-// 대화상자 안에서는 고르는 중인 값을 따로 들고 있다가, 적용을 눌렀을 때만 검색에 반영한다.
-// 출발일 범위가 거꾸로면 서버가 400으로 거부하므로 적용하지 못하게 막고 이유를 보여 준다.
 export function BasecampFilterDialog({ initial, onApply, onClose }: BasecampFilterDialogProps) {
   const [draft, setDraft] = useState<BasecampFilters>(initial);
   const reversed = isDateRangeReversed(draft);
@@ -117,7 +115,6 @@ export function BasecampFilterDialog({ initial, onApply, onClose }: BasecampFilt
           />
         </fieldset>
 
-        {/* 조건이 길어 창을 굴려도 초기화·적용 버튼은 창 아래에 붙여 둔다. 대화상자 본문 여백만큼 바깥으로 넓혀 바탕을 채운다. */}
         <div className="sticky -bottom-6 -mx-6 -mb-6 flex gap-2 border-t border-line bg-surface px-6 pt-4 pb-6">
           <Button type="button" variant="ghost" className="shrink-0" onClick={() => setDraft(NO_BASECAMP_FILTERS)}>
             초기화

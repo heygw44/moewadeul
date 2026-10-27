@@ -5,8 +5,6 @@ import { Icon } from '../../components/icons';
 const ARROW_BUTTON =
   'absolute top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-control bg-surface text-ink shadow-raise hover:bg-fill';
 
-// 사진을 가로로 한 장씩 넘겨 보는 정사각 칸이다. 스크롤 위치(snap)로 넘기므로 손가락으로 밀어도 되고,
-// 좌우 버튼과 키보드(칸에 포커스를 두고 좌우 화살표)로도 넘긴다. 사진이 한 장이면 버튼과 쪽수를 두지 않는다.
 export function MemoryPhotoCarousel({
   images,
   owner,

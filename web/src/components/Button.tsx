@@ -25,7 +25,6 @@ export function Button({
   const reasonId = useId();
   const showReason = disabled && !loading && Boolean(disabledReason);
 
-  // 로딩 중에도 원래 색을 유지해서 무엇을 처리하는지 알아볼 수 있게 하고, 클릭만 막는다.
   const stateClasses = disabled
     ? DISABLED_CLASSES
     : loading
@@ -62,7 +61,6 @@ export function Button({
   );
 }
 
-// 둥근 테두리 클래스를 쓰지 않으려고 원 모양은 SVG 호로 그린다. 색은 버튼 글자색을 따른다.
 function Spinner() {
   return (
     <svg

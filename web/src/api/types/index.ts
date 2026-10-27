@@ -1,6 +1,3 @@
-// 서버 API의 요청·응답 모양을 옮긴 타입이다.
-// 서버가 시각은 ISO-8601 UTC 문자열로, 날짜는 한국 날짜 YYYY-MM-DD 문자열로 준다.
-
 export type * from './admin';
 export type * from './bakji';
 export type * from './basecamp';

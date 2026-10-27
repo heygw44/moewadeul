@@ -4,7 +4,6 @@ import { Icon } from './icons';
 
 type TextAreaProps = Omit<ComponentPropsWithRef<'textarea'>, 'value'> & {
   label: string;
-  // 글자 수를 세려면 값을 알아야 하므로 제어 컴포넌트로만 쓴다.
   value: string;
   error?: string;
   hint?: string;

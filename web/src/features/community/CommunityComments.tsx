@@ -20,7 +20,6 @@ import { useSession } from '../member/session';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import type { CommunityReportTarget } from './CommunityReportDialog';
 
-// 서버 규칙과 같은 값이다. 댓글은 공백뿐일 수 없고 1,000자 이하다.
 const CONTENT_MAX = 1000;
 
 type ListState = {
@@ -31,13 +30,10 @@ type ListState = {
 
 type CommunityCommentsProps = {
   postId: number;
-  // 머리에 보여 줄 댓글 수. 글을 다시 받으면 바뀐다.
   count: number;
-  // 댓글을 쓰거나 고치거나 지운 뒤 부른다. 부모가 글의 댓글 수를 다시 받는다.
   onChanged: () => void;
 };
 
-// 글 상세의 댓글 칸. 댓글 목록과 작성·답글·수정·삭제·신고를 맡는다.
 export function CommunityComments({ postId, count, onChanged }: CommunityCommentsProps) {
   const session = useSession();
   const myMemberId = session.status === 'authenticated' ? (session.me?.memberId ?? null) : null;
@@ -78,7 +74,6 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
     [postId],
   );
 
-  // 처음 목록은 한 번만 받는다. 결과를 받았을 때만 상태를 바꾼다.
   useEffect(() => {
     const controller = new AbortController();
     listComments(postId, 0, controller.signal).then(
@@ -252,8 +247,6 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
   );
 }
 
-// 비회원에게는 댓글 쓰기 버튼을 보여 주고 누르면 로그인 화면으로 보낸다. 이메일 인증 전인 회원에게는 이 자리에서 한 번만
-// 막힌 이유를 알리고, 글과 댓글마다 있는 좋아요·답글·신고 버튼에는 이유를 되풀이하지 않는다. 쓰기 권한은 서버가 다시 확인한다.
 function NewCommentArea({ onSubmit }: { onSubmit: (content: string) => Promise<void> }) {
   const session = useSession();
   const { pathname, search } = useLocation();
@@ -281,7 +274,6 @@ type CommentItemProps = {
   onSaveEdit: (commentId: number, content: string) => Promise<void>;
   onDelete: (commentId: number) => void;
   onReport: (commentId: number) => void;
-  // 답글에 답해도 서버가 같은 최상위 댓글 아래에 달아서, 화면의 들여쓰기는 한 단계로 끝난다.
   replying?: boolean;
   onReply?: () => void;
   onCancelReply?: () => void;
@@ -401,7 +393,6 @@ type CommentFormProps = {
   onSubmit: (content: string) => Promise<void>;
 };
 
-// 댓글 작성, 답글 작성, 댓글 수정이 함께 쓰는 입력 칸이다.
 function CommentForm({ label, submitLabel, initial = '', onCancel, onSubmit }: CommentFormProps) {
   const [content, setContent] = useState(initial);
   const [fieldError, setFieldError] = useState<string | undefined>();
@@ -421,7 +412,6 @@ function CommentForm({ label, submitLabel, initial = '', onCancel, onSubmit }: C
     setSubmitting(true);
     try {
       await onSubmit(trimmed);
-      // 성공하면 목록을 다시 받으면서 이 입력 칸이 사라지거나, 새 댓글 입력 칸은 비워 둔다.
       setContent(initial);
       setSubmitting(false);
     } catch (error) {

@@ -7,8 +7,6 @@ type AdminSegmentsProps<T extends string> = {
   onChange: (value: T) => void;
 };
 
-// 관리자 목록 위에서 보기 하나를 고르는 칸이다. 세이지 알약 트랙 안에서 고른 칸만 먹색 알약으로 뒤집는다.
-// 칸이 많아도 좁은 화면에서 가로 스크롤이 생기지 않게 줄을 바꿔 놓는다.
 export function AdminSegments<T extends string>({ label, segments, value, onChange }: AdminSegmentsProps<T>) {
   return (
     <div role="group" aria-label={label} className="flex w-fit max-w-full flex-wrap gap-1 rounded-sheet bg-fill p-1">

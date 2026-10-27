@@ -2,7 +2,6 @@ import type { AiInterpretResponse, SpotSetting, SpotType } from '../../api/types
 import type { ActiveFilterChip } from '../../components/ActiveFilterChips';
 import { SPOT_SETTING_LABELS, SPOT_TYPE_META } from './spotLabels';
 
-// 지도 장소 조회에 붙이는 상세 조건이다. 유형이 비어 있으면 모든 유형을 본다.
 export type SpotFilters = {
   types: SpotType[];
   settings: SpotSetting[];
@@ -34,9 +33,6 @@ export const SPOT_SETTING_ORDER: ReadonlyArray<SpotSetting> = [
   'CITY',
 ];
 
-// AI가 읽어 낸 조건으로 장소 조건을 통째로 바꾼다. 응답에 없는 조건은 끈 상태로 두어, 전에 켜 둔 조건이 남지 않게 한다.
-// 입지는 공공 야영장에만 있는 정보라서, 유형을 골랐는데 야영장이 없으면 입지를 조건에서 빼고 따로 돌려준다.
-// 그대로 합치면 결과가 늘 0건이 되기 때문이다.
 export function filtersFromInterpretation(result: AiInterpretResponse): {
   filters: SpotFilters;
   droppedSettings: SpotSetting[];
@@ -57,7 +53,6 @@ export function filtersFromInterpretation(result: AiInterpretResponse): {
   };
 }
 
-// 켜진 조건을 칩으로 바꾼다. 칩을 누르면 그 조건만 풀린 조건으로 onChange를 부른다.
 export function spotFilterChips(filters: SpotFilters, onChange: (next: SpotFilters) => void): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
   if (filters.types.length > 0) {

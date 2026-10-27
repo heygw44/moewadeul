@@ -3,7 +3,6 @@ import type { CompanionReviewCreateRequest, Page, PendingCompanionReview, Receiv
 
 export const RECEIVED_REVIEW_PAGE_SIZE = 10;
 
-// 신뢰 단계 1 이상만 받을 수 있다. 서버는 페이지로 나누지 않고 기한이 급한 순서로 준다.
 export function fetchPendingCompanionReviews(signal?: AbortSignal): Promise<PendingCompanionReview[]> {
   return apiFetch<PendingCompanionReview[]>('/api/me/companion-reviews/pending', { signal });
 }

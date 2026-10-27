@@ -15,7 +15,6 @@ import { AdminPage } from './AdminGate';
 import { AdminSegments } from './AdminSegments';
 import { adminErrorMessage } from './adminErrors';
 
-// 실행 기록에서 종류를 가리지 않는 칸의 값이다.
 const ALL_JOBS = 'ALL';
 
 const JOB_TYPES: readonly SyncJobType[] = ['GOCAMPING', 'FOREST', 'FOREST_STANDARD', 'PARK_BOUNDARY', 'BAKJI_REJUDGE'];
@@ -28,7 +27,6 @@ const JOB_LABELS: Record<SyncJobType, string> = {
   BAKJI_REJUDGE: '박지 재판정',
 };
 
-// 실행 전 확인 창에 작업이 무엇을 다시 읽는지 적는다. 운영자가 원천을 착각하고 실행하지 않게 하기 위해서다.
 const JOB_DESCRIPTIONS: Record<SyncJobType, string> = {
   GOCAMPING: '고캠핑 API에서 바뀐 야영장을 받아 반영해요.',
   FOREST: '서버에 둔 국립자연휴양림 파일을 다시 읽어 적재해요.',
@@ -43,7 +41,6 @@ const STATUS_META: Record<SyncJobStatus, { label: string; tone: StatusTone }> = 
   FAILED: { label: '실패', tone: 'danger' },
 };
 
-// 서버는 고캠핑을 하루에 한 번 동기화한다. 이 시간이 지나도록 성공이 없으면 화면이 경고한다.
 const GOCAMPING_STALE_HOURS = 48;
 const GOCAMPING_LOOKBACK = 50;
 const POLL_INTERVAL_MS = 10_000;
@@ -58,7 +55,6 @@ type HistoryState = {
   error: Failure | null;
 };
 
-// 요청이 실패했을 때 화면에 보여 줄 문구와 원래 오류다. 원래 오류는 서버 오류의 문의 번호를 꺼내는 데 쓴다.
 type Failure = { message: string; error: unknown };
 
 function toFailure(error: unknown): Failure {
@@ -129,7 +125,6 @@ function SyncJobs() {
   }, [history]);
 
   useEffect(() => {
-    // 주기적으로 다시 읽는 경우에 사용자가 더 보기로 불러 둔 목록은 건드리지 않는다. 첫 쪽만 보고 있을 때만 새로 읽는다.
     const polled = pollRef.current;
     pollRef.current = false;
     if (polled && historyPageRef.current > 0) return;
@@ -145,7 +140,6 @@ function SyncJobs() {
         (caught: unknown) => {
           if (!controller.signal.aborted) {
             setHistory((previous) => {
-              // 다른 필터의 목록을 새 필터의 목록으로 오인하지 않도록 같은 필터일 때만 이어 쓴다.
               const same = previous !== null && previous.filter === filter;
               return {
                 items: same ? previous.items : [],
@@ -164,7 +158,6 @@ function SyncJobs() {
     return () => controller.abort();
   }, [filter, tick]);
 
-  // 실행 중인 작업이 있는 동안만 10초마다 다시 읽는다. 앞선 요청이 끝나지 않았으면 건너뛴다.
   useEffect(() => {
     if (!anyRunning) return;
     const timer = window.setInterval(() => {
@@ -178,7 +171,6 @@ function SyncJobs() {
 
   async function loadMore() {
     if (!history || loadingMore) return;
-    // 요청을 보내는 동안 필터가 바뀌거나 목록이 첫 쪽으로 돌아갈 수 있어서, 시작한 때의 필터와 쪽을 기억한다.
     const startFilter = filter;
     const startPage = history.page;
     const stillCurrent = (previous: HistoryState | null): previous is HistoryState =>
@@ -348,7 +340,6 @@ function JobCard({
     } catch (caught) {
       setError(toFailure(caught));
       setConfirm(false);
-      // 이미 실행 중이라는 응답이면 화면의 상태가 낡은 것이므로 다시 읽어서 버튼을 끈다.
       onStarted();
     } finally {
       setBusy(false);
@@ -422,7 +413,6 @@ function JobCard({
   );
 }
 
-// 실행 한 번을 목록판의 한 행으로 적는다. 작업과 상태를 앞에 두고, 시각과 건수를 한 줄로 잇는다.
 function HistoryRow({ run }: { run: SyncJobRun }) {
   return (
     <li className="flex min-w-0 flex-col gap-1 rounded-row bg-surface px-4 py-3">
@@ -451,7 +441,6 @@ function HistoryRow({ run }: { run: SyncJobRun }) {
   );
 }
 
-// 건수는 굵은 숫자에 작은 단위를 붙인다.
 function Count({ value }: { value: number }) {
   return (
     <span className="whitespace-nowrap">

@@ -11,7 +11,6 @@ export const REPORT_REASON_OPTIONS: ReadonlyArray<ChoiceOption<CommunityReportRe
   { value: 'OTHER', label: '기타' },
 ];
 
-// 주소의 spotId는 양의 정수만 받는다. 그 밖의 값은 조건이 없는 것으로 본다.
 export function parseSpotId(raw: string | null): number | null {
   if (raw === null || !/^\d+$/.test(raw)) return null;
   const value = Number(raw);

@@ -26,11 +26,8 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   const viewerEpoch = useViewerEpoch();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
-  // 이미지 조회 URL은 1시간 뒤 만료된다. 열어 둔 화면에서 이미지가 깨지면 글을 한 번만 다시 받아 새 URL을 얻는다.
   const imageRetried = useRef(false);
 
-  // 요청에는 세션 쿠키가 붙고 서버가 쿠키로 likedByMe를 정하므로, 세션 확인을 기다리지 않고 함께 보낸다.
-  // 로그인 상태가 바뀔 때(viewerEpoch)만 다시 받고, 다시 받을 때는 화면을 비우지 않고 이전 내용을 둔 채 바꾼다.
   useEffect(() => {
     const controller = new AbortController();
     getPost(postId, controller.signal).then(
@@ -180,7 +177,6 @@ function PostMeta({ post }: { post: CommunityPostDetail }) {
   );
 }
 
-// 작성자에게는 수정·삭제를, 로그인한 다른 회원에게는 신고를 보여 준다. 권한은 서버가 다시 확인한다.
 function PostActions({ post }: { post: CommunityPostDetail }) {
   const session = useSession();
   const signedIn = session.status === 'authenticated' && session.me !== null;
@@ -217,7 +213,6 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
 function PostAside({ post }: { post: CommunityPostDetail | null }) {
   return (
     <>
-      {/* 장소 이름·장소 링크와 글쓴이는 제목 아래 정보 줄에 있으므로, 여기에는 거기에 없는 "같은 장소의 다른 글"만 둔다. */}
       {post?.spot && (
         <AsideSection title="같은 장소의 글">
           <Link to={`/community?spotId=${post.spot.spotId}`} className={ASIDE_LINK}>
@@ -252,8 +247,6 @@ type PostContentProps = {
   onImageError: () => void;
 };
 
-// 글 하나를 판 없이 흰 바탕에 둔다. 머리에 제목·글쓴이 줄·수정·신고 버튼, 그 아래 본문·사진, 맨 아래 좋아요와 댓글 수다.
-// 페이지 제목(h1)은 위 띠가 스크린 리더에 읽히므로, 판의 제목은 화면에만 보인다.
 function PostContent({ post, meta, actions, onLikeChanged, onImageError }: PostContentProps) {
   return (
     <article className="flex flex-col">

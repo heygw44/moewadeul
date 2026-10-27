@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { ApiError } from './client';
 import { createIdempotentRunner } from './idempotency';
 
-// 보낸 키를 차례로 모으고, 호출 순서대로 정한 결과를 돌려주는 가짜 전송 함수를 만든다.
 function sender(...outcomes: Array<'ok' | 'network' | 'business'>) {
   const keys: string[] = [];
   const send = async (key: string) => {

@@ -11,7 +11,6 @@ import type {
   ProgramStatus,
 } from './types';
 
-// 목록 필터에는 취소된 행사가 없다. 서버가 취소된 행사를 목록에서 뺀다.
 export type ProgramListStatus = Exclude<ProgramStatus, 'CANCELED'>;
 
 export function listPrograms(
@@ -38,7 +37,6 @@ export function applyProgram(
   });
 }
 
-// 가짜 결제만 있다. 실제 결제 수단은 만들지 않는다.
 export function payApplication(
   applicationId: number,
   idempotencyKey: string,
@@ -52,7 +50,6 @@ export function payApplication(
   });
 }
 
-// 취소는 Idempotency-Key를 받지 않는다. 같은 요청을 다시 보내면 서버가 PROGRAM_INVALID_STATE로 답한다.
 export function cancelApplication(applicationId: number, signal?: AbortSignal): Promise<ProgramCancelResponse> {
   return apiFetch<ProgramCancelResponse>(`/api/program-applications/${applicationId}/cancel`, {
     method: 'POST',
@@ -60,7 +57,6 @@ export function cancelApplication(applicationId: number, signal?: AbortSignal): 
   });
 }
 
-// 서버는 본문 없이 201(이미 신청했으면 200)만 준다.
 export function subscribeVacancyAlert(programId: number, signal?: AbortSignal): Promise<void> {
   return apiFetch<void>(`/api/programs/${programId}/vacancy-alerts`, { method: 'POST', signal });
 }

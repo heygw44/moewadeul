@@ -3,7 +3,6 @@ import { Icon } from '../../components/icons';
 import { useSession } from '../member/session';
 import { notificationLabel, useUnreadCount } from './unreadCount';
 
-// 안 읽은 알림 수 배지. 100개부터는 99+로 줄여 적는다. 흰 바탕과 세이지 면 어디서나 보이게 위험색으로 칠한다.
 export function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
@@ -16,7 +15,6 @@ export function UnreadBadge({ count }: { count: number }) {
   );
 }
 
-// 로그인한 회원에게만 보인다. 수는 앱 전체에서 한 번만 받아 오고(UnreadCountSync), 여기서는 읽기만 한다.
 export function NotificationLink() {
   const session = useSession();
   const count = useUnreadCount();
@@ -36,7 +34,6 @@ export function NotificationLink() {
   );
 }
 
-// 모바일 머리글과 지도 위에 두는 종 아이콘 링크다. 하단 탭에 알림 칸이 없어서 여기서 알림함으로 간다.
 export function NotificationBellLink({ className }: { className: string }) {
   const session = useSession();
   const count = useUnreadCount();

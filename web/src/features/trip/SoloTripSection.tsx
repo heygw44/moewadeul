@@ -12,7 +12,6 @@ import { TextField } from '../../components/TextField';
 import { addDaysToLocalDate, todayKst } from '../../lib/datetime';
 import { GatedButton } from '../member/GatedButton';
 
-// 서버와 같은 규칙이다. 출발일은 내일부터 60일 안이고, 일정은 1~3박이다. 서버가 다시 검사하므로 여기서는 입력을 돕는 데만 쓴다.
 const MAX_DAYS_UNTIL_START = 60;
 const MAX_NIGHTS = 3;
 
@@ -21,7 +20,6 @@ const SECTION_TITLE_CLASS = 'text-[1.1875rem] font-extrabold tracking-[-0.02em] 
 
 type SoloTripSectionProps = {
   spotId: number;
-  // 등록한 일정이 예상 인원에 들어가므로, 부모가 장소 상세를 다시 받아 예상 인원을 바꾼다.
   onRegistered: () => void;
 };
 
@@ -103,7 +101,6 @@ function SoloTripForm({
 
   function changeStart(value: string) {
     setStartDate(value);
-    // 출발일을 옮기면 종료일이 1~3박 범위를 벗어나기 쉬워서, 범위 밖이면 1박 뒤로 맞춘다.
     if (endDate <= value || endDate > addDaysToLocalDate(value, MAX_NIGHTS)) {
       setEndDate(addDaysToLocalDate(value, 1));
     }

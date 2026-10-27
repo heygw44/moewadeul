@@ -5,8 +5,6 @@ type UnderlineTabsProps<T extends string> = {
   onChange: (value: T) => void;
 };
 
-// 제목 아래에 놓는 분류 탭이다. 세이지 알약 트랙 안에서 고른 탭만 먹색 알약으로 뒤집고, aria-pressed로 알린다.
-// 좁은 화면에서는 트랙 안에서만 가로로 밀린다. 이름은 예전 밑줄 모양에서 왔고, 부르는 곳이 많아 그대로 둔다.
 export function UnderlineTabs<T extends string>({ label, options, value, onChange }: UnderlineTabsProps<T>) {
   return (
     <div

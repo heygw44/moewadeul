@@ -11,16 +11,13 @@ import { TextArea } from './TextArea';
 const CONTENT_MAX = 1000;
 
 type ReportDialogProps = {
-  // 화면 문구에 들어가는 대상 이름이다. 예: 글, 댓글, 기록
   targetLabel: string;
   reasonOptions: ReadonlyArray<ChoiceOption<CommunityReportReason>>;
-  // 같은 대상을 이미 신고했을 때 서버가 주는 오류 코드다.
   alreadyReportedCode: string;
   submit: (request: CommunityReportRequest) => Promise<void>;
   onClose: () => void;
 };
 
-// 커뮤니티 글·댓글과 기록 신고가 함께 쓰는 대화상자다. 같은 대상을 다시 신고할 수 있는지는 서버가 판단한다.
 export function ReportDialog({
   targetLabel,
   reasonOptions,

@@ -13,7 +13,6 @@ import { TextField } from '../../components/TextField';
 import { AGE_GROUP_LABELS, GENDER_LABELS } from './memberLabels';
 import { NICKNAME_REQUIRED } from './requiredMessages';
 
-// 직접 입력한 값을 지우는 선택지. 서버에는 null로 보낸다.
 const NOT_SET = 'NOT_SET';
 type AgeChoice = SelfAgeGroup | typeof NOT_SET;
 type GenderChoice = SelfGender | typeof NOT_SET;
@@ -37,7 +36,6 @@ function isFormField(field: string): field is FormField {
   return field === 'nickname' || field === 'selfAgeGroup' || field === 'selfGender';
 }
 
-// 닉네임과 자기 신고 연령대·성별을 고친다. 서버는 보내지 않은 필드를 그대로 두므로, 바뀐 값만 보낸다.
 export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void }) {
   const [nickname, setNickname] = useState(me.nickname);
   const [ageGroup, setAgeGroup] = useState<AgeChoice>(me.selfAgeGroup ?? NOT_SET);

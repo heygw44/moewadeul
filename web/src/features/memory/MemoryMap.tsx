@@ -7,8 +7,6 @@ import type { MemoryMapView, MemoryPinData } from '../../map/types';
 
 type MapFailure = { reason: MapLoadError['reason']; message: string };
 
-// 추억 기록을 사진 핀으로 보여 주는 지도다. 지도를 못 불러오면 지도 자리에 안내만 두고, 아래 격자는 그대로 쓸 수 있다.
-// pins는 값이 바뀔 때만 새 배열을 넘겨야 한다(useMemo). 새 배열이 올 때마다 핀을 다시 그리고 지도를 맞춘다.
 export function MemoryMap({
   pins,
   selectedId,
@@ -27,7 +25,6 @@ export function MemoryMap({
     onSelectRef.current = onSelect;
   });
 
-  // 지도는 시도할 때마다 새 요소에 만든다. 개발 모드에서 효과가 두 번 실행돼도 한 요소에 지도가 겹쳐 생기지 않게 하기 위해서다.
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -63,7 +60,6 @@ export function MemoryMap({
     };
   }, [attempt]);
 
-  // 지도 칸의 크기가 바뀌면(화면 회전, 폭 변경) 지도에 알린다.
   useEffect(() => {
     const host = hostRef.current;
     if (!view || !host) return;
@@ -82,7 +78,6 @@ export function MemoryMap({
     view?.setSelected(selectedId);
   }, [view, selectedId, pins]);
 
-  // 다시 시도할 때 지도를 만들 요소가 있어야 하므로, 실패해도 지도 칸은 숨기기만 하고 화면에서 빼지 않는다.
   function retryMap() {
     setFailure(null);
     setAttempt((value) => value + 1);

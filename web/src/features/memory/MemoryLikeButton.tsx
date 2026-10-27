@@ -9,8 +9,6 @@ import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 
-// 추억 기록의 좋아요 버튼이다. 비회원은 로그인 화면으로 보내고, 이메일 인증 전 회원은 누를 수 없다.
-// 누르면 서버가 돌려준 값으로 상태와 개수를 바꾼다. 응답을 기다리는 동안 낙관적으로 바꾸지 않는다.
 export function MemoryLikeButton({
   memoryId,
   likedByMe,

@@ -18,7 +18,6 @@ import { useRetryCountdown } from './useRetryCountdown';
 type ChangeField = 'currentPassword' | 'newPassword' | 'newPasswordConfirm';
 type FormErrors = Partial<Record<ChangeField, string>>;
 
-// 서버 오류 코드를 어느 입력란 아래에 보여 줄지 정한다. 표에 없는 코드는 폼 위의 안내로 보여 준다.
 const FIELD_BY_CODE: Record<string, ChangeField> = {
   MEMBER_CURRENT_PASSWORD_MISMATCH: 'currentPassword',
   MEMBER_PASSWORD_POLICY: 'newPassword',
@@ -29,7 +28,6 @@ function isChangeField(field: string): field is ChangeField {
   return field === 'currentPassword' || field === 'newPassword' || field === 'newPasswordConfirm';
 }
 
-// 현재 비밀번호를 확인하고 새 비밀번호로 바꾼다. 비밀번호 규칙은 서버가 검사하고, 화면은 빈 칸과 확인 값만 미리 본다.
 export function PasswordChangeForm() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');

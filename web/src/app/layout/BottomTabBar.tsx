@@ -3,8 +3,6 @@ import { useSession } from '../../features/member/session';
 import { Link, useLocation } from '../router';
 import { activeNavKey, NAV_ITEMS, navTarget } from './navItems';
 
-// 모바일 화면 맨 아래에 붙는 다섯 칸 메뉴다. lg부터는 머리글이 메뉴를 맡으므로 숨긴다.
-// 높이는 theme.css의 --bottom-nav-h와 같다(64px + 아이폰 홈 막대 여백).
 export function BottomTabBar() {
   const { pathname } = useLocation();
   const session = useSession();
@@ -29,7 +27,6 @@ export function BottomTabBar() {
                   current ? 'text-ink' : 'text-ink-muted',
                 ].join(' ')}
               >
-                {/* 지금 탭은 글자를 먹색으로, 아이콘을 숲색으로 칠해 두 가지로 알아보게 한다. */}
                 <Icon name={item.icon} size={22} className={current ? 'text-brand' : undefined} />
                 {item.label}
               </Link>

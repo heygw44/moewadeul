@@ -84,7 +84,6 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
     document.title = '베이스캠프 관리 · 뫼와들';
   }, []);
 
-  // 관리 화면은 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
@@ -109,7 +108,6 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const detail = current && 'detail' in current ? current.detail : null;
   const isLeader = detail?.myRelation === 'LEADER';
 
-  // 신청 목록은 캠프 리더만 받을 수 있어서 리더로 확인된 뒤에 요청한다.
   useEffect(() => {
     if (!isLeader) return;
     const controller = new AbortController();
@@ -143,7 +141,6 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const reload = () => setAttempt((value) => value + 1);
   const showSkeleton = useDelayedFlag(session.status === 'loading' || (authenticated && current === null));
 
-  // 성공이든 실패든 서버의 지금 상태로 화면을 맞춘다. 실패는 대개 다른 곳에서 상태가 바뀌어서 생기기 때문이다.
   async function run(action: () => Promise<unknown>, successText: string, failTitle: string) {
     setSubmitting(true);
     setError(null);
@@ -434,7 +431,6 @@ function StatusActions({
 }) {
   const open = detail.status === 'RECRUITING' || detail.status === 'CLOSED';
   const enoughMembers = detail.headcount >= MIN_CONFIRM_HEADCOUNT;
-  // 서버는 출발일 0시(한국 시간)부터 캠프 리더의 취소를 거부한다. 출발한 뒤에는 동행이 실제로 이뤄지기 때문이다.
   const departed = todayKst() >= detail.startDate;
   return (
     <PageCard title="모집 상태">
@@ -644,7 +640,6 @@ function MembersCard({ detail, onKick }: { detail: BasecampDetail; onKick: (memb
   );
 }
 
-// 연락 수단은 https 주소만 받는다. 서버도 같은 기준으로 다시 검사한다.
 function validateContact(value: string): string | null {
   if (value === '') return '연락 수단을 적어 주세요.';
   if (value.length > CONTACT_MAX) return `${CONTACT_MAX}자 이하로 적어 주세요.`;

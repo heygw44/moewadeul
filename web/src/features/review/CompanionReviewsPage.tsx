@@ -63,7 +63,6 @@ export function CompanionReviewsPage() {
     document.title = '동행 후기 · 뫼와들';
   }, []);
 
-  // 동행 후기는 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
@@ -399,7 +398,6 @@ function ReceivedTab() {
             </PageCard>
           ) : (
             <section
-              // 공개 전 후기는 ID가 없고, 한 베이스캠프에서 여러 개가 올 수 있어서 순서로 구분한다.
               key={`sealed-${item.basecampId}-${index}`}
               className="flex flex-col gap-3 rounded-sheet bg-fill p-4 lg:p-5"
             >

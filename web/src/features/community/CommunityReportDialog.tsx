@@ -9,7 +9,6 @@ type CommunityReportDialogProps = {
   onClose: () => void;
 };
 
-// 글이나 댓글을 신고한다.
 export function CommunityReportDialog({ target, onClose }: CommunityReportDialogProps) {
   return (
     <ReportDialog

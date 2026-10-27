@@ -1,6 +1,3 @@
-// 카카오맵 JS SDK 중에서 지도 래퍼가 쓰는 API만 타입으로 적는다.
-// SDK는 script 태그로 불러와 전역 kakao 객체로 들어오므로 모듈이 아닌 전역 선언으로 둔다.
-
 declare namespace kakao.maps {
   class LatLng {
     constructor(lat: number, lng: number);
@@ -15,7 +12,6 @@ declare namespace kakao.maps {
     getNorthEast(): LatLng;
   }
 
-  // 지도 컨테이너 왼쪽 위를 원점으로 한 픽셀 좌표다.
   class Point {
     constructor(x: number, y: number);
     x: number;
@@ -103,7 +99,6 @@ declare namespace kakao.maps {
   interface CircleOptions {
     map?: Map;
     center: LatLng;
-    // 미터 단위다.
     radius: number;
     strokeWeight?: number;
     strokeColor?: string;
@@ -121,7 +116,6 @@ declare namespace kakao.maps {
 
   interface MouseEvent {
     latLng: LatLng;
-    // 지도 컨테이너 왼쪽 위를 원점으로 한 픽셀 좌표다.
     point: Point;
   }
 
@@ -229,7 +223,6 @@ declare namespace kakao.maps {
   }
 }
 
-// 스크립트를 불러오기 전에는 전역 kakao가 없으므로 window에서 있는지 먼저 확인한다.
 interface Window {
   kakao?: typeof kakao;
 }

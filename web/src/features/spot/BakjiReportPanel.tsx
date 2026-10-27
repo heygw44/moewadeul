@@ -28,7 +28,6 @@ type BakjiReportPanelProps = {
   draft: LatLng | null;
   onCancel: () => void;
   onSubmitted: (response: BakjiSubmissionResponse) => void;
-  // 지도 메뉴에서 베이스캠프를 열려다가 근처에 장소가 없어 넘어온 제보다. 등록되면 새 박지에서 베이스캠프 열기 폼을 연다.
   nextBasecamp?: boolean;
 };
 
@@ -55,7 +54,6 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = 
         linkLabel="제보한 박지 보기"
         result={result}
         warnedNote={
-          // 베이스캠프를 열려던 흐름이면 열 수 없다는 결과만 한 줄 더한다.
           nextBasecamp && (
             <p className="text-base font-semibold text-danger">
               이 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.
@@ -78,7 +76,6 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = 
         title="로그인하면 박지를 제보할 수 있어요"
         description="제보한 박지는 지도에 바로 올라가요. 다른 회원이 다녀와서 확인하거나 문제를 신고해요."
         action={
-          // 지도 메뉴에서 찍어 온 위치와 다음 갈 곳이 로그인 뒤에도 남도록 주소를 그대로 돌려받는다.
           <Link to={withNext('/login', `${location.pathname}${location.search}`)} className={PRIMARY_LINK_CLASS}>
             로그인
           </Link>
@@ -93,8 +90,6 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = 
         nextBasecamp={nextBasecamp}
         onSubmitted={(response) => {
           onSubmitted(response);
-          // 경고 박지로는 베이스캠프를 열 수 없으므로, 그때는 열기 폼으로 가지 않고 등록 결과와 경고를 보여 준다.
-          // 뒤로 가기로 이 제보 화면에 돌아와 같은 박지를 다시 제보하지 않도록 주소를 바꿔치기한다.
           if (nextBasecamp && !response.parkWarning.warned) {
             navigate(`/basecamps/new?spotId=${response.spotId}`, { replace: true });
             return;
@@ -140,7 +135,6 @@ function ReportForm({
   const controllerRef = useRef<AbortController | null>(null);
   useLocationErrorReset(draft, fieldErrors, setFieldErrors);
 
-  // 요청 중에 화면을 벗어나면 응답을 기다리지 않는다.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

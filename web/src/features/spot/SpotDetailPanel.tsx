@@ -35,27 +35,20 @@ import type { SpotWeatherState } from './useSpotWeather';
 type SpotDetailPanelProps = {
   spotId: number;
   onBack: () => void;
-  // 장소 정보를 불러오면 알린다. 지도 화면은 이 장소로 지도를 옮기고 핀을 그린다.
   onLoaded?: (detail: SpotDetail) => void;
-  // 제보한 회원이 박지를 지우면 알린다. 지도 화면은 지운 박지가 사라지도록 마커를 다시 불러온다.
   onBakjiDeleted?: () => void;
 };
 
-// 어느 요청(장소, 시도 횟수)의 결과인지 함께 기억해서, 장소를 바꾸면 이전 결과를 곧바로 버린다.
 type DetailResult =
   { spotId: number; attempt: number; detail: SpotDetail } | { spotId: number; attempt: number; error: unknown };
 
-// 섹션은 선 없이 간격과 굵은 제목으로 나눈다.
 const SECTION_CLASS = 'mt-8';
 const SECTION_TITLE_CLASS = 'text-[1.1875rem] font-extrabold tracking-[-0.02em] text-ink';
 
-// 단기 예보는 앞에서부터 이만큼만 보여 준다.
 const SHORT_TERM_LIMIT = 4;
 
-// 중기 예보는 앞에서부터 이만큼만 보여 준다.
 const MID_TERM_LIMIT = 7;
 
-// 기상청이 주지 않은 값은 글자 대신 줄표로 보여 준다.
 function formatValue(value: number | null, unit: string): string {
   return value === null ? '-' : `${value}${unit}`;
 }
@@ -63,7 +56,6 @@ function formatValue(value: number | null, unit: string): string {
 export function SpotDetailPanel({ spotId, onBack, onLoaded, onBakjiDeleted }: SpotDetailPanelProps) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
-  // 날씨는 상세와 같은 때에 따로 요청한다. 상세가 먼저 오면 근거부터 그리고, 날씨 칸만 날씨를 기다린다.
   const weather = useSpotWeather(spotId);
 
   useEffect(() => {
@@ -160,22 +152,18 @@ function DetailContent({
   const publicDetail = detail.publicDetail;
   const bakji = detail.bakji;
   const warning = detail.parkWarning;
-  // 확인 버튼을 누르면 서버가 준 새 횟수로 바꿔 보여 준다. 상세를 다시 불러오지 않는다.
   const [confirmationCount, setConfirmationCount] = useState(bakji?.confirmationCount ?? 0);
-  // 개인 일정을 등록하면 예상 인원만 새로 받아 바꾼다. 상세 전체를 다시 그리면 쓰던 화면 위치를 잃기 때문이다.
   const [expectedPeople, setExpectedPeople] = useState(detail.expectedPeople);
 
   function refreshExpectedPeople() {
     fetchSpotDetail(detail.spotId).then(
       (fresh) => setExpectedPeople(fresh.expectedPeople),
-      // 다시 받지 못해도 등록은 끝났으므로, 예상 인원은 다음에 상세를 열 때 바뀐다.
       () => undefined,
     );
   }
 
   return (
     <article>
-      {/* 휴장과 공원 경계 경고는 바로 아래 안내 상자가 기간·근거와 함께 알리므로, 이름 아래에는 장소 유형과 주소만 둔다. */}
       <header className="flex flex-col gap-1.5">
         <h2 className="text-[1.75rem] leading-tight font-extrabold tracking-[-0.03em] text-ink lg:text-[1.875rem]">
           {detail.name}
@@ -267,7 +255,6 @@ function DetailContent({
   );
 }
 
-// 평점·후기 수·가장 가까운 밤의 예상 인원을 세이지 칸 셋으로 먼저 보여 준다. 자세한 값은 아래 섹션에 있다.
 function SummaryTiles({ rating, expectedPeople }: { rating: SpotRating; expectedPeople: ExpectedPeople[] }) {
   const next = expectedPeople[0];
   const tiles = [
@@ -298,7 +285,6 @@ function ClosedNotice({ publicDetail }: { publicDetail: PublicDetail }) {
     period = `${formatLocalDate(closedUntil)}까지`;
   }
 
-  // 원천 데이터가 늦게 바뀔 수 있어서 서버는 휴장 장소를 숨기지 않는다. 그래서 확인을 권하는 문장을 함께 둔다.
   return (
     <Notice tone="info" title="지금은 휴장 기간이에요">
       <div className="flex flex-col gap-2">
@@ -346,7 +332,6 @@ function BakjiSection({
   );
 }
 
-// 링크로 열 수 있는 https 주소만 링크로 만든다. 원천 값에 scheme이 없거나 http 같은 다른 scheme이면 글자로만 보여 준다.
 function parseHomepage(homepage: string): URL | null {
   try {
     const url = new URL(homepage);
@@ -420,7 +405,6 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
   );
 }
 
-// 서버는 오늘 이후이면서 인원이 있는 날짜만 날짜 순으로 준다. 그래서 화면은 받은 날짜를 자르지 않고 모두 보여 준다.
 function ExpectedPeopleSection({ expectedPeople }: { expectedPeople: ExpectedPeople[] }) {
   return (
     <section className={SECTION_CLASS} aria-labelledby="spot-expected-people-title">

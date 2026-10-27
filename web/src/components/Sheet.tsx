@@ -7,17 +7,14 @@ type SheetProps = {
   snap: SheetSnap;
   onSnapChange: (snap: SheetSnap) => void;
   header?: ReactNode;
-  // 데스크톱(lg)에서만 머리 아래에 두는 도구 줄이다. 지도 화면은 여기에 검색·유형 선택·조건을 둔다.
   toolbar?: ReactNode;
   children: ReactNode;
   label: string;
-  // 모바일 하단 탭 위에 시트를 띄울 때 켠다. 시트의 아래 끝을 탭 높이만큼 올리고, 전체 높이에서도 그만큼 뺀다.
   aboveBottomNav?: boolean;
 };
 
 const SNAP_ORDER: readonly SheetSnap[] = ['peek', 'half', 'full'];
 
-// 화면 높이 가운데 시트가 차지하는 비율. 아래 높이 클래스(28dvh, 55dvh, 92dvh)와 같은 값으로 맞춘다.
 const SNAP_RATIO: Record<SheetSnap, number> = {
   peek: 0.28,
   half: 0.55,
@@ -30,7 +27,6 @@ const SNAP_HEIGHT_CLASSES: Record<SheetSnap, string> = {
   full: 'h-[92dvh]',
 };
 
-// 하단 탭 위에 뜰 때의 전체 높이. 접힘·절반은 탭이 있어도 같은 높이라서 목록 미리보기 양이 바뀌지 않는다.
 const FULL_ABOVE_NAV_CLASS = 'h-[calc(92dvh-var(--bottom-nav-h))]';
 
 const SNAP_LABELS: Record<SheetSnap, string> = {
@@ -45,7 +41,6 @@ const NEXT_SNAP: Record<SheetSnap, SheetSnap> = {
   full: 'peek',
 };
 
-// 이 거리보다 적게 움직이면 끌기가 아니라 누르기로 본다.
 const DRAG_THRESHOLD_PX = 6;
 
 const DESKTOP_QUERY = '(min-width: 64rem)';
@@ -54,12 +49,10 @@ type DragState = {
   pointerId: number;
   startY: number;
   startHeight: number;
-  // 시트 아래 끝이 화면 아래에서 떨어진 거리(px). 하단 탭 위에 뜨면 탭 높이다.
   bottomInset: number;
   moved: boolean;
 };
 
-// 단계별 목표 높이(px). 전체 단계만 시트 아래 여백(하단 탭 높이)을 뺀다.
 function snapHeight(snap: SheetSnap, viewportHeight: number, bottomInset: number): number {
   const height = SNAP_RATIO[snap] * viewportHeight;
   return snap === 'full' ? height - bottomInset : height;
@@ -78,11 +71,9 @@ function nearestSnap(height: number, viewportHeight: number, bottomInset: number
   return best;
 }
 
-// 모바일에서는 지도 위에 뜨는 하단 시트이고, lg 이상에서는 같은 내용을 왼쪽 440px 고정 패널로 그린다.
 export function Sheet({ snap, onSnapChange, header, toolbar, children, label, aboveBottomNav = false }: SheetProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const dragRef = useRef<DragState | null>(null);
-  // 끌기를 마친 직후에 브라우저가 보내는 click을 무시하려고 기억해 둔다.
   const suppressClickRef = useRef(false);
   const [dragHeight, setDragHeight] = useState<number | null>(null);
 
@@ -135,7 +126,6 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
     setDragHeight(null);
   }
 
-  // 마우스 클릭, Enter, Space 모두 click으로 들어온다. 접힘 → 절반 → 전체 → 접힘 순서로 바꾼다.
   function handleClick(event: MouseEvent<HTMLButtonElement>) {
     const fromKeyboard = event.detail === 0;
     if (suppressClickRef.current) {
@@ -145,7 +135,6 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
     onSnapChange(NEXT_SNAP[snap]);
   }
 
-  // 시트 안에 포커스가 있을 때 Esc를 누르면 시트를 접는다. 데스크톱 패널에서는 높이가 없으므로 무시한다.
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key !== 'Escape' || snap === 'peek') return;
     if (window.matchMedia(DESKTOP_QUERY).matches) return;
@@ -183,7 +172,6 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
       >
         <span aria-hidden="true" className="h-1.5 w-10 rounded-full bg-ink-faint/50" />
       </button>
-      {/* 데스크톱은 도구 줄을 맨 위에 두고 그 아래에 머리(지역 이름과 개수)를 둔다. 둘 다 흰 바탕 위에 띠 없이 그린다. */}
       {toolbar && <div className="hidden shrink-0 flex-col gap-3 px-6 pt-4 lg:flex">{toolbar}</div>}
       {header && <div className="shrink-0 px-4 pb-3 text-ink lg:px-6 lg:pt-6 lg:pb-2">{header}</div>}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
