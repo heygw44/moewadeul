@@ -24,9 +24,6 @@ public class MemoryImageReader {
     }
 
     public Map<Long, List<MemoryPhoto>> readByMemoryIds(Collection<Long> memoryIds) {
-        if (memoryIds.isEmpty()) {
-            return Map.of();
-        }
         return memoryImageMapper.selectByMemoryIds(memoryIds).stream()
                 .collect(Collectors.groupingBy(
                         MemoryImageRow::memoryId, Collectors.mapping(this::toPhoto, Collectors.toList())));

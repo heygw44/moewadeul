@@ -9,7 +9,6 @@ import com.moewadeul.memory.domain.MemoryStatus;
 import com.moewadeul.memory.infra.moderation.AdminMemoryMapper;
 import com.moewadeul.memory.infra.moderation.AdminMemoryRecentReportRow;
 import com.moewadeul.memory.infra.moderation.AdminMemoryRow;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -67,9 +66,6 @@ public class AdminMemoryQueryService {
     }
 
     private Map<Long, List<AdminMemorySummary.RecentReport>> readRecentReports(List<Long> memoryIds) {
-        if (memoryIds.isEmpty()) {
-            return Collections.emptyMap();
-        }
         return adminMemoryMapper.selectRecentReports(memoryIds).stream()
                 .collect(Collectors.groupingBy(
                         AdminMemoryRecentReportRow::memoryId,

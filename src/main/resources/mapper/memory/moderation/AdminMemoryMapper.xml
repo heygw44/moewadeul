@@ -41,7 +41,7 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="selectRecentReports" resultType="com.moewadeul.memory.infra.moderation.AdminMemoryRecentReportRow">
+    <select id="selectRecentReportsOfNonEmpty" resultType="com.moewadeul.memory.infra.moderation.AdminMemoryRecentReportRow">
         SELECT ranked.memory_id AS memory_id,
                ranked.reason AS reason,
                ranked.content AS content,

@@ -9,7 +9,11 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface MemoryImageMapper {
 
-    List<MemoryImageRow> selectByMemoryIds(@Param("memoryIds") Collection<Long> memoryIds);
+    default List<MemoryImageRow> selectByMemoryIds(Collection<Long> memoryIds) {
+        return memoryIds.isEmpty() ? List.of() : selectByNonEmptyMemoryIds(memoryIds);
+    }
+
+    List<MemoryImageRow> selectByNonEmptyMemoryIds(@Param("memoryIds") Collection<Long> memoryIds);
 
     List<MemoryImageRow> selectUnattachedCreatedBefore(
             @Param("createdBefore") Instant createdBefore, @Param("limit") int limit);
