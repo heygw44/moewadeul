@@ -278,7 +278,7 @@ class CompanionReviewControllerTest {
         // given
         ReceivedCompanionReview revealed = new ReceivedCompanionReview(
                 21L, true, 9L, "굴업도 주말 1박", 31L, "새벽능선", true, List.of(CompanionReviewTag.ON_TIME), "좋았다", CREATED_AT);
-        ReceivedCompanionReview sealed = sealedItem(22L);
+        ReceivedCompanionReview sealed = ReceivedCompanionReview.sealed(22L);
         when(queryService.received(MEMBER_ID, 0, 20))
                 .thenReturn(new CompanionReviewPage<>(List.of(revealed, sealed), 0, 20, true));
 
@@ -391,10 +391,6 @@ class CompanionReviewControllerTest {
         assertThat(delete.getResponse().getStatus()).isIn(404, 405);
         assertThat(patchOnCollection.getResponse().getStatus()).isIn(403, 404, 405);
         verifyNoInteractions(commandService, queryService);
-    }
-
-    private static ReceivedCompanionReview sealedItem(long basecampId) {
-        return new ReceivedCompanionReview(basecampId, false, null, null, null, null, null, null, null, null);
     }
 
     private MvcTestResult post(RequestPostProcessor login, String body) {

@@ -39,7 +39,6 @@ class AiBudgetBurstIntegrationTest {
     private static final int OPENAI_DELAY_MILLIS = 1_000;
     private static final int INPUT_PER_CALL = 1_500;
     private static final int OUTPUT_PER_CALL = 200;
-    private static final int ALREADY_USED_INPUT_TOKENS = 2_498_850;
 
     @Autowired
     private AiInterpretService service;
@@ -66,7 +65,7 @@ class AiBudgetBurstIntegrationTest {
     @DisplayName("[F-27][AI-04] 한도에 거의 닿았을 때 50건이 몰리면, 넘친 금액은 OpenAI까지 간 호출 수만큼이고 그 뒤 요청은 OpenAI를 부르지 않는다")
     void burstOverrunIsBoundedByInFlightCalls() throws Exception {
         // given
-        insertUsage(saveMember(), ALREADY_USED_INPUT_TOKENS);
+        insertUsage(saveMember(), inputTokensLeavingHalfACallOfBudget());
         assertThat(properties.isBudgetExhausted(usageRecorder.sumTokens(TODAY))).isFalse();
         List<Long> members = new ArrayList<>();
         for (int i = 0; i < THREADS; i++) {
@@ -120,6 +119,18 @@ class AiBudgetBurstIntegrationTest {
 
     private long saveMember() {
         return memberRepository.saveAndFlush(aMember().build()).getId();
+    }
+
+    private int inputTokensLeavingHalfACallOfBudget() {
+        BigDecimal halfCall = properties
+                .costUsd(new TokenTotals(INPUT_PER_CALL, OUTPUT_PER_CALL))
+                .divide(BigDecimal.TWO);
+        return properties
+                .dailyBudgetUsd()
+                .subtract(halfCall)
+                .multiply(BigDecimal.valueOf(1_000_000))
+                .divide(properties.inputPricePerMillionUsd())
+                .intValueExact();
     }
 
     private void insertUsage(long memberId, int inputTokens) {

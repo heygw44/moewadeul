@@ -14,6 +14,7 @@ class ForestStandardMatcherTest {
 
     private static final double LAT = 37.5;
     private static final double LNG = 127.5;
+    private static final double EARTH_RADIUS_METERS = 6_371_008.8;
     private static final List<PublicSpotLocation> NONE = List.of();
 
     @Test
@@ -22,8 +23,8 @@ class ForestStandardMatcherTest {
         // given
         List<ForestStandardRecord> records = List.of(
                 row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"),
-                row("가나자연휴양림(시립)", "Y", LAT + 0.0005, LNG, "2026-09-10"),
-                row("가나 휴양림", "Y", LAT + 0.001, LNG, "2026-09-05"));
+                row("가나자연휴양림(시립)", "Y", metersNorth(55), LNG, "2026-09-10"),
+                row("가나 휴양림", "Y", metersNorth(110), LNG, "2026-09-05"));
 
         // when
         Result result = ForestStandardMatcher.match(records, NONE, NONE);
@@ -55,7 +56,8 @@ class ForestStandardMatcherTest {
     void keepsRowsApartWhenFartherThan100Meters() {
         // given
         List<ForestStandardRecord> records = List.of(
-                row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"), row("가나 자연휴양림", "Y", LAT + 0.002, LNG, "2026-09-01"));
+                row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"),
+                row("가나 자연휴양림", "Y", metersNorth(220), LNG, "2026-09-01"));
 
         // when
         Result result = ForestStandardMatcher.match(records, NONE, NONE);
@@ -70,7 +72,7 @@ class ForestStandardMatcherTest {
         // given
         List<ForestStandardRecord> records = List.of(
                 row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"),
-                row("다라 자연휴양림", "N", LAT + 1, LNG, "2026-09-01"),
+                row("다라 자연휴양림", "N", metersNorth(100_000), LNG, "2026-09-01"),
                 new ForestStandardRecord("마바 자연휴양림", "", "Y", "", "", "", "abc", "127.5", "2026-09-01"),
                 new ForestStandardRecord("사아 자연휴양림", "", "Y", "", "", "", "", "", "2026-09-01"),
                 new ForestStandardRecord("", "", "Y", "", "", "", "36.5", "127.5", "2026-09-01"));
@@ -89,7 +91,7 @@ class ForestStandardMatcherTest {
     void skipsForestWithin100MetersOfNational() {
         // given
         List<ForestStandardRecord> records = List.of(row("전혀 다른 이름", "Y", LAT, LNG, "2026-09-01"));
-        List<PublicSpotLocation> national = List.of(location("0101", "유명산 자연휴양림", LAT + 0.0005, LNG));
+        List<PublicSpotLocation> national = List.of(location("0101", "유명산 자연휴양림", metersNorth(55), LNG));
 
         // when
         Result result = ForestStandardMatcher.match(records, national, NONE);
@@ -104,7 +106,7 @@ class ForestStandardMatcherTest {
     @DisplayName("[F-06] 이름 핵심이 같거나 서로 포함하고 1.5km 안이면 국립과 겹친 것으로 보고 뺀다")
     void skipsForestWithSameNameCoreWithin1500Meters() {
         // given
-        List<ForestStandardRecord> records = List.of(row("유명 휴양림(도립)", "Y", LAT + 0.009, LNG, "2026-09-01"));
+        List<ForestStandardRecord> records = List.of(row("유명 휴양림(도립)", "Y", metersNorth(1_000), LNG, "2026-09-01"));
         List<PublicSpotLocation> national = List.of(location("0101", "국립 유명산 자연휴양림", LAT, LNG));
 
         // when
@@ -119,7 +121,7 @@ class ForestStandardMatcherTest {
     @DisplayName("[F-06] 이름이 같아도 1.5km보다 멀면 국립과 겹친 것으로 보지 않고 둔다")
     void keepsForestWithSameNameButFarFromNational() {
         // given
-        List<ForestStandardRecord> records = List.of(row("유명산 휴양림", "Y", LAT + 0.027, LNG, "2026-09-01"));
+        List<ForestStandardRecord> records = List.of(row("유명산 휴양림", "Y", metersNorth(3_000), LNG, "2026-09-01"));
         List<PublicSpotLocation> national = List.of(location("0101", "유명산 자연휴양림", LAT, LNG));
 
         // when
@@ -134,7 +136,7 @@ class ForestStandardMatcherTest {
     @DisplayName("[F-06] 이름 핵심이 2자 미만이면 이름으로는 겹침을 판정하지 않는다")
     void doesNotCompareNamesShorterThanTwoCharacters() {
         // given
-        List<ForestStandardRecord> records = List.of(row("숲 휴양림", "Y", LAT + 0.009, LNG, "2026-09-01"));
+        List<ForestStandardRecord> records = List.of(row("숲 휴양림", "Y", metersNorth(1_000), LNG, "2026-09-01"));
         List<PublicSpotLocation> national = List.of(location("0101", "국립 숲 자연휴양림", LAT, LNG));
 
         // when
@@ -149,8 +151,8 @@ class ForestStandardMatcherTest {
     void skipsGroupWhenAnyRowOverlapsNational() {
         // given
         List<ForestStandardRecord> records = List.of(
-                row("국립과 같은 자리", "Y", LAT, LNG, "2026-09-01"), row("대표 행", "Y", LAT + 0.0007, LNG, "2026-09-10"));
-        List<PublicSpotLocation> national = List.of(location("0101", "전혀 다른 국립", LAT - 0.0004, LNG));
+                row("국립과 같은 자리", "Y", LAT, LNG, "2026-09-01"), row("대표 행", "Y", metersNorth(78), LNG, "2026-09-10"));
+        List<PublicSpotLocation> national = List.of(location("0101", "전혀 다른 국립", metersNorth(-44), LNG));
 
         // when
         Result result = ForestStandardMatcher.match(records, national, NONE);
@@ -165,7 +167,7 @@ class ForestStandardMatcherTest {
     void reusesExternalIdAfterRename() {
         // given
         List<ForestStandardRecord> records = List.of(row("새 이름 휴양림", "Y", LAT, LNG, "2026-09-01"));
-        List<PublicSpotLocation> existing = List.of(location("RF-old", "옛 이름 휴양림", LAT + 0.0003, LNG));
+        List<PublicSpotLocation> existing = List.of(location("RF-old", "옛 이름 휴양림", metersNorth(33), LNG));
 
         // when
         Result result = ForestStandardMatcher.match(records, NONE, existing);
@@ -178,7 +180,7 @@ class ForestStandardMatcherTest {
     @DisplayName("[F-06] 좌표를 200m 고쳐도 이름 핵심이 같은 기존 장소가 있으면 그 외부 ID를 이어 쓴다")
     void reusesExternalIdAfterCoordinateFixWithSameName() {
         // given
-        List<ForestStandardRecord> records = List.of(row("가나 자연휴양림", "Y", LAT + 0.002, LNG, "2026-09-01"));
+        List<ForestStandardRecord> records = List.of(row("가나 자연휴양림", "Y", metersNorth(220), LNG, "2026-09-01"));
         List<PublicSpotLocation> existing = List.of(location("RF-old", "가나 휴양림", LAT, LNG));
 
         // when
@@ -192,7 +194,7 @@ class ForestStandardMatcherTest {
     @DisplayName("[F-06] 100m보다 멀고 이름 핵심도 다른 기존 장소와는 이어 쓰지 않고 새 외부 ID를 만든다")
     void createsNewExternalIdWhenExistingIsFarAndDifferentName() {
         // given
-        List<ForestStandardRecord> records = List.of(row("가나 자연휴양림", "Y", LAT + 0.002, LNG, "2026-09-01"));
+        List<ForestStandardRecord> records = List.of(row("가나 자연휴양림", "Y", metersNorth(220), LNG, "2026-09-01"));
         List<PublicSpotLocation> existing = List.of(location("RF-old", "다라 휴양림", LAT, LNG));
 
         // when
@@ -211,8 +213,9 @@ class ForestStandardMatcherTest {
     void givesExistingLocationToNearestForestOnly() {
         // given
         List<ForestStandardRecord> records = List.of(
-                row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"), row("다라 자연휴양림", "Y", LAT + 0.0015, LNG, "2026-09-01"));
-        List<PublicSpotLocation> existing = List.of(location("RF-old", "마바 휴양림", LAT + 0.0007, LNG));
+                row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"),
+                row("다라 자연휴양림", "Y", metersNorth(167), LNG, "2026-09-01"));
+        List<PublicSpotLocation> existing = List.of(location("RF-old", "마바 휴양림", metersNorth(78), LNG));
 
         // when
         Result result = ForestStandardMatcher.match(records, NONE, existing);
@@ -228,7 +231,7 @@ class ForestStandardMatcherTest {
         // given
         List<ForestStandardRecord> records = List.of(row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"));
         List<ForestStandardRecord> sameWithAnotherDate = List.of(row("가나 휴양림", "Y", LAT, LNG, "2026-12-01"));
-        List<ForestStandardRecord> movedRecords = List.of(row("가나 자연휴양림", "Y", LAT + 0.01, LNG, "2026-09-01"));
+        List<ForestStandardRecord> movedRecords = List.of(row("가나 자연휴양림", "Y", metersNorth(1_110), LNG, "2026-09-01"));
         List<ForestStandardRecord> renamedRecords = List.of(row("다라 자연휴양림", "Y", LAT, LNG, "2026-09-01"));
 
         // when
@@ -254,7 +257,7 @@ class ForestStandardMatcherTest {
         List<ForestStandardRecord> records = List.of(row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"));
         String base =
                 externalIds(ForestStandardMatcher.match(records, NONE, NONE)).get(0);
-        List<PublicSpotLocation> existing = List.of(location(base, "멀리 있는 다른 휴양림", LAT + 1, LNG));
+        List<PublicSpotLocation> existing = List.of(location(base, "멀리 있는 다른 휴양림", metersNorth(100_000), LNG));
 
         // when
         Result result = ForestStandardMatcher.match(records, NONE, existing);
@@ -291,5 +294,9 @@ class ForestStandardMatcherTest {
 
     private static PublicSpotLocation location(String externalId, String name, double lat, double lng) {
         return new PublicSpotLocation(externalId, name, lat, lng);
+    }
+
+    private static double metersNorth(double meters) {
+        return LAT + Math.toDegrees(meters / EARTH_RADIUS_METERS);
     }
 }

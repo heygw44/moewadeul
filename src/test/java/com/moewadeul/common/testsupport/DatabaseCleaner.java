@@ -5,12 +5,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import javax.sql.DataSource;
 
 public final class DatabaseCleaner {
 
     private static final String FLYWAY_HISTORY_TABLE = "flyway_schema_history";
+    private static final Set<String> TRIGGER_MAINTAINED_TABLES = Set.of("spot_cluster_total", "spot_cluster_cell");
     private static final String FIND_TABLES = "SELECT table_name FROM information_schema.tables "
             + "WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'";
 
@@ -33,11 +36,16 @@ public final class DatabaseCleaner {
         List<String> tables = findTables(statement);
         statement.execute("SET FOREIGN_KEY_CHECKS = 0");
         try {
-            deleteFrom(statement, tables);
-            deleteFrom(statement, tables);
+            deleteFrom(statement, triggerMaintainedTablesLast(tables));
         } finally {
             statement.execute("SET FOREIGN_KEY_CHECKS = 1");
         }
+    }
+
+    private static List<String> triggerMaintainedTablesLast(List<String> tables) {
+        return tables.stream()
+                .sorted(Comparator.comparing(TRIGGER_MAINTAINED_TABLES::contains))
+                .toList();
     }
 
     private void deleteFrom(Statement statement, List<String> tables) throws SQLException {

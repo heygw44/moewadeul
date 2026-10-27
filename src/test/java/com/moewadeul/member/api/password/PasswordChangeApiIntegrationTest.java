@@ -167,7 +167,6 @@ class PasswordChangeApiIntegrationTest {
                 .passwordHash(passwordEncoder.encode(OLD_PASSWORD))
                 .now(clock.instant())
                 .build());
-        clock.advance(Duration.ofSeconds(1));
         return member;
     }
 
