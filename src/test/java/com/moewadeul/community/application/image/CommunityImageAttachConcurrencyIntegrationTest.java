@@ -81,7 +81,6 @@ class CommunityImageAttachConcurrencyIntegrationTest {
         return jdbc.queryForObject(sql, Integer.class);
     }
 
-    // 작업마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runConcurrently(List<Callable<Object>> tasks) throws Exception {
         int threads = tasks.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

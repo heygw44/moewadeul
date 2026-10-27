@@ -467,7 +467,6 @@ class BasecampDetailApiIntegrationTest {
         return fixture.insertBasecamp(leader, spotId, status, BasecampApiFixture.DEFAULT_START_DATE);
     }
 
-    // 캠프 리더와 멤버 한 명이 있는 확정된 베이스캠프에 연락 수단을 등록해 둔다.
     private long confirmedBasecampWithContact() {
         long id = basecamp("CONFIRMED");
         fixture.insertMemberRow(id, member, "MEMBER", "ACTIVE");
@@ -475,7 +474,6 @@ class BasecampDetailApiIntegrationTest {
         return id;
     }
 
-    // 응답 본문에 이메일과 출생연도가 어떤 이름으로도 없는지 문자열로 확인한다.
     private void assertNoEmailOrBirthYear(MvcTestResult result) {
         String body = new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
         assertThat(body)

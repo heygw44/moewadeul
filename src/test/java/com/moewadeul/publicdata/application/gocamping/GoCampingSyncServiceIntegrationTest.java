@@ -33,17 +33,12 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-// 테스트 프로필의 페이지 크기는 2다. 픽스처는 동기화 목록 7건이라 서비스는 1~4페이지를 차례로 받는다.
-// 1페이지: 146(A), 2329(A) / 2페이지: 2931(U), 7001(A) / 3페이지: 7002(U), 1467(U, 휴장 기간이 있다) / 4페이지: 3466(D)
-// 3466은 원천에서 삭제된 항목이라 처음부터 DB에 없다. 1467과 3466은 고캠핑 basedSyncList 실제 응답
-// (fixtures/publicdata/gocamping/based-sync-list.json)의 항목이고, 나머지는 basedList 실제 응답에서 가져와 syncStatus를 붙였다.
 @IntegrationTest
 class GoCampingSyncServiceIntegrationTest {
 
     private static final String BASED_SYNC_LIST_PATH = "/B551011/GoCamping/basedSyncList";
     private static final String TEST_SERVICE_KEY = "test+key/value==";
     private static final int PAGE_COUNT = 4;
-    // 응답에 담긴 항목은 모두 7건이고, 그중 삭제 항목 하나를 뺀 6건이 장소로 적재된다.
     private static final int RECEIVED_COUNT = 7;
     private static final int LIVE_COUNT = 6;
 
@@ -155,7 +150,7 @@ class GoCampingSyncServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 좌표가 비어 있는 항목은 건너뛰고, 건너뛴 건수를 결과와 실행 기록에 남기며 받은 항목 수에는 센다")
     void syncSkipsItemWithoutCoordinateAndRecordsSkippedCount() {
-        // given: 2페이지의 7001은 좌표가 비어 있다.
+        // given
         stubAllPages(Map.of("7001", Map.of("mapX", "", "mapY", "")));
 
         // when
@@ -180,7 +175,7 @@ class GoCampingSyncServiceIntegrationTest {
     @Test
     @DisplayName("[F-06][NFR-06] 중간 페이지에서 실패하면 실행 기록을 실패로 남기고, 다음 실행은 받은 페이지를 다시 부르지 않고 이어서 받는다")
     void syncResumesFromNextPageAfterFailure() {
-        // given: 2페이지는 재시도까지 모두 서버 오류로 응답한다.
+        // given
         stubPage(1);
         stubPage(3);
         stubPage(4);
@@ -203,7 +198,7 @@ class GoCampingSyncServiceIntegrationTest {
                 .doesNotContain("serviceKey");
         assertThat(countRows("spot")).isEqualTo(2);
 
-        // when: 2페이지가 다시 정상으로 응답한 뒤 재실행한다.
+        // when
         stubPage(2);
         clock.advance(Duration.ofHours(1));
         goCampingSyncService.sync();
@@ -216,7 +211,6 @@ class GoCampingSyncServiceIntegrationTest {
         assertThat(runs.get(1).progressCursor()).isEqualTo(String.valueOf(PAGE_COUNT));
         assertThat(runs.get(1).processedCount()).isEqualTo(5);
         assertThat(requestCount(1)).isEqualTo(1);
-        // 첫 실행이 서버 오류로 두 번(처음 호출과 재시도 한 번), 재실행이 한 번 불렀다.
         assertThat(requestCount(2)).isEqualTo(3);
         assertThat(requestCount(3)).isEqualTo(1);
         assertThat(requestCount(4)).isEqualTo(1);
@@ -235,7 +229,7 @@ class GoCampingSyncServiceIntegrationTest {
         Map<String, Object> changedBefore = detailRow("146");
         Map<String, Object> othersBefore = detailRow("2931");
 
-        // when: 146번 항목은 수정일만 바뀌고 나머지 값은 같다.
+        // when
         clock.advance(Duration.ofDays(1));
         stubAllPages(Map.of("146", Map.of("modifiedtime", "2026-10-09")));
         Optional<GoCampingSyncResult> second = goCampingSyncService.sync();
@@ -278,13 +272,13 @@ class GoCampingSyncServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 원천에서 삭제된 항목은 장소를 숨기고, 같은 삭제 항목이 다시 와도 그대로 두며, 살아 있는 항목으로 돌아오면 다시 공개한다")
     void syncHidesRemovedSpotAndRestoresItWhenItComesBack() {
-        // given: 처음에는 모든 항목이 정상으로 적재된다.
+        // given
         stubAllPages();
         goCampingSyncService.sync();
         assertThat(spotStatus("2931")).isEqualTo("ACTIVE");
         assertThat(sourceRemovedAt("2931")).isNull();
 
-        // when: 2931이 삭제 항목으로 바뀌어 온다.
+        // when
         stubAllPages(Map.of("2931", Map.of("syncStatus", "D")));
         clock.advance(Duration.ofDays(1));
         GoCampingSyncResult hidden = goCampingSyncService.sync().orElseThrow();
@@ -302,11 +296,11 @@ class GoCampingSyncServiceIntegrationTest {
         assertThat(countRows("spot WHERE status = 'HIDDEN'")).isEqualTo(1);
         assertThat(runs().getLast().skippedCount()).isZero();
 
-        // when: 같은 응답으로 다시 실행한다.
+        // when
         clock.advance(Duration.ofDays(1));
         GoCampingSyncResult again = goCampingSyncService.sync().orElseThrow();
 
-        // then: 이미 숨긴 장소는 다시 숨기지 않고, 숨긴 시각도 그대로다.
+        // then
         assertThat(again.removed()).isZero();
         assertThat(again.inserted()).isZero();
         assertThat(again.updated()).isZero();
@@ -314,7 +308,7 @@ class GoCampingSyncServiceIntegrationTest {
         assertThat(spotStatus("2931")).isEqualTo("HIDDEN");
         assertThat(sourceRemovedAt("2931")).isEqualTo(removedAt);
 
-        // when: 2931이 U로 돌아온다.
+        // when
         stubAllPages(Map.of("2931", Map.of("syncStatus", "U")));
         clock.advance(Duration.ofDays(1));
         GoCampingSyncResult restored = goCampingSyncService.sync().orElseThrow();
@@ -332,14 +326,14 @@ class GoCampingSyncServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 관리자가 숨긴 장소가 삭제 항목으로 와도 건드리거나 표시하지 않고, 살아 있는 항목으로 돌아와도 숨긴 채로 둔다")
     void syncLeavesAdminHiddenSpotUntouchedWhenItArrivesAsRemoved() {
-        // given: 처음에 적재한 뒤 관리자가 2931을 숨긴다.
+        // given
         stubAllPages();
         goCampingSyncService.sync();
         jdbcTemplate.update("UPDATE spot SET status = 'HIDDEN' WHERE id = (SELECT spot_id FROM public_spot_detail"
                 + " WHERE external_id = '2931')");
         List<Map<String, Object>> spotsBefore = spotRows();
 
-        // when: 2931이 삭제 항목으로 온다.
+        // when
         stubAllPages(Map.of("2931", Map.of("syncStatus", "D")));
         clock.advance(Duration.ofDays(1));
         GoCampingSyncResult removedRun = goCampingSyncService.sync().orElseThrow();
@@ -350,12 +344,12 @@ class GoCampingSyncServiceIntegrationTest {
         assertThat(sourceRemovedAt("2931")).isNull();
         assertThat(spotRows()).isEqualTo(spotsBefore);
 
-        // when: 2931이 살아 있는 항목으로 돌아온다.
+        // when
         stubAllPages();
         clock.advance(Duration.ofDays(1));
         goCampingSyncService.sync();
 
-        // then: 관리자가 숨긴 장소라서 다시 공개하지 않는다.
+        // then
         assertThat(spotStatus("2931")).isEqualTo("HIDDEN");
         assertThat(sourceRemovedAt("2931")).isNull();
     }
@@ -363,7 +357,7 @@ class GoCampingSyncServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 오래 갱신되지 않은 RUNNING 기록은 실패로 처리하고, 그 기록의 진행 위치 다음 페이지부터 이어서 받는다")
     void syncFailsStaleRunningRunAndResumesFromItsCursor() {
-        // given: 서버가 1페이지를 처리한 뒤 꺼져서 31분 동안 갱신되지 않은 기록이다.
+        // given
         stubAllPages();
         long staleRunId = insertRunningRun(clock.instant().minus(Duration.ofMinutes(31)));
 
@@ -426,7 +420,6 @@ class GoCampingSyncServiceIntegrationTest {
                         .withBody(readFixture(pageNo, itemOverrides))));
     }
 
-    // 항목 ID를 키로, 바꿀 원천 필드 이름과 값을 넘기면 픽스처의 그 항목 필드만 바꿔서 응답으로 쓴다.
     private static String readFixture(int pageNo, Map<String, Map<String, String>> itemOverrides) {
         String path = "fixtures/publicdata/gocamping/sync/based-sync-list-page" + pageNo + ".json";
         try {

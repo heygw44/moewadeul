@@ -41,7 +41,6 @@ class MemoryApiIntegrationTest {
     private static final long IMAGE_SIZE = 1024;
     private static final long THUMBNAIL_SIZE = 64;
 
-    // 기본 시각(2026-10-05 한국 정오)의 오늘과 어제다.
     private static final String TODAY = "2026-10-05";
     private static final String YESTERDAY = "2026-10-04";
 
@@ -559,7 +558,6 @@ class MemoryApiIntegrationTest {
                 .formatted(YESTERDAY, spotId);
     }
 
-    // 업로드 URL을 받고, 회원이 그 URL로 파일을 올린 것처럼 테스트 저장소에 객체를 둔다.
     private int uploadedImage(Cookie session) {
         MvcTestResult issued = send(
                 mvc.post().uri("/api/memories/images"),
@@ -571,7 +569,6 @@ class MemoryApiIntegrationTest {
         return imageId;
     }
 
-    // 썸네일과 함께 업로드 URL을 받고, 회원이 두 URL로 파일을 올린 것처럼 테스트 저장소에 객체를 둔다.
     private int uploadedImageWithThumbnail(Cookie session) {
         int imageId = issuedWithThumbnail(session);
         storage.markUploaded(keyOf(imageId), IMAGE_SIZE);

@@ -14,7 +14,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class NotificationIndexIntegrationTest {
 
-    // countByMemberIdAndReadAtIsNull이 만드는 SQL과 같은 조건이다.
     private static final String COUNT_UNREAD_SQL =
             "SELECT COUNT(n.id) FROM notification n WHERE n.member_id = ? AND n.read_at IS NULL";
 
@@ -30,8 +29,7 @@ class NotificationIndexIntegrationTest {
     @Test
     @DisplayName("[F-20] 안 읽은 알림 수를 셀 때 MySQL은 (member_id, read_at) 인덱스만 읽고 알림 행을 다시 읽지 않는다")
     void unreadCountReadsOnlyMemberReadIndex() {
-        // given: 읽은 알림이 많고 안 읽은 알림이 적은 회원이다.
-        // 인덱스에 read_at이 없으면 MySQL이 이 회원의 알림을 모두 찾은 뒤 행마다 read_at을 확인한다.
+        // given
         long memberId = memberRepository.saveAndFlush(aMember().build()).getId();
         insertNotifications(memberId, READ_NOTIFICATIONS, true);
         insertNotifications(memberId, UNREAD_NOTIFICATIONS, false);

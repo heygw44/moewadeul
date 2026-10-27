@@ -74,7 +74,6 @@ class BasecampOpenSanctionIntegrationTest {
         insertSanction("WARNING", "ACTIVE", null);
         insertSanction("SUSPEND_7D", "EXPIRED", NOW.minus(Duration.ofDays(1)));
         insertSanction("SUSPEND_30D", "LIFTED", NOW.plus(Duration.ofDays(20)));
-        // 종료 시각은 지났지만 만료 작업이 아직 돌지 않은 정지도 이미 끝난 정지다.
         insertSanction("SUSPEND_7D", "ACTIVE", NOW.minusSeconds(1));
 
         BasecampOpenResult result = open();

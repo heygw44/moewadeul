@@ -25,7 +25,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class CompanionReviewCommandServiceIntegrationTest {
 
-    // 테스트 시계의 기본 시각에 베이스캠프가 막 완료된 것으로 둔다. 그래서 기한은 기본 시각에서 14일 뒤다.
     private static final Instant COMPLETED_AT = MutableClock.DEFAULT_INSTANT;
     private static final Duration PERIOD = Duration.ofDays(14);
 

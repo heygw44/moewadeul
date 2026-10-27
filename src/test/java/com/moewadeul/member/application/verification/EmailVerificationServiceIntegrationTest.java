@@ -112,14 +112,14 @@ class EmailVerificationServiceIntegrationTest {
         Member atBoundary = newMember();
         String codeAtBoundary = issue(atBoundary);
 
-        // when & then: 10분에서 1초 모자란 시각
+        // when & then
         clock.advance(Duration.ofMinutes(10).minusSeconds(1));
         assertThat(emailVerificationService
                         .verify(justBefore.getId(), codeJustBefore)
                         .status())
                 .isEqualTo(MemberStatus.ACTIVE);
 
-        // when & then: 정각
+        // when & then
         clock.advance(Duration.ofSeconds(1));
         assertThatThrownBy(() -> emailVerificationService.verify(atBoundary.getId(), codeAtBoundary))
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_CODE_EXPIRED);
@@ -150,14 +150,14 @@ class EmailVerificationServiceIntegrationTest {
         String code = issue(member);
         String wrongCode = wrongCodeFor(code);
 
-        // when & then: 다섯 번째까지는 INVALID이고 횟수가 예외와 상관없이 남는다
+        // when & then
         for (int attempt = 1; attempt <= 5; attempt++) {
             assertThatThrownBy(() -> emailVerificationService.verify(member.getId(), wrongCode))
                     .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_CODE_INVALID);
             assertThat(latestAttemptCount(member)).isEqualTo(attempt);
         }
 
-        // when & then: 여섯 번째부터는 맞는 코드든 틀린 코드든 EXCEEDED이고 횟수는 5로 멈춘다
+        // when & then
         assertThatThrownBy(() -> emailVerificationService.verify(member.getId(), wrongCode))
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
         assertThatThrownBy(() -> emailVerificationService.verify(member.getId(), code))
@@ -312,7 +312,7 @@ class EmailVerificationServiceIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-03] 가입 때 보낸 코드를 포함해 24시간에 5번까지만 보내고, 가장 오래된 발송이 24시간 지나면 풀린다")
     void dailyLimitCountsAllSendsIncludingFirstOne() {
-        // given: 2분 간격으로 5번 발송(첫 번째가 가입 때 보낸 코드)
+        // given
         Member member = newMember();
         Instant firstSentAt = clock.instant();
         for (int sent = 0; sent < 5; sent++) {
@@ -320,14 +320,14 @@ class EmailVerificationServiceIntegrationTest {
             clock.advance(Duration.ofMinutes(2));
         }
 
-        // when & then: 10분이 지났어도 하루 한도에 걸려 가장 오래된 발송이 풀릴 때까지 남은 시간을 알려 준다
+        // when & then
         assertResendLimited(member, IP, Duration.ofHours(24).minusMinutes(10));
 
-        // when & then: 24시간에서 1초 모자라면 아직 막혀 있다
+        // when & then
         clock.setInstant(firstSentAt.plus(Duration.ofHours(24)).minusSeconds(1));
         assertResendLimited(member, IP, Duration.ofSeconds(1));
 
-        // when & then: 첫 발송이 24시간 지나면 재발송된다
+        // when & then
         clock.setInstant(firstSentAt.plus(Duration.ofHours(24)));
         emailVerificationService.requestResend(member.getId(), IP);
         assertThat(countEvents(member)).isEqualTo(1);
@@ -353,18 +353,18 @@ class EmailVerificationServiceIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-03] 같은 IP가 1시간에 20번 요청하면 다른 회원도 막고, 1시간이 지나면 풀린다")
     void ipLimitBlocksOtherMembersFromSameIp() {
-        // given: 서로 다른 회원 20명이 같은 IP로 코드를 받았다
+        // given
         for (int sent = 0; sent < 20; sent++) {
             issue(newMember());
         }
         Member another = newMember();
 
-        // when & then: 같은 IP는 막히고 다른 IP는 통과한다
+        // when & then
         assertResendLimited(another, IP, Duration.ofHours(1));
         emailVerificationService.requestResend(another.getId(), OTHER_IP);
         assertThat(countEvents(another)).isEqualTo(1);
 
-        // when & then: 1시간에서 1초 모자라면 아직 막혀 있고, 1시간이 지나면 풀린다
+        // when & then
         Member later = newMember();
         clock.advance(Duration.ofHours(1).minusSeconds(1));
         assertResendLimited(later, IP, Duration.ofSeconds(1));
@@ -424,7 +424,7 @@ class EmailVerificationServiceIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-03] 같은 IP에서 처리하지 않은 발송 요청이 20건이면 코드 행이 없어도 IP 한도에 걸린다")
     void queuedSendRequestsCountTowardIpLimit() {
-        // given: 서로 다른 회원 20명이 같은 IP로 재발송을 요청했고 아직 처리기가 코드 행을 만들지 않았다
+        // given
         for (int requested = 0; requested < 20; requested++) {
             emailVerificationService.requestResend(newMember().getId(), IP);
         }
@@ -441,7 +441,7 @@ class EmailVerificationServiceIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-03] 코드 행을 이미 만든 발송 요청은 아직 PENDING이어도 IP 한도에 한 번만 센다")
     void requestWithIssuedRowIsCountedOnceTowardIpLimit() {
-        // given: 코드 행 18개와, 요청해서 코드 행까지 만들었지만 이벤트는 아직 PENDING인 요청 1건
+        // given
         for (int sent = 0; sent < 18; sent++) {
             issue(newMember());
         }
@@ -453,7 +453,7 @@ class EmailVerificationServiceIntegrationTest {
         // when
         emailVerificationService.requestResend(another.getId(), IP);
 
-        // then: 19번째까지는 막지 않고, 20번째 요청이 기록되면 한도에 닿는다
+        // then
         assertThat(countEvents(another)).isEqualTo(1);
         assertResendLimited(newMember(), IP, Duration.ofHours(1));
     }
@@ -508,8 +508,6 @@ class EmailVerificationServiceIntegrationTest {
                 .code();
     }
 
-    // 난수가 우연히 같은 코드를 두 번 만들면 이전 코드가 무효가 됐는지 확인할 수 없다.
-    // 확률은 100만분의 1이지만 테스트가 흔들리지 않도록, 다른 코드가 나올 때까지 다시 발급한다.
     private String issueDifferentFrom(Member member, String previousCode) {
         String code = issue(member);
         while (code.equals(previousCode)) {
@@ -560,7 +558,6 @@ class EmailVerificationServiceIntegrationTest {
                 member.getId());
     }
 
-    // DATETIME 컬럼에는 UTC 시각이 들어 있으므로(connectionTimeZone=UTC) LocalDateTime을 UTC로 읽어 Instant로 바꾼다.
     private Instant queryInstant(String sql, Object... args) {
         return jdbc.queryForObject(sql, LocalDateTime.class, args).toInstant(ZoneOffset.UTC);
     }

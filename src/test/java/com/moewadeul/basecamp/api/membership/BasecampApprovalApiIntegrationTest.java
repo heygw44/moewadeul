@@ -71,7 +71,6 @@ class BasecampApprovalApiIntegrationTest {
         leader = fixture.saveMember();
         leaderSession = fixture.identityVerifiedSession(leader, "FEMALE");
         applicant = fixture.saveMember();
-        // 신청자는 2007년생 남성(20대)으로 본인확인한 단계 1 회원이다.
         applicantSession = fixture.identityVerifiedSession(applicant, "MALE");
         spotId = fixture.insertSpot("개머리언덕", 37.25, 127.25);
         basecampId = fixture.insertBasecamp(leader, spotId, "RECRUITING", START_DATE);

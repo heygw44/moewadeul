@@ -26,10 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// 픽스처(fixtures/publicdata/forest/forest_20260325.csv)는 실제 파일
-// (산림청 국립자연휴양림관리소_국립자연휴양림 예약 정책_20260325.csv)에서 휴양림 3곳의 행을 옮긴 것이다.
-// 0101 유명산 자연휴양림 3행, 0116 화천숲속 야영장 2행, 0305 금산 자연휴양림 2행이라 행은 7개이고 휴양림은 3곳이다.
-// 위도가 abc인 기관아이디 9999 행은 좌표를 읽지 못하는 경우를 확인하려고 테스트에서 지어낸 행이다.
 @IntegrationTest
 class ForestLoadServiceIntegrationTest {
 

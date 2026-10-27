@@ -534,7 +534,6 @@ class CommunityPostApiIntegrationTest {
         assertThat(fixture.postCount()).isZero();
     }
 
-    // 이메일 인증 없이 로그인만 한 세션을 만든다.
     private Cookie loginOnly(Member member) {
         MvcTestResult login = mvc.post()
                 .uri("/api/auth/login")
@@ -660,7 +659,7 @@ class CommunityPostApiIntegrationTest {
     @Test
     @DisplayName("[F-29][CM-01][CM-12] 활성이 아닌 글과 숨긴 장소의 글이 섞여도 조건마다 페이지를 끝까지 넘긴 글이 전체 글 수와 같고 최신순이다")
     void pagingThroughEveryConditionMatchesTotalCount() throws Exception {
-        // given: 활성 글 사이에 지운 글·숨긴 글·검토 대기 글을 두고, 연결한 장소는 나중에 숨긴다
+        // given
         long spotId = fixture.insertSpot("능선 끝 평지", "ACTIVE");
         Cookie ridge = fixture.verifiedSession(fixture.saveMember("능선러"));
         Cookie other = fixture.verifiedSession(fixture.saveMember(null));
@@ -734,7 +733,7 @@ class CommunityPostApiIntegrationTest {
     @Test
     @DisplayName("[F-29][CM-13] 검색은 최근 ACTIVE 글 10,000개 안에서만 찾고 글 수도 그 안에서 세며, 활성이 아닌 글은 10,000개에 넣지 않는다")
     void searchLooksOnlyAtRecentActivePosts() {
-        // given: 검색어가 든 오래된 글 뒤에 숨긴 글 3개와 활성 글 9,998개를 두고, 검색어가 든 새 글을 하나 더 쓴다
+        // given
         Member author = fixture.saveMember(null);
         Cookie session = fixture.verifiedSession(author);
         long old = fixture.writePost(session, "오래된 능선 글", "본문", null);
@@ -742,7 +741,7 @@ class CommunityPostApiIntegrationTest {
         insertPosts(author.getId(), "ACTIVE", CommunityPost.SEARCH_RECENT_POST_LIMIT - 2);
         long latest = fixture.writePost(session, "새 능선 글", "본문", null);
 
-        // when: 오래된 글은 최근 활성 글 10,000번째다. 활성 글이 하나 더 생기면 범위 밖으로 밀린다
+        // when
         MvcTestResult atBoundary = mvc.get().uri(POSTS + "?keyword=능선").exchange();
         insertPosts(author.getId(), "ACTIVE", 1);
         MvcTestResult pushedOut = mvc.get().uri(POSTS + "?keyword=능선").exchange();
@@ -859,7 +858,6 @@ class CommunityPostApiIntegrationTest {
                 .asList();
     }
 
-    // 한 쪽에 한 건씩 마지막 페이지까지 넘기며 글 ID를 모은다. 모은 수가 응답의 전체 글 수와 같아야 한다.
     private List<Integer> idsOverAllPages(String condition) throws Exception {
         MvcTestResult first =
                 mvc.get().uri(POSTS + "?size=1&page=0" + condition).exchange();
@@ -879,7 +877,6 @@ class CommunityPostApiIntegrationTest {
         return ids;
     }
 
-    // 검색어가 들지 않은 글을 count개 한 번에 넣는다. 숫자 열 개를 네 번 곱해 최대 10,000행을 만든다.
     private void insertPosts(long memberId, String status, int count) {
         jdbc.update("""
                 INSERT INTO community_post (member_id, title, content, status, created_at, updated_at)

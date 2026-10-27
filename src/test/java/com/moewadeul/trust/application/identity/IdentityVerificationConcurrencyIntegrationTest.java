@@ -77,7 +77,8 @@ class IdentityVerificationConcurrencyIntegrationTest {
     @DisplayName(
             "[ID-04] 같은 CI의 본인확인 행을 지운 직후 서로 다른 회원 10명이 그 CI로 동시에 본인확인해도, DB 교착 상태로 실패하는 요청 없이 1건만 저장되고 나머지는 IDENTITY_CI_DUPLICATED다")
     void sameCiAfterDeletedRowIsLinkedToOneMember() throws Exception {
-        // given: 지운 행은 InnoDB가 정리하기 전까지 같은 키의 삭제 표시 레코드로 인덱스에 남는다.
+        // given
+        // 지운 행은 InnoDB가 정리하기 전까지 같은 키의 삭제 표시 레코드로 인덱스에 남는다.
         // 같은 키를 동시에 넣는 트랜잭션들은 이 레코드에 공유 잠금을 건 뒤 삽입 잠금을 기다려서 교착 상태가 생길 수 있다.
         service.verify(saveMember(), new IdentityVerifyCommand(1995, Gender.MALE, "reused-person"));
         jdbc.update("DELETE FROM identity_verification");
@@ -114,7 +115,6 @@ class IdentityVerificationConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM identity_verification", Integer.class);
     }
 
-    // 요청마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runConcurrently(int threads, IndexedAction action) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         CountDownLatch ready = new CountDownLatch(threads);

@@ -45,7 +45,6 @@ class SmtpMailSenderTest {
 
     @BeforeEach
     void stubMimeMessageCreation() {
-        // 메시지 객체는 실제 구현이 만든 것을 쓴다. 보낸 메시지의 헤더와 본문을 그대로 읽어 확인하려는 것이다.
         JavaMailSenderImpl messageFactory = new JavaMailSenderImpl();
         given(javaMailSender.createMimeMessage()).willAnswer(invocation -> messageFactory.createMimeMessage());
     }
@@ -153,7 +152,7 @@ class SmtpMailSenderTest {
     @Test
     @DisplayName("[F-20] 메일 한 통을 보내는 시간이 상한을 넘으면 일시적인 실패로 끝내고 보내던 스레드를 멈춘다")
     void failsTransientlyAndStopsSendingWhenSendExceedsTimeout() throws Exception {
-        // given: 서버가 응답하지 않아 send가 끝나지 않는다.
+        // given
         CountDownLatch sendingInterrupted = new CountDownLatch(1);
         willAnswer(invocation -> {
                     try {

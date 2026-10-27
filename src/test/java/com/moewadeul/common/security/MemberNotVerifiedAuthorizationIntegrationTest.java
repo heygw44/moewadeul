@@ -25,12 +25,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-/**
- * 이메일 인증을 마치지 않은 회원의 접근 권한을 엔드포인트별로 확인한다.
- *
- * <p>이메일 인증이 필요한 경로 중 컨트롤러가 아직 없는 곳이 있다. 그래도 인가는 컨트롤러보다 앞선 필터에서 일어나므로,
- * 인가를 통과한 요청은 404 같은 컨트롤러 쪽 상태를 받고 401·403은 받지 않는다. 그래서 통과 여부를 "401·403이 아니다"로 판단한다.
- */
 @IntegrationTest
 @AutoConfigureMockMvc
 class MemberNotVerifiedAuthorizationIntegrationTest {
@@ -49,8 +43,6 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // 공개 읽기 행이다. 이메일 인증이 필요한 경로와 앞부분이 같은 것(예: /api/basecamps/1과 /api/basecamps/1/applications)도 있어서
-    // 인증을 마치지 않은 회원으로도 확인한다.
     static Stream<Arguments> publicReadEndpoints() {
         return AuthorizationMatrix.PUBLIC.stream()
                 .filter(endpoint -> endpoint.method() == HttpMethod.GET)
@@ -81,8 +73,6 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
 
         MvcTestResult result = call(method, path, session);
 
-        // 보안 설정을 통과한 뒤에도 서비스가 신뢰 단계 같은 업무 규칙으로 403을 줄 수 있다. 그래서 보안 설정이 막은 403(MEMBER_NOT_VERIFIED, ACCESS_DENIED)이 아닌지만
-        // 확인한다.
         assertThat(result.getResponse().getStatus()).isNotEqualTo(401);
         if (result.getResponse().getStatus() == 403) {
             assertThat(result).bodyJson().extractingPath("$.code").isNotIn("MEMBER_NOT_VERIFIED", "ACCESS_DENIED");
@@ -149,7 +139,6 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
                 .cookie(session)
                 .exchange();
 
-        // 발급한 코드가 없으므로 코드 확인은 코드 오류까지 가야 한다. 인가에서 막혔다면 403이었을 것이다.
         assertThat(verify).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(verify).bodyJson().extractingPath("$.code").isEqualTo("EMAIL_CODE_INVALID");
         assertThat(resend).hasStatus(HttpStatus.NO_CONTENT);
@@ -219,7 +208,6 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
         return session;
     }
 
-    // 인증 코드 API는 DB의 회원을 읽으므로, 이 로그인만 프로브 대신 실제 회원과 로그인 API를 쓴다.
     private Cookie loginAsRealMember() {
         Member member = memberRepository.save(aMember()
                 .email(TestSequence.email())

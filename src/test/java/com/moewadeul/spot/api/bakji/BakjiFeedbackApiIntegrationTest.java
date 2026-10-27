@@ -245,7 +245,6 @@ class BakjiFeedbackApiIntegrationTest {
         return spotId.get();
     }
 
-    // 본문이 null이면 본문 없이 보낸다. 쓰기 요청이므로 항상 CSRF 토큰을 싣는다.
     private MvcTestResult post(Cookie session, String uri, String body) {
         MockMvcTester.MockMvcRequestBuilder request =
                 mvc.post().uri(uri).with(csrf()).cookie(session).contentType(MediaType.APPLICATION_JSON);
@@ -317,8 +316,6 @@ class BakjiFeedbackApiIntegrationTest {
         return session;
     }
 
-    // 실제 흐름대로 로그인한 세션에서 인증 코드를 확인해야 그 세션이 이메일 인증 권한을 얻는다.
-    // 코드 원값은 메일로만 나가므로, 테스트는 발송 처리기가 쓰는 서비스를 직접 불러 코드를 받는다.
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService

@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// 관리자 신고 처리 통합 테스트들이 함께 쓰는 JDBC 데이터 준비 도구다. 신고 접수 자격 검사를 거치지 않고 원하는 상태의 신고 행을 바로 넣는다.
 public final class MemberReportFixture {
 
     private final JdbcTemplate jdbc;
@@ -14,13 +13,11 @@ public final class MemberReportFixture {
         this.jdbc = jdbc;
     }
 
-    /** 회원 신고(kind=MEMBER)를 status 상태로 넣고 신고 ID를 돌려준다. 긴급 여부는 유형에서 정한다. */
     public long insertMemberReport(
             long reporterId, long targetId, long basecampId, String type, String status, Instant createdAt) {
         return insert(reporterId, targetId, basecampId, "MEMBER", null, type, status, createdAt);
     }
 
-    /** 후기 신고(kind=REVIEW)를 status 상태로 넣고 신고 ID를 돌려준다. */
     public long insertReviewReport(
             long reporterId, long targetId, long basecampId, long reviewId, String status, Instant createdAt) {
         return insert(reporterId, targetId, basecampId, "REVIEW", reviewId, "INAPPROPRIATE_REVIEW", status, createdAt);

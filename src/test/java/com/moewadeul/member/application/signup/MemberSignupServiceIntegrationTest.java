@@ -74,12 +74,12 @@ class MemberSignupServiceIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-03] 같은 IP의 인증 메일 발송 요청이 한 시간에 20건이면 가입은 SIGNUP_LIMITED이고 회원도 발송 요청도 만들지 않는다")
     void signupIsRejectedWhenIpReachedHourlyLimit() {
-        // given: 한 IP에서 가입 20건이 성공했고 발송 요청은 아직 처리 전이다
+        // given
         for (int signedUp = 0; signedUp < 20; signedUp++) {
             memberSignupService.signUp(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP));
         }
 
-        // when & then: 같은 IP의 21번째 가입은 거부하고 남은 시간을 알려 준다
+        // when & then
         assertThatThrownBy(() -> memberSignupService.signUp(
                         new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP)))
                 .isInstanceOfSatisfying(RateLimitedException.class, e -> {
@@ -89,7 +89,7 @@ class MemberSignupServiceIntegrationTest {
         assertThat(countRows("member")).isEqualTo(20);
         assertThat(countRows("outbox_event")).isEqualTo(20);
 
-        // when & then: 다른 IP는 가입할 수 있고, 한 시간이 지나면 같은 IP도 가입할 수 있다
+        // when & then
         memberSignupService.signUp(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), "203.0.113.8"));
         clock.advance(Duration.ofHours(1));
         memberSignupService.signUp(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP));

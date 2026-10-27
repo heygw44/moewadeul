@@ -160,7 +160,6 @@ class ProgramApplicationTest {
         assertThat(application.getStatus()).isEqualTo(status);
     }
 
-    // 엔티티에 만드는 메서드가 없어서(신청 행은 쿼리가 만든다) 리플렉션으로 상태를 채운다.
     private static ProgramApplication application(ProgramApplicationStatus status) {
         ProgramApplication application = BeanUtils.instantiateClass(ProgramApplication.class);
         ReflectionTestUtils.setField(application, "status", status);

@@ -11,7 +11,6 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-// 항목 값은 고캠핑 basedList 실제 응답(fixtures/publicdata/gocamping/based-list.json)에서 가져왔다.
 class GoCampingItemConverterTest {
 
     @Test
@@ -50,8 +49,7 @@ class GoCampingItemConverterTest {
     @Test
     @DisplayName("[F-06] 값이 비어 있는 원천 필드는 null로 바꾸고, 시설 정보에는 값이 있는 항목만 원천 이름 그대로 담는다")
     void convertsBlankValuesToNullAndKeepsOnlyFilledFacilities() {
-        // given: 실제 옥화자연휴양림 항목은 주소 끝에 공백이 있고 화로대·부대시설 기타 값이 비어 있다.
-        // 여기에 더해 테스트는 전화번호를 빈 문자열로, 홈페이지를 공백으로, 가능 시설 기타를 응답에 없는 값(null)으로 바꿨다.
+        // given
         GoCampingItem item = new GoCampingItem(
                 "2329",
                 "옥화자연휴양림 국민여가오토캠핑장",

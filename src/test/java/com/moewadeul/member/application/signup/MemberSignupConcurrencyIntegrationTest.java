@@ -157,7 +157,6 @@ class MemberSignupConcurrencyIntegrationTest {
                                 e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.SIGNUP_LIMITED)));
     }
 
-    // 메일 서버가 멈춰 재시도를 기다리는 발송 요청을 넣는다. 다음 시도 시각이 하루 뒤라서 발행기가 집지 않고, 서버는 이 요청도 IP의 발송 수에 센다.
     private void insertQueuedSends(String requestIp, int count) {
         Timestamp now = Timestamp.from(clock.instant());
         Timestamp nextAttempt = Timestamp.from(clock.instant().plus(Duration.ofDays(1)));
@@ -177,7 +176,6 @@ class MemberSignupConcurrencyIntegrationTest {
         }
     }
 
-    // 서버의 IP 한도와 같은 기준으로, 최근 한 시간에 그 IP가 요청한 인증 메일 발송 요청 수를 센다. 발행기가 아직 처리하지 않은 요청도 센다.
     private int sendsInHour(String requestIp) {
         Timestamp since = Timestamp.from(clock.instant().minus(Duration.ofHours(1)));
         return jdbc.queryForObject(

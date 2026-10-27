@@ -34,7 +34,6 @@ import tools.jackson.databind.json.JsonMapper;
 class BasecampMembershipApiIntegrationTest {
 
     private static final LocalDate START_DATE = BasecampApiFixture.DEFAULT_START_DATE;
-    // 출발일 0시(한국)는 2026-10-19T15:00:00Z이고, 임박 탈퇴는 그 48시간 전인 2026-10-17T15:00:00Z부터다.
     private static final Instant EARLY_LEAVE_FROM = Instant.parse("2026-10-17T15:00:00Z");
 
     @Autowired
@@ -318,7 +317,6 @@ class BasecampMembershipApiIntegrationTest {
         assertThat(basecampRow()).containsEntry("status", "RECRUITING");
     }
 
-    // 출발일이 지나기 전까지 확정 상태로 둔다. 확정 시각은 테스트 시계의 기본 시각이다.
     private void confirmBasecamp() {
         jdbc.update(
                 "UPDATE basecamp SET status = 'CONFIRMED', confirmed_at = '2026-10-05 03:00:00' WHERE id = ?",

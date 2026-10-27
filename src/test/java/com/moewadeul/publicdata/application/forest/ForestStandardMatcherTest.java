@@ -10,7 +10,6 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-// 이름과 좌표는 모두 테스트에서 지어낸 값이다. 위도 0.001도는 약 111m, 경도 0.001도는 위도 37도에서 약 89m다.
 class ForestStandardMatcherTest {
 
     private static final double LAT = 37.5;
@@ -20,7 +19,7 @@ class ForestStandardMatcherTest {
     @Test
     @DisplayName("[F-06] 100m 안의 행을 한 휴양림으로 묶고, 기준일이 가장 늦은 행을 대표로 삼는다")
     void groupsRowsWithin100MetersAndPicksLatestAsRepresentative() {
-        // given: 두 번째와 세 번째 행은 첫 행에서 각각 약 55m, 약 110m이지만 서로 55m라 사슬로 이어져 한 묶음이 된다.
+        // given
         List<ForestStandardRecord> records = List.of(
                 row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"),
                 row("가나자연휴양림(시립)", "Y", LAT + 0.0005, LNG, "2026-09-10"),
@@ -54,7 +53,7 @@ class ForestStandardMatcherTest {
     @Test
     @DisplayName("[F-06] 100m보다 떨어진 행은 같은 이름이어도 따로 둔다")
     void keepsRowsApartWhenFartherThan100Meters() {
-        // given: 위도 0.002도는 약 222m다.
+        // given
         List<ForestStandardRecord> records = List.of(
                 row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"), row("가나 자연휴양림", "Y", LAT + 0.002, LNG, "2026-09-01"));
 
@@ -104,7 +103,7 @@ class ForestStandardMatcherTest {
     @Test
     @DisplayName("[F-06] 이름 핵심이 같거나 서로 포함하고 1.5km 안이면 국립과 겹친 것으로 보고 뺀다")
     void skipsForestWithSameNameCoreWithin1500Meters() {
-        // given: 위도 0.009도는 약 1km다. 이름 핵심은 '유명산'과 '유명'이라 한쪽이 다른 쪽을 포함한다.
+        // given
         List<ForestStandardRecord> records = List.of(row("유명 휴양림(도립)", "Y", LAT + 0.009, LNG, "2026-09-01"));
         List<PublicSpotLocation> national = List.of(location("0101", "국립 유명산 자연휴양림", LAT, LNG));
 
@@ -119,7 +118,7 @@ class ForestStandardMatcherTest {
     @Test
     @DisplayName("[F-06] 이름이 같아도 1.5km보다 멀면 국립과 겹친 것으로 보지 않고 둔다")
     void keepsForestWithSameNameButFarFromNational() {
-        // given: 위도 0.027도는 약 3km다.
+        // given
         List<ForestStandardRecord> records = List.of(row("유명산 휴양림", "Y", LAT + 0.027, LNG, "2026-09-01"));
         List<PublicSpotLocation> national = List.of(location("0101", "유명산 자연휴양림", LAT, LNG));
 
@@ -134,7 +133,7 @@ class ForestStandardMatcherTest {
     @Test
     @DisplayName("[F-06] 이름 핵심이 2자 미만이면 이름으로는 겹침을 판정하지 않는다")
     void doesNotCompareNamesShorterThanTwoCharacters() {
-        // given: 두 이름의 핵심이 모두 '숲' 한 글자다.
+        // given
         List<ForestStandardRecord> records = List.of(row("숲 휴양림", "Y", LAT + 0.009, LNG, "2026-09-01"));
         List<PublicSpotLocation> national = List.of(location("0101", "국립 숲 자연휴양림", LAT, LNG));
 
@@ -148,7 +147,7 @@ class ForestStandardMatcherTest {
     @Test
     @DisplayName("[F-06] 묶음의 대표가 아닌 행이 국립과 겹쳐도 묶음 전체를 뺀다")
     void skipsGroupWhenAnyRowOverlapsNational() {
-        // given: 대표 행(나중 기준일)은 국립에서 약 120m이고, 다른 행은 국립에서 약 44m다. 두 행은 78m 떨어져 한 묶음이다.
+        // given
         List<ForestStandardRecord> records = List.of(
                 row("국립과 같은 자리", "Y", LAT, LNG, "2026-09-01"), row("대표 행", "Y", LAT + 0.0007, LNG, "2026-09-10"));
         List<PublicSpotLocation> national = List.of(location("0101", "전혀 다른 국립", LAT - 0.0004, LNG));
@@ -178,7 +177,7 @@ class ForestStandardMatcherTest {
     @Test
     @DisplayName("[F-06] 좌표를 200m 고쳐도 이름 핵심이 같은 기존 장소가 있으면 그 외부 ID를 이어 쓴다")
     void reusesExternalIdAfterCoordinateFixWithSameName() {
-        // given: 위도 0.002도는 약 222m다.
+        // given
         List<ForestStandardRecord> records = List.of(row("가나 자연휴양림", "Y", LAT + 0.002, LNG, "2026-09-01"));
         List<PublicSpotLocation> existing = List.of(location("RF-old", "가나 휴양림", LAT, LNG));
 
@@ -210,7 +209,7 @@ class ForestStandardMatcherTest {
     @Test
     @DisplayName("[F-06] 기존 장소 하나를 두 휴양림이 다투면 더 가까운 휴양림만 그 외부 ID를 가져간다")
     void givesExistingLocationToNearestForestOnly() {
-        // given: 두 휴양림은 서로 약 166m 떨어져 따로이고, 기존 장소는 첫째에서 약 78m, 둘째에서 약 89m다.
+        // given
         List<ForestStandardRecord> records = List.of(
                 row("가나 자연휴양림", "Y", LAT, LNG, "2026-09-01"), row("다라 자연휴양림", "Y", LAT + 0.0015, LNG, "2026-09-01"));
         List<PublicSpotLocation> existing = List.of(location("RF-old", "마바 휴양림", LAT + 0.0007, LNG));

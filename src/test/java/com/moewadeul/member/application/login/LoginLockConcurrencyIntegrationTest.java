@@ -28,10 +28,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-/**
- * 같은 이메일로 로그인 요청이 겹쳐도 10분 안에 5번까지만 틀릴 수 있는지 확인한다. 서버는 비밀번호를 비교하는 동안 DB 트랜잭션을
- * 열지 않아서, 잠금 확인과 실패 기록 사이에 다른 요청이 끼어들 수 있다.
- */
 @IntegrationTest
 @Import(PasswordMatchPause.Config.class)
 class LoginLockConcurrencyIntegrationTest {
@@ -100,7 +96,6 @@ class LoginLockConcurrencyIntegrationTest {
         }
     }
 
-    // 요청 BURST_SIZE건을 한꺼번에 출발시키고 각 요청이 던진 예외를 모은다. 모두 틀린 비밀번호라서 성공하는 요청은 없어야 한다.
     private List<Throwable> loginTogether(String email) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(BURST_SIZE);
         CountDownLatch ready = new CountDownLatch(BURST_SIZE);

@@ -24,8 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// 매진된 행사에서 결제 대기 신청이 같은 만료 실행에 한꺼번에 만료되는 상황을 만든다.
-// 자리 반환마다 알리면 이 규모에서 이벤트 20건, 알림 4,000행, 메일 1,000통이 생긴다.
 @IntegrationTest
 class ProgramSeatReleaseBurstIntegrationTest {
 
@@ -104,7 +102,6 @@ class ProgramSeatReleaseBurstIntegrationTest {
         assertThat(notified).containsExactlyInAnyOrderElementsOf(subscribers);
     }
 
-    // 스레드마다 다른 회원이 자기 신청을 취소한다. 모든 스레드가 준비된 뒤 한꺼번에 출발시켜 자리 반환이 겹치게 한다.
     private void cancelConcurrently(List<Long> cancelers, List<Long> applicationIds) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(THREADS);
         CountDownLatch ready = new CountDownLatch(THREADS);
@@ -128,7 +125,6 @@ class ProgramSeatReleaseBurstIntegrationTest {
         assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
     }
 
-    // 발행기는 한 번에 정해진 수만 집으므로, 남은 이벤트가 없을 때까지 부른다.
     private void publishAll() {
         while (publisher.publishPending() > 0) {}
     }

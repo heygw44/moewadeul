@@ -36,10 +36,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-/**
- * 로그인 컨트롤러가 회원을 다시 확인한 뒤 응답을 커밋해 세션을 저장하기까지 사이에 재설정이나 정지가 끝나도, 그 세션이 남지 않는지 확인한다.
- * 이때는 재설정이 지울 세션도, 컨트롤러가 볼 바뀐 값도 아직 없으므로 세션을 저장한 뒤에 한 번 더 확인해야 막을 수 있다.
- */
 @IntegrationTest
 @AutoConfigureMockMvc
 class LoginSessionCommitRaceIntegrationTest {
@@ -108,7 +104,6 @@ class LoginSessionCommitRaceIntegrationTest {
         assertThat(sessionCount(member)).isZero();
     }
 
-    // 로그인 요청을 컨트롤러의 회원 확인이 끝난 직후에 멈춰 세우고, 그사이 otherWork를 실행한 뒤 로그인 응답을 돌려준다.
     private MvcTestResult loginWhileOtherWorkRuns(Member member, Runnable otherWork) throws Exception {
         doAnswer(invocation -> {
                     invocation.callRealMethod();
@@ -147,7 +142,6 @@ class LoginSessionCommitRaceIntegrationTest {
                 .build());
     }
 
-    // 토큰 원값은 DB에 없다. 메일을 거치지 않으므로 토큰을 직접 만들어 해시만 저장한다.
     private String issueToken(Member member) {
         ResetToken token = ResetToken.generate(new SecureRandom());
         tokenRepository.save(PasswordResetToken.issue(member.getId(), ResetToken.hash(token.value()), clock.instant()));

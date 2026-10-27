@@ -45,7 +45,6 @@ class IdempotencyExecutorConcurrencyIntegrationTest {
         // given
         long memberId = insertMember();
         AtomicInteger calls = new AtomicInteger();
-        // 먼저 선점한 요청이 처리 중인 동안 나머지 요청이 모두 들어오도록, 모든 요청이 끝난 것을 알릴 때까지 action을 붙잡아 둔다.
         CountDownLatch allRequestsFinishedOrBlocked = new CountDownLatch(THREADS - 1);
 
         // when
@@ -77,7 +76,6 @@ class IdempotencyExecutorConcurrencyIntegrationTest {
                         "SELECT COUNT(*) FROM idempotency_record WHERE response_status IS NOT NULL", Integer.class))
                 .isEqualTo(1);
 
-        // 끝난 뒤 다시 보내면 저장된 값을 재생한다.
         Result replayed = executor.execute(
                 new IdempotentRequest(memberId, "key-1", OPERATION, null),
                 HttpStatus.CREATED,
@@ -105,7 +103,6 @@ class IdempotencyExecutorConcurrencyIntegrationTest {
                                 Result.class,
                                 action);
                     } finally {
-                        // 성공한 요청의 action 안에서도 같은 래치를 기다리므로, 실패하는 요청만 세어도 THREADS - 1에 닿는다.
                         finishedOrBlockedSignal.countDown();
                     }
                 }));

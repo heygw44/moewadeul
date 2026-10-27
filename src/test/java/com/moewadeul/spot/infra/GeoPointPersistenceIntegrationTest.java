@@ -15,9 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// 서울시청 좌표(위도 37.5665, 경도 126.978)를 쓴다. 위도와 경도가 뒤바뀌면 위도 자리에 126.978이 들어가는데,
-// 위도는 -90~90 범위라서 MySQL이 값을 거부하거나 GeoPoint 생성자가 IllegalArgumentException을 던진다.
-// 그래서 저장하는 쪽이든 읽는 쪽이든 축이 뒤바뀌면 아래 테스트가 실패한다.
 @IntegrationTest
 class GeoPointPersistenceIntegrationTest {
 
@@ -59,7 +56,7 @@ class GeoPointPersistenceIntegrationTest {
     @Test
     @DisplayName("[ADR-001] MySQL에 위도·경도 순서로 넣은 좌표를 JPA가 같은 GeoPoint로 읽는다")
     void coordinateInsertedAsLatitudeLongitudeWktIsReadByJpaAsSameGeoPoint() {
-        // given: SRID 4326 좌표의 WKT는 위도, 경도 순서다.
+        // given
         long id = insertSpotWithWkt("서울시청", "POINT(37.5665 126.978)");
 
         // when

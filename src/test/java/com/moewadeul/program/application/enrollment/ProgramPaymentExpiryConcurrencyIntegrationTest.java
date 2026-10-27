@@ -70,7 +70,6 @@ class ProgramPaymentExpiryConcurrencyIntegrationTest {
         Instant dueAt = NOW.plus(Duration.ofMinutes(1));
         long applicationId = fixture.saveApplication(programId, memberId, "PENDING_PAYMENT", dueAt);
         ExpiryTarget target = new ExpiryTarget(applicationId, memberId, programId);
-        // 결제는 기한 1초 전 시각에 읽고, 만료는 기한 정각을 넘겨 호출한다. 두 작업이 같은 신청 행을 두고 경쟁한다.
         clock.setInstant(dueAt.minusSeconds(1));
 
         // when
@@ -130,7 +129,6 @@ class ProgramPaymentExpiryConcurrencyIntegrationTest {
 
     private record Outcomes(List<Object> successes, List<Throwable> failures) {}
 
-    // 작업마다 스레드 하나로 동시에 출발시키고, 반환값과 던져진 예외를 모아 돌려준다.
     private Outcomes runConcurrently(List<Callable<Object>> actions) throws Exception {
         int threads = actions.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

@@ -150,7 +150,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
     @Test
     @DisplayName("[F-08] 다른 트랜잭션이 박지 행을 잠근 채 놓지 않으면 신고는 MySQL 기본값 50초가 아니라 약 5초 기다린 뒤 잠금 대기 실패로 끝난다")
     void reportGivesUpWaitingForLockedBakjiAfterAboutFiveSeconds() throws Exception {
-        // given: 다른 스레드가 박지 행을 잠그고, 테스트가 풀어 줄 때까지 커밋하지 않는다.
+        // given
         long spotId = saveBakji();
         long memberId = saveMember();
         CountDownLatch locked = new CountDownLatch(1);
@@ -224,7 +224,6 @@ class BakjiFeedbackConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT status FROM spot WHERE id = ?", String.class, spotId);
     }
 
-    // 회원마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private <T> List<Throwable> runConcurrently(List<Long> memberIds, MemberAction<T> action) throws Exception {
         int threads = memberIds.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

@@ -118,7 +118,6 @@ class BasecampApplyConcurrencyIntegrationTest {
         return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
-    // 본인확인을 마친 2007년생 성인 회원을 직접 저장한다. 신뢰 단계가 1이라 합류 신청 자격이 있다.
     private List<Long> saveVerifiedMembers(int count) {
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < count; i++) {
@@ -136,7 +135,6 @@ class BasecampApplyConcurrencyIntegrationTest {
         return ids;
     }
 
-    // 캠프 리더와 그 멤버 행까지 만든 모집 중 베이스캠프다. 정원은 6명이다.
     private long saveBasecamp() {
         long leaderId = saveMember();
         long spotId = saveSpot();
@@ -194,7 +192,6 @@ class BasecampApplyConcurrencyIntegrationTest {
                 "SELECT COUNT(*) FROM outbox_event WHERE event_type = 'BASECAMP_APPLIED'", Integer.class);
     }
 
-    // 회원마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runConcurrently(List<Long> memberIds, MemberAction action) throws Exception {
         int threads = memberIds.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

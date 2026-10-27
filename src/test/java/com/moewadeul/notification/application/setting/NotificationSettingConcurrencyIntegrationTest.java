@@ -65,7 +65,6 @@ class NotificationSettingConcurrencyIntegrationTest {
         assertThat(requests()).contains(storedDisabledTypes());
     }
 
-    // 요청 i는 앞에서부터 i+1개 종류의 이메일을 끈다. 그래서 요청마다 남는 행의 집합이 다르다.
     private static List<Set<String>> requests() {
         List<Set<String>> requests = new ArrayList<>();
         for (int i = 0; i < THREADS; i++) {
@@ -87,7 +86,6 @@ class NotificationSettingConcurrencyIntegrationTest {
                 memberId));
     }
 
-    // 같은 회원의 변경 요청을 스레드마다 하나씩 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> replaceConcurrently() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(THREADS);
         CountDownLatch ready = new CountDownLatch(THREADS);

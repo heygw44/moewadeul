@@ -102,7 +102,6 @@ class SoloTripRegisterConcurrencyIntegrationTest {
                         e -> assertThat(e.getErrorCode()).isEqualTo(expected));
     }
 
-    // 같은 회원의 등록 요청을 스레드마다 하나씩 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private static List<Throwable> runConcurrently(List<Callable<Long>> actions) throws Exception {
         int threads = actions.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

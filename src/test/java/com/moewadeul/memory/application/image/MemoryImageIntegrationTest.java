@@ -310,7 +310,6 @@ class MemoryImageIntegrationTest {
         return ids;
     }
 
-    // 업로드 URL을 발급하고, 회원이 그 URL로 파일을 올린 것처럼 테스트 저장소에 객체를 둔다.
     private long uploaded(long ownerId) {
         long imageId = uploadService.issue(ownerId, command("image/jpeg", SIZE)).imageId();
         storage.markUploaded(keyOf(imageId), SIZE);

@@ -29,13 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 하루 비용 한도에 거의 닿았을 때 요청이 한꺼번에 몰리면 한도를 얼마나 넘는지 확인한다.
- *
- * <p>서버는 OpenAI를 부르기 전에 오늘 합계를 잠금 없이 읽어 판정하고, 응답을 받은 뒤에 토큰을 더한다. 그래서 응답을 기다리는 사이에 들어온
- * 요청은 모두 판정을 통과한다. 정책은 이 넘침을 "마지막 몇 건만큼"으로 허용하므로, 이 테스트는 넘침이 막 진행 중이던 호출 수만큼으로
- * 묶이고 몰린 요청이 끝난 뒤에는 다음 요청을 막는지를 확인한다.
- */
 @IntegrationTest
 class AiBudgetBurstIntegrationTest {
 
@@ -44,11 +37,8 @@ class AiBudgetBurstIntegrationTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 5);
     private static final int THREADS = 50;
     private static final int OPENAI_DELAY_MILLIS = 1_000;
-    // 호출 한 번의 토큰 수는 기술 결정 때 실제 지시문과 답변 형식으로 추정한 값(입력 약 1,500, 출력 약 200)을 쓴다.
-    // 기본 단가로 한 번에 0.00092달러다.
     private static final int INPUT_PER_CALL = 1_500;
     private static final int OUTPUT_PER_CALL = 200;
-    // 다른 회원이 오늘 이미 0.99954달러를 써서, 남은 금액(0.00046달러)이 호출 반 번 값이다. 그래서 한 번만 불러도 한도를 넘는다.
     private static final int ALREADY_USED_INPUT_TOKENS = 2_498_850;
 
     @Autowired

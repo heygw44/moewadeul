@@ -21,9 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// 픽스처(fixtures/publicdata/forest-standard/)는 손으로 지어낸 휴양림 5행이다.
-// 가나 자연휴양림과 가나자연휴양림(시립)은 약 7m 떨어진 중복 행이라 한 휴양림이 되고, 기준일이 늦은 시립 행이 대표다.
-// 다라(36.5, 128.5), 마바(35.5, 127.0)는 따로 있는 휴양림이고, 사아 휴양림은 숙박가능여부가 N이다.
 @IntegrationTest
 class ForestStandardLoadServiceIntegrationTest {
 
@@ -150,7 +147,7 @@ class ForestStandardLoadServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 국립 휴양림과 겹치는 휴양림은 건너뛰고, 이름이 같고 1.5km 안인 휴양림도 건너뛴다")
     void skipsForestsOverlappingNational() throws IOException {
-        // given: 다라의 33m 옆에 이름이 다른 국립 장소를, 마바의 1km 옆에 이름 핵심이 겹치는 국립 장소를 둔다.
+        // given
         insertNational("N1", "전혀 다른 국립 자연휴양림", 36.5003, 128.5);
         insertNational("N2", "국립 마바산 자연휴양림", 35.509, 127.0);
 
@@ -277,7 +274,7 @@ class ForestStandardLoadServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 표준데이터를 적재해도 국립 휴양림은 숨기지 않는다")
     void doesNotHideNationalForest() throws IOException {
-        // given: 파일의 어느 휴양림과도 겹치지 않는 국립 장소 둘이다.
+        // given
         insertNational("N1", "전혀 다른 국립 자연휴양림", 37.0, 128.0);
         insertNational("N2", "또 다른 국립 자연휴양림", 35.0, 129.0);
 

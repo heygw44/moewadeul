@@ -317,7 +317,6 @@ class MemoryFeedApiIntegrationTest {
                 mvc.get().uri("/api/members/" + author.getId() + "/memories").exchange();
 
         // then
-        // 피드는 나중에 쓴 기록(보이는 장소)이 먼저이고, 추억지도는 방문일이 늦은 기록(숨긴 장소)이 먼저다.
         assertThat(feed).bodyJson().extractingPath("$.content[0].spot.spotId").isEqualTo((int) visible);
         assertThat(feed).bodyJson().doesNotHavePath("$.content[1].spot");
         assertThat(list).bodyJson().doesNotHavePath("$[0].spot");

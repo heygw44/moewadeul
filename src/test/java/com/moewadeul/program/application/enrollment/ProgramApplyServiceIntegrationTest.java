@@ -205,12 +205,12 @@ class ProgramApplyServiceIntegrationTest {
         ProgramApplyResult firstResult = programApplyService.apply(first, programId);
         Instant due = firstResult.paymentDueAt();
 
-        // when, then: 기한 1밀리초 전에는 자리가 차 있다
+        // when, then
         clock.setInstant(due.minusMillis(1));
         assertThat(programQueryService.detail(programId, null).remainingSeats()).isZero();
         assertErrorCode(() -> programApplyService.apply(second, programId), ProgramErrorCode.PROGRAM_SOLD_OUT);
 
-        // when, then: 기한 정각에는 만료 작업이 돌지 않았어도 자리가 돌아와 새 신청이 성공한다
+        // when, then
         clock.setInstant(due);
         assertThat(programQueryService.detail(programId, null).remainingSeats()).isEqualTo(1);
         ProgramApplyResult secondResult = programApplyService.apply(second, programId);
@@ -218,7 +218,7 @@ class ProgramApplyServiceIntegrationTest {
         assertThat(programQueryService.detail(programId, null).remainingSeats()).isZero();
         assertThat(fixture.applicationStatus(firstResult.applicationId())).isEqualTo("PENDING_PAYMENT");
 
-        // then: 기한이 지난 첫 신청은 결제할 수 없어서 확정 신청이 정원을 넘지 않는다
+        // then
         assertErrorCode(
                 () -> programPaymentService.pay(first, firstResult.applicationId()),
                 ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED);

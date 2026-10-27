@@ -114,7 +114,6 @@ class ProgramApplicationMapperIntegrationTest {
                     fixture.saveApplication(programId, memberId, "EXPIRED");
                 })
                 .doesNotThrowAnyException();
-        // 활성 신청이 취소로 바뀌면 같은 회원이 다시 활성 신청을 가질 수 있다.
         jdbc.update(
                 "UPDATE program_application SET status = 'CANCELED' WHERE program_id = ? AND member_id = ?",
                 programId,

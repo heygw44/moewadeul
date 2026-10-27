@@ -25,7 +25,7 @@ class ExternalCallLimitTest {
     @Test
     @DisplayName("[NFR-05] 자리가 모두 차 있으면 기다리지 않고 바로 거부하고, 거부한 수를 지표에 남긴다")
     void rejectsImmediatelyWhenFull() throws Exception {
-        // given: 두 호출이 자리를 쥔 채 끝나지 않는다.
+        // given
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch entered = new CountDownLatch(2);
         CountDownLatch release = new CountDownLatch(1);
@@ -60,7 +60,7 @@ class ExternalCallLimitTest {
     @Test
     @DisplayName("[NFR-05] 호출이 끝나면 정상이든 예외든 자리를 돌려준다")
     void releasesPermitAfterSuccessAndFailure() {
-        // when: 한도(2)보다 많은 호출을 차례로 보낸다. 자리를 돌려주지 않으면 세 번째부터 거부된다.
+        // when
         for (int i = 0; i < 3; i++) {
             assertThat(limit.call(() -> "ok", IllegalStateException::new)).isEqualTo("ok");
         }
@@ -100,7 +100,7 @@ class ExternalCallLimitTest {
                 }));
             }
 
-            // when: 모든 호출이 시도를 마칠 때까지(거부된 호출이 끝날 때까지) 기다린 뒤 자리를 쥔 호출을 놓아 준다.
+            // when
             ready.await();
             start.countDown();
             long rejected = 0;

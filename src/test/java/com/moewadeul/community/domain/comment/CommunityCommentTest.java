@@ -295,7 +295,6 @@ class CommunityCommentTest {
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommunityErrorCode.COMMUNITY_INVALID_STATE));
     }
 
-    // 답글은 대상의 ID를 써야 해서, 저장된 댓글처럼 ID를 넣어 둔다.
     private static CommunityComment saved(CommunityComment comment, long id) {
         ReflectionTestUtils.setField(comment, "id", id);
         return comment;

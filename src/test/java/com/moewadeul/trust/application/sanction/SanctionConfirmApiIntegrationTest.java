@@ -84,7 +84,6 @@ class SanctionConfirmApiIntegrationTest {
         MvcTestResult login = loginRequest(targetId);
         assertThat(login).hasStatus(HttpStatus.FORBIDDEN);
         assertThat(login).bodyJson().extractingPath("$.code").isEqualTo("MEMBER_SUSPENDED");
-        // 발행기가 돌기 전에는 베이스캠프가 그대로다.
         assertThat(basecampStatus(ledBasecamp)).isEqualTo("RECRUITING");
 
         outboxPublisher.publishPending();
@@ -162,7 +161,7 @@ class SanctionConfirmApiIntegrationTest {
         return jdbc.queryForObject("SELECT status FROM outbox_event WHERE event_type = ?", String.class, eventType);
     }
 
-    // 이벤트 payload의 알림 대상 회원 ID를 읽는다. MySQL의 JSON 열은 공백을 정리해 돌려주므로 문자열이 아니라 JSON으로 읽는다.
+    // MySQL의 JSON 열은 공백을 정리해 돌려주므로 문자열이 아니라 JSON으로 읽는다.
     private List<Long> memberIdsOf(String eventType, long aggregateId) {
         List<String> payloads = jdbc.queryForList(
                 "SELECT payload FROM outbox_event WHERE event_type = ? AND aggregate_id = ?",

@@ -98,7 +98,6 @@ class BakjiDetailTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    // 저장하면 JPA가 ID를 채운다. 단위 테스트는 스프링 없이 돌아서 리플렉션으로 ID를 넣는다.
     private static Spot savedBakji() {
         Spot spot = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
         try {

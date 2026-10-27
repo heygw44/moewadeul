@@ -242,7 +242,6 @@ class PasswordResetUnlockApiIntegrationTest {
                 .build());
     }
 
-    // 토큰 원값은 DB에 없다. 메일을 거치지 않는 테스트는 토큰을 직접 만들어 해시만 저장한다.
     private String issueToken(Member member) {
         ResetToken token = ResetToken.generate(new SecureRandom());
         tokenRepository.save(PasswordResetToken.issue(member.getId(), ResetToken.hash(token.value()), clock.instant()));

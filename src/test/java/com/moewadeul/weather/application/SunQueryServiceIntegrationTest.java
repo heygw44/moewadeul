@@ -31,7 +31,6 @@ class SunQueryServiceIntegrationTest {
     private static final String RISE_SET_PATH = "/B090041/openapi/service/RiseSetInfoService/getLCRiseSetInfo";
     private static final String FALLBACK_COUNTER = "moewadeul.external.api.fallbacks";
     private static final LocalDate DATE = LocalDate.of(2026, 10, 4);
-    // 서울시청
     private static final double LAT = 37.5665;
     private static final double LNG = 126.9780;
 
@@ -77,7 +76,7 @@ class SunQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-09][NFR-05] 천문연 응답이 응답 대기 시간보다 늦어도 예외 없이 빈 값을 돌려준다")
     void returnsEmptyWhenKasiIsSlow() {
-        // given: 테스트 프로필의 응답 대기 시간은 1초다.
+        // given
         stub(xml(readFixture("rise-set.xml")).withFixedDelay(2_000));
         double fallbackBefore = fallbackCount();
 
@@ -87,7 +86,6 @@ class SunQueryServiceIntegrationTest {
         // then
         assertThat(result).isEmpty();
         assertThat(fallbackCount() - fallbackBefore).isEqualTo(1);
-        // WireMock이 지연 응답을 다 보낸 뒤에야 요청을 기록한다. 그래서 테스트는 기록이 두 건이 될 때까지 기다린다.
         await().atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(requestCount()).isEqualTo(2));
     }

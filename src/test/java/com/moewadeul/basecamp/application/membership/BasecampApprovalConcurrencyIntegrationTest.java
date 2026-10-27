@@ -109,7 +109,7 @@ class BasecampApprovalConcurrencyIntegrationTest {
     @DisplayName(
             "[F-13] 날짜가 겹치는 두 베이스캠프의 캠프 리더가 같은 신청자를 동시에 승인하면 1건만 성공하고 나머지는 BASECAMP_DATE_CONFLICT이며 ACTIVE 멤버 행은 1개다")
     void onlyOneOfTwoOverlappingApprovalsOfSameApplicantSucceeds() throws Exception {
-        // given: saveBasecamp는 늘 같은 기간으로 만들므로 두 베이스캠프의 일정이 겹친다.
+        // given
         long applicantId = saveVerifiedMember();
         long firstLeader = saveMember();
         long firstBasecamp = saveBasecamp(firstLeader, 4);
@@ -144,7 +144,6 @@ class BasecampApprovalConcurrencyIntegrationTest {
         return tasks;
     }
 
-    // 마지막 자리를 놓친 승인은 먼저 끝난 승인이 이미 마감했으므로 BASECAMP_INVALID_STATE이고, 정원 검사에 먼저 닿으면 BASECAMP_FULL이다.
     private static void assertLoserOfLastSeat(Throwable failure) {
         assertThat(failure).isInstanceOf(BusinessException.class);
         ErrorCode code = ((BusinessException) failure).getErrorCode();
@@ -164,7 +163,6 @@ class BasecampApprovalConcurrencyIntegrationTest {
                 .containsEntry("closed_reason", closedReason);
     }
 
-    // 승인된 신청의 수는 캠프 리더를 뺀 ACTIVE 멤버 수와 같아야 하고, 승인된 신청자마다 ACTIVE 멤버 행이 하나씩 있어야 한다.
     private void assertApprovalsMatchMembers(Scenario scenario) {
         long basecampId = scenario.basecampId();
         Integer approved = jdbc.queryForObject(
@@ -204,7 +202,6 @@ class BasecampApprovalConcurrencyIntegrationTest {
         return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
-    // 본인확인을 마친 2007년생 성인 회원을 직접 저장한다. 신뢰 단계가 1이라 합류 조건을 충족한다.
     private long saveVerifiedMember() {
         long memberId = saveMember();
         jdbc.update(
@@ -218,7 +215,6 @@ class BasecampApprovalConcurrencyIntegrationTest {
         return memberId;
     }
 
-    // 캠프 리더 외에 승인된 멤버 한 명이 있고 대기 신청이 pendingCount건인 모집 중 베이스캠프를 만든다. 남은 자리는 capacity - 2다.
     private Scenario saveScenario(int capacity, int pendingCount) {
         long leaderId = saveMember();
         long basecampId = saveBasecamp(leaderId, capacity);
@@ -277,7 +273,6 @@ class BasecampApprovalConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT MAX(id) FROM basecamp_application", Long.class);
     }
 
-    // 작업마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runConcurrently(List<Callable<Object>> actions) throws Exception {
         int threads = actions.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

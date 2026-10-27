@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 class SpotTest {
 
-    // 서울시청 좌표다. 개발자가 이 좌표의 기상청 격자 (60, 127)로 단기예보 API를 실제로 호출해 확인했다.
     private static final GeoPoint SEOUL_CITY_HALL = new GeoPoint(37.5665, 126.978);
     private static final Instant NOW = MutableClock.DEFAULT_INSTANT;
     private static final long PROTECTED_AREA_ID = 7L;
@@ -55,7 +54,7 @@ class SpotTest {
     @Test
     @DisplayName("[F-09] 기상청 격자 밖 좌표로는 박지를 만들 수 없다")
     void rejectsBakjiOutsideWeatherGrid() {
-        // given: 도쿄는 한국에서 멀어서 기상청 격자 범위 밖이다.
+        // given
         GeoPoint tokyo = new GeoPoint(35.6762, 139.6503);
 
         // when & then
@@ -84,7 +83,7 @@ class SpotTest {
     @Test
     @DisplayName("[F-07] 박지를 새 좌표로 옮기면 좌표, 기상청 격자, 경계 판정 결과, 수정 시각을 바꾸고 위도·경도 순서를 지킨다")
     void moveToReplacesLocationGridJudgementAndUpdatedAt() {
-        // given: 서울시청에서 부산시청 쪽 좌표로 옮긴다. 위도와 경도를 뒤바꾸면 격자가 달라진다.
+        // given
         Spot spot = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
         GeoPoint busan = new GeoPoint(35.1796, 129.0756);
         Instant movedAt = NOW.plusSeconds(60);

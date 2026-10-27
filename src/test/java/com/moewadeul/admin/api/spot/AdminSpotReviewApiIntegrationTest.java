@@ -456,7 +456,6 @@ class AdminSpotReviewApiIntegrationTest {
         return spotId;
     }
 
-    // 신고마다 새 회원이 신고한다. 한 회원이 같은 박지를 두 번 신고할 수 없기 때문이다. 신고한 회원의 ID를 돌려준다.
     private long insertReport(long spotId, String reason, String content, Instant createdAt, Instant reviewedAt) {
         long reporterId = newMemberId();
         jdbc.update(

@@ -599,7 +599,6 @@ class AdminProgramApiIntegrationTest {
         return jdbc.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
     }
 
-    // 신청마다 새 회원이 신청한 것으로 만든다. 신청 ID를 돌려준다.
     private long insertApplication(long programId, String status, Instant now) {
         long memberId = fixture.saveVerifiedMember(TestSequence.nickname());
         return insertApplicationFor(programId, memberId, status, now.plus(Duration.ofMinutes(15)));
@@ -639,7 +638,6 @@ class AdminProgramApiIntegrationTest {
                 + " WHERE event_type = 'PROGRAM_APPLICATION_CANCELED' AND aggregate_type = 'PROGRAM_APPLICATION'");
     }
 
-    // 신청 하나의 취소 이벤트가 행사 취소 사유와 환불 여부를 담고 있는지 확인한다.
     private void assertCanceledEvent(long applicationId, long programId, boolean refunded) {
         String payload = jdbc.queryForObject(
                 "SELECT payload FROM outbox_event WHERE event_type = 'PROGRAM_APPLICATION_CANCELED'"

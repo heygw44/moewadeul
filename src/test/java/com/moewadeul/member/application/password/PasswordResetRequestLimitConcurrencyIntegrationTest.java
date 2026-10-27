@@ -108,7 +108,6 @@ class PasswordResetRequestLimitConcurrencyIntegrationTest {
         assertThat(countRows("password_reset_throttle")).isEqualTo(21);
     }
 
-    // 실패는 모두 한도 예외여야 한다. 교착이나 잠금 시간 초과, 커넥션 풀 고갈은 다른 예외로 드러난다.
     private static void assertOnlyLimitedFailures(List<Throwable> failures) {
         assertThat(failures)
                 .filteredOn(failure -> failure != null)
@@ -118,7 +117,6 @@ class PasswordResetRequestLimitConcurrencyIntegrationTest {
                                 e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.PASSWORD_RESET_LIMITED)));
     }
 
-    // 요청마다 스레드를 따로 쓰고, 모두 준비된 뒤에 시작 신호를 한꺼번에 준다. 성공이면 null, 실패면 던진 예외를 담는다.
     private List<Throwable> runConcurrently(List<Request> requests) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(requests.size());
         CountDownLatch ready = new CountDownLatch(requests.size());

@@ -180,7 +180,6 @@ class PasswordResetThrottleMapperIntegrationTest {
         return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM password_reset_throttle", Integer.class);
     }
 
-    // DATETIME 컬럼에는 UTC 시각이 들어 있으므로(connectionTimeZone=UTC) LocalDateTime을 UTC로 바꿔 넣고 읽는다.
     private static LocalDateTime toDateTime(Instant instant) {
         return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
     }

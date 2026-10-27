@@ -95,7 +95,6 @@ class CommunityPostViewCountConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT view_count FROM community_post WHERE id = ?", Integer.class, postId);
     }
 
-    // 조회하는 사람마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다. 비회원은 null로 넘긴다.
     private List<Throwable> runConcurrently(List<Long> viewerIds, ViewerAction action) throws Exception {
         int threads = viewerIds.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

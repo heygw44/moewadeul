@@ -183,7 +183,6 @@ class KmaClientIntegrationTest {
     @DisplayName("[F-09][NFR-05] 17시 발표처럼 단기예보가 1,000건을 넘어도 한 번의 요청으로 모두 받는다")
     void readsShortTermResponseOverOneThousandItems() {
         // given
-        // 기상청은 numOfRows만큼만 항목을 담고 totalCount에는 전체 개수를 준다. 2026-10-10 17시 발표는 1,052건이었다.
         int totalCount = 1052;
         wireMock.stubFor(get(urlPathEqualTo(VILAGE_FCST_PATH))
                 .atPriority(1)
@@ -322,7 +321,7 @@ class KmaClientIntegrationTest {
     @Test
     @DisplayName("[F-09][NFR-05] 응답이 응답 대기 시간보다 늦으면 한 번 다시 보낸 뒤 인증키 없는 예외를 던진다")
     void throwsAfterSecondReadTimeout() {
-        // given: 테스트 프로필의 응답 대기 시간은 1초다.
+        // given
         stub(MID_TA_PATH, okJson(readFixture("mid-ta.json")).withFixedDelay(2_000));
         long failureBefore = timerCount("getMidTa", "failure");
 
@@ -333,7 +332,6 @@ class KmaClientIntegrationTest {
         assertThat(thrown).hasMessageContaining("I/O 오류");
         assertNoServiceKey(thrown);
         assertThat(timerCount("getMidTa", "failure") - failureBefore).isEqualTo(2);
-        // WireMock이 지연 응답을 다 보낸 뒤에야 요청을 기록한다. 그래서 테스트는 기록이 두 건이 될 때까지 기다린다.
         await().atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(requestCount(MID_TA_PATH)).isEqualTo(2));
     }
@@ -341,10 +339,7 @@ class KmaClientIntegrationTest {
     @Test
     @DisplayName("[F-09][NFR-05] 압축된 응답을 읽는 도중 응답 대기 시간이 지나도, 모든 요청이 정상 응답이나 다시 보낼 수 있는 예외로 끝난다")
     void everyRequestEndsWithRetryableFailureWhenReadTimeoutHitsDuringCompressedBody() throws Exception {
-        // given: 테스트 프로필의 응답 대기 시간은 1초다. WireMock은 gzip을 받겠다는 요청에만 본문을 압축해서 보낸다.
-        // 응답이 대기 시간 경계 근처에 끝나게 지연을 두면, 압축을 받는 클라이언트에서는 일부 요청의 본문이 압축을 푸는 도중에 닫힌다.
-        // 그 경쟁은 드물어서 동시 요청 100건을 지연을 바꿔 가며 여러 번 보낸다. 압축을 받던 때는 이 조건 1,200건 중 약 10건이 예외로 끝났다.
-        // 이 경쟁을 보려면 요청 100건이 동시에 나가야 하므로, 동시 호출 수 한도를 넘지 않는 클라이언트를 따로 만들어 쓴다.
+        // given
         KmaClient unlimited = new KmaClient(
                 kmaProperties,
                 new ExternalApiProperties(CONCURRENT_REQUESTS, Duration.ZERO),
@@ -433,7 +428,7 @@ class KmaClientIntegrationTest {
     @Test
     @DisplayName("[NFR-05] 기상청이 느릴 때 동시 호출이 한도(10)를 넘으면, 넘는 호출은 기다리지 않고 기상청을 부르지 않은 채 다시 보낼 수 없는 예외로 끝난다")
     void rejectsCallsBeyondConcurrentLimitWithoutCallingKma() throws Exception {
-        // given: 테스트 프로필의 응답 대기 시간은 1초다. 응답이 0.5초 걸려서 먼저 들어간 10건이 그동안 자리를 쥔다. 느린 CI 러너에서도 대기 시간을 넘지 않게 여유를 둔다.
+        // given
         int threads = 30;
         stub(MID_TA_PATH, okJson(readFixture("mid-ta.json")).withFixedDelay(500));
         long successBefore = timerCount("getMidTa", "success");
@@ -469,8 +464,6 @@ class KmaClientIntegrationTest {
         assertThat(timerCount("getMidTa", "success") - successBefore).isBetween(1L, 10L);
     }
 
-    // 키가 예외에 남으면 로그와 오류 추적 도구로 비밀값이 새어 나간다. 서버는 이 예외를 스택 트레이스째 로그에 남기므로,
-    // 메시지만이 아니라 로그에 찍히는 스택 트레이스 전체(원인 예외와 억제된 예외 포함)에 키가 없는지 확인한다.
     private static void assertNoServiceKey(Throwable thrown) {
         StringWriter stackTrace = new StringWriter();
         thrown.printStackTrace(new PrintWriter(stackTrace));
@@ -490,12 +483,12 @@ class KmaClientIntegrationTest {
     @Test
     @DisplayName("[NFR-05][NFR-06] 기상청이 재시도까지 실패하면 쉬는 시간 동안 기상청을 부르지 않고, 쉬는 시간이 지나면 한 호출만 시험 삼아 보낸다")
     void restsAfterOutageAndProbesWithOneCall() {
-        // given: 기상청이 계속 500을 준다.
+        // given
         KmaClient resting = clientWithCooldown();
         stub(VILAGE_FCST_PATH, serverError());
         double skippedBefore = skippedCount();
 
-        // when: 첫 호출은 재시도까지 두 번 보낸 뒤 실패한다. 이어지는 호출은 작업과 격자가 달라도 쉬는 중이라 기상청에 보내지 않는다.
+        // when
         KmaApiException first = catchThrowableOfType(KmaApiException.class, () -> resting.getVilageFcst(BASE, 60, 127));
         KmaApiException otherGrid =
                 catchThrowableOfType(KmaApiException.class, () -> resting.getVilageFcst(BASE, 61, 127));
@@ -511,7 +504,7 @@ class KmaClientIntegrationTest {
         assertThat(requestCount(MID_TA_PATH)).isZero();
         assertThat(skippedCount() - skippedBefore).isEqualTo(2);
 
-        // when: 쉬는 시간이 지나면 한 호출이 재시도까지 두 번 보내고, 또 실패하면 다시 쉰다.
+        // when
         clock.advance(Duration.ofSeconds(30));
         catchThrowableOfType(KmaApiException.class, () -> resting.getVilageFcst(BASE, 60, 127));
         KmaApiException afterProbe =
@@ -525,7 +518,7 @@ class KmaClientIntegrationTest {
     @Test
     @DisplayName("[NFR-05] 쉬는 시간이 지난 뒤 시험 호출이 성공하면 바로 정상으로 돌아와 다음 호출도 기상청에 보낸다")
     void recoversWhenProbeSucceeds() {
-        // given: 기상청이 500을 줘서 쉬는 중이다.
+        // given
         KmaClient resting = clientWithCooldown();
         stub(MID_TA_PATH, serverError());
         catchThrowableOfType(KmaApiException.class, () -> resting.getMidTa("11B10101", TM_FC));
@@ -560,7 +553,6 @@ class KmaClientIntegrationTest {
         assertThat(requestCount(MID_TA_PATH)).isEqualTo(2);
     }
 
-    // 테스트 프로필은 다른 테스트가 서로의 실패에 영향받지 않게 쉬는 시간을 0으로 둔다. 쉬는 동작을 보는 테스트는 30초를 쉬는 클라이언트를 따로 만든다.
     private KmaClient clientWithCooldown() {
         return new KmaClient(
                 kmaProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), jsonMapper, metrics, clock);

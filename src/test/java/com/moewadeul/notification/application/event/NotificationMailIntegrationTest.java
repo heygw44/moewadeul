@@ -236,7 +236,7 @@ class NotificationMailIntegrationTest {
                         "SELECT email_attempt_count FROM notification WHERE email_status = 'PENDING'", Integer.class))
                 .isEqualTo(1);
 
-        // when: 재시도 간격 전에는 다시 집지 않는다
+        // when
         int beforeRetryDelay = mailer.sendDue();
 
         // then
@@ -387,7 +387,6 @@ class NotificationMailIntegrationTest {
         publisher.publishPending();
         ShutdownSignal signal = new ShutdownSignal();
         List<MailMessage> sentByStoppingMailer = new ArrayList<>();
-        // 첫 메일을 보내는 도중에 앱이 종료를 시작한 상황이다.
         MailSender shutdownStartingSender = message -> {
             sentByStoppingMailer.add(message);
             signal.request();
@@ -407,7 +406,7 @@ class NotificationMailIntegrationTest {
                         Integer.class))
                 .isEqualTo(2);
 
-        // when: 새로 뜬 앱의 발송 작업은 임대 시간이 지나기를 기다리지 않는다.
+        // when
         int afterRestart = mailer.sendDue();
 
         // then
@@ -578,7 +577,7 @@ class NotificationMailIntegrationTest {
         drain();
         mailSender.reset();
 
-        // when: 상한이 찬 동안에는 시간이 조금 지나도 더 보내지 않는다
+        // when
         clock.advance(Duration.ofHours(22));
         int insideWindow = drain();
 
@@ -586,7 +585,7 @@ class NotificationMailIntegrationTest {
         assertThat(insideWindow).isZero();
         assertThat(mailSender.sent()).isEmpty();
 
-        // when: 24시간 전에 보낸 메일이 기간 밖으로 나간다
+        // when
         clock.advance(Duration.ofHours(2).plusSeconds(1));
         int afterWindow = drain();
 
@@ -624,7 +623,6 @@ class NotificationMailIntegrationTest {
         return memberIds;
     }
 
-    // 이미 보낸 알림 메일을 직접 넣는다. 상한을 채우려고 회원을 수백 명 만들지 않기 위해서다.
     private void insertSentNotifications(long memberId, int count, Duration sentAgo) {
         Timestamp sentAt = Timestamp.from(clock.instant().minus(sentAgo));
         List<Object[]> rows = new ArrayList<>();

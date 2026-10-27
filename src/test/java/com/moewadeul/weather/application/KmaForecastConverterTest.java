@@ -26,7 +26,6 @@ import tools.jackson.databind.json.JsonMapper;
 class KmaForecastConverterTest {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
-    // 2026-10-04 06:00 KST. 픽스처 첫 항목의 예보 시각이다.
     private static final Instant FIXTURE_START = Instant.parse("2026-10-03T21:00:00Z");
 
     @Test
@@ -67,7 +66,7 @@ class KmaForecastConverterTest {
     @Test
     @DisplayName("[F-09] 현재 시각보다 앞선 예보 시각은 뺀다")
     void dropsTimesBeforeNow() {
-        // given: 한국 시각 2026-10-04 12:00
+        // given
         Instant now = Instant.parse("2026-10-04T03:00:00Z");
 
         // when
@@ -130,7 +129,7 @@ class KmaForecastConverterTest {
     @Test
     @DisplayName("[F-09] 오늘 이전 날짜의 중기예보는 뺀다")
     void dropsMidTermDatesBeforeToday() {
-        // given: 발표 후 6일이 지난 날
+        // given
         LocalDate tmFcDate = LocalDate.of(2026, 10, 4);
         LocalDate today = LocalDate.of(2026, 10, 10);
 

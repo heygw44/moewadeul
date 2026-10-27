@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class SpotSchemaIntegrationTest {
 
-    // SRID 4326 WKT는 위도, 경도 순서다. 서울시청 좌표다.
+    // SRID 4326 WKT는 위도, 경도 순서다.
     private static final String SEOUL_CITY_HALL_WKT = "POINT(37.5665 126.978)";
 
     @Autowired
@@ -26,7 +26,7 @@ class SpotSchemaIntegrationTest {
     @Test
     @DisplayName("[ADR-001] 마이그레이션을 적용하면 장소·공공데이터 테이블이 모두 만들어진다")
     void spotAndPublicDataTablesExistAfterMigration() {
-        // given: 컨텍스트가 뜰 때 Flyway가 빈 DB에 마이그레이션을 적용했다
+        // given
 
         // when
         List<String> tableNames = jdbcTemplate.queryForList(
@@ -49,7 +49,7 @@ class SpotSchemaIntegrationTest {
     @Test
     @DisplayName("[ADR-001] 장소 좌표와 공원 경계에 공간 인덱스가 있다")
     void spotLocationAndProtectedAreaBoundaryHaveSpatialIndexes() {
-        // given: 컨텍스트가 뜰 때 Flyway가 빈 DB에 마이그레이션을 적용했다
+        // given
 
         // when
         String spotIndexType = indexTypeOf("spot", "location");
@@ -63,7 +63,7 @@ class SpotSchemaIntegrationTest {
     @Test
     @DisplayName("[F-03] 장소를 저장하거나 좌표를 바꾸면 MySQL이 위도·경도 컬럼을 좌표와 같은 값으로 채운다")
     void latitudeAndLongitudeColumnsFollowLocation() {
-        // given: 서울시청은 위도 37.5665, 경도 126.978이다. 위도와 경도가 뒤바뀌어 채워지면 두 값이 서로 바뀐다.
+        // given
         long spotId = insertSpot("CAMPSITE", "좌표 확인 야영장");
 
         // when
@@ -80,7 +80,7 @@ class SpotSchemaIntegrationTest {
     @Test
     @DisplayName("[ADR-001] SRID가 4326이 아닌 좌표로 장소를 저장할 수 없다")
     void spotLocationRejectsPointWithoutSrid4326() {
-        // given: SRID를 지정하지 않으면 MySQL은 SRID 0인 점을 만든다
+        // given
         String sql = "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
                 + " VALUES ('CAMPSITE', '좌표계 없는 장소', ST_GeomFromText('POINT(1 1)'), 60, 127, 'ACTIVE',"
                 + " NOW(6), NOW(6))";
