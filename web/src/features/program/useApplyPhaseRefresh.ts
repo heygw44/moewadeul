@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import { serverNow } from '../../api/client';
 import type { ProgramDetail } from '../../api/types';
 
@@ -16,6 +16,7 @@ function nextPhaseAt(detail: ProgramDetail): number | null {
 
 export function useApplyPhaseRefresh(detail: ProgramDetail | null, reload: () => void): void {
   const retries = useRef<{ at: number; count: number } | null>(null);
+  const onPhaseChange = useEffectEvent(reload);
 
   useEffect(() => {
     if (detail === null) return;
@@ -27,20 +28,20 @@ export function useApplyPhaseRefresh(detail: ProgramDetail | null, reload: () =>
     let timer: number | undefined;
     if (delay > 0) {
       retries.current = null;
-      if (delay < MAX_TIMEOUT_MS) timer = window.setTimeout(reload, delay + Math.random() * SPREAD_MS);
+      if (delay < MAX_TIMEOUT_MS) timer = window.setTimeout(() => onPhaseChange(), delay + Math.random() * SPREAD_MS);
     } else {
       const count = retries.current?.at === at ? retries.current.count + 1 : 1;
       retries.current = { at, count };
-      if (count <= MAX_RETRIES) timer = window.setTimeout(reload, RETRY_MS);
+      if (count <= MAX_RETRIES) timer = window.setTimeout(() => onPhaseChange(), RETRY_MS);
     }
 
     function handleVisibility() {
-      if (document.visibilityState === 'visible' && serverNow() >= at) reload();
+      if (document.visibilityState === 'visible' && serverNow() >= at) onPhaseChange();
     }
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       window.clearTimeout(timer);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [detail, reload]);
+  }, [detail]);
 }

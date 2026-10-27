@@ -46,50 +46,50 @@ describe('fetchMeWithRetry', () => {
     expect(fetchMeMock).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(1);
 
-    await expect(result).resolves.toBe(ME);
+    await expect(result).resolves.toEqual({ status: 'authenticated', me: ME });
     expect(fetchMeMock).toHaveBeenCalledTimes(3);
   });
 
-  it('세 번 모두 실패하면 로그인하지 않은 것으로 바꾸지 않고 마지막 오류를 던진다', async () => {
-    const last = serverError();
-    fetchMeMock.mockRejectedValueOnce(networkError()).mockRejectedValueOnce(serverError()).mockRejectedValueOnce(last);
-    const result = fetchMeWithRetry().catch((error: unknown) => error);
+  it('세 번 모두 실패하면 로그인하지 않은 것과 구별되는 unavailable을 돌려준다', async () => {
+    fetchMeMock
+      .mockRejectedValueOnce(networkError())
+      .mockRejectedValueOnce(serverError())
+      .mockRejectedValueOnce(serverError());
+    const result = fetchMeWithRetry();
 
     await vi.advanceTimersByTimeAsync(3000);
-    await expect(result).resolves.toBe(last);
+    await expect(result).resolves.toEqual({ status: 'unavailable' });
     expect(fetchMeMock).toHaveBeenCalledTimes(3);
   });
 
-  it('로그인하지 않은 응답(null)은 다시 묻지 않고 그대로 돌려준다', async () => {
+  it('로그인하지 않은 응답(null)은 다시 묻지 않고 anonymous를 돌려준다', async () => {
     fetchMeMock.mockResolvedValueOnce(null);
 
-    await expect(fetchMeWithRetry()).resolves.toBeNull();
+    await expect(fetchMeWithRetry()).resolves.toEqual({ status: 'anonymous' });
     expect(fetchMeMock).toHaveBeenCalledTimes(1);
   });
 
-  it('제한 시간을 넘긴 경우와 4xx는 다시 묻지 않고 바로 던진다', async () => {
-    const timeout = new ApiError(0, 'REQUEST_TIMEOUT', null);
-    fetchMeMock.mockRejectedValueOnce(timeout);
-    await expect(fetchMeWithRetry()).rejects.toBe(timeout);
+  it('제한 시간을 넘긴 경우와 4xx는 다시 묻지 않고 바로 unavailable을 돌려준다', async () => {
+    fetchMeMock.mockRejectedValueOnce(new ApiError(0, 'REQUEST_TIMEOUT', null));
+    await expect(fetchMeWithRetry()).resolves.toEqual({ status: 'unavailable' });
     expect(fetchMeMock).toHaveBeenCalledTimes(1);
 
     fetchMeMock.mockReset();
-    const forbidden = new ApiError(403, 'FORBIDDEN', null);
-    fetchMeMock.mockRejectedValueOnce(forbidden);
-    await expect(fetchMeWithRetry()).rejects.toBe(forbidden);
+    fetchMeMock.mockRejectedValueOnce(new ApiError(403, 'FORBIDDEN', null));
+    await expect(fetchMeWithRetry()).resolves.toEqual({ status: 'unavailable' });
     expect(fetchMeMock).toHaveBeenCalledTimes(1);
   });
 
   it('기다리는 중에 취소하면 더 묻지 않고 끝난다', async () => {
     fetchMeMock.mockRejectedValue(serverError());
     const controller = new AbortController();
-    const result = fetchMeWithRetry(controller.signal).catch((error: unknown) => error);
+    const result = fetchMeWithRetry(controller.signal);
 
     await vi.advanceTimersByTimeAsync(500);
     controller.abort();
     await vi.advanceTimersByTimeAsync(10_000);
 
-    expect(await result).toBe(controller.signal.reason);
+    expect(await result).toEqual({ status: 'unavailable' });
     expect(fetchMeMock).toHaveBeenCalledTimes(1);
   });
 });
