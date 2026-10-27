@@ -6,7 +6,6 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 제재 확정 이벤트를 받아 제재받은 회원에게 알림을 만든다. 경고도 알린다. */
 @Component
 class SanctionConfirmedNotificationHandler extends NotificationEventHandler<NotificationPayloads.SanctionConfirmed> {
 

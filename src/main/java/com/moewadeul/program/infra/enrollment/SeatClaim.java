@@ -3,10 +3,7 @@ package com.moewadeul.program.infra.enrollment;
 import java.time.Instant;
 import lombok.Getter;
 
-/**
- * 자리 선점 INSERT에 넘길 값과, INSERT가 만든 신청 ID를 받는 그릇이다.
- * MyBatis가 생성된 ID를 {@code id} 필드에 채워야 해서 record가 아니라 클래스로 둔다.
- */
+// MyBatis가 useGeneratedKeys로 만든 ID를 id 필드에 채워야 해서 record가 아니라 클래스다.
 @Getter
 public class SeatClaim {
 

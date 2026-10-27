@@ -13,11 +13,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * 인증 코드를 발송한 기록 한 건. 발송 요청 이벤트 하나에 행이 하나이고, 코드 원값은 저장하지 않고 해시만 저장한다.
- * 같은 이벤트를 다시 처리하면 새 행을 만들지 않고 {@link #reissue}로 같은 행의 코드를 바꾼다.
- * 시도 횟수와 인증 시각은 동시 요청에서도 한 번만 바뀌어야 해서 MyBatis 조건부 UPDATE로 바꾼다.
- */
 @Entity
 @Table(name = "email_verification")
 @Getter
@@ -71,7 +66,6 @@ public class EmailVerification {
         this.updatedAt = now;
     }
 
-    /** @param codeHash {@link VerificationCode#hash(long, String)}의 결과. 코드 원값을 넘기면 안 된다. */
     public static EmailVerification issue(
             long memberId, long outboxEventId, String codeHash, String requestIp, Instant now) {
         requireCodeHash(codeHash);
@@ -82,12 +76,6 @@ public class EmailVerification {
         return new EmailVerification(memberId, outboxEventId, codeHash, requestIp, now);
     }
 
-    /**
-     * 호출하면 같은 발송 요청을 다시 처리하면서 만든 새 코드로 바꾼다. 이전 코드는 무효가 되고 시도 횟수는 0으로 돌아가며 만료는
-     * {@code now}부터 다시 센다. 발송 요청을 처음 처리한 시각({@code createdAt})은 그대로 둬서 재발송 한도에는 한 번만 센다.
-     *
-     * @param codeHash {@link VerificationCode#hash(long, String)}의 결과. 코드 원값을 넘기면 안 된다.
-     */
     public void reissue(String codeHash, Instant now) {
         requireCodeHash(codeHash);
         requireNow(now);
@@ -113,7 +101,6 @@ public class EmailVerification {
         return verifiedAt != null;
     }
 
-    /** 호출하면 유효 시간이 끝났는지 알려 준다. 만료 시각 정각부터 만료다. */
     public boolean isExpiredAt(Instant now) {
         return !expiresAt.isAfter(now);
     }

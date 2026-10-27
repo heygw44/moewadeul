@@ -2,8 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.program.infra.catalog.ProgramQueryMapper">
 
-    <!-- 남은 자리는 정원에서 정원을 차지하는 신청의 수를 뺀 값이다. 정원을 차지하는 신청은 확정 신청과, 결제 기한이 now보다 늦은 결제 대기 신청이다.
-         기한이 지난 결제 대기 신청은 만료 작업이 상태를 바꾸기 전이어도 자리를 차지하지 않는다. 신청이 정원보다 많아도 응답이 음수가 되지 않게 0에서 멈춘다. -->
     <sql id="remainingSeats">
         GREATEST(
             p.capacity - (SELECT COUNT(*)
@@ -14,8 +12,6 @@
             0)
     </sql>
 
-    <!-- 단계는 저장하지 않고 신청 시작·마감 시각과 now를 비교해서 가른다. 시작 시각이 같으면 ID 순서로 정렬해서, 페이지를 넘겨도 같은 행사가
-         두 번 나오거나 빠지지 않게 한다. (start_at, id) 인덱스를 그대로 따라 읽는다. -->
     <select id="selectList" resultType="com.moewadeul.program.infra.catalog.ProgramListRow">
         SELECT p.id AS program_id,
                p.title AS title,
@@ -46,7 +42,6 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 목록 단계 UPCOMING과 같은 기준(now가 신청 시작 시각보다 이름)이라서, 이 값이 지나면 UPCOMING 행사 하나가 OPEN으로 넘어간다. -->
     <select id="selectNextApplyOpenAt" resultType="java.time.Instant">
         SELECT MIN(p.apply_open_at)
         FROM program p
@@ -85,7 +80,6 @@
         LIMIT 1
     </select>
 
-    <!-- 신청 ID는 신청한 순서대로 커지므로 ID 순서가 곧 신청 순서다. 회원 테이블에서는 닉네임만 읽는다. -->
     <select id="selectApplicants" resultType="com.moewadeul.program.infra.catalog.ProgramApplicantRow">
         SELECT a.id AS application_id,
                a.member_id AS member_id,
@@ -107,7 +101,6 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- 신청 ID는 신청한 순서대로 커지므로 ID 내림차순이 곧 최근 신청부터다. 행사 정보는 신청 시점이 아니라 지금 값을 조인한다. -->
     <select id="selectMyApplications" resultType="com.moewadeul.program.infra.catalog.MyProgramApplicationRow">
         SELECT a.id AS application_id,
                a.status AS status,

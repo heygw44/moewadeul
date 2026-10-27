@@ -5,7 +5,6 @@ import com.moewadeul.basecamp.application.membership.BasecampApplicationPage;
 import java.time.Instant;
 import java.util.List;
 
-/** 캠프 리더가 보는 합류 신청 목록의 한 페이지다. 전체 개수는 없고, 다음 페이지가 있는지만 hasNext로 알린다. 이메일과 출생연도는 담지 않는다. */
 public record BasecampApplicationPageResponse(List<ApplicationEntry> content, int page, int size, boolean hasNext) {
 
     static BasecampApplicationPageResponse from(BasecampApplicationPage page) {

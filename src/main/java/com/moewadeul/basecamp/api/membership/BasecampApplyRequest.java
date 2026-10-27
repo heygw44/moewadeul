@@ -14,7 +14,6 @@ public record BasecampApplyRequest(
         return new BasecampApplyCommand(basecampId, memberId, message);
     }
 
-    /** 요청 본문이 아예 없을 때 쓰는 값이다. */
     static BasecampApplyRequest empty() {
         return new BasecampApplyRequest(null);
     }

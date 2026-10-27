@@ -23,12 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 지도 영역이나 반경 안의 모집 중 베이스캠프를 출발일이 빠른 순서로 찾는다. 로그인한 요청자에게는 항목마다 신청할 수 있는지와 그 이유를 함께 준다.
- *
- * <p>서버는 한 페이지의 베이스캠프 전체를 판정하려고 요청자의 신뢰 정보를 한 번, 이전 관계와 진행 중인 베이스캠프의 일정을 각각 한 번씩만 읽는다.
- * 베이스캠프마다 조회하지 않는다.
- */
 @Service
 @RequiredArgsConstructor
 public class BasecampSearchService {
@@ -38,11 +32,6 @@ public class BasecampSearchService {
     private final BasecampSearchMapper basecampSearchMapper;
     private final TrustSummaryService trustSummaryService;
 
-    /**
-     * 호출하면 query 조건에 맞는 모집 중 베이스캠프를 한 페이지 돌려준다. viewerId가 null이면 비로그인 요청자라서 신청 가능 여부를 채우지 않는다.
-     *
-     * <p>다음 페이지가 있는지 알려고 한 건을 더 읽고, 그 건은 결과에서 뺀다. 그래서 전체 개수를 세는 쿼리를 따로 보내지 않는다.
-     */
     @Transactional(readOnly = true)
     public BasecampSearchPage search(Long viewerId, BasecampSearchQuery query) {
         long offset = (long) query.page() * query.size();
@@ -124,7 +113,6 @@ public class BasecampSearchService {
                 judge == null ? null : judge.judge(row));
     }
 
-    // 한 페이지에서 요청자 한 명의 신청 자격을 베이스캠프마다 판정하는 데 필요한 값을 모아 둔 것이다.
     private record EligibilityJudge(
             Applicant applicant, Map<Long, PriorRelation> priorRelations, List<InProgressScheduleRow> schedules) {
 
@@ -135,8 +123,6 @@ public class BasecampSearchService {
                     JoinEligibilityPolicy.unmetReasons(condition, applicant, hasDateConflict(row), prior));
         }
 
-        // 요청자가 ACTIVE 멤버로 들어 있는 모집 중·마감·확정 베이스캠프의 일정과 하루라도 겹치면 충돌이다.
-        // 요청자가 이미 멤버인 검색 결과 자신은 겹치는 것으로 치지 않도록 비교에서 뺀다. 그 경우는 이미 합류한 이유로 따로 판정한다.
         private boolean hasDateConflict(BasecampSearchRow row) {
             return schedules.stream()
                     .filter(schedule -> schedule.basecampId() != row.basecampId())

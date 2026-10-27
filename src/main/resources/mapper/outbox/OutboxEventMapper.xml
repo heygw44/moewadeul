@@ -2,7 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.outbox.infra.OutboxEventMapper">
 
-    <!-- 다른 발행기가 잠근 행은 SKIP LOCKED로 건너뛴다. 그래서 발행기 여러 개가 같은 행을 동시에 집지 못한다. -->
     <select id="selectClaimableIds" resultType="long">
         SELECT id
         FROM outbox_event
@@ -23,7 +22,6 @@
         </foreach>
     </update>
 
-    <!-- 임대 만료 시각이 집을 때 건 값 그대로인 행만 푼다. 임대가 끝난 뒤 다른 발행기가 같은 행을 다시 집었으면 만료 시각이 새 값이라서 건너뛴다. -->
     <update id="releaseLease">
         UPDATE outbox_event
         SET locked_until = NULL,
@@ -57,11 +55,7 @@
     </update>
 
     <!-- MySQL은 SET 절을 왼쪽에서 오른쪽으로 평가하고 앞에서 바꾼 값을 뒤에서 읽는다.
-         그래서 status와 locked_until을 attempt_count보다 먼저 두어야, 아직 올리지 않은 시도 횟수로 계산한다.
-         실패한 이벤트는 locked_until을 비우지 않고 다음 재시도 시각으로 채운다.
-         selectClaimableIds는 locked_until이 지난 행만 집는다. 그래서 재시도 시각 컬럼을 따로 두지 않고도 임대 컬럼으로 재시도 간격을 지킨다.
-         재시도 간격은 실패할 때마다 두 배로 늘리고 상한에서 멈춘다. 일시적인 실패는 횟수 상한 없이 계속 다시 시도하므로,
-         2의 거듭제곱이 DOUBLE 범위를 넘지 않게 지수를 20에서 자른다. 기본값(30초)에서는 지수가 5만 돼도 이미 상한(10분)을 넘는다. -->
+         그래서 status와 locked_until을 attempt_count보다 먼저 두어야, 아직 올리지 않은 시도 횟수로 계산한다. -->
     <update id="markFailedAttempt">
         UPDATE outbox_event
         SET status = CASE WHEN NOT #{transientFailure} AND attempt_count + 1 &gt;= #{maxAttempts} THEN 'FAILED' ELSE status END,
@@ -74,7 +68,6 @@
           AND status = 'PENDING'
     </update>
 
-    <!-- (status, id) 인덱스로 PENDING·FAILED 구간만 읽는다. 행이 없어도 집계 결과 한 행이 나오도록 COALESCE로 0을 채운다. -->
     <select id="selectBacklog" resultType="com.moewadeul.outbox.infra.OutboxBacklogRow">
         SELECT COALESCE(SUM(status = 'PENDING'), 0) AS pending_count,
                COALESCE(SUM(status = 'FAILED'), 0) AS failed_count,

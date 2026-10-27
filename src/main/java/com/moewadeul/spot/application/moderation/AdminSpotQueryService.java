@@ -14,17 +14,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 관리자가 검토 대기 또는 숨긴 장소의 목록을 읽는다. 신고 내용이 들어 있으므로 호출하는 쪽이 관리자 권한을 확인해야 한다. */
 @Service
 @RequiredArgsConstructor
 public class AdminSpotQueryService {
 
     private final AdminSpotMapper adminSpotMapper;
 
-    /**
-     * 호출하면 status인 장소를 상태가 바뀐 시각이 이른 순서로 한 페이지 돌려준다. status가 null이면 검토 대기(PENDING_REVIEW)를 읽는다.
-     * 검토 대기와 숨김(HIDDEN) 말고 다른 값이면 INVALID_INPUT으로 거부한다. 각 항목에는 검토 전 신고의 수, 사유별 수, 최근 5건을 담는다.
-     */
     @Transactional(readOnly = true)
     public AdminSpotPage list(String status, int page, int size) {
         SpotStatus spotStatus = parseStatus(status);

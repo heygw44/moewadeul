@@ -18,8 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-// 관리자 기능이지만 관리자 모듈에 두지 않는다. 관리자 모듈은 공공데이터 모듈을 부를 수 없게 모듈 의존 방향이 정해져 있다.
-// 그래서 공공데이터 모듈이 자기 관리자 엔드포인트를 직접 둔다. /api/admin/** 경로는 보안 설정이 ADMIN 역할에만 연다.
 @RestController
 @RequestMapping("/api/admin/sync-jobs")
 class SyncJobAdminController {

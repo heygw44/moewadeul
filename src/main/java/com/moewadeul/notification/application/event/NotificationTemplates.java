@@ -5,10 +5,6 @@ import com.moewadeul.notification.application.NotificationEventTypes;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/**
- * 이벤트 내용을 받는 사람별 알림 내용으로 바꾼다. 저장하거나 읽지 않고 문구만 만드는 순수한 클래스다.
- * 신고 결과 알림에는 제재 내용을 담지 않는다. 신고자에게는 처리 결과만 알린다.
- */
 final class NotificationTemplates {
 
     private static final DateTimeFormatter SUSPENSION_END_FORMAT =
@@ -16,7 +12,6 @@ final class NotificationTemplates {
 
     private NotificationTemplates() {}
 
-    /** 호출하면 basecampId인 베이스캠프에 합류 신청이 들어왔다고 캠프 리더에게 알리는 알림을 만든다. */
     static List<NotificationDraft> applied(long basecampId, NotificationPayloads.Applied payload) {
         return List.of(new NotificationDraft(
                 payload.leaderId(),
@@ -44,7 +39,6 @@ final class NotificationTemplates {
                 basecampLink(payload.basecampId())));
     }
 
-    /** 호출하면 강퇴 사유를 담아 강퇴된 회원에게 알리는 알림을 만든다. 모르는 사유 이름이면 예외를 던진다. */
     static List<NotificationDraft> kicked(NotificationPayloads.Kicked payload) {
         String body = "캠프 리더가 베이스캠프에서 내보냈어요. 사유: " + kickReasonLabel(payload.reason()) + ". 같은 베이스캠프에는 다시 신청할 수 없어요.";
         return List.of(new NotificationDraft(
@@ -91,7 +85,6 @@ final class NotificationTemplates {
                 basecampLink(payload.basecampId()));
     }
 
-    /** 호출하면 신고 처리 결과만 신고자에게 알린다. 제재 종류나 사유는 어디에도 싣지 않는다. 모르는 결과 값이면 예외를 던진다. */
     static List<NotificationDraft> reportResolved(NotificationPayloads.ReportResolved payload) {
         String body = switch (payload.result()) {
             case "ACTIONED" -> "신고한 내용을 검토해 조치했어요.";
@@ -102,7 +95,6 @@ final class NotificationTemplates {
                 payload.reporterId(), NotificationEventTypes.MEMBER_REPORT_RESOLVED, "신고 처리 완료", body, null));
     }
 
-    /** 호출하면 제재 종류에 맞는 문구로 제재받은 회원에게 알린다. 기간이 정해진 정지인데 endsAt이 없거나 모르는 종류이면 예외를 던진다. */
     static List<NotificationDraft> sanctionConfirmed(NotificationPayloads.SanctionConfirmed payload) {
         return List.of(new NotificationDraft(
                 payload.memberId(),
@@ -112,7 +104,6 @@ final class NotificationTemplates {
                 null));
     }
 
-    /** 호출하면 결제를 마쳐 행사 신청이 확정됐다고 신청자에게 알리는 알림을 만든다. */
     static List<NotificationDraft> programApplicationConfirmed(
             NotificationPayloads.ProgramApplicationConfirmed payload) {
         return List.of(new NotificationDraft(
@@ -123,7 +114,6 @@ final class NotificationTemplates {
                 programLink(payload.programId())));
     }
 
-    /** 호출하면 취소 사유에 맞는 문구로 신청자에게 알린다. 환불했으면 환불했다는 문장을 덧붙인다. 모르는 사유 이름이면 예외를 던진다. */
     static List<NotificationDraft> programApplicationCanceled(NotificationPayloads.ProgramApplicationCanceled payload) {
         String body = switch (payload.reason()) {
             case "USER" -> "행사 신청을 취소했어요.";
@@ -142,7 +132,6 @@ final class NotificationTemplates {
                 programLink(payload.programId())));
     }
 
-    /** 호출하면 결제 기한이 지나 행사 신청이 만료됐다고 신청자에게 알리는 알림을 만든다. */
     static List<NotificationDraft> programApplicationExpired(NotificationPayloads.ProgramApplicationExpired payload) {
         return List.of(new NotificationDraft(
                 payload.memberId(),
@@ -152,7 +141,6 @@ final class NotificationTemplates {
                 programLink(payload.programId())));
     }
 
-    /** 호출하면 빈자리 알림을 신청한 회원마다 알림을 하나씩 만든다. */
     static List<NotificationDraft> programSeatReleased(NotificationPayloads.ProgramSeatReleased payload) {
         return payload.memberIds().stream()
                 .map(memberId -> new NotificationDraft(

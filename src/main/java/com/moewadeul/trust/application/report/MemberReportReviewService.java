@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 관리자가 접수된 신고의 검토를 시작한다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -25,10 +24,6 @@ public class MemberReportReviewService {
     private final AdminAuditRecorder adminAuditRecorder;
     private final Clock clock;
 
-    /**
-     * 호출하면 신고를 접수 상태에서 검토 중으로 바꾸고 감사 로그를 한 줄 남긴다. 신고 행을 쓰기 잠금으로 읽으므로 같은 신고를 동시에
-     * 처리하면 한 줄로 세워진다. 신고가 없으면 NOT_FOUND, 접수 상태가 아니면 REPORT_INVALID_STATE로 거부한다.
-     */
     @Transactional
     public MemberReportStatusResult startReview(long reportId, long adminId) {
         MemberReport report = memberReportRepository

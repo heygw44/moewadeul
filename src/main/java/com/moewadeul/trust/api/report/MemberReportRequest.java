@@ -9,7 +9,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
-// 빠진 값을 @NotNull 위반으로 돌려주려고 ID와 종류, 유형은 래퍼 타입으로 받는다. 후기 ID는 회원 신고에서 없어야 하므로 필수가 아니다.
 public record MemberReportRequest(
         @NotNull(message = "신고할 회원을 입력해 주세요.") @Positive(message = "신고할 회원 ID는 양수여야 해요.")
         Long targetMemberId,

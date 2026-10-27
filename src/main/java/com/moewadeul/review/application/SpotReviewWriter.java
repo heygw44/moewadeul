@@ -17,16 +17,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 후기를 저장하고, 고치고, 지우는 트랜잭션을 가진다. {@link SpotReviewCommandService}가 이미지를 저장소까지 확인한 뒤에 부른다.
- *
- * <p>후기를 쓸 수 있는 장소는 지도에 보이는(ACTIVE) 장소뿐이다. 장소가 없거나 ACTIVE가 아니면 NOT_FOUND로 거부한다. 반대로 고치거나 지울 때는
- * 장소 상태를 보지 않는다. 장소가 숨겨진 뒤에도 작성자는 자기 후기를 고치거나 지울 수 있어야 하기 때문이다.
- *
- * <p>한 회원은 같은 장소에 방문일마다 후기를 하나만 쓴다. 조회로 미리 거르지 않고, 저장할 때 DB가 던지는 유니크 제약 위반을
- * SPOT_REVIEW_DUPLICATED로 바꾼다. 같은 회원의 요청 두 개가 동시에 들어와도 DB가 하나만 받기 때문이다. 평균 평점과 후기 수는 저장하지 않고
- * 장소 상세가 조회할 때 계산하므로, 후기를 쓰고 고치고 지울 때 갱신할 집계가 없고 락도 필요 없다.
- */
 @Component
 @RequiredArgsConstructor
 class SpotReviewWriter {
@@ -69,13 +59,11 @@ class SpotReviewWriter {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 
-    // 후기 행을 지우면 FK가 붙은 이미지의 후기 ID를 NULL로 바꾸므로, 이미지는 붙지 않은 업로드가 되어 정리 작업이 지운다.
     @Transactional
     public void delete(long memberId, long reviewId) {
         spotReviewRepository.delete(loadOwnReview(memberId, reviewId));
     }
 
-    /** 호출하면 reviewId인 후기가 있고 memberId가 쓴 후기인지 확인한다. 없으면 NOT_FOUND로, 남의 후기면 ACCESS_DENIED로 거부한다. */
     @Transactional(readOnly = true)
     public void requireOwnReview(long memberId, long reviewId) {
         loadOwnReview(memberId, reviewId);
@@ -99,7 +87,6 @@ class SpotReviewWriter {
         }
     }
 
-    // 방문일은 한국 날짜로 받으므로, 오늘도 한국 날짜로 계산해서 비교한다. 오늘 방문한 장소의 후기는 쓸 수 있다.
     private static void requireNotFuture(LocalDate visitedDate, Instant now) {
         if (visitedDate == null) {
             throw invalidInput("방문일을 입력해 주세요.");

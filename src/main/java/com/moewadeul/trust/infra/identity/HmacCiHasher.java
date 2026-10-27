@@ -9,11 +9,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
 
-/**
- * 비밀 키로 CI를 HMAC-SHA256 해시한다. 키가 없으면 CI 해시를 만들 수 없으므로 키는 설정에서 받는다.
- *
- * <p>{@link Mac}은 스레드에 안전하지 않다. 그래서 호출할 때마다 새로 만든다.
- */
+/** {@link Mac}은 스레드에 안전하지 않다. 그래서 호출할 때마다 새로 만든다. */
 @Component
 class HmacCiHasher implements CiHasher {
 

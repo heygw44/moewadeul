@@ -32,11 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 장소 한 곳의 상세를 DB에서 읽는다. 박지는 박지 상세를, 야영장과 자연휴양림은 공공데이터 상세를 채운다. 날씨는 채우지 않는다.
- *
- * <p>공공데이터 장소의 휴장 여부는 조회한 날의 한국 날짜로 계산한다.
- */
 @Component
 @RequiredArgsConstructor
 class SpotDetailReader {
@@ -50,12 +45,6 @@ class SpotDetailReader {
     private final JsonMapper jsonMapper;
     private final Clock clock;
 
-    /**
-     * 호출하면 spotId인 장소의 상세를 돌려준다.
-     *
-     * <p>장소가 없거나 숨김, 삭제, 검토 대기처럼 ACTIVE가 아니면 NOT_FOUND로 거부한다. 숨긴 장소가 있는지조차 드러내지 않으려고 두 경우를
-     * 구분하지 않는다.
-     */
     @Transactional(readOnly = true)
     public SpotDetail read(long spotId) {
         SpotDetailRow row = spotDetailMapper
@@ -80,8 +69,6 @@ class SpotDetailReader {
                         .toList());
     }
 
-    // 확정 베이스캠프, 이 장소에 연결된 숙박 공식 행사의 확정 참가자, 혼자 가는 개인 일정을 같은 모양의 야영 기간으로 모은다.
-    // 행사는 시작·종료를 UTC 시각으로 저장하므로, 각 시각의 한국 날짜를 출발일과 종료일로 본다.
     private List<SpotConfirmedStayRow> readStays(long spotId, LocalDate today) {
         List<SpotConfirmedStayRow> stays = new ArrayList<>(spotDetailMapper.selectConfirmedStays(spotId, today));
         stays.addAll(spotDetailMapper.selectSoloTrips(spotId, today));
@@ -95,8 +82,6 @@ class SpotDetailReader {
         return stays;
     }
 
-    // 야영 기간마다 시작일부터 종료일 전날까지 밤마다 인원을 더한다. 종료일은 이미 집으로 돌아간 날이라 세지 않는다.
-    // 겹치는 기간은 같은 날짜에 합산한다. 이미 지난 밤은 건너뛴다. 날짜 순서는 TreeMap이 맞춘다.
     private static List<SpotExpectedPeople> toExpectedPeople(List<SpotConfirmedStayRow> stays, LocalDate today) {
         Map<LocalDate, Integer> countByNight = new TreeMap<>();
         for (SpotConfirmedStayRow stay : stays) {
@@ -126,7 +111,6 @@ class SpotDetailReader {
         return new SpotRating(row.average(), row.count());
     }
 
-    // 최근 후기의 이미지는 쿼리 한 번으로 읽고, 조회 URL은 서버 안에서 서명을 계산해 붙인다. 저장소는 부르지 않는다.
     private List<SpotRecentReview> readRecentReviews(long spotId) {
         List<SpotRecentReviewRow> rows = spotDetailMapper.selectRecentReviews(spotId, RECENT_REVIEW_COUNT);
         Map<Long, List<SpotRecentReview.Image>> images = new HashMap<>();
@@ -155,7 +139,6 @@ class SpotDetailReader {
                 row.createdAt());
     }
 
-    // 경고인데 경계 행이 없으면 경계 이름·출처·기준일만 null로 두고, 안내 문구는 채운다.
     private static SpotParkWarning toParkWarning(SpotDetailRow row) {
         if (!row.parkWarning()) {
             return SpotParkWarning.notWarned();
@@ -163,7 +146,6 @@ class SpotDetailReader {
         return SpotParkWarning.warned(row.areaName(), row.areaSource(), row.areaSourceDate());
     }
 
-    // 박지 상세 행이 없는 박지는 데이터가 어긋난 경우라서, 서비스는 상세 없이 장소 정보만 돌려준다.
     private static SpotBakjiDetail toBakjiDetail(SpotDetailRow row) {
         if (row.type() != SpotType.BAKJI || row.reporterId() == null) {
             return null;
@@ -179,7 +161,6 @@ class SpotDetailReader {
                 ParkWarningTexts.bakjiCheckNoticeOf(row.parkWarning()));
     }
 
-    // 공공데이터 상세 행이 없는 야영장이나 휴양림도 데이터가 어긋난 경우라서, 서비스는 상세 없이 장소 정보만 돌려준다.
     private SpotPublicDetail toPublicDetail(SpotDetailRow row, LocalDate today) {
         if (row.type() == SpotType.BAKJI || row.source() == null) {
             return null;
@@ -200,7 +181,6 @@ class SpotDetailReader {
                 closedNow);
     }
 
-    // 동기화는 고캠핑 원천 항목 이름을 키로 시설 정보를 저장한다. 서비스는 그 키를 응답 필드 이름으로 옮기고, 없는 키는 null로 둔다.
     private SpotFacilities toFacilities(String facilitiesJson) {
         if (facilitiesJson == null) {
             return null;

@@ -23,15 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 본인확인을 마친 회원이 장소에 베이스캠프를 열고, 캠프 리더를 첫 멤버로 저장한다.
- *
- * <p>캠프 리더의 자격은 신뢰 단계가 1 이상이고 지금 적용 중인 이용 정지가 없는 것이다. 경고와 기간이 끝난 정지는 열기를 막지 않는다.
- * 정지를 확정하면 그 회원의 세션을 지우지만, 지우기 전에 이미 들어온 요청을 막으려고 여기서도 한 번 더 확인한다.
- *
- * <p>한 회원이 열어 둔 베이스캠프 수는 저장하기 전에 센다. 그런데 같은 회원의 요청 두 개가 동시에 들어오면 둘 다 "아직 3개 미만"으로 세고
- * 함께 저장할 수 있다. 그래서 서비스는 트랜잭션의 첫 쿼리로 캠프 리더의 회원 행을 잠가 같은 회원의 열기를 한 줄로 세운다.
- */
 @Service
 @RequiredArgsConstructor
 public class BasecampOpenService {
@@ -45,21 +36,6 @@ public class BasecampOpenService {
     private final BasecampLockMapper basecampLockMapper;
     private final Clock clock;
 
-    /**
-     * 호출하면 leaderId인 회원이 command대로 베이스캠프를 열고 그 ID와 상태를 돌려준다.
-     *
-     * <p>거부하는 경우는 다음과 같다.
-     * <ul>
-     *   <li>출발일이 내일부터 60일 뒤 사이가 아니거나 박 수가 1~3박이 아니면 BASECAMP_SCHEDULE_INVALID
-     *   <li>정원이 2~6명이 아니면 BASECAMP_CAPACITY_INVALID
-     *   <li>신뢰 단계가 1 미만이면 TRUST_LEVEL_INSUFFICIENT
-     *   <li>지금 적용 중인 이용 정지가 있으면 ACCESS_DENIED
-     *   <li>합류 조건 값이 올바르지 않으면 INVALID_INPUT
-     *   <li>장소가 없거나 ACTIVE가 아니면 NOT_FOUND
-     *   <li>장소가 공원 경계 경고가 붙은 박지이면 BASECAMP_WARNING_SPOT
-     *   <li>모집 중이거나 마감된 베이스캠프를 이미 3개 열었으면 BASECAMP_OPEN_LIMIT
-     * </ul>
-     */
     @Transactional
     public BasecampOpenResult open(long leaderId, BasecampOpenCommand command) {
         // 잠금이 트랜잭션의 첫 쿼리여야 한다. 그래야 아래 개수 조회가 잠금을 얻은 뒤의 스냅숏을 읽어서, 먼저 끝난 요청이 연 베이스캠프가 보인다.
@@ -105,7 +81,6 @@ public class BasecampOpenService {
         }
     }
 
-    // 제목·설명 길이처럼 도메인이 IllegalArgumentException으로 알리는 요청 값 오류는 INVALID_INPUT으로 바꾼다.
     private static Basecamp open(long leaderId, long spotId, BasecampDetails details, Instant now) {
         try {
             return Basecamp.open(leaderId, spotId, details, now);

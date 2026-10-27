@@ -23,16 +23,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 한국관광공사 고캠핑 API 클라이언트.
- *
- * <p>공공데이터포털은 하루 호출 수를 1,000번으로 제한하고, 재시도한 요청도 이 한도에서 뺀다. 그래서 클라이언트는 다시 보내면 성공할 수 있는
- * 실패(I/O 오류, 타임아웃, HTTP 5xx)일 때만 한 번 더 보낸다. 반면 인증 오류나 원천 오류 코드는 다시 보내도 같은 결과라서 바로 실패로 끝낸다.
- *
- * <p>전체 동기화 한 번은 페이지 크기 100 기준으로 약 54번을 호출한다(항목 5,353건).
- *
- * <p>인증키는 쿼리 값으로 보내므로 요청 주소에 키가 들어 있다. 그래서 클라이언트는 요청 주소를 로그나 예외 메시지에 남기지 않는다.
- */
 @Slf4j
 @Component
 public class GoCampingClient {
@@ -61,13 +51,7 @@ public class GoCampingClient {
         this.metrics = metrics;
     }
 
-    /**
-     * 캠핑장 동기화 목록 한 페이지를 받는다.
-     *
-     * @param pageNo 1부터 세는 페이지 번호
-     * @param numOfRows 페이지 크기
-     * @throws GoCampingApiException 재시도까지 실패했거나, 원천이 오류를 돌려줬거나, 응답 형식을 해석하지 못했을 때
-     */
+    // 공공데이터포털은 하루 1,000번까지 받고 재시도한 요청도 한도에서 뺀다. 그래서 다시 보내면 성공할 수 있는 실패에만 한 번 더 보낸다.
     public GoCampingPage fetchPage(int pageNo, int numOfRows) {
         try {
             return fetchBasedSyncListOnce(pageNo, numOfRows);
@@ -225,7 +209,6 @@ public class GoCampingClient {
 
     // 인증키가 없거나 등록되지 않았으면, 공공데이터포털 게이트웨이는 _type=json을 무시하고 resultCode 없는 XML을 돌려준다.
     // 예: <OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg>
-    //
     // <returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg>...</cmmMsgHeader></OpenAPI_ServiceResponse>
     private static String xmlErrorOf(String body) {
         String authMessage = firstGroup(AUTH_ERROR_MESSAGE, body);

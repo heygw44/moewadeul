@@ -12,7 +12,6 @@ import org.springframework.data.repository.query.Param;
 public interface PasswordResetThrottleJpaRepository
         extends JpaRepository<PasswordResetThrottle, String>, PasswordResetThrottleRepository {
 
-    // 이름만으로는 Spring Data가 잠금 쿼리를 만들 수 없어서 JPQL을 직접 쓴다.
     @Override
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM PasswordResetThrottle t WHERE t.key = :key")

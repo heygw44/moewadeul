@@ -5,7 +5,6 @@ import com.moewadeul.program.domain.ProgramCancelReason;
 import com.moewadeul.program.domain.ProgramStatus;
 import java.time.Instant;
 
-/** 내 행사 신청 목록의 한 행이다. 신청 정보와 신청한 행사의 요약을 함께 읽고, 회원 정보는 읽지 않는다. */
 public record MyProgramApplicationRow(
         long applicationId,
         ProgramApplicationStatus status,

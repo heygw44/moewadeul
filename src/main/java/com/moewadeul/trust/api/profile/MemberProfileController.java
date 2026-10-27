@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
-// 프로필에는 회원 모듈의 닉네임·자기 신고 값과 신뢰 모듈의 신뢰 정보가 함께 들어간다.
-// 신뢰 모듈이 회원 모듈의 공개 서비스를 부르는 방향만 허용되므로, 두 정보를 모으는 컨트롤러를 신뢰 모듈에 둔다.
 @RestController
 class MemberProfileController {
 

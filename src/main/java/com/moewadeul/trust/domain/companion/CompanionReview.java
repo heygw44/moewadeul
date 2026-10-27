@@ -19,19 +19,12 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 완료된 베이스캠프의 멤버가 같은 베이스캠프의 다른 멤버에게 쓴 후기. 한 베이스캠프에서 같은 상대에게는 한 번만 쓸 수 있다.
- *
- * <p>쓴 뒤에는 바꾸거나 지우지 않으므로 수정 메서드가 없고, 관리자가 신고를 처리할 때 숨기기만 한다. 베이스캠프와 회원은 다른 모듈의 엔티티라서 연관관계로 걸지 않고 ID로만 가리킨다.
- * 작성 자격과 기한은 서비스가 검사하고, 이 엔티티는 값의 형식만 지킨다.
- */
 @Entity
 @Table(name = "companion_review")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CompanionReview {
 
-    /** 코멘트의 최대 길이다. DB 컬럼 크기와 같다. */
     public static final int COMMENT_MAX_LENGTH = 300;
 
     @Id
@@ -81,12 +74,6 @@ public class CompanionReview {
         this.createdAt = now;
     }
 
-    /**
-     * 호출하면 reviewerId인 회원이 basecampId인 베이스캠프에서 revieweeId인 회원에게 쓰는 후기를 만든다.
-     *
-     * <p>코멘트가 공백뿐이면 없는 것으로 저장한다. tags가 null이면 태그 없이 만든다. 같은 태그를 두 번 넘기면 한 번만 담는다.
-     * 작성자와 상대가 같거나, 코멘트가 {@value #COMMENT_MAX_LENGTH}자를 넘거나, now가 null이면 {@link IllegalArgumentException}을 던진다.
-     */
     public static CompanionReview write(
             long basecampId,
             long reviewerId,
@@ -109,10 +96,6 @@ public class CompanionReview {
         return new CompanionReview(basecampId, reviewerId, revieweeId, rejoinWanted, safeTags, normalizedComment, now);
     }
 
-    /**
-     * 호출하면 관리자가 신고를 확인한 후기를 숨긴다. 숨긴 후기는 목록과 집계에서 빠진다.
-     * 이미 숨긴 후기이면 처음 숨긴 시각을 그대로 둔다.
-     */
     public void hide(Instant now) {
         if (now == null) {
             throw new IllegalArgumentException("후기를 숨기는 시각이 null입니다.");

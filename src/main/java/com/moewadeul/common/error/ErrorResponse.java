@@ -32,8 +32,6 @@ public record ErrorResponse(
         return new ErrorResponse(errorCode.name(), errorCode.message(), currentTraceId(), fieldErrors, Map.of());
     }
 
-    // 도메인 예외가 알려 주는 추가 값(예: 정지 해제 시각)을 응답 JSON 최상위에 펼쳐 쓴다.
-    // 추가 값이 없으면 다른 응답과 JSON 모양이 똑같다.
     @JsonAnyGetter
     public Map<String, Object> additionalFields() {
         return extraFields;

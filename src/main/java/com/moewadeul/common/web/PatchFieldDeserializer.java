@@ -7,26 +7,13 @@ import tools.jackson.databind.JavaType;
 import tools.jackson.databind.ValueDeserializer;
 import tools.jackson.databind.util.AccessPattern;
 
-/**
- * JSON 값을 {@link PatchField}로 읽는다. Jackson은 경우마다 이 클래스의 다른 메서드를 부른다.
- *
- * <ul>
- *   <li>값이 있으면 {@link #deserialize}를 부른다. 이 클래스는 안쪽 타입(예: {@code PatchField<String>}의 {@code String})의
- *       기본 역직렬화기로 값을 읽고 {@code PatchField.of(값)}으로 감싼다.
- *   <li>{@code null}이 오면 {@link #getNullValue}를 부르고, 이 클래스는 {@code PatchField.of(null)}을 돌려준다.
- *   <li>레코드 생성자에 넘길 필드가 JSON에 없으면 {@link #getAbsentValue}를 부르고, 이 클래스는 {@link PatchField#absent()}를 돌려준다.
- * </ul>
- *
- * <p>{@link PatchField}에 붙인 {@code @JsonDeserialize}로 Jackson이 이 클래스를 찾는다. 처음에는 안쪽 타입을 모르는 상태로 만들어지고,
- * 필드마다 {@link #createContextual}에서 안쪽 타입에 맞는 역직렬화기를 가진 새 인스턴스를 받는다.
- */
+// Jackson은 값이 있으면 deserialize, null이면 getNullValue, 레코드 생성자 인자가 JSON에 없으면 getAbsentValue를 부른다.
 final class PatchFieldDeserializer extends ValueDeserializer<PatchField<?>> {
 
     private static final PatchField<?> EXPLICIT_NULL = PatchField.of(null);
 
     private final ValueDeserializer<Object> contentDeserializer;
 
-    // Jackson이 @JsonDeserialize(using = ...)를 보고 이 생성자로 인스턴스를 만든다.
     public PatchFieldDeserializer() {
         this(null);
     }

@@ -2,7 +2,6 @@ package com.moewadeul.trust.application.report;
 
 import java.time.Instant;
 
-/** 관리자 신고 목록의 한 항목. kind, type, status는 각 enum의 이름이다. */
 public record AdminMemberReportSummary(
         long reportId,
         String kind,

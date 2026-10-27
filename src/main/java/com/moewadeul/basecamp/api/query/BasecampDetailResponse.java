@@ -7,13 +7,8 @@ import com.moewadeul.basecamp.domain.BasecampRelation;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * 베이스캠프 상세 응답이다. 요청자가 로그인하지 않았으면 멤버의 닉네임과 역할만, 로그인했으면 프로필 요약까지 담는다.
- * 권한이 없는 필드는 null로 두지 않고 필드 자체를 뺀다. 장소가 ACTIVE가 아니면 spot도 뺀다. 이메일과 출생연도는 어떤 경우에도 담지 않는다.
- */
 public sealed interface BasecampDetailResponse {
 
-    /** 모든 요청자에게 보여 주는 안전 안내다. */
     String SAFETY_NOTICE = "출발 전 일정을 가족이나 지인과 공유하세요. 플랫폼 밖 송금 요구는 신고해 주세요.";
 
     static BasecampDetailResponse from(BasecampDetail detail, boolean loggedIn) {
@@ -69,7 +64,6 @@ public sealed interface BasecampDetailResponse {
                 SAFETY_NOTICE);
     }
 
-    /** 비로그인 요청자가 보는 상세다. 멤버는 닉네임과 역할만 있고, 연락 수단은 없다. */
     record Anonymous(
             long basecampId,
             String title,
@@ -87,10 +81,6 @@ public sealed interface BasecampDetailResponse {
             String safetyNotice)
             implements BasecampDetailResponse {}
 
-    /**
-     * 로그인한 요청자가 보는 상세다. contactInfo는 등록된 값이 있고, 요청자가 확정된 베이스캠프의 멤버이거나
-     * 확정 전 베이스캠프의 캠프 리더일 때만 응답에 나타나고, 아니면 필드 자체가 없다. canApply와 unmetReasons는 모집 중인 베이스캠프일 때만 나타난다.
-     */
     record Member(
             long basecampId,
             String title,
@@ -111,12 +101,8 @@ public sealed interface BasecampDetailResponse {
             @JsonInclude(JsonInclude.Include.NON_NULL) List<String> unmetReasons)
             implements BasecampDetailResponse {}
 
-    /**
-     * 장소 요약이다. 화면은 lat·lng로 상세를 열 때 지도를 그 장소로 옮긴다. ACTIVE 장소의 좌표는 공개 값이라 모든 요청자에게 같다.
-     */
     record SpotResponse(long spotId, String name, String type, double lat, double lng) {
 
-        // 장소가 ACTIVE가 아니어서 요약이 없으면 null을 돌려주고, 응답에서는 필드 자체가 빠진다.
         static SpotResponse from(BasecampDetail.SpotSummary summary) {
             if (summary == null) {
                 return null;
@@ -131,7 +117,6 @@ public sealed interface BasecampDetailResponse {
 
     record LeaderEntry(long memberId, String nickname, int trustLevel) {}
 
-    /** 로그인한 요청자가 보는 멤버다. 연령대·성별이 없으면 null이고, 본인확인한 값이면 verified가 true다. */
     record MemberEntry(
             long memberId,
             String nickname,

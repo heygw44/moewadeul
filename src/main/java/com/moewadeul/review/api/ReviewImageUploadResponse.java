@@ -4,7 +4,6 @@ import com.moewadeul.review.application.ReviewImageUpload;
 import java.time.Instant;
 import java.util.Map;
 
-// 화면은 uploadUrl로 파일을 PUT하면서 headers를 그대로 보낸다. 저장소 객체 키는 내보내지 않는다.
 public record ReviewImageUploadResponse(
         long imageId, String uploadUrl, String method, Map<String, String> headers, Instant expiresAt) {
 

@@ -17,11 +17,6 @@ import org.springframework.security.web.authentication.session.SessionAuthentica
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Component;
 
-/**
- * 비밀번호 검사를 끝낸 회원을 세션에 로그인시키고 로그아웃시킨다.
- *
- * <p>Spring Security의 폼 로그인 필터를 쓰지 않으므로, 로그인 API가 이 클래스를 직접 호출해 세션과 SecurityContext를 만든다.
- */
 @Component
 public class LoginSessionManager {
 
@@ -40,19 +35,11 @@ public class LoginSessionManager {
     public void login(LoginMember member, HttpServletRequest request, HttpServletResponse response) {
         Authentication authentication = authenticationOf(member);
 
-        // 로그인 전부터 쓰던 세션 ID를 공격자가 알고 있을 수 있다. 그래서 세션이 이미 있으면 로그인하기 전에 ID를 바꾼다.
-        // 세션이 없으면 아래 saveContext가 새 세션을 만들므로 이전 ID가 남지 않는다.
         sessionFixationStrategy.onAuthentication(authentication, request, response);
 
         storeContext(authentication, request, response);
     }
 
-    /**
-     * 현재 세션의 회원이 이메일 인증을 마쳤다고 표시한다. 세션 ID는 바꾸지 않고 같은 세션에 인증 권한만 더한다.
-     *
-     * <p>이 호출은 현재 요청의 세션만 바꾼다. 같은 회원이 다른 기기에서 로그인해 둔 세션은 다음에 로그인할 때까지 예전 권한을 가진다.
-     * 세션에 저장된 권한은 로그인할 때 정해지고, 이 메서드는 그 회원의 다른 세션을 찾아 고치지 않기 때문이다.
-     */
     public void markEmailVerified(HttpServletRequest request, HttpServletResponse response) {
         Authentication current = securityContextHolderStrategy.getContext().getAuthentication();
         if (current == null || !(current.getPrincipal() instanceof LoginMember member)) {
@@ -65,10 +52,6 @@ public class LoginSessionManager {
         storeContext(authenticationOf(verified), request, response);
     }
 
-    /**
-     * 호출하면 현재 세션의 속성과 로그인 상태는 그대로 두고 세션 ID만 새로 발급한다. 새 ID는 응답의 세션 쿠키로 나간다.
-     * 비밀번호를 바꾼 뒤 부른다. 예전 세션 ID가 새어 나갔더라도 그 ID로는 더 이상 로그인 상태를 쓸 수 없게 하려는 것이다.
-     */
     public void changeSessionId(HttpServletRequest request) {
         if (request.getSession(false) == null) {
             throw new IllegalStateException("세션이 없는 요청에서 세션 ID 재발급을 요청했습니다.");

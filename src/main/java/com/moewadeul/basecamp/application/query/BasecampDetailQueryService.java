@@ -23,12 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 베이스캠프 한 건의 상세를 읽는다. 상태와 상관없이 읽을 수 있고, 요청자와의 관계에 따라 연락 수단 공개 여부만 달라진다.
- * 장소가 지도에 보이지 않게 되어도(숨김·삭제·검토 대기) 상세는 읽을 수 있지만, 장소 요약은 빠진다.
- *
- * <p>멤버의 프로필은 멤버마다 신뢰 모듈의 서비스를 불러 읽는다. 정원이 최대 6명이라 쿼리가 많지 않다.
- */
 @Service
 @RequiredArgsConstructor
 public class BasecampDetailQueryService {
@@ -39,17 +33,6 @@ public class BasecampDetailQueryService {
     private final JoinEligibilityChecker joinEligibilityChecker;
     private final Clock clock;
 
-    /**
-     * 호출하면 basecampId인 베이스캠프의 상세를 돌려준다. viewerId가 null이면 비로그인 요청자라서 관계는 NONE이고 연락 수단은 없다.
-     * 베이스캠프가 없으면 NOT_FOUND로 실패한다.
-     *
-     * <p>장소 요약(spot)은 장소가 ACTIVE일 때만 채우고, 아니면 null이다. 숨긴 장소가 있다는 사실을 드러내지 않기 위해서다.
-     *
-     * <p>신청 자격(eligibility)은 로그인한 요청자가 모집 중인 베이스캠프를 볼 때만 채운다. 판정 규칙은 검색과 같다.
-     * 장소가 ACTIVE가 아니면 서버가 신청을 받지 않으므로 이때도 채우지 않는다.
-     *
-     * <p>연락 수단은 확정된 뒤부터 완료 후 일주일까지 ACTIVE 멤버(캠프 리더 포함)에게만 채우고, 등록된 값이 없으면 그때도 null이다.
-     */
     @Transactional(readOnly = true)
     public BasecampDetail find(Long viewerId, long basecampId) {
         Basecamp basecamp = basecampRepository
@@ -80,8 +63,6 @@ public class BasecampDetailQueryService {
                 spot == null ? null : eligibilityOf(basecamp, viewerId));
     }
 
-    // 캠프 리더가 탈퇴하거나 제재로 빠진 뒤 취소된 베이스캠프는 ACTIVE 멤버 목록에 리더가 없다.
-    // 그래도 상세는 리더를 보여 줘야 하므로, 목록에 없으면 리더의 프로필을 따로 읽는다.
     private BasecampDetail.DetailMember findLeader(Basecamp basecamp, List<BasecampDetail.DetailMember> members) {
         return members.stream()
                 .filter(member -> member.memberId() == basecamp.getLeaderId())

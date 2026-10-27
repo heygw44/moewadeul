@@ -6,7 +6,6 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 멤버 변경 이벤트를 받아 남은 멤버 전원에게 알림을 만든다. */
 @Component
 class BasecampMemberChangedNotificationHandler extends NotificationEventHandler<NotificationPayloads.BasecampMembers> {
 

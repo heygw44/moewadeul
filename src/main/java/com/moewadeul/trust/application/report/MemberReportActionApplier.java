@@ -25,10 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 신고 조치에서 트랜잭션 하나로 묶는 부분이다. 제재 확정, 후기 숨김, 신고 상태 변경, 결과 이벤트, 감사 로그를 함께 커밋하거나
- * 함께 되돌린다. 세션 삭제는 {@link MemberReportActionService}가 이 트랜잭션이 끝난 뒤에 한다.
- */
 @Service
 @RequiredArgsConstructor
 public class MemberReportActionApplier {
@@ -41,19 +37,6 @@ public class MemberReportActionApplier {
     private final AdminAuditRecorder adminAuditRecorder;
     private final Clock clock;
 
-    /**
-     * 호출하면 검토 중인 신고를 조치 완료로 바꾼다. 요청에 제재가 있으면 신고 대상 회원에게 확정하고, hideReview이면 신고된 동행 후기를 숨긴다.
-     * 신고 행을 쓰기 잠금으로 먼저 읽고, 제재 확정이 그다음에 회원 행을 잠근다. 이 순서를 모든 신고 처리가 지켜서 데드락을 피한다.
-     * 긴급 신고의 임시 정지는 건드리지 않고 자연 만료되게 둔다.
-     *
-     * <p>다음 순서로 검사하고 처음 걸린 이유로 거부한다.
-     * <ol>
-     *   <li>신고가 없으면 NOT_FOUND
-     *   <li>신고가 검토 중이 아니면 REPORT_INVALID_STATE
-     *   <li>제재도 후기 숨김도 요청하지 않았거나, 회원 신고에 후기 숨김을 요청했으면 INVALID_INPUT
-     *   <li>요청한 제재 종류가 회원의 다음 단계와 다르면 INVALID_INPUT
-     * </ol>
-     */
     @Transactional
     public MemberReportActionResult apply(MemberReportActionCommand command, SanctionType sanctionType) {
         MemberReport report = memberReportRepository

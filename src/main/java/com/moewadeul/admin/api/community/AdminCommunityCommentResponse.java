@@ -4,7 +4,6 @@ import com.moewadeul.community.application.moderation.AdminCommunityCommentSumma
 import java.time.Instant;
 import java.util.List;
 
-/** 관리자 댓글 검토 목록의 한 항목. 숨긴 댓글도 content에 원문 전체를 담고, 작성자가 지운 댓글이면 content는 null이다. */
 public record AdminCommunityCommentResponse(
         long commentId,
         long postId,

@@ -9,14 +9,12 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
-// 장소 날씨 응답. 기상청 호출이 실패하면 weather가 null이고, 천문연만 실패하면 weather 안의 sun이 null이다. 두 경우 모두 필드는 응답에 남는다.
 public record SpotWeatherResponse(Weather weather) {
 
     static SpotWeatherResponse from(SpotWeather weather) {
         return new SpotWeatherResponse(weather == null ? null : Weather.from(weather));
     }
 
-    /** sun은 천문연이 실패해도 필드를 남기고 null로 준다. */
     public record Weather(String source, List<ShortTerm> shortTerm, List<MidTerm> midTerm, Sun sun) {
 
         static Weather from(SpotWeather weather) {
@@ -58,7 +56,6 @@ public record SpotWeatherResponse(Weather weather) {
         }
     }
 
-    // 시각은 초 없이 "HH:mm"(한국 시각)으로 내보낸다.
     public record Sun(
             LocalDate date,
             @JsonFormat(pattern = "HH:mm") LocalTime sunrise,

@@ -10,12 +10,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import org.springframework.stereotype.Component;
 
-/**
- * 실제 본인확인기관과 계약할 수 없어서 시연에 쓰는 가짜 제공자다.
- *
- * <p>회원이 낸 출생연도와 성별을 그대로 믿는다. CI는 시연용 식별 문자열에서 만든다. 같은 문자열이면 항상 같은 CI가 나오므로, 서로 다른 계정이
- * 같은 사람인 경우(한 사람이 계정을 두 개 만드는 경우)를 시연할 수 있다.
- */
 @Component
 class FakeIdentityProvider implements IdentityProvider {
 

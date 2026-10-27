@@ -15,11 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 공개 행사 목록과 상세를 읽는다. 로그인하지 않아도 부를 수 있다.
- *
- * <p>진행 단계(UPCOMING, OPEN, CLOSED, CANCELED)는 저장하지 않고, 읽을 때마다 현재 시각과 신청 시작·마감 시각으로 계산한다.
- */
 @Service
 @RequiredArgsConstructor
 public class ProgramQueryService {
@@ -27,11 +22,6 @@ public class ProgramQueryService {
     private final ProgramQueryMapper programQueryMapper;
     private final Clock clock;
 
-    /**
-     * 호출하면 취소되지 않은 행사를 query.phase로 거르고 행사 시작 시각이 이른 순서로 한 페이지 읽는다.
-     * 다음 페이지가 있는지 알려고 한 건을 더 읽고, 그 건은 결과에서 뺀다. 그래서 전체 개수를 세는 쿼리를 따로 보내지 않는다.
-     * 화면이 신청이 열리는 순간을 알 수 있게, 필터와 페이지와 상관없이 가장 가까운 신청 오픈 시각도 함께 읽는다.
-     */
     @Transactional(readOnly = true)
     public ProgramPage list(ProgramListQuery query) {
         Instant now = clock.instant();
@@ -47,10 +37,6 @@ public class ProgramQueryService {
         return new ProgramPage(content, query.page(), query.size(), hasNext, nextApplyOpenAt);
     }
 
-    /**
-     * 호출하면 programId인 행사의 상세를 읽는다. 취소된 행사도 status가 CANCELED인 상세로 돌려준다. 신청했던 회원이 취소 사실을 확인해야 하기 때문이다.
-     * viewerId가 null이 아니고 그 회원의 신청이 있으면 가장 최근 신청을 myApplication에 담는다. 행사가 없으면 NOT_FOUND로 실패한다.
-     */
     @Transactional(readOnly = true)
     public ProgramDetail detail(long programId, Long viewerId) {
         Instant now = clock.instant();
@@ -61,10 +47,6 @@ public class ProgramQueryService {
         return toDetail(row, now, findMyApplication(programId, viewerId));
     }
 
-    /**
-     * 호출하면 memberId인 회원의 신청을 query.status로 거르고 최근 신청부터 한 페이지 읽는다. 취소된 행사의 신청도 포함한다.
-     * 다음 페이지가 있는지 알려고 한 건을 더 읽고, 그 건은 결과에서 뺀다.
-     */
     @Transactional(readOnly = true)
     public MyProgramApplicationPage listMine(long memberId, MyProgramApplicationQuery query) {
         Instant now = clock.instant();

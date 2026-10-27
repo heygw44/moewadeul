@@ -11,9 +11,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.util.Set;
 
-// 지도 화면이 쿼리 파라미터로 보내는 영역 조회 조건이다. 기본형 숫자는 값이 빠진 상태를 나타낼 수 없다.
-// 그래서 래퍼 타입으로 받고, 서버는 빠진 값을 @NotNull 위반으로 보고 필드 오류로 돌려준다.
-// types와 settings는 쉼표로 구분한 문자열(CAMPSITE,BAKJI)과 같은 이름을 여러 번 쓴 형태를 모두 받는다.
 public record SpotAreaRequest(
         @NotNull(message = "남서쪽 위도를 입력해 주세요.")
         @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 해요.")
@@ -47,10 +44,8 @@ public record SpotAreaRequest(
         Boolean excludeWarning,
         Boolean hideClosed) {
 
-    // 한 화면의 가로세로 비율을 훨씬 넘는 값이다. 가로로 긴 32:9 모니터도 도 단위로는 4~5배 안쪽이다.
     private static final double MAX_SIDE_RATIO = 10;
 
-    // 위도나 경도가 빠졌으면 @NotNull이 따로 오류를 내므로, 여기서는 둘 다 있을 때만 순서를 본다.
     @AssertTrue(message = "남서쪽 위도는 북동쪽 위도보다 작아야 해요.")
     public boolean isLatitudeOrdered() {
         return swLat == null || neLat == null || swLat < neLat;
@@ -61,8 +56,6 @@ public record SpotAreaRequest(
         return swLng == null || neLng == null || swLng < neLng;
     }
 
-    // 영역이 가늘고 길면 서버가 그 영역을 덮는 격자 행을 수만 개 만들어 조회 한 번이 장소 테이블 전체를 훑는다.
-    // 순서가 틀린 영역은 위 검사가 따로 오류를 내므로, 여기서는 두 변이 양수일 때만 비율을 본다.
     @AssertTrue(message = "지도 영역이 너무 가늘고 길어요. 긴 변은 짧은 변의 10배 이하여야 해요.")
     public boolean isAreaProportioned() {
         if (swLat == null || swLng == null || neLat == null || neLng == null) {

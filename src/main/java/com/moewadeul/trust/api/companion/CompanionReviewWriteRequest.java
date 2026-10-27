@@ -9,7 +9,6 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.hibernate.validator.constraints.UniqueElements;
 
-// 빠진 값을 @NotNull 위반으로 돌려주려고 상대와 "다시 동행" 여부는 래퍼 타입으로 받는다. 태그는 없거나 비어 있어도 된다.
 public record CompanionReviewWriteRequest(
         @NotNull(message = "후기를 받을 회원을 입력해 주세요.") @Positive(message = "후기를 받을 회원 ID는 양수여야 해요.")
         Long revieweeId,

@@ -2,7 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.trip.infra.SoloTripMapper">
 
-    <!-- 장소 상태로는 거르지 않는다. 장소가 숨겨져도 회원 본인의 기록이라서 보여 준다. -->
     <select id="selectUpcomingByMember" resultType="com.moewadeul.trip.infra.SoloTripRow">
         SELECT t.id AS solo_trip_id,
                t.spot_id AS spot_id,

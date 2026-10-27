@@ -7,7 +7,6 @@ import com.moewadeul.community.application.moderation.AdminCommunityRecentReport
 import java.time.Instant;
 import java.util.List;
 
-/** 관리자 글·댓글 검토 목록 응답이 함께 쓰는 작은 값들. 신고 수와 최근 신고는 검토 전 신고만 담고 신고자는 담지 않는다. */
 public final class AdminCommunityReports {
 
     private AdminCommunityReports() {}

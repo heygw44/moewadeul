@@ -15,10 +15,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * 관리자 조치 한 건의 기록이다. 한 번 기록하면 바꾸지 않으므로 변경 메서드가 없다.
- * 조치 대상은 테이블이 action마다 달라서 외래 키 없이 종류(targetType)와 ID로만 가리킨다.
- */
 @Entity
 @Table(name = "admin_audit_log")
 @Getter
@@ -58,10 +54,6 @@ public class AdminAuditLog {
         this.createdAt = now;
     }
 
-    /**
-     * 호출하면 관리자 adminId가 now에 targetType인 대상 targetId에 action을 한 기록을 만든다. detailJson은 JSON 문자열이고 없으면 null이다.
-     * action, 대상 종류, 시각이 비어 있으면 {@link IllegalArgumentException}을 던진다.
-     */
     public static AdminAuditLog record(
             long adminId, AdminAuditAction action, String targetType, long targetId, String detailJson, Instant now) {
         if (action == null || now == null) {

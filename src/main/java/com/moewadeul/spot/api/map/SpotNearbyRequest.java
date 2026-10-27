@@ -10,9 +10,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.util.Set;
 
-// 화면이 쿼리 파라미터로 보내는 반경 검색 조건이다. 빠진 값을 @NotNull 위반으로 돌려주려고 숫자는 래퍼 타입으로 받는다.
-// 반경의 상한은 여기서 검사하지 않는다. 50km를 넘는 반경은 입력 형식 오류가 아니라 전용 오류 코드로 알려야 해서,
-// 조회 조건(SpotNearbyQuery)을 만들 때 그 쪽이 검사한다.
 public record SpotNearbyRequest(
         @NotNull(message = "중심 위도를 입력해 주세요.")
         @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 해요.")

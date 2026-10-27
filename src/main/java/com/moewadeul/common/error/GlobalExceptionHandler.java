@@ -40,8 +40,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                             List.of(new ErrorResponse.FieldError(invalidField.getField(), e.getMessage()))));
         }
         if (errorCode.httpStatus().value() == HttpStatus.SERVICE_UNAVAILABLE.value()) {
-            // 503은 외부 서비스가 실패했거나 하루 한도를 넘어서 서버가 일부러 기능을 멈춘 응답이다. 서버 코드의 결함이 아니고
-            // 사람이 바로 고칠 일도 아니다. 그래서 ERROR와 스택 트레이스 대신 WARN 한 줄에 원인 예외의 종류와 메시지만 남긴다.
             log.warn("business exception code={} cause={}", errorCode.name(), describeCause(e));
         } else if (errorCode.httpStatus().is5xxServerError()) {
             log.error("business exception code={}", errorCode.name(), e);
@@ -69,7 +67,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return Math.max(1, seconds);
     }
 
-    // 여기가 마지막 방어선이다. 예상하지 못한 예외가 와도 서버는 스택 트레이스를 로그에 남기고, 원인은 응답에 담지 않는다.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception e) {
         log.error("unexpected exception", e);
@@ -81,7 +78,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         List<ErrorResponse.FieldError> fieldErrors = new ArrayList<>();
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            // 형 변환에 실패하면 Spring 기본 메시지가 java.lang.Integer 같은 자바 타입 이름이 든 영어 문장이라서, 개발자가 정한 문구로 바꿔 내보낸다.
             String message = fieldError.isBindingFailure() ? "값의 형식이 맞지 않아요." : fieldError.getDefaultMessage();
             fieldErrors.add(new ErrorResponse.FieldError(fieldError.getField(), message));
         }

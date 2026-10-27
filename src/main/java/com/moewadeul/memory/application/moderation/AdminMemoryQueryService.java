@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 관리자가 검토 대기 또는 숨긴 공개 기록의 목록을 읽는다. 신고 내용이 들어 있으므로 호출하는 쪽이 관리자 권한을 확인해야 한다. */
 @Service
 @RequiredArgsConstructor
 public class AdminMemoryQueryService {
@@ -25,15 +24,9 @@ public class AdminMemoryQueryService {
     private final AdminMemoryMapper adminMemoryMapper;
     private final MemoryImageReader memoryImageReader;
 
-    /**
-     * 호출하면 status인 공개 기록을 금전 요구·사기 신고가 있는 기록부터, 같은 묶음에서는 상태가 바뀐 시각이 이른 순서로 한 페이지 돌려준다. status가
-     * null이면 검토 대기(PENDING_REVIEW)를 읽는다. 검토 대기와 숨김(HIDDEN) 말고 다른 값이면 INVALID_INPUT으로 거부한다. 비공개 기록은 관리자도 보지
-     * 못하므로 읽지 않는다.
-     */
     @Transactional(readOnly = true)
     public AdminMemoryPage list(String status, int page, int size) {
         MemoryStatus memoryStatus = parseStatus(status);
-        // 다음 쪽이 있는지 알려고 한 건 더 읽는다.
         List<AdminMemoryRow> rows = adminMemoryMapper.selectMemories(memoryStatus.name(), (long) page * size, size + 1);
         boolean hasNext = rows.size() > size;
         List<AdminMemoryRow> pageRows = rows.stream().limit(size).toList();

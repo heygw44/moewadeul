@@ -14,17 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 회원이 커뮤니티 글에 댓글과 답글을 쓰고, 자기 댓글을 고치거나 지운다.
- *
- * <p>댓글은 ACTIVE인 글에만 달 수 있다. 답할 댓글은 같은 글의 ACTIVE 댓글이어야 하고, 어기면 INVALID_INPUT으로 거부한다. 답할 댓글이
- * 답글이어도 받는다. 이때 새 답글은 그 답글의 최상위 댓글 아래에 달리므로, 최상위 댓글의 상태는 보지 않는다.
- * 고치거나 지울 때는 댓글이 없거나, 댓글이 ACTIVE가 아니거나, 글이 ACTIVE가 아니면 NOT_FOUND로 거부한다. 작성자 본인에게도 같다.
- * 그 조건을 통과한 뒤 작성자가 아니면 ACCESS_DENIED로 거부하므로, 검사 순서는 대상 확인, 작성자 확인이다.
- *
- * <p>댓글을 지울 때는 상태를 DELETED로 바꾸고 내용을 지운 채 행을 남긴다. 답글이 달려 있는지는 따지지 않는다.
- * 답글이 있는 댓글은 목록에서 자리만 남기 때문이다.
- */
 @Service
 @RequiredArgsConstructor
 public class CommunityCommentCommandService {
@@ -34,12 +23,6 @@ public class CommunityCommentCommandService {
     private final CommunityCommentMapper communityCommentMapper;
     private final Clock clock;
 
-    /**
-     * 호출하면 memberId인 회원의 댓글을 postId인 글에 저장하고 댓글 ID를 돌려준다.
-     *
-     * <p>parentId는 답할 댓글이고, 최상위 댓글과 답글 모두 될 수 있다. 글이 없거나 ACTIVE가 아니면 NOT_FOUND로 거부한다. 내용이 공백뿐이거나
-     * 1,000자를 넘거나, parentId인 댓글이 없거나 다른 글의 댓글이거나 ACTIVE가 아니면 INVALID_INPUT으로 거부한다.
-     */
     @Transactional
     public long write(long memberId, long postId, CommunityCommentWriteCommand command) {
         requireActivePost(postId);
@@ -51,12 +34,6 @@ public class CommunityCommentCommandService {
         return communityCommentRepository.saveAndFlush(comment).getId();
     }
 
-    /**
-     * 호출하면 작성자 memberId가 commentId인 댓글의 내용을 바꾸고, 바꾼 뒤의 댓글을 돌려준다. 최상위 댓글이면 ACTIVE 답글도 함께 담는다.
-     *
-     * <p>댓글이나 글이 없거나 ACTIVE가 아니면 NOT_FOUND로, 다른 회원이 쓴 댓글이면 ACCESS_DENIED로 거부한다. 내용이 공백뿐이거나
-     * 1,000자를 넘으면 INVALID_INPUT으로 거부한다.
-     */
     @Transactional
     public CommunityCommentItem revise(long memberId, long commentId, String content) {
         CommunityComment comment = loadOwnActiveComment(memberId, commentId);
@@ -70,11 +47,6 @@ public class CommunityCommentCommandService {
         return CommunityCommentItem.from(row, repliesOf(comment));
     }
 
-    /**
-     * 호출하면 작성자 memberId의 댓글을 DELETED로 바꾸고 내용을 지운다. 행은 남는다.
-     *
-     * <p>댓글이나 글이 없거나 ACTIVE가 아니면 NOT_FOUND로, 다른 회원이 쓴 댓글이면 ACCESS_DENIED로 거부한다.
-     */
     @Transactional
     public void delete(long memberId, long commentId) {
         loadOwnActiveComment(memberId, commentId).delete(clock.instant());
@@ -90,8 +62,6 @@ public class CommunityCommentCommandService {
     }
 
     private CommunityComment loadOwnActiveComment(long memberId, long commentId) {
-        // 숨김·신고 처리와 같은 댓글 행 잠금을 첫 쿼리로 잡는다. 잠그지 않고 읽으면 그사이 커밋된 HIDDEN·검토 대기 상태를
-        // 이 트랜잭션이 행 전체를 쓰면서 ACTIVE로 되돌린다. 신고 처리처럼 글은 잠그지 않고 읽기만 한다.
         CommunityComment comment = communityCommentRepository
                 .findByIdForUpdate(commentId)
                 .filter(CommunityComment::isActive)
@@ -110,7 +80,6 @@ public class CommunityCommentCommandService {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 
-    // 답할 댓글은 같은 글에 있고 내용이 보여야 한다. 답글이어도 되는데, 새 답글의 부모는 엔티티가 최상위 댓글로 맞추기 때문이다.
     private CommunityComment loadReplyTarget(long postId, long targetId) {
         return communityCommentRepository
                 .findById(targetId)

@@ -3,7 +3,6 @@ package com.moewadeul.member.application.password;
 import com.moewadeul.common.mail.MailMessage;
 import com.moewadeul.member.domain.password.PasswordResetPolicy;
 
-/** 비밀번호 재설정 링크를 담은 메일을 만든다. 토큰은 이 메일 본문의 링크에만 들어간다. */
 final class PasswordResetMailFactory {
 
     static final String SUBJECT = "[뫼와들] 비밀번호 재설정 안내";
