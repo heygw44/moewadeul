@@ -13,6 +13,8 @@ import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.Password;
 import com.moewadeul.member.domain.signup.DisposableEmailDomainRepository;
+import com.moewadeul.member.domain.verification.EmailVerificationPolicy;
+import com.moewadeul.member.domain.verification.SendWindow;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -40,12 +42,16 @@ public class MemberSignupService {
         Password password = Password.of(command.password());
         Email email = Email.of(command.email());
         Member.requireValidNickname(command.nickname());
+        // IP 잠금이 이 트랜잭션의 첫 SQL이어야 한다. MySQL은 첫 일반 조회 때 읽기 스냅숏을 정하므로, 이보다 앞서 조회하면
+        // 잠금을 기다리는 동안 같은 IP의 다른 가입이 커밋한 발송 요청을 세지 못한다.
+        SendWindow sentByIp = emailVerificationService.lockSendsByIp(command.requestIp());
+        Instant now = Instant.now(clock);
         rejectDisposableDomain(email);
         rejectDuplicates(email, command.nickname());
-        rejectIfIpLimited(command.requestIp());
+        rejectIfIpLimited(sentByIp, now);
 
         String passwordHash = passwordEncoder.encode(password.value());
-        Member member = Member.register(email, passwordHash, command.nickname(), Instant.now(clock));
+        Member member = Member.register(email, passwordHash, command.nickname(), now);
         Member saved = saveOrTranslate(member);
         outboxEventRecorder.record(
                 EmailVerificationEvents.EVENT_TYPE,
@@ -58,8 +64,9 @@ public class MemberSignupService {
 
     // 가입의 첫 인증 메일도 재발송과 같은 IP 시간당 한도를 쓴다. 한 IP가 가입을 쏟아내서 메일 서비스의 하루 발송 한도를 다 쓰고
     // 다른 회원의 인증·재설정 메일까지 못 나가게 하는 일을 막는다. 비용이 큰 비밀번호 해시 전에 거른다.
-    private void rejectIfIpLimited(String requestIp) {
-        Optional<Duration> blockedFor = emailVerificationService.ipBlockedFor(requestIp);
+    private void rejectIfIpLimited(SendWindow sentByIp, Instant now) {
+        Optional<Duration> blockedFor =
+                EmailVerificationPolicy.ipBlockedFor(Math.toIntExact(sentByIp.count()), sentByIp.oldestSentAt(), now);
         if (blockedFor.isPresent()) {
             throw new RateLimitedException(MemberErrorCode.SIGNUP_LIMITED, blockedFor.get());
         }

@@ -124,6 +124,20 @@ class EmailVerificationCleanupIntegrationTest {
         assertThat(count()).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("[F-01][EV-03] 마지막 요청이 24시간보다 1마이크로초 더 지난 IP 잠금 행은 지우고, 정확히 24시간 된 행과 그보다 새 행은 남긴다")
+    void deletesOnlyIpLockRowsIdleLongerThanOneDay() {
+        Instant lockCutoff = clock.instant().minus(Duration.ofHours(24));
+        insertIpLockRow("idle", lockCutoff.minus(Duration.ofNanos(1_000)));
+        insertIpLockRow("exact", lockCutoff);
+        insertIpLockRow("recent", clock.instant());
+
+        cleanupService.deleteExpired();
+
+        assertThat(jdbc.queryForList("SELECT ip_key FROM email_verification_ip_lock ORDER BY ip_key", String.class))
+                .containsExactly(ipLockKey("exact"), ipLockKey("recent"));
+    }
+
     private Instant cutoff() {
         return clock.instant().minus(EmailVerificationPolicy.RECORD_RETENTION);
     }
@@ -146,6 +160,18 @@ class EmailVerificationCleanupIntegrationTest {
                 at,
                 at);
         return jdbc.queryForObject("SELECT MAX(id) FROM email_verification", Long.class);
+    }
+
+    private void insertIpLockRow(String name, Instant lastRequestedAt) {
+        jdbc.update(
+                "INSERT INTO email_verification_ip_lock (ip_key, last_requested_at) VALUES (?, ?)",
+                ipLockKey(name),
+                DATETIME_UTC.format(lastRequestedAt));
+    }
+
+    // 잠금 행의 키는 64자 고정 길이다. 테스트는 이름 뒤를 채워서 행마다 다르고 정렬 순서를 아는 키를 만든다.
+    private static String ipLockKey(String name) {
+        return (name + "_".repeat(64)).substring(0, 64);
     }
 
     private boolean exists(long id) {

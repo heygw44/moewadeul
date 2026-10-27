@@ -429,12 +429,13 @@ class EmailVerificationServiceIntegrationTest {
             emailVerificationService.requestResend(newMember().getId(), IP);
         }
         Member another = newMember();
+        Member fromOtherIp = newMember();
 
         // when & then
         assertThat(countVerificationRows()).isZero();
         assertResendLimited(another, IP, Duration.ofHours(1));
-        assertThat(emailVerificationService.ipBlockedFor(IP)).contains(Duration.ofHours(1));
-        assertThat(emailVerificationService.ipBlockedFor(OTHER_IP)).isEmpty();
+        emailVerificationService.requestResend(fromOtherIp.getId(), OTHER_IP);
+        assertThat(countEvents(fromOtherIp)).isEqualTo(1);
     }
 
     @Test
@@ -454,7 +455,7 @@ class EmailVerificationServiceIntegrationTest {
 
         // then: 19번째까지는 막지 않고, 20번째 요청이 기록되면 한도에 닿는다
         assertThat(countEvents(another)).isEqualTo(1);
-        assertThat(emailVerificationService.ipBlockedFor(IP)).isPresent();
+        assertResendLimited(newMember(), IP, Duration.ofHours(1));
     }
 
     @Test

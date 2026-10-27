@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.member.infra.verification.EmailVerificationIpLockMapper">
+
+    <!--
+        INSERT IGNORE 대신 ON DUPLICATE KEY UPDATE를 쓴다. 행이 이미 있으면 INSERT IGNORE는 그 행에 공유 잠금만 얻는다.
+        그 뒤 같은 트랜잭션이 쓰기 잠금으로 올리려 할 때 같은 IP의 다른 요청도 공유 잠금을 쥐고 있으면 서로 기다리다 교착이 난다.
+        이 문장은 행이 이미 있어도 처음부터 쓰기 잠금을 얻는다.
+        키는 IP 원문 대신 SHA2로 만든 SHA-256 16진수 64자다. 키를 이 문장 한 곳에서만 만들어서, 키 만드는 방식이 둘로 갈라지지 않게 한다.
+    -->
+    <insert id="lock">
+        INSERT INTO email_verification_ip_lock (ip_key, last_requested_at)
+        VALUES (SHA2(#{requestIp}, 256), #{now})
+        ON DUPLICATE KEY UPDATE last_requested_at = #{now}
+    </insert>
+
+    <delete id="deleteIdleBefore">
+        DELETE FROM email_verification_ip_lock
+        WHERE last_requested_at &lt; #{cutoff}
+        LIMIT #{limit}
+    </delete>
+</mapper>
