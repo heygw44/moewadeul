@@ -7,14 +7,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import java.util.Arrays;
 
 public record MyBasecampListRequest(
         @Schema(description = "내 관계. LEADER, MEMBER, APPLICANT 중 하나. 생략하면 셋 모두.")
-        String relation,
+        BasecampRelation relation,
 
-        @Schema(implementation = BasecampStatus.class, description = "베이스캠프 상태. 생략하면 모든 상태.")
-        String status,
+        @Schema(description = "베이스캠프 상태. 생략하면 모든 상태.") BasecampStatus status,
 
         @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.") Integer page,
 
@@ -26,26 +24,11 @@ public record MyBasecampListRequest(
 
     @AssertTrue(message = "relation은 LEADER, MEMBER, APPLICANT 중 하나여야 해요.")
     public boolean isRelationValid() {
-        return relation == null || (!BasecampRelation.NONE.name().equals(relation) && isRelationName(relation));
-    }
-
-    @AssertTrue(message = "status는 RECRUITING, CLOSED, CONFIRMED, COMPLETED, CANCELED 중 하나여야 해요.")
-    public boolean isStatusValid() {
-        return status == null
-                || Arrays.stream(BasecampStatus.values())
-                        .anyMatch(candidate -> candidate.name().equals(status));
+        return relation != BasecampRelation.NONE;
     }
 
     MyBasecampListQuery toQuery() {
         return new MyBasecampListQuery(
-                relation == null ? null : BasecampRelation.valueOf(relation),
-                status == null ? null : BasecampStatus.valueOf(status),
-                page == null ? DEFAULT_PAGE : page,
-                size == null ? DEFAULT_SIZE : size);
-    }
-
-    private static boolean isRelationName(String value) {
-        return Arrays.stream(BasecampRelation.values())
-                .anyMatch(candidate -> candidate.name().equals(value));
+                relation, status, page == null ? DEFAULT_PAGE : page, size == null ? DEFAULT_SIZE : size);
     }
 }

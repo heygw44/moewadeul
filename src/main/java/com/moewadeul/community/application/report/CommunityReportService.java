@@ -13,7 +13,6 @@ import com.moewadeul.community.domain.report.CommunityReportRepository;
 import com.moewadeul.community.domain.report.CommunityReportTargetType;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -68,7 +67,7 @@ public class CommunityReportService {
 
     private boolean saveReport(
             CommunityReportTargetType targetType, long targetId, long memberId, CommunityReportCommand command) {
-        CommunityReportReason reason = parseReason(command.reason());
+        CommunityReportReason reason = command.reason();
         String content = command.content();
         if (content != null && content.length() > CommunityReport.CONTENT_MAX_LENGTH) {
             throw new BusinessException(
@@ -86,20 +85,6 @@ public class CommunityReportService {
         }
         return communityReportRepository.countByTargetTypeAndTargetIdAndReviewedAtIsNull(targetType, targetId)
                 >= PENDING_REVIEW_REPORT_THRESHOLD;
-    }
-
-    private static CommunityReportReason parseReason(String value) {
-        return Arrays.stream(CommunityReportReason.values())
-                .filter(reason -> reason.name().equals(value))
-                .findFirst()
-                .orElseThrow(() -> new BusinessException(
-                        CommonErrorCode.INVALID_INPUT, "신고 사유는 " + allowedReasons() + " 중 하나여야 해요."));
-    }
-
-    private static String allowedReasons() {
-        return String.join(
-                ", ",
-                Arrays.stream(CommunityReportReason.values()).map(Enum::name).toList());
     }
 
     private static BusinessException alreadyReported() {

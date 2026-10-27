@@ -27,8 +27,8 @@ public class MemoryImageCleanupService {
 
     public Result deleteExpiredRowsThenObjects() {
         Instant createdBefore = clock.instant().minus(RETENTION);
-        Result result =
-                deleteRowsThenObjectsInBatches(() -> memoryImageMapper.selectUnattachedCreatedBefore(createdBefore, BATCH_SIZE));
+        Result result = deleteRowsThenObjectsInBatches(
+                () -> memoryImageMapper.selectUnattachedCreatedBefore(createdBefore, BATCH_SIZE));
         log.info(
                 "memory image cleanup deletedRows={} storageFailures={}",
                 result.deletedRows(),

@@ -447,6 +447,24 @@ class BasecampQueryControllerTest {
     }
 
     @Test
+    @DisplayName("[F-13] 내 베이스캠프의 status를 enum으로 바꾸지 못하면 status 필드에 허용 값을 알려 준다")
+    void listMineNamesAllowedStatusValues() {
+        // when
+        MvcTestResult result = mvc.get()
+                .uri(MY_BASECAMPS + "?status=UNKNOWN")
+                .with(unverified())
+                .exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("status");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("RECRUITING, CLOSED, CONFIRMED, COMPLETED, CANCELED 중 하나여야 해요.");
+    }
+
+    @Test
     @DisplayName("[F-13] 로그인하지 않고 내 베이스캠프를 조회하면 401 AUTHENTICATION_REQUIRED이다")
     void listMineRequiresLogin() {
         // when

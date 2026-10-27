@@ -8,9 +8,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record CommunityReportRequest(
-        @Schema(implementation = CommunityReportReason.class, description = "신고 사유.")
-        @NotNull(message = "신고 사유를 입력해 주세요.")
-        String reason,
+        @Schema(description = "신고 사유.") @NotNull(message = "신고 사유를 입력해 주세요.")
+        CommunityReportReason reason,
 
         @Size(max = CommunityReport.CONTENT_MAX_LENGTH, message = "신고 내용은 1000자 이하여야 해요.")
         String content) {

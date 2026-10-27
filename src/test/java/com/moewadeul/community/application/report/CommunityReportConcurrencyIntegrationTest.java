@@ -11,6 +11,7 @@ import com.moewadeul.community.application.moderation.CommunityModerationService
 import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostWriteCommand;
 import com.moewadeul.community.domain.CommunityErrorCode;
+import com.moewadeul.community.domain.report.CommunityReportReason;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,7 +34,8 @@ class CommunityReportConcurrencyIntegrationTest {
 
     private static final int THREADS = 10;
     private static final int PENDING_REVIEW_REPORTS = 5;
-    private static final CommunityReportCommand REPORT = new CommunityReportCommand("SPAM", "광고입니다");
+    private static final CommunityReportCommand REPORT =
+            new CommunityReportCommand(CommunityReportReason.SPAM, "광고입니다");
 
     @Autowired
     private CommunityReportService communityReportService;

@@ -18,6 +18,7 @@ import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.community.application.report.CommunityReportCommand;
 import com.moewadeul.community.application.report.CommunityReportService;
 import com.moewadeul.community.domain.CommunityErrorCode;
+import com.moewadeul.community.domain.report.CommunityReportReason;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,7 +57,8 @@ class CommunityReportControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.CREATED);
         assertThat(result.getResponse().getContentAsByteArray()).isEmpty();
-        verify(communityReportService).reportPost(MEMBER_ID, 9L, new CommunityReportCommand("SPAM", "광고입니다"));
+        verify(communityReportService)
+                .reportPost(MEMBER_ID, 9L, new CommunityReportCommand(CommunityReportReason.SPAM, "광고입니다"));
     }
 
     @Test
@@ -68,7 +70,8 @@ class CommunityReportControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.CREATED);
         assertThat(result.getResponse().getContentAsByteArray()).isEmpty();
-        verify(communityReportService).reportComment(MEMBER_ID, 5L, new CommunityReportCommand("ABUSE", null));
+        verify(communityReportService)
+                .reportComment(MEMBER_ID, 5L, new CommunityReportCommand(CommunityReportReason.ABUSE, null));
     }
 
     @Test
@@ -130,20 +133,20 @@ class CommunityReportControllerTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-07] 모르는 reason도 서비스까지 그대로 넘기고, 서비스가 던진 INVALID_INPUT은 400으로 응답한다")
-    void unknownReasonIsRejectedByService() {
-        // given
-        doThrow(new BusinessException(CommonErrorCode.INVALID_INPUT, "신고 사유가 올바르지 않습니다."))
-                .when(communityReportService)
-                .reportPost(anyLong(), anyLong(), any());
-
+    @DisplayName("[F-29][CM-07] 모르는 reason은 서비스를 부르지 않고 reason 필드 오류로 400 INVALID_INPUT을 응답한다")
+    void unknownReasonIsFieldError() {
         // when
         MvcTestResult result = send(POST_REPORTS, verified(), "{\"reason\":\"UNKNOWN\"}");
 
         // then
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
-        verify(communityReportService).reportPost(MEMBER_ID, 9L, new CommunityReportCommand("UNKNOWN", null));
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("reason");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("SPAM, ABUSE, ILLEGAL_CAMPING, PRIVACY, MONEY_SCAM, OTHER 중 하나여야 해요.");
+        verifyNoInteractions(communityReportService);
     }
 
     private MvcTestResult send(String uri, RequestPostProcessor user, String body) {
