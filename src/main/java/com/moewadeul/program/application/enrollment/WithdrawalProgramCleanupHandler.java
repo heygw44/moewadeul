@@ -3,12 +3,11 @@ package com.moewadeul.program.application.enrollment;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.program.domain.ProgramCancelReason;
+import com.moewadeul.trust.application.withdrawal.WithdrawalEvents;
 import org.springframework.stereotype.Component;
 
 @Component
 class WithdrawalProgramCleanupHandler implements OutboxEventHandler {
-
-    static final String EVENT_TYPE = "WITHDRAWAL_PROGRAM_CLEANUP";
 
     private final ProgramSanctionCleanupService cleanupService;
 
@@ -18,7 +17,7 @@ class WithdrawalProgramCleanupHandler implements OutboxEventHandler {
 
     @Override
     public String eventType() {
-        return EVENT_TYPE;
+        return WithdrawalEvents.PROGRAM_CLEANUP_EVENT_TYPE;
     }
 
     @Override
