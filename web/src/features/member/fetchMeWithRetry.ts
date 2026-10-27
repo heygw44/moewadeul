@@ -2,6 +2,8 @@ import { fetchMe } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import type { Me } from '../../api/types';
 
+export type MeLookup = { status: 'authenticated'; me: Me } | { status: 'anonymous' } | { status: 'unavailable' };
+
 const RETRY_DELAYS_MS = [1000, 2000];
 
 function isTransient(error: unknown): boolean {
@@ -26,14 +28,19 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-export async function fetchMeWithRetry(signal?: AbortSignal): Promise<Me | null> {
+export async function fetchMeWithRetry(signal?: AbortSignal): Promise<MeLookup> {
   for (let attempt = 0; ; attempt += 1) {
     try {
-      return await fetchMe(signal);
+      const me = await fetchMe(signal);
+      return me ? { status: 'authenticated', me } : { status: 'anonymous' };
     } catch (error) {
       const delay = RETRY_DELAYS_MS[attempt];
-      if (delay === undefined || !isTransient(error)) throw error;
-      await sleep(delay, signal);
+      if (delay === undefined || !isTransient(error)) return { status: 'unavailable' };
+      try {
+        await sleep(delay, signal);
+      } catch {
+        return { status: 'unavailable' };
+      }
     }
   }
 }

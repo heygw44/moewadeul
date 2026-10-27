@@ -35,18 +35,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchMeWithRetry(controller.signal).then(
-      (me) => {
-        setState(me ? { status: 'authenticated', me } : ANONYMOUS);
-        setUnavailable(false);
-        setRetrying(false);
-      },
-      () => {
+    void fetchMeWithRetry(controller.signal).then((result) => {
+      if (result.status === 'unavailable') {
         if (controller.signal.aborted) return;
         setUnavailable(true);
         setRetrying(false);
-      },
-    );
+        return;
+      }
+      setState(result.status === 'authenticated' ? { status: 'authenticated', me: result.me } : ANONYMOUS);
+      setUnavailable(false);
+      setRetrying(false);
+    });
     return () => controller.abort();
   }, [attempt]);
 
