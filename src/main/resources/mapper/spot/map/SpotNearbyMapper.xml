@@ -11,7 +11,6 @@
               * POW(SIN(RADIANS(s.longitude - #{nearby.centerLng}) / 2), 2))))
     </sql>
 
-    <!-- NOT 안의 식이 NULL이 되면 MySQL이 그 행을 빼므로, 운영 상태에 IS NOT NULL을 먼저 걸어 식이 항상 참이나 거짓이 되게 한다. -->
     <sql id="candidatesInRadius">
         FROM spot s
         <if test="nearby.hasWater or nearby.hasToilet">
@@ -49,15 +48,9 @@
                 </foreach>)
         </if>
         <if test="nearby.hideClosed">
-          AND NOT (
-                s.type &lt;&gt; 'BAKJI'
-                AND (
-                    ((d.closed_from IS NOT NULL OR d.closed_until IS NOT NULL)
-                        AND (d.closed_from IS NULL OR d.closed_from &lt;= #{nearby.today})
-                        AND (d.closed_until IS NULL OR d.closed_until &gt;= #{nearby.today}))
-                    OR (d.closed_from IS NULL AND d.closed_until IS NULL
-                        AND d.operating_status IS NOT NULL
-                        AND d.operating_status IN ('TEMPORARILY_CLOSED', 'PERMANENTLY_CLOSED'))))
+          AND NOT <include refid="com.moewadeul.spot.infra.map.SpotClosureSql.closedToday">
+              <property name="condition" value="nearby"/>
+          </include>
         </if>
           AND <include refid="distanceMeters"/> &lt;= #{nearby.radiusMeters}
     </sql>
