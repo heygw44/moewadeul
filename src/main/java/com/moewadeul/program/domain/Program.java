@@ -19,13 +19,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * 관리자가 등록하는 공식 행사다. 정원, 참가비, 신청 기간, 결제 기한을 가진다.
- *
- * <p>이 클래스는 값의 범위와 시각 순서(신청 시작 &lt; 신청 마감 &le; 행사 시작 &lt; 행사 종료)를 검사한다.
- * 신청을 몇 건 받았는지는 알지 못하고, 같은 행사를 동시에 바꾸는 요청도 직접 막지 않는다. 그 제어는 호출하는 서비스가 맡는다.
- * 모든 메서드는 현재 시각을 호출하는 쪽에서 받는다.
- */
 @Entity
 @Table(name = "program")
 @Getter
@@ -51,7 +44,6 @@ public class Program {
 
     private String title;
 
-    // MySQL TEXT 컬럼이다. 길이는 DESCRIPTION_MAX_LENGTH로 앱이 검사한다.
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     private String description;
 
@@ -114,13 +106,6 @@ public class Program {
         this.updatedAt = now;
     }
 
-    /**
-     * 호출하면 관리자 createdBy가 details대로 등록하는 행사를 만든다.
-     *
-     * <p>값이 null이거나 범위를 벗어나거나, 시각 순서가 맞지 않거나, 행사 시작이 now 이전이면 {@link IllegalArgumentException}을 던진다.
-     * 신청 시작 시각은 now 이후일 필요가 없다. 이미 신청을 받는 중인 행사도 등록할 수 있다.
-     * 장소가 지도에 보이는 장소인지는 다른 모듈의 정보가 필요해서 호출하는 쪽이 검사한다.
-     */
     public static Program create(long createdBy, ProgramDetails details, Instant now) {
         if (details == null || now == null) {
             throw new IllegalArgumentException("행사를 만드는 데 필요한 값이 null입니다.");
@@ -139,14 +124,6 @@ public class Program {
         return new Program(createdBy, details, now);
     }
 
-    /**
-     * 호출하면 revision에서 null이 아닌 필드로 행사를 고치고, 바뀐 내용을 돌려준다. 고친 뒤의 값으로 범위와 시각 순서를 다시 검사한다.
-     *
-     * <p>취소된 행사이면 PROGRAM_INVALID_STATE를 던진다. 수정 전의 신청 시작 시각이 now 이전이거나 이 행사에 신청이 하나라도 있는데
-     * 정원을 줄이면 PROGRAM_CAPACITY_DECREASE를 던진다. 신청자가 이미 들어왔을 수 있어서 줄일 수 없고, 늘리는 것은 허용한다.
-     * 신청 시작 시각을 미래로 미룬 뒤에 줄이는 요청도 막아야 하므로, 호출하는 쪽이 신청 기록이 있는지를 applicationsExist로 알려 준다.
-     * 값이 범위를 벗어나거나 시각 순서가 맞지 않으면 {@link IllegalArgumentException}을 던진다. 이 경우 행사는 바뀌지 않는다.
-     */
     public ProgramChange revise(ProgramRevision revision, Instant now, boolean applicationsExist) {
         if (revision == null || now == null) {
             throw new IllegalArgumentException("행사를 고치는 데 필요한 값이 null입니다.");
@@ -173,10 +150,6 @@ public class Program {
         return new ProgramChange(changedFields, capacityBefore, capacity);
     }
 
-    /**
-     * 호출하면 행사를 CANCELED로 바꾼다. 이미 취소된 행사이면 PROGRAM_INVALID_STATE를 던진다.
-     * 이 행사의 신청과 결제를 함께 취소하는 일은 호출하는 서비스가 맡는다.
-     */
     public void cancel(Instant now) {
         if (status == ProgramStatus.CANCELED) {
             throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
@@ -185,15 +158,10 @@ public class Program {
         this.updatedAt = now;
     }
 
-    /** 호출하면 now 시점의 공개 진행 단계를 돌려준다. */
     public ProgramPhase phaseAt(Instant now) {
         return ProgramPhase.of(status, applyOpenAt, applyCloseAt, now);
     }
 
-    /**
-     * 호출하면 now에 신청을 받는 행사인지 검사한다. 취소된 행사이면 PROGRAM_INVALID_STATE, 신청 시작 전이거나 마감 뒤이면
-     * PROGRAM_NOT_IN_APPLY_PERIOD를 던진다.
-     */
     public void requireApplicableAt(Instant now) {
         switch (phaseAt(now)) {
             case CANCELED -> throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
@@ -202,22 +170,18 @@ public class Program {
         }
     }
 
-    /** 호출하면 신뢰 단계가 trustLevel인 회원이 이 행사에 신청할 자격이 있는지 돌려준다. 숙박 행사만 단계 1 이상을 요구한다. */
     public boolean isTrustLevelSufficient(int trustLevel) {
         return !overnight || trustLevel >= MIN_TRUST_LEVEL_FOR_OVERNIGHT;
     }
 
-    /** 호출하면 now에 신청한 회원의 결제 기한을 돌려준다. */
     public Instant paymentDueAt(Instant now) {
         return now.plus(Duration.ofMinutes(paymentDeadlineMinutes));
     }
 
-    /** 호출하면 결제를 마친 신청자가 환불받으며 취소할 수 있는 마지막 시각(행사 시작 72시간 전)을 돌려준다. 이 시각 정각까지 취소할 수 있다. */
     public Instant refundDeadline() {
         return startAt.minus(Duration.ofHours(REFUND_CANCEL_HOURS_BEFORE_START));
     }
 
-    // 고친 뒤의 값을 영속 상태가 아닌 임시 객체에 모아서, 검사에 실패하면 이 행사를 건드리지 않게 한다.
     private Program merge(ProgramRevision revision) {
         Program merged = new Program();
         merged.title = revision.title() == null ? title : revision.title();

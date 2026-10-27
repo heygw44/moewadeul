@@ -6,15 +6,6 @@ import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.bakji.BakjiContent;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/**
- * 박지 수정 요청이다. 모든 필드가 선택이고, 필드를 빼는 것과 {@code null}을 보내는 것의 뜻이 다르다.
- * 서버는 요청에 없는 필드를 그대로 두고, {@code null}로 보낸 설명·통신 상태·바닥 유형은 지운다.
- * 이름, 위도·경도, 물·화장실 유무는 지울 수 없어서 서버가 {@code null}을 거부한다. 위도와 경도는 함께 보내야 한다.
- *
- * <p>값의 형식(이름·설명 길이, 좌표 범위, 허용된 통신 상태·바닥 유형)은 서비스가 검증한다. 이 요청은 받은 값을 그대로 넘긴다.
- *
- * <p>JSON에 빠진 필드를 Jackson이 Java {@code null}로 넘기는 경우가 있다. 그래서 생성자가 {@code null}을 "요청에 없음"으로 바꾼다.
- */
 public record BakjiUpdateRequest(
         @Schema(
                 implementation = String.class,

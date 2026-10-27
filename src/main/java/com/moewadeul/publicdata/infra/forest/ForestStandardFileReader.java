@@ -13,16 +13,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 공공데이터포털에서 받은 전국휴양림표준데이터 JSON 파일을 읽는다.
- *
- * <p>파일은 UTF-8이고 {@code {"fields":[...],"records":[{"휴양림명":"...", ...}]}} 모양이다. 리더는 {@code records}의 각 행에서 키 이름으로
- * 값을 찾으므로, 키 순서가 바뀌거나 쓰지 않는 키가 늘어도 그대로 읽는다. 값이 문자열이든 숫자든 문자열로 바꿔 돌려주고, null은 빈
- * 문자열로 바꾼다.
- *
- * <p>이 파일은 사람이 내려받아 넣는 정적 파일이다. {@code records}가 없거나 한 행이라도 필요한 키가 빠졌으면 파일 전체가 잘못 받아졌을 수
- * 있으므로, 리더는 일부 행만 돌려주지 않고 파일 전체를 거부한다.
- */
 @Component
 @RequiredArgsConstructor
 public class ForestStandardFileReader {
@@ -40,12 +30,6 @@ public class ForestStandardFileReader {
 
     private final JsonMapper jsonMapper;
 
-    /**
-     * 호출하면 파일의 {@code records}를 모두 읽어 돌려준다.
-     *
-     * @throws IllegalStateException JSON 형식이 아니거나, {@code records} 배열이 없거나, 행이 객체가 아니거나, 행에 필요한 키가 없을 때
-     * @throws UncheckedIOException 파일이 없거나 읽지 못했을 때
-     */
     public ForestStandardFile read(Path file) {
         String fileName = fileName(file);
         try (InputStream in = Files.newInputStream(file)) {

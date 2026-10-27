@@ -8,12 +8,6 @@ import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * 회원의 문장을 장소 검색 조건으로 바꾸는 유스케이스.
- *
- * <p>이 클래스에는 트랜잭션을 걸지 않는다. OpenAI 호출이 느려지면 DB 커넥션을 붙잡기 때문이다. 사용량 기록은 {@link AiSearchUsageRecorder}의 짧은
- * 트랜잭션이 맡는다. 문장은 OpenAI에 보내는 데만 쓰고 로그, 예외 메시지, 지표 태그, DB에 남기지 않는다.
- */
 @Service
 @RequiredArgsConstructor
 public class AiInterpretService {
@@ -27,12 +21,6 @@ public class AiInterpretService {
     private final MeterRegistry meterRegistry;
     private final Clock clock;
 
-    /**
-     * 호출하면 오늘 한도를 하나 쓰고, 서비스 전체의 하루 비용 한도가 남았을 때만 OpenAI로 문장을 해석한다.
-     *
-     * @throws RateLimitedException 회원의 오늘 한도를 다 썼을 때
-     * @throws BusinessException 하루 비용 한도에 닿았거나 OpenAI 호출·응답 검증이 실패했을 때(AI_SEARCH_UNAVAILABLE)
-     */
     public SpotQueryConditions interpret(long memberId, String query) {
         LocalDate today = AiSearchDay.today(clock);
         claim(memberId, today);
@@ -66,7 +54,6 @@ public class AiInterpretService {
         try {
             result = interpreter.interpret(query);
         } catch (SpotQueryInterpretationException e) {
-            // 응답은 받았지만 내용 검증에서 실패한 호출도 OpenAI가 비용을 매기므로 토큰을 센다.
             e.usage().ifPresent(usage -> usageRecorder.addTokens(memberId, today, usage));
             countRequest("failed");
             throw unavailable(e);
@@ -79,7 +66,6 @@ public class AiInterpretService {
         meterRegistry.counter(REQUESTS_METRIC, "outcome", outcome).increment();
     }
 
-    // 원인 예외의 메시지에는 실패 종류만 있고 문장은 없다. 그래서 원인을 달아 두어도 로그에 문장이 새지 않는다.
     private static BusinessException unavailable(Throwable cause) {
         BusinessException exception = new BusinessException(AiSearchErrorCode.AI_SEARCH_UNAVAILABLE);
         if (cause != null) {

@@ -16,10 +16,6 @@ import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 동기화 작업의 실행 기록을 남긴다. 기록을 바꾸는 메서드마다 트랜잭션을 따로 연다.
- * 그래서 작업이 외부 API를 부르는 동안 DB 커넥션을 붙잡지 않고, 페이지마다 남긴 진행 위치는 작업이 나중에 실패해도 남는다.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,35 +25,17 @@ public class SyncJobRunService {
 
     private static final String RUNNING_UNIQUE_CONSTRAINT = "uk_sync_job_run_running";
     private static final String KEY_MARKER = " for key '";
+    // 같은 종류를 동시에 시작하면 InnoDB가 같은 키를 넣으려는 트랜잭션 하나를 교착 상태 오류로 중단시키기도 해서 다시 시도한다.
     private static final int MAX_START_ATTEMPTS = 3;
 
     private final SyncJobRunStartService syncJobRunStartService;
     private final SyncJobRunRepository syncJobRunRepository;
     private final Clock clock;
 
-    /**
-     * 호출하면 새 실행 기록을 RUNNING으로 만들고, 이번 실행이 어디부터 처리할지 돌려준다.
-     *
-     * <p>직전 실행이 실패했으면 그 실행의 진행 위치를 이어받고, 완료했거나 기록이 없으면 처음부터 처리한다.
-     * 직전 실행이 아직 RUNNING이고 {@code staleAfter} 안에 갱신됐으면 다른 실행이 진행 중이므로 기록을 만들지 않고 빈 값을 돌려준다.
-     * 그보다 오래 갱신되지 않았으면 서버가 작업 도중 꺼진 것으로 보고, 그 기록을 실패로 처리한 뒤 진행 위치를 이어받는다.
-     *
-     * <p>두 호출이 같은 종류를 동시에 시작하면 둘 다 RUNNING 기록이 없다고 읽을 수 있다. 이때 DB는 종류마다 RUNNING 기록을 하나만 받으므로
-     * 늦게 넣은 쪽에 유니크 제약 위반 예외를 던진다. 그 예외가 나면 시작 트랜잭션은 이미 롤백됐으므로, 이 메서드는 트랜잭션 밖에서 예외를 받아
-     * 다른 실행이 진행 중일 때와 같이 빈 값을 돌려준다.
-     *
-     * <p>같은 종류를 동시에 시작한 호출이 여럿이면 InnoDB가 같은 키를 넣으려는 트랜잭션 중 하나를 교착 상태 오류로 중단시키기도 한다.
-     * 중단된 트랜잭션은 롤백됐으므로, 이 메서드는 시작을 최대 {@value #MAX_START_ATTEMPTS}번까지 다시 시도한다.
-     * 다시 시도하면 먼저 끝낸 쪽이 커밋한 RUNNING 기록을 읽어 빈 값을 돌려주거나 새로 넣는다. 모든 시도가 실패하면 마지막 예외를 던진다.
-     */
     public Optional<SyncJobStart> begin(SyncJobType jobType, Duration staleAfter) {
         return begin(jobType, staleAfter, null);
     }
 
-    /**
-     * 호출하면 {@link #begin(SyncJobType, Duration)}처럼 실행 기록을 만들고, 관리자 adminId가 요청한 실행이면 같은 트랜잭션에서 감사 로그도 남긴다.
-     * 실행 기록을 만들지 못하고 빈 값을 돌려줄 때는 감사 로그도 남지 않는다.
-     */
     public Optional<SyncJobStart> begin(SyncJobType jobType, Duration staleAfter, Long adminId) {
         for (int attempt = 1; ; attempt++) {
             try {
@@ -103,10 +81,6 @@ public class SyncJobRunService {
         getRun(runId).fail(message, clock.instant());
     }
 
-    /**
-     * 호출하면 runId 실행이 시작된 뒤에 jobType 실행이 성공으로 끝났는지 돌려준다. 어떤 작업이 도는 사이에 다른 작업이 끝났는지, 예를 들어 재판정이
-     * 도는 사이에 공원 경계 적재가 끝났는지 알려는 호출이 쓴다. 두 시각이 같으면 뒤에 끝난 것으로 세지 않는다.
-     */
     @Transactional(readOnly = true)
     public boolean hasCompletedSinceStartOf(SyncJobType jobType, long runId) {
         Instant startedAt = getRun(runId).getStartedAt();
@@ -120,11 +94,5 @@ public class SyncJobRunService {
                 .orElseThrow(() -> new IllegalStateException("실행 기록이 없습니다. runId=" + runId));
     }
 
-    /**
-     * 이번 실행의 시작 정보.
-     *
-     * @param runId 새로 만든 실행 기록의 ID
-     * @param resumeCursor 실패한 직전 실행이 마지막으로 처리를 마친 위치. 처음부터 처리하면 null이다.
-     */
     public record SyncJobStart(long runId, String resumeCursor) {}
 }

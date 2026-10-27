@@ -5,8 +5,6 @@ import com.moewadeul.trust.domain.TrustErrorCode;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 
-// 서비스가 중복 여부를 조회한 뒤 DB에 쓰기 전에, 다른 요청이 같은 회원이나 같은 CI로 먼저 본인확인을 저장할 수 있다.
-// 이때 DB가 유니크 제약 위반 예외를 던지므로, 서비스는 이 클래스로 제약 이름을 보고 어느 쪽이 중복인지 가려낸다.
 final class IdentityUniqueConstraintTranslator {
 
     private static final String MEMBER_UNIQUE_CONSTRAINT = "uk_identity_verification_member";
@@ -15,7 +13,6 @@ final class IdentityUniqueConstraintTranslator {
 
     private IdentityUniqueConstraintTranslator() {}
 
-    /** 호출하면 본인확인 유니크 제약 위반을 오류 코드 예외로 바꿔 돌려준다. 다른 제약 위반이면 받은 예외를 그대로 돌려준다. */
     static RuntimeException translate(DataIntegrityViolationException e) {
         String violatedKey =
                 violatedKey(NestedExceptionUtils.getMostSpecificCause(e).getMessage());

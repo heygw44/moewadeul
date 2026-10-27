@@ -13,20 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 글을 저장하고 고치고 지우는 트랜잭션 단위. {@link CommunityPostCommandService}가 트랜잭션 밖에서 이미지 확인을 마친 뒤 여기를 부른다.
- *
- * <p>회원이 커뮤니티 글을 쓰고, 자기 글을 고치거나 지운다.
- *
- * <p>글에 연결할 수 있는 장소는 지도에 보이는(ACTIVE) 장소뿐이다. 장소가 없거나 ACTIVE가 아니면 서비스는 INVALID_INPUT으로 거부한다.
- * 고치거나 지울 때는 글이 없거나 ACTIVE가 아니면(삭제, 숨김, 검토 대기) NOT_FOUND로 거부한다. 작성자 본인에게도 같다. 글이 있는데
- * 작성자가 아니면 ACCESS_DENIED로 거부하므로, 검사 순서는 글 확인, 작성자 확인이다.
- *
- * <p>고치거나 지울 때 서비스는 글 행을 쓰기 잠금으로 먼저 읽는다. 잠그지 않고 읽으면 관리자 숨김이나 신고 누적이 그사이 커밋한 HIDDEN·검토 대기
- * 상태를 이 트랜잭션이 행 전체를 쓰면서 ACTIVE로 되돌리기 때문이다.
- *
- * <p>글을 지울 때는 상태만 DELETED로 바꾸고 행을 남긴다. 이후에 신고 기록과 감사 로그가 글을 가리키기 때문이다.
- */
 @Service
 @RequiredArgsConstructor
 public class CommunityPostWriter {
@@ -37,12 +23,6 @@ public class CommunityPostWriter {
     private final CommunityPostImageAttacher communityPostImageAttacher;
     private final Clock clock;
 
-    /**
-     * 호출하면 memberId인 회원의 글을 저장하고 글 ID를 돌려준다.
-     *
-     * <p>제목이 공백뿐이거나 100자를 넘거나, 본문이 공백뿐이거나 10,000자를 넘거나, 연결할 장소가 ACTIVE가 아니면 INVALID_INPUT으로
-     * 거부한다. 이미지는 잠근 뒤 소유자와 붙은 상태를 다시 검사하고, 어기면 글도 저장하지 않는다.
-     */
     @Transactional
     public long write(long memberId, CommunityPostWriteCommand command) {
         requireValidTitle(command.title());
@@ -59,19 +39,11 @@ public class CommunityPostWriter {
         return postId;
     }
 
-    /**
-     * 호출하면 작성자 memberId가 postId인 글에서 요청에 담은 필드만 고치고, 고친 뒤의 글을 돌려준다. 요청에 없는 필드는 그대로 둔다.
-     *
-     * <p>글이 없거나 ACTIVE가 아니면 NOT_FOUND로, 다른 회원이 쓴 글이면 ACCESS_DENIED로 거부한다. 제목이나 본문을 null로 보냈거나
-     * 값이 규칙을 어기거나, 연결할 장소가 ACTIVE가 아니면 INVALID_INPUT으로 거부한다.
-     */
     @Transactional
     public CommunityPostItem revise(long memberId, long postId, CommunityPostReviseCommand command) {
-        // 잠금 쿼리가 이 트랜잭션의 첫 쿼리여야 최신 상태를 읽는다. 클래스 설명을 본다.
         CommunityPost post = lockOwnActivePost(memberId, postId);
         Instant now = clock.instant();
         applyChanges(post, command, now);
-        // imageIds를 보냈으면 서비스가 null을 이미 거부했으므로 값이 있다.
         if (command.imageIds().present()
                 && communityPostImageAttacher.replace(
                         memberId, postId, command.imageIds().value())) {
@@ -84,24 +56,16 @@ public class CommunityPostWriter {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 
-    /**
-     * 호출하면 작성자 memberId의 글을 DELETED로 바꾼다. 행은 남는다.
-     *
-     * <p>글이 없거나 ACTIVE가 아니면 NOT_FOUND로, 다른 회원이 쓴 글이면 ACCESS_DENIED로 거부한다.
-     */
     @Transactional
     public void delete(long memberId, long postId) {
         lockOwnActivePost(memberId, postId).delete(clock.instant());
     }
 
-    /** 호출하면 postId인 글이 ACTIVE이고 memberId인 회원이 쓴 글인지만 확인한다. 아니면 {@link #revise}와 같은 예외로 거부한다. */
     @Transactional(readOnly = true)
     public void requireOwnActivePost(long memberId, long postId) {
         loadOwnActivePost(memberId, postId);
     }
 
-    // 숨김·신고 처리와 같은 글 행 잠금을 잡는다. 그래서 그쪽이 먼저 커밋하면 이쪽은 바뀐 상태를 보고 거부하고, 이쪽이 먼저면 그쪽이 기다린다.
-    // 같은 글의 이미지를 바꾸는 요청끼리도 이 잠금으로 줄을 서므로, 늦은 요청은 먼저 붙은 이미지를 보고 떼어 낸다.
     private CommunityPost lockOwnActivePost(long memberId, long postId) {
         return requireOwnActive(communityPostRepository.findByIdForUpdate(postId), memberId);
     }
@@ -138,7 +102,6 @@ public class CommunityPostWriter {
         }
     }
 
-    // 제목과 본문은 지울 수 있는 값이 아니다. 요청에 있는데 null이면 지우려는 것으로 보고 거부한다.
     private static void requireNotCleared(PatchField<?> field, String label) {
         if (field.present() && field.value() == null) {
             throw invalidInput(label + "은(는) 비울 수 없어요.");

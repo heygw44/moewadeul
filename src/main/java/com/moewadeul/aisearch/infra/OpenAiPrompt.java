@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** OpenAI에 보내는 시스템 프롬프트와 답변 형식(JSON 스키마). 요청마다 같은 값이라 한 번만 만든다. */
 final class OpenAiPrompt {
 
     static final String SYSTEM = """

@@ -12,8 +12,6 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-// 이 클래스에는 @Transactional을 두지 않는다. 처리기가 메일을 보내는 것처럼 오래 걸리는 일을 해도
-// DB 커넥션과 행 잠금을 붙잡지 않아야 하기 때문이다. DB 접근은 OutboxEventStore의 짧은 트랜잭션이 맡는다.
 @Slf4j
 @Service
 public class OutboxPublisher {
@@ -33,15 +31,6 @@ public class OutboxPublisher {
         this.shutdownSignal = shutdownSignal;
     }
 
-    /**
-     * 호출하면 발행할 이벤트를 집어 이벤트마다 처리기를 호출하고, 성공하면 PUBLISHED로, 실패하면 시도 횟수를 올려 표시한다.
-     * 한 이벤트가 실패해도 나머지 이벤트는 계속 처리한다.
-     *
-     * <p>앱이 종료를 시작하면 처리하던 이벤트 하나만 마치고 멈춘다. 집어 두고 처리하지 않은 이벤트는 임대를 풀어서, 새로 뜬 앱이
-     * 임대 시간을 기다리지 않고 바로 집게 한다. 종료가 이미 시작됐으면 이벤트를 집지 않는다.
-     *
-     * @return 이번에 집어서 처리한 이벤트 수(실패한 이벤트 포함)
-     */
     public int publishPending() {
         if (shutdownSignal.isRequested()) {
             return 0;
@@ -80,7 +69,6 @@ public class OutboxPublisher {
             store.markPublished(message.eventId());
             return;
         }
-        // 오류 문자열은 처리기가 만든 메시지라 개인정보가 들어 있을 수 있다. 그래서 로그에는 남기지 않고 last_error 열에만 기록한다.
         log.warn(
                 "outbox event failed eventId={} eventType={} transient={}",
                 message.eventId(),
@@ -95,14 +83,10 @@ public class OutboxPublisher {
         if (handler == null) {
             return Optional.of(new Failure(truncate("no handler for " + message.eventType()), false));
         }
-        // 처리기는 모듈마다 다르게 구현하므로 어떤 예외가 나올지 미리 알 수 없다.
-        // 그런데 이벤트 하나가 던진 예외가 나머지 이벤트 처리를 막으면 안 되고, 던진 이벤트는 재시도 대상으로 남겨야 한다.
-        // 그래서 이 루프에서만 Exception을 통째로 잡아 오류 문자열로 바꾸고, 예외를 삼키지 않고 DB에 기록한다.
         try {
             handler.handle(message);
             return Optional.empty();
         } catch (Exception e) {
-            // 메일 서버에 연결하지 못한 것처럼 서버가 돌아오면 성공할 실패는 재시도 한도에 세지 않는다.
             return Optional.of(new Failure(describe(e), MailDeliveryException.isTransient(e)));
         }
     }

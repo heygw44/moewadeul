@@ -32,14 +32,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * OpenAI Chat Completions로 문장을 장소 검색 조건으로 바꾼다.
- *
- * <p>호출이 돈과 시간을 쓰고 사용자가 화면에서 기다리므로 재시도하지 않는다. 실패하면 호출한 쪽이 바로 알고 안내한다.
- *
- * <p>사용자 문장은 개인정보일 수 있고 요청 헤더에는 키가 들어 있다. 그래서 문장, 응답 본문, 헤더는 예외 메시지와 로그에 남기지 않고,
- * 실패 종류와 HTTP 상태만 남긴다.
- */
 @Slf4j
 @Component
 public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
@@ -85,7 +77,6 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
             throw fail("OpenAI 키가 설정되지 않았다");
         }
         try {
-            // 동시 호출 수 한도에 닿으면 기다리지 않고 바로 실패로 끝낸다. 호출한 쪽은 이 실패를 503으로 바꾼다.
             return callLimit.call(
                     () -> metrics.record(API, OPERATION, () -> interpretOnce(query)),
                     () -> fail("동시 호출 수가 한도에 닿아 호출하지 않았다"));
@@ -105,7 +96,6 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
         try {
             return new SpotQueryInterpretation(readConditions(root), usage);
         } catch (SpotQueryInterpretationException e) {
-            // 응답은 받았으므로 토큰 비용은 이미 들었다. 호출한 쪽이 하루 한도에 더할 수 있게 실어 보낸다.
             throw new SpotQueryInterpretationException(e.getMessage(), e.getCause(), usage);
         }
     }
@@ -129,13 +119,11 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
         return new RawResponse(response.getStatusCode(), body);
     }
 
-    // 사용자 문장은 user 메시지에만 넣는다. 날짜, 회원 ID, 이메일, 좌표 같은 다른 값은 보내지 않는다.
     private Map<String, Object> requestBody(String query) {
         return Map.of(
                 "model", properties.model(),
                 "temperature", 0,
                 "max_completion_tokens", properties.maxOutputTokens(),
-                // 요청과 응답을 OpenAI 쪽에 저장하지 않게 한다.
                 "store", false,
                 "messages",
                         List.of(
@@ -271,7 +259,6 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
         }
     }
 
-    // 어느 필드가 틀렸는지 알아야 원인을 좁힐 수 있다. 값은 응답 내용이라 메시지에 넣지 않고 필드 이름만 넣는다.
     private static SpotQueryInterpretationException schemaMismatch(String field) {
         return fail("답변이 스키마와 다르다 field=" + field);
     }

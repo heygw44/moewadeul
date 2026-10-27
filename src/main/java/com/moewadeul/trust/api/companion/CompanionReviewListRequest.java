@@ -3,7 +3,6 @@ package com.moewadeul.trust.api.companion;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
-// 화면이 쿼리 파라미터로 보내는 페이지 조건이다. 값이 없으면 기본값을 쓰려고 래퍼 타입으로 받는다.
 public record CompanionReviewListRequest(
         @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.") Integer page,
 

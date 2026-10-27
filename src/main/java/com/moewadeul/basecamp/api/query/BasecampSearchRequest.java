@@ -13,11 +13,6 @@ import java.util.Set;
 import java.util.stream.Stream;
 import org.springframework.format.annotation.DateTimeFormat;
 
-// 화면이 쿼리 파라미터로 보내는 베이스캠프 검색 조건이다. 지역은 영역(swLat, swLng, neLat, neLng) 네 개나 반경(lat, lng, radiusKm) 세 개 중
-// 한 묶음만 모두 보내야 한다. 두 묶음 모두 값이 비어 있을 수 있어서 개별 값에는 @NotNull을 걸지 않고, 묶음 단위로 @AssertTrue가 검사한다.
-// 반경의 상한(50km)은 장소 검색과 달리 전용 오류 코드 없이 입력 형식 오류(INVALID_INPUT)로 알린다.
-// types와 nights는 쉼표로 구분한 문자열(CAMPSITE,BAKJI)과 같은 이름을 여러 번 쓴 형태를 모두 받는다. 박 수는 베이스캠프를 열 때와 같은
-// 1~3박이고, 최소 신뢰 단계 상한은 합류 조건에 둘 수 있는 단계인 1~2다.
 public record BasecampSearchRequest(
         @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 해요.") @DecimalMax(value = "90", message = "위도는 90 이하여야 해요.")
         Double swLat,
@@ -73,7 +68,6 @@ public record BasecampSearchRequest(
         return (hasFullArea() && hasNoRadius()) || (hasNoArea() && hasFullRadius());
     }
 
-    // 위도나 경도가 빠졌으면 지역 묶음 검사가 따로 오류를 내므로, 여기서는 네 값이 모두 있을 때만 순서를 본다.
     @AssertTrue(message = "남서쪽 위도는 북동쪽 위도보다 작아야 해요.")
     public boolean isLatitudeOrdered() {
         return !hasFullArea() || swLat < neLat;

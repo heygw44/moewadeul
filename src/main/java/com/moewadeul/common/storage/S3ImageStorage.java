@@ -28,15 +28,6 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
-/**
- * S3 버킷에 커뮤니티 글과 장소 후기의 이미지를 두는 저장소. 자격 증명은 SDK의 기본 방식으로 찾는다. 운영 서버에서는 인스턴스 역할이다.
- *
- * <p>사전 서명 URL은 서버 안에서 계산하므로 S3를 부르지 않는다. 객체 크기 확인과 삭제만 S3를 부르며, SDK는 기본으로 제한 시간이 없어서
- * 호출마다 제한 시간을 걸고 재시도는 한 번만 한다. 로그에는 키나 URL을 남기지 않는다. 키에 회원 ID가 들어 있고, URL에는 서명이 들어 있기 때문이다.
- *
- * <p>객체 크기 확인은 사용자 요청 스레드에서 S3 응답을 기다린다. 그래서 동시에 보내는 확인 수를 제한하고, 한도를 넘거나 S3가 시간 안에
- * 답하지 않거나 5xx로 답하면 503 {@code IMAGE_STORAGE_UNAVAILABLE}로 끝낸다.
- */
 @Component
 @ConditionalOnProperty(
         prefix = "moewadeul.image-storage",
@@ -68,7 +59,6 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
                 new ExternalCallLimit(API, externalApiProperties, metrics));
     }
 
-    // 테스트가 고정 자격 증명으로 만든 서명기를 넣을 수 있게 열어 둔다.
     S3ImageStorage(
             ImageStorageProperties properties, S3Client s3Client, S3Presigner presigner, ExternalCallLimit headLimit) {
         this.properties = properties;
@@ -84,6 +74,7 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
     private static S3Client buildClient(ImageStorageProperties properties) {
         return S3Client.builder()
                 .region(Region.of(properties.region()))
+                // AWS SDK는 기본으로 API 호출 제한 시간이 없다.
                 .overrideConfiguration(override -> override.apiCallTimeout(properties.apiCallTimeout())
                         .apiCallAttemptTimeout(properties.apiCallAttemptTimeout())
                         .retryStrategy(retry -> retry.maxAttempts(MAX_ATTEMPTS)))
@@ -127,10 +118,8 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
         } catch (NoSuchKeyException e) {
             return Optional.empty();
         } catch (SdkClientException e) {
-            // 시간 초과나 연결 실패다.
             throw unavailable(e);
         } catch (S3Exception e) {
-            // S3가 5xx로 답한 것은 저장소 쪽 문제라서 곧 나아질 수 있다. 권한 없음 같은 4xx는 설정 결함이라 그대로 던져 500으로 남긴다.
             if (e.statusCode() >= HttpStatus.INTERNAL_SERVER_ERROR.value()) {
                 throw unavailable(e);
             }
@@ -148,11 +137,6 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
         return new BusinessException(CommonErrorCode.IMAGE_STORAGE_UNAVAILABLE);
     }
 
-    /**
-     * 호출하면 key의 조회 URL을 준다. 서명 시각이 URL에 들어가서 매번 새로 서명하면 URL이 달라지고, 브라우저는 같은 사진을 다시 받는다. 그래서 같은
-     * 객체의 URL은 서명 구간 동안 한 번만 서명해 두고 그대로 돌려준다. 구간 끝에 가까워서 받은 URL도 조회 유효 시간만큼은 쓸 수 있도록 서명 유효 시간에
-     * 구간 길이를 더한다. 응답에는 같은 시간만큼 브라우저가 캐시하도록 {@code Cache-Control}을 서명에 넣는다.
-     */
     @Override
     public String presignView(String key) {
         return viewUrls.get(key, this::signView);

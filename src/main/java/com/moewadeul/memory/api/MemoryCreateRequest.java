@@ -13,8 +13,6 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 
-// 빠진 값을 @NotNull 위반으로 돌려주려고 숫자는 래퍼 타입으로 받는다. 방문일이 오늘 뒤인지, 글이 공백뿐인지, 장소가 연결할 수 있는 장소인지는
-// 서비스가 검사한다. 공개 범위는 문자열로 받아서, 모르는 값을 Jackson의 enum 변환 오류가 아니라 이 필드의 입력 오류로 돌려준다.
 public record MemoryCreateRequest(
         @NotNull(message = "위도를 입력해 주세요.")
         @DecimalMin(value = "-90", message = "위도는 -90 이상이어야 해요.")

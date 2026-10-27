@@ -13,11 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 캠프 리더가 자기 베이스캠프에 들어온 합류 신청 목록을 읽는다.
- *
- * <p>신청자의 프로필은 신청마다 신뢰 모듈의 서비스를 불러 읽는다. 한 페이지는 최대 50건이다.
- */
 @Service
 @RequiredArgsConstructor
 public class BasecampApplicationListService {
@@ -26,12 +21,6 @@ public class BasecampApplicationListService {
     private final BasecampApplicationMapper basecampApplicationMapper;
     private final MemberProfileQueryService memberProfileQueryService;
 
-    /**
-     * 호출하면 leaderId인 캠프 리더가 basecampId인 베이스캠프의 신청 가운데 query.status인 것을 신청이 오래된 순서로 한 페이지 읽는다.
-     * 베이스캠프가 없으면 NOT_FOUND, 요청자가 캠프 리더가 아니면 ACCESS_DENIED로 실패한다.
-     *
-     * <p>다음 페이지가 있는지 알려고 한 건을 더 읽고, 그 건은 결과에서 뺀다. 그래서 전체 개수를 세는 쿼리를 따로 보내지 않는다.
-     */
     @Transactional(readOnly = true)
     public BasecampApplicationPage list(long basecampId, long leaderId, BasecampApplicationListQuery query) {
         Basecamp basecamp = basecampRepository

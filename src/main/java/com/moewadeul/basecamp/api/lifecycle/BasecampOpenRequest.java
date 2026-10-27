@@ -9,7 +9,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
-// 빠진 값을 @NotNull 위반으로 돌려주려고 숫자는 래퍼 타입으로 받는다. 출발일 범위, 박 수, 정원 범위는 서비스가 검사한다.
 public record BasecampOpenRequest(
         @NotNull(message = "장소를 입력해 주세요.") Long spotId,
 
@@ -30,7 +29,6 @@ public record BasecampOpenRequest(
 
         @Valid JoinConditionRequest joinCondition) {
 
-    /** 합류 조건이다. 보내지 않은 값은 그 조건을 걸지 않는다. 값의 범위는 서비스가 검사한다. */
     public record JoinConditionRequest(
             @Schema(description = "최소 신뢰 단계. 1 또는 2다.", example = "1")
             Integer minTrustLevel,

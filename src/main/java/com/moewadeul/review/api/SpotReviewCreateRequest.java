@@ -11,7 +11,6 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 
-// 빠진 값을 @NotNull 위반으로 돌려주려고 평점은 래퍼 타입으로 받는다. 방문일이 오늘 뒤인지는 시각이 필요해서 서비스가 검사한다.
 public record SpotReviewCreateRequest(
         @Schema(description = "방문일(한국 날짜). 오늘보다 뒤일 수 없다.", example = "2026-10-05") @NotNull(message = "방문일을 입력해야 합니다.")
         LocalDate visitedDate,

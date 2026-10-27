@@ -3,10 +3,6 @@ package com.moewadeul.admin.api.program;
 import com.moewadeul.program.application.catalog.ProgramDetail;
 import java.time.Instant;
 
-/**
- * 관리자가 행사를 고친 뒤 받는 상세다. 공개 상세와 같은 모양이다. 다만 관리자는 자기 신청을 확인할 일이 없어서 myApplication을 뺀다.
- * status는 UPCOMING, OPEN, CLOSED, CANCELED 중 하나이고, spotId는 지도 장소와 연결하지 않았으면 null이다.
- */
 public record AdminProgramDetailResponse(
         long programId,
         String title,

@@ -5,8 +5,6 @@ import com.moewadeul.trust.domain.TrustErrorCode;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 
-// 서비스가 이미 썼는지 조회한 뒤 저장하기 전에, 같은 후기를 쓰는 다른 요청이 먼저 저장할 수 있다.
-// 이때 DB가 유니크 제약 위반 예외를 던지므로, 서비스는 이 클래스로 제약 이름을 보고 같은 후기의 중복인지 가려낸다.
 final class CompanionReviewUniqueConstraintTranslator {
 
     private static final String UNIQUE_CONSTRAINT = "uk_companion_review_basecamp_reviewer_reviewee";
@@ -14,7 +12,6 @@ final class CompanionReviewUniqueConstraintTranslator {
 
     private CompanionReviewUniqueConstraintTranslator() {}
 
-    /** 호출하면 같은 후기의 유니크 제약 위반을 오류 코드 예외로 바꿔 돌려준다. 다른 제약 위반이면 받은 예외를 그대로 돌려준다. */
     static RuntimeException translate(DataIntegrityViolationException e) {
         String violatedKey =
                 violatedKey(NestedExceptionUtils.getMostSpecificCause(e).getMessage());

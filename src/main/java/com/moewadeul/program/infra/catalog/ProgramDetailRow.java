@@ -3,7 +3,6 @@ package com.moewadeul.program.infra.catalog;
 import com.moewadeul.program.domain.ProgramStatus;
 import java.time.Instant;
 
-/** 행사 상세 한 건이다. 목록 항목에 설명과 결제 기한(분)이 더해진다. */
 public record ProgramDetailRow(
         long programId,
         String title,

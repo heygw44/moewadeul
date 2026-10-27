@@ -1,6 +1,5 @@
 package com.moewadeul.common.audit;
 
-/** 감사 로그에서 조치 대상이 어느 테이블의 행인지 나타내는 종류. */
 public final class AdminAuditTargetType {
 
     public static final String MEMBER_REPORT = "MEMBER_REPORT";

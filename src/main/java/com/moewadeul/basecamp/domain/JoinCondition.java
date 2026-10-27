@@ -11,12 +11,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * 캠프 리더가 거는 합류 조건이다. 값이 없으면 그 조건은 걸지 않은 것이다.
- *
- * <p>이 클래스는 조건 값이 올바른지만 검사한다. 신청자가 조건을 채웠는지는 신청자의 본인확인 정보가 필요해서 이 클래스가 판정하지 않는다.
- * 연령대는 20, 30처럼 십 단위 숫자이고 60은 60대 이상을 뜻한다.
- */
 @Embeddable
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -60,12 +54,10 @@ public class JoinCondition {
         this.requiredGender = requiredGender;
     }
 
-    /** 호출하면 아무 조건도 걸지 않은 합류 조건을 만든다. */
     public static JoinCondition none() {
         return new JoinCondition(null, null, null, false, null);
     }
 
-    /** 호출하면 최소 신뢰 단계를 건 새 조건을 돌려준다. 단계가 1~2가 아니면 {@link IllegalArgumentException}을 던진다. */
     public JoinCondition withMinTrustLevel(int level) {
         if (level < MIN_TRUST_LEVEL || level > MAX_TRUST_LEVEL) {
             throw new IllegalArgumentException("최소 신뢰 단계는 " + MIN_TRUST_LEVEL + " 또는 " + MAX_TRUST_LEVEL + "이어야 합니다.");
@@ -73,7 +65,6 @@ public class JoinCondition {
         return new JoinCondition(level, ageGroupMin, ageGroupMax, sameGenderOnly, requiredGender);
     }
 
-    /** 호출하면 연령대 범위를 건 새 조건을 돌려준다. 값이 십 단위 20~60이 아니거나 min이 max보다 크면 {@link IllegalArgumentException}을 던진다. */
     public JoinCondition withAgeGroupRange(int min, int max) {
         requireAgeGroup(min);
         requireAgeGroup(max);
@@ -83,7 +74,6 @@ public class JoinCondition {
         return new JoinCondition(minTrustLevel, min, max, sameGenderOnly, requiredGender);
     }
 
-    /** 호출하면 gender와 같은 성별만 받는 새 조건을 돌려준다. gender가 null이면 {@link IllegalArgumentException}을 던진다. */
     public JoinCondition withSameGenderOnly(JoinGender gender) {
         if (gender == null) {
             throw new IllegalArgumentException("동성만 받으려면 캠프 리더의 성별이 필요합니다.");

@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-// /api/admin/** 경로는 보안 설정이 ADMIN 역할에만 연다.
 @RestController
 @RequestMapping("/api/admin/spots")
 class AdminSpotController {

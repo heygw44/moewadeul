@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-/** 관리자 추억 기록 검토 목록의 한 페이지 응답이다. 전체 개수는 없고 다음 페이지가 있는지만 hasNext로 알려 준다. */
 public record AdminMemoryPageResponse(List<Item> content, int page, int size, boolean hasNext) {
 
     static AdminMemoryPageResponse from(AdminMemoryPage page) {
@@ -17,7 +16,6 @@ public record AdminMemoryPageResponse(List<Item> content, int page, int size, bo
                 page.content().stream().map(Item::from).toList(), page.page(), page.size(), page.hasNext());
     }
 
-    // 관리자에게도 정확한 좌표는 주지 않고 대략 좌표(approxLat, approxLng)만 준다. 글이 없으면 content 필드를 뺀다.
     public record Item(
             long memoryId,
             AdminCommunityReports.Author author,
@@ -56,7 +54,6 @@ public record AdminMemoryPageResponse(List<Item> content, int page, int size, bo
         }
     }
 
-    /** 기록 안 순서대로 담는다. url은 사전 서명한 조회 URL이다. */
     public record Image(long imageId, String url) {}
 
     public record ReasonCounts(

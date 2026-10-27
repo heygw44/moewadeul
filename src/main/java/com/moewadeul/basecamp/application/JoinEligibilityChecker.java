@@ -14,10 +14,6 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * 회원이 베이스캠프의 합류 조건과 일정을 충족하는지 검사한다. 합류 신청과 신청 승인이 같은 검사를 쓴다.
- * 신청할 때 통과했더라도 승인할 때까지 신뢰 단계나 다른 베이스캠프의 멤버 여부가 바뀔 수 있어서, 승인할 때 같은 규칙으로 다시 검사한다.
- */
 @Component
 @RequiredArgsConstructor
 public class JoinEligibilityChecker {
@@ -25,18 +21,10 @@ public class JoinEligibilityChecker {
     private final TrustSummaryService trustSummaryService;
     private final BasecampSearchMapper basecampSearchMapper;
 
-    /** 호출하면 memberId인 회원의 신뢰 정보를 읽어 자격 판정에 쓰는 값으로 돌려준다. */
     public Applicant applicantOf(long memberId) {
         return JoinApplicants.from(trustSummaryService.detail(memberId));
     }
 
-    /**
-     * 호출하면 applicant가 basecamp의 합류 조건과 일정을 충족하는지 검사하고, 충족하지 못하면 첫 번째 이유의 오류로 거부한다.
-     * 최소 신뢰 단계, 연령대, 성별을 충족하지 못하면 BASECAMP_CONDITION_NOT_MET이고, 같은 기간에 아직 끝나지 않은(모집 중·마감·확정) 다른
-     * 베이스캠프의 ACTIVE 멤버이면 BASECAMP_DATE_CONFLICT이다.
-     *
-     * <p>이전 관계(이미 멤버이거나 거절·탈퇴·강퇴된 적)는 도메인의 신청·승인 검사가 먼저 다루므로 NONE으로 넘긴다.
-     */
     public void requireEligible(Basecamp basecamp, Applicant applicant, long memberId) {
         boolean dateConflict = hasDateConflict(basecamp, memberId);
         List<JoinUnmetReason> reasons = JoinEligibilityPolicy.unmetReasons(
@@ -46,10 +34,6 @@ public class JoinEligibilityChecker {
         }
     }
 
-    /**
-     * 호출하면 viewerId인 회원이 basecamp에 신청할 수 있는지와, 없다면 모든 이유를 순서대로 돌려준다. 이미 멤버이거나 대기 중인 신청이 있으면
-     * ALREADY_JOINED, 거절·탈퇴·강퇴된 적이 있으면 REAPPLY_NOT_ALLOWED가 이유에 들어간다.
-     */
     public JoinEligibility judge(Basecamp basecamp, long viewerId) {
         Applicant applicant = applicantOf(viewerId);
         PriorRelation prior = basecampSearchMapper.selectViewerHistory(viewerId, List.of(basecamp.getId())).stream()
@@ -60,8 +44,6 @@ public class JoinEligibilityChecker {
                 basecamp.getJoinCondition(), applicant, hasDateConflict(basecamp, viewerId), prior));
     }
 
-    // 회원이 ACTIVE 멤버로 들어 있는 모집 중·마감·확정 베이스캠프의 일정과 하루라도 겹치면 충돌이다.
-    // 확정 전에 승인된 멤버도 그대로 가면 같은 기간에 두 곳에 가게 되므로 확정된 일정만 보지 않는다. 이 베이스캠프 자신은 비교에서 뺀다.
     private boolean hasDateConflict(Basecamp basecamp, long memberId) {
         List<InProgressScheduleRow> schedules = basecampSearchMapper.selectInProgressSchedules(memberId);
         return schedules.stream()

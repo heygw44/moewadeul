@@ -16,15 +16,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.domain.Persistable;
 
-/**
- * 멱등성 키별 처리 기록. 같은 회원이 같은 키로 보낸 요청은 한 건만 처리하려고 (회원, 키)를 기본 키로 쓴다.
- *
- * <p>요청을 받으면 응답 없이 먼저 만들어(선점) 다른 요청이 같은 키로 들어오지 못하게 하고, 업무 처리가 성공하면 응답을 채운다(완료).
- * 응답이 비어 있는 행은 처리 중이라는 뜻이다.
- *
- * <p>기본 키를 호출하는 쪽이 정하므로, Spring Data의 {@code save()}는 새 엔티티인지 알 수 없다. 그래서 {@link Persistable}을 구현해
- * 저장하기 전에는 새 것이라고 답하고, 곧바로 INSERT를 보내 기본 키 중복을 DB가 가려내게 한다.
- */
+// 기본 키를 호출하는 쪽이 정하므로 Spring Data의 save()는 새 엔티티인지 알 수 없다.
+// Persistable로 새 것이라고 답해 곧바로 INSERT를 보내고, 기본 키 중복은 DB가 가려낸다.
 @Entity
 @Table(name = "idempotency_record")
 @IdClass(IdempotencyRecordId.class)
@@ -65,7 +58,6 @@ public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
         this.createdAt = now;
     }
 
-    /** 호출하면 응답이 아직 없는 선점 행을 만든다. 인자가 비어 있으면 {@link IllegalArgumentException}을 던진다. */
     public static IdempotencyRecord claim(long memberId, String idempotencyKey, String requestHash, Instant now) {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new IllegalArgumentException("멱등성 키가 비어 있습니다.");
@@ -79,7 +71,6 @@ public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
         return new IdempotencyRecord(memberId, idempotencyKey, requestHash, now);
     }
 
-    /** 호출하면 처리 결과를 채워 완료 상태로 만들고 자기 자신을 돌려준다. */
     public IdempotencyRecord complete(int responseStatus, String responseBody) {
         if (responseBody == null) {
             throw new IllegalArgumentException("응답 본문이 null입니다.");
@@ -93,7 +84,6 @@ public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
         return responseStatus != null && responseBody != null;
     }
 
-    /** 이 행을 만든 요청과 내용이 같은 요청이면 true다. */
     public boolean matches(String requestHash) {
         return this.requestHash.equals(requestHash);
     }

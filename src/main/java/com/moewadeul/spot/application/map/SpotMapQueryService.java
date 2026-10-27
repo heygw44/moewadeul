@@ -16,17 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 지도 화면 영역 안의 ACTIVE 장소를 찾는다.
- *
- * <p>한 응답에는 마커와 묶음을 합쳐 {@value #MAX_ITEMS}개까지만 담는다. 그래서 서버는 영역 안 장소가 {@value #MAX_ITEMS}개 이하이면 모두 마커로
- * 주고, 넘으면 마커를 비우고 미리 세어 둔 고정 격자의 칸별 묶음으로 준다. 서버는 중심이 영역 안인 칸이 {@value #MAX_CLUSTER_CELLS}개 이하인 가장 작은
- * 격자를 고르므로 묶음이 상한을 넘지 않는다. 가장 큰 격자로도 그보다 많은 아주 넓은 영역은 화면을 가로세로 {@value #GRID_SIZE}칸씩 나눈 칸별 묶음으로
- * 준다.
- *
- * <p>공공데이터 장소의 휴장 여부는 조회한 날의 한국 날짜로 계산한다. 서버는 기본으로 휴장 중인 장소도 숨기지 않고 표시만
- * 하고, 호출하는 쪽이 휴장 제외를 고를 때만 뺀다.
- */
 @Service
 @RequiredArgsConstructor
 public class SpotMapQueryService {
@@ -34,38 +23,15 @@ public class SpotMapQueryService {
     static final int MAX_ITEMS = 500;
     static final int GRID_SIZE = 20;
 
-    // 한 응답에는 마커와 묶음을 합쳐 MAX_ITEMS(500)개까지만 담는다. 묶음 하나가 격자 칸 하나이므로 칸을 400개로 제한하면 상한 안에 여유 있게 들어간다.
     static final int MAX_CLUSTER_CELLS = 400;
 
-    // 아주 넓은 영역에서 화면 칸으로 다시 합칠 때, 묶음 조회가 읽을 격자 칸의 최대 크기를 화면 칸 크기의 몇 배로 할지 정한다.
-    // 이 값은 고정 격자를 쓸 수 없는 넓은 영역의 대체 경로에서만 쓴다.
-    // 격자 칸이 클수록 화면 칸 하나에 든 격자 칸이 적어서, 묶음 조회가 읽고 정렬하는 행이 줄어든다.
-    // 대신 화면 칸 경계에 걸친 격자 칸은 중심으로 배정하므로, 배정이 어긋나는 크기가 화면 칸의 4분의 1에서 2분의 1로 커진다.
     static final double CLUSTER_CELL_RATIO = 1.0;
 
-    // 상한 초과 여부를 먼저 세는 조회가 읽을 격자 칸의 최대 크기를 화면 칸 크기의 몇 배로 할지 정한다.
-    // 이 조회는 장소가 MAX_ITEMS개를 넘는지만 판단한다. 영역 안에 통째로 든 격자 칸만 세면 실제 수보다 작거나 같은 값이라서,
-    // 격자를 키워도 판단이 틀리지 않는다. 너무 크게 키워 영역 안에 통째로 든 칸이 적으면 실제로 넘는데도 못 넘는다고 세지만,
-    // 그때는 마커를 MAX_ITEMS+1건 읽어 다시 판단한다. 결과는 정확하고 조금 느릴 뿐이다.
     static final double COUNT_CELL_RATIO = 2.0;
 
     private final SpotAreaMapper spotAreaMapper;
     private final Clock clock;
 
-    /**
-     * 호출하면 query 조건에 맞는 영역 안 장소를 마커나 칸별 묶음으로 돌려준다. 마커는 장소 ID 순서이고, 묶음은 남쪽 행부터, 같은 행에서는 서쪽 칸부터
-     * 나온다. 묶음은 중심이 영역 안인 고정 격자 칸 하나가 하나의 묶음이라서, 지도를 옮겨도 같은 칸의 묶음 위치가 그대로다.
-     *
-     * <p>묶음은 장소 테이블이 아니라 미리 세어 둔 격자 집계 표에서 합친다. 넓은 영역은 장소가 수십만 건이라 요청마다 세면 DB CPU가 모자라기 때문이다.
-     * 상한을 넘는지는 영역 안 장소 수로 정확히 판단한다. 먼저 영역 안에 통째로 든 격자 칸만 세어 상한을 넘으면 바로 묶음을 주고, 그렇지 않을 때만 마커를
-     * 상한보다 한 건 더 읽어 판단한다. 세는 조회는 상한 초과만 판단하면 되고 적게 세어도 결과가 틀리지 않아서, 화면 칸의 두 배 이하인 격자를 쓴다.
-     *
-     * <p>입지 필터를 켜면 격자 집계 표에 입지 축이 없어서 먼저 세는 단계를 건너뛰고, 마커를 상한보다 한 건 더 읽어 판단한다. 상한을 넘으면 집계 표
-     * 대신 장소를 직접 세어 묶는다. 입지가 있는 장소는 고캠핑 야영장뿐이라 그 수가 적다.
-     *
-     * <p>모든 조회를 읽기 전용 트랜잭션 하나에서 실행한다. 그래서 MySQL은 모든 조회에 같은 스냅숏을 보여 주고, 그 사이 다른 트랜잭션이 장소를 바꿔도
-     * 판단과 묶음 결과가 어긋나지 않는다.
-     */
     @Transactional(readOnly = true)
     public SpotAreaResult findInArea(SpotAreaQuery query) {
         LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
@@ -85,8 +51,6 @@ public class SpotMapQueryService {
         return new SpotAreaResult(markers, List.of());
     }
 
-    // 영역 안에 통째로 든 격자 칸의 장소는 모두 영역 안이다. 휴장 제외를 켜면 영역 안의 휴장 장소를 모두 뺀다.
-    // 그래서 결과는 실제 영역 안 장소 수보다 크지 않고, 이 값이 상한을 넘으면 실제 수도 상한을 넘는다.
     private long countCertainlyInArea(SpotAreaCondition condition, SpotGridCells cells) {
         long insideCells = spotAreaMapper.countInsideCells(condition, cells);
         if (!condition.hideClosed()) {
@@ -102,8 +66,6 @@ public class SpotMapQueryService {
                 .toList();
     }
 
-    // 입지 필터는 격자 집계 표에 없는 조건이라, 켜면 집계 표 대신 장소를 직접 센다.
-    // 그렇지 않으면 칸이 400개 이하인 고정 격자를 쓰고, 가장 큰 격자로도 넘는 아주 넓은 영역만 화면 칸으로 다시 합친다.
     private List<SpotClusterRow> selectClusterRows(
             SpotAreaCondition condition, SpotAreaQuery query, SpotClusterGrid grid, double viewCellSize) {
         if (condition.filtersSettings()) {

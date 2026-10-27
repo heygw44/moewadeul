@@ -2,9 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.notification.infra.event.NotificationMailMapper">
 
-    <!-- 메일을 받을 수 있는 회원인지는 두 쿼리가 같은 조건으로 판단한다.
-         설정 행이 없는 종류는 LEFT JOIN 결과가 NULL이므로 COALESCE로 기본값을 채운다. 기본값은 앱이 정하고 파라미터로 받는다.
-         회원 조건은 둘 다 필요하다. 상태만 보면 인증을 한 번도 마치지 않은 정지 회원이 들어오고, 인증 여부만 보면 탈퇴 등으로 상태가 맞지 않는 회원이 들어온다. -->
     <sql id="deliverable">
         COALESCE(s.email_enabled, #{defaultEmailEnabled})
           AND m.status IN ('ACTIVE', 'SUSPENDED')
@@ -12,10 +9,6 @@
           AND m.email_verified_at IS NOT NULL
     </sql>
 
-    <!-- 받을 수 없는 알림도 함께 집어서 발송 작업이 SKIPPED로 바꾼다. 거르기만 하면 PENDING으로 남아 매번 다시 읽힌다.
-         FOR UPDATE OF n은 알림 행만 잠근다. 회원과 설정 행까지 잠그면 같은 회원의 설정 변경과 로그인이 메일 발송을 기다린다.
-         다른 발송 작업이 잠근 알림은 SKIP LOCKED로 건너뛰어, 서버 여러 대가 같은 알림을 동시에 집지 못한다.
-         (email_status, id) 인덱스로 PENDING 구간만 읽고, 회원과 설정은 기본 키로 찾는다. -->
     <select id="selectDueForUpdate" resultType="com.moewadeul.notification.infra.event.NotificationMailRow">
         SELECT n.id AS notification_id,
                m.email AS email,
@@ -43,7 +36,6 @@
         </foreach>
     </update>
 
-    <!-- 다음 시도 시각이 집을 때 건 임대 끝 시각 그대로인 알림만 푼다. 임대가 끝난 뒤 다른 발송 작업이 다시 집었으면 시각이 새 값이라서 건너뛴다. -->
     <update id="releaseLease">
         UPDATE notification
         SET email_next_attempt_at = NULL
@@ -76,10 +68,7 @@
     </update>
 
     <!-- MySQL은 SET 절을 왼쪽에서 오른쪽으로 평가하고 앞에서 바꾼 값을 뒤에서 읽는다.
-         그래서 email_attempt_count를 맨 뒤에 두어야, 앞의 두 식이 아직 올리지 않은 실패 횟수로 계산한다.
-         실패한 알림은 다음 시도 시각을 재시도 시각으로 채운다. selectDueForUpdate는 그 시각이 지난 알림만 집으므로 재시도 간격이 지켜진다.
-         재시도 간격은 실패할 때마다 두 배로 늘리고 상한에서 멈춘다. 일시적인 실패는 횟수 상한 없이 계속 다시 시도하므로,
-         2의 거듭제곱이 DOUBLE 범위를 넘지 않게 지수를 20에서 자른다. 기본값(30초)에서는 지수가 5만 돼도 이미 상한(10분)을 넘는다. -->
+         그래서 email_attempt_count를 맨 뒤에 두어야, 앞의 두 식이 아직 올리지 않은 실패 횟수로 계산한다. -->
     <update id="markFailedAttempt">
         UPDATE notification
         SET email_status = CASE WHEN NOT #{transientFailure} AND email_attempt_count + 1 &gt;= #{maxAttempts}
@@ -105,14 +94,12 @@
           AND <include refid="deliverable"/>
     </select>
 
-    <!-- email_sent_at 인덱스의 구간만 읽는다. 보낸 시각은 SENT 알림에만 있으므로 상태 조건은 필요 없다. -->
     <select id="countSentAfter" resultType="int">
         SELECT COUNT(*)
         FROM notification
         WHERE email_sent_at &gt; #{since}
     </select>
 
-    <!-- (email_status, id) 인덱스의 PENDING·FAILED 구간만 읽는다. -->
     <select id="selectBacklog" resultType="com.moewadeul.notification.infra.event.NotificationMailBacklogRow">
         SELECT COALESCE(SUM(email_status = 'PENDING'), 0) AS pending_count,
                COALESCE(SUM(email_status = 'FAILED'), 0) AS failed_count,

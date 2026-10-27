@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-/** 이메일 인증 코드의 유효 시간, 시도 횟수, 재발송 한도. 값은 이 클래스 한 곳에서만 정한다. */
 public final class EmailVerificationPolicy {
 
     public static final Duration CODE_VALIDITY = Duration.ofMinutes(10);
@@ -13,7 +12,6 @@ public final class EmailVerificationPolicy {
 
     public static final Duration RESEND_INTERVAL = Duration.ofSeconds(60);
 
-    /** 이메일당 한도. 회원 한 명이 이메일 하나를 가지므로 회원 기준으로 센다. 가입할 때 보낸 코드도 센다. */
     public static final Duration DAILY_WINDOW = Duration.ofHours(24);
 
     public static final int DAILY_LIMIT = 5;
@@ -21,21 +19,10 @@ public final class EmailVerificationPolicy {
     public static final Duration IP_WINDOW = Duration.ofHours(1);
     public static final int IP_LIMIT = 20;
 
-    /** 인증 기록을 보관하는 기간이다. 재발송 한도는 최근 24시간만 세고 코드는 10분만 유효해서, 이보다 오래된 기록은 쓰는 곳이 없다. */
     public static final Duration RECORD_RETENTION = Duration.ofDays(7);
 
     private EmailVerificationPolicy() {}
 
-    /**
-     * 재발송 판정에 필요한 발송 이력.
-     *
-     * @param lastSentAt 이 회원에게 가장 최근에 코드를 발송한 시각. 발송한 적이 없으면 null이다.
-     * @param sentInDay 이 회원에게 최근 {@link #DAILY_WINDOW} 안에 발송한 횟수
-     * @param oldestSentInDay 그 구간에서 가장 오래된 발송 시각. 횟수가 0이면 null이다.
-     * @param sentByIpInHour 이 IP가 최근 {@link #IP_WINDOW} 안에 요청한 발송 횟수(회원과 무관)
-     * @param oldestSentByIpInHour 그 구간에서 가장 오래된 발송 시각. 횟수가 0이면 null이다.
-     * @param sendPending 이 회원의 발송 요청 중 아직 처리하지 않은 것이 있는지 여부
-     */
     public record ResendHistory(
             Instant lastSentAt,
             int sentInDay,
@@ -56,16 +43,6 @@ public final class EmailVerificationPolicy {
         }
     }
 
-    /**
-     * 호출하면 재발송이 막혀 있을 때 풀리기까지 남은 시간을 돌려준다. 막은 이유가 여럿이면 가장 긴 시간이고, 막혀 있지 않으면 비어 있다.
-     *
-     * <p>한도를 채운 구간에서는 가장 오래된 발송이 구간 밖으로 밀려나야 한 건이 비므로, 그 시각을 기준으로 남은 시간을 계산한다.
-     * 한도를 넘겨 쌓인 경우(처리기가 같은 요청을 두 번 처리한 경우 등)에는 실제로 풀리는 시각보다 이를 수 있다.
-     * 그때 호출한 쪽이 일찍 다시 요청하면 다시 막히므로 한도는 지켜진다.
-     *
-     * <p>대기 중인 발송 요청이 있으면 아직 메일이 나가지 않았어도 최소 {@link #RESEND_INTERVAL}은 막는다.
-     * 처리기가 발송 이력을 남기기 전에 사용자가 다시 눌러도 발송 요청이 겹쳐 쌓이지 않게 하기 위해서다.
-     */
     public static Optional<Duration> resendBlockedFor(ResendHistory history, Instant now) {
         return Stream.of(
                         intervalRemaining(history, now),
@@ -77,13 +54,6 @@ public final class EmailVerificationPolicy {
                 .max(Duration::compareTo);
     }
 
-    /**
-     * 호출하면 한 IP가 최근 {@link #IP_WINDOW} 안에 요청한 발송 횟수가 {@link #IP_LIMIT}에 닿았을 때 풀리기까지 남은 시간을 돌려준다.
-     * 닿지 않았으면 비어 있다. 가입의 첫 발송과 재발송이 이 한도를 함께 쓴다.
-     *
-     * @param sentByIpInHour 이 IP가 그 구간에 요청한 발송 횟수
-     * @param oldestSentByIpInHour 그 구간에서 가장 오래된 발송 시각. 횟수가 0이면 null이다.
-     */
     public static Optional<Duration> ipBlockedFor(int sentByIpInHour, Instant oldestSentByIpInHour, Instant now) {
         return limitRemaining(sentByIpInHour, IP_LIMIT, oldestSentByIpInHour, IP_WINDOW, now)
                 .filter(remaining -> remaining.isPositive());

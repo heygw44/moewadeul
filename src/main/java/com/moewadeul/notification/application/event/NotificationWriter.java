@@ -17,16 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 이벤트 하나에서 만든 알림을 한 트랜잭션으로 저장한다.
- *
- * <p>아웃박스는 같은 이벤트를 적어도 한 번 전달한다. 그래서 알림마다 "{이벤트 ID}:{회원 ID}" 키를 만들고, 이미 저장된 키는 건너뛴다.
- * 조회와 저장 사이에 다른 발행기가 같은 키를 먼저 저장하면 DB의 유니크 제약이 위반 예외를 던진다.
- * 이 예외는 잡지 않고 그대로 올린다. 발행기가 이벤트를 다시 처리하면 이번에는 모든 키가 이미 있어서 아무것도 저장하지 않고 끝난다.
- *
- * <p>메일은 여기서 보내지 않는다. 알림마다 메일 상태를 PENDING으로 두면 메일 발송 작업이 따로 보낸다. 이벤트 하나의 메일 상한이 있는 종류는
- * 메일을 받을 수 있는 회원을 drafts 순서대로 상한까지만 PENDING으로 두고 나머지는 SKIPPED로 둔다.
- */
 @Service
 @RequiredArgsConstructor
 class NotificationWriter {
@@ -35,7 +25,6 @@ class NotificationWriter {
     private final NotificationMailMapper mailMapper;
     private final Clock clock;
 
-    /** 호출하면 drafts 가운데 아직 저장되지 않은 알림만 저장하고, 새로 저장한 건수를 돌려준다. */
     @Transactional
     int write(long eventId, List<NotificationDraft> drafts) {
         Map<String, NotificationDraft> draftsByKey = new LinkedHashMap<>();
@@ -45,7 +34,6 @@ class NotificationWriter {
         if (draftsByKey.isEmpty()) {
             return 0;
         }
-        // 이미 저장된 알림을 빼기 전에 상태를 정한다. 같은 이벤트를 다시 처리해도 상한 안에 드는 회원이 바뀌지 않게 하려는 순서다.
         Map<String, NotificationEmailStatus> emailStatuses = emailStatuses(draftsByKey);
         List<String> existingKeys = notificationRepository.findExistingDedupKeys(draftsByKey.keySet());
         existingKeys.forEach(draftsByKey::remove);

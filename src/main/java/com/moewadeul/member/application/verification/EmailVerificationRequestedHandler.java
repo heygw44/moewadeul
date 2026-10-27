@@ -10,15 +10,6 @@ import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 인증 코드 요청 이벤트를 받아 코드를 만들고 메일을 보낸다.
- *
- * <p>이 클래스에는 {@code @Transactional}을 걸지 않는다. 코드 저장은 {@link EmailVerificationService#issueFor}가
- * 자기 짧은 트랜잭션으로 끝내고, 메일은 그 트랜잭션이 커밋된 뒤에 보낸다. 메일 서버 응답을 기다리는 동안 DB 커넥션을 잡지 않고,
- * 메일이 나간 코드는 반드시 DB에 있게 하려는 순서다. 메일 발송이 실패하면 예외가 발행기로 올라가 이벤트를 다시 처리한다.
- * 전달이 적어도 한 번이라 같은 이벤트가 다시 오면, 서비스가 이벤트 ID로 같은 코드 행을 찾아 코드를 새로 만들어 덮어쓴다.
- * 그래서 행은 늘지 않고, 가장 최근에 만든 코드만 유효하다.
- */
 @Component
 @RequiredArgsConstructor
 class EmailVerificationRequestedHandler implements OutboxEventHandler {
@@ -44,7 +35,6 @@ class EmailVerificationRequestedHandler implements OutboxEventHandler {
         mailSender.send(EmailVerificationMailFactory.create(issued.email(), issued.code()));
     }
 
-    // payload에는 접속 IP가 들어 있으므로 예외 메시지에 내용을 싣지 않는다.
     private EmailVerificationEvents.Payload parse(OutboxMessage message) {
         try {
             EmailVerificationEvents.Payload payload =

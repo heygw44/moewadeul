@@ -5,7 +5,6 @@ import com.moewadeul.basecamp.application.query.MyBasecampPage;
 import java.time.LocalDate;
 import java.util.List;
 
-/** 내 베이스캠프 목록의 한 페이지다. 전체 개수는 없고, 다음 페이지가 있는지만 hasNext로 알린다. */
 public record MyBasecampPageResponse(List<Entry> content, int page, int size, boolean hasNext) {
 
     static MyBasecampPageResponse from(MyBasecampPage page) {
@@ -41,6 +40,5 @@ public record MyBasecampPageResponse(List<Entry> content, int page, int size, bo
         }
     }
 
-    /** 장소 요약이다. type은 장소 유형 이름이다. */
     public record SpotEntry(long spotId, String name, String type) {}
 }

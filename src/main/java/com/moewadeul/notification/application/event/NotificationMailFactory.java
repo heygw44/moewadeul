@@ -3,7 +3,6 @@ package com.moewadeul.notification.application.event;
 import com.moewadeul.common.mail.MailMessage;
 import com.moewadeul.notification.infra.event.NotificationMailRow;
 
-/** 알림 한 건을 메일 한 통으로 바꾼다. 보내거나 읽지 않고 내용만 만드는 순수한 클래스다. */
 final class NotificationMailFactory {
 
     private static final String SUBJECT_PREFIX = "[뫼와들] ";
@@ -11,10 +10,6 @@ final class NotificationMailFactory {
 
     private NotificationMailFactory() {}
 
-    /**
-     * 호출하면 제목은 알림 제목 앞에 서비스 이름을 붙이고, 본문은 알림 본문 아래에 링크 줄을 붙인 메일을 만든다.
-     * 알림에 연결할 화면이 없으면(link가 null) 링크 줄을 붙이지 않는다. baseUrl 끝의 슬래시는 지우고 붙인다.
-     */
     static MailMessage create(NotificationMailRow row, String baseUrl) {
         String body = row.link() == null
                 ? row.body()

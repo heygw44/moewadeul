@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 장소의 후기 목록을 읽는다. 지도에 보이는(ACTIVE) 장소의 후기만 읽을 수 있다. */
 @Service
 @RequiredArgsConstructor
 public class SpotReviewQueryService {
@@ -18,12 +17,6 @@ public class SpotReviewQueryService {
     private final SpotReviewMapper spotReviewMapper;
     private final ReviewImageReader reviewImageReader;
 
-    /**
-     * 호출하면 spotId인 장소의 후기를 작성 시각이 늦은 순서로 한 페이지 돌려준다. 작성 시각이 같으면 후기 ID가 큰 것이 먼저 나온다.
-     *
-     * <p>장소가 없거나 ACTIVE가 아니면 NOT_FOUND로 거부한다. 서비스는 다음 페이지가 있는지 알려고 한 행을 더 읽고, 그 행은 결과에서 뺀다.
-     * 그래서 전체 개수를 세는 쿼리를 따로 보내지 않는다. 한 페이지의 이미지는 쿼리 한 번으로 읽는다.
-     */
     @Transactional(readOnly = true)
     public SpotReviewPage list(long spotId, int page, int size) {
         activeSpotChecker.requireActive(spotId);

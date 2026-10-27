@@ -8,8 +8,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.Arrays;
 
-// 상태는 문자열로 받고 허용 값인지 직접 검사한다. 모르는 값을 Spring의 enum 변환 오류가 아니라 필드 오류가 담긴 입력 오류로 돌려주려는 것이다.
-// 생략하면 상태로 거르지 않는다.
 public record MyProgramApplicationListRequest(
         @Schema(implementation = ProgramApplicationStatus.class, description = "신청 상태. 생략하면 모든 상태.")
         String status,

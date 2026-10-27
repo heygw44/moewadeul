@@ -20,8 +20,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-// 내 정보 응답에는 회원 모듈의 계정 정보와 신뢰 모듈의 본인확인 여부·신뢰 단계가 함께 들어간다.
-// 신뢰 모듈은 회원 모듈의 공개 서비스를 부를 수 있지만 반대 방향은 막혀 있으므로, 두 정보를 모으는 컨트롤러를 신뢰 모듈에 둔다.
 @RestController
 @RequestMapping("/api/me")
 class MeController {
@@ -76,7 +74,6 @@ class MeController {
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {
         withdrawalService.withdraw(loginMember.memberId(), request.password(), httpRequest.getRemoteAddr());
-        // 서비스가 DB의 세션을 지웠지만, 이 요청의 SecurityContext와 세션 쿠키는 남아 있다. 여기서 비우고 쿠키를 만료시킨다.
         loginSessionManager.logout(httpRequest, httpResponse);
     }
 

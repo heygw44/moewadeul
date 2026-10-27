@@ -2,7 +2,6 @@ package com.moewadeul.trust.domain.identity;
 
 import java.util.Optional;
 
-/** 본인확인한 출생연도로 계산한 연령대다. 성인만 연령대를 가지며 20대부터 60대 이상까지 나눈다. */
 public enum AgeGroup {
     TWENTIES,
     THIRTIES,
@@ -10,10 +9,6 @@ public enum AgeGroup {
     FIFTIES,
     SIXTIES_PLUS;
 
-    /**
-     * 연 나이(올해 − 출생연도)로 연령대를 고른다. 19~29세는 20대, 60세 이상은 60대 이상이다.
-     * 성인 기준(19세) 미만이면 연령대가 없으므로 빈 값을 돌려준다.
-     */
     public static Optional<AgeGroup> fromAge(int age) {
         if (age < IdentityVerification.ADULT_AGE) {
             return Optional.empty();

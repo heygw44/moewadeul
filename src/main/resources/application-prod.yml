@@ -1,8 +1,5 @@
 spring:
   datasource:
-    # 값은 배포 환경(AWS SSM Parameter Store에서 주입한 환경 변수)에서 온다.
-    # 운영 값을 코드에 남기지 않으려고 우리는 기본값을 두지 않는다. 값이 빠지면 자리 표시자
-    # 문자열이 그대로 값으로 쓰여 앱이 첫 DB 접속에서 실패한다.
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
@@ -10,18 +7,13 @@ spring:
 server:
   tomcat:
     threads:
-      # DB 커넥션 풀이 10개라 요청 스레드가 그보다 많으면 나머지는 커넥션을 기다리며 메모리만 쓴다.
-      # 운영 서버(메모리 2GB)에서는 기본값 200 대신 50으로 둔다. 넘치는 요청은 Tomcat 연결 대기열에서 기다린다.
       max: 50
 
 logging:
   structured:
     format:
-      # 운영 로그는 수집 에이전트가 Grafana Cloud로 보내서 검색한다. 그래서 필드로 나뉜 JSON(ECS 형식)으로 쓴다.
-      # 이 형식은 MDC 값을 필드로 넣으므로, 요청마다 넣는 추적 ID(traceId)로 한 요청의 로그를 모아 볼 수 있다.
       console: ecs
 
 moewadeul:
   image-storage:
-    # 운영은 실제 S3 버킷을 쓴다. 자격 증명은 서버의 인스턴스 역할에서 받으므로 키를 설정에 두지 않는다.
     storage: s3

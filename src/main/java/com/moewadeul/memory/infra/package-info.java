@@ -1,2 +1,0 @@
-/** 추억 기록 모듈의 infra 계층: JPA 리포지토리, MyBatis 매퍼. */
-package com.moewadeul.memory.infra;

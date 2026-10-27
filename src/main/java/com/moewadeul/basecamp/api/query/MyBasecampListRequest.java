@@ -9,8 +9,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.Arrays;
 
-// 관계와 상태는 문자열로 받고 허용 값인지 직접 검사한다. 모르는 값을 Spring의 enum 변환 오류가 아니라 필드 오류가 담긴 입력 오류로 돌려주려는 것이다.
-// 생략하면 그 조건으로는 거르지 않는다. 관계에는 NONE이 있지만 목록에서는 의미가 없어서 허용하지 않는다.
 public record MyBasecampListRequest(
         @Schema(description = "내 관계. LEADER, MEMBER, APPLICANT 중 하나. 생략하면 셋 모두.")
         String relation,

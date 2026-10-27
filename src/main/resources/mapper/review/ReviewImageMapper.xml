@@ -2,7 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.review.infra.ReviewImageMapper">
 
-    <!-- 후기 안 순서(display_order)는 후기에 붙은 이미지에만 있고, 후기마다 0부터 겹치지 않게 채운다. -->
     <select id="selectByReviewIds" resultType="com.moewadeul.review.infra.ReviewImageRow">
         SELECT id AS image_id, review_id, object_key
         FROM review_image
@@ -20,7 +19,6 @@
         LIMIT #{limit}
     </select>
 
-    <!-- 읽은 뒤에 후기에 붙은 이미지는 review_id가 NULL이 아니라서 지워지지 않는다. -->
     <delete id="deleteIfUnattached">
         DELETE FROM review_image
         WHERE id = #{imageId}

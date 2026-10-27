@@ -11,13 +11,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
-/**
- * 행사 수정 요청이다. 모든 필드가 선택이고, 보내지 않은 필드는 그대로 둔다.
- * 장소(spotId)는 필드를 빼는 것과 {@code null}을 보내는 것의 뜻이 다르다. 서버는 {@code null}로 보내면 지도 장소와의 연결을 끊는다.
- *
- * <p>각 값의 범위는 여기서 검사하고, 시각 순서와 정원 축소 가능 여부는 서비스가 바뀐 뒤의 값으로 검사한다.
- * JSON에 빠진 필드를 Jackson이 Java {@code null}로 넘기는 경우가 있다. 그래서 생성자가 spotId의 {@code null}을 "요청에 없음"으로 바꾼다.
- */
 public record AdminProgramReviseRequest(
         @Size(max = ProgramLimits.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 해요.")
         @Pattern(regexp = ".*\\S.*", message = "제목은 공백뿐일 수 없어요.")

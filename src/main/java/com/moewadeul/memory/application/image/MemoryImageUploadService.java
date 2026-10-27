@@ -11,15 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 회원이 기록에 붙일 사진을 올릴 URL을 발급한다. 서버는 파일을 받지 않는다.
- *
- * <p>URL을 발급할 때 기록에 붙지 않은 사진 행을 먼저 만든다. 회원이 올리지 않거나 기록에 붙이지 않은 사진은 정리 작업이 24시간 뒤에 지운다.
- * 저장소 키는 서버가 {@code memory/{회원 ID}/{UUID}.{확장자}}로 만든다. 사전 서명은 서버 안에서 계산하므로 저장소를 부르지 않고, 트랜잭션 안에서 해도 된다.
- *
- * <p>회원이 썸네일 크기를 함께 보내면 같은 UUID에 {@code _thumb.jpg}를 붙인 키로 썸네일 업로드 URL도 발급한다. 목록 화면은 원본 대신 이
- * 썸네일을 내려받는다.
- */
 @Service
 @RequiredArgsConstructor
 public class MemoryImageUploadService {
@@ -30,13 +21,6 @@ public class MemoryImageUploadService {
     private final ImageStorage imageStorage;
     private final Clock clock;
 
-    /**
-     * 호출하면 memberId인 회원이 command의 형식과 크기로 파일을 올릴 URL을 발급하고 사진 행을 만든다. 썸네일 크기가 있으면 썸네일 업로드 URL도
-     * 발급한다.
-     *
-     * <p>허용하지 않는 형식이거나 크기가 1바이트 미만이거나 5MB를 넘으면 INVALID_INPUT으로 거부한다. 썸네일 크기가 1바이트 미만이거나 256KB를
-     * 넘어도 INVALID_INPUT으로 거부한다.
-     */
     @Transactional
     public MemoryImageUpload issue(long memberId, MemoryImageUploadCommand command) {
         String extension = MemoryImage.extensionOf(command.contentType())

@@ -8,7 +8,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
-// 연결할 장소가 ACTIVE인지는 장소 상태를 읽어야 해서 서비스가 검사한다. 이미지도 개수, 소유자, 저장소 객체를 서비스가 검사한다.
 public record CommunityPostCreateRequest(
         @NotBlank(message = "제목을 입력해 주세요.") @Size(max = CommunityPost.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 해요.")
         String title,

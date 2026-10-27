@@ -9,10 +9,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.regex.Pattern;
 
-/**
- * 천문연 원천 값을 일출·일몰 응답 값으로 바꾼다. 값을 해석하지 못하면 {@link KasiApiException}을 던져서, 호출한 쪽이 API 실패와 같은 방법으로
- * 처리하게 한다.
- */
 final class KasiSunTimesConverter {
 
     private static final DateTimeFormatter LOCDATE = DateTimeFormatter.ofPattern("yyyyMMdd");

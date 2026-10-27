@@ -19,7 +19,6 @@ public class DisposableEmailDomainListFile {
 
     private static final String RESOURCE_PATH = "disposable-email-domains.txt";
     private static final String COMMENT_PREFIX = "#";
-    // disposable_email_domain.domain 컬럼 길이
     private static final int MAX_DOMAIN_LENGTH = 253;
 
     public List<String> readDomains() {

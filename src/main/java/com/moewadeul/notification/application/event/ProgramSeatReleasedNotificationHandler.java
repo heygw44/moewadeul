@@ -6,7 +6,6 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 행사 빈자리 이벤트를 받아 빈자리 알림을 신청한 회원에게 알림을 만든다. */
 @Component
 class ProgramSeatReleasedNotificationHandler
         extends NotificationEventHandler<NotificationPayloads.ProgramSeatReleased> {

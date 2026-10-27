@@ -62,8 +62,6 @@ public class MemberSignupService {
         return new SignupResult(saved.getId(), saved.getStatus());
     }
 
-    // 가입의 첫 인증 메일도 재발송과 같은 IP 시간당 한도를 쓴다. 한 IP가 가입을 쏟아내서 메일 서비스의 하루 발송 한도를 다 쓰고
-    // 다른 회원의 인증·재설정 메일까지 못 나가게 하는 일을 막는다. 비용이 큰 비밀번호 해시 전에 거른다.
     private void rejectIfIpLimited(SendWindow sentByIp, Instant now) {
         Optional<Duration> blockedFor =
                 EmailVerificationPolicy.ipBlockedFor(Math.toIntExact(sentByIp.count()), sentByIp.oldestSentAt(), now);
@@ -87,8 +85,6 @@ public class MemberSignupService {
         }
     }
 
-    // 사전 조회와 저장 사이에 다른 요청이 같은 이메일이나 닉네임을 먼저 넣을 수 있다.
-    // 이때는 서비스가 DB 유니크 제약 위반을 이메일 중복이나 닉네임 중복 오류로 바꿔 던진다.
     private Member saveOrTranslate(Member member) {
         try {
             return memberRepository.save(member);
