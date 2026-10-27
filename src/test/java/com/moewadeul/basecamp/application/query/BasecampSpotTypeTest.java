@@ -14,7 +14,8 @@ class BasecampSpotTypeTest {
     @DisplayName("베이스캠프가 따로 두는 장소 유형은 spot 의 장소 유형과 이름이 같다")
     void namesMatchSpotType() {
         // given
-        List<String> spotTypes = Arrays.stream(SpotType.values()).map(Enum::name).toList();
+        List<String> spotTypes =
+                Arrays.stream(SpotType.values()).map(Enum::name).toList();
 
         // when
         List<String> basecampSpotTypes =

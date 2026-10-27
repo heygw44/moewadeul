@@ -1,5 +1,6 @@
 package com.moewadeul.publicdata.application;
 
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.publicdata.domain.SyncJobRun;
 import com.moewadeul.publicdata.domain.SyncJobRunRepository;
 import com.moewadeul.publicdata.domain.SyncJobStatus;
@@ -10,7 +11,6 @@ import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
@@ -24,7 +24,6 @@ public class SyncJobRunService {
     static final String STALE_RUN_MESSAGE = "실행 기록이 오래 갱신되지 않아, 다음 실행이 작업 도중 서버가 꺼진 것으로 보고 실패로 처리했습니다.";
 
     private static final String RUNNING_UNIQUE_CONSTRAINT = "uk_sync_job_run_running";
-    private static final String KEY_MARKER = " for key '";
     // 같은 종류를 동시에 시작하면 InnoDB가 같은 키를 넣으려는 트랜잭션 하나를 교착 상태 오류로 중단시키기도 해서 다시 시도한다.
     private static final int MAX_START_ATTEMPTS = 3;
 
@@ -41,7 +40,7 @@ public class SyncJobRunService {
             try {
                 return syncJobRunStartService.start(jobType, staleAfter, adminId);
             } catch (DataIntegrityViolationException e) {
-                if (!isRunningUniqueViolation(e)) {
+                if (!UniqueViolations.violates(e, RUNNING_UNIQUE_CONSTRAINT)) {
                     throw e;
                 }
                 log.info("sync job already running jobType={} reason=concurrent start", jobType);
@@ -53,17 +52,6 @@ public class SyncJobRunService {
                 log.warn("sync job start lost a lock conflict, retrying jobType={} attempt={}", jobType, attempt);
             }
         }
-    }
-
-    // MySQL 메시지는 "Duplicate entry '값' for key '테이블.제약'" 형태다. 값은 작업 종류 이름이라 제약 이름과 겹치지 않지만,
-    // 다른 유니크 제약과 섞어 읽지 않도록 마지막 "for key" 뒤만 본다.
-    private static boolean isRunningUniqueViolation(DataIntegrityViolationException e) {
-        String message = NestedExceptionUtils.getMostSpecificCause(e).getMessage();
-        if (message == null) {
-            return false;
-        }
-        int marker = message.lastIndexOf(KEY_MARKER);
-        return marker >= 0 && message.substring(marker + KEY_MARKER.length()).contains(RUNNING_UNIQUE_CONSTRAINT);
     }
 
     @Transactional

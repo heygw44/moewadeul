@@ -18,7 +18,8 @@ class SyncJobTypeTest {
                 Arrays.stream(PublicSpotSource.values()).map(Enum::name).toList();
 
         // when
-        List<String> jobTypes = Arrays.stream(SyncJobType.values()).map(Enum::name).toList();
+        List<String> jobTypes =
+                Arrays.stream(SyncJobType.values()).map(Enum::name).toList();
 
         // then
         assertThat(jobTypes).containsAll(sources);

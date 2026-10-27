@@ -133,7 +133,9 @@ class NotificationProducerContractTest {
 
         // then
         assertThat(actual)
-                .as("알림 이벤트 %s 의 payload %s 와 %s", consumerEventType, consumerPayload.getSimpleName(), producerPayload.getName())
+                .as(
+                        "알림 이벤트 %s 의 payload %s 와 %s",
+                        consumerEventType, consumerPayload.getSimpleName(), producerPayload.getName())
                 .isEqualTo(expected);
     }
 
