@@ -10,7 +10,9 @@ import java.util.regex.Pattern;
 
 public final class ResetToken {
 
-    private static final Pattern WELL_FORMED = Pattern.compile("[A-Za-z0-9_-]{43}");
+    private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
+    private static final Pattern WELL_FORMED = Pattern.compile("[A-Za-z0-9_-]{"
+            + ENCODER.encodeToString(new byte[PasswordResetPolicy.TOKEN_BYTES]).length() + "}");
 
     private final String value;
 
@@ -21,7 +23,7 @@ public final class ResetToken {
     public static ResetToken generate(SecureRandom random) {
         byte[] bytes = new byte[PasswordResetPolicy.TOKEN_BYTES];
         random.nextBytes(bytes);
-        return new ResetToken(Base64.getUrlEncoder().withoutPadding().encodeToString(bytes));
+        return new ResetToken(ENCODER.encodeToString(bytes));
     }
 
     public static String hash(String raw) {
