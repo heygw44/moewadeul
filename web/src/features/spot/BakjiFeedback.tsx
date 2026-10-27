@@ -15,7 +15,6 @@ import { REPORT_REASON_LABELS } from './spotLabels';
 
 type BakjiFeedbackProps = {
   spotId: number;
-  // 확인에 성공하면 서버가 준 새 확인 횟수를 알린다. 이미 확인했다는 응답에는 횟수가 없어서 부르지 않는다.
   onConfirmed: (confirmationCount: number) => void;
 };
 
@@ -25,8 +24,6 @@ const REASON_OPTIONS: ChoiceOption<BakjiReportReason>[] = (
   Object.keys(REPORT_REASON_LABELS) as BakjiReportReason[]
 ).map((value) => ({ value, label: REPORT_REASON_LABELS[value] }));
 
-// 박지를 다녀온 회원이 정보를 확인하거나 문제를 신고한다.
-// 상세 응답에는 내가 이미 확인했는지가 없어서 미리 막지 않고, 서버가 이미 확인했다고 답하면 완료 상태로 바꾼다.
 export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
   const session = useSession();
   const [confirming, setConfirming] = useState(false);

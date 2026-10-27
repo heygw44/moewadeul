@@ -15,11 +15,8 @@ import { useViewerEpoch } from '../member/useViewerEpoch';
 import { usePagedList } from '../program/usePagedList';
 
 const FEED_PAGE_SIZE = 24;
-// 커뮤니티·행사와 같은 넓은 열을 써서, 넓은 화면에서는 칸이 지나치게 커지지 않게 열 수를 늘린다.
 const FEED_GRID_CLASS = 'grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
 
-// 모두에게 공개된 기록을 최신순으로 이어서 보여 준다. 좋아요 상태(likedByMe)는 서버가 요청의 세션 쿠키로 정하므로 세션 확인을 기다리지 않고 함께 받는다.
-// 로그인 상태가 바뀔 때(viewerEpoch)만 첫 쪽부터 다시 받는다.
 export function MemoryFeedPage() {
   const viewerEpoch = useViewerEpoch();
   const feed = usePagedList<MemoryFeedItem, number>(true, viewerEpoch, (_filter, page, signal) =>
@@ -109,10 +106,7 @@ export function MemoryFeedPage() {
   );
 }
 
-// 칸 하나는 기록으로 가는 링크 하나다. 링크 안에 버튼이나 다른 링크를 두지 않는다.
-// 덮개는 마우스를 올리거나 키보드 포커스가 올 때만 보이고, 같은 내용을 링크의 aria-label이 읽어 준다.
 function MemoryFeedCell({ item }: { item: MemoryFeedItem }) {
-  // 조회 URL이 만료되는 등 사진을 못 불러오면 사진 없는 칸 모양으로 바꾼다.
   const [imageFailed, setImageFailed] = useState(false);
   const photoCount = item.imageCount;
   const coverUrl = imageFailed ? undefined : item.thumbnailUrl;

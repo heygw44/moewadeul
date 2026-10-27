@@ -14,7 +14,6 @@ export class ApiError extends Error {
   readonly body: ErrorBody | null;
 
   constructor(status: number, code: string, body: ErrorBody | null, retryAfterSeconds?: number) {
-    // 화면에 보여 줄 문구는 코드 표를 먼저 보고, 표에 없으면 서버 문구를 쓴다.
     super(errorMessage(code) ?? body?.message ?? GENERIC_ERROR_MESSAGE);
     this.name = 'ApiError';
     this.status = status;
@@ -38,13 +37,10 @@ export interface RequestOptions {
 
 let unauthorizedHandler: (() => void) | null = null;
 
-// 세션이 없거나 끊겼을 때(401) 화면이 로그인으로 보내도록 처리기를 하나 등록한다.
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
 
-// 행사 신청·결제처럼 서버가 중복 처리를 막아야 하는 요청에 붙인다.
-// 사용자 행동 한 번에 하나를 만들고, 같은 행동을 다시 보낼 때는 같은 키를 쓴다. 만들기 요청(기록·글·댓글·일정·베이스캠프)은 idempotency.ts의 실행기가 키를 정한다.
 export function newIdempotencyKey(): string {
   return crypto.randomUUID();
 }
@@ -64,8 +60,6 @@ function readCookie(name: string): string | undefined {
 
 let serverClockOffsetMs = 0;
 
-// 결제 기한처럼 서버가 정한 시각까지 남은 시간을 셀 때 쓴다. 브라우저 시계가 서버보다 늦으면 남은 시간이 길게 보이기 때문이다.
-// 그래서 마지막으로 받은 응답의 Date 헤더로 브라우저 시계를 보정한다. 응답을 받은 적이 없으면 브라우저 시계 그대로다.
 export function serverNow(): number {
   return Date.now() + serverClockOffsetMs;
 }
@@ -80,9 +74,6 @@ function recordServerClock(response: Response): void {
 
 let csrfCookieRequest: Promise<void> | null = null;
 
-// 서버는 모든 API 응답에 XSRF-TOKEN 쿠키를 실어 보낸다. 로그인하지 않았을 때 오는 401 응답도 마찬가지다.
-// 그래서 첫 화면에서 쿠키가 아직 없으면 가벼운 GET /api/me를 한 번 보내 쿠키만 받고, 응답 내용은 쓰지 않는다.
-// 여러 요청이 동시에 쿠키를 찾아도 서버에는 한 번만 보낸다.
 async function ensureCsrfCookie(): Promise<void> {
   csrfCookieRequest ??= fetch('/api/me', {
     method: 'GET',
@@ -109,7 +100,6 @@ function buildUrl(path: string, query: RequestOptions['query']): string {
       continue;
     }
     if (Array.isArray(value)) {
-      // 서버는 여러 값을 쉼표로 이어 받는다. 빈 목록은 조건이 없는 것과 같아서 보내지 않는다.
       if (value.length > 0) {
         params.set(key, value.join(','));
       }
@@ -137,7 +127,6 @@ function parseRetryAfter(header: string | null): number | undefined {
   return Math.max(0, Math.ceil((date - Date.now()) / 1000));
 }
 
-// 서버 오류 본문을 믿지 않고 쓰는 필드마다 모양을 확인해서 옮긴다. 코드나 문구가 없으면 null이다.
 function toErrorBody(value: unknown): ErrorBody | null {
   if (typeof value !== 'object' || value === null || !('code' in value) || !('message' in value)) {
     return null;
@@ -167,7 +156,6 @@ function toErrorBody(value: unknown): ErrorBody | null {
   return body;
 }
 
-// 본문이 JSON이 아니면(프록시가 만든 오류 화면 등) 상태 코드로 공통 오류 코드를 고른다.
 function codeFromStatus(status: number): string {
   switch (status) {
     case 400:
@@ -197,13 +185,8 @@ function parseJson(text: string): unknown {
   }
 }
 
-// 약한 망에서 응답이 오지 않으면 화면이 끝없이 기다리므로 GET에는 제한 시간을 둔다. 넘기면 요청을 끊고 실패로 끝내서 화면이 다시 시도 경로를 보여 준다.
-// GET은 다시 보내도 서버 상태가 바뀌지 않는다. 하지만 POST·PUT·PATCH·DELETE는 서버가 처리를 마쳤는데 화면만 실패로 볼 수 있어서 두지 않는다.
-// 서버에서 가장 오래 걸리는 외부 호출(연결 1초 + 응답 5초)보다 넉넉하게 잡았다.
 const GET_TIMEOUT_MS = 15_000;
 
-// 호출하는 쪽의 취소 신호를 그대로 따르면서, 제한 시간이 지나면 따로 끊는 신호를 만든다.
-// 어느 쪽이 끊었는지는 expired()로 구분한다.
 function startDeadline(callerSignal: AbortSignal | undefined, timeoutMs: number) {
   const controller = new AbortController();
   let expired = false;
@@ -265,11 +248,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     if (deadline?.expired()) {
       throw new ApiError(0, 'REQUEST_TIMEOUT', null);
     }
-    // 호출하는 쪽이 요청을 취소한 경우는 오류 화면을 띄우지 않도록 그대로 넘긴다.
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error;
     }
-    // 서버에 닿지 못했거나 본문을 받다가 끊겼다. 화면 문구는 오류 코드 표의 네트워크 문구를 쓴다.
     throw new ApiError(0, 'NETWORK_ERROR', null);
   } finally {
     deadline?.clear();

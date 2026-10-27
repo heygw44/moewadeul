@@ -23,7 +23,6 @@ describe('useViewerEpoch', () => {
   let root: Root;
   let epoch: number;
   let requests: Request[];
-  // 화면이 내용 요청을 보내는 방식 그대로다. 값이 바뀔 때만 이전 요청을 끊고 다시 보낸다.
   function Probe() {
     const value = useViewerEpoch();
     epoch = value;

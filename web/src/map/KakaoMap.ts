@@ -13,7 +13,6 @@ import type { SpotPin } from './markers';
 import type { PinStack, PlacedPin } from './stackPins';
 import type { Bounds, ClusterData, LatLng, MapView, SpotMarkerData } from './types';
 
-// 선택한 핀이 다른 핀과 묶음 위로, 펼친 핀은 모든 장소 핀 위로 올라오게 겹침 순서를 둔다.
 const CLUSTER_Z_INDEX = 1;
 const PIN_Z_INDEX = 2;
 const SELECTED_PIN_Z_INDEX = 3;
@@ -21,10 +20,8 @@ const SPREAD_Z_INDEX = 4;
 const SEARCH_PIN_Z_INDEX = 5;
 const DRAFT_PIN_Z_INDEX = 6;
 const MENU_Z_INDEX = 7;
-// 메뉴를 지도 가장자리에서 띄울 거리(px)다.
 const MENU_MARGIN = 8;
 
-// 카카오 로고 링크에서 위로 올라가며 절대 위치로 놓인 저작권 칸을 찾아 아래 여백을 바꾼다.
 // 카카오가 그린 요소의 구조에 기대므로, 찾지 못하면 아무것도 하지 않는다.
 function raiseCopyright(container: HTMLElement) {
   const logo = [...container.querySelectorAll('a')].find((link) => link.href.includes('map.kakao.com'));
@@ -33,35 +30,26 @@ function raiseCopyright(container: HTMLElement) {
   if (box && box !== container) box.style.bottom = 'var(--sheet-top, 0px)';
 }
 
-// 누른 점에서 메뉴를 얼마나 옮길지(px) 정한다. 누른 점이 뒤쪽 절반이면 앞쪽으로 펼치고,
-// 그래도 가장자리를 넘으면 안쪽으로 밀어 넣는다. 메뉴가 영역보다 크면 앞쪽 끝을 맞춘다.
 function menuOffset(at: number, size: number, limit: number): number {
   const preferred = at > limit / 2 ? -size : 0;
   const clamped = Math.min(preferred, limit - MENU_MARGIN - size - at);
   return Math.max(clamped, MENU_MARGIN - at);
 }
 
-// 휴대폰에는 우클릭이 없어서, 지도를 움직이지 않고 이만큼 누르고 있으면 우클릭과 같이 본다.
 const LONG_PRESS_MS = 500;
-// 손가락은 가만히 대고 있어도 조금씩 흔들리므로, 이 거리 안의 움직임은 지도를 끈 것으로 보지 않는다.
 const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
 // 길게 누른 뒤 손을 떼면 브라우저가 클릭을 하나 더 보낸다. 그 클릭이 방금 연 메뉴를 닫지 않도록 잠깐 무시한다.
 const CLICK_SUPPRESS_MS = 600;
 
-// 지도 위 오버레이 요소에 붙이는 표시다. 메뉴 안을 길게 눌렀을 때 메뉴를 다시 열지 않으려고 쓴다.
 const OVERLAY_ATTRIBUTE = 'data-map-overlay';
 
-// 묶음 원의 지름이 44px이라, 중심이 이보다 가까우면 원이 겹치거나 맞붙어 숫자를 읽기 어렵다.
 const CLUSTER_MIN_DISTANCE_PX = 48;
-// 합친 위치가 가중 평균으로 옮겨지면 이웃 묶음과 다시 가까워질 수 있어서, 더 합칠 것이 없을 때까지 몇 번 되풀이한다.
 const CLUSTER_MERGE_MAX_PASSES = 4;
 
-// 겹친 핀을 펼친 동안 나머지 핀과 묶음을 이만큼 흐리게 해서, 어디까지가 펼친 핀인지 드러낸다.
 const DIMMED_OPACITY = '0.35';
 
 const MAX_ANIMATED_LEVEL_STEP = 2;
 
-// 영역에 맞출 때 장소가 화면 가장자리에 붙지 않도록 둘레에 두는 여백(px)이다.
 const FIT_PADDING_PX = 48;
 // 반경 원의 색이다. 숲색 판 토큰(brand)과 같은 값이고, 지도 SDK에는 CSS 변수를 넘길 수 없어서 값을 적는다.
 const RADIUS_COLOR = '#2c6a45';
@@ -73,15 +61,11 @@ interface DrawnPin {
 
 interface Spread {
   overlay: kakao.maps.CustomOverlay;
-  // 펼치는 동안 숨긴 맨 위 핀의 id다.
   topId: number;
 }
 
 export async function createMapView(
   container: HTMLElement,
-  // scrollWheel을 끄면 마우스 휠이 지도를 확대·축소하지 않고 페이지를 스크롤한다. 랜딩처럼 지도가 페이지 안에 있을 때 끈다.
-  // markerStyle이 'dot'이면 장소를 유형별 핀 대신 작은 점으로 그리고, 겹친 점을 묶지 않는다.
-  // draggable을 끄면 지도를 끌어 옮길 수 없다. 랜딩처럼 화면에 고정한 지도에서 터치 스크롤이 지도에 먹히지 않게 할 때 끈다.
   initial: { center: LatLng; level: number; scrollWheel?: boolean; draggable?: boolean; markerStyle?: 'pin' | 'dot' },
 ): Promise<MapView> {
   await loadKakaoMaps();
@@ -94,7 +78,6 @@ export async function createMapView(
     scrollwheel: initial.scrollWheel ?? true,
     draggable: initial.draggable ?? true,
   });
-  // 왼쪽 아래에는 지도 범례를 두므로, 카카오 로고와 저작권 표시는 오른쪽 아래로 옮긴다.
   map.setCopyrightPosition(kakao.maps.CopyrightPosition.BOTTOMRIGHT, true);
   // 폰 지도 화면은 지도 아래쪽을 시트가 덮는다. 카카오는 로고 자리를 아래쪽으로만 고르게 하므로,
   // 로고 칸을 바깥 칸이 정한 CSS 변수 --sheet-top(시트 윗변 높이)만큼 올려 시트 위에 보이게 한다. 변수가 없으면 맨 아래다.
@@ -107,15 +90,12 @@ export async function createMapView(
   const mapClickListeners = new Set<(position: LatLng) => void>();
   const contextMenuListeners = new Set<(position: LatLng) => void>();
 
-  // 구독 해제가 반복 중에 일어나도 이번 알림은 모두 받도록 복사본을 돈다.
-  // 확대 수준이 바뀌면 핀 사이의 화면 거리가 바뀌므로 다시 묶는다. 끌기만 했으면 거리가 그대로라 다시 묶지 않는다.
   const handleIdle = () => {
     if (!destroyed && layoutLevel !== null && map.getLevel() !== layoutLevel) layoutPins();
     for (const listener of [...idleListeners]) listener();
   };
   kakao.maps.event.addListener(map, 'idle', handleIdle);
 
-  // 지도를 끌거나 확대·축소하면 펼친 핀을 접는다. 펼친 위치는 그때의 화면 거리로 계산한 것이라 움직이면 맞지 않는다.
   const handleMoveStart = () => {
     collapse();
     for (const listener of [...moveStartListeners]) listener();
@@ -123,10 +103,8 @@ export async function createMapView(
   kakao.maps.event.addListener(map, 'dragstart', handleMoveStart);
   kakao.maps.event.addListener(map, 'zoom_start', handleMoveStart);
 
-  // 길게 누른 직후에 오는 클릭은 이 시각까지 무시한다.
   let suppressClickUntil = 0;
 
-  // 핀과 묶음은 clickable 오버레이라서 그 위를 누른 클릭은 지도 이벤트로 오지 않는다.
   const handleMapClick = (event: kakao.maps.MouseEvent) => {
     collapse();
     if (performance.now() < suppressClickUntil) return;
@@ -139,7 +117,6 @@ export async function createMapView(
     for (const listener of [...contextMenuListeners]) listener(position);
   };
 
-  // 화면에 닿아 있는 손가락이다. 두 손가락이면 확대·축소라서 길게 누르기로 보지 않는다.
   const touchPointers = new Set<number>();
   let press: { pointerId: number; x: number; y: number; timer: number } | null = null;
 
@@ -163,7 +140,6 @@ export async function createMapView(
       cancelPress();
       return;
     }
-    // 핀, 묶음, 메뉴처럼 누를 수 있는 오버레이 위에서는 길게 누르기를 세지 않는다.
     if (event.target instanceof Element && event.target.closest(`button, a, input, [${OVERLAY_ATTRIBUTE}]`)) return;
     cancelPress();
     const { pointerId, clientX, clientY } = event;
@@ -188,7 +164,6 @@ export async function createMapView(
     if (press && event.pointerId === press.pointerId) cancelPress();
   };
 
-  // 브라우저의 우클릭 메뉴와 iOS의 길게 누르기 메뉴가 지도 메뉴를 가리지 않게 막는다.
   const preventNativeMenu = (event: Event) => event.preventDefault();
 
   // 지도가 SDK 안에서 이벤트를 멈춰도 먼저 받도록 캡처 단계에서 듣는다.
@@ -198,7 +173,6 @@ export async function createMapView(
   container.addEventListener('pointercancel', handlePointerEnd, true);
   container.addEventListener('contextmenu', preventNativeMenu);
   container.style.setProperty('-webkit-touch-callout', 'none');
-  // 지도를 끌거나 확대·축소하기 시작하면 길게 누르기가 아니다.
   kakao.maps.event.addListener(map, 'dragstart', cancelPress);
   kakao.maps.event.addListener(map, 'zoom_start', cancelPress);
 
@@ -210,10 +184,8 @@ export async function createMapView(
   };
 
   let markers: SpotMarkerData[] = [];
-  // 맨 위 핀의 id로 찾는다. 겹쳐서 가려진 핀은 따로 그리지 않는다.
   let pins = new Map<number, DrawnPin>();
   let spread: Spread | null = null;
-  // 마지막으로 핀을 묶은 때의 확대 수준이다.
   let layoutLevel: number | null = null;
   let clusterOverlays: kakao.maps.CustomOverlay[] = [];
   let clusterElements: HTMLElement[] = [];
@@ -222,7 +194,6 @@ export async function createMapView(
   let menuOverlay: kakao.maps.CustomOverlay | null = null;
   let menuResize: ResizeObserver | null = null;
   let selectedId: number | null = null;
-  // 고른 장소가 그린 마커에 없을 때 대신 그릴 핀이다. showSelectedSpot으로 받는다.
   let selectedSpot: SpotMarkerData | null = null;
   let radiusCircle: kakao.maps.Circle | null = null;
   let terrainOn = false;
@@ -243,7 +214,6 @@ export async function createMapView(
     return merged;
   }
 
-  // 펼친 핀을 지우고 숨겼던 맨 위 핀을 다시 보인다. 키보드로 접었으면 포커스를 그 핀으로 돌려놓는다.
   function collapse(restoreFocus = false) {
     if (spread === null) return;
     spread.overlay.setMap(null);
@@ -261,11 +231,9 @@ export async function createMapView(
     for (const element of clusterElements) element.style.opacity = opacity;
   }
 
-  // 겹친 핀을 원래 위치에서 펼친다. 지도는 확대하지 않는다.
   function expand(stack: PinStack) {
     collapse();
     const anchor = stack.top;
-    // 화면 좌표는 묶을 때 구한 값이다. 그 뒤로 지도를 끌었더라도 핀 사이의 거리는 그대로라 기준점과의 차이만 쓴다.
     const placements = arrangeSpread(
       stack.members.map((member) => ({
         item: member.marker,
@@ -289,7 +257,6 @@ export async function createMapView(
       content: element,
       position: toKakaoLatLng(anchor.marker.position),
       clickable: true,
-      // 내용 요소의 크기가 0이라 기준점은 왼쪽 위로 두고, 안의 핀과 선을 이 점에서 떨어진 거리로 놓는다.
       xAnchor: 0,
       yAnchor: 0,
       zIndex: SPREAD_Z_INDEX,
@@ -300,7 +267,6 @@ export async function createMapView(
     buttons[0]?.focus();
   }
 
-  // 지금 확대 수준의 화면 좌표로 핀을 묶고, 묶음마다 맨 위 핀 하나만 그린다.
   function layoutPins() {
     collapse();
     clearPins();
@@ -309,13 +275,11 @@ export async function createMapView(
     const placed: PlacedPin[] = [];
     const seen = new Set<number>();
     for (const marker of markers) {
-      // 같은 id가 두 번 오면 앞의 오버레이를 잃어버려 지울 수 없게 되므로 처음 것만 그린다.
       if (seen.has(marker.id)) continue;
       seen.add(marker.id);
       const point = projection.containerPointFromCoords(toKakaoLatLng(marker.position));
       placed.push({ marker, x: point.x, y: point.y });
     }
-    // 고른 장소가 조건에 걸러졌거나 영역 조회가 묶음만 줘서 마커에 없으면, 받아 둔 데이터로 그 핀을 따로 그린다.
     if (selectedSpot !== null && selectedSpot.id === selectedId && !seen.has(selectedSpot.id)) {
       const point = projection.containerPointFromCoords(toKakaoLatLng(selectedSpot.position));
       placed.push({ marker: selectedSpot, x: point.x, y: point.y });
@@ -352,7 +316,6 @@ export async function createMapView(
         position: toKakaoLatLng(top.position),
         clickable: true,
         xAnchor: 0.5,
-        // 핀의 뾰족한 끝이 좌표에 오도록 요소 아래쪽 끝을 기준으로 놓는다.
         yAnchor: 1,
         zIndex: selected ? SELECTED_PIN_Z_INDEX : PIN_Z_INDEX,
       });
@@ -416,7 +379,6 @@ export async function createMapView(
     panTo(position: LatLng, level?: number) {
       const current = map.getLevel();
       if (level !== undefined && Math.abs(level - current) > MAX_ANIMATED_LEVEL_STEP) {
-        // 확대 수준을 크게 바꾸면 애니메이션이 없으므로 setCenter와 같이 바로 옮긴다.
         view.setCenter(position, level);
         return;
       }
@@ -425,7 +387,6 @@ export async function createMapView(
         map.setLevel(level, { animate: true, anchor: toKakaoLatLng(position) });
     },
 
-    // 서버 묶음은 핀과 섞어 묶지 않는다. 묶음끼리만 합쳐서 그린다.
     showMarkers(nextMarkers: SpotMarkerData[], clusters: ClusterData[]) {
       if (destroyed) return;
       markers = nextMarkers;
@@ -449,8 +410,6 @@ export async function createMapView(
       }
     },
 
-    // 고른 핀은 겹친 핀 묶음의 맨 위로 올라와야 하므로 핀을 다시 묶는다.
-    // 지금 화면에 없는 id라도 기억해 두었다가, 다음 showMarkers에서 그 핀을 선택 상태로 그린다.
     setSelected(id: number | null) {
       if (id === selectedId) return;
       selectedId = id;
@@ -487,7 +446,6 @@ export async function createMapView(
       return subscribe(contextMenuListeners, listener);
     },
 
-    // 메뉴가 지도 밖으로 넘치지 않게, 누른 곳이 화면 오른쪽 절반이면 메뉴를 왼쪽으로, 아래쪽 절반이면 위로 펼친다.
     // SDK는 오버레이를 만들 때 내용의 크기로 기준점을 계산하는데, 그때는 화면 코드가 아직 내용을 그리기 전이라 크기가 0이다.
     // 그래서 기준점은 왼쪽 위로 두고, 펼칠 방향은 내용 요소를 CSS로 옮겨서 정한다. 열 때마다 새로 만든다.
     showMenu(position: LatLng | null, visibleHeight?: number) {
@@ -500,8 +458,6 @@ export async function createMapView(
       const point = map.getProjection().containerPointFromCoords(kakaoPosition);
       const element = document.createElement('div');
       element.setAttribute(OVERLAY_ATTRIBUTE, '');
-      // 메뉴 내용은 화면 코드가 나중에 그려 넣으므로, 크기가 정해질 때마다 다시 자리를 잡는다.
-      // 폰에서는 메뉴가 지도 폭보다 넓을 수 있고 지도 아래쪽은 시트가 덮으므로, 보이는 영역 안으로 밀어 넣는다.
       const place = () => {
         const height = Math.min(visibleHeight ?? container.clientHeight, container.clientHeight);
         const x = menuOffset(point.x, element.offsetWidth, container.clientWidth);
@@ -523,7 +479,6 @@ export async function createMapView(
       return element;
     },
 
-    // 임시 핀은 오버레이 하나를 만들어 두고 위치만 옮긴다.
     showDraft(position: LatLng | null) {
       if (destroyed) return;
       if (position === null) {
@@ -545,7 +500,6 @@ export async function createMapView(
       draftOverlay.setMap(map);
     },
 
-    // 검색 위치 핀도 오버레이 하나를 만들어 두고 위치만 옮긴다.
     showSearchPin(position: LatLng | null) {
       if (destroyed) return;
       if (position === null) {
@@ -573,7 +527,6 @@ export async function createMapView(
       map.setBounds(area, FIT_PADDING_PX, FIT_PADDING_PX, FIT_PADDING_PX, FIT_PADDING_PX);
     },
 
-    // 원은 하나만 만들어 두고 중심과 반지름만 바꾼다.
     showRadius(area: { center: LatLng; radiusKm: number } | null) {
       if (destroyed) return;
       if (area === null) {
@@ -600,7 +553,6 @@ export async function createMapView(
       radiusCircle.setMap(map);
     },
 
-    // 지형도는 기본 지도 위에 겹치는 타일이다. 이미 켜져 있으면 다시 겹치지 않는다.
     setTerrain(on: boolean) {
       if (destroyed || on === terrainOn) return;
       if (on) {

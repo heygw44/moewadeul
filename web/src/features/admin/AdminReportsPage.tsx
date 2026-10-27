@@ -44,7 +44,6 @@ function ReportList() {
   const [status, setStatus] = useState<string>(ALL);
   const [urgentOnly, setUrgentOnly] = useState(false);
 
-  // 필터가 같은 값이면 같은 객체를 넘겨야 목록이 필터가 바뀐 줄 알고 다시 받지 않는다.
   const filter = useMemo<ReportFilter>(
     () => ({ status: status === ALL ? undefined : (status as ReportStatus), urgent: urgentOnly ? true : undefined }),
     [status, urgentOnly],
@@ -76,7 +75,6 @@ function ReportList() {
       )}
       {current !== null && current.items.length > 0 && (
         <div className="rounded-sheet bg-fill p-1.5">
-          {/* 넓은 화면에서는 표처럼 칸 이름 줄을 둔다. 좁은 화면은 행마다 위아래로 쌓으므로 이 줄을 숨긴다. */}
           <div aria-hidden="true" className={`hidden py-2.5 text-sm font-semibold text-ink-muted md:grid ${ROW_GRID}`}>
             <span>우선</span>
             <span>사유</span>
@@ -102,7 +100,6 @@ function ReportList() {
   );
 }
 
-// 칸 이름 줄과 행이 같은 칸 폭을 쓴다.
 const ROW_GRID = 'px-4 md:grid-cols-[3.5rem_minmax(0,10rem)_minmax(0,1fr)_6rem_9.5rem_1.25rem] md:gap-4';
 
 function ReportRow({ item }: { item: AdminReportSummary }) {

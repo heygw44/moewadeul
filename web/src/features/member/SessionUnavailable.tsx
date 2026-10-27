@@ -1,7 +1,6 @@
 import { BrandMark } from '../../components/BrandMark';
 import { Button } from '../../components/Button';
 
-// 로그인 상태를 확인하지 못했을 때 앱 전체 대신 보여 준다. 로그인 화면으로 보내지 않고, 사용자가 다시 시도할 수 있게 한다.
 export function SessionUnavailable({ retrying, onRetry }: { retrying: boolean; onRetry(): void }) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">

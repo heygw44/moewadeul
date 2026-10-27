@@ -16,14 +16,12 @@ import { newMemoryPath } from '../memory/memoryLabels';
 import { LocationLabel } from '../spot/LocationLabel';
 import { SPOT_TYPE_META } from '../spot/spotLabels';
 
-// 누른 곳에서 이 반경 안의 장소를 같은 곳으로 본다. 박지를 제보할 때 서버가 중복 후보를 찾는 반경과 같은 50m다.
 const SAME_PLACE_RADIUS_KM = 0.05;
 
 const GUIDE_LINK_CLASS = 'inline-flex min-h-11 items-center text-accent underline underline-offset-2';
 
 const MEMORY_LINK_CLASS = `${buttonClassName('secondary')} w-full`;
 
-// 제보 폼이 서버에 보내는 좌표와 같은 정밀도로 줄인다.
 function roundCoordinate(value: number): number {
   return Math.round(value * 1e6) / 1e6;
 }
@@ -31,13 +29,9 @@ function roundCoordinate(value: number): number {
 type MapOpenMenuProps = {
   position: LatLng;
   onClose: () => void;
-  // 근처에 장소가 있으면 메뉴를 닫고 후보 목록을 띄우도록 호출하는 쪽에 넘긴다.
   onCandidates: (spots: NearbySpot[]) => void;
 };
 
-// 지도를 우클릭하거나 길게 누른 곳에 뜨는 메뉴다. 그 자리에서 베이스캠프를 열거나 기록을 남긴다.
-// 자격이 없으면 무엇을 하면 되는지 안내만 한다. 화면의 자격 안내는 편의일 뿐이고, 폼과 서버가 다시 판정한다.
-// 기록은 이메일 인증만 마치면 남길 수 있어서, 본인확인 전 회원에게도 기록 링크를 보여 준다.
 export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProps) {
   const session = useSession();
   const location = useLocation();
@@ -46,13 +40,10 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 메뉴가 뜨면 키보드로 바로 고를 수 있게 닫기 버튼이 아니라 본문의 첫 버튼·링크로 포커스를 옮긴다.
-  // 지도가 움직이지 않도록 스크롤은 막는다.
   useEffect(() => {
     bodyRef.current?.querySelector<HTMLElement>('a, button:not([disabled])')?.focus({ preventScroll: true });
   }, []);
 
-  // 찾는 중에 메뉴를 닫으면 응답을 기다리지 않는다.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   async function search() {
@@ -70,7 +61,6 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
         onCandidates(page.content);
         return;
       }
-      // 근처에 장소가 없으면 그 자리를 박지로 먼저 제보하고, 등록되면 새 장소에서 베이스캠프를 연다.
       navigate(`/bakjis/new?lat=${lat}&lng=${lng}&next=basecamp`);
     } catch (caught) {
       if (controller.signal.aborted) return;
@@ -165,7 +155,6 @@ export function MapOpenMenu({ position, onClose, onCandidates }: MapOpenMenuProp
   );
 }
 
-// 누른 좌표 그대로 추억 기록 폼을 연다. 장소를 연결하지 않는다.
 function MemoryLink({ position }: { position: LatLng }) {
   return (
     <Link to={newMemoryPath(position)} className={MEMORY_LINK_CLASS}>
@@ -179,7 +168,6 @@ type SpotPickDialogProps = {
   onClose: () => void;
 };
 
-// 누른 곳 근처의 장소 중에서 베이스캠프를 열 곳을 고른다. 공원 경계 경고가 있는 박지는 고를 수 없게 막고 이유를 적는다.
 export function SpotPickDialog({ spots, onClose }: SpotPickDialogProps) {
   return (
     <Dialog title="어느 장소에서 열까요?" onClose={onClose}>

@@ -6,14 +6,11 @@ import { DATA_SOURCES } from './dataSources';
 
 const LINK_CLASS = 'inline-flex min-h-11 items-center text-sm text-ink-muted hover:text-ink hover:underline lg:min-h-8';
 
-// 랜딩과 지도가 없는 화면 맨 아래에 둔다. 지도 화면은 화면 전체를 지도가 쓰므로 바닥글이 없다.
-// 위에서부터 글자 열 셋, 데이터 출처 한 줄, 고지 줄 순서다.
 export function SiteFooter() {
   const session = useSession();
   const signedIn = session.status === 'authenticated' && session.me !== null;
 
   return (
-    // 바닥글은 세이지 면이다. 흰 본문과 색 한 단계로 나누고, 안의 묶음도 선 대신 간격으로 나눈다.
     <footer className="bg-fill text-ink">
       <div className="mx-auto grid max-w-screen-xl grid-cols-2 gap-8 px-4 pt-14 pb-10 md:grid-cols-[2fr_1fr_1fr]">
         <div className="col-span-2 flex flex-col gap-2 md:col-span-1">
@@ -67,7 +64,6 @@ export function SiteFooter() {
       </div>
 
       <div>
-        {/* 출처는 판단 근거라서 지우지 않고, 열 하나를 차지하지 않게 한 줄로 모은다. */}
         <p className="mx-auto max-w-screen-xl px-4 pt-2 text-[0.9375rem] leading-relaxed text-ink-muted">
           <span className="block max-w-[72ch]">데이터 · {DATA_SOURCES.join(' · ')}</span>
         </p>

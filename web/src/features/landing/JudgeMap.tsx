@@ -1,10 +1,8 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { contourPaths } from './contours';
 
-// 지도 조각의 좌표계(viewBox)다. 다각형과 핀 위치는 이 좌표로 계산한다.
 const MAP_WIDTH = 560;
 const MAP_HEIGHT = 476;
-// 예시 공원 경계 다각형이다. 실제 공원 경계가 아니라 판정이 어떻게 보이는지 보여 주는 그림이다.
 const BOUNDARY: ReadonlyArray<readonly [number, number]> = [
   [120, 40],
   [330, 20],
@@ -14,7 +12,6 @@ const BOUNDARY: ReadonlyArray<readonly [number, number]> = [
   [130, 230],
 ];
 const BOUNDARY_PATH = `M${BOUNDARY.map(([x, y]) => `${x} ${y}`).join(' L')} Z`;
-// 키보드로 핀을 옮길 때 한 번에 움직이는 거리(지도 좌표)다.
 const KEY_STEP = 16;
 const KEY_MOVES: Record<string, readonly [number, number]> = {
   ArrowLeft: [-KEY_STEP, 0],
@@ -23,7 +20,6 @@ const KEY_MOVES: Record<string, readonly [number, number]> = {
   ArrowDown: [0, KEY_STEP],
 };
 
-// 점이 다각형 안에 있는지 판정한다. 점에서 오른쪽으로 그은 반직선이 변을 홀수 번 넘으면 안쪽이다.
 function insideBoundary(x: number, y: number): boolean {
   let inside = false;
   for (let i = 0, j = BOUNDARY.length - 1; i < BOUNDARY.length; j = i++) {
@@ -38,14 +34,11 @@ function clampPoint(x: number, y: number) {
   return { x: Math.min(MAP_WIDTH, Math.max(0, x)), y: Math.min(MAP_HEIGHT, Math.max(0, y)) };
 }
 
-// 이 페이지의 하나뿐인 조작이다. 지도를 누르거나 화살표 키로 핀을 옮기면 공원 경계 안·밖을 다시 판정하고,
-// 경계 안이면 베이스캠프 열기 버튼을 막는다. 앱의 실제 규칙(경고 박지로는 베이스캠프를 열 수 없음)을 그대로 보여 준다.
 export function JudgeMap() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pin, setPin] = useState({ x: 291, y: 190 });
   const warned = insideBoundary(pin.x, pin.y);
   const hintId = useId();
-  // 지형 등고선이다. 오른쪽 위에 큰 봉우리 하나, 왼쪽 아래에 작은 봉우리 하나를 둔다.
   const peaks = useMemo(
     () => [
       contourPaths({ cx: 470, cy: 150, rx: 300, ry: 210, levels: 7, seed: 2.2 }),
@@ -57,7 +50,6 @@ export function JudgeMap() {
   function moveTo(clientX: number, clientY: number) {
     const matrix = svgRef.current?.getScreenCTM();
     if (!matrix) return;
-    // 화면 좌표를 지도 좌표로 바꾼다. 지도가 칸을 넘치게 채워(slice) 잘려 있어도 정확한 자리를 얻는다.
     const point = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
     setPin(clampPoint(point.x, point.y));
   }
@@ -107,7 +99,6 @@ export function JudgeMap() {
         <text x={226} y={64} fontSize={13} fontWeight={700} className="fill-warning">
           예시 국립공원 경계
         </text>
-        {/* 핀은 지도 좌표에 그려서 화면 크기가 바뀌어도 같은 자리에 있다. 끝이 좌표를 가리키는 물방울 모양이다. */}
         <g
           style={{ transform: `translate(${pin.x}px, ${pin.y}px)` }}
           className="transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
@@ -131,7 +122,6 @@ export function JudgeMap() {
         지도를 눌러 핀을 옮겨 보세요
       </p>
 
-      {/* 판정 결과 창이다. 지도 위에 떠 있어 그림자를 둔다. 결과가 바뀌면 스크린 리더가 읽는다. */}
       <div className="absolute inset-x-3 bottom-3 rounded-row bg-surface p-4 text-[0.9375rem] shadow-raise sm:inset-x-4 sm:bottom-4">
         <p className="text-[1.0625rem] font-bold">이름 없는 박지 · 사용자 제보</p>
         <p className="text-[0.9375rem] text-ink-muted">경계 자료: 예시 공원 경계 · 2026-06-30 기준</p>

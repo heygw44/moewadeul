@@ -20,7 +20,6 @@ describe('usePagedList', () => {
   let container: HTMLDivElement;
   let root: Root;
   let latest: Result;
-  // 요청마다 응답을 직접 풀어 줄 수 있게 쪽 번호별로 대기열을 둔다.
   let pending: Map<string, Deferred[]>;
   let fetcher: (filter: string, pageNumber: number) => Promise<Page<number>>;
 

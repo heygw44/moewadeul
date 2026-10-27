@@ -10,7 +10,6 @@ import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
 
-// 어느 시도의 결과인지 함께 기억해서, 다시 불러오는 동안 이전 결과를 보여 주지 않는다.
 type TripsResult = { attempt: number; trips: SoloTrip[] } | { attempt: number; error: { cause: unknown } };
 
 export function MySoloTripsCard() {

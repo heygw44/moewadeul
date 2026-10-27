@@ -22,7 +22,6 @@ import { useSession } from '../member/session';
 import { NOTIFICATION_LABELS, NOTIFICATION_TYPES } from './notificationLabels';
 import { refreshUnreadCount } from './unreadCount';
 
-// 서버가 주는 link는 앱 안의 경로다. 다른 사이트로 보내는 값(//, 스킴이 붙은 주소)은 따라가지 않는다.
 function isInternalPath(link: string): boolean {
   return link.startsWith('/') && !link.startsWith('//') && !link.includes('\\');
 }
@@ -36,7 +35,6 @@ export function NotificationsPage() {
     document.title = '알림 · 뫼와들';
   }, []);
 
-  // 알림은 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
@@ -118,7 +116,6 @@ function NotificationList() {
         void refreshUnreadCount();
       }
     } catch (caught) {
-      // 읽음 처리에 실패해도 이동할 곳이 있으면 이동한다. 이동할 곳이 없을 때만 오류를 보여 준다.
       if (!item.link || !isInternalPath(item.link)) {
         setActionError({ cause: caught });
         return;
@@ -210,7 +207,6 @@ function NotificationList() {
 
 function NotificationRow({ item, onOpen }: { item: NotificationItem; onOpen: () => void }) {
   const unread = item.readAt === null;
-  // 제목과 본문은 서버가 만든 글자이지만 HTML로 넣지 않고 글자로만 그린다.
   return (
     <li>
       <button
@@ -242,7 +238,6 @@ type SettingsState =
   | { status: 'ready'; enabled: Record<NotificationType, boolean> };
 
 function toEnabledMap(items: NotificationSetting[]): Record<NotificationType, boolean> {
-  // 서버가 빠뜨린 종류는 기본값(받기)으로 본다.
   const map = Object.fromEntries(NOTIFICATION_TYPES.map((type) => [type, true])) as Record<NotificationType, boolean>;
   for (const item of items) {
     if (item.type in map) map[item.type] = item.emailEnabled;

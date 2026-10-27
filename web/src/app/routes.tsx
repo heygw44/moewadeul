@@ -16,8 +16,6 @@ import { lazyPage } from './lazyPage';
 import type { LatLng } from '../map/types';
 import type { RouteDef } from './router';
 
-// 관리자, 랜딩, 추억, 커뮤니티, 행사 화면은 코드를 따로 받는다. 지도만 열어도 이 화면들의 코드까지 받지 않게 하려는 것이다.
-// 링크에 포인터를 올리거나 초점을 두면 preload가 그 화면의 코드를 미리 받는다.
 const AdminReportDetailPage = lazyPage(
   () => import('../features/admin/AdminReportDetailPage'),
   'AdminReportDetailPage',
@@ -54,7 +52,6 @@ export const routes: RouteDef[] = [
   {
     path: '/spots/:spotId',
     opensMap: true,
-    // 장소 ID는 양의 정수만 있다. 그 밖의 값은 서버에 묻지 않고 없는 페이지로 보여 준다.
     render: (params) => {
       const raw = params.spotId ?? '';
       const spotId = Number(raw);
@@ -68,8 +65,6 @@ export const routes: RouteDef[] = [
   {
     path: '/bakjis/new',
     opensMap: true,
-    // 지도 메뉴에서 넘어오면 주소에 처음 찍을 위치(lat, lng)와 제보 뒤 갈 곳(next=basecamp)이 붙는다.
-    // 좌표가 숫자가 아니거나 범위를 벗어나면 버리고 빈 제보 화면을 연다.
     render: () => {
       const search = new URLSearchParams(window.location.search);
       const initialDraft = toLatLng(search.get('lat'), search.get('lng'));
@@ -85,7 +80,6 @@ export const routes: RouteDef[] = [
   {
     path: '/bakjis/:spotId/edit',
     opensMap: true,
-    // 세그먼트 수가 달라서 '/bakjis/new'와 겹치지 않는다. 제보한 회원인지는 수정 화면과 서버가 확인한다.
     render: (params) => {
       const spotId = toPositiveId(params.spotId);
       return spotId === null ? <NotFoundPage /> : <MapPage mode="bakjiEdit" editSpotId={spotId} />;
@@ -95,7 +89,6 @@ export const routes: RouteDef[] = [
   {
     path: '/basecamps/new',
     opensMap: true,
-    // 장소 ID는 주소의 spotId에서 읽는다. 양의 정수가 아니면 서버에 묻지 않고 없는 페이지로 보여 준다.
     render: () => {
       const spotId = toPositiveId(new URLSearchParams(window.location.search).get('spotId') ?? undefined);
       return spotId === null ? <NotFoundPage /> : <MapPage mode="basecampOpen" openSpotId={spotId} />;
@@ -104,7 +97,6 @@ export const routes: RouteDef[] = [
   {
     path: '/basecamps/:basecampId',
     opensMap: true,
-    // 베이스캠프 ID도 양의 정수만 있다. 위의 '/basecamps/new'가 먼저 맞아야 하므로 이 경로는 그 뒤에 둔다.
     render: (params) => {
       const basecampId = toPositiveId(params.basecampId);
       return basecampId === null ? <NotFoundPage /> : <MapPage mode="basecamps" basecampId={basecampId} />;
@@ -112,14 +104,12 @@ export const routes: RouteDef[] = [
   },
   {
     path: '/basecamps/:basecampId/manage',
-    // 세그먼트 수가 달라서 '/basecamps/:basecampId'와 겹치지 않는다.
     render: (params) => {
       const basecampId = toPositiveId(params.basecampId);
       return basecampId === null ? <NotFoundPage /> : <BasecampManagePage key={basecampId} basecampId={basecampId} />;
     },
   },
   { path: '/community', render: () => <CommunityListPage />, preload: CommunityListPage.preload },
-  // '/community/new'가 '/community/:postId'보다 먼저 맞아야 하므로 이 경로를 앞에 둔다.
   {
     path: '/community/new',
     render: () => <CommunityPostFormPage mode="create" />,
@@ -141,9 +131,6 @@ export const routes: RouteDef[] = [
       return postId === null ? <NotFoundPage /> : <CommunityPostDetailPage key={postId} postId={postId} />;
     },
   },
-  // 지도 메뉴는 누른 좌표(lat, lng)를, 장소 상세는 장소 좌표와 spotId를 주소에 붙인다. 폼이 값을 읽고 검사한다.
-  // '/memories/new'가 '/memories/:memoryId'보다 먼저 맞아야 하므로 이 경로를 앞에 둔다.
-  // 세그먼트 수가 달라서 '/memories/new', '/memories/:memoryId'와 겹치지 않는다.
   { path: '/memories', render: () => <MemoryFeedPage />, preload: MemoryFeedPage.preload },
   { path: '/memories/new', render: () => <MemoryFormPage mode="create" />, preload: MemoryFormPage.preload },
   {
@@ -209,7 +196,6 @@ export const routes: RouteDef[] = [
   },
   {
     path: '/members/:memberId',
-    // 회원 ID도 양의 정수만 있다. 그 밖의 값은 서버에 묻지 않고 없는 페이지로 보여 준다.
     render: (params) => {
       const memberId = toPositiveId(params.memberId);
       return memberId === null ? <NotFoundPage /> : <MemberProfilePage key={memberId} memberId={memberId} />;

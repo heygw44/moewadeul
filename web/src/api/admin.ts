@@ -70,7 +70,6 @@ export function restoreSpot(spotId: number): Promise<{ spotId: number; status: s
   return apiFetch(`/api/admin/spots/${spotId}/restore`, { method: 'POST' });
 }
 
-// 관리자도 비공개 기록은 보지 못해서, 서버는 공개 기록만 준다.
 export function fetchAdminMemories(
   params: { status: AdminMemoryStatus; page: number },
   signal?: AbortSignal,
@@ -99,7 +98,6 @@ export function fetchSyncJobRuns(
   });
 }
 
-// 서버가 작업을 백그라운드에서 시작하고 바로 돌려준다. 끝났는지는 실행 기록으로 확인한다.
 export function startSyncJob(jobType: SyncJobType): Promise<{ jobRunId: number }> {
   return apiFetch('/api/admin/sync-jobs', { method: 'POST', body: { jobType } });
 }

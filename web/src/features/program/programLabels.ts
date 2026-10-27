@@ -39,18 +39,14 @@ export const APPLICATION_FILTERS: ReadonlyArray<{ value: ProgramApplicationStatu
   { value: 'EXPIRED', label: '만료' },
 ];
 
-// 예: 30,000원. 0원은 "무료"로 적는다.
 export function feeText(fee: number): string {
   return fee === 0 ? '무료' : `${fee.toLocaleString('ko-KR')}원`;
 }
 
-// 예: 3/20. 남은 자리 / 정원이다.
 export function seatsText(remainingSeats: number, capacity: number): string {
   return `${remainingSeats}/${capacity}`;
 }
 
-// 남은 시간을 mm:ss로 적는다. 이미 지났으면 00:00이다.
-// 서버 시각 보정에 1초 안쪽 오차가 있어서, 남은 시간이 결제 기한(maxSeconds)보다 길게 나오지 않게 자른다.
 export function countdownText(dueAtIso: string, nowMs: number, maxSeconds: number): string {
   const remaining = Math.floor((Date.parse(dueAtIso) - nowMs) / 1000);
   const seconds = Math.max(0, Math.min(maxSeconds, remaining));

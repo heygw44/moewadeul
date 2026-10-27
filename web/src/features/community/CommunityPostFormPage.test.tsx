@@ -7,18 +7,15 @@ import { useLocation } from '../../app/router';
 import { SessionProvider } from '../member/session';
 import { CommunityPostFormPage } from './CommunityPostFormPage';
 
-// 머리글·알림 띠가 따로 요청을 보내므로, 폼만 보는 이 테스트에서는 본문만 그린다.
 vi.mock('../../components/HubLayout', () => ({
   HubLayout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
   AsideSection: ({ children }: { children: ReactNode }) => <aside>{children}</aside>,
 }));
 
-// jsdom에는 실제 캔버스가 없어서, 올리기 전에 다시 만든 사진을 돌려주는 함수를 바꿔 끼운다.
 vi.mock('../../components/reencodeImage', () => ({
   reencodeImage: async (file: File) => new Blob(['reencoded'], { type: file.type }),
 }));
 
-// React가 act 밖의 상태 변경을 경고하지 않도록 테스트 환경임을 알린다.
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const FORM_PATH = '/community/new';
@@ -41,7 +38,6 @@ function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-// 라우터처럼 주소가 글쓰기 경로일 때만 폼을 그린다. 세션이 끊겨 로그인 경로로 가면 폼이 사라진다.
 function FormRoute() {
   const { pathname } = useLocation();
   return pathname === FORM_PATH ? <CommunityPostFormPage mode="create" /> : <p>로그인 화면</p>;
@@ -58,7 +54,6 @@ describe('글쓰기 화면: 세션이 끊긴 채 저장했을 때', () => {
       HTMLInputElement | HTMLTextAreaElement;
   const photoCount = () => container.querySelectorAll('img[alt^="올린 사진"]').length;
 
-  // 로그인 화면에서 돌아오면 화면이 새로 그려지므로, 폼을 내렸다가 같은 주소로 다시 올린다.
   async function mountForm() {
     root = createRoot(container);
     await act(async () => {

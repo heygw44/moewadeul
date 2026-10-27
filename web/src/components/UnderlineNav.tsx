@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from '../app/router';
 
-// 제목 아래에 놓는 이동 링크 줄이다. UnderlineTabs와 같은 알약 트랙 모양이고, 현재 화면은 aria-current로 알린다.
 export function UnderlineNav({ label, children }: { label: string; children: ReactNode }) {
   return (
     <nav aria-label={label} className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-control bg-fill p-1">

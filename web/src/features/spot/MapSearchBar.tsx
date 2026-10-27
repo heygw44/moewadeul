@@ -26,36 +26,26 @@ const GUIDE_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2 hover:text-accent-deep';
 const MODE_BUTTON_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2 hover:text-accent';
-// 검색 칸 옆의 AI 검색 버튼이다. 켜면 숲색 판으로 채워 지금 문장으로 찾는 중임을 알린다.
-// AI 검색 버튼은 검색 칸 안 오른쪽의 작은 알약이다. 켜면 숲색, 끄면 검색 칸 바탕과 한 단계 다른 면이다.
 const AI_TOGGLE_ON = 'bg-brand text-white hover:bg-brand-strong';
 const AI_TOGGLE_FLOATING = 'bg-fill text-ink hover:bg-fill-strong';
 const AI_TOGGLE_PANEL = 'bg-surface text-ink hover:bg-fill-strong';
 const PANEL_BOX_CLASS = 'rounded-sheet bg-fill px-4 py-3 text-sm text-ink';
 
-// AI 검색이 실패했을 때 입력란 아래에 띄울 안내의 종류다. 하루 횟수를 다 썼을 때는 남은 시간을 알 때만 시간을 적는다.
 type AiError = { kind: 'limited'; timed: boolean } | { kind: 'unavailable' } | { kind: 'message'; text: string };
 
 type SearchState =
   | { status: 'idle' }
   | { status: 'loading' }
-  // aiResult가 있으면 AI가 읽은 조건을 쥐고 있다가, 후보를 고르면 그 후보와 함께 넘긴다.
   | { status: 'candidates'; candidates: RegionCandidate[]; aiResult?: AiInterpretResponse }
   | { status: 'empty'; keyword: string }
   | { status: 'error'; message: string };
 
 type MapSearchBarProps = {
-  // 새 검색을 시작할 때 부른다. 앞선 검색이 남긴 표시를 지운다.
   onSearch: () => void;
-  // 고른 지역으로 지도를 옮긴다. 옮긴 뒤 영역 조회는 지도 idle 구독이 맡는다.
   onSelect: (candidate: RegionCandidate) => void;
-  // 지도가 움직이기 시작하면 떠 있던 후보 목록과 안내 문구를 닫는다.
   mapMoving: boolean;
-  // 지도 위에 띄울 때 켠다. 랜딩처럼 지도 밖 흰 바탕에 둘 때는 끈다.
   floating?: boolean;
-  // 데스크톱 지도 화면의 왼쪽 패널 안에 둘 때 켠다. 지도 위가 아니라서 그림자 없이 테두리로 입력란을 알린다.
   inPanel?: boolean;
-  // 넘기면 입력란에서 문장으로 찾는 AI 모드로 바꿀 수 있다. 읽어 낸 조건과, 그 조건의 지역으로 정한 후보(없으면 null)를 넘겨 준다.
   ai?: { onResult: (result: AiInterpretResponse, candidate: RegionCandidate | null) => void };
 };
 
@@ -71,33 +61,27 @@ export function MapSearchBar({
   const { pathname, search } = useLocation();
   const countdown = useRetryCountdown();
   const [query, setQuery] = useState('');
-  // 문장은 해석에 쓰고 버리는 값이라 화면 상태에만 둔다. 저장소나 콘솔에는 남기지 않는다.
   const [aiQuery, setAiQuery] = useState('');
   const [aiMode, setAiMode] = useState(false);
-  // 결과를 받은 뒤에는 OpenAI 안내를 접어 지도를 덜 가린다. 문장을 고치거나 모드를 바꾸면 다시 보인다.
   const [aiResolved, setAiResolved] = useState(false);
   const [aiError, setAiError] = useState<AiError | null>(null);
   const [inputError, setInputError] = useState<string | undefined>();
   const [state, setState] = useState<SearchState>({ status: 'idle' });
   const [wasMoving, setWasMoving] = useState(mapMoving);
 
-  // 렌더 중에 이전 값과 비교해서 닫으므로, 화면이 한 번 그려진 뒤 다시 그리는 일이 없다. 검색 중인 요청은 그대로 둔다.
   if (mapMoving !== wasMoving) {
     setWasMoving(mapMoving);
     if (mapMoving && state.status !== 'idle' && state.status !== 'loading') setState({ status: 'idle' });
   }
   const anonymous = session.status === 'anonymous' || (session.status === 'authenticated' && session.me === null);
   const unverified = session.status === 'authenticated' && session.me?.status === 'UNVERIFIED';
-  // 세션을 아직 모를 때는 모드 토글을 그리지 않는다. 로그인 여부에 따라 보여 줄 내용이 달라서다.
   const aiAvailable = ai !== undefined && session.status !== 'loading';
-  // 이 화면이 AI를 허용하지 않으면(ai를 안 넘기면) 모드가 켜져 있어도 지역 검색으로 그린다.
   const aiActive = aiMode && aiAvailable;
   const aiGuide = aiActive && (anonymous || unverified);
   const loading = state.status === 'loading';
   const waiting = aiActive && countdown.secondsLeft > 0;
   const limitedShown = aiError?.kind === 'limited' && (!aiError.timed || countdown.secondsLeft > 0);
 
-  // 앞선 검색이 늦게 끝나도 마지막 검색 결과만 보여 주려고 요청마다 번호를 붙인다.
   const requestRef = useRef(0);
 
   async function handleRegionSubmit() {
@@ -124,7 +108,6 @@ export function MapSearchBar({
       if (only === undefined) {
         setState({ status: 'empty', keyword: normalizeRegionQuery(trimmed) });
       } else if (candidates.length === 1) {
-        // 후보가 하나면 고르는 단계 없이 바로 옮긴다.
         setState({ status: 'idle' });
         onSelect(only);
       } else {
@@ -137,8 +120,6 @@ export function MapSearchBar({
     }
   }
 
-  // 문장을 조건으로 바꾼 뒤, 조건에 지역 이름이 있으면 지역 검색으로 좌표 후보를 찾는다.
-  // 지역을 찾지 못하거나 지역 검색이 실패해도 읽어 낸 조건은 버리지 않고, 후보 없이 넘긴다.
   async function handleAiSubmit() {
     if (!ai) return;
     const trimmed = aiQuery.trim();
@@ -195,7 +176,6 @@ export function MapSearchBar({
     else void handleRegionSubmit();
   }
 
-  // 모드를 바꾸면 하던 검색과 안내를 모두 걷는다. 진행 중인 요청의 응답은 번호를 올려서 버린다.
   function toggleMode() {
     requestRef.current++;
     setAiMode((value) => !value);
@@ -224,8 +204,6 @@ export function MapSearchBar({
   const boxClass = inPanel ? PANEL_BOX_CLASS : GUIDE_BOX_CLASS;
   const floatingField = floating && !inPanel;
 
-  // 켜고 끄는 버튼이라 이름은 그대로 두고 눌림 상태(aria-pressed)로 지금 모드를 알린다.
-  // 검색 칸 안 오른쪽에 두고, 패널 안에서는 "AI 검색"으로, 좁은 지도 위에서는 "AI"로 줄여 적는다.
   const modeButton = aiAvailable && (
     <button
       type="button"
@@ -240,9 +218,6 @@ export function MapSearchBar({
     </button>
   );
 
-  // 검색 칸은 알약 모양이다. 패널 안에서는 세이지 면, 지도 위에서는 지도에 묻히지 않게 흰 면과 그림자로 띄운다.
-  // 오류일 때만 위험색 테두리를 보인다. 칸 안 오른쪽에 찾기 아이콘과 AI 검색 버튼이 들어가서 오른쪽 여백을 넓힌다.
-  // 지도 밖(랜딩)에서는 첫 화면의 주 입력이라 52px로 키우고, 아이콘 대신 '찾기' 글자 버튼을 둔다.
   return (
     <form
       role="search"

@@ -9,7 +9,6 @@ import type { SpotFilters } from './spotFilters';
 
 type AreaStatus = 'idle' | 'loading' | 'ready' | 'error';
 
-// 목록 행 하나다. 지도 가운데에서 떨어진 거리(km)를 함께 쥐고, 가까운 순으로 줄 선다. 순서 번호가 곧 핀 번호다.
 export type ListedSpot = SpotMarker & { distanceKm: number };
 
 export type SpotsInView = {
@@ -26,17 +25,11 @@ type AreaState = {
   clusters: SpotCluster[];
   status: AreaStatus;
   error: string | null;
-  // error가 5xx 응답이면 그 추적 ID다. 목록 화면이 문의 번호로 보여 준다.
   traceId: string | null;
 };
 
 const INITIAL_STATE: AreaState = { markers: [], clusters: [], status: 'idle', error: null, traceId: null };
 
-// 지도 이동이 멈출 때마다 지금 보이는 영역의 장소를 받는다.
-// 빠르게 여러 번 움직이면 앞선 요청을 취소해서 마지막 영역의 응답만 화면에 남긴다.
-// 서버가 묶음으로 주면 그대로 그리고, 클라이언트에서 다시 묶지 않는다.
-// enabled가 false이면 아무것도 보내지 않고 지도의 마커도 건드리지 않는다. 베이스캠프를 찾는 화면이 마커를 맡는 동안 끈다.
-// 조건(filters)이 바뀌면 지도가 멈추기를 기다리지 않고 지금 영역을 바로 다시 받는다.
 export function useSpotsInView(
   map: MapView | null,
   enabled = true,
@@ -46,7 +39,6 @@ export function useSpotsInView(
   const controllerRef = useRef<AbortController | null>(null);
   const loadRef = useRef<() => void>(() => {});
 
-  // 유형·입지 목록은 렌더마다 새 배열일 수 있어서, 효과가 같은 조건으로 다시 돌지 않게 글자로 바꿔 비교한다.
   const typesKey = [...filters.types].sort().join(',');
   const settingsKey = [...filters.settings].sort().join(',');
   const { hasWater, hasToilet, excludeWarning, hideClosed } = filters;
@@ -61,7 +53,6 @@ export function useSpotsInView(
       excludeWarning: excludeWarning || undefined,
       hideClosed: hideClosed || undefined,
     };
-    // 요청만 보낸다. 상태는 응답이 온 뒤에만 바꾼다.
     const request = () => {
       controllerRef.current?.abort();
       const controller = new AbortController();
@@ -74,7 +65,6 @@ export function useSpotsInView(
       ).then(
         (response) => {
           if (controller.signal.aborted) return;
-          // 응답 순서 대신 지금 지도 가운데에서 가까운 순으로 줄 세우고, 그 순서를 목록 번호와 핀 번호로 쓴다.
           const center = map.getCenter();
           const listed = response.markers
             .map((marker) => ({ ...marker, distanceKm: distanceKm(center, { lat: marker.lat, lng: marker.lng }) }))
@@ -97,7 +87,6 @@ export function useSpotsInView(
           setState({ markers: listed, clusters: response.clusters, status: 'ready', error: null, traceId: null });
         },
         (error: unknown) => {
-          // 취소한 요청의 실패는 새 요청이 이어받으므로 화면에 반영하지 않는다.
           if (controller.signal.aborted) return;
           setState((previous) => ({
             ...previous,
@@ -109,7 +98,6 @@ export function useSpotsInView(
       );
     };
 
-    // 지도를 움직였거나 다시 불러오기를 눌렀을 때는 이전 결과를 남긴 채 불러오는 중으로 바꾼다.
     const reload = () => {
       setState((previous) => ({ ...previous, status: 'loading', error: null, traceId: null }));
       request();
@@ -117,7 +105,6 @@ export function useSpotsInView(
 
     loadRef.current = reload;
     const unsubscribe = map.onIdle(reload);
-    // 지도가 처음 준비됐을 때는 idle을 기다리지 않고 바로 한 번 받는다. 이때 상태는 아래에서 불러오는 중으로 본다.
     request();
 
     return () => {
@@ -131,7 +118,6 @@ export function useSpotsInView(
 
   const retry = useCallback(() => loadRef.current(), []);
 
-  // 지도가 준비된 뒤 첫 응답 전에는 idle로 남아 있으므로 불러오는 중으로 돌려준다.
   const status: AreaStatus = map && enabled && state.status === 'idle' ? 'loading' : state.status;
   return { ...state, status, retry };
 }

@@ -20,9 +20,7 @@ import type { BasecampsInView } from './useBasecampsInView';
 
 type BasecampListPanelProps = {
   result: BasecampsInView;
-  // 조건 대화상자에서 고른 조건이 하나라도 켜져 있는지다. 결과가 없을 때 안내 문구를 고른다.
   filtered: boolean;
-  // 지도에서 고른 장소다. 있으면 그 장소의 베이스캠프만 보여 준다.
   spotFilterId: number | null;
   onClearSpotFilter: () => void;
   waitingForMap: boolean;
@@ -132,8 +130,6 @@ function BasecampRow({ item }: { item: BasecampSearchItem }) {
   const [, month, day] = item.startDate.split('-');
   const weekday = formatLocalDate(item.startDate).match(/\((.)\)/)?.[1] ?? '';
 
-  // 왼쪽에 출발 날짜 칸, 가운데 제목과 상태·장소·박 수, 오른쪽에 자리 수를 둔다.
-  // 날짜를 칸으로 세워서 목록을 위아래로 훑으면 출발일 순서가 먼저 읽힌다.
   return (
     <li>
       <Link

@@ -8,7 +8,6 @@ type CheckboxProps = Omit<ComponentPropsWithRef<'input'>, 'type'> & {
   hint?: string;
 };
 
-// 라벨 전체가 눌리는 영역이라 터치 높이가 44px 이상이다.
 export function Checkbox({
   label,
   error,

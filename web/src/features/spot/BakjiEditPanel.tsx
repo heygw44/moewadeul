@@ -28,7 +28,6 @@ import type { BakjiFormValues, FieldErrors, FormError } from './bakjiFormModel';
 type BakjiEditPanelProps = {
   spotId: number;
   draft: LatLng | null;
-  // 고칠 박지를 불러오면 알린다. 지도 화면은 그 좌표에 위치 핀을 찍고 지도를 옮긴다.
   onLoaded: (detail: SpotDetail) => void;
   onCancel: () => void;
   onSubmitted: (response: BakjiSubmissionResponse) => void;
@@ -36,10 +35,8 @@ type BakjiEditPanelProps = {
 
 type Original = { name: string; lat: number; lng: number; bakji: BakjiDetail };
 
-// 어느 시도의 결과인지 함께 기억해서, 다시 불러오면 이전 결과를 곧바로 버린다.
 type LoadResult = { attempt: number; detail: SpotDetail } | { attempt: number; error: unknown };
 
-// 제보한 회원이 자기 박지의 위치와 정보를 고친다. 권한은 서버가 다시 확인한다.
 export function BakjiEditPanel({ spotId, draft, onLoaded, onCancel, onSubmitted }: BakjiEditPanelProps) {
   const session = useSession();
   const location = useLocation();
@@ -135,7 +132,6 @@ function EditLoader({
   const editable = detail !== null && bakji !== null && !notMine ? detail : null;
   const showSkeleton = useDelayedFlag(current === null);
 
-  // 다른 회원의 박지는 고칠 수 없으므로 장소 상세로 돌려보낸다.
   useEffect(() => {
     if (notMine) navigate(`/spots/${spotId}`, { replace: true });
   }, [notMine, spotId]);
@@ -162,7 +158,6 @@ function EditLoader({
       />
     );
   }
-  // 장소는 있지만 박지가 아니면 고칠 수 있는 박지가 없는 것과 같다.
   if (
     detail !== null ||
     ('error' in current && current.error instanceof ApiError && current.error.code === 'NOT_FOUND')
@@ -193,7 +188,6 @@ function initialValues(original: Original): BakjiFormValues {
   };
 }
 
-// 처음 값과 달라진 필드만 담는다. 서버는 빠진 필드를 그대로 두고, null로 보낸 설명·통신 상태·바닥은 지운다.
 function changedFields(original: Original, draft: LatLng, values: BakjiFormValues): BakjiUpdateRequest {
   const { bakji } = original;
   const patch: BakjiUpdateRequest = {};
@@ -201,7 +195,6 @@ function changedFields(original: Original, draft: LatLng, values: BakjiFormValue
   if (name !== original.name) patch.name = name;
   const lat = roundCoordinate(draft.lat);
   const lng = roundCoordinate(draft.lng);
-  // 좌표는 두 값을 함께 보내야 하므로 하나만 바뀌어도 둘 다 보낸다.
   if (lat !== roundCoordinate(original.lat) || lng !== roundCoordinate(original.lng)) {
     patch.lat = lat;
     patch.lng = lng;
@@ -236,7 +229,6 @@ function EditForm({
   const controllerRef = useRef<AbortController | null>(null);
   useLocationErrorReset(draft, fieldErrors, setFieldErrors);
 
-  // 요청 중에 화면을 벗어나면 응답을 기다리지 않는다.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -249,7 +241,6 @@ function EditForm({
     if (draft === null || Object.keys(errors).length > 0) return;
 
     const patch = changedFields(original, draft, values);
-    // 바꾼 것이 없으면 서버에 묻지 않고 상세로 돌아간다.
     if (Object.keys(patch).length === 0) {
       navigate(`/spots/${spotId}`);
       return;

@@ -5,7 +5,6 @@ import { TextField } from './TextField';
 
 type PasswordFieldProps = Omit<ComponentProps<typeof TextField>, 'type' | 'trailing'>;
 
-// 비밀번호를 눈으로 확인하게 하는 보기 버튼이 붙은 입력란이다. 붙여넣기는 막지 않는다.
 export function PasswordField(props: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
 

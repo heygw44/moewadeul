@@ -12,9 +12,7 @@ type SelectFieldProps = Omit<ComponentPropsWithRef<'select'>, 'children'> & {
   options: ReadonlyArray<SelectOption>;
   error?: string;
   hint?: string;
-  // 라벨을 화면에서만 감춘다. 스크린 리더는 그대로 읽는다. 묶음 제목이 따로 있을 때 쓴다.
   hideLabel?: boolean;
-  // 메시지 없이 오류 모양(빨간 테두리, aria-invalid)만 낸다. 메시지를 묶음 아래 한 번만 보여 줄 때 쓴다.
   invalid?: boolean;
 };
 

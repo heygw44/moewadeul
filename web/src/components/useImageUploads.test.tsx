@@ -10,10 +10,8 @@ import { useImageUploads } from './useImageUploads';
 import type { ImageUploads } from './useImageUploads';
 
 vi.mock('../api/uploads', () => ({ putImage: vi.fn() }));
-// jsdom에는 실제 캔버스가 없어서, 다시 만든 사진을 돌려주는 함수를 바꿔 끼운다.
 vi.mock('./reencodeImage', () => ({ reencodeImage: vi.fn() }));
 
-// React가 act 밖의 상태 변경을 경고하지 않도록 테스트 환경임을 알린다.
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 type Pending = { resolve: (upload: ImageUpload) => void; reject: (error: Error) => void };
@@ -25,7 +23,6 @@ describe('useImageUploads', () => {
   let requests: Pending[];
   let putCalls: number;
 
-  // 프로젝트의 TypeScript lib에 Promise.withResolvers가 없어서 실행기 형태로 만든다.
   const requestUpload = vi.fn(
     () =>
       new Promise<ImageUpload>((resolve, reject) => {
@@ -48,7 +45,6 @@ describe('useImageUploads', () => {
     });
   }
 
-  // requests[index]의 업로드 URL을 내주고, 그 사진이 올라가는 것까지 기다린다.
   async function finish(index: number) {
     await act(async () => {
       requests[index]!.resolve({ imageId: index + 1 } as ImageUpload);

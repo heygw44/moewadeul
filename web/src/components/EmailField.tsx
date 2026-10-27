@@ -17,7 +17,6 @@ type EmailFieldProps = {
   error?: string;
   autoFocus?: boolean;
   onBlur?: () => void;
-  // 아이디 칸의 자동 완성 종류다. 로그인 화면은 비밀번호 관리자가 저장한 계정을 채우도록 username을 쓴다.
   autoComplete?: 'email' | 'username';
 };
 

@@ -17,7 +17,6 @@ import { safeNextPath, withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { buttonClassName } from '../../components/buttonClass';
 
-// 서버가 받는 출생연도 하한이다.
 const MIN_BIRTH_YEAR = 1900;
 const DEMO_KEY_MAX_LENGTH = 100;
 
@@ -53,7 +52,6 @@ export function IdentityVerificationPage() {
     document.title = '본인확인 · 뫼와들';
   }, []);
 
-  // 본인확인은 로그인한 세션으로 하므로, 로그인하지 않았으면 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') {
       navigate(withNext('/login', withNext('/identity-verification', next)), {
@@ -126,13 +124,11 @@ export function IdentityVerificationPage() {
       return;
     }
     if (error instanceof ApiError && error.code === 'IDENTITY_ALREADY_VERIFIED') {
-      // 다른 기기에서 먼저 마쳤다. 세션을 새로 읽으면 "이미 마쳤어요" 화면으로 바뀐다.
       void session.refresh().catch(() => null);
     }
     setFormError({ cause: error });
   }
 
-  // 다른 인증 화면의 아래 줄 링크와 같은 모양으로 두어 판 왼쪽 끝과 맞춘다.
   const footer = (
     <button
       type="button"

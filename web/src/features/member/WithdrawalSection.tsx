@@ -15,7 +15,6 @@ import { useRetryCountdown } from './useRetryCountdown';
 
 const WRONG_PASSWORD = '비밀번호가 맞지 않아요. 다시 입력해 주세요.';
 
-// 탈퇴는 되돌릴 수 없어서 첫 버튼은 테두리만 있는 위험 버튼으로 두고, 비밀번호를 다시 받는 다이얼로그에서 확정한다.
 export function WithdrawalSection() {
   const [open, setOpen] = useState(false);
 
@@ -58,7 +57,6 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
       handleError(error);
       return;
     }
-    // 서버가 세션을 이미 지웠다. 홈으로 먼저 옮긴 뒤 세션을 다시 확인해야, 이 화면이 비로그인 상태를 보고 로그인 화면으로 보내지 않는다.
     navigate('/', { replace: true });
     void session.refresh().catch(() => null);
   }
@@ -79,7 +77,6 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
       setPasswordError(error.fieldErrors.find(({ field }) => field === 'password')?.reason ?? PASSWORD_REQUIRED);
       return;
     }
-    // 세션이 끊긴 401은 로그아웃 처리를 건너뛰었으므로, 세션을 다시 확인해서 비로그인 상태로 돌린다. 그러면 화면이 로그인으로 보낸다.
     if (error.code === 'AUTHENTICATION_REQUIRED') {
       void session.refresh().catch(() => null);
       return;

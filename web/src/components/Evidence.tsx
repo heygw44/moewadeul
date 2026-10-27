@@ -9,7 +9,6 @@ type EvidenceProps = {
   items: EvidenceItem[];
 };
 
-// 판단 근거(출처, 기준일, 좌표 등)를 "라벨 — 값" 행으로 적는다. 값은 고정폭 숫자로 오른쪽에 맞춘다.
 export function Evidence({ items }: EvidenceProps) {
   if (items.length === 0) return null;
 

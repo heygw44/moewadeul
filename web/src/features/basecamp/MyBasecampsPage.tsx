@@ -54,7 +54,6 @@ export function MyBasecampsPage() {
     document.title = '내 베이스캠프 · 뫼와들';
   }, []);
 
-  // 내 베이스캠프는 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
@@ -170,7 +169,6 @@ export function MyBasecampsPage() {
   );
 }
 
-// 관계(캠프 리더·멤버·신청 중)로 거른 탭에서는 모든 행의 관계가 탭 이름과 같으므로 '전체' 탭에서만 적는다.
 function BasecampCard({ item, showRelation }: { item: MyBasecampItem; showRelation: boolean }) {
   const status = BASECAMP_STATUS_META[item.status];
   return (

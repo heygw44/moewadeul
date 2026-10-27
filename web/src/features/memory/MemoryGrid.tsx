@@ -4,8 +4,6 @@ import { memoryCellId, memoryCellLabel } from './memoryItems';
 import type { MemoryCellItem } from './memoryItems';
 import { nightsLabel } from './memoryLabels';
 
-// 사진이 있으면 사진, 없으면 방문일과 박 수를 보여 주는 3열 정사각 격자다. 주는 순서 그대로 늘어놓는다.
-// 칸을 누르면 기록 상세로 간다. 지도에서 고른 기록(selectedId)은 숲색 테두리로 드러낸다.
 export function MemoryGrid({ items, selectedId }: { items: MemoryCellItem[]; selectedId: number | null }) {
   return (
     <ul aria-label="기록 목록" className="grid grid-cols-3 gap-1">

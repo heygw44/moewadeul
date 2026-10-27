@@ -20,14 +20,11 @@ import { useViewerEpoch } from './useViewerEpoch';
 type ProfileResult =
   { memberId: number; attempt: number; profile: MemberProfile } | { memberId: number; attempt: number; error: unknown };
 
-// 다른 회원이 보는 프로필. 서버가 요청자에 맞게 필드를 빼서 주므로, 화면은 응답에 있는 값만 보여 준다.
 export function MemberProfilePage({ memberId }: { memberId: number }) {
   const viewerEpoch = useViewerEpoch();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<ProfileResult | null>(null);
 
-  // 로그인 여부에 따라 서버가 주는 필드가 달라지고, 서버는 요청의 세션 쿠키로 이를 정한다.
-  // 그래서 세션 확인을 기다리지 않고 함께 보내고, 로그인 상태가 바뀔 때(viewerEpoch)만 다시 받는다.
   useEffect(() => {
     const controller = new AbortController();
     fetchMemberProfile(memberId, controller.signal).then(
@@ -98,7 +95,6 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
     />
   );
 
-  // 비회원 응답에는 닉네임만 있다. 신뢰 단계가 없으면 비회원 응답으로 본다.
   if (profile.trustLevel === undefined) {
     return (
       <>
@@ -173,13 +169,11 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
   );
 }
 
-// 본인확인된 값인지 자기 신고 값인지 글로 구분한다. 값이 없으면 밝히지 않은 것이다.
 function verifiedValue(label: string | null, verified: boolean | undefined): string {
   if (label === null) return '밝히지 않음';
   return `${label} · ${verified ? '본인확인됨' : '직접 입력'}`;
 }
 
-// 동행 기록 숫자는 굵은 숫자에 작은 단위를 붙인다. 숫자를 먼저 읽게 하기 위해서다.
 function Figure({ value, unit }: { value: number; unit: string }) {
   return (
     <span className="whitespace-nowrap">

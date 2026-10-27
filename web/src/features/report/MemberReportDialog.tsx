@@ -28,12 +28,10 @@ type MemberReportDialogProps = {
   targetMemberId: number;
   targetNickname: string;
   basecampId: number;
-  // 후기 신고(REVIEW)일 때만 넘긴다.
   companionReviewId?: number;
   onClose: () => void;
 };
 
-// 베이스캠프에서 함께한 회원이나 내가 받은 동행 후기를 신고한다. 신고할 수 있는 자격은 서버가 판단한다.
 export function MemberReportDialog({
   kind,
   targetMemberId,

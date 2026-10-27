@@ -1,4 +1,3 @@
-// 남은 시간을 "2시간 5분"처럼 적는다. 1분이 안 남았어도 "1분"으로 올려 적는다.
 export function formatRemaining(seconds: number): string {
   const totalMinutes = Math.max(1, Math.ceil(seconds / 60));
   const hours = Math.floor(totalMinutes / 60);
