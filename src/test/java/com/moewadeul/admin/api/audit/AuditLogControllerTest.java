@@ -102,8 +102,6 @@ class AuditLogControllerTest {
         return member("ADMIN");
     }
 
-    // 로그인 서비스가 세션에 넣는 것과 같은 모양의 인증 정보를 만든다. 역할 권한과 이메일 인증 권한을 함께 붙인다.
-
     private static RequestPostProcessor member(String role) {
         LoginMember loginMember = new LoginMember(ADMIN_ID, role, true);
         return authentication(UsernamePasswordAuthenticationToken.authenticated(

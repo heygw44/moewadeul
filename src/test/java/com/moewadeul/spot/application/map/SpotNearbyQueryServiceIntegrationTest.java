@@ -26,22 +26,19 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class SpotNearbyQueryServiceIntegrationTest {
 
-    // 중심은 서울시청이다. 아래 장소의 거리는 반지름 6,370,986m 구 위에서 하버사인 공식으로 미리 계산했다. MySQL이 SRID 4326 좌표에 쓰는
-    // 반지름(WGS 84 평균 반지름 6,371,008.77m)과는 10km에서 4cm쯤 차이 나서, 아래 테스트의 허용 오차 안이다.
     private static final Coordinate CENTER = new Coordinate(37.5665, 126.978);
     private static final double RADIUS_KM = 10;
 
-    private static final Coordinate NORTH_2_KM = new Coordinate(37.5845, 126.978); // 2.0015km
-    private static final Coordinate EAST_5_KM = new Coordinate(37.5665, 127.0347); // 4.9974km
-    private static final Coordinate SOUTH_8_KM = new Coordinate(37.4946, 126.978); // 7.9949km
-    private static final Coordinate NORTH_12_KM = new Coordinate(37.6744, 126.978); // 11.9979km
+    private static final Coordinate NORTH_2_KM = new Coordinate(37.5845, 126.978);
+    private static final Coordinate EAST_5_KM = new Coordinate(37.5665, 127.0347);
+    private static final Coordinate SOUTH_8_KM = new Coordinate(37.4946, 126.978);
+    private static final Coordinate NORTH_12_KM = new Coordinate(37.6744, 126.978);
 
-    // 반경 10km 경계 근처다. 동서 방향은 위도에 따라 1도의 거리가 줄어서, 서비스가 후보 사각형의 경도 폭을 좁게 잡으면 먼저 빠진다.
-    private static final Coordinate NORTH_9_8_KM = new Coordinate(37.6546, 126.978); // 9.7963km
-    private static final Coordinate SOUTH_9_8_KM = new Coordinate(37.4784, 126.978); // 9.7963km
-    private static final Coordinate EAST_9_8_KM = new Coordinate(37.5665, 127.0891); // 9.7921km
-    private static final Coordinate WEST_9_8_KM = new Coordinate(37.5665, 126.8669); // 9.7921km
-    private static final Coordinate EAST_10_2_KM = new Coordinate(37.5665, 127.0936); // 10.1888km
+    private static final Coordinate NORTH_9_8_KM = new Coordinate(37.6546, 126.978);
+    private static final Coordinate SOUTH_9_8_KM = new Coordinate(37.4784, 126.978);
+    private static final Coordinate EAST_9_8_KM = new Coordinate(37.5665, 127.0891);
+    private static final Coordinate WEST_9_8_KM = new Coordinate(37.5665, 126.8669);
+    private static final Coordinate EAST_10_2_KM = new Coordinate(37.5665, 127.0936);
 
     @Autowired
     private SpotNearbyQueryService spotNearbyQueryService;
@@ -55,7 +52,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-04] 반경 안의 장소만 가까운 순서로 찾고, 거리를 km로 함께 돌려준다")
     void findsOnlySpotsInsideRadiusOrderedByDistance() {
-        // given: 장소는 WKT(위도, 경도 순서)로 넣고, 가까운 순서와 다르게 넣는다.
+        // given
         long southId = insertSpot("CAMPSITE", "남쪽 8km 야영장", SOUTH_8_KM);
         long northId = insertSpot("FOREST", "북쪽 2km 휴양림", NORTH_2_KM);
         insertSpot("CAMPSITE", "북쪽 12km 야영장", NORTH_12_KM);
@@ -97,7 +94,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         // when
         SpotNearbyPage result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
-        // then: 동서 두 곳과 남북 두 곳은 거리가 거의 같아서 순서는 보지 않는다.
+        // then
         assertThat(result.content())
                 .extracting(SpotNearbyItem::spotId)
                 .containsExactlyInAnyOrder(northId, southId, eastId, westId);
@@ -106,8 +103,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-04] 중심과 장소의 위도·경도를 서로 바꿔 읽지 않는다")
     void doesNotSwapLatitudeAndLongitude() {
-        // given: 위도와 경도가 비슷한 곳에서 두 값을 맞바꾼 두 장소를 둔다. 두 장소는 서로 약 14km 떨어져 있다.
-        // 그래서 조회 SQL이 좌표 순서를 바꿔 읽으면 중심이 다른 장소로 옮겨 가서 결과가 달라진다.
+        // given
         Coordinate center = new Coordinate(37.5, 37.6);
         long centerSpotId = insertSpot("CAMPSITE", "중심 야영장", center);
         insertSpot("CAMPSITE", "좌표를 맞바꾼 야영장", new Coordinate(37.6, 37.5));
@@ -175,7 +171,6 @@ class SpotNearbyQueryServiceIntegrationTest {
         // then
         assertThat(valley.content()).extracting(SpotNearbyItem::spotId).containsExactly(valleyId);
         assertThat(anyOf.content()).extracting(SpotNearbyItem::spotId).containsExactly(beachId, multiId);
-        // 북쪽과 남쪽 9.8km 두 곳은 거리가 수학적으로 같다. 그래서 두 곳의 순서는 부동소수점 계산의 마지막 자리에 따라 정해지므로 보지 않는다.
         assertThat(all.content())
                 .extracting(SpotNearbyItem::spotId)
                 .startsWith(valleyId, beachId, multiId)
@@ -204,7 +199,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-04] 물·화장실 필터는 해당 시설이 있는 박지만 남기고, 야영장과 휴양림은 시설과 상관없이 남긴다")
     void facilityFiltersApplyOnlyToBakji() {
-        // given: 모두 같은 자리라 거리가 같으므로 결과는 ID 순서로 나온다.
+        // given
         long reporterId = insertMember();
         long campsiteId = insertSpot("CAMPSITE", "야영장", NORTH_2_KM);
         long forestId = insertSpot("FOREST", "휴양림", NORTH_2_KM);
@@ -238,7 +233,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-04] 휴장 중인 야영장도 반경 검색에서 빼지 않고 휴장으로 표시하며, 박지는 휴장으로 보지 않는다")
     void keepsClosedSpotsAndMarksThemClosed() {
-        // given: 한국은 2026-11-01 0시 30분이고, UTC로는 아직 2026-10-31이다.
+        // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         long reporterId = insertMember();
         long closedId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", NORTH_2_KM);
@@ -260,7 +255,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-31] 반경 검색도 휴장 제외를 켜면 휴장 중인 장소를 빼고, 박지와 운영 중인 장소는 남긴다")
     void hideClosedExcludesClosedSpotsFromNearby() {
-        // given: 한국은 2026-11-01 0시 30분이다.
+        // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         long reporterId = insertMember();
         long closedId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", NORTH_2_KM);
@@ -282,7 +277,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-04] 페이지 크기 2로 장소 3곳을 나누면 첫 페이지에 가까운 두 곳, 다음 페이지에 먼 한 곳이 나오고, 거리가 같으면 ID 순서다")
     void pagesByDistanceThenId() {
-        // given: 먼 장소를 먼저 넣어 ID가 가장 작게 하고, 가까운 두 장소는 같은 자리에 둔다.
+        // given
         long farId = insertSpot("CAMPSITE", "먼 야영장", SOUTH_8_KM);
         long firstNearId = insertSpot("CAMPSITE", "가까운 야영장 1", NORTH_2_KM);
         long secondNearId = insertSpot("CAMPSITE", "가까운 야영장 2", NORTH_2_KM);
@@ -306,7 +301,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-04] 가까운 장소가 한 페이지보다 적으면 서버가 반경을 넓혀 요청한 반경 끝의 장소까지 거리순으로 찾는다")
     void findsFarSpotsInOrderWhenFewSpotsAreNearby() {
-        // given: 서버는 작은 반경부터 넓혀 가므로, 첫 단계 반경 안에 한 곳만 두고 나머지는 멀리 둔다.
+        // given
         long nearId = insertSpot("CAMPSITE", "북쪽 0.5km 야영장", new Coordinate(37.5710, 126.978));
         long middleId = insertSpot("CAMPSITE", "북쪽 3km 야영장", new Coordinate(37.5935, 126.978));
         long farId = insertSpot("CAMPSITE", "북쪽 30km 야영장", new Coordinate(37.8363, 126.978));
@@ -322,7 +317,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-04] 페이지를 넘겨 읽은 결과를 이으면 반경 안 장소 전체를 거리순으로 한 번씩 읽은 것과 같다")
     void pagesAcrossExpandingRadiusMatchFullDistanceOrder() {
-        // given: 북쪽으로 0.3km 간격에 25곳을 둔다. 서버는 페이지마다 필요한 개수가 다르므로, 페이지마다 다른 반경에서 멈춘다.
+        // given
         List<Long> expected = new ArrayList<>();
         for (int i = 1; i <= 25; i++) {
             Coordinate at = new Coordinate(CENTER.lat() + 0.0027 * i, CENTER.lng());
@@ -347,7 +342,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-04] 유형 조건에 맞는 장소가 가까이 없으면, 서버가 조건을 건 채로 반경을 넓혀 먼 곳의 맞는 장소를 찾는다")
     void expandsRadiusWithFiltersApplied() {
-        // given: 첫 단계 반경 안에 조건에 맞지 않는 야영장을 한 페이지보다 많이 두고, 조건에 맞는 휴양림은 5km 밖에 둔다.
+        // given
         for (int i = 0; i < 25; i++) {
             insertSpot("CAMPSITE", "가까운 야영장 " + i, new Coordinate(CENTER.lat() + 0.0001 * i, CENTER.lng()));
         }
@@ -364,7 +359,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-04] 응답 거리는 MySQL ST_Distance_Sphere가 계산한 구면 거리와 같다")
     void distanceMatchesMySqlSphereDistance() {
-        // given: 거리가 서로 다른 장소 여러 곳을 둔다.
+        // given
         List<Long> ids = List.of(
                 insertSpot("CAMPSITE", "북쪽 경계 근처", NORTH_9_8_KM),
                 insertSpot("CAMPSITE", "동쪽 경계 근처", EAST_9_8_KM),
@@ -374,7 +369,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         // when
         SpotNearbyPage result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
-        // then: 서버는 거리를 소수 둘째 자리(km)로 반올림하므로, MySQL 거리도 같은 방식으로 반올림해 비교한다.
+        // then
         assertThat(result.content()).hasSize(ids.size());
         for (SpotNearbyItem item : result.content()) {
             Double meters = jdbcTemplate.queryForObject(

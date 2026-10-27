@@ -109,12 +109,12 @@ class SoloTripServiceIntegrationTest {
         commandService.register(memberId, command(spotId, "2026-10-10", "2026-10-11"));
         commandService.register(memberId, command(spotId, "2026-10-12", "2026-10-13"));
 
-        // when, then: 오늘 기준으로는 3개라서 4번째를 거부한다.
+        // when, then
         assertRejected(
                 () -> commandService.register(memberId, command(spotId, "2026-10-20", "2026-10-21")),
                 TripErrorCode.SOLO_TRIP_LIMIT);
 
-        // when: 첫 일정의 종료일(10-07)이 되면 진행 예정 일정은 2개다.
+        // when
         clock.setInstant(Instant.parse("2026-10-07T03:00:00Z"));
         commandService.register(memberId, command(spotId, "2026-10-20", "2026-10-21"));
 

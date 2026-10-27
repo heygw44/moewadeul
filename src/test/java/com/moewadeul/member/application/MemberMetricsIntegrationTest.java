@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionTemplate;
 
-// 통합 테스트는 Spring 컨텍스트와 지표 저장소를 공유한다. 그래서 각 테스트는 지표의 절대값이 아니라 호출 전후의 차이를 본다.
 @IntegrationTest
 class MemberMetricsIntegrationTest {
 

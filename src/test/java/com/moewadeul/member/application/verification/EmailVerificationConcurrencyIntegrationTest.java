@@ -145,7 +145,6 @@ class EmailVerificationConcurrencyIntegrationTest {
         return outcomes.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
     }
 
-    // 스레드마다 별도 트랜잭션으로 호출한다. 성공이면 SUCCESS, 도메인 예외면 오류 코드 이름, 그 밖의 예외는 예외 종류를 돌려준다.
     private List<String> runConcurrently(Callable<?> task) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(THREADS);
         CountDownLatch ready = new CountDownLatch(THREADS);

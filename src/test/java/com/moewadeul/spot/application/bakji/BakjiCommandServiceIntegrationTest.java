@@ -30,14 +30,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class BakjiCommandServiceIntegrationTest {
 
-    // 경계 WKT는 (경도 위도) 순서다. 경도 127.0~127.5, 위도 37.0~37.5인 사각형이다.
     private static final String PARK_SQUARE = "MULTIPOLYGON(((127 37, 127.5 37, 127.5 37.5, 127 37.5, 127 37)))";
     private static final double INSIDE_PARK_LAT = 37.25;
     private static final double INSIDE_PARK_LNG = 127.25;
     private static final double OUTSIDE_LAT = 37.25;
     private static final double OUTSIDE_LNG = 127.75;
 
-    // 지구를 반지름 6,370,986m인 구로 볼 때 1m에 해당하는 위도 차이(도)다. 같은 경도에서 위도만 다르면 거리가 이 값에 비례한다.
     private static final double DEGREES_PER_METER = Math.toDegrees(1.0 / 6_370_986.0);
 
     private static final String WARNED_GUIDE =
@@ -122,7 +120,7 @@ class BakjiCommandServiceIntegrationTest {
     @Test
     @DisplayName("[F-07] 제보하면 50m 안의 ACTIVE 박지만 가까운 순서로 중복 후보에 담고, 51m 박지와 숨긴 박지, 야영장, 자기 자신은 뺀다")
     void reportListsDuplicateCandidatesWithinFiftyMeters() {
-        // given: 기준점에서 같은 경도의 북쪽으로 떨어진 박지들이다.
+        // given
         double baseLat = 37.6;
         double baseLng = 128.7;
         long reporterId = saveMember();
@@ -149,7 +147,7 @@ class BakjiCommandServiceIntegrationTest {
     @Test
     @DisplayName("[F-07] 중복 후보는 최대 10개이고, 같은 거리의 박지는 장소 ID 순서로 준다")
     void reportLimitsDuplicateCandidatesToTen() {
-        // given: 12곳이 모두 기준점에서 10m 떨어져 있다.
+        // given
         double baseLat = 37.6;
         double baseLng = 128.7;
         long reporterId = saveMember();
@@ -281,7 +279,7 @@ class BakjiCommandServiceIntegrationTest {
         Instant judgedAt = spotRow(spotId).areaCheckedAt();
         clock.setInstant(judgedAt.plusSeconds(3600));
 
-        // when: 같은 좌표를 다시 보낸다.
+        // when
         BakjiSubmission same = bakjiCommandService.update(
                 reporterId,
                 spotId,
@@ -294,7 +292,7 @@ class BakjiCommandServiceIntegrationTest {
         assertThat(same.parkWarning().warned()).isTrue();
         assertThat(spotRow(spotId).areaCheckedAt()).isEqualTo(judgedAt);
 
-        // when: 경계 밖으로 옮긴다.
+        // when
         BakjiSubmission moved = bakjiCommandService.update(
                 reporterId,
                 spotId,
@@ -455,7 +453,6 @@ class BakjiCommandServiceIntegrationTest {
         return new UpdateCommandBuilder();
     }
 
-    // 요청에 없는 필드는 absent로 채운다. 테스트마다 보낼 필드만 고르게 하려는 빌더다.
     private static final class UpdateCommandBuilder {
         private PatchField<String> name = PatchField.absent();
         private PatchField<Double> lat = PatchField.absent();
@@ -523,7 +520,7 @@ class BakjiCommandServiceIntegrationTest {
         return jdbc.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
     }
 
-    // 제보 흐름 밖의 장소(숨김 박지, 야영장)를 만든다. 좌표는 SRID 4326 WKT 기본 순서인 (위도 경도)로 넣는다.
+    // 좌표는 SRID 4326 WKT 기본 순서인 (위도 경도)로 넣는다.
     private long insertSpot(String type, String status, double lat, double lng) {
         String name = TestSequence.unique(type);
         Timestamp now = Timestamp.from(MutableClock.DEFAULT_INSTANT);

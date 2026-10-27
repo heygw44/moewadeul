@@ -61,7 +61,7 @@ class KmaBaseTimesTest {
     @Test
     @DisplayName("[F-09] 한국 시각 기준으로 계산한다. UTC 날짜가 달라도 한국 날짜를 따른다")
     void usesKoreanTimeZone() {
-        // given: UTC로는 10월 4일 16:30이지만 한국 시각으로는 10월 5일 01:30이다.
+        // given
         Instant now = Instant.parse("2026-10-04T16:30:00Z");
 
         // when

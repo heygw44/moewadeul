@@ -70,7 +70,6 @@ class SanctionFollowUpReliabilityIntegrationTest {
                 new SanctionConfirmCommand(targetId, null, SanctionType.PERMANENT, "금전 요구", adminId));
         int processed = outboxPublisher.publishPending();
 
-        // 베이스캠프 정리·행사 신청 정리·제재 알림 이벤트를 모두 집는다. 베이스캠프 정리만 실패한다.
         assertThat(processed).isEqualTo(3);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sanction WHERE member_id = ?", Integer.class, targetId))
                 .isEqualTo(1);

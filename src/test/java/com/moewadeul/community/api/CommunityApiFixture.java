@@ -18,10 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-/**
- * 커뮤니티 글 API 통합 테스트가 함께 쓰는 준비 코드다. 실제 로그인·이메일 인증 흐름으로 세션을 만들고,
- * 장소 행은 SQL로 직접 넣어서 원하는 상태를 바로 만든다.
- */
 public final class CommunityApiFixture {
 
     public static final String POSTS = "/api/community/posts";
@@ -55,7 +51,6 @@ public final class CommunityApiFixture {
                 .build());
     }
 
-    // 로그인하고 이메일 인증까지 마친 세션을 만든다.
     public Cookie verifiedSession(Member member) {
         MvcTestResult login = mvc.post()
                 .uri("/api/auth/login")
@@ -104,7 +99,6 @@ public final class CommunityApiFixture {
         return request.exchange();
     }
 
-    // 같은 Idempotency-Key로 여러 번 보내 보려고 키를 직접 정해 POST한다.
     public MvcTestResult postWithKey(String uri, Cookie session, String key, String body) {
         return mvc.post()
                 .uri(uri)
@@ -116,7 +110,6 @@ public final class CommunityApiFixture {
                 .exchange();
     }
 
-    // 글을 쓰고 201을 확인한 뒤 postId를 돌려준다.
     public long writePost(Cookie session, String title, String content, Long spotId) {
         String spotPart = spotId == null ? "" : ",\"spotId\":" + spotId;
         MvcTestResult created = send(
@@ -145,7 +138,6 @@ public final class CommunityApiFixture {
         return jdbc.queryForObject("SELECT COUNT(*) FROM community_post", Integer.class);
     }
 
-    // 댓글이나 답글을 쓰고 201을 확인한 뒤 commentId를 돌려준다. parentId가 null이면 최상위 댓글이다.
     public long writeComment(Cookie session, long postId, String content, Long parentId) {
         MvcTestResult created = writeCommentRaw(session, postId, content, parentId);
         assertThat(created).hasStatus(HttpStatus.CREATED);
@@ -182,7 +174,6 @@ public final class CommunityApiFixture {
         return jdbc.queryForObject("SELECT COUNT(*) FROM community_comment", Integer.class);
     }
 
-    // 이메일 인증 없이 로그인만 한 세션을 만든다.
     public Cookie loginOnly(Member member) {
         MvcTestResult login = mvc.post()
                 .uri("/api/auth/login")

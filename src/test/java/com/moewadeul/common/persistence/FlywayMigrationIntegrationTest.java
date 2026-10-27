@@ -26,7 +26,7 @@ class FlywayMigrationIntegrationTest {
     @Test
     @DisplayName("[ADR-001] 빈 DB에 마이그레이션이 모두 적용되고 회원·세션 테이블이 만들어진다")
     void migrationsAreAppliedToEmptyDatabase() {
-        // given: 컨텍스트가 뜰 때 Flyway가 빈 DB에 마이그레이션을 적용했다
+        // given
 
         // when
         MigrationInfo[] applied = flyway.info().applied();

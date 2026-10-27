@@ -41,10 +41,8 @@ class SpotDetailQueryServiceIntegrationTest {
     private static final String VILAGE_FCST_PATH = "/1360000/VilageFcstInfoService_2.0/getVilageFcst";
     private static final String RISE_SET_PATH = "/B090041/openapi/service/RiseSetInfoService/getLCRiseSetInfo";
 
-    // 위도와 경도가 크게 다른 좌표라서, 조회 SQL이 두 값을 바꿔 읽으면 단언이 실패한다.
     private static final Coordinate RIDGE = new Coordinate(37.71, 128.75);
 
-    // 상세가 외부 API를 기다리면 이 시간보다 늦게 끝난다.
     private static final int EXTERNAL_DELAY_MILLIS = 3_000;
 
     @Autowired
@@ -62,7 +60,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-05][SF-06] 박지 상세는 박지 정보, 제보자 닉네임, 확인 수를 채우고 공공데이터 상세는 비우며, 경고 박지라 확인 안내는 없다")
     void findsBakjiDetail() {
-        // given: 제보자와 다른 회원 두 명이 박지를 확인했다.
+        // given
         long reporterId = insertMember("새벽능선");
         long spotId = insertSpot("BAKJI", "ACTIVE", "능선 끝 평지", "강원특별자치도 어딘가", true, RIDGE);
         jdbcTemplate.update(
@@ -120,7 +118,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-05] 야영장 상세는 원천 시설 항목을 응답 필드 이름으로 옮기고, 원천에 없는 항목은 null로 둔다")
     void findsCampsiteDetailWithMappedFacilities() {
-        // given: 시설 JSON에는 샤워실 수(swrmCo)와 주변 시설 기타(posblFcltyEtc)가 없다.
+        // given
         long spotId = insertSpot("CAMPSITE", "ACTIVE", "솔숲 야영장", "강원특별자치도 평창군", false, RIDGE);
         jdbcTemplate.update(
                 "INSERT INTO public_spot_detail"
@@ -185,10 +183,10 @@ class SpotDetailQueryServiceIntegrationTest {
                 LocalDate.parse("2026-11-01"),
                 LocalDate.parse("2027-03-31"));
 
-        // when: 한국은 2026-10-31 23시 30분이다.
+        // when
         clock.setInstant(Instant.parse("2026-10-31T14:30:00Z"));
         SpotDetail beforeClosure = spotDetailQueryService.findDetail(spotId);
-        // when: 한국은 2026-11-01 0시 30분이고, UTC로는 아직 2026-10-31이다.
+        // when
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         SpotDetail duringClosure = spotDetailQueryService.findDetail(spotId);
 
@@ -246,7 +244,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-05] 점검 시각은 장소 원천과 같은 종류에서 마지막으로 성공한 동기화의 종료 시각이고, 실패와 실행 중인 기록은 무시한다")
     void reportsLatestCompletedSyncFinishTimeOfSameSource() {
-        // given: 고캠핑은 성공 두 번, 그 뒤에 끝난 실패 한 번, 실행 중 한 번이 있다. 자연휴양림 성공 기록은 더 늦다.
+        // given
         long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
         insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
         insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-01 03:00:00.000000", "2026-10-01 03:10:00.000000");
@@ -269,11 +267,11 @@ class SpotDetailQueryServiceIntegrationTest {
         long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
         insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
 
-        // when, then: 기록이 없다.
+        // when, then
         assertThat(spotDetailQueryService.findDetail(spotId).publicDetail().checkedAt())
                 .isNull();
 
-        // when, then: 다른 종류의 성공 기록과 같은 종류의 실패 기록만 있다.
+        // when, then
         insertSyncRun("FOREST", "COMPLETED", "2026-10-05 03:00:00.000000", "2026-10-05 03:01:00.000000");
         insertSyncRun("GOCAMPING", "FAILED", "2026-10-06 03:00:00.000000", "2026-10-06 03:01:00.000000");
         assertThat(spotDetailQueryService.findDetail(spotId).publicDetail().checkedAt())
@@ -425,7 +423,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-05] 겹치는 확정 베이스캠프는 밤마다 인원을 합산하고, 종료일은 밤으로 세지 않는다")
     void sumsConfirmedMembersPerNightAndExcludesEndDate() {
-        // given: 한국 날짜 2026-11-01. 3명이 11-07, 11-08 두 밤을, 2명이 11-08 한 밤을 야영한다.
+        // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
         long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
         long first = insertBasecamp(spotId, "CONFIRMED", "2026-11-07", "2026-11-09");
@@ -483,7 +481,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-05] 이미 지난 밤은 예상 인원에서 빼고, 오늘 밤부터 센다")
     void excludesPastNights() {
-        // given: 한국 날짜 2026-11-08. 11-07 밤은 지났고 11-08 밤부터 센다.
+        // given
         clock.setInstant(Instant.parse("2026-11-08T03:00:00Z"));
         long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
         insertBasecampMembers(insertBasecamp(spotId, "CONFIRMED", "2026-11-07", "2026-11-10"), "ACTIVE", 2);
@@ -502,7 +500,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-23][ST-05] 개인 일정은 밤마다 1명으로 예상 인원에 더하고, 같은 밤의 확정 베이스캠프 인원과 합산한다")
     void addsSoloTripsToExpectedPeople() {
-        // given: 개인 일정은 11-07, 11-08 두 밤이고, 확정 베이스캠프 2명은 11-08 한 밤이다.
+        // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
         long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
         insertSoloTrip(insertMember(TestSequence.nickname()), spotId, "2026-11-07", "2026-11-09");
@@ -521,7 +519,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-23][ST-05] 탈퇴한 회원의 개인 일정, 다른 장소의 일정, 이미 끝난 일정은 예상 인원에 세지 않는다")
     void excludesWithdrawnOtherSpotAndFinishedSoloTrips() {
-        // given: 한국 날짜 2026-11-08
+        // given
         clock.setInstant(Instant.parse("2026-11-08T03:00:00Z"));
         long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
         long otherSpotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
@@ -542,7 +540,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-05] 예상 인원의 오늘은 UTC가 아니라 한국 날짜로 정한다")
     void decidesTodayByKoreanDate() {
-        // given: 한국은 2026-11-08 0시 30분이고 UTC로는 아직 2026-11-07이다.
+        // given
         clock.setInstant(Instant.parse("2026-11-07T15:30:00Z"));
         long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
         insertBasecampMembers(insertBasecamp(spotId, "CONFIRMED", "2026-11-07", "2026-11-09"), "ACTIVE", 2);
@@ -557,7 +555,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-05] 숙박 행사의 확정 참가자를 예상 인원에 더하고, 같은 밤의 확정 베이스캠프 인원과 합산한다")
     void addsConfirmedProgramParticipantsToExpectedPeople() {
-        // given: 한국 날짜 2026-11-01. 행사는 한국 시각 11-07 10:00에 시작해 11-08 12:00에 끝나서 11-07 한 밤을 보낸다.
+        // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
         long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
         long programId = insertProgram(spotId, "2026-11-07T01:00:00Z", "2026-11-08T03:00:00Z", true, "SCHEDULED");
@@ -580,7 +578,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-05] 행사의 야영 밤은 시작·종료 시각의 UTC 날짜가 아니라 한국 날짜로 정한다")
     void countsProgramNightsByKoreanDate() {
-        // given: 시작 UTC 11-06 16:00은 한국 11-07 01:00, 종료 UTC 11-07 16:00은 한국 11-08 01:00이다.
+        // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
         long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
         long programId = insertProgram(spotId, "2026-11-06T16:00:00Z", "2026-11-07T16:00:00Z", true, "SCHEDULED");
@@ -596,7 +594,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-05] 당일 행사, 취소된 행사, 다른 장소의 행사, 끝난 행사의 참가자는 예상 인원에 세지 않는다")
     void excludesDayCanceledOtherSpotAndPastPrograms() {
-        // given: 한국 날짜 2026-11-01
+        // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
         long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
         long otherSpotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
@@ -685,7 +683,6 @@ class SpotDetailQueryServiceIntegrationTest {
     }
 
     private long insertSeoulCampsite() {
-        // 한국 시각 2026-10-04 12:58. 날씨 픽스처를 받은 시각이다.
         clock.setInstant(Instant.parse("2026-10-04T03:58:00Z"));
         long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
         insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
@@ -721,7 +718,6 @@ class SpotDetailQueryServiceIntegrationTest {
         return jdbcTemplate.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
     }
 
-    // 경고 박지를 만든다. areaId가 null이면 경계 행을 가리키지 않는 경고다.
     private long insertWarnedBakji(Long areaId) {
         String name = TestSequence.unique("경고박지");
         long spotId = insertSpot("BAKJI", "ACTIVE", name, null, true, RIDGE);
@@ -773,7 +769,6 @@ class SpotDetailQueryServiceIntegrationTest {
                 closedUntil);
     }
 
-    // 시각은 UTC 문자열로 넣는다. finishedAt이 null이면 끝나지 않은 기록이다.
     private void insertSyncRun(String jobType, String status, String startedAt, String finishedAt) {
         jdbcTemplate.update(
                 "INSERT INTO sync_job_run (job_type, status, processed_count, skipped_count, started_at,"
@@ -812,7 +807,6 @@ class SpotDetailQueryServiceIntegrationTest {
         return jdbcTemplate.queryForObject("SELECT id FROM basecamp WHERE title = ?", Long.class, title);
     }
 
-    // 멤버 수만큼 새 회원을 만들어 주어진 상태의 멤버 행으로 넣는다.
     private void insertBasecampMembers(long basecampId, String status, int count) {
         for (int i = 0; i < count; i++) {
             jdbcTemplate.update(
@@ -834,7 +828,6 @@ class SpotDetailQueryServiceIntegrationTest {
                 endDate);
     }
 
-    // 신청이 열려 있던 행사를 장소에 연결해 저장한다. 시작·종료 시각은 UTC다.
     private long insertProgram(long spotId, String startAt, String endAt, boolean overnight, String status) {
         String title = TestSequence.unique("행사");
         jdbcTemplate.update(
@@ -852,7 +845,6 @@ class SpotDetailQueryServiceIntegrationTest {
         return jdbcTemplate.queryForObject("SELECT id FROM program WHERE title = ?", Long.class, title);
     }
 
-    // 신청 수만큼 새 회원을 만들어 주어진 상태의 행사 신청 행으로 넣는다.
     private void insertProgramApplications(long programId, String status, int count) {
         for (int i = 0; i < count; i++) {
             jdbcTemplate.update(
@@ -864,7 +856,6 @@ class SpotDetailQueryServiceIntegrationTest {
         }
     }
 
-    // DATETIME 컬럼은 UTC 시각을 시간대 없이 저장하므로, ISO 시각에서 Z와 T를 지운 문자열로 넣는다.
     private static String toUtcDateTime(String isoInstant) {
         return Instant.parse(isoInstant).toString().replace("T", " ").replace("Z", "");
     }

@@ -43,7 +43,6 @@ class SecurityConfigIntegrationTest {
     @Autowired
     private ApplicationContext applicationContext;
 
-    // 로그인해야 하는 행, 그리고 공개 경로와 경로는 같지만 HTTP 메서드가 다른 행이다.
     static Stream<Arguments> loginRequiredEndpoints() {
         return Stream.of(
                 Arguments.of(HttpMethod.GET, "/api/me"),
@@ -404,7 +403,6 @@ class SecurityConfigIntegrationTest {
         return session;
     }
 
-    // Spring Session은 쿠키에 세션 ID를 Base64로 인코딩해 담는다.
     private static String decodeSessionId(Cookie sessionCookie) {
         return new String(Base64.getDecoder().decode(sessionCookie.getValue()), StandardCharsets.UTF_8);
     }

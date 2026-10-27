@@ -25,10 +25,6 @@ import org.springframework.core.io.ClassPathResource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 실제 OpenAI를 호출해 고정된 문장 30개의 해석 정확도를 잰다. 비용이 들어서 CI에서는 돌리지 않고,
- * {@code OPENAI_API_KEY}를 넣고 {@code ./gradlew aiSearchEval}로 직접 실행한다. 틀려도 테스트는 실패하지 않고 결과만 출력한다.
- */
 @Tag("ai-eval")
 class AiSearchEvalTest {
 
@@ -134,7 +130,6 @@ class AiSearchEvalTest {
         }
     }
 
-    // 지역은 표기가 조금씩 달라질 수 있어서(예: "홍천" / "홍천군") 공백을 뺀 뒤 한쪽이 다른 쪽을 포함하면 맞는 것으로 본다.
     private static boolean regionMatches(String expected, String actual) {
         if (expected == null || actual == null) {
             return expected == null && actual == null;

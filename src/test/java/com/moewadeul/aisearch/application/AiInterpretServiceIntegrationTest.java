@@ -38,12 +38,10 @@ import tools.jackson.databind.json.JsonMapper;
 
 @IntegrationTest
 @ExtendWith(OutputCaptureExtension.class)
-// 이 클래스의 동시성 테스트는 회원 하루 횟수 제한을 본다. 외부 API 동시 호출 수 한도(기본 10)가 끼어들지 않게, 동시 요청 수보다 크게 둔다.
 @TestPropertySource(properties = "moewadeul.external-api.max-concurrent-calls=100")
 class AiInterpretServiceIntegrationTest {
 
     private static final String PATH = "/openai/v1/chat/completions";
-    // 로그나 DB에 새는지 찾을 수 있도록 다른 곳에 나오지 않을 문장을 쓴다.
     private static final String SENTENCE = "  쿠쿠다스봉우리 근처 계곡 야영장 식수 있는 곳  ";
     private static final String SECRET_PART = "쿠쿠다스봉우리";
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 5);
@@ -340,7 +338,6 @@ class AiInterpretServiceIntegrationTest {
                 outputTokens);
     }
 
-    // 요청 횟수, 입력 토큰, 출력 토큰 순서로 돌려준다.
     private List<Integer> usage(long memberId, LocalDate date) {
         Map<String, Object> row = jdbc.queryForMap(
                 "SELECT request_count, input_tokens, output_tokens FROM ai_search_usage"

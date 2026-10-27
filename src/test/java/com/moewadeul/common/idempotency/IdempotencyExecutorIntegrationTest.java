@@ -105,7 +105,6 @@ class IdempotencyExecutorIntegrationTest {
     @DisplayName("[NFR-03] 응답 없는 선점 행이 있으면 IDEMPOTENCY_IN_PROGRESS이고 action을 부르지 않는다")
     void inProgressRowIsConflict() {
         long memberId = insertMember();
-        // 같은 요청의 해시를 그대로 두려고 실행기로 먼저 한 번 처리한 뒤, 응답만 비워 처리 중인 상태로 만든다.
         run(memberId, "key-1", OPERATION, null, () -> new Result(1, "x"));
         jdbc.update("UPDATE idempotency_record SET response_status = NULL, response_body = NULL");
         AtomicInteger calls = new AtomicInteger();

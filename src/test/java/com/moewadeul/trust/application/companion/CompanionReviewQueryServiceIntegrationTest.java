@@ -284,7 +284,6 @@ class CompanionReviewQueryServiceIntegrationTest {
         }
     }
 
-    // 나와 상대가 ACTIVE 멤버인 완료 베이스캠프를 만든다.
     private BlindPair blindPair(Instant completedAt) {
         long basecampId = fixture.saveBasecamp("COMPLETED", completedAt);
         long me = fixture.saveVerifiedMember("나야나");

@@ -14,13 +14,6 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
-/**
- * 유니크 제약 위반이 로그에 원값을 남기지 않는지 확인한다.
- *
- * <p>MySQL은 유니크 제약을 어긴 값을 "Duplicate entry '값' for key '제약'" 메시지에 그대로 담는다. Hibernate는 이 메시지를 받으면
- * 기본으로 WARN 로그에 남기므로, 이메일이나 CI 해시처럼 로그에 남기면 안 되는 값이 운영 로그에 찍힌다. 서비스는 이 예외를 중복 오류 코드로
- * 바꿔 응답하므로, 서버는 Hibernate의 SQL 오류 로그를 끄고 예상하지 못한 예외만 공통 예외 처리기에서 로그로 남긴다.
- */
 @IntegrationTest
 @ExtendWith(OutputCaptureExtension.class)
 class DuplicateEntryLogIntegrationTest {

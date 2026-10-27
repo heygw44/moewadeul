@@ -33,9 +33,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-// 픽스처의 경계는 테스트에서 지어낸 작은 사각형이다. 좌표는 (경도 위도) 순서다.
-// parks_20251231.tsv: 북한산 경도 126.9~127.0, 위도 37.6~37.7
-// parks_20260630.tsv: 북한산을 경도 127.1~127.2로 옮겼다. 적재 서비스는 같은 공원 행의 경계를 덮어쓰므로 ID는 그대로다.
 @IntegrationTest
 class BakjiRejudgeServiceIntegrationTest {
 
@@ -87,7 +84,7 @@ class BakjiRejudgeServiceIntegrationTest {
         assertNotWarned(newInside);
         assertNotWarned(outside);
 
-        // when: 북한산 경계를 옮긴 파일을 적재하고 다시 판정한다.
+        // when
         parkBoundaryLoadService.load(fixture(NEWER_FIXTURE)).orElseThrow();
         BakjiRejudgeResult second = bakjiRejudgeService.rejudge().orElseThrow();
 
@@ -137,7 +134,7 @@ class BakjiRejudgeServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 재판정은 박지를 묶음 크기만큼씩 나눠 모두 판정하고, 묶음마다 실행 기록에 처리 수와 마지막 박지 ID를 남긴다")
     void rejudgeProcessesBakjisInChunks() throws IOException {
-        // given: 묶음 크기 2에 박지 5건이면 묶음 셋이다.
+        // given
         parkBoundaryLoadService.load(fixture(FIXTURE)).orElseThrow();
         long bukhansanId = idOf("북한산");
         List<Long> insideIds = new ArrayList<>();
@@ -152,7 +149,7 @@ class BakjiRejudgeServiceIntegrationTest {
         // when
         BakjiRejudgeResult result = service.rejudge().orElseThrow();
 
-        // then: 마지막 호출은 남은 박지가 없음을 확인하는 빈 묶음이다.
+        // then
         assertThat(result).isEqualTo(new BakjiRejudgeResult(5, 3, 0));
         assertThat(chunkStarts).containsExactly(0L, insideIds.get(1), outsideFirst, outsideLast);
         insideIds.forEach(id -> assertWarned(id, bukhansanId));
@@ -187,7 +184,7 @@ class BakjiRejudgeServiceIntegrationTest {
             other.shutdown();
         }
 
-        // then: 다른 커넥션이 기다리지 않고(NOWAIT) 앞 묶음의 박지 행을 잠갔다.
+        // then
         assertThat(lockedDuringSecondChunk.get()).isEqualTo(first);
     }
 
@@ -208,11 +205,11 @@ class BakjiRejudgeServiceIntegrationTest {
         // when
         assertThatThrownBy(() -> failing.rejudge()).isInstanceOf(IllegalStateException.class);
 
-        // then: 앞 묶음은 커밋됐고 둘째 묶음은 판정하지 않았다.
+        // then
         assertWarned(first, bukhansanId);
         assertThat(judgement(second).get("area_checked_at")).isNull();
 
-        // when: 같은 경계로 판정을 지운 뒤 다시 재판정한다.
+        // when
         jdbcTemplate.update("UPDATE spot SET park_warning = FALSE, protected_area_id = NULL WHERE id = ?", first);
         List<Long> chunkStarts = new ArrayList<>();
         BakjiRejudgeResult result = serviceWithChunkSize(1, (afterId, limit) -> chunkStarts.add(afterId))
@@ -232,7 +229,7 @@ class BakjiRejudgeServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 재판정이 도는 사이에 공원 경계 적재가 끝나면 재판정을 마친 뒤 처음부터 다시 판정해, 앞 묶음에서 옛 경계로 판정한 박지에도 경고를 붙인다")
     void rejudgeRepeatsWhenBoundaryLoadFinishesWhileRunning() throws IOException {
-        // given: 첫 박지는 새 경계 안에 있고, 옛 경계 안이 아니다. 첫 묶음에서 옛 경계로 판정한다.
+        // given
         parkBoundaryLoadService.load(fixture(FIXTURE)).orElseThrow();
         long bukhansanId = idOf("북한산");
         long first = insertBakji("새 경계 안 박지", 37.65, 127.15);
@@ -248,7 +245,7 @@ class BakjiRejudgeServiceIntegrationTest {
         // when
         BakjiRejudgeResult result = service.rejudge().orElseThrow();
 
-        // then: 두 번째 판정이 첫 박지의 경고를 새 경계로 붙였다. 결과는 마지막 판정의 것이다.
+        // then
         assertThat(result).isEqualTo(new BakjiRejudgeResult(2, 1, 0));
         assertWarned(first, bukhansanId);
         assertThat(jdbcTemplate.queryForList(
@@ -281,7 +278,6 @@ class BakjiRejudgeServiceIntegrationTest {
         }
     }
 
-    // 묶음 크기를 바꾼 재판정 서비스를 만든다. 묶음 판정은 실제 빈에 맡기되, 묶음마다 판정하기 전에 beforeChunk를 부른다.
     private BakjiRejudgeService serviceWithChunkSize(int chunkSize, BiConsumer<Long, Integer> beforeChunk) {
         ParkAreaJudgeService hooked = new ParkAreaJudgeService(parkAreaJudgeMapper, clock) {
             @Override
@@ -294,7 +290,6 @@ class BakjiRejudgeServiceIntegrationTest {
                 syncJobRunService, hooked, new BakjiRejudgeProperties(Duration.ofMinutes(30), chunkSize), clock);
     }
 
-    // 다른 스레드의 새 트랜잭션에서 박지 행을 기다리지 않고 잠근다. 다른 트랜잭션이 이미 잠갔으면 MySQL이 바로 오류를 낸다.
     private Long lockNowait(ExecutorService other, long spotId) {
         TransactionTemplate tx = new TransactionTemplate(transactionManager);
         try {

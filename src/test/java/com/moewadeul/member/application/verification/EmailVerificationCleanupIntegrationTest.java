@@ -25,7 +25,6 @@ class EmailVerificationCleanupIntegrationTest {
 
     private static final String IP = "203.0.113.7";
     private static final Duration ONE_SECOND = Duration.ofSeconds(1);
-    // DATETIME 컬럼에 UTC 시각을 문자열로 넣는다. 드라이버의 시간대 변환이 끼어들지 않게 하려는 것이다.
     private static final DateTimeFormatter DATETIME_UTC =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").withZone(ZoneOffset.UTC);
 
@@ -169,7 +168,6 @@ class EmailVerificationCleanupIntegrationTest {
                 DATETIME_UTC.format(lastRequestedAt));
     }
 
-    // 잠금 행의 키는 64자 고정 길이다. 테스트는 이름 뒤를 채워서 행마다 다르고 정렬 순서를 아는 키를 만든다.
     private static String ipLockKey(String name) {
         return (name + "_".repeat(64)).substring(0, 64);
     }

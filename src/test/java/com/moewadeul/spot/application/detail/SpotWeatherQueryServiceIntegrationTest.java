@@ -45,7 +45,6 @@ class SpotWeatherQueryServiceIntegrationTest {
     private static final List<String> ALL_PATHS =
             List.of(VILAGE_FCST_PATH, MID_LAND_FCST_PATH, MID_TA_PATH, RISE_SET_PATH);
 
-    // 한국 시각 2026-10-04 12:58. 날씨 픽스처를 받은 시각이고, 이때 조회할 단기예보 발표는 11시다.
     private static final Instant FIXTURE_TIME = Instant.parse("2026-10-04T03:58:00Z");
 
     @Autowired
@@ -226,7 +225,6 @@ class SpotWeatherQueryServiceIntegrationTest {
                 .orElseThrow()
                 .forecast()
                 .shortTerm();
-        // 한국 시각 14:08. 14시 발표는 14:10부터 조회하므로 서버는 아직 11시 발표를 쓴다.
         clock.setInstant(FIXTURE_TIME.plus(Duration.ofMinutes(70)));
 
         // when
@@ -249,7 +247,6 @@ class SpotWeatherQueryServiceIntegrationTest {
         long spotId = insertSeoulCampsite("ACTIVE");
         stubAllSuccess();
         spotWeatherQueryService.findWeather(spotId);
-        // 한국 시각 14:10. 14시 발표를 조회할 수 있게 된다.
         clock.setInstant(FIXTURE_TIME.plus(Duration.ofMinutes(72)));
 
         // when
@@ -264,7 +261,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         return insertCampsite(status, "POINT(37.5665 126.978)");
     }
 
-    // 좌표는 SRID 4326 WKT라서 (위도 경도) 순서다. 격자는 두 장소 모두 서울시청 격자(60, 127)로 둔다.
+    // 좌표는 SRID 4326 WKT라서 (위도 경도) 순서다.
     private long insertCampsite(String status, String wkt) {
         clock.setInstant(FIXTURE_TIME);
         String name = TestSequence.unique("야영장");

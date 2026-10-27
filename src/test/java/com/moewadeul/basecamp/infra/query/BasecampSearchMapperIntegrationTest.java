@@ -26,10 +26,8 @@ class BasecampSearchMapperIntegrationTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 10, 20);
 
-    // 영역 검사용 화면 영역이다. 남서쪽 꼭짓점은 (37.0, 127.0), 북동쪽 꼭짓점은 (38.0, 128.0)이다.
     private static final BasecampSearchCondition.Area AREA = new BasecampSearchCondition.Area(37.0, 127.0, 38.0, 128.0);
 
-    // 반경 검사용 중심은 서울시청이다. 아래 장소의 거리는 MySQL이 쓰는 구 위에서 계산한 값이다.
     private static final Coordinate CENTER = new Coordinate(37.5665, 126.978);
     private static final Coordinate NORTH_9_8_KM = new Coordinate(37.6546, 126.978);
     private static final Coordinate EAST_10_2_KM = new Coordinate(37.5665, 127.0936);
@@ -68,7 +66,7 @@ class BasecampSearchMapperIntegrationTest {
     @Test
     @DisplayName("[F-12] 영역 조회는 위도와 경도를 서로 바꿔 읽지 않는다")
     void areaDoesNotSwapLatitudeAndLongitude() {
-        // given: 위도와 경도가 비슷한 곳에서 두 값을 맞바꾼 두 장소를 둔다. 조회 SQL이 좌표 순서를 바꿔 읽으면 결과가 달라진다.
+        // given
         Member leader = saveMember();
         long expected = insertBasecamp(leader, insertSpot("제자리", new Coordinate(37.5, 37.6)), "RECRUITING", DAY, 4);
         insertBasecamp(leader, insertSpot("맞바꾼 자리", new Coordinate(37.6, 37.5)), "RECRUITING", DAY, 4);
@@ -415,7 +413,6 @@ class BasecampSearchMapperIntegrationTest {
         assertThat(mapper.selectSpotSummary(deletedSpot)).isNull();
     }
 
-    // 상세 조건 없이 지역·출발일·남은 자리만 거는 조건이다.
     private static BasecampSearchCondition condition(
             BasecampSearchCondition.Area area,
             BasecampSearchCondition.Nearby nearby,
@@ -465,7 +462,6 @@ class BasecampSearchMapperIntegrationTest {
         return jdbc.queryForObject("SELECT MAX(id) FROM spot", Long.class);
     }
 
-    // 캠프 리더의 멤버 행도 함께 넣어서 현재 인원이 1명으로 시작한다. 종료일은 출발일 이틀 뒤다.
     private long insertBasecamp(Member leader, long spotId, String status, LocalDate startDate, int capacity) {
         jdbc.update(
                 "INSERT INTO basecamp (leader_id, spot_id, title, description, start_date, end_date, capacity, status,"
@@ -482,7 +478,6 @@ class BasecampSearchMapperIntegrationTest {
         return id;
     }
 
-    // 모집 중이고 정원 4명인 베이스캠프를 박 수와 합류 조건을 정해서 넣는다. 캠프 리더의 멤버 행도 함께 넣는다.
     private long insertBasecamp(
             Member leader,
             long spotId,

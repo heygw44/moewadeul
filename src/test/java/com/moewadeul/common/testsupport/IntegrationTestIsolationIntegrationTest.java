@@ -11,8 +11,6 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// 이 테스트는 확장이 테스트 사이에 하는 일(DB 행 삭제, 시계 복원)을 확인한다.
-// 그래서 두 테스트가 순서대로 실행된다는 점에 일부러 기대고 있다.
 @IntegrationTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class IntegrationTestIsolationIntegrationTest {

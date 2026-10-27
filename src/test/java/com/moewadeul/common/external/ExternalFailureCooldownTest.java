@@ -71,10 +71,10 @@ class ExternalFailureCooldownTest {
         triggerOutage();
         clock.advance(COOLDOWN);
 
-        // when: 시험 호출이 또 실패한다.
+        // when
         assertThatThrownBy(this::failOutage).isInstanceOf(OutageException.class);
 
-        // then: 다시 쉰다. 쉬는 시간이 지난 뒤 시험 호출이 성공하면 이어지는 호출은 모두 외부 API로 나간다.
+        // then
         assertThatThrownBy(this::callOk).hasMessage("skipped");
         clock.advance(COOLDOWN);
         assertThat(callOk()).isEqualTo("ok");
@@ -103,7 +103,7 @@ class ExternalFailureCooldownTest {
     @Test
     @DisplayName("[NFR-05] 쉬는 시간이 지났을 때 동시에 들어온 호출 중 하나만 외부 API를 부른다")
     void onlyOneCallProbesAfterCooldown() throws Exception {
-        // given: 쉬는 시간이 막 지났고 여러 스레드가 동시에 호출한다. 시험 호출은 끝나지 않는다.
+        // given
         triggerOutage();
         clock.advance(COOLDOWN);
         int threads = 10;
@@ -134,7 +134,7 @@ class ExternalFailureCooldownTest {
                 }));
             }
 
-            // when: 시험 호출이 안에 들어간 뒤, 나머지 호출이 모두 건너뛰기를 마칠 때까지 기다린 뒤 시험 호출을 놓아 준다.
+            // when
             ready.await();
             start.countDown();
             assertThat(probeEntered.await(5, TimeUnit.SECONDS)).isTrue();
@@ -214,6 +214,5 @@ class ExternalFailureCooldownTest {
         }
     }
 
-    /** 응답하지 못하는 상태(I/O 오류, 제한 시간 초과, 5xx)를 흉내 내는 예외다. */
     private static final class OutageException extends RuntimeException {}
 }

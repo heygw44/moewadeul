@@ -173,7 +173,7 @@ class MyProgramApplicationApiIntegrationTest {
         // when
         MvcTestResult result = mvc.get().uri(MINE).cookie(session).exchange();
 
-        // then: 최근 신청부터 만료, 취소, 확정 순서다.
+        // then
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(result).bodyJson().extractingPath("$.content[0].status").isEqualTo("EXPIRED");
         assertThat(result)
@@ -287,7 +287,7 @@ class MyProgramApplicationApiIntegrationTest {
         // when
         MvcTestResult result = mvc.get().uri(MINE).cookie(session).exchange();
 
-        // then: 최근 신청부터 마감 뒤, 신청 시작 전, 취소 순서다.
+        // then
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(result)
                 .bodyJson()

@@ -21,7 +21,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class PasswordResetThrottleCleanupIntegrationTest {
 
     private static final Duration ONE_SECOND = Duration.ofSeconds(1);
-    // DATETIME 컬럼에 UTC 시각을 문자열로 넣는다. 드라이버의 시간대 변환이 끼어들지 않게 하려는 것이다.
     private static final DateTimeFormatter DATETIME_UTC =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").withZone(ZoneOffset.UTC);
 
@@ -156,7 +155,6 @@ class PasswordResetThrottleCleanupIntegrationTest {
                 rows);
     }
 
-    // 키는 해시이므로 64자 16진수이기만 하면 된다. 행마다 겹치지 않게 순번을 채워 만든다.
     private String nextKey() {
         return "%064x".formatted(keySequence.incrementAndGet());
     }

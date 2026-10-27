@@ -393,7 +393,6 @@ class CompanionReviewControllerTest {
         verifyNoInteractions(commandService, queryService);
     }
 
-    // 공개 전 항목을 만드는 정적 팩터리는 application 패키지 안에서만 보이므로, 같은 모양의 값을 생성자로 직접 만든다.
     private static ReceivedCompanionReview sealedItem(long basecampId) {
         return new ReceivedCompanionReview(basecampId, false, null, null, null, null, null, null, null, null);
     }
@@ -412,7 +411,6 @@ class CompanionReviewControllerTest {
                 .exchange();
     }
 
-    // 로그인 서비스가 세션에 넣는 것과 같은 모양의 인증 정보를 만든다. 이메일 인증 권한을 붙여 인증 회원 전용 경로를 연다.
     private static RequestPostProcessor verified() {
         LoginMember loginMember = new LoginMember(MEMBER_ID, "USER", true);
         return authentication(UsernamePasswordAuthenticationToken.authenticated(

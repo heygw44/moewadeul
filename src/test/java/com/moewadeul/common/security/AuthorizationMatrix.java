@@ -5,17 +5,10 @@ import java.util.stream.Stream;
 import org.junit.jupiter.params.provider.Arguments;
 import org.springframework.http.HttpMethod;
 
-/**
- * 모든 API 엔드포인트를 필요한 권한 등급별로 나눈 표다. 경로의 {변수}에는 1이나 2를 넣었다.
- *
- * <p>권한 테스트들이 이 표의 행을 매개변수로 쓴다. 그리고 {@code EndpointAuthorizationCoverageIntegrationTest}가 컨트롤러에 있는
- * 엔드포인트가 모두 이 표에 있는지 확인하므로, 개발자가 엔드포인트를 추가하면 여기에도 행을 추가해야 테스트가 통과한다.
- */
 final class AuthorizationMatrix {
 
     record Endpoint(HttpMethod method, String path) {}
 
-    // 로그인하지 않아도 부를 수 있다.
     static final List<Endpoint> PUBLIC = List.of(
             new Endpoint(HttpMethod.POST, "/api/members"),
             new Endpoint(HttpMethod.POST, "/api/auth/login"),
@@ -38,7 +31,6 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.GET, "/api/memories/1"),
             new Endpoint(HttpMethod.GET, "/api/members/1/memories"));
 
-    // 로그인만 하면 이메일 인증을 마치지 않은 회원도 부를 수 있다.
     static final List<Endpoint> LOGIN = List.of(
             new Endpoint(HttpMethod.GET, "/api/me"),
             new Endpoint(HttpMethod.DELETE, "/api/me"),
@@ -57,13 +49,10 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.PUT, "/api/me/notification-settings"),
             new Endpoint(HttpMethod.POST, "/api/auth/logout"));
 
-    // 이메일 인증 코드 확인과 재발송은 로그인만 필요하다. 다만 실제 회원 행이 있어야 동작해서, 프로브 회원으로 부르는 통과 테스트에서는 뺀다.
     static final List<Endpoint> LOGIN_EMAIL_VERIFICATION = List.of(
             new Endpoint(HttpMethod.POST, "/api/me/email-verification"),
             new Endpoint(HttpMethod.POST, "/api/me/email-verification/resend"));
 
-    // 이메일 인증을 마친 회원만 부를 수 있다. 본인확인, 캠프 리더, 작성자처럼 더 높은 자격이 필요한 것도 여기에 든다.
-    // 그 자격은 보안 설정이 아니라 각 서비스가 회원 ID로 검사한다.
     static final List<Endpoint> VERIFIED = List.of(
             new Endpoint(HttpMethod.PATCH, "/api/me"),
             new Endpoint(HttpMethod.POST, "/api/me/identity-verification"),
@@ -121,7 +110,6 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.POST, "/api/community/comments/1/reports"),
             new Endpoint(HttpMethod.POST, "/api/memories/1/reports"));
 
-    // ADMIN 역할만 부를 수 있다.
     static final List<Endpoint> ADMIN = List.of(
             new Endpoint(HttpMethod.POST, "/api/admin/programs"),
             new Endpoint(HttpMethod.PATCH, "/api/admin/programs/1"),

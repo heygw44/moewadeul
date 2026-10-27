@@ -20,7 +20,6 @@ class BasecampApplyTest {
 
     private static final long FIRST_EXTRA_APPLICANT_ID = 100L;
 
-    // 정원 6명인 모집 중 베이스캠프에 서로 다른 회원 count명이 대기 신청을 낸 상태를 만든다.
     private static Basecamp basecampWithPending(int count) {
         Basecamp basecamp = aBasecamp().capacity(6).openOnly();
         for (int i = 0; i < count; i++) {

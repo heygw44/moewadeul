@@ -497,7 +497,6 @@ class BasecampQueryControllerTest {
                 eligibility);
     }
 
-    // 장소가 ACTIVE가 아니어서 서비스가 장소 요약을 비운 상세를 만든다.
     private static BasecampDetail withoutSpot(BasecampDetail detail) {
         return new BasecampDetail(
                 detail.basecampId(),
@@ -517,7 +516,6 @@ class BasecampQueryControllerTest {
                 detail.eligibility());
     }
 
-    // 로그인 서비스가 세션에 넣는 것과 같은 모양의 인증 정보를 만든다. 이메일 인증 권한을 붙여 인증 회원 전용 경로를 연다.
     private static RequestPostProcessor verified() {
         LoginMember loginMember = new LoginMember(MEMBER_ID, "USER", true);
         return authentication(UsernamePasswordAuthenticationToken.authenticated(

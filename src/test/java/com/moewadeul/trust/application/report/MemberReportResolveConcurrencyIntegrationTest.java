@@ -173,7 +173,6 @@ class MemberReportResolveConcurrencyIntegrationTest {
                 .isEqualTo("UNVERIFIED");
     }
 
-    // 성희롱·위협 신고를 접수해 대상을 임시 정지하고, 검토 중 상태까지 진행한다.
     private long inReviewUrgentReport() {
         long reporterId = fixture.saveVerifiedMember(TestSequence.nickname());
         long basecampId = fixture.saveBasecamp("COMPLETED", null);
@@ -193,7 +192,6 @@ class MemberReportResolveConcurrencyIntegrationTest {
 
     private record Outcome(boolean succeeded, Throwable error) {}
 
-    // 작업을 스레드 하나씩 맡겨 동시에 출발시키고, 작업 순서대로 성공 여부와 던져진 예외를 모아 돌려준다.
     private List<Outcome> runConcurrently(List<Callable<Object>> tasks) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
         CountDownLatch ready = new CountDownLatch(tasks.size());

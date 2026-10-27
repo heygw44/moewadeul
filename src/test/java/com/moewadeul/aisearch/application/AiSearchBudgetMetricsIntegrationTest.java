@@ -34,7 +34,6 @@ class AiSearchBudgetMetricsIntegrationTest {
         usageRecorder.claim(memberId, TODAY.minusDays(1));
         usageRecorder.addTokens(memberId, TODAY.minusDays(1), new TokenUsage(2_000_000, 0));
         usageRecorder.claim(memberId, TODAY);
-        // 입력 단가 0.40달러/100만 토큰이므로 125만 토큰이 0.5달러다.
         usageRecorder.addTokens(memberId, TODAY, new TokenUsage(1_250_000, 0));
 
         // when

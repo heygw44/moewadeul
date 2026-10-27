@@ -14,12 +14,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-/**
- * 컨트롤러에 있는 API 엔드포인트가 모두 권한 표({@link AuthorizationMatrix})에 있는지 확인한다.
- *
- * <p>권한 테스트는 그 표의 행으로만 돈다. 그래서 개발자가 엔드포인트를 추가하고 표에 넣지 않으면, 그 엔드포인트는 권한 테스트 없이 머지된다.
- * 이 테스트는 그런 엔드포인트를 찾아 실패한다.
- */
 @IntegrationTest
 class EndpointAuthorizationCoverageIntegrationTest {
 
@@ -44,7 +38,6 @@ class EndpointAuthorizationCoverageIntegrationTest {
         assertThat(unlisted).isEmpty();
     }
 
-    // 경로 템플릿(/api/spots/{spotId})과 메서드 쌍을 모은다. 메서드를 정하지 않은 매핑은 없어야 하므로 따로 다루지 않는다.
     private List<Endpoint> apiEndpoints() {
         return handlerMapping.getHandlerMethods().keySet().stream()
                 .flatMap(info -> endpointsOf(info).stream())

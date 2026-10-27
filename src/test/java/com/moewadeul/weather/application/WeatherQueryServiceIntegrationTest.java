@@ -39,7 +39,6 @@ class WeatherQueryServiceIntegrationTest {
     private static final String MID_LAND_FCST_PATH = "/1360000/MidFcstInfoService/getMidLandFcst";
     private static final String MID_TA_PATH = "/1360000/MidFcstInfoService/getMidTa";
     private static final String FALLBACK_COUNTER = "moewadeul.external.api.fallbacks";
-    // 서울시청, 기상청 격자 60·127
     private static final double SEOUL_LAT = 37.5665;
     private static final double SEOUL_LNG = 126.9780;
 
@@ -57,7 +56,6 @@ class WeatherQueryServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // 한국 시각 2026-10-04 12:58. 픽스처를 받은 시각이다. 단기 기준은 11시, 중기 기준은 06시 발표다.
         clock.setInstant(Instant.parse("2026-10-04T03:58:00Z"));
     }
 
@@ -110,7 +108,7 @@ class WeatherQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-09][NFR-05] 기상청 응답이 응답 대기 시간보다 늦어도 예외 없이 빈 값을 돌려준다")
     void returnsEmptyWhenKmaIsSlow() {
-        // given: 테스트 프로필의 응답 대기 시간은 1초다.
+        // given
         stub(VILAGE_FCST_PATH, okJson(readFixture("vilage-fcst.json")).withFixedDelay(2_000));
         double fallbackBefore = fallbackCount();
 
@@ -120,7 +118,6 @@ class WeatherQueryServiceIntegrationTest {
         // then
         assertThat(result).isEmpty();
         assertThat(fallbackCount() - fallbackBefore).isEqualTo(1);
-        // WireMock이 지연 응답을 다 보낸 뒤에야 요청을 기록한다. 그래서 테스트는 기록이 두 건이 될 때까지 기다린다.
         await().atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(requestCount(VILAGE_FCST_PATH)).isEqualTo(2));
         assertThat(requestCount(MID_LAND_FCST_PATH)).isZero();

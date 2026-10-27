@@ -41,13 +41,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/**
- * 작성자가 글이나 댓글을 고치는 사이 관리자 숨김이나 신고 누적이 끼어들 때, 마지막에 남는 상태를 확인한다. 같은 글의 이미지를 동시에 바꾸는
- * 요청끼리 겹칠 때 붙은 이미지 수도 확인한다.
- *
- * <p>테스트는 작성자 트랜잭션을 글이나 댓글 행을 읽은 직후에 멈추고, 그사이 다른 스레드에서 숨김이나 신고를 실행한 뒤 멈춘 트랜잭션을 이어 간다.
- * 작성자 트랜잭션이 행을 잠그고 있으면 가운데 작업이 잠금을 기다리므로, 테스트는 잠깐 기다린 뒤 멈춘 트랜잭션을 풀어 준다.
- */
 @IntegrationTest
 class CommunityAuthorEditConcurrencyIntegrationTest {
 
@@ -224,14 +217,11 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
         assertThat(paused.await(10, TimeUnit.SECONDS)).isTrue();
     }
 
-    // 가운데 작업을 다른 스레드에서 시작한다. 멈춘 트랜잭션의 잠금을 기다리느라 끝나지 않으면 잠깐 기다린 뒤 멈춘 트랜잭션을 풀어 준다.
-    // 멈췄던 작업이 예외로 끝나면 그 예외를 돌려주고, 성공하면 null을 돌려준다. 가운데 작업은 성공해야 한다.
     private Throwable runInMiddle(Callable<?> middle, Future<?> pausedWork) throws Exception {
         Future<?> middleWork = executor.submit(middle);
         try {
             middleWork.get(MIDDLE_WAIT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
-            // 가운데 작업이 잠금을 기다리는 중이다. 멈춘 쪽을 풀면 이어서 끝난다.
         }
         resume.countDown();
         middleWork.get(60, TimeUnit.SECONDS);
@@ -287,7 +277,6 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT status FROM community_comment WHERE id = ?", String.class, commentId);
     }
 
-    /** 멈출 호출과 그때 부를 동작이다. 테스트가 끝나면 비운다. */
     static final class PauseHooks {
 
         static volatile Set<String> afterCalls = Set.of();
@@ -308,8 +297,6 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
         }
     }
 
-    // 글, 댓글, 이미지 리포지토리를 한 겹 감싸서, 정해 둔 메서드가 끝난 뒤에 멈출 지점을 부른다.
-    // 리포지토리 빈은 JDK 프록시라서 Mockito 스파이로는 실제 메서드를 부를 수 없다. 그래서 같은 인터페이스를 구현하는 프록시로 감싼다.
     @TestConfiguration(proxyBeanMethods = false)
     static class PauseHookConfig {
 

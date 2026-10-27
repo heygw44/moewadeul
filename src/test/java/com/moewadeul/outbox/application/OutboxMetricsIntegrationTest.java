@@ -45,7 +45,7 @@ class OutboxMetricsIntegrationTest {
     @Test
     @DisplayName("[NFR-09] 상태별 이벤트 수와 가장 오래된 미발행 이벤트가 기록된 뒤 지난 시간을 지표로 읽는다")
     void reportsBacklogFromDatabase() {
-        // given: 이벤트 3건을 기록하고 1건은 재시도 한도를 넘긴 것처럼 FAILED로 바꾼다
+        // given
         transactionTemplate.executeWithoutResult(status -> {
             for (int sequence = 1; sequence <= 3; sequence++) {
                 recorder.record(

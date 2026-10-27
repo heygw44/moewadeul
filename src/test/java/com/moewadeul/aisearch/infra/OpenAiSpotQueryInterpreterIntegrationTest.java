@@ -36,7 +36,6 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
 
     private static final String PATH = "/openai/v1/chat/completions";
     private static final String REQUEST_TIMER = "moewadeul.external.api.requests";
-    // 로그나 예외 메시지에 새는지 찾을 수 있도록 다른 곳에 나오지 않을 문장을 쓴다.
     private static final String SENTENCE = "쿠쿠다스봉우리 근처 계곡 야영장 식수 있는 곳 주말에";
 
     @Autowired

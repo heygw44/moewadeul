@@ -83,7 +83,6 @@ class MemberTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                // 공백류: NBSP, 숫자 크기 공백, 좁은 NBSP, 전각 공백, 줄 구분자, 문단 구분자
                 "nick\u00A0",
                 "ni\u00A0ck",
                 "ni\u2007ck",
@@ -91,7 +90,6 @@ class MemberTest {
                 "ni\u3000ck",
                 "ni\u2028ck",
                 "ni\u2029ck",
-                // 서식 문자: 폭 없는 공백, ZWNJ, ZWJ, 단어 결합자, BOM, 소프트 하이픈, 오른쪽에서 왼쪽 덮어쓰기
                 "ni\u200Bck",
                 "\u200B\u200B",
                 "ni\u200Cck",
@@ -100,16 +98,13 @@ class MemberTest {
                 "\uFEFFnick",
                 "ni\u00ADck",
                 "\u202Enick",
-                // 제어 문자
                 "ni\u0000ck",
                 "ni\u0085ck",
-                // 한글 채움 문자
                 "nick\u3164",
                 "\u3164\u3164",
                 "ni\u115Fck",
                 "ni\u1160ck",
                 "ni\uFFA0ck",
-                // ZWJ로 이은 이모지
                 "👨\u200D👩\u200D👧"
             })
     @DisplayName("[F-01] 닉네임에 공백류·제어·서식 문자나 한글 채움 문자가 있으면 INVALID_INPUT으로 거부한다")

@@ -35,20 +35,10 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/**
- * 박지 수정과 박지 재판정, 관리자 숨김, 신고가 같은 박지 행에서 겹칠 때 마지막에 남는 값을 확인한다.
- *
- * <p>동시에 출발시키는 것만으로는 원하는 순서가 잘 나오지 않는다. 그래서 테스트는 한 트랜잭션을 정해 둔 지점에서 멈추고, 그사이 다른 쪽을 실행한 뒤
- * 멈춘 트랜잭션을 이어 간다. 박지 수정은 박지 행을 읽은 직후(제보 상세를 읽을 때), 재판정은 박지 좌표를 모두 읽은 직후에 멈춘다.
- *
- * <p>가운데 작업은 다른 스레드에서 돌린다. 멈춘 트랜잭션이 행을 잠그고 있으면 가운데 작업이 그 잠금을 기다리기 때문이다. 이때 테스트는 잠깐 기다린 뒤
- * 멈춘 트랜잭션을 풀어 주고, 두 작업이 모두 끝난 뒤 값을 본다.
- */
 @IntegrationTest
 class BakjiUpdateRejudgeConcurrencyIntegrationTest {
 
     private static final int REPETITIONS = 5;
-    // 공원 경계는 위도 37~38, 경도 128~129 사각형이다. 안쪽 점과 바깥 점은 위도가 같고 경도만 다르다.
     private static final String AREA_LONG_LAT_WKT = "MULTIPOLYGON(((128 37, 129 37, 129 38, 128 38, 128 37)))";
     private static final double LAT = 37.6;
     private static final double INSIDE_LNG = 128.7;
@@ -102,7 +92,6 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
     @RepeatedTest(REPETITIONS)
     @DisplayName("[F-06][F-07][BC-04] 이름만 고치는 박지 수정이 재판정과 겹쳐도, 재판정이 새로 붙인 공원 경계 경고가 남는다")
     void renameDuringRejudgeKeepsNewWarning() throws Exception {
-        // 처음에는 경계가 없어서 이 좌표의 박지는 경고가 아니다. 수정이 멈춘 사이 경계를 넣으면 경계 안이 된다.
         long spotId = report(INSIDE_LNG);
         pauseUpdateAfterReadingSpot();
 
@@ -198,7 +187,6 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.NOT_FOUND));
     }
 
-    // 재판정 작업처럼 박지를 묶음마다 끝까지 판정한다.
     private Void rejudgeAll() {
         Instant now = clock.instant();
         long afterId = 0;
@@ -222,7 +210,6 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
         bakjiFeedbackService.reportProblem(memberId, spotId, new BakjiProblemReportCommand("FALSE_INFO", null));
     }
 
-    // 박지 수정은 박지 행을 읽은 다음 제보 상세를 읽는다. 그래서 제보 상세를 읽기 직전에 멈추면 박지 행을 읽은 직후에 멈춘다.
     private void pauseUpdateAfterReadingSpot() {
         pauseArmed.set(true);
         PauseHooks.beforeBakjiDetailRead = this::pauseOnce;
@@ -250,14 +237,11 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
         assertThat(paused.await(10, TimeUnit.SECONDS)).isTrue();
     }
 
-    // 가운데 작업을 다른 스레드에서 시작한다. 멈춘 트랜잭션의 잠금을 기다리느라 끝나지 않으면 잠깐 기다린 뒤 멈춘 트랜잭션을 풀어 준다.
-    // 멈췄던 작업이 예외로 끝나면 그 예외를 돌려주고, 성공하면 null을 돌려준다. 가운데 작업은 성공해야 한다.
     private Throwable runInMiddle(Callable<?> middle, Future<?> pausedWork) throws Exception {
         Future<?> middleWork = executor.submit(middle);
         try {
             middleWork.get(MIDDLE_WAIT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
-            // 가운데 작업이 잠금을 기다리는 중이다. 멈춘 쪽을 풀면 이어서 끝난다.
         }
         resume.countDown();
         middleWork.get(60, TimeUnit.SECONDS);
@@ -338,7 +322,6 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT ST_Longitude(location) FROM spot WHERE id = ?", Double.class, spotId);
     }
 
-    /** 멈출 지점에서 부를 동작이다. 테스트가 끝나면 비운다. */
     static final class PauseHooks {
 
         static volatile Runnable beforeBakjiDetailRead;
@@ -358,8 +341,6 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
         }
     }
 
-    // 제보 상세 리포지토리와 재판정 매퍼를 한 겹 감싸서, 정해 둔 메서드의 앞이나 뒤에서 멈출 지점을 부른다.
-    // 두 빈은 JDK 프록시라서 Mockito 스파이로는 실제 메서드를 부를 수 없다. 그래서 같은 인터페이스를 구현하는 프록시로 감싸 원래 빈에 넘긴다.
     @TestConfiguration(proxyBeanMethods = false)
     static class PauseHookConfig {
 

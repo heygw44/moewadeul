@@ -29,7 +29,6 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 class BasecampContactVisibilityApiIntegrationTest {
 
     private static final String CONTACT = "https://open.kakao.com/o/abc";
-    // MutableClock 기본 시각(2026-10-05T03:00:00Z)을 UTC 컬럼 값으로 쓴 것이다. 시점별 시각은 이 값에서 옮긴다.
     private static final String COMPLETED_AT = "2026-10-05 03:00:00";
 
     private enum Relation {
@@ -52,8 +51,6 @@ class BasecampContactVisibilityApiIntegrationTest {
         }
     }
 
-    // 현재 시각을 완료 시각 기준으로 얼마나 옮길지는 completedOffset이다. 완료 상태가 아니면 null이다.
-    // contactOpen은 활성 멤버 전체에게 보이는 시점이고, leaderOnly는 확정 전이라 캠프 리더에게만 보이는 시점이다.
     private enum Timing {
         RECRUITING("모집 중", "RECRUITING", null, false, true),
         CLOSED("마감", "CLOSED", null, false, true),

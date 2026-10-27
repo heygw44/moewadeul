@@ -205,7 +205,6 @@ class MemoryWithdrawalCleanupIntegrationTest {
         return new MemoryWriteCommand(null, 37.25, 127.25, YESTERDAY, 1, null, "PUBLIC", imageIds);
     }
 
-    // 썸네일과 함께 업로드 URL을 발급하고, 회원이 두 URL로 파일을 올린 것처럼 테스트 저장소에 객체를 둔다.
     private long uploaded(long ownerId) {
         long imageId = uploadService
                 .issue(ownerId, new MemoryImageUploadCommand("image/png", SIZE, THUMBNAIL_SIZE))

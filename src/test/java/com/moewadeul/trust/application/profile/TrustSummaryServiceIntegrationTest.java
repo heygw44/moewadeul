@@ -22,10 +22,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class TrustSummaryServiceIntegrationTest {
 
     private static final Instant NOW = MutableClock.DEFAULT_INSTANT;
-    // 후기 작성 기한(14일)이 지나 받은 후기가 공개되는 완료 시각이다.
-    private static final Instant LONG_AGO = NOW.minus(Duration.ofDays(20));
-    // 작성 기한이 남아 있어 반대 방향 후기가 없으면 공개되지 않는 완료 시각이다.
-    private static final Instant JUST_COMPLETED = NOW.minus(Duration.ofDays(1));
+    private static final Instant COMPLETED_PAST_REVIEW_DEADLINE = NOW.minus(Duration.ofDays(20));
+    private static final Instant COMPLETED_WITHIN_REVIEW_DEADLINE = NOW.minus(Duration.ofDays(1));
     private static final Duration RECENT_PERIOD = Duration.ofDays(180);
 
     @Autowired
@@ -63,9 +61,10 @@ class TrustSummaryServiceIntegrationTest {
     void twoCompletedCompanionsIsLevelOne() {
         long member = fixture.saveVerifiedMember(TestSequence.nickname());
         for (int i = 0; i < 2; i++) {
-            long basecampId = fixture.saveBasecamp("COMPLETED", LONG_AGO);
+            long basecampId = fixture.saveBasecamp("COMPLETED", COMPLETED_PAST_REVIEW_DEADLINE);
             fixture.insertMember(basecampId, member, "MEMBER", "ACTIVE");
-            fixture.insertReview(basecampId, fixture.leaderIdOf(basecampId), member, true, LONG_AGO);
+            fixture.insertReview(
+                    basecampId, fixture.leaderIdOf(basecampId), member, true, COMPLETED_PAST_REVIEW_DEADLINE);
         }
 
         assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(1);
@@ -77,25 +76,23 @@ class TrustSummaryServiceIntegrationTest {
     void doesNotCountUnrevealedHiddenNotCompletedOrLeft() {
         long member = fixture.saveVerifiedMember(TestSequence.nickname());
         makeQualified(member);
-        // 이 후기들이 세어지면 비율이 80% 아래로 내려간다.
-        long unrevealed = fixture.saveBasecamp("COMPLETED", JUST_COMPLETED);
+        long unrevealed = fixture.saveBasecamp("COMPLETED", COMPLETED_WITHIN_REVIEW_DEADLINE);
         fixture.insertMember(unrevealed, member, "MEMBER", "ACTIVE");
-        long hiddenBasecamp = fixture.saveBasecamp("COMPLETED", LONG_AGO);
+        long hiddenBasecamp = fixture.saveBasecamp("COMPLETED", COMPLETED_PAST_REVIEW_DEADLINE);
         fixture.insertMember(hiddenBasecamp, member, "MEMBER", "ACTIVE");
-        long hidden = fixture.insertReview(hiddenBasecamp, fixture.leaderIdOf(hiddenBasecamp), member, false, LONG_AGO);
+        long hidden = fixture.insertReview(
+                hiddenBasecamp, fixture.leaderIdOf(hiddenBasecamp), member, false, COMPLETED_PAST_REVIEW_DEADLINE);
         fixture.hide(hidden);
         for (int i = 0; i < 3; i++) {
             fixture.insertReview(unrevealed, fixture.saveVerifiedMember(TestSequence.nickname()), member, false, NOW);
         }
-        // 완료되지 않은 베이스캠프의 ACTIVE 행과 완료된 베이스캠프의 LEFT 행은 완료한 동행이 아니다.
         long recruiting = fixture.saveBasecamp("RECRUITING", null);
         fixture.insertMember(recruiting, member, "MEMBER", "ACTIVE");
-        long completedButLeft = fixture.saveBasecamp("COMPLETED", LONG_AGO);
+        long completedButLeft = fixture.saveBasecamp("COMPLETED", COMPLETED_PAST_REVIEW_DEADLINE);
         fixture.insertMember(completedButLeft, member, "MEMBER", "LEFT");
 
         TrustDetail detail = trustSummaryService.detail(member);
 
-        // 완료된 ACTIVE 행은 makeQualified의 3개와 공개 전 후기 베이스캠프, 숨긴 후기 베이스캠프를 합쳐 5개다.
         assertThat(detail.completedCompanions()).isEqualTo(5);
         assertThat(detail.rejoinRate()).isEqualTo(80);
         assertThat(detail.trustLevel()).isEqualTo(2);
@@ -105,7 +102,7 @@ class TrustSummaryServiceIntegrationTest {
     @DisplayName("[RV-03][TR-01] 작성 기한이 남아 있어도 반대 방향 후기가 있으면 그 후기는 센다")
     void countsReviewWhenReverseReviewExists() {
         long member = fixture.saveVerifiedMember(TestSequence.nickname());
-        long basecampId = fixture.saveBasecamp("COMPLETED", JUST_COMPLETED);
+        long basecampId = fixture.saveBasecamp("COMPLETED", COMPLETED_WITHIN_REVIEW_DEADLINE);
         fixture.insertMember(basecampId, member, "MEMBER", "ACTIVE");
         long leader = fixture.leaderIdOf(basecampId);
         long other = fixture.saveVerifiedMember(TestSequence.nickname());
@@ -116,7 +113,6 @@ class TrustSummaryServiceIntegrationTest {
 
         TrustDetail detail = trustSummaryService.detail(member);
 
-        // 리더의 후기만 공개된다. other는 member가 쓰지 않았고 기한도 남아 있어 공개되지 않는다.
         assertThat(detail.rejoinRate()).isEqualTo(100);
     }
 
@@ -197,23 +193,31 @@ class TrustSummaryServiceIntegrationTest {
     @DisplayName("[F-15] 대표 태그는 공개된 후기의 태그만 세어 많은 순서로 3개, 같은 횟수는 선언 순서로 고른다")
     void topTagsCountOnlyRevealedReviews() {
         long member = fixture.saveVerifiedMember(TestSequence.nickname());
-        long basecampId = fixture.saveBasecamp("COMPLETED", LONG_AGO);
+        long basecampId = fixture.saveBasecamp("COMPLETED", COMPLETED_PAST_REVIEW_DEADLINE);
         fixture.insertMember(basecampId, member, "MEMBER", "ACTIVE");
-        tagged(basecampId, fixture.leaderIdOf(basecampId), member, LONG_AGO, "LATE", "ON_TIME");
-        tagged(basecampId, fixture.saveVerifiedMember(TestSequence.nickname()), member, LONG_AGO, "LATE");
+        tagged(basecampId, fixture.leaderIdOf(basecampId), member, COMPLETED_PAST_REVIEW_DEADLINE, "LATE", "ON_TIME");
         tagged(
                 basecampId,
                 fixture.saveVerifiedMember(TestSequence.nickname()),
                 member,
-                LONG_AGO,
+                COMPLETED_PAST_REVIEW_DEADLINE,
+                "LATE");
+        tagged(
+                basecampId,
+                fixture.saveVerifiedMember(TestSequence.nickname()),
+                member,
+                COMPLETED_PAST_REVIEW_DEADLINE,
                 "ON_TIME",
                 "CONSIDERATE",
                 "NO_SHOW");
-        // 숨긴 후기와 공개 전 후기의 태그는 세지 않는다.
-        long hidden =
-                tagged(basecampId, fixture.saveVerifiedMember(TestSequence.nickname()), member, LONG_AGO, "LITTERING");
+        long hidden = tagged(
+                basecampId,
+                fixture.saveVerifiedMember(TestSequence.nickname()),
+                member,
+                COMPLETED_PAST_REVIEW_DEADLINE,
+                "LITTERING");
         fixture.hide(hidden);
-        long unrevealedBasecamp = fixture.saveBasecamp("COMPLETED", JUST_COMPLETED);
+        long unrevealedBasecamp = fixture.saveBasecamp("COMPLETED", COMPLETED_WITHIN_REVIEW_DEADLINE);
         for (int i = 0; i < 4; i++) {
             tagged(
                     unrevealedBasecamp,
@@ -244,14 +248,13 @@ class TrustSummaryServiceIntegrationTest {
         return reviewId;
     }
 
-    // 임박 탈퇴 행마다 베이스캠프가 따로 필요하다. 같은 베이스캠프에는 한 회원의 행이 하나뿐이기 때문이다.
     private void addEarlyLeave(long member, Instant leftAt) {
         long basecampId = fixture.saveBasecamp("CONFIRMED", null);
         fixture.insertEarlyLeaver(basecampId, member, leftAt);
     }
 
     private void makeQualified(long member) {
-        fixture.insertQualifiedRecord(member, LONG_AGO);
+        fixture.insertQualifiedRecord(member, COMPLETED_PAST_REVIEW_DEADLINE);
     }
 
     private void insertSanction(long memberId, String type, String status, Instant startsAt) {

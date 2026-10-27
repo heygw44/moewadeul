@@ -70,7 +70,6 @@ class BasecampJpaRepositoryIntegrationTest {
         Long id = basecampRepository
                 .saveAndFlush(Basecamp.open(leader.getId(), spotId, details, NOW))
                 .getId();
-        // members는 지연 로딩이라 같은 트랜잭션 안에서 읽는다.
         transactionTemplate.executeWithoutResult(status -> {
             Basecamp found = basecampRepository.findById(id).orElseThrow();
 

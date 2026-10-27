@@ -63,7 +63,7 @@ class SanctionNotificationIntegrationTest {
     @Test
     @DisplayName("[F-20][SN-10] 7일 정지를 확정하면 알림 본문에 한국 시간 종료 시각이 들어간다")
     void suspensionNotificationShowsEndInKoreanTime() {
-        // given: 테스트 시계는 2026-10-05 12:00(한국 시간)이라 7일 뒤는 2026-10-12 12:00이다.
+        // given
         confirm(SanctionType.WARNING);
         confirm(SanctionType.SUSPEND_7D);
 

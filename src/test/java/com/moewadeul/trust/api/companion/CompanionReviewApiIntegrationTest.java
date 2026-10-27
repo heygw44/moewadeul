@@ -22,12 +22,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-/**
- * 동행 후기 API의 신뢰 단계 검사를 HTTP 요청으로 확인한다.
- *
- * <p>보안 설정은 이메일 인증만 검사하고, 본인확인을 마쳤는지는 서비스가 검사한다. 그래서 이메일 인증만 마친 회원이 보안 설정을
- * 통과한 뒤 서비스에서 403을 받는지 실제 요청으로 확인한다.
- */
 @IntegrationTest
 @AutoConfigureMockMvc
 class CompanionReviewApiIntegrationTest {
@@ -101,7 +95,6 @@ class CompanionReviewApiIntegrationTest {
         assertThat(fixture.reviewCount()).isZero();
     }
 
-    // 쓰기 요청은 이메일 인증을 마친 회원만 보낼 수 있어서, 로그인한 뒤 인증 코드를 발급받아 인증한다.
     private Cookie verifiedSession(long memberId) {
         Cookie session = login(memberId);
         String code = emailVerificationService

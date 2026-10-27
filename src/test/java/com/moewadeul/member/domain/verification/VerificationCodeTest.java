@@ -15,8 +15,8 @@ class VerificationCodeTest {
 
     private static final long MEMBER_ID = 1L;
     private static final String CODE = "123456";
-    // printf '1:123456' | shasum -a 256 으로 따로 계산한 값이다. 해시 방식이 바뀌면 저장된 해시와 어긋나므로 값을 고정해 둔다.
-    private static final String CODE_HASH = "0a5538553f1a5746c15e0ad5df86655c5663ef805941dcdab1d17b3ecbfe7718";
+    private static final String SHA256_OF_1_COLON_123456 =
+            "0a5538553f1a5746c15e0ad5df86655c5663ef805941dcdab1d17b3ecbfe7718";
 
     @ParameterizedTest
     @ValueSource(ints = {0, 7, 42, 999, 12_345, 999_999})
@@ -74,7 +74,7 @@ class VerificationCodeTest {
         String hash = VerificationCode.hash(MEMBER_ID, CODE);
 
         // then
-        assertThat(hash).hasSize(64).matches("[0-9a-f]{64}").isEqualTo(CODE_HASH);
+        assertThat(hash).hasSize(64).matches("[0-9a-f]{64}").isEqualTo(SHA256_OF_1_COLON_123456);
     }
 
     @Test
@@ -87,19 +87,22 @@ class VerificationCodeTest {
     @Test
     @DisplayName("[F-01][EV-02] 저장된 해시와 같은 회원·같은 코드일 때만 일치한다")
     void matchesOnlyForSameMemberAndSameCode() {
-        assertThat(VerificationCode.matches(MEMBER_ID, CODE, CODE_HASH)).isTrue();
-        assertThat(VerificationCode.matches(MEMBER_ID, "123457", CODE_HASH)).isFalse();
-        assertThat(VerificationCode.matches(2L, CODE, CODE_HASH)).isFalse();
+        assertThat(VerificationCode.matches(MEMBER_ID, CODE, SHA256_OF_1_COLON_123456))
+                .isTrue();
+        assertThat(VerificationCode.matches(MEMBER_ID, "123457", SHA256_OF_1_COLON_123456))
+                .isFalse();
+        assertThat(VerificationCode.matches(2L, CODE, SHA256_OF_1_COLON_123456)).isFalse();
     }
 
     @Test
     @DisplayName("[F-01][EV-02] 코드나 저장된 해시가 null이거나 해시가 잘려 있으면 일치하지 않는다")
     void doesNotMatchNullOrTruncatedHash() {
-        assertThat(VerificationCode.matches(MEMBER_ID, null, CODE_HASH)).isFalse();
-        assertThat(VerificationCode.matches(MEMBER_ID, CODE, null)).isFalse();
-        assertThat(VerificationCode.matches(MEMBER_ID, CODE, CODE_HASH.substring(0, 63)))
+        assertThat(VerificationCode.matches(MEMBER_ID, null, SHA256_OF_1_COLON_123456))
                 .isFalse();
-        assertThat(VerificationCode.matches(MEMBER_ID, CODE, CODE_HASH.toUpperCase(Locale.ROOT)))
+        assertThat(VerificationCode.matches(MEMBER_ID, CODE, null)).isFalse();
+        assertThat(VerificationCode.matches(MEMBER_ID, CODE, SHA256_OF_1_COLON_123456.substring(0, 63)))
+                .isFalse();
+        assertThat(VerificationCode.matches(MEMBER_ID, CODE, SHA256_OF_1_COLON_123456.toUpperCase(Locale.ROOT)))
                 .isFalse();
     }
 
@@ -113,7 +116,6 @@ class VerificationCodeTest {
         assertThat(text).doesNotContain(CODE);
     }
 
-    // 구현이 random.nextInt(bound)를 부르므로 그 값만 고정한다. 한 번에 한 값만 쓰는 테스트라서 SecureRandom을 상속해 쓴다.
     private static SecureRandom fixedRandom(int value) {
         return new SecureRandom() {
             @Override

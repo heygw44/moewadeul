@@ -49,7 +49,6 @@ class S3ImageStorageTest {
 
     @BeforeEach
     void setUp() {
-        // 서명 계산에만 쓰는 고정 자격 증명이다. 네트워크를 쓰지 않는다.
         presigner = S3Presigner.builder()
                 .region(Region.AP_NORTHEAST_2)
                 .credentialsProvider(
@@ -193,7 +192,7 @@ class S3ImageStorageTest {
     @Test
     @DisplayName("[NFR-05] 동시에 확인하는 수가 한도에 닿으면 S3를 부르지 않고 503 IMAGE_STORAGE_UNAVAILABLE로 끝낸다")
     void findObjectSizeRejectsWhenLimitReached() throws Exception {
-        // given: 확인 하나가 S3 응답을 기다리며 한도(1)의 자리를 쥐고 있다.
+        // given
         CountDownLatch entered = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         S3Client s3Client = mock(S3Client.class);

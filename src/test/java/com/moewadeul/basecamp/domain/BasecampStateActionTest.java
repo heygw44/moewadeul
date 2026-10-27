@@ -19,7 +19,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
-/** 상태별로 할 수 있는 일 표의 칸을 하나도 빠짐없이 확인한다. 완료와 취소는 서로 다른 상태라서 따로 센다. */
 class BasecampStateActionTest {
 
     private static final Instant LATER = NOW.plusSeconds(60);

@@ -93,7 +93,6 @@ class PasswordResetConcurrencyIntegrationTest {
         assertThat(passwordEncoder.matches(OLD_PASSWORD, storedHash)).isFalse();
     }
 
-    // 스레드마다 별도 트랜잭션으로 호출한다. 시작 신호를 모두가 기다렸다가 동시에 출발한다.
     private List<Outcome> runConcurrently(String rawToken, List<String> passwords) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(THREADS);
         CountDownLatch ready = new CountDownLatch(THREADS);
@@ -133,14 +132,12 @@ class PasswordResetConcurrencyIntegrationTest {
         }
     }
 
-    // 성공이면 failure가 null이다. 실패는 던진 예외를 그대로 담아 MemberException이 아닌 예외도 걸러낸다.
     private record Outcome(String password, RuntimeException failure) {
 
         boolean succeeded() {
             return failure == null;
         }
 
-        // 레코드 기본 toString은 비밀번호를 찍는다. 단언 실패 메시지에 새지 않게 숨긴다.
         @Override
         public String toString() {
             return "Outcome[" + (succeeded() ? "success" : failure.getClass().getSimpleName()) + "]";

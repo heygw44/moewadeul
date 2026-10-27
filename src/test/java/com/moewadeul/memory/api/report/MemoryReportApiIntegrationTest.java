@@ -236,7 +236,6 @@ class MemoryReportApiIntegrationTest {
                 session);
     }
 
-    // 신고자마다 로그인하지 않아도 되도록 회원 행만 만들고 검토 전 신고를 직접 넣는다.
     private void insertReviewPendingReports(long memoryId, int count) {
         for (int i = 0; i < count; i++) {
             jdbc.update(

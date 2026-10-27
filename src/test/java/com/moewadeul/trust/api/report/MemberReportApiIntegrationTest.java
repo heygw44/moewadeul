@@ -407,7 +407,6 @@ class MemberReportApiIntegrationTest {
         return memberId;
     }
 
-    // 완료된 지 elapsed가 지난 베이스캠프와 그 멤버 한 명이다. 작성 기한(14일)을 넘기면 받은 후기가 공개된다.
     private CompletedScenario completedScenario(Duration elapsed) {
         long basecampId = fixture.saveBasecamp("COMPLETED", clock.instant().minus(elapsed));
         return new CompletedScenario(basecampId, fixture.leaderIdOf(basecampId), joinedMember(basecampId));
@@ -415,7 +414,6 @@ class MemberReportApiIntegrationTest {
 
     private record CompletedScenario(long basecampId, long leaderId, long reporterId) {}
 
-    // 로그인할 수 있도록 비밀번호 해시를 채우고, 실제 흐름대로 로그인한 세션에서 인증 코드를 확인해 이메일 인증 권한을 얻는다.
     private Cookie verifiedSession(long memberId) {
         Cookie session = login(memberId);
         String code = emailVerificationService

@@ -60,7 +60,6 @@ class ProgramSeatReleaseIntegrationTest {
         fixture.saveApplication(programId, holder, "CONFIRMED");
         fixture.saveVacancyAlert(programId, waiting);
         fixture.saveVacancyAlert(programId, holder);
-        // 취소한 회원도 알림 신청자다. 같은 트랜잭션에서 바꾼 신청 상태가 대상 조회 전에 반영되는지 확인한다.
         fixture.saveVacancyAlert(programId, canceler);
 
         // when

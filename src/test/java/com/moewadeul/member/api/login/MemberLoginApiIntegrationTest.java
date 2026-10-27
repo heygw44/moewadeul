@@ -39,7 +39,6 @@ class MemberLoginApiIntegrationTest {
     private static final String WRONG_PASSWORD = "Wrong-pass-1!";
     private static final String SESSION_COOKIE = "SESSION";
     private static final String LOCAL_IP = "127.0.0.1";
-    // DATETIME 컬럼에 UTC 시각을 문자열로 넣는다. 드라이버의 시간대 변환이 끼어들지 않게 하려는 것이다.
     private static final DateTimeFormatter DATETIME_UTC =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").withZone(ZoneOffset.UTC);
 

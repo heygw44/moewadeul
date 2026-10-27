@@ -97,7 +97,6 @@ class MemoryLikeConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM memory_like WHERE memory_id = ?", Integer.class, memoryId);
     }
 
-    // 요청마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private <T> List<Throwable> runConcurrently(List<Long> memberIds, MemberAction<T> action) throws Exception {
         int threads = memberIds.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

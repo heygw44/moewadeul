@@ -25,9 +25,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// 픽스처의 공원 이름은 실제 공원이지만, 경계는 테스트에서 지어낸 작은 사각형이다. 좌표는 (경도 위도) 순서다.
-// parks_20251231.tsv: 북한산(국립, 경도 126.9~127.0, 위도 37.6~37.7), 대둔산(도립, POLYGON으로 적은 경계), 강천산(군립, 조각 두 개)
-// parks_20260630.tsv: 북한산 경계를 경도 127.1~127.2로 옮기고, 대둔산은 그대로 두고, 강천산을 빼고, 천마산(군립)을 더했다.
 @IntegrationTest
 class ParkBoundaryLoadServiceIntegrationTest {
 
@@ -81,7 +78,7 @@ class ParkBoundaryLoadServiceIntegrationTest {
         // when
         parkBoundaryLoadService.load(fixture(FIXTURE));
 
-        // then: 북한산 경계 첫 점은 파일에 (126.9 37.6)으로 적혀 있다.
+        // then
         Map<String, Object> firstPoint = jdbcTemplate.queryForMap(
                 "SELECT ST_Longitude(p.point) AS longitude, ST_Latitude(p.point) AS latitude FROM"
                         + " (SELECT ST_PointN(ST_ExteriorRing(ST_GeometryN(boundary, 1)), 1) AS point"
@@ -171,7 +168,7 @@ class ParkBoundaryLoadServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 형식이 깨진 줄이 있으면 공원을 하나도 저장하지 않고, 줄 번호를 실패 기록에 남긴다")
     void invalidFileFailsRunWithoutStoringAnyPark() throws IOException {
-        // given: 세 번째 줄의 구분이 적재 대상이 아니다.
+        // given
         String content =
                 Files.readString(fixture(FIXTURE), StandardCharsets.UTF_8).replace("PROVINCIAL_PARK", "URBAN_PARK");
         Path file = Files.writeString(tempDir.resolve("parks_20251231.tsv"), content, StandardCharsets.UTF_8);

@@ -20,9 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class SpotPersistenceIntegrationTest {
 
-    // 북한산국립공원 안쪽 좌표다.
     private static final GeoPoint BUKHANSAN = new GeoPoint(37.66, 126.98);
-    // 위 좌표를 덮는 사각형 경계(경도 126.9~127.1, 위도 37.6~37.7)다. 공원 경계 파일과 같은 경도, 위도 순서로 적는다.
     private static final String BUKHANSAN_BOUNDARY_WKT =
             "MULTIPOLYGON(((126.9 37.6, 127.1 37.6, 127.1 37.7, 126.9 37.7, 126.9 37.6)))";
 
@@ -83,7 +81,6 @@ class SpotPersistenceIntegrationTest {
         return jdbcTemplate.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
     }
 
-    // DATETIME 컬럼에는 UTC 시각이 들어 있으므로(connectionTimeZone=UTC) LocalDateTime을 UTC로 읽어 Instant로 바꾼다.
     private StoredSpot findStoredSpot(long id) {
         return jdbcTemplate.queryForObject(
                 "SELECT type, status, weather_nx, weather_ny, park_warning, protected_area_id, area_checked_at"

@@ -25,7 +25,7 @@ class ProgramPaymentExpiryServiceTest {
     @Test
     @DisplayName("[NFR-09][PG-05] 신청 하나가 예외로 실패해도 나머지는 계속 처리하고, 예외로 실패한 수만 failed에 센다")
     void countsOnlyFailuresThatThrew() {
-        // given: 1번은 잠금 대기 시간 초과, 2번은 결제가 먼저 확정해 바뀐 것이 없음, 3번은 정상 만료
+        // given
         ExpiryTarget lockTimeout = new ExpiryTarget(1L, 10L, 100L);
         ExpiryTarget alreadyPaid = new ExpiryTarget(2L, 20L, 100L);
         ExpiryTarget due = new ExpiryTarget(3L, 30L, 100L);

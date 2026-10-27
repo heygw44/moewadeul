@@ -15,7 +15,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class SpotClusterCellTriggerIntegrationTest {
 
-    // 트리거가 쌓은 값과 비교하려고 spot에서 새로 센다. 칸 번호 식은 마이그레이션의 프로시저와 같다.
     private static final String LEVELS =
             "(SELECT 0 AS grid_level UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3"
                     + " UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7) g";
@@ -43,7 +42,7 @@ class SpotClusterCellTriggerIntegrationTest {
     @Test
     @DisplayName("[F-03] 장소를 넣으면 트리거가 8단계 격자 칸마다 장소 수와 위도·경도 합을 더한다")
     void insertAddsSpotToEveryGridLevel() {
-        // given & when: 서울시청 근처 야영장 두 곳은 0.32도 칸에서는 같은 칸, 0.0025도 칸에서는 다른 칸이다.
+        // given & when
         insertSpot("CAMPSITE", "ACTIVE", false, 37.5665, 126.978);
         insertSpot("CAMPSITE", "ACTIVE", false, 37.5701, 126.9832);
         insertSpot("CAMPSITE", "HIDDEN", false, 37.5665, 126.978);
@@ -98,7 +97,7 @@ class SpotClusterCellTriggerIntegrationTest {
     @Test
     @DisplayName("[F-03] 집계 표를 먼저 비운 뒤 장소를 지워도 음수 행이 남지 않는다")
     void deletingSpotsAfterAggregatesAreClearedLeavesNoNegativeRows() {
-        // given: 테스트 정리처럼 집계 표를 먼저 비운다
+        // given
         insertSpot("CAMPSITE", "ACTIVE", false, 37.5665, 126.978);
         jdbcTemplate.update("DELETE FROM spot_cluster_total");
         jdbcTemplate.update("DELETE FROM spot_cluster_cell");
@@ -118,7 +117,6 @@ class SpotClusterCellTriggerIntegrationTest {
         assertSameRows(jdbcTemplate.queryForList(ACTUAL_CELL), jdbcTemplate.queryForList(EXPECTED_CELL));
     }
 
-    // 위도·경도 합은 더하고 빼는 순서에 따라 부동소수점 끝자리가 달라질 수 있어서 오차를 두고 비교한다.
     private static void assertSameRows(List<Map<String, Object>> actual, List<Map<String, Object>> expected) {
         assertThat(actual).hasSameSizeAs(expected);
         for (int i = 0; i < expected.size(); i++) {
@@ -138,7 +136,6 @@ class SpotClusterCellTriggerIntegrationTest {
         }
     }
 
-    // 기대값 쿼리의 FLOOR와 COALESCE는 실수·정수를 돌려주고, 집계 표는 정수 칸 번호와 BOOLEAN을 돌려준다. 그래서 같은 형태로 바꿔 비교한다.
     private static Object comparable(Object value) {
         if (value instanceof Boolean flag) {
             return flag ? 1.0 : 0.0;

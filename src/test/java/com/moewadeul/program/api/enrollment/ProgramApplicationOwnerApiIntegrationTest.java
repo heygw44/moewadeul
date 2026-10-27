@@ -23,11 +23,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-/**
- * 행사 신청의 결제와 취소를 신청자 본인만 할 수 있는지 HTTP 요청으로 확인한다.
- *
- * <p>경로에는 신청 ID만 있어서, 다른 회원이 남의 신청 ID를 넣어 보낼 수 있다. 서비스는 신청자와 로그인한 회원을 비교해 거부해야 한다.
- */
 @IntegrationTest
 @AutoConfigureMockMvc
 class ProgramApplicationOwnerApiIntegrationTest {
@@ -103,7 +98,6 @@ class ProgramApplicationOwnerApiIntegrationTest {
                 aMember().passwordHash(passwordEncoder.encode(PASSWORD)).build());
     }
 
-    // 쓰기 요청은 이메일 인증을 마친 회원만 보낼 수 있어서, 로그인한 뒤 인증 코드를 발급받아 인증한다.
     private Cookie login(Member member) {
         MvcTestResult result = mvc.post()
                 .uri("/api/auth/login")

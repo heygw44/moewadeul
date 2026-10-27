@@ -31,7 +31,6 @@ class BakjiApiIntegrationTest {
     private static final String SESSION_COOKIE = "SESSION";
     private static final String LOCAL_IP = "127.0.0.1";
 
-    // 경계는 경도 127.0~127.5, 위도 37.0~37.5인 사각형이다.
     private static final String PARK_SQUARE = "MULTIPOLYGON(((127 37, 127.5 37, 127.5 37.5, 127 37.5, 127 37)))";
     private static final String INSIDE_PARK_BODY =
             "{\"name\":\"능선 끝 평지\",\"lat\":37.25,\"lng\":127.25,\"hasWater\":true,\"hasToilet\":false}";
@@ -138,7 +137,7 @@ class BakjiApiIntegrationTest {
                 .isEmpty();
         assertThat(first).bodyJson().doesNotHavePath("$.notice");
 
-        // when: 위도를 약 30m 북쪽으로 옮긴 좌표다(0.00027도).
+        // when
         MvcTestResult second = send(
                 mvc.post().uri(PATH),
                 session,
@@ -248,7 +247,6 @@ class BakjiApiIntegrationTest {
                 .isEqualTo("ACTIVE");
     }
 
-    // 본문이 null이면 본문 없이 보낸다. 쓰기 요청이므로 항상 CSRF 토큰을 싣는다.
     private MvcTestResult send(MockMvcTester.MockMvcRequestBuilder builder, Cookie session, String body) {
         MockMvcTester.MockMvcRequestBuilder request =
                 builder.with(csrf()).cookie(session).contentType(MediaType.APPLICATION_JSON);
@@ -290,8 +288,6 @@ class BakjiApiIntegrationTest {
         return session;
     }
 
-    // 실제 흐름대로 로그인한 세션에서 인증 코드를 확인해야 그 세션이 이메일 인증 권한을 얻는다.
-    // 코드 원값은 메일로만 나가므로, 테스트는 발송 처리기가 쓰는 서비스를 직접 불러 코드를 받는다.
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService

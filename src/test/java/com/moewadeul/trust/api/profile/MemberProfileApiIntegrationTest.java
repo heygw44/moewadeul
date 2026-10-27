@@ -181,7 +181,6 @@ class MemberProfileApiIntegrationTest {
     void verifiedMinorUsesSelfReportedAgeGroup() {
         Member target = saveMember();
         jdbc.update("UPDATE member SET self_age_group = 'TWENTIES' WHERE id = ?", target.getId());
-        // 테스트 시계는 한국 날짜로 2026-10-05라서 2008년생은 미성년이다.
         verifyIdentity(verifiedSession(target), 2008, "demo-minor");
         Cookie viewer = login(saveMember());
 
@@ -257,7 +256,6 @@ class MemberProfileApiIntegrationTest {
         return session;
     }
 
-    // 실제 흐름대로 로그인한 세션에서 인증 코드를 확인해야 그 세션이 이메일 인증 권한을 얻는다.
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService

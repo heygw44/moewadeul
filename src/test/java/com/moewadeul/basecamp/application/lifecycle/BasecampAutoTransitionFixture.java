@@ -8,7 +8,6 @@ import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-// 자동 처리 통합 테스트들이 함께 쓰는 JDBC 데이터 준비와 조회 도구다. 서비스를 거치지 않고 행을 직접 넣어, 원하는 상태에서 시작한다.
 final class BasecampAutoTransitionFixture {
 
     static final String AT_DEFAULT_INSTANT = "2026-10-05 03:00:00";
@@ -29,7 +28,6 @@ final class BasecampAutoTransitionFixture {
         return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
-    // 본인확인을 마친 2007년생 성인 회원을 직접 저장한다. 신뢰 단계가 1이라 탈퇴할 자격이 있다.
     long saveVerifiedMember() {
         long memberId = saveMember();
         jdbc.update(
@@ -43,7 +41,6 @@ final class BasecampAutoTransitionFixture {
         return memberId;
     }
 
-    /** 캠프 리더만 ACTIVE 멤버인 베이스캠프를 저장하고 그 ID를 돌려준다. 캠프 리더의 ID는 {@link #leaderIdOf}로 읽는다. */
     long saveBasecamp(String status, String closedReason, LocalDate startDate, LocalDate endDate) {
         long leaderId = saveVerifiedMember();
         jdbc.update("INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
@@ -71,7 +68,6 @@ final class BasecampAutoTransitionFixture {
         return saveBasecamp(status, null, START_DATE, END_DATE);
     }
 
-    /** 캠프 리더 외에 ACTIVE 멤버가 memberCount명 더 있는 베이스캠프를 저장한다. */
     long saveBasecampWithMembers(String status, int memberCount) {
         long basecampId = saveBasecamp(status);
         for (int i = 0; i < memberCount; i++) {
@@ -148,7 +144,6 @@ final class BasecampAutoTransitionFixture {
                 basecampId);
     }
 
-    /** 이벤트가 하나뿐이라고 보고 그 payload의 회원 ID를 돌려준다. */
     List<Long> payloadMemberIdsOf(String eventType, long basecampId) {
         String json = jdbc.queryForObject(
                 "SELECT payload FROM outbox_event WHERE event_type = ? AND aggregate_id = ?",

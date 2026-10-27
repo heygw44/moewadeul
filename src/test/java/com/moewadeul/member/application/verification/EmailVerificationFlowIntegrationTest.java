@@ -188,7 +188,7 @@ class EmailVerificationFlowIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-03] 메일 서버 장애로 같은 발송 요청을 여섯 번 다시 시도해도 코드 행은 하나이고, 메일이 나간 뒤 회원은 60초 뒤 재발송할 수 있다")
     void retriedSendRequestKeepsOneCodeRowAndLeavesResendAvailable() {
-        // given: 메일 서버가 여섯 번 연속 실패하고, 발행기는 그때마다 같은 이벤트를 다시 처리한다
+        // given
         SignupResult signedUp = signUp(TestSequence.email());
         mailSender.failNextSends(6);
         for (int attempt = 0; attempt < 6; attempt++) {
@@ -196,7 +196,7 @@ class EmailVerificationFlowIntegrationTest {
             clock.advance(outboxProperties.retryMaxDelay());
         }
 
-        // when: 메일 서버가 돌아와 일곱 번째 시도에서 메일이 나간다
+        // when
         publisher.publishPending();
 
         // then
@@ -204,7 +204,7 @@ class EmailVerificationFlowIntegrationTest {
         assertThat(mailSender.sent()).hasSize(1);
         assertThat(countVerificationRows()).isEqualTo(1);
 
-        // when & then: 메일이 나간 뒤 60초가 지나면 회원의 재발송 요청이 받아들여진다
+        // when & then
         clock.advance(Duration.ofSeconds(60));
         emailVerificationService.requestResend(signedUp.memberId(), REQUEST_IP);
         assertThat(countRows("outbox_event")).isEqualTo(2);

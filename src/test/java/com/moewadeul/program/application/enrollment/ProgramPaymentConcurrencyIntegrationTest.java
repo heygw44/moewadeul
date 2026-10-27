@@ -140,7 +140,6 @@ class ProgramPaymentConcurrencyIntegrationTest {
                 .isEqualTo(paid);
     }
 
-    // 컨트롤러와 같은 방식으로 멱등성 실행기를 거쳐 결제한다. 결과는 신청 ID와 결제 시각으로 비교한다.
     private Object payWithKey(long memberId, long applicationId, String key) {
         ProgramPayResult result = idempotencyExecutor.execute(
                 new IdempotentRequest(memberId, key, "POST /api/program-applications/" + applicationId + "/pay", null),
@@ -167,7 +166,6 @@ class ProgramPaymentConcurrencyIntegrationTest {
         return runConcurrently(actions);
     }
 
-    // 작업마다 스레드 하나로 동시에 출발시키고, 반환값과 던져진 예외를 모아 돌려준다.
     private Outcomes runConcurrently(List<Callable<Object>> actions) throws Exception {
         int threads = actions.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

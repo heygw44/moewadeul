@@ -220,7 +220,6 @@ class BasecampSearchApiIntegrationTest {
         Cookie session = fixture.identityVerifiedSession(viewer, "MALE");
         long target = fixture.insertBasecamp(leader, spotId, "RECRUITING", START);
         long otherSpot = fixture.insertSpot("다른 장소", 37.5, 127.5);
-        // 확정된 베이스캠프는 10월 22일에 끝나고, 검색 대상은 10월 20일~22일이라 겹친다.
         long confirmed = fixture.insertBasecamp(fixture.saveMember(), otherSpot, "CONFIRMED", START.minusDays(2));
         fixture.insertMemberRow(confirmed, viewer, "MEMBER", "ACTIVE");
         long farTarget = fixture.insertBasecamp(leader, spotId, "RECRUITING", START.plusDays(10));

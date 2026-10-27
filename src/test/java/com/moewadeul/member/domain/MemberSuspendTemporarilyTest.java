@@ -91,7 +91,6 @@ class MemberSuspendTemporarilyTest {
         assertThatThrownBy(() -> member.suspendTemporarily(UNTIL, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
-    // 상태를 바꾸는 공개 메서드가 아직 없어서, 테스트가 필요한 상태를 필드에 직접 넣는다.
     private static Member memberWithStatus(MemberStatus status, Instant suspendedUntil) {
         Member member = aMember().build();
         ReflectionTestUtils.setField(member, "status", status);

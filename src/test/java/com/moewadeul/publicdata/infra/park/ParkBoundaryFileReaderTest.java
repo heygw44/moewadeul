@@ -18,7 +18,6 @@ import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.WKTReader;
 
-// 공원 이름은 실제 공원이지만, 경계는 형식 검사를 확인하려고 테스트에서 지어낸 작은 사각형이다.
 class ParkBoundaryFileReaderTest {
 
     private static final String BOM = "\uFEFF";
@@ -37,7 +36,7 @@ class ParkBoundaryFileReaderTest {
     @Test
     @DisplayName("[F-06] 파일 이름에서 기준일을 읽고, 빈 줄을 건너뛰며 공원마다 이름, 구분, MULTIPOLYGON WKT를 그대로 읽는다")
     void readsRecordsAndSourceDate() throws IOException {
-        // given: 마지막에 빈 줄이 있다.
+        // given
         String county = "강천산\tCOUNTY_PARK\tMULTIPOLYGON(((127 35.4,127.05 35.4,127.05 35.45,127 35.45,127 35.4)))";
         Path file = write("kdpa-park-boundaries_20251231.tsv", HEADER + "\n" + BUKHANSAN + "\n" + county + "\n\n");
 
@@ -133,7 +132,7 @@ class ParkBoundaryFileReaderTest {
     @Test
     @DisplayName("[F-06] 헤더가 name, area_type, wkt를 탭으로 나눈 줄이 아니면 거부한다")
     void rejectsUnexpectedHeader() throws IOException {
-        // given: 열 순서가 다르다.
+        // given
         Path file = write("parks_20251231.tsv", "area_type\tname\twkt\nNATIONAL_PARK\t북한산\t" + BUKHANSAN_WKT + "\n");
 
         // when, then
@@ -158,7 +157,7 @@ class ParkBoundaryFileReaderTest {
     @Test
     @DisplayName("[F-06] 열이 세 개가 아닌 줄이 있으면 일부만 돌려주지 않고 파일 전체를 거부한다")
     void rejectsLineWithWrongColumnCount() throws IOException {
-        // given: 세 번째 줄에 탭이 하나 더 있다.
+        // given
         Path file = write("parks_20251231.tsv", HEADER + "\n" + BUKHANSAN + "\n" + DAEDUNSAN + "\t추가\n");
 
         // when, then
@@ -171,7 +170,7 @@ class ParkBoundaryFileReaderTest {
     @Test
     @DisplayName("[F-06] 구분이 국립·도립·군립공원이 아니면 파일 전체를 거부한다")
     void rejectsUnknownAreaType() throws IOException {
-        // given: 도시자연공원구역은 적재 대상이 아니고, OTHER도 파일에서는 받지 않는다.
+        // given
         Path urban =
                 write("parks_20251231.tsv", HEADER + "\n" + BUKHANSAN.replace("NATIONAL_PARK", "URBAN_PARK") + "\n");
         Path other = write("others_20251231.tsv", HEADER + "\n" + BUKHANSAN.replace("NATIONAL_PARK", "OTHER") + "\n");
@@ -262,7 +261,7 @@ class ParkBoundaryFileReaderTest {
     @Test
     @DisplayName("[F-06] 위도와 경도를 바꿔 써서 좌표가 경위도 범위 밖이면 파일 전체를 거부한다")
     void rejectsCoordinatesOutOfRange() throws IOException {
-        // given: 북한산 경계를 (위도 경도) 순서로 잘못 썼다. 그래서 위도 자리에 127이 들어간다.
+        // given
         Path file = write(
                 "parks_20251231.tsv",
                 HEADER + "\n" + BUKHANSAN + "\n대둔산\tPROVINCIAL_PARK\t"

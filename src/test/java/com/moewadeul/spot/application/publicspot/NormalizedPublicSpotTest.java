@@ -281,7 +281,7 @@ class NormalizedPublicSpotTest {
     @Test
     @DisplayName("[F-06] 위도나 경도가 허용 오차보다 많이 다르면 바뀐 좌표로 본다")
     void treatsCoordinateBeyondToleranceAsChanged() {
-        // given: 1e-6도는 허용 오차 1e-7도의 열 배이고 약 10cm다.
+        // given
         NormalizedPublicSpot spot = NormalizedPublicSpot.from(new PublicSpotCommand(
                 "100", "솔숲 야영장", 37.8813, 127.7298, null, null, null, null, null, null, null, null, null, Set.of()));
         PublicSpotRow movedLatitude = storedRow(37.8813 + 1e-6, 127.7298);
