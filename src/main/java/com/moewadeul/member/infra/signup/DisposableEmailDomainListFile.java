@@ -19,7 +19,7 @@ public class DisposableEmailDomainListFile {
 
     private static final String RESOURCE_PATH = "disposable-email-domains.txt";
     private static final String COMMENT_PREFIX = "#";
-    private static final int MAX_DOMAIN_LENGTH = 253;
+    static final int MAX_DOMAIN_LENGTH = 253;
 
     public List<String> readDomains() {
         Resource resource = new ClassPathResource(RESOURCE_PATH);
