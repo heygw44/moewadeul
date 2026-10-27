@@ -5,6 +5,7 @@ import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.domain.BasecampApplication;
 import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
+import com.moewadeul.basecamp.infra.BasecampLockMapper;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
@@ -19,12 +20,18 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>마지막 자리를 두고 승인 두 건이 겹치거나 마감과 승인이 겹쳐도 정원을 넘지 않도록, 베이스캠프 행을 쓰기 잠금으로 읽어
  * 같은 베이스캠프의 신청·취소·승인·거절을 한 번에 하나씩 처리한다.
+ *
+ * <p>승인은 신청자의 회원 행도 잠근다. 서로 다른 베이스캠프의 리더가 같은 신청자를 동시에 승인하면 베이스캠프 행 잠금만으로는 두 승인이 서로를
+ * 기다리지 않는다. 그러면 둘 다 상대가 넣은 멤버 행을 보지 못하고, 기간이 겹치는 두 베이스캠프에 같은 회원이 들어간다. 잠금 순서는 베이스캠프
+ * 행, 신청자의 회원 행, 그 밖의 행이다. 회원 행을 먼저 잠그는 쓰기(베이스캠프 열기, 혼자 가는 일정, 이용 정지, 탈퇴)는 같은 트랜잭션에서 기존
+ * 베이스캠프 행을 잠그지 않으므로, 이 순서로는 교착 상태가 생기지 않는다.
  */
 @Service
 @RequiredArgsConstructor
 public class BasecampApprovalService {
 
     private final BasecampRepository basecampRepository;
+    private final BasecampLockMapper basecampLockMapper;
     private final JoinEligibilityChecker joinEligibilityChecker;
     private final ActiveSpotChecker activeSpotChecker;
     private final OutboxEventRecorder outboxEventRecorder;
@@ -49,6 +56,7 @@ public class BasecampApprovalService {
     @Transactional
     public BasecampApproveResult approve(long basecampId, long applicationId, long leaderId) {
         Basecamp basecamp = lockLedBy(basecampId, leaderId);
+        lockApplicant(basecampId, applicationId);
         // 장소가 지도에서 내려가면 새 멤버를 받지 않는다. 숨긴 장소가 있다는 사실을 드러내지 않으려고 NOT_FOUND로 거부한다.
         // 거절은 대기 신청을 정리하는 일이라 장소 상태와 상관없이 할 수 있다.
         activeSpotChecker.requireActive(basecamp.getSpotId());
@@ -88,6 +96,15 @@ public class BasecampApprovalService {
             throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }
         return basecamp;
+    }
+
+    // 기간이 겹치는 다른 베이스캠프의 멤버인지 보는 조회는 잠그지 않는 읽기다. 그래서 신청자의 회원 행 잠금도 이 트랜잭션의 어떤 잠그지 않는
+    // 읽기보다 먼저 와야 한다. 그래야 겹치는 조회가 잠금을 얻은 뒤의 스냅숏을 읽어, 먼저 끝난 다른 승인이 넣은 멤버 행이 보인다.
+    private void lockApplicant(long basecampId, long applicationId) {
+        Long applicantId = basecampLockMapper.lockApplicantId(basecampId, applicationId);
+        if (applicantId != null) {
+            basecampLockMapper.lockMember(applicantId);
+        }
     }
 
     private void recordDecision(String eventType, Basecamp basecamp, BasecampApplication application) {

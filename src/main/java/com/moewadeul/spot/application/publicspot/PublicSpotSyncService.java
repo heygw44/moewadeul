@@ -243,6 +243,14 @@ public class PublicSpotSyncService {
     }
 
     private void update(UpsertPlan plan, Instant now) {
+        if (plan.detailUpdates.isEmpty()) {
+            return;
+        }
+        // 관리자 숨김·복구는 spot 행을 먼저 잠그고 public_spot_detail 행을 나중에 잠근다. 그런데 spot 열이 그대로인 장소는 updateDetails가
+        // public_spot_detail 행을 먼저 잠그고, 입지를 다시 넣거나 상태를 되돌릴 때 spot 행을 나중에 잠근다. 그래서 둘이 동시에 오면 데드락이 난다.
+        // 이를 피하려고 이 묶음이 쓰는 장소의 spot 행을 모두 먼저 잠근다. detailUpdates에는 이 묶음이 바꾸는 기존 장소가 모두 들어 있다.
+        publicSpotMapper.lockSpots(
+                plan.detailUpdates.stream().map(PublicSpotUpdateRow::spotId).toList());
         if (!plan.spotUpdates.isEmpty()) {
             publicSpotMapper.updateSpots(plan.spotUpdates, now);
         }

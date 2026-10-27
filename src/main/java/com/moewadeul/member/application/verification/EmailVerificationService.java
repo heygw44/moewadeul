@@ -17,6 +17,7 @@ import com.moewadeul.member.domain.verification.EmailVerificationPolicy.ResendHi
 import com.moewadeul.member.domain.verification.EmailVerificationRepository;
 import com.moewadeul.member.domain.verification.SendWindow;
 import com.moewadeul.member.domain.verification.VerificationCode;
+import com.moewadeul.member.infra.verification.EmailVerificationIpLockMapper;
 import com.moewadeul.member.infra.verification.EmailVerificationMapper;
 import com.moewadeul.member.infra.verification.MemberActivationMapper;
 import java.security.SecureRandom;
@@ -27,6 +28,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
@@ -44,6 +46,7 @@ public class EmailVerificationService {
     private final MemberRepository memberRepository;
     private final EmailVerificationRepository emailVerificationRepository;
     private final EmailVerificationMapper emailVerificationMapper;
+    private final EmailVerificationIpLockMapper ipLockMapper;
     private final MemberActivationMapper memberActivationMapper;
     private final OutboxEventRecorder outboxEventRecorder;
     private final OutboxEventJpaRepository outboxEventRepository;
@@ -83,16 +86,23 @@ public class EmailVerificationService {
     }
 
     /**
-     * 호출하면 그 IP가 최근 한 시간에 요청한 인증 메일 발송 수를 세어, 한도에 닿았으면 풀리기까지 남은 시간을 돌려준다.
-     * 닿지 않았으면 비어 있다. 가입의 첫 발송이 재발송과 같은 IP 한도를 쓰도록 가입 서비스가 이벤트를 기록하기 전에 부른다.
-     * 회원 행이 없어서 잠글 수 없으므로, 동시에 들어온 요청은 한도를 DB 커넥션 수만큼 넘길 수 있다.
+     * 호출하면 그 IP의 발송 잠금 행을 쓰기 잠금으로 잡은 뒤, 그 IP가 최근 한 시간에 요청한 인증 메일 발송 수를 센다.
+     * 세는 대상은 이미 코드 행을 만든 발송과 아직 코드 행이 없는 대기 중 발송 요청이다.
+     *
+     * <p>같은 IP로 이 메서드를 부른 다른 트랜잭션은 이 트랜잭션이 끝날 때까지 기다린다. 그래서 호출한 쪽이 이 수로 판정하고
+     * 발송 요청을 기록해 커밋할 때까지 같은 IP의 다른 요청이 끼어들지 못한다. 가입의 첫 발송과 재발송이 이 잠금을 함께 쓴다.
+     * 한 시간 구간은 잠금을 얻은 뒤의 시각으로 정한다. 기다린 시간만큼 구간이 뒤처지면 그사이 구간을 벗어난 발송까지 세기 때문이다.
+     * 판정에 쓸 현재 시각도 호출한 쪽이 이 메서드가 끝난 뒤에 읽는다.
+     *
+     * <p>호출하는 쪽의 트랜잭션에서 잠그지 않는 조회를 하기 전에 부른다.
+     * MySQL은 트랜잭션의 첫 일반 조회 때 읽기 스냅숏을 정한다. 그래서 먼저 조회하면, 잠금을 기다리는 동안 다른 요청이 커밋한
+     * 발송 요청을 세지 못한다.
      */
-    @Transactional
-    public Optional<Duration> ipBlockedFor(String requestIp) {
+    @Transactional(propagation = Propagation.MANDATORY)
+    public SendWindow lockSendsByIp(String requestIp) {
         requireRequestIp(requestIp);
-        Instant now = Instant.now(clock);
-        SendWindow byIp = summarizeSentByIp(requestIp, now);
-        return EmailVerificationPolicy.ipBlockedFor(Math.toIntExact(byIp.count()), byIp.oldestSentAt(), now);
+        ipLockMapper.lock(requestIp, Instant.now(clock));
+        return summarizeSentByIp(requestIp, Instant.now(clock));
     }
 
     /**
@@ -104,13 +114,15 @@ public class EmailVerificationService {
     public void requestResend(long memberId, String requestIp) {
         requireRequestIp(requestIp);
         // 회원 행을 잠가서 같은 회원의 재발송 요청을 한 줄로 세운다. 잠그지 않으면 동시에 온 요청이 모두 "이력 없음"으로 보고
-        // 한도 검사를 통과해 이벤트가 여러 건 쌓인다. 또 이 조회가 트랜잭션의 첫 읽기여야 한다. 그래야 아래 이력 조회가
+        // 한도 검사를 통과해 이벤트가 여러 건 쌓인다. 이어서 IP 잠금 행을 잡아 같은 IP의 가입과 재발송도 한 줄로 세운다.
+        // 잠금 순서는 늘 회원 행이 먼저, IP 행이 나중이고, 이력 조회는 두 잠금을 모두 얻은 뒤에 한다. 그래야 이력 조회가
         // 잠금을 얻은 뒤의 스냅샷을 읽어서, 먼저 끝난 요청이 기록한 이벤트가 보인다.
         Member member = memberRepository.findByIdForUpdate(memberId).orElseThrow(() -> memberNotFound(memberId));
         rejectIfAlreadyVerified(member);
+        SendWindow sentByIp = lockSendsByIp(requestIp);
 
         Instant now = Instant.now(clock);
-        ResendHistory history = loadResendHistory(memberId, requestIp, now);
+        ResendHistory history = loadResendHistory(memberId, sentByIp, now);
         Optional<Duration> blockedFor = EmailVerificationPolicy.resendBlockedFor(history, now);
         if (blockedFor.isPresent()) {
             throw new RateLimitedException(MemberErrorCode.EMAIL_RESEND_LIMITED, blockedFor.get());
@@ -194,16 +206,15 @@ public class EmailVerificationService {
         memberMetrics.recordEmailVerified();
     }
 
-    private ResendHistory loadResendHistory(long memberId, String requestIp, Instant now) {
+    private ResendHistory loadResendHistory(long memberId, SendWindow sentByIp, Instant now) {
         SendWindow daily = emailVerificationRepository.summarizeSentToMemberSince(
                 memberId, now.minus(EmailVerificationPolicy.DAILY_WINDOW));
-        SendWindow byIp = summarizeSentByIp(requestIp, now);
         return new ResendHistory(
                 emailVerificationRepository.findLastSentAt(memberId).orElse(null),
                 Math.toIntExact(daily.count()),
                 daily.oldestSentAt(),
-                Math.toIntExact(byIp.count()),
-                byIp.oldestSentAt(),
+                Math.toIntExact(sentByIp.count()),
+                sentByIp.oldestSentAt(),
                 hasPendingSendRequest(memberId));
     }
 

@@ -8,7 +8,7 @@ import com.moewadeul.basecamp.domain.BasecampOpenPolicy;
 import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.Capacity;
 import com.moewadeul.basecamp.domain.JoinCondition;
-import com.moewadeul.basecamp.infra.lifecycle.BasecampLeaderLockMapper;
+import com.moewadeul.basecamp.infra.BasecampLockMapper;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.time.KoreaTime;
@@ -42,7 +42,7 @@ public class BasecampOpenService {
     private final SanctionQueryService sanctionQueryService;
     private final ActiveSpotChecker activeSpotChecker;
     private final BasecampRepository basecampRepository;
-    private final BasecampLeaderLockMapper basecampLeaderLockMapper;
+    private final BasecampLockMapper basecampLockMapper;
     private final Clock clock;
 
     /**
@@ -63,7 +63,7 @@ public class BasecampOpenService {
     @Transactional
     public BasecampOpenResult open(long leaderId, BasecampOpenCommand command) {
         // 잠금이 트랜잭션의 첫 쿼리여야 한다. 그래야 아래 개수 조회가 잠금을 얻은 뒤의 스냅숏을 읽어서, 먼저 끝난 요청이 연 베이스캠프가 보인다.
-        basecampLeaderLockMapper.lockMember(leaderId);
+        basecampLockMapper.lockMember(leaderId);
         Instant now = clock.instant();
         BasecampOpenPolicy.requireSchedule(
                 command.startDate(), command.endDate(), LocalDate.ofInstant(now, KoreaTime.ZONE));

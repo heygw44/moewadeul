@@ -68,6 +68,17 @@
         </foreach>
     </insert>
 
+    <select id="lockSpots" resultType="long">
+        SELECT id
+        FROM spot
+        WHERE id IN
+        <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
+            #{spotId}
+        </foreach>
+        ORDER BY id
+        FOR UPDATE
+    </select>
+
     <!-- 행마다 값이 달라서, 바꿀 값을 UNION ALL 파생 테이블로 만들고 기본 키로 조인해 한 문장으로 갱신한다.
          INSERT ... ON DUPLICATE KEY UPDATE와 달리 이 문장은 그사이 행이 없어져도 새 행을 만들지 않는다. -->
     <update id="updateSpots">
