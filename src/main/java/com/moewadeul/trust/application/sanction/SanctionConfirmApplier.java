@@ -1,6 +1,7 @@
 package com.moewadeul.trust.application.sanction;
 
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.member.application.MemberWithdrawalService;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
@@ -27,8 +28,8 @@ public class SanctionConfirmApplier {
 
     @Transactional
     public SanctionConfirmResult apply(SanctionConfirmCommand command) {
-        long memberId = command.targetMemberId();
-        memberSuspensionService.lockForSanction(memberId);
+        LockedMember member = memberSuspensionService.lockForSanction(command.targetMemberId());
+        long memberId = member.id();
         Instant now = clock.instant();
         Integer highestLevel = sanctionRepository
                 .findHighestConfirmedLevel(memberId)
@@ -40,7 +41,7 @@ public class SanctionConfirmApplier {
         extendCiRetentionIfWithdrawn(memberId, now);
         boolean suspended = command.type().isSuspension();
         if (suspended) {
-            suspend(sanction);
+            suspend(member, sanction);
             outboxEventRecorder.record(
                     SanctionEvents.BASECAMP_CLEANUP_EVENT_TYPE,
                     SanctionEvents.AGGREGATE_TYPE,
@@ -61,12 +62,12 @@ public class SanctionConfirmApplier {
         return new SanctionConfirmResult(sanction.getId(), memberId, suspended);
     }
 
-    private void suspend(Sanction sanction) {
+    private void suspend(LockedMember member, Sanction sanction) {
         if (sanction.getType() == SanctionType.PERMANENT) {
-            memberSuspensionService.suspendPermanently(sanction.getMemberId());
+            memberSuspensionService.suspendPermanently(member);
             return;
         }
-        memberSuspensionService.suspendTemporarily(sanction.getMemberId(), sanction.getEndsAt());
+        memberSuspensionService.suspendTemporarily(member, sanction.getEndsAt());
     }
 
     private void extendCiRetentionIfWithdrawn(long memberId, Instant now) {

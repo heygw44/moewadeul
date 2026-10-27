@@ -2,6 +2,7 @@ package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.trust.domain.CompanionReviewPolicy;
 import com.moewadeul.trust.domain.TrustErrorCode;
@@ -102,10 +103,9 @@ public class MemberReportApplier {
     }
 
     private Instant suspendTarget(long reporterId, long targetMemberId, Instant now) {
-        memberSuspensionService.lockForSanction(Math.min(reporterId, targetMemberId));
-        memberSuspensionService.lockForSanction(Math.max(reporterId, targetMemberId));
+        LockedMember target = memberSuspensionService.lockForSanctionAlongWith(targetMemberId, reporterId);
         Instant endsAt = now.plus(Sanction.TEMPORARY_SUSPENSION);
-        memberSuspensionService.suspendTemporarily(targetMemberId, endsAt);
+        memberSuspensionService.suspendTemporarily(target, endsAt);
         return endsAt;
     }
 }

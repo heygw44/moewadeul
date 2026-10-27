@@ -1,5 +1,6 @@
 package com.moewadeul.trust.application.sanction;
 
+import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.trust.domain.sanction.Sanction;
 import com.moewadeul.trust.domain.sanction.SanctionRepository;
@@ -20,9 +21,9 @@ public class SuspensionResyncer {
     private final MemberSuspensionService memberSuspensionService;
     private final Clock clock;
 
-    public void resync(long memberId) {
+    public void resync(LockedMember member) {
         Instant now = clock.instant();
-        List<Sanction> active = sanctionRepository.findActiveSuspensions(memberId);
+        List<Sanction> active = sanctionRepository.findActiveSuspensions(member.id());
         boolean permanent = active.stream().anyMatch(sanction -> sanction.getType() == SanctionType.PERMANENT);
         Instant latestEnd = active.stream()
                 .map(Sanction::getEndsAt)
@@ -30,6 +31,6 @@ public class SuspensionResyncer {
                 .filter(endsAt -> endsAt.isAfter(now))
                 .max(Comparator.naturalOrder())
                 .orElse(null);
-        memberSuspensionService.resyncSuspension(memberId, permanent, latestEnd);
+        memberSuspensionService.resyncSuspension(member, permanent, latestEnd);
     }
 }

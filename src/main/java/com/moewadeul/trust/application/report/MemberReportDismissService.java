@@ -6,6 +6,7 @@ import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.trust.application.TrustAuditDetails;
 import com.moewadeul.trust.application.sanction.SuspensionResyncer;
@@ -43,8 +44,8 @@ public class MemberReportDismissService {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         report.requireInReview();
         Instant now = clock.instant();
-        memberSuspensionService.lockForSanction(report.getTargetMemberId());
-        Long liftedSanctionId = liftTemporarySuspensions(report, adminId, now);
+        LockedMember target = memberSuspensionService.lockForSanction(report.getTargetMemberId());
+        Long liftedSanctionId = liftTemporarySuspensions(report, target, adminId, now);
         ReportStatus before = report.getStatus();
         report.dismiss(adminId, note, now);
         outboxEventRecorder.record(
@@ -63,7 +64,7 @@ public class MemberReportDismissService {
         return new MemberReportStatusResult(reportId, report.getStatus().name());
     }
 
-    private Long liftTemporarySuspensions(MemberReport report, long adminId, Instant now) {
+    private Long liftTemporarySuspensions(MemberReport report, LockedMember target, long adminId, Instant now) {
         List<Sanction> temporaries = sanctionRepository.findUnliftedTemporaryByReportId(report.getId());
         if (temporaries.isEmpty()) {
             return null;
@@ -72,7 +73,7 @@ public class MemberReportDismissService {
                 temporaries.stream().anyMatch(sanction -> sanction.getStatus() == SanctionStatus.ACTIVE);
         temporaries.forEach(sanction -> sanction.liftForDismissedReport(adminId, now));
         if (wasSuspending) {
-            suspensionResyncer.resync(report.getTargetMemberId());
+            suspensionResyncer.resync(target);
         }
         return temporaries.get(0).getId();
     }
