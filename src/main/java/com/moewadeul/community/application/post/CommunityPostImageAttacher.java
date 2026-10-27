@@ -54,7 +54,7 @@ public class CommunityPostImageAttacher {
         boolean attachable =
                 image != null && image.isUploadedBy(memberId) && (!image.isAttached() || image.isAttachedTo(postId));
         if (!attachable) {
-            throw CommunityImageAttachmentChecker.invalid(CommunityImageAttachmentChecker.UNUSABLE_MESSAGE);
+            throw CommunityImageAttachmentPrecheck.invalid(CommunityImageAttachmentPrecheck.UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
         return image;
     }

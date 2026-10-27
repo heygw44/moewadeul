@@ -10,10 +10,10 @@ import org.springframework.stereotype.Service;
 public class CommunityPostCommandService {
 
     private final CommunityPostWriter communityPostWriter;
-    private final CommunityImageAttachmentChecker communityImageAttachmentChecker;
+    private final CommunityImageAttachmentPrecheck communityImageAttachmentPrecheck;
 
     public long write(long memberId, CommunityPostWriteCommand command) {
-        communityImageAttachmentChecker.verify(memberId, null, command.imageIds());
+        communityImageAttachmentPrecheck.verify(memberId, null, command.imageIds());
         return communityPostWriter.write(memberId, command);
     }
 
@@ -22,9 +22,9 @@ public class CommunityPostCommandService {
         if (imageIds.present()) {
             communityPostWriter.requireOwnActivePost(memberId, postId);
             if (imageIds.value() == null) {
-                throw CommunityImageAttachmentChecker.invalid("imageIds는 비울 수 없어요. 이미지를 모두 떼려면 빈 배열을 보내 주세요.");
+                throw CommunityImageAttachmentPrecheck.invalid("imageIds는 비울 수 없어요. 이미지를 모두 떼려면 빈 배열을 보내 주세요.");
             }
-            communityImageAttachmentChecker.verify(memberId, postId, imageIds.value());
+            communityImageAttachmentPrecheck.verify(memberId, postId, imageIds.value());
         }
         return communityPostWriter.revise(memberId, postId, command);
     }

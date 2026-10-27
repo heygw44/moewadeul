@@ -53,7 +53,7 @@ class MemoryImageAttacher {
         boolean attachable =
                 image != null && image.isUploadedBy(memberId) && (!image.isAttached() || image.isAttachedTo(memoryId));
         if (!attachable) {
-            throw MemoryImageAttachmentChecker.invalid(MemoryImageAttachmentChecker.UNUSABLE_MESSAGE);
+            throw MemoryImageAttachmentPrecheck.invalid(MemoryImageAttachmentPrecheck.UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
         return image;
     }

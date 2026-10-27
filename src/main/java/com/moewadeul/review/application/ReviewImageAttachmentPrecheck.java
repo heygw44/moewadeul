@@ -14,10 +14,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-class ReviewImageAttachmentChecker {
+class ReviewImageAttachmentPrecheck {
 
     static final String FIELD = "imageIds";
-    static final String UNUSABLE_MESSAGE = "붙일 수 없는 이미지가 있어요.";
+    static final String UNUSABLE_MESSAGE_FOR_ANY_REASON = "붙일 수 없는 이미지가 있어요.";
 
     private final ReviewImageRepository reviewImageRepository;
     private final ImageStorage imageStorage;
@@ -43,7 +43,7 @@ class ReviewImageAttachmentChecker {
             throw invalid("이미지는 " + ReviewImage.MAX_PER_REVIEW + "장까지 붙일 수 있어요.");
         }
         if (imageIds.stream().anyMatch(Objects::isNull)) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
         if (new HashSet<>(imageIds).size() != imageIds.size()) {
             throw invalid("같은 이미지를 두 번 붙일 수 없어요.");
@@ -52,10 +52,10 @@ class ReviewImageAttachmentChecker {
 
     private static void requireAttachable(ReviewImage image, long memberId, Long reviewId) {
         if (image == null || !image.isUploadedBy(memberId)) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
         if (image.isAttached() && !isAttachedTo(image, reviewId)) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
     }
 
@@ -69,7 +69,7 @@ class ReviewImageAttachmentChecker {
                 .filter(size -> size == image.getSizeBytes())
                 .isPresent();
         if (!uploaded) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
     }
 

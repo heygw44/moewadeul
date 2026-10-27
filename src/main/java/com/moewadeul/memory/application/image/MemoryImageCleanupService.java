@@ -25,10 +25,10 @@ public class MemoryImageCleanupService {
     private final ImageStorage imageStorage;
     private final Clock clock;
 
-    public Result deleteUnattached() {
+    public Result deleteExpiredRowsThenObjects() {
         Instant createdBefore = clock.instant().minus(RETENTION);
         Result result =
-                deleteInBatches(() -> memoryImageMapper.selectUnattachedCreatedBefore(createdBefore, BATCH_SIZE));
+                deleteRowsThenObjectsInBatches(() -> memoryImageMapper.selectUnattachedCreatedBefore(createdBefore, BATCH_SIZE));
         log.info(
                 "memory image cleanup deletedRows={} storageFailures={}",
                 result.deletedRows(),
@@ -36,7 +36,7 @@ public class MemoryImageCleanupService {
         return result;
     }
 
-    public Result deleteUnattachedOf(long memberId) {
+    public Result deleteObjectsThenRowsOf(long memberId) {
         int deletedRows = 0;
         int storageFailures = 0;
         long lastImageId = 0;
@@ -71,7 +71,7 @@ public class MemoryImageCleanupService {
         return new Result(deletedRows, storageFailures);
     }
 
-    private Result deleteInBatches(Supplier<List<MemoryImageRow>> nextBatch) {
+    private Result deleteRowsThenObjectsInBatches(Supplier<List<MemoryImageRow>> nextBatch) {
         int deletedRows = 0;
         int storageFailures = 0;
         int batchDeleted;

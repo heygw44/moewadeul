@@ -33,7 +33,7 @@ public class MemberLoginService {
     private final MemberSessions memberSessions;
     private final Clock clock;
 
-    private final String dummyPasswordHash;
+    private final String timingDecoyPasswordHash;
 
     public MemberLoginService(
             MemberRepository memberRepository,
@@ -48,7 +48,7 @@ public class MemberLoginService {
         this.memberSuspensionService = memberSuspensionService;
         this.memberSessions = memberSessions;
         this.clock = clock;
-        this.dummyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
+        this.timingDecoyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     public LoginResult login(LoginCommand command) {
@@ -104,10 +104,10 @@ public class MemberLoginService {
                 .findByEmail(attemptedEmail)
                 .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN)
                 .orElse(null);
-        String passwordHash = member != null ? member.getPasswordHash() : dummyPasswordHash;
+        String passwordHash = member != null ? member.getPasswordHash() : timingDecoyPasswordHash;
         boolean authenticated = passwordEncoder.matches(command.password(), passwordHash) && member != null;
         Long memberId = member != null ? member.getId() : null;
-        loginAttemptService.settle(memberId, attemptedEmail, command.ip(), authenticated);
+        loginAttemptService.recordAttemptUnderEmailLock(memberId, attemptedEmail, command.ip(), authenticated);
         if (!authenticated) {
             throw new MemberException(MemberErrorCode.LOGIN_FAILED);
         }

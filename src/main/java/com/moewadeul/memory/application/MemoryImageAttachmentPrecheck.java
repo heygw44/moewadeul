@@ -14,10 +14,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-class MemoryImageAttachmentChecker {
+class MemoryImageAttachmentPrecheck {
 
     static final String FIELD = "imageIds";
-    static final String UNUSABLE_MESSAGE = "붙일 수 없는 사진이 있어요.";
+    static final String UNUSABLE_MESSAGE_FOR_ANY_REASON = "붙일 수 없는 사진이 있어요.";
 
     private final MemoryImageRepository memoryImageRepository;
     private final ImageStorage imageStorage;
@@ -43,7 +43,7 @@ class MemoryImageAttachmentChecker {
             throw invalid("사진은 " + MemoryImage.MAX_PER_MEMORY + "장까지 붙일 수 있어요.");
         }
         if (imageIds.stream().anyMatch(Objects::isNull)) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
         if (new HashSet<>(imageIds).size() != imageIds.size()) {
             throw invalid("같은 사진을 두 번 붙일 수 없어요.");
@@ -52,10 +52,10 @@ class MemoryImageAttachmentChecker {
 
     private static void requireAttachable(MemoryImage image, long memberId, Long memoryId) {
         if (image == null || !image.isUploadedBy(memberId)) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
         if (image.isAttached() && !isAttachedTo(image, memoryId)) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
     }
 
@@ -67,7 +67,7 @@ class MemoryImageAttachmentChecker {
         boolean uploaded = isUploaded(image.getObjectKey(), image.getSizeBytes())
                 && (!image.hasThumbnail() || isUploaded(image.getThumbnailObjectKey(), image.getThumbnailSizeBytes()));
         if (!uploaded) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
     }
 

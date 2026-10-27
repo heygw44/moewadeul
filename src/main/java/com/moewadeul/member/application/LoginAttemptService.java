@@ -29,7 +29,7 @@ public class LoginAttemptService {
     }
 
     @Transactional
-    public void settle(Long memberId, String attemptedEmail, String ip, boolean passwordMatched) {
+    public void recordAttemptUnderEmailLock(Long memberId, String attemptedEmail, String ip, boolean passwordMatched) {
         Instant now = Instant.now(clock);
         attemptLockMapper.lock(LoginLockout.attemptKey(attemptedEmail), now);
         Optional<Duration> retryAfter = retryAfter(attemptedEmail, now);
