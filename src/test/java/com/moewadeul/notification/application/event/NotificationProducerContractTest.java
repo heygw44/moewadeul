@@ -117,12 +117,12 @@ class NotificationProducerContractTest {
         String actual = consumerEventType;
 
         // then
-        assertThat(actual).as("알림 이벤트 %s 의 발행 이름", consumerEventType).isEqualTo(expected);
+        assertThat(actual).as("알림 이벤트 %s의 발행 이름", consumerEventType).isEqualTo(expected);
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("contracts")
-    @DisplayName("알림이 읽는 payload 의 필드 이름·순서·타입은 발행하는 payload 와 같다")
+    @DisplayName("알림이 읽는 payload의 필드 이름·순서·타입은 발행하는 payload와 같다")
     void payloadMatchesProducer(
             String consumerEventType, String producerEventType, Class<?> consumerPayload, Class<?> producerPayload) {
         // given
@@ -134,7 +134,7 @@ class NotificationProducerContractTest {
         // then
         assertThat(actual)
                 .as(
-                        "알림 이벤트 %s 의 payload %s 와 %s",
+                        "알림 이벤트 %s의 payload %s, %s",
                         consumerEventType, consumerPayload.getSimpleName(), producerPayload.getName())
                 .isEqualTo(expected);
     }

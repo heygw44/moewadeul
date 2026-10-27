@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class BasecampSpotTypeTest {
 
     @Test
-    @DisplayName("베이스캠프가 따로 두는 장소 유형은 spot 의 장소 유형과 이름이 같다")
+    @DisplayName("베이스캠프가 따로 두는 장소 유형은 spot의 장소 유형과 이름이 같다")
     void namesMatchSpotType() {
         // given
         List<String> spotTypes =
