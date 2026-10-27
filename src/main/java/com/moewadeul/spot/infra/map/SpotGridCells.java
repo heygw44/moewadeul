@@ -48,6 +48,10 @@ public record SpotGridCells(int level, List<Integer> rows, int fromColumn, int t
         return Optional.empty();
     }
 
+    public double cellSize() {
+        return cellSize(level);
+    }
+
     public boolean isEmpty() {
         return rows.isEmpty() || fromColumn > toColumn;
     }
@@ -78,7 +82,7 @@ public record SpotGridCells(int level, List<Integer> rows, int fromColumn, int t
         return BASE_CELL_SIZE * Math.pow(2, level);
     }
 
-    private static int cellIndex(double degree, double size) {
+    static int cellIndex(double degree, double size) {
         return (int) Math.floor(degree / size);
     }
 }

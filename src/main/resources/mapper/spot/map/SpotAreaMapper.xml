@@ -115,7 +115,9 @@
         ORDER BY m.spot_id
     </select>
 
-    <sql id="cellSize">(0.0025 * POW(2, #{cells.level}))</sql>
+    <!-- Connector/J는 double 인자를 0.32 같은 소수 문자열로 보내고, MySQL은 이를 DECIMAL로 읽는다. 그러면 칸 경계 계산이 정확한 십진수
+         연산이 되어 DOUBLE로 계산한 V33 트리거의 칸 번호와 어긋날 수 있으므로 DOUBLE로 바꿔 쓴다. -->
+    <sql id="cellSize">CAST(#{cells.cellSize} AS DOUBLE)</sql>
 
     <sql id="clusterCellsInGrid">
         <choose>
