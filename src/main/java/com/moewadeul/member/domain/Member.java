@@ -244,7 +244,7 @@ public class Member {
         };
     }
 
-    public static void requireValidNickname(String nickname) {
+    static void requireValidNickname(String nickname) {
         if (!isValidNickname(nickname)) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, NICKNAME_RULE_MESSAGE);
         }

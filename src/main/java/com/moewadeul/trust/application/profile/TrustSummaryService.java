@@ -52,8 +52,9 @@ public class TrustSummaryService {
         String verifiedAgeGroup = found.flatMap(verification -> verification.ageGroupIn(currentYear))
                 .map(Enum::name)
                 .orElse(null);
-        String verifiedGender =
-                found.map(IdentityVerification::getGender).map(Enum::name).orElse(null);
+        String verifiedGender = found.flatMap(IdentityVerification::retainedGender)
+                .map(Enum::name)
+                .orElse(null);
         return new TrustDetail(
                 found.isPresent(),
                 adult,

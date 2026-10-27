@@ -11,6 +11,7 @@ import com.moewadeul.member.application.EmailVerificationEvents;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberException;
+import com.moewadeul.member.domain.Nickname;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -81,7 +82,7 @@ class MemberSignupConcurrencyIntegrationTest {
         // then
         assertOnlyDuplicateFailures(failures, MemberErrorCode.MEMBER_NICKNAME_DUPLICATED);
         assertThat(memberJpaRepository.count()).isEqualTo(1);
-        assertThat(memberJpaRepository.existsByNickname(nickname)).isTrue();
+        assertThat(memberJpaRepository.existsByNickname(new Nickname(nickname))).isTrue();
     }
 
     @RepeatedTest(5)
