@@ -22,6 +22,8 @@ import com.moewadeul.community.domain.report.CommunityReportReason;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -146,6 +148,19 @@ class CommunityReportControllerTest {
                 .bodyJson()
                 .extractingPath("$.fieldErrors[0].reason")
                 .isEqualTo("SPAM, ABUSE, ILLEGAL_CAMPING, PRIVACY, MONEY_SCAM, OTHER 중 하나여야 해요.");
+        verifyNoInteractions(communityReportService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"reason\":0}", "{\"reason\":\"5\"}"})
+    @DisplayName("[F-29][CM-07] reason을 숫자로 보내면 enum 순서로 받지 않고 reason 필드 오류로 400 INVALID_INPUT을 응답한다")
+    void numericReasonIsFieldError(String body) {
+        // when
+        MvcTestResult result = send(POST_REPORTS, verified(), body);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("reason");
         verifyNoInteractions(communityReportService);
     }
 

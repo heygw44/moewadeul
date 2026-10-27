@@ -13,6 +13,10 @@ spring:
     scheduling:
       pool:
         size: 4
+  jackson:
+    datatype:
+      enum:
+        fail-on-numbers-for-enums: true
   jpa:
     open-in-view: false
     hibernate:

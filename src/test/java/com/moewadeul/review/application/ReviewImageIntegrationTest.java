@@ -186,9 +186,9 @@ class ReviewImageIntegrationTest {
         commandService.delete(memberId, reviewId);
         Map<String, Object> detached =
                 jdbc.queryForMap("SELECT review_id, display_order FROM review_image WHERE id = ?", image);
-        int beforeRetention = cleanupService.deleteUnattached().deletedRows();
+        int beforeRetention = cleanupService.deleteExpiredRowsThenObjects().deletedRows();
         clock.advance(ReviewImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
-        ReviewImageCleanupService.Result result = cleanupService.deleteUnattached();
+        ReviewImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(detached).containsEntry("review_id", null).containsEntry("display_order", null);
@@ -209,7 +209,7 @@ class ReviewImageIntegrationTest {
         clock.advance(Duration.ofDays(3));
 
         // when
-        ReviewImageCleanupService.Result result = cleanupService.deleteUnattached();
+        ReviewImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);
