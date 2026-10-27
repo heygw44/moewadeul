@@ -13,6 +13,8 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Sheet } from '../../components/Sheet';
+import { SHEET_SNAP_DVH, sheetTopFromBottom } from '../../components/sheetSnap';
+import type { SheetSnap } from '../../components/sheetSnap';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { createMapView } from '../../map/KakaoMap';
@@ -57,10 +59,6 @@ import { readMapScreen, rememberMapScreen } from './mapScreenMemory';
 import type { RadiusSearch } from './mapScreenMemory';
 import type { SpotsNearby } from './useSpotsNearby';
 
-type SheetSnap = 'peek' | 'half' | 'full';
-
-const SHEET_TOP_DVH: Record<SheetSnap, number> = { peek: 28, half: 55, full: 92 };
-
 function visibleMapHeight(host: HTMLElement | null): number | undefined {
   if (!host || window.matchMedia(DESKTOP_QUERY).matches) return undefined;
   const sheet = host.closest('[data-map-root]')?.querySelector('[data-sheet]');
@@ -77,7 +75,7 @@ function openMapSpan(
 ): { top: number; bottom: number } {
   const rect = host.getBoundingClientRect();
   if (window.matchMedia(DESKTOP_QUERY).matches) return { top: 0, bottom: rect.height };
-  const sheetTop = window.innerHeight * (1 - SHEET_TOP_DVH[snap] / 100);
+  const sheetTop = window.innerHeight * (1 - SHEET_SNAP_DVH[snap] / 100);
   const bottom = Math.min(rect.height, sheetTop - rect.top);
   const top = controls ? Math.max(0, controls.getBoundingClientRect().bottom - rect.top) : 0;
   if (bottom - top >= MIN_OPEN_SPAN_PX) return { top, bottom };
@@ -113,11 +111,6 @@ function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData | null {
     warning: false,
     closed: false,
   };
-}
-
-function sheetTop(snap: SheetSnap, aboveBottomNav: boolean): string {
-  if (snap === 'full' || !aboveBottomNav) return `${SHEET_TOP_DVH[snap]}dvh`;
-  return `calc(${SHEET_TOP_DVH[snap]}dvh + var(--bottom-nav-h))`;
 }
 
 type MapFailure = { reason: MapLoadErrorReason; message: string };
@@ -650,7 +643,7 @@ export function MapPage({
         </Sheet>
 
         <div
-          style={{ '--mobile-sheet-top': sheetTop(snap, !contentOpen) } as CSSProperties}
+          style={{ '--mobile-sheet-top': sheetTopFromBottom(snap, !contentOpen) } as CSSProperties}
           className="absolute inset-0 z-0 [--sheet-top:var(--mobile-sheet-top)] lg:relative lg:mr-4 lg:mb-4 lg:flex-1 lg:overflow-hidden lg:rounded-media lg:[--sheet-top:0px]"
         >
           <div ref={hostRef} role="region" aria-label="지도" className="absolute inset-0" />

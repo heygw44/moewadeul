@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
-import type { KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from 'react';
-
-type SheetSnap = 'peek' | 'half' | 'full';
+import type { CSSProperties, KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from 'react';
+import { SHEET_SNAP_DVH, sheetHeight } from './sheetSnap';
+import type { SheetSnap } from './sheetSnap';
 
 type SheetProps = {
   snap: SheetSnap;
@@ -14,20 +14,6 @@ type SheetProps = {
 };
 
 const SNAP_ORDER: readonly SheetSnap[] = ['peek', 'half', 'full'];
-
-const SNAP_RATIO: Record<SheetSnap, number> = {
-  peek: 0.28,
-  half: 0.55,
-  full: 0.92,
-};
-
-const SNAP_HEIGHT_CLASSES: Record<SheetSnap, string> = {
-  peek: 'h-[28dvh]',
-  half: 'h-[55dvh]',
-  full: 'h-[92dvh]',
-};
-
-const FULL_ABOVE_NAV_CLASS = 'h-[calc(92dvh-var(--bottom-nav-h))]';
 
 const SNAP_LABELS: Record<SheetSnap, string> = {
   peek: '접힘',
@@ -54,7 +40,7 @@ type DragState = {
 };
 
 function snapHeight(snap: SheetSnap, viewportHeight: number, bottomInset: number): number {
-  const height = SNAP_RATIO[snap] * viewportHeight;
+  const height = (SHEET_SNAP_DVH[snap] / 100) * viewportHeight;
   return snap === 'full' ? height - bottomInset : height;
 }
 
@@ -99,7 +85,7 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
     if (!drag.moved && Math.abs(deltaY) < DRAG_THRESHOLD_PX) return;
     drag.moved = true;
     const viewportHeight = window.innerHeight;
-    const minHeight = SNAP_RATIO.peek * viewportHeight;
+    const minHeight = snapHeight('peek', viewportHeight, drag.bottomInset);
     const maxHeight = snapHeight('full', viewportHeight, drag.bottomInset);
     setDragHeight(Math.min(maxHeight, Math.max(minHeight, drag.startHeight - deltaY)));
   }
@@ -150,13 +136,11 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
       data-sheet
       aria-label={label}
       onKeyDown={handleKeyDown}
-      style={dragging ? { height: `${dragHeight}px` } : undefined}
+      style={{ '--sheet-h': dragging ? `${dragHeight}px` : sheetHeight(snap, aboveBottomNav) } as CSSProperties}
       className={[
-        'fixed inset-x-0 z-10 flex flex-col rounded-t-drawer bg-canvas shadow-raise',
+        'fixed inset-x-0 z-10 flex h-(--sheet-h) flex-col rounded-t-drawer bg-canvas shadow-raise',
         aboveBottomNav ? 'bottom-(--bottom-nav-h)' : 'bottom-0',
-        dragging
-          ? 'transition-none'
-          : `${aboveBottomNav && snap === 'full' ? FULL_ABOVE_NAV_CLASS : SNAP_HEIGHT_CLASSES[snap]} transition-[height] duration-200 ease-out motion-reduce:transition-none`,
+        dragging ? 'transition-none' : 'transition-[height] duration-200 ease-out motion-reduce:transition-none',
         'lg:static lg:z-auto lg:h-full lg:w-[440px] lg:shrink-0 lg:rounded-none lg:shadow-none',
       ].join(' ')}
     >
