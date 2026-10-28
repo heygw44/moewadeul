@@ -5,12 +5,10 @@ import type { NearbySpot, SpotSetting, SpotType } from '../../api/types';
 import type { LatLng, MapView } from '../../map/types';
 import type { SpotFilters } from './spotFilters';
 
-// 첫 페이지와 "더 보기"가 한 번에 받는 건수다. 서버가 허용하는 최대값이다.
 const PAGE_SIZE = 50;
 
 type NearbyStatus = 'idle' | 'loading' | 'ready' | 'error';
 
-// 반경 검색의 기준점과 반경이다.
 export type RadiusArea = { center: LatLng; radiusKm: number };
 
 export type SpotsNearby = {
@@ -18,7 +16,6 @@ export type SpotsNearby = {
   hasNext: boolean;
   status: NearbyStatus;
   error: string | null;
-  // error나 moreError가 5xx 응답이면 그 추적 ID다. 목록 화면이 문의 번호로 보여 준다.
   traceId: string | null;
   loadingMore: boolean;
   moreError: string | null;
@@ -48,9 +45,6 @@ const INITIAL_STATE: NearbyState = {
   moreError: null,
 };
 
-// 기준점에서 반경 안의 장소를 가까운 순서로 받아 지도에 그리고, 반경 원도 함께 그린다.
-// 기준점이 고정이라서 지도를 움직여도 다시 받지 않는다. 조건이나 반경이 바뀌면 앞선 요청을 취소하고 처음부터 받는다.
-// radius가 null이거나 enabled가 false이면 아무것도 보내지 않고, 그려 둔 반경 원은 지운다.
 export function useSpotsNearby(
   map: MapView | null,
   radius: RadiusArea | null,
@@ -64,7 +58,6 @@ export function useSpotsNearby(
   const loadRef = useRef<() => void>(() => {});
   const moreRef = useRef<() => void>(() => {});
 
-  // 유형·입지 목록은 렌더마다 새 배열일 수 있어서, 효과가 같은 조건으로 다시 돌지 않게 글자로 바꿔 비교한다.
   const typesKey = [...filters.types].sort().join(',');
   const settingsKey = [...filters.settings].sort().join(',');
   const { hasWater, hasToilet, excludeWarning, hideClosed } = filters;
@@ -107,7 +100,6 @@ export function useSpotsNearby(
 
     map.showRadius({ center: { lat: centerLat, lng: centerLng }, radiusKm });
 
-    // 요청만 보낸다. 상태는 응답이 온 뒤에만 바꾼다.
     const request = () => {
       controllerRef.current?.abort();
       moreControllerRef.current?.abort();
@@ -130,7 +122,6 @@ export function useSpotsNearby(
           });
         },
         (error: unknown) => {
-          // 취소한 요청의 실패는 새 요청이 이어받으므로 화면에 반영하지 않는다.
           if (controller.signal.aborted) return;
           setState((previous) => ({
             ...previous,
@@ -215,7 +206,6 @@ export function useSpotsNearby(
   const retry = useCallback(() => loadRef.current(), []);
   const loadMore = useCallback(() => moreRef.current(), []);
 
-  // 켜진 뒤 첫 응답 전에는 idle로 남아 있으므로 불러오는 중으로 돌려준다.
   const active = map !== null && enabled && radius !== null;
   const status: NearbyStatus = active && state.status === 'idle' ? 'loading' : state.status;
   return { ...state, status, retry, loadMore };

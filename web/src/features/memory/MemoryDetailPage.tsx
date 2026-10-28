@@ -33,11 +33,8 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   const viewerEpoch = useViewerEpoch();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
-  // 사진 조회 URL은 1시간 뒤 만료된다. 열어 둔 화면에서 사진이 깨지면 기록을 한 번만 다시 받아 새 URL을 얻는다.
   const imageRetried = useRef(false);
 
-  // 작성자인지에 따라 좌표가 오고 비공개 기록이 보인다. 서버가 요청의 세션 쿠키로 정하므로 세션 확인을 기다리지 않고 함께 보낸다.
-  // 로그인 상태가 바뀔 때(viewerEpoch)만 다시 받는다.
   useEffect(() => {
     const controller = new AbortController();
     getMemory(memoryId, controller.signal).then(
@@ -60,7 +57,6 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   }, [title]);
 
   const reload = () => setAttempt((value) => value + 1);
-  // 작성자는 내 기록 지도로, 그 밖의 사람은 피드로 돌아간다. 아직 모르거나 기록을 못 받았을 때는 피드로 둔다.
   const authorId = current !== null && 'memory' in current ? current.memory.author.memberId : null;
   const viewerIsAuthor = authorId !== null && session.status === 'authenticated' && session.me?.memberId === authorId;
   const breadcrumb = (
@@ -175,7 +171,6 @@ function MemoryMeta({ memory }: { memory: MemoryDetail }) {
   );
 }
 
-// 작성자에게만 수정·삭제를 보여 준다. 권한은 서버가 다시 확인한다.
 function MemoryActions({ memoryId }: { memoryId: number }) {
   const [deleting, setDeleting] = useState(false);
   return (
@@ -191,7 +186,6 @@ function MemoryActions({ memoryId }: { memoryId: number }) {
   );
 }
 
-// 로그인한 회원이 남의 공개 기록을 볼 때만 신고를 보여 준다. 이메일 인증 여부와 신고할 수 있는지는 서버가 다시 확인한다.
 function ReportAction({ memory }: { memory: MemoryDetail }) {
   const session = useSession();
   const [reporting, setReporting] = useState(false);
@@ -208,7 +202,6 @@ function ReportAction({ memory }: { memory: MemoryDetail }) {
   );
 }
 
-// 신고가 쌓여 검토 중이거나 관리자가 숨긴 기록은 작성자만 본다. 작성자에게 왜 다른 사람에게 보이지 않는지 알린다.
 function HiddenStatusNotice({ status }: { status: MemoryDetail['status'] }) {
   if (status === undefined || status === 'ACTIVE') return null;
   const reviewing = status === 'PENDING_REVIEW';
@@ -225,12 +218,10 @@ function HiddenStatusNotice({ status }: { status: MemoryDetail['status'] }) {
 
 function MemoryContent({ memory, onImageError }: { memory: MemoryDetail; onImageError: () => void }) {
   const position = memory.lat !== undefined && memory.lng !== undefined ? { lat: memory.lat, lng: memory.lng } : null;
-  // 작성자가 아닌 사람에게는 정확한 좌표 대신 약 1km로 줄인 좌표만 온다.
   const approxPosition =
     memory.approxLat !== undefined && memory.approxLng !== undefined
       ? { lat: memory.approxLat, lng: memory.approxLng }
       : null;
-  // 검토 중이거나 숨긴 기록은 서버가 좋아요를 받지 않는다.
   const likeable = memory.visibility === 'PUBLIC' && (memory.status === undefined || memory.status === 'ACTIVE');
   return (
     <div className="flex flex-col gap-4">

@@ -447,6 +447,42 @@ class BasecampQueryControllerTest {
     }
 
     @Test
+    @DisplayName("[F-13] 내 베이스캠프의 relation이 틀리면 고를 수 있는 LEADER, MEMBER, APPLICANT만 알려 준다")
+    void listMineNamesAllowedRelationValues() {
+        // when
+        MvcTestResult result = mvc.get()
+                .uri(MY_BASECAMPS + "?relation=NONE")
+                .with(unverified())
+                .exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("relation");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("LEADER, MEMBER, APPLICANT 중 하나여야 해요.");
+    }
+
+    @Test
+    @DisplayName("[F-13] 내 베이스캠프의 status를 enum으로 바꾸지 못하면 status 필드에 허용 값을 알려 준다")
+    void listMineNamesAllowedStatusValues() {
+        // when
+        MvcTestResult result = mvc.get()
+                .uri(MY_BASECAMPS + "?status=UNKNOWN")
+                .with(unverified())
+                .exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("status");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("RECRUITING, CLOSED, CONFIRMED, COMPLETED, CANCELED 중 하나여야 해요.");
+    }
+
+    @Test
     @DisplayName("[F-13] 로그인하지 않고 내 베이스캠프를 조회하면 401 AUTHENTICATION_REQUIRED이다")
     void listMineRequiresLogin() {
         // when
@@ -497,7 +533,6 @@ class BasecampQueryControllerTest {
                 eligibility);
     }
 
-    // 장소가 ACTIVE가 아니어서 서비스가 장소 요약을 비운 상세를 만든다.
     private static BasecampDetail withoutSpot(BasecampDetail detail) {
         return new BasecampDetail(
                 detail.basecampId(),
@@ -517,7 +552,6 @@ class BasecampQueryControllerTest {
                 detail.eligibility());
     }
 
-    // 로그인 서비스가 세션에 넣는 것과 같은 모양의 인증 정보를 만든다. 이메일 인증 권한을 붙여 인증 회원 전용 경로를 연다.
     private static RequestPostProcessor verified() {
         LoginMember loginMember = new LoginMember(MEMBER_ID, "USER", true);
         return authentication(UsernamePasswordAuthenticationToken.authenticated(

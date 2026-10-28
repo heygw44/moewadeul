@@ -34,13 +34,11 @@ import {
 type BasecampDetailPanelProps = {
   basecampId: number;
   onBack: () => void;
-  // 베이스캠프를 불러오면 알린다. 지도 화면은 베이스캠프 장소로 지도를 옮기고 핀을 그린다.
   onLoaded?: (detail: BasecampDetail) => void;
 };
 
 type DetailResult = { basecampId: number; detail: BasecampDetail } | { basecampId: number; error: unknown };
 
-// 섹션은 선 없이 간격과 굵은 제목으로 나누고, 묶음은 세이지 면에 담는다.
 const SECTION_CLASS = 'mt-8';
 const SECTION_TITLE_CLASS = 'mb-3 text-[1.1875rem] font-extrabold tracking-[-0.02em] text-ink';
 const BOARD_CLASS = 'overflow-hidden rounded-sheet bg-fill';
@@ -60,9 +58,6 @@ export function BasecampDetailPanel({ basecampId, onBack, onLoaded }: BasecampDe
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
 
-  // 로그인 여부에 따라 서버가 주는 필드가 달라지고, 서버는 요청의 세션 쿠키로 이를 정한다.
-  // 그래서 세션 확인을 기다리지 않고 함께 보내고, 로그인한 회원이 바뀔 때(viewerEpoch)만 다시 받는다.
-  // 다시 받는 동안에도 이전 내용을 그대로 보여 주고, 응답이 오면 바꾼다.
   useEffect(() => {
     const controller = new AbortController();
     fetchBasecampDetail(basecampId, controller.signal).then(
@@ -159,7 +154,6 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
   return (
     <>
       <article className="px-4 pt-2 pb-6 lg:px-6">
-        {/* 머리는 상태·제목 아래에 출발·돌아오는 날·일정을 세이지 칸 셋으로 적는다. */}
         <header>
           <p className="inline-flex items-center gap-1.5 text-[0.8125rem] font-bold text-ink">
             <span
@@ -214,7 +208,6 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
               <Icon name="chevronRight" size={20} className="shrink-0 text-ink-muted" />
             </Link>
           ) : (
-            // 장소가 숨겨지거나 삭제되거나 검토를 기다리면 서버가 장소 정보를 주지 않는다.
             <p className={`${BOARD_CLASS} px-4 py-3 text-base text-ink-muted`}>{SPOT_UNAVAILABLE_TEXT}</p>
           )}
         </section>
@@ -235,7 +228,6 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
                   key={member.memberId}
                   member={member}
                   basecampId={detail.basecampId}
-                  // 신고 버튼은 편의일 뿐이고, 신고할 수 있는지는 서버가 판단한다.
                   reportable={isMember && member.memberId !== session.me?.memberId}
                 />
               ))}
@@ -266,7 +258,6 @@ function DetailContent({ detail, onChanged }: { detail: BasecampDetail; onChange
           <ContactInfo contactInfo={detail.contactInfo} isMember={isMember} />
         </section>
 
-        {/* 안전 안내와 확정 뒤 수칙은 같은 맥락이라 상자 하나에 담는다. 상자를 겹쳐 두면 같은 무게의 안내가 두 번 보인다. */}
         <div className={SECTION_CLASS}>
           <Notice tone="info" title="안전 안내">
             <p>{detail.safetyNotice}</p>
@@ -351,7 +342,6 @@ function MemberRow({
   );
 }
 
-// 정원만큼 자리 점을 그린다. 찬 자리는 숲색, 빈자리는 테두리만 그린다. 숫자와 남은 자리를 글로도 적는다.
 function SeatRow({ headcount, capacity, recruiting }: { headcount: number; capacity: number; recruiting: boolean }) {
   const left = Math.max(0, capacity - headcount);
   return (
@@ -372,7 +362,6 @@ function SeatRow({ headcount, capacity, recruiting }: { headcount: number; capac
   );
 }
 
-// 연락 수단은 https 주소만 링크로 연다. 그 밖의 값은 글자로만 보여 준다.
 function parseHttpsUrl(value: string): URL | null {
   try {
     const url = new URL(value);
@@ -436,7 +425,6 @@ type Pending = 'apply' | 'cancel' | 'leave' | null;
 const HOUR_MS = 60 * 60 * 1000;
 const LATE_LEAVE_HOURS = 48;
 
-// 확정된 뒤 출발 48시간 안에 나가면 임박 탈퇴로 기록된다. 서버가 같은 기준으로 기록하고, 여기서는 미리 알리기만 한다.
 function isLateLeave(detail: BasecampDetail): boolean {
   if (detail.status !== 'CONFIRMED') return false;
   return Date.now() >= departureInstant(detail.startDate).getTime() - LATE_LEAVE_HOURS * HOUR_MS;
@@ -444,7 +432,6 @@ function isLateLeave(detail: BasecampDetail): boolean {
 
 const LEAVABLE_STATUSES: ReadonlyArray<BasecampDetail['status']> = ['RECRUITING', 'CLOSED', 'CONFIRMED'];
 
-// 시트 아래에 붙어서 스크롤해도 보이는 행동 영역이다.
 function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: () => void }) {
   const session = useSession();
   const { pathname, search } = useLocation();
@@ -466,7 +453,6 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
     } finally {
       setSubmitting(false);
       setDialog(null);
-      // 성공이든 실패든 서버의 지금 상태로 화면을 맞춘다. 실패는 대개 다른 곳에서 상태가 바뀌어서 생기기 때문이다.
       onChanged();
     }
   }
@@ -475,7 +461,6 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   if (session.status === 'loading') {
     content = null;
   } else if (session.status === 'anonymous' || session.me === null) {
-    // 비회원에게도 합류 신청 버튼을 그대로 보여 주고, 누르면 로그인한 뒤 이 화면으로 돌아오게 한다.
     content =
       detail.status !== 'RECRUITING' ? (
         <p className="text-base text-ink">{BASECAMP_STATUS_GUIDE[detail.status]}</p>
@@ -541,7 +526,6 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
   } else if (detail.status !== 'RECRUITING') {
     content = <p className="text-base text-ink">{BASECAMP_STATUS_GUIDE[detail.status]}</p>;
   } else if (detail.spot === undefined) {
-    // 장소가 지도에서 내려가면 서버가 새 합류 신청을 거부하고 신청 자격도 주지 않는다.
     content = <p className="text-base text-ink">{APPLY_CLOSED_BY_SPOT_TEXT}</p>;
   } else if (detail.canApply === true) {
     content = (

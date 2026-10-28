@@ -33,7 +33,6 @@ class EmailVerificationApiIntegrationTest {
     private static final String LOCAL_IP = "127.0.0.1";
     private static final String VERIFY_PATH = "/api/me/email-verification";
     private static final String RESEND_PATH = "/api/me/email-verification/resend";
-    // 이메일 인증을 마친 회원만 부를 수 있는 경로다. 이 경로의 컨트롤러가 아직 없어도 인가는 컨트롤러보다 앞서 일어난다.
     private static final String VERIFIED_ONLY_PATH = "/api/bakjis";
 
     @Autowired
@@ -277,7 +276,6 @@ class EmailVerificationApiIntegrationTest {
                 .build());
     }
 
-    // 코드 원값은 발송 처리기가 메일을 보내기 직전에 만들어 메모리에서 메일로만 나간다. 테스트는 같은 서비스를 직접 불러 그 값을 받는다.
     private String issueCode(Member member) {
         return emailVerificationService
                 .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
@@ -314,7 +312,6 @@ class EmailVerificationApiIntegrationTest {
         return "{\"code\":\"%s\"}".formatted(code);
     }
 
-    // 맞는 코드와 첫 자리만 다른 6자리 숫자다. 임의의 틀린 코드를 쓰면 아주 드물게 맞는 코드와 같아져서 테스트가 흔들린다.
     private static String differentCode(String code) {
         char first = code.charAt(0);
         char changed = first == '9' ? '0' : (char) (first + 1);

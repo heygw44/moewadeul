@@ -2,7 +2,6 @@ import type { ChoiceOption } from '../../components/ChoiceGroup';
 import type { SelectOption } from '../../components/SelectField';
 import type { MemoryStatus, MemoryVisibility } from '../../api/types';
 
-// 서버 규칙과 같은 값이다.
 export const MEMORY_CONTENT_MAX = 2000;
 export const MEMORY_MAX_IMAGES = 10;
 export const MEMORY_MAX_NIGHTS = 30;
@@ -17,7 +16,6 @@ export const VISIBILITY_LABEL: Record<MemoryVisibility, string> = {
   PUBLIC: '공개',
 };
 
-// 작성자에게만 보여 주는 상태 이름이다. 정상(ACTIVE)이면 따로 적지 않는다.
 export const MEMORY_STATUS_LABEL: Record<Exclude<MemoryStatus, 'ACTIVE'>, string> = {
   PENDING_REVIEW: '검토 중',
   HIDDEN: '숨김',
@@ -35,7 +33,6 @@ export const NIGHTS_OPTIONS: ReadonlyArray<SelectOption> = Array.from(
   }),
 );
 
-// 주소의 좌표가 숫자가 아니거나 범위를 벗어나면 null이다. 서버도 같은 범위를 검사한다.
 export function parseLatLng(lat: string | null, lng: string | null): { lat: number; lng: number } | null {
   if (lat === null || lng === null || lat.trim() === '' || lng.trim() === '') return null;
   const latValue = Number(lat);
@@ -51,7 +48,6 @@ export function parsePositiveId(raw: string | null): number | null {
   return Number.isSafeInteger(value) && value > 0 ? value : null;
 }
 
-// 제보 폼과 같은 정밀도로 줄인다.
 export function roundCoordinate(value: number): number {
   return Math.round(value * 1e6) / 1e6;
 }

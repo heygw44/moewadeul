@@ -4,7 +4,6 @@ import com.moewadeul.trust.application.companion.PendingCompanionReview;
 import java.time.Instant;
 import java.util.List;
 
-/** 후기를 쓸 수 있는 베이스캠프 하나. deadline까지 쓸 수 있고, targets는 아직 후기를 쓰지 않은 상대다. */
 public record PendingCompanionReviewResponse(
         long basecampId, String basecampTitle, Instant completedAt, Instant deadline, List<TargetResponse> targets) {
 

@@ -16,19 +16,12 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 회원이 베이스캠프에 보낸 합류 신청이다. 한 회원은 한 베이스캠프에 행을 하나만 가진다.
- *
- * <p>신청자가 취소한 뒤 다시 신청하면 새 행을 만들지 않고 같은 행을 대기 상태로 되돌린다.
- * 상태를 바꾸는 메서드는 같은 패키지의 {@link Basecamp}만 부른다.
- */
 @Entity
 @Table(name = "basecamp_application")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BasecampApplication {
 
-    /** 신청 메시지의 최대 길이다. DB 컬럼 크기와 같다. */
     public static final int MESSAGE_MAX_LENGTH = 500;
 
     @Id
@@ -50,7 +43,6 @@ public class BasecampApplication {
     @Column(name = "decided_at")
     private Instant decidedAt;
 
-    /** 가장 최근에 신청한 시각이다. 대기 순서를 정하는 기준이라서 다시 신청하면 그 시각으로 바뀐다. */
     @Column(name = "applied_at")
     private Instant appliedAt;
 
@@ -105,8 +97,6 @@ public class BasecampApplication {
         this.updatedAt = now;
     }
 
-    // 취소했던 신청자가 다시 신청하는 경우다. 이전 결정 시각은 의미가 없어져서 비운다.
-    // 다시 신청한 사람이 대기 순서 맨 뒤로 가도록 신청 시각도 지금으로 바꾼다.
     void resubmit(String message, Instant now) {
         requireValidMessage(message);
         this.message = message;

@@ -10,7 +10,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
-// 평점과 내용을 둘 다 받는다. 방문일은 고칠 수 없어서 받지 않는다. 이미지 목록은 보낼 때만 바꾼다.
 public record SpotReviewUpdateRequest(
         @NotNull(message = "평점을 입력해 주세요.")
         @Min(value = SpotReview.MIN_RATING, message = "평점은 1 이상이어야 해요.")

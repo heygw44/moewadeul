@@ -10,6 +10,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.community.application.report.CommunityReportCommand;
 import com.moewadeul.community.application.report.CommunityReportService;
+import com.moewadeul.community.domain.report.CommunityReportReason;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
 import jakarta.servlet.http.Cookie;
@@ -274,7 +275,7 @@ class AdminCommunityReviewApiIntegrationTest {
             insertPostReport(postId, "SPAM", null, BASE.plus(Duration.ofMinutes(i)), null);
         }
         assertThat(post(POSTS + "/" + postId + "/restore")).hasStatus(HttpStatus.OK);
-        CommunityReportCommand report = new CommunityReportCommand("SPAM", "다시 확인했다");
+        CommunityReportCommand report = new CommunityReportCommand(CommunityReportReason.SPAM, "다시 확인했다");
 
         // when
         communityReportService.reportPost(newMemberId(), postId, report);

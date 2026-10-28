@@ -31,7 +31,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class SpotReviewServiceIntegrationTest {
 
-    // 테스트 시계의 기본 시각은 한국 날짜로 2026-10-05 낮 12시다.
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 5);
 
     @Autowired
@@ -152,7 +151,7 @@ class SpotReviewServiceIntegrationTest {
     @Test
     @DisplayName("[F-10][PV-08] 탈퇴한 두 회원의 후기는 익명화돼도 하나로 묶이지 않고 회원마다 한 표씩 평균에 들어간다")
     void withdrawnAuthorsKeepSeparateVotes() {
-        // given: 한 회원은 평점 1과 3을, 다른 회원은 5를 주고 둘 다 탈퇴한다.
+        // given
         long spotId = saveSpot();
         long first = saveMember();
         long second = saveMember();
@@ -165,7 +164,7 @@ class SpotReviewServiceIntegrationTest {
         // when
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
 
-        // then: 회원별 평균 2와 5의 평균이다. 세 후기를 한 표로 묶었다면 3.0이 된다.
+        // then
         assertThat(detail.rating().count()).isEqualTo(3);
         assertThat(detail.rating().average()).isEqualTo(3.5);
     }
@@ -194,14 +193,14 @@ class SpotReviewServiceIntegrationTest {
         long spotId = saveSpot();
         long memberId = saveMember();
 
-        // when, then: 한국 날짜 2026-10-05 낮이다.
+        // when, then
         commandService.write(memberId, spotId, write(TODAY, 3, "오늘 다녀왔다"));
         assertThatThrownBy(() -> commandService.write(memberId, spotId, write(TODAY.plusDays(1), 3, "내일 갈 곳")))
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT));
 
-        // when, then: UTC로는 아직 10월 5일이지만 한국은 10월 6일 0시 30분이다.
+        // when, then
         clock.setInstant(Instant.parse("2026-10-05T15:30:00Z"));
         commandService.write(memberId, spotId, write(TODAY.plusDays(1), 3, "한국 날짜로는 오늘"));
         assertThat(rowCount(spotId)).isEqualTo(2);
@@ -418,7 +417,7 @@ class SpotReviewServiceIntegrationTest {
     @Test
     @DisplayName("[F-05][F-10] 상세의 recentReviews는 작성 시각이 같으면 후기 ID가 큰 것이 먼저이고, rating은 그 장소의 후기만 센다")
     void detailBreaksCreatedAtTieByIdAndCountsOnlyThisSpot() {
-        // given: 후기 셋을 같은 시각에 쓰고, 다른 장소에도 후기를 하나 쓴다.
+        // given
         long spotId = saveSpot();
         long otherSpotId = saveSpot();
         long first = writeAt(spotId, 1, Duration.ZERO);

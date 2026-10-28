@@ -74,7 +74,6 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
                 .isEqualTo(1);
         assertThat(fixture.eventCount(BasecampTransitionEvents.CANCELED_EVENT_TYPE))
                 .isZero();
-        // 자동 처리가 이겼으면 캠프 리더의 확정이 거부되고, 캠프 리더가 이겼으면 자동 처리가 false를 돌려준다. 둘 중 하나만 이긴다.
         int leaderWins = failures.isEmpty() ? 1 : 0;
         assertThat(leaderWins + autoProcessed.get()).isEqualTo(1);
         assertThat(failures).allSatisfy(failure -> assertInvalidState(failure));
@@ -124,8 +123,6 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
                 () -> transitionService.cancel(basecampId, leaderId),
                 () -> countIfTrue(applier.processDayBeforeDeparture(basecampId, AUTO_NOW), autoProcessed)));
 
-        // 확정된 베이스캠프도 출발일 전날까지는 캠프 리더가 취소할 수 있다. 서비스 시계는 출발일보다 훨씬 이른 날이라서,
-        // 어느 순서로 실행되든 취소는 성공한다.
         assertThat(failures).isEmpty();
         assertThat(jdbc.queryForMap("SELECT status, cancel_reason FROM basecamp WHERE id = ?", basecampId))
                 .containsEntry("status", "CANCELED")
@@ -152,7 +149,6 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
                 },
                 () -> countIfTrue(applier.processDayBeforeDeparture(basecampId, AUTO_NOW), autoProcessed)));
 
-        // 확정된 뒤의 탈퇴도 허용되므로 탈퇴는 어느 순서에서든 성공하고, 자동 처리는 정확히 한 번 전이한다.
         assertThat(failures).isEmpty();
         assertThat(autoProcessed.get()).isEqualTo(1);
         assertThat(fixture.activeMemberCount(basecampId)).isEqualTo(1);
@@ -160,14 +156,12 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
                         + fixture.eventCount(BasecampTransitionEvents.CANCELED_EVENT_TYPE, basecampId))
                 .isEqualTo(1);
         if (fixture.statusOf(basecampId).equals("CANCELED")) {
-            // 탈퇴가 먼저 커밋된 경우다. 자동 처리가 탈퇴를 보지 못했다면 확정했을 것이다.
             assertThat(jdbc.queryForObject("SELECT cancel_reason FROM basecamp WHERE id = ?", String.class, basecampId))
                     .isEqualTo("NOT_ENOUGH_MEMBERS");
             assertThat(fixture.payloadMemberIdsOf(BasecampTransitionEvents.CANCELED_EVENT_TYPE, basecampId))
                     .containsExactly(leaderId);
             return;
         }
-        // 자동 처리가 먼저 확정한 경우다. 확정 이벤트는 확정한 시점의 멤버 둘을 모두 담는다.
         assertThat(fixture.statusOf(basecampId)).isEqualTo("CONFIRMED");
         assertThat(fixture.payloadMemberIdsOf(BasecampTransitionEvents.CONFIRMED_EVENT_TYPE, basecampId))
                 .containsExactly(leaderId, memberId);
@@ -187,7 +181,6 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
                         e -> assertThat(e.getErrorCode()).isEqualTo(BasecampErrorCode.BASECAMP_INVALID_STATE));
     }
 
-    // 작업마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runConcurrently(List<Callable<Object>> actions) throws Exception {
         int threads = actions.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

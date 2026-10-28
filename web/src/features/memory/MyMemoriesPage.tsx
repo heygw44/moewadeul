@@ -17,7 +17,6 @@ import { MemoryMapGrid } from './MemoryMapGrid';
 
 type LoadResult = { attempt: number; memories: MemorySummary[] } | { attempt: number; error: unknown };
 
-// 내가 남긴 기록을 공개 범위와 상관없이 정확한 좌표로 지도에 보여 준다. 좌표는 작성자인 나에게만 간다.
 export function MyMemoriesPage() {
   const session = useSession();
   const { pathname, search } = useLocation();
@@ -29,7 +28,6 @@ export function MyMemoriesPage() {
     document.title = '내 기록 지도 · 뫼와들';
   }, []);
 
-  // 내 기록은 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);

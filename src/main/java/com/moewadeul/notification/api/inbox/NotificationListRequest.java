@@ -20,7 +20,6 @@ public record NotificationListRequest(
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 20;
     private static final int MAX_SIZE = 50;
-    // Spring Data는 건너뛸 건수(page × size)를 int로 다룬다. 크기를 최대로 보내도 그 값이 int 범위 안에 들어오는 가장 큰 쪽 번호다.
     private static final int MAX_PAGE = Integer.MAX_VALUE / MAX_SIZE;
 
     int pageOrDefault() {

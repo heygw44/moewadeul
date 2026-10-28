@@ -13,18 +13,12 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 회원이 커뮤니티 글이나 댓글을 신고한 기록. 한 회원은 같은 글이나 댓글을 한 번만 신고할 수 있다.
- *
- * <p>대상은 글과 댓글 두 테이블에 걸쳐 있어서 연관관계로 걸지 않고 종류와 ID로만 가리킨다. 신고는 추가만 하고 고치거나 지우지 않는다.
- */
 @Entity
 @Table(name = "community_report")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CommunityReport {
 
-    /** 신고 내용의 최대 길이다. DB 컬럼 크기와 같다. */
     public static final int CONTENT_MAX_LENGTH = 1000;
 
     @Id
@@ -46,7 +40,6 @@ public class CommunityReport {
 
     private String content;
 
-    // 관리자가 대상을 복구하면서 검토를 마친 것으로 표시한 시각이다. null이면 아직 검토 전이다.
     @Column(name = "reviewed_at")
     private Instant reviewedAt;
 
@@ -68,12 +61,6 @@ public class CommunityReport {
         this.createdAt = now;
     }
 
-    /**
-     * 호출하면 reporterId인 회원이 targetType의 targetId를 reason으로 신고한 기록을 만든다. content는 없어도 된다.
-     *
-     * <p>targetType, reason, now가 null이거나 content가 {@value #CONTENT_MAX_LENGTH}자를 넘으면 {@link IllegalArgumentException}을
-     * 던진다.
-     */
     public static CommunityReport of(
             CommunityReportTargetType targetType,
             long targetId,

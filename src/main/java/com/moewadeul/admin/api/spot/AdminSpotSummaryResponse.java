@@ -5,7 +5,6 @@ import com.moewadeul.spot.application.moderation.AdminSpotSummary;
 import java.time.Instant;
 import java.util.List;
 
-/** 관리자 박지 검토 목록의 한 항목. reporter는 공공데이터 장소이면 null이다. 신고 수와 최근 신고는 검토 전 신고만 담고 신고자는 담지 않는다. */
 public record AdminSpotSummaryResponse(
         long spotId,
         String type,

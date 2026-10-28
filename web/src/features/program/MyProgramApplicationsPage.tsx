@@ -40,7 +40,6 @@ export function MyProgramApplicationsPage() {
     document.title = '내 행사 신청 · 뫼와들';
   }, []);
 
-  // 내 신청은 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
@@ -107,7 +106,6 @@ export function MyProgramApplicationsPage() {
   );
 }
 
-// 신청 시각부터 결제 기한까지가 그 신청의 결제 기한 길이다. 행사마다 기한 길이가 다를 수 있어서 응답의 두 시각으로 구한다.
 function paymentWindowSeconds(createdAt: string, paymentDueAt: string): number {
   return Math.floor((Date.parse(paymentDueAt) - Date.parse(createdAt)) / 1000);
 }

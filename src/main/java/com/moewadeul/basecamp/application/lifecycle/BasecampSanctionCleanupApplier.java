@@ -12,10 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 제재를 받았거나 탈퇴한 회원을 베이스캠프 하나에서 정리한다. 메서드 하나가 트랜잭션 하나이고 베이스캠프 하나만 다룬다.
- * 그래서 한 베이스캠프의 처리가 실패해도 다른 베이스캠프의 처리는 그대로 커밋된다.
- */
 @Component
 @RequiredArgsConstructor
 public class BasecampSanctionCleanupApplier {
@@ -24,11 +20,6 @@ public class BasecampSanctionCleanupApplier {
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
 
-    /**
-     * 호출하면 memberId인 회원을 basecampId인 베이스캠프에서 cause(제재 또는 탈퇴)에 맞게 정리하고, 남은 멤버에게 알릴 이벤트를 같은 트랜잭션에서 기록한다.
-     * 캠프 리더이면 베이스캠프를 취소하고 캠프 리더를 뺀 ACTIVE 멤버에게 알린다. 멤버이면 탈퇴 처리하고 남은 ACTIVE 멤버에게 알린다.
-     * 대기 중인 신청자이면 신청만 취소하고 알리지 않는다. 이미 빠졌거나 끝난 베이스캠프이면 아무것도 바꾸지 않고 이벤트도 기록하지 않는다.
-     */
     @Transactional
     public MemberRemoval cleanUp(long basecampId, long memberId, RemovalCause cause) {
         // 베이스캠프 행을 쓰기 잠금으로 읽는 조회가 이 트랜잭션의 첫 조회여야 한다. MySQL의 반복 가능한 읽기에서는

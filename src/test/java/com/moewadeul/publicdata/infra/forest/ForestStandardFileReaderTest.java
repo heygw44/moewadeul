@@ -13,8 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.json.JsonMapper;
 
-// 행의 값은 실제 파일(전국휴양림표준데이터)의 모양을 따라 손으로 지어낸 것이다.
-// 숫자 값, null 값, 키가 빠진 행, records가 없는 파일은 형식 검사를 확인하려고 테스트에서 지어낸 것이다.
 class ForestStandardFileReaderTest {
 
     private static final String FORM = """
@@ -98,7 +96,7 @@ class ForestStandardFileReaderTest {
     @Test
     @DisplayName("[F-06] 한 행이라도 필요한 키가 없으면 일부만 돌려주지 않고 파일 전체를 거부한다")
     void rejectsFileWhenRowMissesRequiredKey() throws IOException {
-        // given: 두 번째 행에 위도 키가 없다.
+        // given
         String withoutLatitude = FULL_RECORD.replace("\"위도\":\"37.5\",", "");
         Path file = write(FORM.formatted(FULL_RECORD + "," + withoutLatitude));
 

@@ -21,13 +21,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 본인확인 기록 하나를 한 트랜잭션으로 저장한다. 제공자가 돌려준 출생연도·성별과 CI 해시만 저장하고, CI 원값은 저장하지 않는다.
- *
- * <p>한 회원은 한 번만 본인확인할 수 있고, 같은 CI는 한 계정에만 연결된다. 이 클래스는 조회로 먼저 거르고, 두 요청이 동시에 들어와 조회를 모두
- * 통과하면 저장할 때 DB가 던지는 유니크 제약 위반을 같은 오류 코드로 바꾼다. 저장하다가 DB 교착 상태로 롤백되는 경우는
- * {@link IdentityVerificationService}가 트랜잭션 밖에서 다시 실행한다(최대 3번).
- */
 @Service
 @RequiredArgsConstructor
 public class IdentityVerificationApplier {
@@ -38,12 +31,6 @@ public class IdentityVerificationApplier {
     private final TrustSummaryService trustSummaryService;
     private final Clock clock;
 
-    /**
-     * 호출하면 memberId인 회원의 본인확인 기록을 저장하고 결과를 돌려준다.
-     *
-     * <p>출생연도가 1900년보다 이르거나 올해(한국 시각)보다 늦으면 INVALID_INPUT으로 거부한다. 이미 본인확인한 회원이면 IDENTITY_ALREADY_VERIFIED로,
-     * 같은 CI로 본인확인한 다른 계정이 있으면 IDENTITY_CI_DUPLICATED로 거부한다. 두 경우가 겹치면 IDENTITY_ALREADY_VERIFIED가 먼저다.
-     */
     @Transactional
     public IdentityVerificationResult apply(long memberId, IdentityVerifyCommand command) {
         Instant now = clock.instant();

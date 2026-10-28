@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
-// 화면이 쿼리 파라미터로 보내는 조건이다. 값이 없으면 기본값을 쓰거나 거르지 않으려고 래퍼 타입으로 받는다.
 public record CommunityPostListRequest(
         Long spotId,
 
@@ -29,7 +28,6 @@ public record CommunityPostListRequest(
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 20;
 
-    // 검색어 길이는 앞뒤 공백을 지운 값으로 검사해야 한다. 그래서 검증보다 먼저 도는 생성자에서 공백을 지우고, 남는 글자가 없으면 검색하지 않는 것으로 본다.
     public CommunityPostListRequest {
         keyword = keyword == null || keyword.isBlank() ? null : keyword.strip();
     }

@@ -17,13 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 실행 기록을 시작하는 트랜잭션만 맡는다. {@link SyncJobRunService#begin}만 이 클래스를 부른다.
- *
- * <p>같은 종류를 동시에 시작하면 DB가 이 트랜잭션 안의 INSERT에서 유니크 제약 위반 예외를 던진다. 예외가 트랜잭션 안에서 나면 Spring이 그 트랜잭션을
- * 롤백 전용으로 표시하므로, 같은 트랜잭션 안에서 예외를 잡아 빈 값을 돌려주면 커밋할 때 다시 예외가 난다. 그래서 트랜잭션을 이 클래스에 따로 두고,
- * {@code begin}이 트랜잭션 밖에서 예외를 받는다.
- */
+// 유니크 제약 위반이 이 트랜잭션 안에서 나면 Spring이 롤백 전용으로 표시해서, 안에서 잡아도 커밋할 때 다시 예외가 난다.
+// 그래서 SyncJobRunService.begin이 이 트랜잭션 밖에서 예외를 받는다.
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -33,10 +28,6 @@ class SyncJobRunStartService {
     private final AdminAuditRecorder adminAuditRecorder;
     private final Clock clock;
 
-    /**
-     * 호출하면 새 실행 기록을 RUNNING으로 만든다. adminId가 null이 아니면 관리자가 요청한 실행이므로 같은 트랜잭션에서 감사 로그를 남기고,
-     * null이면(스케줄러의 자동 실행) 남기지 않는다. 다른 실행이 진행 중이라 기록을 만들지 않을 때도 감사 로그는 남기지 않는다.
-     */
     @Transactional
     public Optional<SyncJobStart> start(SyncJobType jobType, Duration staleAfter, Long adminId) {
         Instant now = clock.instant();

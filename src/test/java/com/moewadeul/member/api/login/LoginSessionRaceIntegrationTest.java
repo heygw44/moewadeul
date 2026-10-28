@@ -31,10 +31,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-/**
- * 로그인 요청이 비밀번호를 비교하는 사이에 비밀번호 재설정이나 정지가 끝나도, 그 요청이 뒤늦게 세션을 남기지 않는지 확인한다.
- * 재설정과 정지는 커밋한 뒤 그 회원의 세션을 한 번만 지우므로, 그때 아직 만들어지지 않은 세션은 지워지지 않는다.
- */
 @IntegrationTest
 @AutoConfigureMockMvc
 @Import(PasswordMatchPause.Config.class)
@@ -116,7 +112,6 @@ class LoginSessionRaceIntegrationTest {
                 .build());
     }
 
-    // 토큰 원값은 DB에 없다. 메일을 거치지 않으므로 토큰을 직접 만들어 해시만 저장한다.
     private String issueToken(Member member) {
         ResetToken token = ResetToken.generate(new SecureRandom());
         tokenRepository.save(PasswordResetToken.issue(member.getId(), ResetToken.hash(token.value()), clock.instant()));

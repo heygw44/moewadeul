@@ -184,8 +184,6 @@ class WeatherCachesTest {
         assertThat(calls).hasValue(1);
     }
 
-    // 첫 요청의 loader가 멈춘 것을 확인한 뒤 같은 키로 요청을 더 보내고, 그 요청들이 모두 첫 호출의 결과를 기다리기 시작한 뒤에 첫 호출을
-    // 끝낸다. 빈 값이나 실패는 끝나자마자 캐시에서 지워지므로, 기다리기 전에 첫 호출이 끝나면 늦게 온 요청이 loader를 다시 부르기 때문이다.
     private <T> List<Future<T>> runConcurrently(CountDownLatch loading, CountDownLatch release, Callable<T> task)
             throws InterruptedException {
         List<Future<T>> results = new ArrayList<>();

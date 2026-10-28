@@ -9,7 +9,6 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-// 보내지 않은(null) 필드는 현재 값을 그대로 둔다. 정원 범위와 합류 조건 값은 서비스가 검사한다.
 public record BasecampReviseRequest(
         @Size(max = Basecamp.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 해요.")
         @Pattern(regexp = ".*\\S.*", message = "제목은 공백뿐일 수 없어요.")

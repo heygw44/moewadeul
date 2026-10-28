@@ -16,20 +16,14 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 회원에게 내린 제재 한 건. 회원은 다른 모듈의 엔티티라서 ID로만 가리킨다.
- * 지금은 긴급 신고에 따른 임시 정지만 만든다.
- */
 @Entity
 @Table(name = "sanction")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Sanction {
 
-    /** 임시 정지 기간이다. 관리자가 신고를 확인하기 전까지 대상 회원의 이용을 막는다. */
     public static final Duration TEMPORARY_SUSPENSION = Duration.ofHours(72);
 
-    /** 확정 제재 사유의 최대 길이다. DB 컬럼 크기와 같다. */
     public static final int REASON_MAX_LENGTH = 500;
 
     static final String TEMPORARY_REASON = "성희롱·위협 신고가 접수되어 관리자가 확인하기 전까지 이용을 임시로 정지해요.";
@@ -87,10 +81,6 @@ public class Sanction {
         this.updatedAt = startsAt;
     }
 
-    /**
-     * 호출하면 reportId인 신고를 근거로 memberId인 회원을 startsAt부터 72시간 정지하는 제재를 만든다.
-     * 제재 단계는 없고(NULL), 관리자가 아니라 서버가 내리므로 만든 사람도 없다. 상태는 적용 중이다.
-     */
     public static Sanction temporary(long memberId, long reportId, Instant startsAt) {
         if (startsAt == null) {
             throw new IllegalArgumentException("정지를 시작하는 시각이 null입니다.");
@@ -119,14 +109,6 @@ public class Sanction {
         this.updatedAt = startsAt;
     }
 
-    /**
-     * 호출하면 관리자 createdBy가 memberId인 회원에게 startsAt부터 적용하는 확정 제재를 만든다. 상태는 적용 중이다.
-     * 7일·30일 정지는 startsAt부터 그 기간 뒤에 끝나고, 경고와 영구 정지는 끝나는 시각이 없다(NULL).
-     * reportId는 근거 신고이고, 신고 없이 내리는 제재이면 null이다.
-     *
-     * <p>임시 정지 종류이거나, 단계가 종류와 맞지 않거나, 사유가 비었거나 {@value #REASON_MAX_LENGTH}자를 넘거나, 시작 시각이 null이면
-     * {@link IllegalArgumentException}을 던진다. 다음 단계가 맞는지는 {@link SanctionPolicy}가 따로 판단한다.
-     */
     public static Sanction confirm(
             long memberId,
             Long reportId,
@@ -150,10 +132,6 @@ public class Sanction {
         return new Sanction(memberId, reportId, type, level, reason, startsAt, createdBy);
     }
 
-    /**
-     * 호출하면 적용 중인 제재를 해제 상태로 바꾸고 해제한 관리자와 시각을 남긴다. 이미 해제됐거나 기간이 끝난 제재이면
-     * SANCTION_INVALID_STATE 예외를 던진다. 회원의 정지 상태를 다시 계산하는 일은 호출하는 쪽이 한다.
-     */
     public void lift(long adminId, Instant now) {
         requireNow(now);
         if (status != SanctionStatus.ACTIVE) {
@@ -162,11 +140,6 @@ public class Sanction {
         markLifted(adminId, now);
     }
 
-    /**
-     * 호출하면 기각된 신고가 만든 임시 정지를 해제 상태로 바꾸고 기각한 관리자와 시각을 남긴다. 적용 중인 임시 정지뿐 아니라 72시간이 지나
-     * 이미 만료된 임시 정지도 바꾼다. 기각된 신고의 임시 정지는 제재 이력에 남기지 않으므로, 만료됐다는 이유로 이력에 남으면 안 되기 때문이다.
-     * 임시 정지가 아니거나 이미 해제됐으면 SANCTION_INVALID_STATE 예외를 던진다. 회원의 정지 상태를 다시 계산하는 일은 호출하는 쪽이 한다.
-     */
     public void liftForDismissedReport(long adminId, Instant now) {
         requireNow(now);
         if (type != SanctionType.TEMPORARY_72H || status == SanctionStatus.LIFTED) {

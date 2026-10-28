@@ -6,12 +6,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * 기록 수정 요청. 필드마다 요청에 있었는지와 값을 함께 담고, 요청에 없던 필드는 바꾸지 않는다.
- *
- * <p>spotId를 null로 보냈으면 장소 연결을 끊고, content를 null로 보냈으면 글을 지운다. 좌표, 방문일, 박 수, 공개 범위, imageIds는 지울 수
- * 있는 값이 아니라서 null을 거부한다. 위도와 경도는 한 지점을 이루므로 함께 보내야 한다.
- */
 public record MemoryReviseCommand(
         PatchField<Long> spotId,
         PatchField<Double> lat,
@@ -33,11 +27,6 @@ public record MemoryReviseCommand(
         Objects.requireNonNull(imageIds, "imageIds");
     }
 
-    /**
-     * 호출하면 요청에 있는 값으로 current를 덮어쓴 작성 요청을 만든다. 사진은 따로 바꾸므로 결과에 넣지 않는다.
-     *
-     * <p>지울 수 없는 필드에 null을 보냈거나, 위도와 경도 중 하나만 보냈으면 그 필드의 INVALID_INPUT으로 거부한다.
-     */
     MemoryWriteCommand mergeInto(MemoryDetails current) {
         requireNotCleared(lat, "lat", "위도");
         requireNotCleared(lng, "lng", "경도");
@@ -58,7 +47,6 @@ public record MemoryReviseCommand(
                 List.of());
     }
 
-    /** 요청이 장소를 currentSpotId가 아닌 다른 장소로 바꾸면 true다. 연결을 끊거나 같은 장소를 다시 보내면 false다. */
     boolean linksNewSpot(Long currentSpotId) {
         return spotId.present() && spotId.value() != null && !spotId.value().equals(currentSpotId);
     }

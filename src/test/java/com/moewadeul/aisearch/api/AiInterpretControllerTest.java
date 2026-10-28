@@ -45,7 +45,6 @@ class AiInterpretControllerTest {
 
     private static final long MEMBER_ID = 7L;
     private static final String URI = "/api/spots/ai-interpret";
-    // 응답 본문에 되돌아오는지 찾을 수 있도록 다른 곳에 나오지 않을 문장을 쓴다.
     private static final String SENTENCE = "쿠쿠다스봉우리 근처 계곡";
     private static final SpotQueryConditions EMPTY =
             new SpotQueryConditions(null, null, Set.of(), false, false, false, false, Set.of(), List.of());

@@ -14,7 +14,6 @@ type SpotTypeMeta = {
   label: string;
   icon: IconName;
   tone: SpotTypeTone;
-  // 목록 행과 상세 머리글의 유형 아이콘 칸 색. 지도 핀 색(map/markers.ts)과 같은 계열로 맞춘다. Tailwind가 소스 글자를 읽으므로 클래스 이름을 통째로 적는다.
   tileClass: string;
 };
 
@@ -30,7 +29,6 @@ export const SIGNAL_LEVEL_LABELS: Record<SignalLevel, string> = {
   GOOD: '좋음',
 };
 
-// 화면에 보여 줄 순서대로 적는다.
 export const FACILITY_LABELS: ReadonlyArray<readonly [keyof PublicFacilities, string]> = [
   ['toiletCount', '화장실 수'],
   ['showerCount', '샤워실 수'],
@@ -50,7 +48,6 @@ const SOURCE_LABELS: Record<string, string> = {
   KDPA: '한국보호지역통합DB(KDPA)',
 };
 
-// 서버가 아직 표에 없는 출처 코드를 주면 받은 글자를 그대로 보여 준다.
 export function sourceLabel(code: string): string {
   return SOURCE_LABELS[code] ?? code;
 }

@@ -24,9 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-/**
- * 로그인한 회원이 현재 비밀번호를 틀린 채 변경 요청을 겹쳐 보내도, 로그인 실패와 합쳐 10분 안에 5번까지만 틀릴 수 있는지 확인한다.
- */
 @IntegrationTest
 class PasswordChangeLockConcurrencyIntegrationTest {
 
@@ -70,7 +67,6 @@ class PasswordChangeLockConcurrencyIntegrationTest {
                 .hasSize(BURST_SIZE - MAX_FAILURES);
     }
 
-    // 요청 BURST_SIZE건을 한꺼번에 출발시키고 각 요청이 던진 오류 코드를 모은다. 모두 틀린 현재 비밀번호라서 성공하는 요청은 없어야 한다.
     private List<MemberErrorCode> changeTogether(long memberId) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(BURST_SIZE);
         CountDownLatch ready = new CountDownLatch(BURST_SIZE);

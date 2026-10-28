@@ -1,13 +1,9 @@
 import { ApiError } from './client';
 
-// 사용자가 고칠 수 없는 요청 형식 오류는 모두 같은 문구로 알린다.
 const REQUEST_BROKEN = '요청을 처리하지 못했어요. 화면을 새로고침한 뒤 다시 시도해 주세요.';
-// 다른 사람이나 다른 화면에서 상태를 먼저 바꾼 경우다.
 const STATE_CHANGED = '상태가 바뀌어 지금은 할 수 없어요. 화면을 새로고침해 주세요.';
 
-// 서버 오류 코드를 화면 문구로 바꾸는 표다. 문구마다 사용자가 다음에 할 일을 함께 적는다.
 const ERROR_MESSAGES: Record<string, string> = {
-  // 공통
   INVALID_INPUT: '입력한 내용에 맞지 않는 곳이 있어요. 표시된 칸을 고쳐 주세요.',
   AUTHENTICATION_REQUIRED: '로그인한 뒤 다시 시도해 주세요.',
   ACCESS_DENIED: '이 기능을 쓸 권한이 없어요. 이전 화면으로 돌아가 주세요.',
@@ -21,7 +17,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   IDEMPOTENCY_KEY_REUSED: REQUEST_BROKEN,
   IDEMPOTENCY_IN_PROGRESS: '앞서 보낸 요청을 아직 처리하고 있어요. 잠시 기다려 주세요.',
 
-  // 회원·인증
   MEMBER_EMAIL_DUPLICATED: '이미 가입된 이메일이에요. 로그인하거나 다른 이메일을 써 주세요.',
   MEMBER_NICKNAME_DUPLICATED: '다른 회원이 쓰는 닉네임이에요. 다른 닉네임을 정해 주세요.',
   MEMBER_DISPOSABLE_EMAIL: '일회용 이메일은 쓸 수 없어요. 평소 쓰는 이메일을 입력해 주세요.',
@@ -41,7 +36,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   PASSWORD_RESET_TOKEN_INVALID: '만료됐거나 이미 쓴 재설정 링크예요. 비밀번호 재설정을 다시 요청해 주세요.',
   PASSWORD_RESET_LIMITED: '재설정을 너무 자주 요청했어요. 잠시 뒤 다시 시도해 주세요.',
 
-  // 신뢰
   IDENTITY_ALREADY_VERIFIED: '이미 본인확인을 마쳤어요. 따로 할 일은 없어요.',
   IDENTITY_CI_DUPLICATED: '다른 계정에서 이미 본인확인을 했어요. 그 계정으로 로그인해 주세요.',
   TRUST_LEVEL_INSUFFICIENT: '신뢰 단계가 부족해요. 내 정보의 신뢰 단계에서 필요한 조건을 볼 수 있어요.',
@@ -54,7 +48,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   REPORT_INVALID_STATE: '이미 처리된 신고예요. 화면을 새로고침해 주세요.',
   SANCTION_INVALID_STATE: '이미 해제됐거나 끝난 제재예요. 화면을 새로고침해 주세요.',
 
-  // 장소·박지·후기
   SPOT_RADIUS_TOO_LARGE: '반경은 50km까지 고를 수 있어요. 반경을 줄여 주세요.',
   BAKJI_ALREADY_CONFIRMED: '이 박지는 이미 확인했어요. 박지마다 한 번만 할 수 있어요.',
   BAKJI_ALREADY_REPORTED: '이미 이 박지를 신고했어요. 처리 결과를 기다려 주세요.',
@@ -64,7 +57,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   AI_SEARCH_UNAVAILABLE: '지금은 AI 검색을 쓸 수 없어요. 지역 이름으로 검색해 주세요.',
   SPOT_REVIEW_DUPLICATED: '이 방문일로 쓴 후기가 이미 있어요. 방문일을 바꿔 주세요.',
 
-  // 베이스캠프
   BASECAMP_OPEN_LIMIT: '모집 중인 베이스캠프는 3개까지 열 수 있어요. 모집 중인 베이스캠프를 마감한 뒤 열어 주세요.',
   BASECAMP_CAPACITY_INVALID: '정원은 캠프 리더를 포함해 2~6명으로 정해 주세요.',
   BASECAMP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안에서, 일정은 1~3박으로 골라 주세요.',
@@ -80,7 +72,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   BASECAMP_NOT_ENOUGH_MEMBERS: '멤버가 2명 이상이어야 확정할 수 있어요. 합류 신청을 더 받아 주세요.',
   BASECAMP_LEADER_CANNOT_LEAVE: '캠프 리더는 베이스캠프에서 나갈 수 없어요. 나가려면 베이스캠프를 취소해 주세요.',
 
-  // 공식 행사
   PROGRAM_NOT_IN_APPLY_PERIOD: '지금은 신청 기간이 아니에요. 행사 상세에서 신청 기간을 볼 수 있어요.',
   PROGRAM_SOLD_OUT: '남은 자리가 없어요. 빈자리 알림을 신청해 주세요.',
   PROGRAM_ALREADY_APPLIED: '이미 신청한 행사예요. 내 행사 신청에서 볼 수 있어요.',
@@ -89,11 +80,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   PROGRAM_CANCEL_NOT_ALLOWED: '취소할 수 있는 기한이 지났어요. 관리자에게 문의해 주세요.',
   PROGRAM_CAPACITY_DECREASE: '신청이 시작된 뒤에는 정원을 줄일 수 없어요. 정원을 늘리거나 그대로 둬 주세요.',
 
-  // 커뮤니티
   COMMUNITY_ALREADY_REPORTED: '이미 신고한 글이나 댓글이에요. 처리 결과를 기다려 주세요.',
-  // 추억 기록
   MEMORY_ALREADY_REPORTED: '이미 신고한 기록이에요. 처리 결과를 기다려 주세요.',
-  // 개인 일정
   SOLO_TRIP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안에서, 일정은 1~3박으로 골라 주세요.',
   SOLO_TRIP_LIMIT: '앞으로 갈 혼자 가는 일정은 3개까지 등록할 수 있어요. 내 정보에서 필요 없는 일정을 삭제해 주세요.',
   SOLO_TRIP_OVERLAP: '등록한 다른 일정과 날짜가 겹쳐요. 다른 날짜를 골라 주세요.',
@@ -102,10 +90,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   MEMORY_INVALID_STATE: STATE_CHANGED,
   IMAGE_UPLOAD_FAILED: '사진을 올리지 못했어요. 다시 올려 주세요.',
 
-  // 공공데이터
   SYNC_JOB_ALREADY_RUNNING: '같은 동기화가 이미 돌고 있어요. 끝난 뒤 다시 실행해 주세요.',
 
-  // 서버에 닿지 못한 경우
   NETWORK_ERROR: '인터넷에 연결하지 못했어요. 연결 상태를 본 뒤 다시 시도해 주세요.',
   REQUEST_TIMEOUT: '응답이 오지 않아요. 연결 상태를 본 뒤 다시 시도해 주세요.',
 };
@@ -128,7 +114,6 @@ export function errorMessage(code: string): string | undefined {
   return ERROR_MESSAGES[code];
 }
 
-// 표에 없는 필드 이름이면 서버가 준 이름을 그대로 돌려준다.
 export function fieldLabel(field: string): string {
   return FIELD_LABELS[field] ?? field;
 }
@@ -140,8 +125,6 @@ export function toUserMessage(error: unknown): string {
   return UNEXPECTED_ERROR_MESSAGE;
 }
 
-// 서버가 5xx로 답한 예상 못 한 오류의 추적 ID다. 회원이 문의할 때 알려 주면 운영자가 서버 로그를 찾는다.
-// 4xx는 회원이 고칠 수 있는 오류라서 ID를 보여 주지 않는다.
 export function serverTraceId(error: unknown): string | undefined {
   return error instanceof ApiError && error.status >= 500 ? error.traceId : undefined;
 }

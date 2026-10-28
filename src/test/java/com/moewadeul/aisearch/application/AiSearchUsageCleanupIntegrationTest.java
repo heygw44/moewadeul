@@ -15,7 +15,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class AiSearchUsageCleanupIntegrationTest {
 
-    // 테스트 시계의 기본 시각은 한국 시간으로 2026-10-05 정오다.
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 5);
 
     @Autowired

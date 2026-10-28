@@ -3,7 +3,6 @@ import { AsideSection } from '../../components/HubLayout';
 
 const TEXT_LINK_CLASS = 'font-semibold text-accent underline underline-offset-2';
 
-// 공식 행사 목록의 오른쪽 안내 열이다. 신청 규칙만 둔다. 내 신청으로 가는 길은 머리 띠의 버튼이 맡는다.
 export function ProgramAside() {
   return (
     <>

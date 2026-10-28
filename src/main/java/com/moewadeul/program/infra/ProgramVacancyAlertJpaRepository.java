@@ -13,7 +13,6 @@ import org.springframework.data.repository.query.Param;
 public interface ProgramVacancyAlertJpaRepository
         extends JpaRepository<ProgramVacancyAlert, Long>, ProgramVacancyAlertRepository {
 
-    // 같은 회원이 동시에 두 번 신청해도 유니크 제약 위반 예외가 나지 않게 DB가 중복을 무시한다. 영향 행 수로 새로 만들었는지 가린다.
     @Override
     @Modifying
     @Query(nativeQuery = true, value = """
@@ -43,7 +42,6 @@ public interface ProgramVacancyAlertJpaRepository
             """)
     List<Long> findAlertTargets(@Param("programId") long programId, @Param("notifiedBefore") Instant notifiedBefore);
 
-    // 조건은 findAlertTargets와 같고, 알림 신청 행을 쓰기 잠금으로 읽는 것만 다르다.
     // 잠금 읽기는 다른 트랜잭션이 잠근 행의 커밋을 기다린 뒤 최신 알림 시각으로 조건을 본다.
     // 바깥 SELECT의 FOR UPDATE는 하위 쿼리의 신청 행을 잠그지 않는다.
     @Override

@@ -28,16 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 공공데이터 원천의 장소 목록을 spot, public_spot_detail, public_spot_setting에 적재한다. 같은 원천 행은 출처와 외부 ID로 찾아서 한 행만 유지한다.
- *
- * <p>서버는 바뀐 행만 갱신한다. 원천 데이터는 대부분 날마다 그대로라서, 모든 행을 다시 쓰면 updated_at과 synced_at이 실제 변경과 상관없이
- * 매일 바뀐다. 그래서 서버는 묶음의 기존 행을 먼저 읽어 Java에서 비교하고, 새 행은 추가하고, 값이 다른 행만 갱신하고, 같은 행에는 SQL을
- * 보내지 않는다.
- *
- * <p>원천이 삭제로 알려 준 장소는 {@link #markRemoved}가 숨기고, 숨긴 시각을 public_spot_detail에 남긴다. 그 장소가 원천에 다시 나타나면
- * {@link #upsert}가 그 표시를 보고 되돌린다.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -49,18 +39,6 @@ public class PublicSpotSyncService {
     private final JsonMapper jsonMapper;
     private final Clock clock;
 
-    /**
-     * 호출하면 commands를 한 트랜잭션으로 적재하고 건수를 돌려준다.
-     *
-     * <p>외부 ID나 이름이 비었거나 좌표가 기상청 격자 밖인 명령은 저장하지 않고 WARN 로그만 남긴다. 한 묶음에 같은 외부 ID가 여러 번 있으면 마지막
-     * 명령만 저장한다. 이미 있는 장소를 갱신해도 상태와 공원 경고는 그대로 둔다. 그래서 관리자가 숨긴 장소는 동기화 뒤에도 숨겨진 채로 남는다.
-     *
-     * <p>예외는 {@link #markRemoved}가 원천 삭제로 숨긴 장소다. 그 장소가 다시 오면 서버는 HIDDEN이던 상태를 ACTIVE로 되돌리고 삭제 표시를
-     * 지운다. 삭제 표시가 있지만 이미 ACTIVE인 장소(관리자가 다시 공개한 장소)는 표시만 지운다. 되돌린 장소는 다른 값이 바뀌었는지와 상관없이
-     * 갱신한 것으로 한 번 센다.
-     *
-     * <p>입지(settings)가 바뀐 장소는 상세 값이 바뀐 것과 같이 한 번 갱신한 것으로 센다. 서버는 그 장소의 입지 행을 모두 지우고 새 입지로 다시 넣는다.
-     */
     @Transactional
     public PublicSpotUpsertResult upsert(PublicSpotSource source, List<PublicSpotCommand> commands) {
         Map<String, NormalizedPublicSpot> spots = normalize(source, commands);
@@ -79,14 +57,6 @@ public class PublicSpotSyncService {
         return new PublicSpotUpsertResult(plan.inserts.size(), plan.detailUpdates.size(), plan.unchanged, skipped);
     }
 
-    /**
-     * 호출하면 source 출처에서 externalIds에 해당하는 장소 중, 지금 ACTIVE이고 원천 삭제로 숨긴 적이 없는 장소를 HIDDEN으로 바꾸고 숨긴 시각을
-     * 남긴다. 실제로 숨긴 장소 수를 돌려준다.
-     *
-     * <p>관리자가 이미 숨긴 장소는 삭제 표시가 없어서 건드리지도 표시하지도 않는다. 그래서 나중에 원천에 다시 나타나도 서버가 그 장소를 공개하지
-     * 않는다. 삭제 표시가 이미 있는 장소도 건드리지 않는다. 같은 삭제 항목이 날마다 와도 한 번만 숨기고, 관리자가 다시 공개한 장소를 동기화가 또
-     * 숨기지 않기 위해서다. DB에 없는 외부 ID, 비어 있거나 열 크기를 넘는 외부 ID는 무시한다.
-     */
     @Transactional
     public int markRemoved(PublicSpotSource source, Collection<String> externalIds) {
         List<String> ids = externalIds.stream()
@@ -104,11 +74,6 @@ public class PublicSpotSyncService {
         if (candidateIds.isEmpty()) {
             return 0;
         }
-        // 관리자가 같은 장소의 상태를 동시에 바꿔도 spot과 public_spot_detail이 서로 어긋나지 않게 두 테이블의 행을 먼저 잠근다.
-        // 관리자 숨김·복구와 같은 순서로 spot을 먼저, public_spot_detail을 나중에 잠근다. 순서가 반대면 동시에 올 때 데드락이 난다.
-        // 잠근 뒤에도 ACTIVE이고 표시가 없는 행만 남기므로, 그 사이 관리자가 숨긴 행은 빠진다. 두 테이블을 한 UPDATE로 바꾸면 영향받은 행 수가
-        // 테이블별 합이라 숨긴 수를 알 수 없다. 그래서 spot을 먼저 바꿔 그 행 수를 숨긴 수로 쓰고, 이어서 표시를 남긴다.
-        // 조건부 상태 변경이라 JPA 엔티티 대신 MyBatis로 처리한다.
         List<Long> activeIds = publicSpotMapper.lockActiveSpots(candidateIds);
         if (activeIds.isEmpty()) {
             return 0;
@@ -126,16 +91,6 @@ public class PublicSpotSyncService {
         return hidden;
     }
 
-    /**
-     * 호출하면 source 출처에서 지금 공개 중이고 원천 삭제로 숨긴 적이 없는 장소 가운데 presentExternalIds에 없는 장소를 {@link #markRemoved}로
-     * 숨기고, 숨긴 장소 수를 돌려준다. 원천이 목록 전체를 주고 삭제를 따로 알리지 않을 때, 새 목록에 빠진 장소를 숨기려고 쓴다.
-     *
-     * <p>관리자가 숨긴 장소는 삭제 표시가 없으므로 {@link #markRemoved}와 같이 건드리지 않는다. 호출하는 쪽은 원천에서 받은 목록이 온전한지
-     * 먼저 확인해야 한다. 빈 목록을 받으면 출처의 장소를 모두 숨기게 되므로, 서비스는 그 경우 예외를 던지고 아무것도 숨기지 않는다.
-     * presentExternalIds의 외부 ID는 앞뒤 공백을 지우고 비교한다. 읽기와 숨기기는 한 트랜잭션에서 처리한다.
-     *
-     * @throws IllegalArgumentException presentExternalIds에 비어 있지 않은 외부 ID가 하나도 없을 때
-     */
     @Transactional
     public int markMissingRemoved(PublicSpotSource source, Collection<String> presentExternalIds) {
         Set<String> present = presentExternalIds.stream()
@@ -155,10 +110,6 @@ public class PublicSpotSyncService {
         return markRemoved(source, missing);
     }
 
-    /**
-     * 호출하면 source 출처의 모든 장소를 상태와 상관없이(숨긴 장소도 포함해서) 외부 ID, 이름, 좌표로 돌려준다. 적재하는 쪽이 다른 출처의 장소와
-     * 겹치는지 가리거나, 이미 저장한 장소에 외부 ID를 이어 붙일 때 쓴다.
-     */
     @Transactional(readOnly = true)
     public List<PublicSpotLocation> findLocations(PublicSpotSource source) {
         return publicSpotMapper.selectLocationsBySource(source.name()).stream()
@@ -166,8 +117,6 @@ public class PublicSpotSyncService {
                 .toList();
     }
 
-    // 외부 ID를 키로 모으므로, 같은 외부 ID가 다시 나오면 뒤의 명령이 앞의 명령을 덮어쓴다.
-    // 그래야 한 INSERT 문에 같은 (출처, 외부 ID)가 두 번 들어가 유니크 제약을 어기는 일이 없다.
     private Map<String, NormalizedPublicSpot> normalize(PublicSpotSource source, List<PublicSpotCommand> commands) {
         Map<String, NormalizedPublicSpot> spots = new LinkedHashMap<>();
         for (PublicSpotCommand command : commands) {
@@ -176,7 +125,6 @@ public class PublicSpotSyncService {
         return spots;
     }
 
-    // 원천 데이터 한 건이 잘못됐다고 묶음 전체를 실패시키면, 다음 동기화도 같은 페이지에서 계속 멈춘다. 그래서 그 건만 건너뛴다.
     private Optional<NormalizedPublicSpot> normalizeOrSkip(PublicSpotSource source, PublicSpotCommand command) {
         try {
             return Optional.of(NormalizedPublicSpot.from(command));
@@ -202,7 +150,7 @@ public class PublicSpotSyncService {
                 .collect(Collectors.toMap(PublicSpotRow::externalId, Function.identity()));
     }
 
-    // 저장된 장소가 없으면 IN 목록이 비어 문장이 깨지므로 조회하지 않는다. 입지가 없는 장소는 맵에 키가 없다.
+    // 저장된 장소가 없으면 IN 목록이 비어 문장이 깨지므로 조회하지 않는다.
     private Map<Long, Set<PublicSpotSetting>> findStoredSettings(Collection<PublicSpotRow> stored) {
         if (stored.isEmpty()) {
             return Map.of();
@@ -243,6 +191,11 @@ public class PublicSpotSyncService {
     }
 
     private void update(UpsertPlan plan, Instant now) {
+        if (plan.detailUpdates.isEmpty()) {
+            return;
+        }
+        publicSpotMapper.lockSpots(
+                plan.detailUpdates.stream().map(PublicSpotUpdateRow::spotId).toList());
         if (!plan.spotUpdates.isEmpty()) {
             publicSpotMapper.updateSpots(plan.spotUpdates, now);
         }
@@ -254,7 +207,6 @@ public class PublicSpotSyncService {
             insertSettings(plan.settingReplacementRows);
         }
         if (!plan.restoredSpotIds.isEmpty()) {
-            // 순서가 중요하다. 상태를 되돌리는 문장이 삭제 표시를 보고 대상을 고르므로, 표시를 지우기 전에 실행한다.
             publicSpotMapper.restoreSpots(plan.restoredSpotIds, now);
             publicSpotMapper.clearSourceRemoved(plan.restoredSpotIds, now);
         }
@@ -279,18 +231,6 @@ public class PublicSpotSyncService {
         return jsonMapper.readValue(storedJson, FACILITIES_TYPE);
     }
 
-    /**
-     * 묶음의 장소를 추가할 것, 갱신할 것, 그대로 둘 것으로 나눈 결과.
-     *
-     * <p>spot 열이 바뀐 장소만 spotUpdates에 넣는다. 하지만 바뀐 장소는 모두 detailUpdates에 넣는다. synced_at은 동기화가 그 장소를 마지막으로 쓴
-     * 시각이라서, 이름이나 좌표만 바뀌어도 public_spot_detail의 synced_at을 옮겨야 하기 때문이다.
-     *
-     * <p>원천 삭제 표시가 있는 장소가 다시 오면 다른 값이 그대로여도 detailUpdates와 restoredSpotIds에 넣는다. 그래서 되돌린 장소는 갱신 건수에
-     * 한 번만 들어간다.
-     *
-     * <p>입지가 바뀐 장소도 detailUpdates에 넣는다. 그리고 그 장소의 ID와 새 입지 행을 따로 모은다. 입지는 지우고 다시 넣는 방식으로 바꾸기 때문이다.
-     * 새로 추가하는 장소의 입지는 spotId를 DB에서 받은 뒤에 넣어야 해서 insertedSettings에 추가 행과 함께 모아 둔다.
-     */
     private final class UpsertPlan {
 
         private final Map<Long, Set<PublicSpotSetting>> storedSettings;

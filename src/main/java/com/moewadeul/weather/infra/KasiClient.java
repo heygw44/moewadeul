@@ -35,15 +35,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-/**
- * 한국천문연구원 출몰시각 API 클라이언트.
- *
- * <p>공공데이터포털은 하루 호출 수를 제한하고, 재시도한 요청도 이 한도에서 뺀다. 그래서 클라이언트는 다시 보내면 성공할 수 있는 실패(I/O
- * 오류, 타임아웃, HTTP 5xx)일 때만 한 번 더 보낸다. 반면 인증 오류나 원천 오류 코드는 다시 보내도 같은 결과라서 바로 실패로 끝낸다.
- *
- * <p>인증키는 쿼리 값으로 보내므로 요청 주소에 키가 들어 있다. 그래서 클라이언트는 요청 주소를 로그나 예외 메시지에 남기지 않는다. 또
- * 이 API는 XML만 주므로, 응답은 외부 엔티티와 DOCTYPE을 막은 XML 파서로 읽는다.
- */
 @Slf4j
 @Component
 public class KasiClient {
@@ -52,7 +43,6 @@ public class KasiClient {
     private static final String RISE_SET = "getLCRiseSetInfo";
     private static final String RISE_SET_URI = "/RiseSetInfoService/getLCRiseSetInfo?serviceKey={serviceKey}"
             + "&locdate={locdate}&longitude={longitude}&latitude={latitude}&dnYn={dnYn}";
-    // Y로 보내면 위도와 경도를 도·분이 아닌 십진수로 받는다.
     private static final String DECIMAL_COORDINATE = "Y";
     private static final String SUCCESS_RESULT_CODE = "00";
     private static final String GATEWAY_ERROR_ROOT = "OpenAPI_ServiceResponse";
@@ -77,28 +67,16 @@ public class KasiClient {
         this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 
-    /**
-     * 위치와 날짜의 일출·일몰·시민박명 시각을 받는다.
-     *
-     * @param date 조회할 날짜(한국 날짜)
-     * @param lat 위도
-     * @param lng 경도
-     * @return 그날의 출몰시각. 원천이 항목을 주지 않았으면 빈 값
-     * @throws KasiApiException 재시도까지 실패했거나, 원천이 오류를 돌려줬거나, 응답 형식을 해석하지 못했을 때
-     */
     public Optional<KasiRiseSetItem> getRiseSet(LocalDate date, double lat, double lng) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("serviceKey", serviceKey);
         variables.put("locdate", LOCDATE.format(date));
-        // Double.toString은 로케일과 상관없이 소수점으로 점을 쓴다.
         variables.put("longitude", Double.toString(lng));
         variables.put("latitude", Double.toString(lat));
         variables.put("dnYn", DECIMAL_COORDINATE);
         return fetch(variables, KasiClient::toItem);
     }
 
-    // 동시 호출 수 한도는 재시도까지 한 호출로 묶어 잡는다. 한도가 차 있으면 기다리지 않고 바로 실패로 끝낸다.
-    // 재시도까지 실패하면(응답이 없거나 5xx) 쉬는 시간 동안 천문연을 부르지 않고 바로 실패로 끝낸다. 원천이 오류 코드로 답한 경우는 천문연이 살아 있으므로 쉬지 않는다.
     private <T> T fetch(Map<String, Object> variables, Function<Element, T> parser) {
         return callLimit.call(
                 () -> failureCooldown.call(
@@ -146,7 +124,6 @@ public class KasiClient {
         return new RawResponse(response.getStatusCode(), body);
     }
 
-    // 정상이면 응답 본문(response/body) 요소를 돌려준다. 그 밖의 응답은 모두 예외로 바꾼다.
     private Element parseBody(RawResponse response) {
         if (response.status().is5xxServerError()) {
             throw KasiApiException.retryable(
@@ -176,7 +153,6 @@ public class KasiClient {
                     .parse(new InputSource(new StringReader(response.body())))
                     .getDocumentElement();
         } catch (SAXException | IOException e) {
-            // 오류 응답이 XML이 아닐 수도 있어서, 상태가 실패면 해석 실패보다 HTTP 상태를 먼저 알린다.
             if (!response.status().is2xxSuccessful()) {
                 throw new KasiApiException(describe("HTTP " + response.status().value()), e);
             }
@@ -184,7 +160,6 @@ public class KasiClient {
         }
     }
 
-    // 외부에서 온 XML이므로 DOCTYPE과 외부 엔티티를 모두 막아 XXE와 엔티티 확장 공격을 차단한다.
     private static DocumentBuilder newDocumentBuilder() {
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -209,7 +184,6 @@ public class KasiClient {
         return "인증 오류 returnAuthMsg=" + textOf(root, "returnAuthMsg") + ", errMsg=" + textOf(root, "errMsg");
     }
 
-    // 결과가 없으면 items가 비어 있어서 item 요소가 없다. 항목이 여럿이어도 한 위치·날짜의 값은 하나라서 첫 항목만 읽는다.
     private static Optional<KasiRiseSetItem> toItem(Element root) {
         NodeList items = root.getElementsByTagName("item");
         if (items.getLength() == 0) {
@@ -220,7 +194,7 @@ public class KasiClient {
                 textOf(item, "locdate"), textOf(item, "sunrise"), textOf(item, "sunset"), textOf(item, "civile")));
     }
 
-    // 값 뒤에 공백이 붙어서 온다. 요소가 없으면 null이다.
+    // 값 뒤에 공백이 붙어서 온다.
     private static String textOf(Element parent, String tagName) {
         NodeList nodes = parent.getElementsByTagName(tagName);
         if (nodes.getLength() == 0) {

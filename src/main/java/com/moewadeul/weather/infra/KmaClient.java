@@ -32,14 +32,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 기상청 단기예보·중기예보 API 클라이언트.
- *
- * <p>공공데이터포털은 하루 호출 수를 제한하고, 재시도한 요청도 이 한도에서 뺀다. 그래서 클라이언트는 다시 보내면 성공할 수 있는 실패(I/O
- * 오류, 타임아웃, HTTP 5xx)일 때만 한 번 더 보낸다. 반면 인증 오류나 원천 오류 코드는 다시 보내도 같은 결과라서 바로 실패로 끝낸다.
- *
- * <p>인증키는 쿼리 값으로 보내므로 요청 주소에 키가 들어 있다. 그래서 클라이언트는 요청 주소를 로그나 예외 메시지에 남기지 않는다.
- */
 @Slf4j
 @Component
 public class KmaClient {
@@ -93,14 +85,6 @@ public class KmaClient {
         this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 
-    /**
-     * 격자 하나의 단기예보를 받는다.
-     *
-     * @param baseDateTime 발표 시각(한국 시각). 예: 2026-10-04T05:00
-     * @param nx 기상청 격자 X
-     * @param ny 기상청 격자 Y
-     * @throws KmaApiException 재시도까지 실패했거나, 원천이 오류를 돌려줬거나, 응답 형식을 해석하지 못했을 때
-     */
     public List<KmaShortTermItem> getVilageFcst(LocalDateTime baseDateTime, int nx, int ny) {
         Map<String, Object> variables = baseVariables(VILAGE_FCST_ROWS);
         variables.put("baseDate", BASE_DATE.format(baseDateTime));
@@ -110,26 +94,10 @@ public class KmaClient {
         return fetch(VILAGE_FCST, VILAGE_FCST_URI, variables, this::toShortTermItems);
     }
 
-    /**
-     * 중기 육상예보(하늘 상태, 강수확률)를 받는다.
-     *
-     * @param regId 중기육상예보 구역 코드. 예: {@code 11B00000}
-     * @param tmFc 발표 시각(한국 시각)
-     * @return 구역의 예보. 원천이 항목을 주지 않았으면 빈 값
-     * @throws KmaApiException 재시도까지 실패했거나, 원천이 오류를 돌려줬거나, 응답 형식을 해석하지 못했을 때
-     */
     public Optional<KmaMidTermItem> getMidLandFcst(String regId, LocalDateTime tmFc) {
         return fetchMid(MID_LAND_FCST, MID_LAND_FCST_URI, regId, tmFc);
     }
 
-    /**
-     * 중기 기온예보(최저·최고 기온)를 받는다.
-     *
-     * @param regId 중기기온예보 구역 코드. 예: {@code 11B10101}
-     * @param tmFc 발표 시각(한국 시각)
-     * @return 구역의 예보. 원천이 항목을 주지 않았으면 빈 값
-     * @throws KmaApiException 재시도까지 실패했거나, 원천이 오류를 돌려줬거나, 응답 형식을 해석하지 못했을 때
-     */
     public Optional<KmaMidTermItem> getMidTa(String regId, LocalDateTime tmFc) {
         return fetchMid(MID_TA, MID_TA_URI, regId, tmFc);
     }
@@ -150,8 +118,6 @@ public class KmaClient {
         return variables;
     }
 
-    // 동시 호출 수 한도는 재시도까지 한 호출로 묶어 잡는다. 한도가 차 있으면 기다리지 않고 바로 실패로 끝낸다.
-    // 재시도까지 실패하면(응답이 없거나 5xx) 쉬는 시간 동안 기상청을 부르지 않고 바로 실패로 끝낸다. 원천이 오류 코드로 답한 경우는 기상청이 살아 있으므로 쉬지 않는다.
     private <T> T fetch(String operation, String uri, Map<String, Object> variables, Function<JsonNode, T> parser) {
         return callLimit.call(
                 () -> failureCooldown.call(
@@ -203,7 +169,6 @@ public class KmaClient {
         return new RawResponse(response.getStatusCode(), body);
     }
 
-    // 정상이면 응답 본문(response.body)을 돌려준다. 그 밖의 응답은 모두 예외로 바꾼다.
     private JsonNode parseBody(String operation, RawResponse response) {
         if (response.status().is5xxServerError()) {
             throw KmaApiException.retryable(
@@ -241,7 +206,6 @@ public class KmaClient {
         if (totalCount < 0) {
             throw new KmaApiException(describe(VILAGE_FCST, "응답에 totalCount가 없다"));
         }
-        // 한 페이지에 다 담기지 않은 응답은 예보 일부가 빠진 것이다. 일부만으로 날씨를 만들면 틀린 값이 나가므로 실패로 본다.
         if (totalCount > items.size()) {
             throw new KmaApiException(
                     describe(VILAGE_FCST, "한 페이지에 다 담기지 않았다 totalCount=" + totalCount + ", 받은 수=" + items.size()));

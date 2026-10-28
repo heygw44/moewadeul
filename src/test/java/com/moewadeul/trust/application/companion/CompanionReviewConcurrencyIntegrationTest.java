@@ -58,7 +58,6 @@ class CompanionReviewConcurrencyIntegrationTest {
         assertThat(fixture.reviewCount()).isEqualTo(1);
     }
 
-    // 같은 작업을 스레드 둘로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runTwice(Callable<Long> task) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(2);

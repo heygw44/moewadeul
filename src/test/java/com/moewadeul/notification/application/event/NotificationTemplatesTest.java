@@ -214,7 +214,7 @@ class NotificationTemplatesTest {
     @CsvSource({"SUSPEND_7D", "SUSPEND_30D"})
     @DisplayName("[F-20] 기간 정지 알림은 종료 시각을 한국 시간 yyyy-MM-dd HH:mm으로 알린다")
     void timedSuspensionBodyShowsEndInKoreanTime(String sanctionType) {
-        // given: UTC 2026-10-12 03:00은 한국 시간으로 같은 날 12:00이다.
+        // given
         NotificationPayloads.SanctionConfirmed payload =
                 new NotificationPayloads.SanctionConfirmed(5L, 3L, sanctionType, Instant.parse("2026-10-12T03:00:00Z"));
 

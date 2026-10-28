@@ -119,7 +119,6 @@ class SpotModerationConcurrencyIntegrationTest {
         bakjiFeedbackService.reportProblem(fifthReporter, spotId, REPORT);
         assertThat(statusOf(spotId)).isEqualTo("PENDING_REVIEW");
         long admin = saveMember();
-        // 검토 대기 박지는 신고를 받지 않으므로, 신고가 복구 뒤에 들어오는 경우만 성공한다.
         long lateReporter = saveMember();
 
         // when
@@ -133,11 +132,9 @@ class SpotModerationConcurrencyIntegrationTest {
         long unreviewed = count("SELECT COUNT(*) FROM bakji_report WHERE spot_id = ? AND reviewed_at IS NULL", spotId);
         assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
         if (failures.isEmpty()) {
-            // 복구가 먼저 끝나서 늦은 신고를 새로 센다. 이전 신고 5건은 검토 완료로 표시됐다.
             assertThat(totalReports).isEqualTo(PENDING_REVIEW_REPORTS + 1);
             assertThat(unreviewed).isEqualTo(1);
         } else {
-            // 신고가 먼저 와서 검토 대기 박지를 찾지 못해 NOT_FOUND로 거부됐다.
             assertThat(failures).hasSize(1);
             assertThat(failures.get(0))
                     .isInstanceOfSatisfying(
@@ -166,12 +163,10 @@ class SpotModerationConcurrencyIntegrationTest {
         // then
         assertThat(statusOf(spotId)).isEqualTo("HIDDEN");
         if (failures.isEmpty()) {
-            // 관리자가 먼저 숨겼다. 동기화는 관리자가 숨긴 장소를 원천 삭제로 표시하지 않는다.
             assertThat(hiddenBySync.get()).isZero();
             assertThat(sourceRemovedAt(spotId)).isNull();
             assertThat(auditCount("SPOT_HIDE")).isEqualTo(1);
         } else {
-            // 동기화가 먼저 숨겼다. 관리자 숨김은 잠금을 기다린 뒤 이미 숨긴 상태를 보고 거부됐다.
             assertThat(failures).hasSize(1);
             assertThat(failures.get(0))
                     .isInstanceOfSatisfying(
@@ -198,14 +193,48 @@ class SpotModerationConcurrencyIntegrationTest {
             return null;
         }));
 
-        // then: 숨김 상태일 때는 동기화의 후보가 아니고, 복구가 커밋된 뒤에는 장소가 ACTIVE이면서 표시를 가져 후보에서 빠진다.
+        // then
         assertThat(failures).isEmpty();
         assertThat(hiddenBySync.get()).isZero();
         assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
         assertThat(sourceRemovedAt(spotId)).isNotNull();
     }
 
+    @RepeatedTest(50)
+    @DisplayName("[F-06][F-21] 원천 삭제로 숨긴 공공데이터 장소의 관리자 복구와 재등장 적재가 동시에 와도 데드락 없이 장소는 ACTIVE이고 삭제 표시는 지워진다")
+    void restoreRacingResurfacingUpsertStaysConsistent() throws Exception {
+        // given
+        long spotId = savePublicSpot();
+        long admin = saveMember();
+        publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, List.of(EXTERNAL_ID));
+
+        // when
+        List<Throwable> failures = runConcurrently(List.of(() -> spotModerationService.restore(spotId, admin), () -> {
+            upsertPublicSpot();
+            return null;
+        }));
+
+        // then
+        if (!failures.isEmpty()) {
+            assertThat(failures).hasSize(1);
+            assertThat(failures.get(0))
+                    .isInstanceOfSatisfying(
+                            BusinessException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(SpotErrorCode.SPOT_INVALID_STATE));
+        }
+        assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
+        assertThat(sourceRemovedAt(spotId)).isNull();
+    }
+
     private long savePublicSpot() {
+        upsertPublicSpot();
+        return jdbc.queryForObject(
+                "SELECT spot_id FROM public_spot_detail WHERE source = 'GOCAMPING' AND external_id = ?",
+                Long.class,
+                EXTERNAL_ID);
+    }
+
+    private void upsertPublicSpot() {
         publicSpotSyncService.upsert(
                 PublicSpotSource.GOCAMPING,
                 List.of(new PublicSpotCommand(
@@ -223,10 +252,6 @@ class SpotModerationConcurrencyIntegrationTest {
                         null,
                         null,
                         Set.of())));
-        return jdbc.queryForObject(
-                "SELECT spot_id FROM public_spot_detail WHERE source = 'GOCAMPING' AND external_id = ?",
-                Long.class,
-                EXTERNAL_ID);
     }
 
     private Timestamp sourceRemovedAt(long spotId) {
@@ -259,7 +284,6 @@ class SpotModerationConcurrencyIntegrationTest {
         return jdbc.queryForObject(sql, Long.class, args);
     }
 
-    // 작업마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runConcurrently(List<Callable<Object>> tasks) throws Exception {
         int threads = tasks.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

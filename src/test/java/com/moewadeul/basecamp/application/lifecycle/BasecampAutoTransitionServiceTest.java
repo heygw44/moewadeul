@@ -24,7 +24,7 @@ class BasecampAutoTransitionServiceTest {
     @Test
     @DisplayName("[NFR-09][BC-10] 베이스캠프 하나가 예외로 실패해도 나머지는 계속 처리하고, 예외로 실패한 수만 failed에 센다")
     void countsOnlyFailuresThatThrew() {
-        // given: 1번은 잠금 대기 시간 초과, 2번은 다른 쪽이 먼저 처리해 바뀐 것이 없음, 3번은 정상 처리
+        // given
         when(mapper.selectDueForDepartureIds(any(), eq(0L), anyInt())).thenReturn(List.of(1L, 2L, 3L));
         when(applier.processDayBeforeDeparture(eq(1L), any()))
                 .thenThrow(new CannotAcquireLockException("Lock wait timeout exceeded"));

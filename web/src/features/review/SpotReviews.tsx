@@ -27,7 +27,6 @@ import { formatKstDateTime, formatLocalDate, todayKst } from '../../lib/datetime
 import { useSession } from '../member/session';
 import { GatedButton } from '../member/GatedButton';
 
-// 서버 규칙과 같은 값이다. 내용은 공백뿐일 수 없고 2,000자 이하다.
 const CONTENT_MAX = 2000;
 const MAX_RATING = 5;
 const MAX_IMAGES = 3;
@@ -48,14 +47,11 @@ type ListState = {
   hasNext: boolean;
 };
 
-// 장소 상세의 후기 칸. 평점 요약, 후기 목록, 작성·수정·삭제를 맡는다.
-// 후기를 바꾸면 평점은 서버가 다시 계산하므로, 장소 상세를 다시 받아 평점만 바꿔 보여 준다.
 export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
   const session = useSession();
   const myMemberId = session.status === 'authenticated' ? (session.me?.memberId ?? null) : null;
   const [rating, setRating] = useState(initialRating);
   const [list, setList] = useState<ListState | null>(null);
-  // 처음 목록은 effect가 받고, 더 보기·다시 불러오기는 버튼을 누른 쪽이 받는다. 이 값은 버튼으로 받는 중인지만 나타낸다.
   const [loading, setLoading] = useState(false);
   const [listError, setListError] = useState<{ cause: unknown } | null>(null);
   const [writing, setWriting] = useState(false);
@@ -90,7 +86,6 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
     [spotId],
   );
 
-  // 컴포넌트는 장소마다 새로 만들어지므로(key) 처음 목록은 한 번만 받는다. 결과를 받았을 때만 상태를 바꾼다.
   useEffect(() => {
     const controller = new AbortController();
     fetchSpotReviews(spotId, 0, controller.signal).then(
@@ -108,16 +103,11 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
     };
   }, [spotId]);
 
-  // 평점을 다시 받지 못해도 후기 자체는 반영됐으므로 이전 평점을 그대로 둔다.
   async function refreshAfterChange(message: string) {
     setStatus(message);
     await loadPage(0);
-    try {
-      const detail = await fetchSpotDetail(spotId);
-      setRating(detail.rating);
-    } catch {
-      // 무시한다.
-    }
+    const detail = await fetchSpotDetail(spotId).catch(() => null);
+    if (detail) setRating(detail.rating);
   }
 
   return (
@@ -234,7 +224,6 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
   );
 }
 
-// 비회원이 누르면 로그인 화면으로 보낸다. 이메일 인증 전인 회원에게 막힌 이유는 장소 상세 위의 안내가 한 번만 알린다.
 function WriteAction({ writing, onStart }: { writing: boolean; onStart: () => void }) {
   if (writing) return null;
   return (
@@ -318,7 +307,6 @@ function isReviewField(field: string): field is ReviewField {
   return field === 'visitedDate' || field === 'rating' || field === 'content' || field === 'imageIds';
 }
 
-// 작성과 수정이 함께 쓰는 입력 칸. 수정할 때는 서버 규칙대로 방문일을 바꿀 수 없어서 칸을 보여 주지 않는다.
 function ReviewForm({
   mode,
   initial,

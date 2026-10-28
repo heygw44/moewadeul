@@ -8,7 +8,6 @@ import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 class MemberResyncSuspensionTest {
 
@@ -96,12 +95,11 @@ class MemberResyncSuspensionTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    // 상태를 바꾸는 공개 메서드가 아직 없어서, 테스트가 필요한 상태를 필드에 직접 넣는다.
     private static Member memberWith(MemberStatus status, Instant suspendedUntil, Instant emailVerifiedAt) {
-        Member member = aMember().build();
-        ReflectionTestUtils.setField(member, "status", status);
-        ReflectionTestUtils.setField(member, "suspendedUntil", suspendedUntil);
-        ReflectionTestUtils.setField(member, "emailVerifiedAt", emailVerifiedAt);
-        return member;
+        return aMember()
+                .status(status)
+                .suspendedUntil(suspendedUntil)
+                .emailVerifiedAt(emailVerifiedAt)
+                .build();
     }
 }

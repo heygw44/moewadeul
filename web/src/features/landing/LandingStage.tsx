@@ -16,9 +16,6 @@ import {
 } from './landingStyles';
 import { approach, useFrameWhileVisible, usePrefersReducedMotion, useRise } from './motion';
 
-// 처음 온 사람에게 뫼와들이 하는 일을 보여 주는 랜딩이다. 구성은 zenora.studio를 따른다:
-// 색 면 첫 화면 → 자료 줄 → 단계 카드 셋 → 판단 근거 → 기능 목록 → 판정 지도 면 → 행사 → 신뢰 단계 카드 → 질문 → 마무리.
-// 서버를 부르지 않는다. 화면 조각 속 장소·닉네임·날짜는 예시이고, 정책 값(정원, 신뢰 단계, 결제 기한 등)만 실제와 같다.
 export function LandingStage() {
   return (
     <>
@@ -35,8 +32,6 @@ export function LandingStage() {
     </>
   );
 }
-
-/* ───────────── 첫 화면 ───────────── */
 
 function Hero() {
   const { ref, rise } = useRise<HTMLElement>();
@@ -70,8 +65,6 @@ function Hero() {
   );
 }
 
-/* ───────────── 자료 줄 ───────────── */
-
 function SourcesStrip() {
   const { ref, rise } = useRise<HTMLElement>();
   const title = rise(0);
@@ -90,9 +83,6 @@ function SourcesStrip() {
   );
 }
 
-/* ───────────── 지도 하나로, 출발까지 ───────────── */
-
-// 카드 위쪽 그림 칸이다. 앱 화면 조각은 앱의 행 구분선을 그대로 쓴다(data-ui).
 function StepArt({ className, children }: { className: string; children: ReactNode }) {
   return (
     <div data-ui className={`relative isolate flex h-72 items-center justify-center overflow-hidden px-5 ${className}`}>
@@ -189,8 +179,6 @@ function HowSection() {
   );
 }
 
-/* ───────────── 판단 근거부터 ───────────── */
-
 const APPROACH_ITEMS = [
   {
     title: '공원 경계로 판정해요',
@@ -206,7 +194,6 @@ const APPROACH_ITEMS = [
   },
 ];
 
-// 오른쪽 사진은 스크롤에 따라 천천히 위로 흐른다. 매 프레임 남은 거리의 일부만 따라가서 멈출 때 부드럽다.
 function ApproachSection() {
   const { ref, rise } = useRise<HTMLElement>();
   const reduced = usePrefersReducedMotion();
@@ -221,7 +208,6 @@ function ApproachSection() {
       const image = imageRef.current;
       if (!frame || !image) return;
       const rect = frame.getBoundingClientRect();
-      // 그림 가운데가 화면 가운데에서 얼마나 떨어졌는지(화면 높이 단위)에 따라 최대 24px 옮긴다.
       const distance = (rect.top + rect.height / 2 - innerHeight / 2) / innerHeight;
       offset.current = approach(offset.current, Math.max(-1, Math.min(1, distance)) * -24, 0.1);
       image.style.transform = `scale(1.08) translateY(${offset.current}px)`;
@@ -276,8 +262,6 @@ function ApproachSection() {
     </section>
   );
 }
-
-/* ───────────── 뫼와들에서 할 수 있는 일 ───────────── */
 
 const SERVICES = [
   {
@@ -361,8 +345,6 @@ function ServicesSection() {
   );
 }
 
-/* ───────────── 여기서 자도 될까요? ───────────── */
-
 const JUDGE_POINTS = [
   '국립·도립·군립공원 경계 자료로 판정해요',
   '출처와 기준일이 항상 같이 보여요',
@@ -375,7 +357,6 @@ const JUDGE_PHOTOS = [
   { src: '/landing/photos/meadow.webp', alt: '산 아래 풀밭에 누워 쉬는 백패커' },
 ];
 
-// 이 페이지의 하나뿐인 조작인 판정 지도를 큰 숲색 면 안에 둔다.
 function JudgeSection() {
   const { ref, rise } = useRise<HTMLElement>();
   const heading = rise(0);
@@ -421,8 +402,6 @@ function JudgeSection() {
     </section>
   );
 }
-
-/* ───────────── 공식 행사 ───────────── */
 
 const PROGRAM_POINTS = [
   {
@@ -504,8 +483,6 @@ function ProgramSection() {
     </section>
   );
 }
-
-/* ───────────── 신뢰 단계 ───────────── */
 
 type TrustLevel = {
   level: number;
@@ -607,8 +584,6 @@ function TrustSection() {
   );
 }
 
-/* ───────────── 자주 묻는 질문 ───────────── */
-
 const FAQ = [
   {
     q: '경고가 붙은 박지는 가면 안 되나요?',
@@ -636,7 +611,6 @@ const FAQ = [
   },
 ];
 
-// 질문을 누르면 답이 펼쳐진다. 하나를 열면 다른 하나는 닫힌다. 스크립트 없이 details 요소가 처리한다.
 function FaqSection() {
   const { ref, rise } = useRise<HTMLElement>();
   const heading = rise(0);
@@ -678,9 +652,6 @@ function FaqSection() {
   );
 }
 
-/* ───────────── 마무리 ───────────── */
-
-// 숲색 면 위에 지역 검색 대화상자를 둔다. 지역을 넣고 누르면 지도 화면이 그 지역을 찾아 옮긴다.
 function ClosingSection() {
   const [region, setRegion] = useState('가평 북면');
   const { ref, rise } = useRise<HTMLElement>();
@@ -699,7 +670,6 @@ function ClosingSection() {
       aria-labelledby="closing-title"
       className="relative overflow-hidden bg-brand-raised text-white [&_:focus-visible]:outline-white"
     >
-      {/* 모닥불 영상을 흑백으로 바꿔 숲색 면 위에 낮게 깐다. 소리가 없는 꾸밈이라 스크린 리더에서 숨기고, 동작 줄이기를 켜면 보이지 않는다. */}
       <video
         autoPlay
         muted

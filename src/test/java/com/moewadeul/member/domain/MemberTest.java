@@ -81,40 +81,55 @@ class MemberTest {
     }
 
     @ParameterizedTest
-    @ValueSource(
-            strings = {
-                // 공백류: NBSP, 숫자 크기 공백, 좁은 NBSP, 전각 공백, 줄 구분자, 문단 구분자
-                "nick\u00A0",
-                "ni\u00A0ck",
-                "ni\u2007ck",
-                "ni\u202Fck",
-                "ni\u3000ck",
-                "ni\u2028ck",
-                "ni\u2029ck",
-                // 서식 문자: 폭 없는 공백, ZWNJ, ZWJ, 단어 결합자, BOM, 소프트 하이픈, 오른쪽에서 왼쪽 덮어쓰기
-                "ni\u200Bck",
-                "\u200B\u200B",
-                "ni\u200Cck",
-                "ni\u200Dck",
-                "ni\u2060ck",
-                "\uFEFFnick",
-                "ni\u00ADck",
-                "\u202Enick",
-                // 제어 문자
-                "ni\u0000ck",
-                "ni\u0085ck",
-                // 한글 채움 문자
-                "nick\u3164",
-                "\u3164\u3164",
-                "ni\u115Fck",
-                "ni\u1160ck",
-                "ni\uFFA0ck",
-                // ZWJ로 이은 이모지
-                "👨\u200D👩\u200D👧"
-            })
-    @DisplayName("[F-01] 닉네임에 공백류·제어·서식 문자나 한글 채움 문자가 있으면 INVALID_INPUT으로 거부한다")
-    void register_rejectsHiddenCharacters(String nickname) {
-        assertInvalidInput(() -> Member.register(EMAIL, HASH, nickname, NOW));
+    @EnumSource(HiddenCharacter.class)
+    @DisplayName("[F-01] 닉네임 앞·가운데·뒤 어디든 공백류·제어·서식 문자나 한글 채움 문자가 있으면 INVALID_INPUT으로 거부한다")
+    void register_rejectsHiddenCharacters(HiddenCharacter hidden) {
+        String ch = hidden.text();
+
+        assertInvalidInput(() -> Member.register(EMAIL, HASH, ch + "nick", NOW));
+        assertInvalidInput(() -> Member.register(EMAIL, HASH, "ni" + ch + "ck", NOW));
+        assertInvalidInput(() -> Member.register(EMAIL, HASH, "nick" + ch, NOW));
+        assertInvalidInput(() -> Member.register(EMAIL, HASH, ch + ch, NOW));
+    }
+
+    @Test
+    @DisplayName("[F-01] 폭 없는 결합자로 이은 가족 이모지도 닉네임으로 받지 않는다")
+    void register_rejectsZeroWidthJoinedEmoji() {
+        String zwj = HiddenCharacter.ZERO_WIDTH_JOINER.text();
+
+        assertInvalidInput(() -> Member.register(EMAIL, HASH, "👨" + zwj + "👩" + zwj + "👧", NOW));
+    }
+
+    private enum HiddenCharacter {
+        NO_BREAK_SPACE(0x00A0),
+        FIGURE_SPACE(0x2007),
+        NARROW_NO_BREAK_SPACE(0x202F),
+        IDEOGRAPHIC_SPACE(0x3000),
+        LINE_SEPARATOR(0x2028),
+        PARAGRAPH_SEPARATOR(0x2029),
+        ZERO_WIDTH_SPACE(0x200B),
+        ZERO_WIDTH_NON_JOINER(0x200C),
+        ZERO_WIDTH_JOINER(0x200D),
+        WORD_JOINER(0x2060),
+        ZERO_WIDTH_NO_BREAK_SPACE(0xFEFF),
+        SOFT_HYPHEN(0x00AD),
+        RIGHT_TO_LEFT_OVERRIDE(0x202E),
+        NULL(0x0000),
+        NEXT_LINE(0x0085),
+        HANGUL_FILLER(0x3164),
+        HANGUL_CHOSEONG_FILLER(0x115F),
+        HANGUL_JUNGSEONG_FILLER(0x1160),
+        HALFWIDTH_HANGUL_FILLER(0xFFA0);
+
+        private final int codePoint;
+
+        HiddenCharacter(int codePoint) {
+            this.codePoint = codePoint;
+        }
+
+        String text() {
+            return Character.toString(codePoint);
+        }
     }
 
     @ParameterizedTest

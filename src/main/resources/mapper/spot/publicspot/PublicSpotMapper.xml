@@ -68,8 +68,17 @@
         </foreach>
     </insert>
 
-    <!-- 행마다 값이 달라서, 바꿀 값을 UNION ALL 파생 테이블로 만들고 기본 키로 조인해 한 문장으로 갱신한다.
-         INSERT ... ON DUPLICATE KEY UPDATE와 달리 이 문장은 그사이 행이 없어져도 새 행을 만들지 않는다. -->
+    <select id="lockSpots" resultType="long">
+        SELECT id
+        FROM spot
+        WHERE id IN
+        <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
+            #{spotId}
+        </foreach>
+        ORDER BY id
+        FOR UPDATE
+    </select>
+
     <update id="updateSpots">
         UPDATE spot s
         JOIN (
@@ -119,8 +128,7 @@
             d.updated_at = #{now}
     </update>
 
-    <!-- 원천 삭제로 숨겼던 장소를 되돌린다. 조건에 source_removed_at을 쓰므로, 같은 트랜잭션에서 clearSourceRemoved보다 먼저 실행해야 한다.
-         SET은 spot의 열만 바꾼다. 그래서 두 테이블을 조인해도 영향받은 행 수는 spot에서 바뀐 행 수와 같다. -->
+    <!-- SET은 spot의 열만 바꾼다. 그래서 두 테이블을 조인해도 영향받은 행 수는 spot에서 바뀐 행 수와 같다. -->
     <update id="restoreSpots">
         UPDATE spot s
         JOIN public_spot_detail d ON d.spot_id = s.id
@@ -205,11 +213,9 @@
           AND d.source_removed_at IS NULL
     </select>
 
-    <!-- 원천 삭제로 숨길 장소를 잠근다. 두 문장 모두 기본 키 목록으로만 읽으므로, 존재하지 않는 키 사이의 틈에는 잠금이 걸리지 않는다.
-         관리자 숨김·복구는 spot 행을 먼저 잠그고 public_spot_detail 행을 나중에 바꾼다. 그래서 동기화도 spot을 먼저, public_spot_detail을
-         나중에 잠근다. 예전에는 두 테이블을 조인한 SELECT ... FOR UPDATE 한 문장으로 잠갔다. 그런데 장소가 하나이면 MySQL이 두 행을 기본 키로
-         먼저 읽는 실행계획을 골라 public_spot_detail을 먼저 잠갔고, 관리자 숨김과 동시에 오면 1,000번 중 852번이 데드락이었다.
-         한 문장으로는 어느 테이블을 먼저 잠글지 실행계획이 정하므로, 순서를 지키려고 문장을 나눈다. -->
+    <!-- 두 문장 모두 기본 키 목록으로만 읽으므로, 존재하지 않는 키 사이의 틈에는 잠금이 걸리지 않는다.
+         두 테이블을 조인한 SELECT ... FOR UPDATE 한 문장으로 잠그면, 장소가 하나일 때 MySQL이 두 행을 기본 키로 먼저 읽는 실행계획을 골라
+         public_spot_detail을 먼저 잠근다. 한 문장으로는 어느 테이블을 먼저 잠글지 실행계획이 정하므로, 순서를 지키려고 문장을 나눈다. -->
     <select id="lockActiveSpots" resultType="long">
         SELECT id
         FROM spot
@@ -256,7 +262,6 @@
         </foreach>
     </update>
 
-    <!-- 표시가 이미 있는 행은 건드리지 않는다. 그래야 동기화가 남긴 숨긴 시각이 관리자 복구로 덮이지 않는다. -->
     <update id="markSourceRemovedIfAbsent">
         UPDATE public_spot_detail
         SET source_removed_at = #{now},

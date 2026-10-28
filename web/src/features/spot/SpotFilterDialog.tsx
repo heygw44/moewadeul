@@ -13,8 +13,6 @@ type SpotFilterDialogProps = {
   onClose: () => void;
 };
 
-// 대화상자 안에서는 고르는 중인 값을 따로 들고 있다가, 적용을 눌렀을 때만 지도에 반영한다.
-// 그래야 고르는 동안 지도가 매번 다시 조회되지 않는다.
 export function SpotFilterDialog({ initial, onApply, onClose }: SpotFilterDialogProps) {
   const [draft, setDraft] = useState<SpotFilters>(initial);
 
@@ -105,7 +103,6 @@ export function SpotFilterDialog({ initial, onApply, onClose }: SpotFilterDialog
           />
         </fieldset>
 
-        {/* 조건이 길어 창을 굴려도 초기화·적용 버튼은 창 아래에 붙여 둔다. 대화상자 본문 여백만큼 바깥으로 넓혀 바탕을 채운다. */}
         <div className="sticky -bottom-6 -mx-6 -mb-6 flex gap-2 border-t border-line bg-surface px-6 pt-4 pb-6">
           <Button type="button" variant="ghost" className="shrink-0" onClick={() => setDraft(NO_SPOT_FILTERS)}>
             초기화

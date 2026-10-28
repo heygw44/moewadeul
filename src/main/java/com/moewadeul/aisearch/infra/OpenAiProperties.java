@@ -5,16 +5,6 @@ import java.util.Objects;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
-/**
- * OpenAI Chat Completions 호출 설정.
- *
- * @param baseUrl OpenAI API의 기본 주소
- * @param apiKey OpenAI 키. 비밀값이라 환경 변수로만 받는다. 값이 없으면 앱은 뜨지만 AI 검색 호출이 요청을 보내기 전에 실패한다.
- * @param model 문장을 해석할 모델
- * @param connectTimeout 서버와 연결을 맺을 때까지 기다리는 시간
- * @param readTimeout 요청을 보낸 뒤 응답을 받을 때까지 기다리는 시간. 사용자가 화면에서 기다리므로 짧게 둔다.
- * @param maxOutputTokens 답변 길이 상한. 조건 JSON은 짧아서 작게 둔다.
- */
 @ConfigurationProperties("moewadeul.aisearch.openai")
 public record OpenAiProperties(
         @DefaultValue("https://api.openai.com/v1") String baseUrl,
@@ -49,7 +39,6 @@ public record OpenAiProperties(
         }
     }
 
-    /** record가 만드는 기본 toString은 키를 그대로 출력한다. 누군가 설정을 로그에 찍어도 키가 남지 않게 가린다. */
     @Override
     public String toString() {
         return "OpenAiProperties[baseUrl=" + baseUrl + ", apiKey=****, model=" + model + ", connectTimeout="

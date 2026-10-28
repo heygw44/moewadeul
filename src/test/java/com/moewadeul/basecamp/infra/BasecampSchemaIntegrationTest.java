@@ -18,7 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class BasecampSchemaIntegrationTest {
 
-    // SRID 4326 WKT는 위도, 경도 순서다. 서울시청 좌표다.
+    // SRID 4326 WKT는 위도, 경도 순서다.
     private static final String SEOUL_CITY_HALL_WKT = "POINT(37.5665 126.978)";
 
     @Autowired
@@ -27,7 +27,7 @@ class BasecampSchemaIntegrationTest {
     @Test
     @DisplayName("[ADR-001] 마이그레이션을 적용하면 베이스캠프·합류 신청·멤버 테이블이 모두 만들어진다")
     void basecampTablesExistAfterMigration() {
-        // given: 컨텍스트가 뜰 때 Flyway가 빈 DB에 마이그레이션을 적용했다
+        // given
 
         // when
         List<String> tableNames = jdbcTemplate.queryForList(

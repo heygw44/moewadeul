@@ -1,17 +1,14 @@
 package com.moewadeul.notification.application.event;
 
-import lombok.RequiredArgsConstructor;
+import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-// fixedDelay는 이전 발송이 끝난 뒤부터 간격을 센다. 그래서 같은 인스턴스에서 발송이 겹치지 않는다.
-// 인스턴스가 여러 대여도 NotificationMailStore가 SKIP LOCKED와 임대로 알림을 나눠 집으므로 겹쳐 실행해도 된다.
-// 아웃박스 발행기와 다른 스케줄러 스레드에서 돌도록 스케줄러 스레드를 여러 개 둔다(application.yml의 spring.task.scheduling.pool.size).
 @Slf4j
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(
         prefix = "moewadeul.notification.mail",
         name = "sender-enabled",
@@ -21,6 +18,16 @@ class NotificationMailScheduler {
 
     private final NotificationMailer mailer;
 
+    NotificationMailScheduler(
+            NotificationMailer mailer,
+            NotificationMailProperties properties,
+            @Value("${moewadeul.mail.send-timeout}") Duration sendTimeout,
+            @Value("${spring.task.scheduling.pool.size:1}") int schedulingPoolSize) {
+        requireLeaseOutlastsBatch(properties, sendTimeout);
+        requireSchedulerThreadNotShared(schedulingPoolSize);
+        this.mailer = mailer;
+    }
+
     @Scheduled(
             fixedDelayString =
                     "${moewadeul.notification.mail.poll-delay:" + NotificationMailProperties.DEFAULT_POLL_DELAY + "}")
@@ -28,6 +35,21 @@ class NotificationMailScheduler {
         int sent = mailer.sendDue();
         if (sent > 0) {
             log.debug("notification mails processed count={}", sent);
+        }
+    }
+
+    private static void requireLeaseOutlastsBatch(NotificationMailProperties properties, Duration sendTimeout) {
+        Duration worstBatch = sendTimeout.multipliedBy(properties.batchSize());
+        if (properties.lease().compareTo(worstBatch) <= 0) {
+            throw new IllegalStateException("moewadeul.notification.mail.lease(" + properties.lease()
+                    + ") must be longer than batchSize x moewadeul.mail.send-timeout(" + worstBatch + ")");
+        }
+    }
+
+    private static void requireSchedulerThreadNotShared(int schedulingPoolSize) {
+        if (schedulingPoolSize < 2) {
+            throw new IllegalStateException("spring.task.scheduling.pool.size must be at least 2 so that"
+                    + " the notification mail sender does not block the outbox publisher");
         }
     }
 }

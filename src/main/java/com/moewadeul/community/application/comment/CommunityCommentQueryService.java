@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 커뮤니티 글의 댓글 목록을 읽는다. 글이 ACTIVE일 때만 읽을 수 있고, 아니면 없는 글로 본다. */
 @Service
 @RequiredArgsConstructor
 public class CommunityCommentQueryService {
@@ -21,13 +20,6 @@ public class CommunityCommentQueryService {
     private final CommunityPostRepository communityPostRepository;
     private final CommunityCommentMapper communityCommentMapper;
 
-    /**
-     * 호출하면 postId인 글의 댓글을 오래된 순으로 한 페이지 돌려준다. page와 size는 답글이 아닌 댓글 단위로 센다.
-     *
-     * <p>서비스는 다음 페이지가 있는지 알려고 한 행을 더 읽고, 그 행은 결과에서 뺀다. 그다음 읽은 댓글들의 ACTIVE 답글을 한 번에 읽어
-     * 부모 아래에 묶는다. 읽은 댓글이 없으면 답글 쿼리를 보내지 않는다. 빈 IN 목록은 SQL 오류이기 때문이다.
-     * 글이 없거나 ACTIVE가 아니면 NOT_FOUND로 거부한다.
-     */
     @Transactional(readOnly = true)
     public CommunityCommentPage list(long postId, int page, int size) {
         requireActivePost(postId);

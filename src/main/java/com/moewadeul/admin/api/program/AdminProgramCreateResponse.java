@@ -1,4 +1,3 @@
 package com.moewadeul.admin.api.program;
 
-/** 행사를 등록한 결과다. */
 public record AdminProgramCreateResponse(long programId) {}

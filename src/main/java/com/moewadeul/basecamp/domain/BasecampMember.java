@@ -16,12 +16,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 베이스캠프에 들어온 멤버다. 캠프 리더도 한 행으로 들어 있다.
- *
- * <p>탈퇴하거나 강퇴돼도 행을 지우지 않는다. 그래서 그 회원은 같은 베이스캠프에 다시 들어올 수 없다.
- * 상태를 바꾸는 메서드는 같은 패키지의 {@link Basecamp}만 부른다.
- */
 @Entity
 @Table(name = "basecamp_member")
 @Getter
@@ -97,7 +91,6 @@ public class BasecampMember {
         this.updatedAt = now;
     }
 
-    // 제재를 받거나 회원 탈퇴 때문에 빠지는 멤버는 베이스캠프에서 스스로 나가는 것이 아니다. 그래서 출발이 임박했어도 임박 탈퇴로 세지 않는다.
     void removeByCleanup(Instant now) {
         this.status = BasecampMemberStatus.LEFT;
         this.earlyLeave = false;

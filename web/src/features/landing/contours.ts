@@ -5,13 +5,11 @@ type ContourOptions = {
   ry: number;
   levels: number;
   seed: number;
-  // 안쪽 고리로 갈수록 중심이 옮겨 가는 방향이다. 봉우리가 한쪽으로 기운 산처럼 보이게 한다.
   lean?: readonly [number, number];
 };
 
 const CONTOUR_POINTS = 72;
 
-// 닫힌 곡선 면 여러 겹의 path를 바깥에서 안으로 돌려준다. 같은 seed는 늘 같은 모양이다.
 export function contourPaths({ cx, cy, rx, ry, levels, seed, lean = [0.1, -0.08] }: ContourOptions): string[] {
   const paths: string[] = [];
   for (let level = 0; level < levels; level += 1) {

@@ -2,51 +2,32 @@ spring:
   application:
     name: moewadeul
   profiles:
-    # 개발자가 bootRun을 플래그 없이 실행할 수 있도록 local을 기본값으로 둔다.
-    # 운영에서는 SPRING_PROFILES_ACTIVE=prod를, 테스트에서는 @ActiveProfiles("test")를 지정해 이 값을 덮어쓴다.
     default: local
   datasource:
     hikari:
       data-source-properties:
-        # 시각은 UTC로 저장한다. JVM 기본 시간대와 무관하게 드라이버가 UTC로 변환해야
-        # MyBatis가 쓴 Instant가 밀리지 않는다.
+        # Connector/J가 JVM 기본 시간대가 아니라 UTC로 변환해야 MyBatis가 쓴 Instant가 밀리지 않는다.
         connectionTimeZone: UTC
-        # MySQL의 잠금 대기 기본값은 50초다. 한 행을 오래 잡은 트랜잭션이 있으면 그 행을 쓰려는 요청이 최대 50초 동안 DB 커넥션을 쥐고 기다린다.
-        # 풀이 10개라서 그런 요청 10개면 장소와 상관없는 지도 조회도 커넥션을 얻지 못한다. 박지 한 곳을 60초 잠그고 신고 20건을 보냈을 때
-        # 신고는 모두 500이 됐고, 신고 시작 약 10초 뒤부터 50초 사이에는 성공한 지도 응답이 없었다.
-        # 그래서 앱 커넥션의 잠금 대기를 5초로 줄인다. 시간이 지나면 MySQL이 잠금 대기 오류(1205)를 내고 그 요청만 실패하며 커넥션을 돌려준다.
-        # 비용: 5초를 넘게 기다려야 성공하던 쓰기가 실패한다. 앱의 정리 작업과 관리자 적재도 같은 풀을 쓰므로 같은 제한을 받는다.
         sessionVariables: innodb_lock_wait_timeout=5
   task:
     scheduling:
       pool:
-        # 기본값은 스레드 1개라서 @Scheduled 작업이 모두 한 스레드를 같이 쓴다. 그러면 오래 걸리는 작업 하나가 다른 작업을 모두 멈춘다.
-        # 실제로 아웃박스 발행기가 메일을 보내는 9분 동안 1분마다 도는 결제 만료가 한 번도 돌지 않았다.
-        # 1초마다 도는 아웃박스 발행기와 알림 메일 발송 작업이 하나씩 차지해도, 정해진 시각에 도는 작업 둘이 함께 돌 수 있게 4개로 둔다.
-        # 같은 작업은 겹쳐 돌지 않는다. fixedDelay는 이전 실행이 끝난 뒤부터 세고, cron은 이전 실행이 끝난 뒤에 다음 시각을 잡는다.
         size: 4
+  jackson:
+    datatype:
+      enum:
+        fail-on-numbers-for-enums: true
   jpa:
-    # 우리는 트랜잭션을 application 계층에서만 연다.
-    # 또한 요청이 끝날 때까지 DB 커넥션을 붙잡는 OSIV(Open Session In View)는 끈다.
     open-in-view: false
     hibernate:
-      # 스키마는 Flyway만 만든다. 엔티티가 스키마와 어긋나면 Hibernate가 시작할 때 검증에 실패한다.
       ddl-auto: validate
   mvc:
-    # Spring MVC는 요청이 끝날 때마다 처리 결과 이벤트를 내면서 세션 ID를 함께 담으려고 세션을 연다.
-    # 그래서 로그인한 회원의 요청은 지도 조회처럼 로그인 정보를 쓰지 않아도 세션 행을 읽고 마지막 접근 시각을 다시 쓴다.
-    # 이 이벤트를 받는 곳이 없으므로 끈다. 세션을 건드리는 또 다른 곳인 리다이렉트 값 저장은 FlashMapConfig가 끈다.
+    # Spring MVC는 이 이벤트에 세션 ID를 담으려고 요청마다 세션을 열어, 로그인 회원의 모든 요청이 세션 행을 읽고 접근 시각을 다시 쓴다.
     publish-request-handled-events: false
   session:
     jdbc:
-      # SPRING_SESSION 테이블은 Flyway가 만든다. Spring Session이 스키마 스크립트를 따로 실행하지 않게 끈다.
       initialize-schema: never
   mail:
-    # Gmail SMTP는 STARTTLS 587 포트를 쓴다. 평문으로 연결한 뒤 TLS로 올리므로, 올리지 못하면 연결을 끊도록 required까지 켠다.
-    # 그렇지 않으면 TLS 없이 인증 정보와 메일 본문이 오갈 수 있다.
-    # Gmail은 일반 계정 비밀번호로 SMTP에 로그인하지 못하게 한다. 그래서 계정에 2단계 인증을 켜고,
-    # MAIL_APP_PASSWORD에는 Google이 발급한 앱 비밀번호를 넣는다.
-    # 이 값들은 비밀값이라 파일에 쓰지 않고 환경 변수로만 받는다. 값이 없으면 앱은 뜨지만 메일 발송은 실패한다.
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
@@ -58,54 +39,37 @@ spring:
           starttls:
             enable: true
             required: true
-          # JavaMail의 기본 제한 시간은 무제한이다. SMTP 서버가 응답하지 않으면 메일을 보내는 스레드가 영원히 멈추고,
-          # 아웃박스 발행기는 이 스레드 하나로 이벤트를 차례로 처리하므로 다른 이벤트까지 모두 밀린다.
-          # 그래서 연결, 읽기, 쓰기에 제한 시간을 둔다. 시간이 지나면 예외가 나고 발행기가 그 이벤트를 나중에 다시 시도한다.
+          # JavaMail의 기본 제한 시간은 무제한이다.
           connectiontimeout: ${MAIL_CONNECTION_TIMEOUT_MS:5000}
           timeout: ${MAIL_READ_TIMEOUT_MS:5000}
           writetimeout: ${MAIL_WRITE_TIMEOUT_MS:5000}
 
 mybatis:
-  # 우리는 매퍼 인터페이스를 com.moewadeul.{모듈}.infra에 @Mapper로, XML을 mapper/{모듈}/ 아래에 둔다.
-  # 하위 패키지가 있는 모듈은 인터페이스를 infra.{하위}에, XML을 mapper/{모듈}/{하위}/에 둔다.
-  # classpath*:를 써야 Spring이 main과 test 리소스 루트를 모두 읽는다.
   mapper-locations: classpath*:mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
-    # 이 설정을 켜면 MyBatis가 record 조회 DTO를 열 순서가 아니라 이름으로 매핑한다.
     arg-name-based-constructor-auto-mapping: true
-    # 같은 트랜잭션에서 같은 쿼리를 다시 실행하면 MyBatis가 세션 1차 캐시의 이전 결과를 돌려준다.
-    # 그래서 그 사이 JPA가 flush한 변경이 보이지 않는다.
+    # 세션 1차 캐시를 쓰면 같은 트랜잭션에서 같은 쿼리를 다시 실행할 때 그 사이 JPA가 flush한 변경이 보이지 않는다.
     local-cache-scope: statement
 
 server:
-  # 운영에서는 Caddy가 요청을 받아 앱으로 넘기므로, 앱이 보는 접속 주소는 Caddy의 내부 주소 하나뿐이다.
-  # 그러면 로그인 기록과 IP당 요청 한도(인증 메일 재발송, 비밀번호 재설정 요청)가 모든 사용자를 한 IP로 센다.
-  # 그래서 Tomcat이 X-Forwarded-For와 X-Forwarded-Proto를 읽어 실제 접속 IP와 HTTPS 여부로 바꾸게 한다.
-  # Tomcat은 내부 주소(10.x, 172.16~31.x, 192.168.x, 127.x 등)에서 온 요청의 헤더만 믿는다. 밖에서 직접 들어온 요청이
-  # 헤더를 꾸며 보내도 무시하고, Caddy는 클라이언트가 보낸 X-Forwarded-For를 버리고 새로 채운다.
-  # 로컬 Vite 개발 서버의 프록시는 이 헤더를 붙이지 않으므로 로컬 동작은 그대로다.
   forward-headers-strategy: native
 
 management:
   endpoints:
     web:
       exposure:
-        # prometheus는 서버의 수집 에이전트(Alloy)가 Compose 내부망에서 읽는다. Caddy는 /actuator를 넘기지 않으므로 밖에서는 열리지 않는다.
         include: health,prometheus
   metrics:
     tags:
       application: moewadeul
     distribution:
-      # 응답 시간 분포를 정해 둔 구간의 히스토그램으로 남긴다. Grafana는 이 구간으로 p50·p95·p99를 계산한다.
-      # 구간을 직접 정하는 이유: 기본 히스토그램은 시계열마다 구간을 수십 개 만들어서 Grafana Cloud 무료 한도(1만 시계열)를 빨리 쓴다.
+      # 기본 히스토그램은 시계열마다 구간을 수십 개 만들어 Grafana Cloud 무료 한도(1만 시계열)를 빨리 쓴다.
       slo:
         http.server.requests: 50ms,100ms,200ms,500ms,1s,2s,5s
         moewadeul.external.api.requests: 100ms,300ms,1s,3s,10s
   health:
     mail:
-      # 상태 확인을 할 때마다 SMTP 서버에 접속해 보는 검사를 끈다.
-      # 외부 메일 서버가 잠시 멈췄다고 앱 전체를 비정상(DOWN)으로 보고 재시작하면 안 되고, 메일 발송 실패는 아웃박스가 재시도로 처리한다.
       enabled: false
 
 springdoc:
@@ -115,70 +79,41 @@ logging:
   pattern:
     correlation: "[%X{traceId:-}] "
   level:
-    # Hibernate는 SQL 오류를 받으면 DB 오류 메시지를 WARN으로 남긴다. MySQL은 유니크 제약을 어긴 값을 그 메시지에 그대로 담으므로,
-    # 이 로그를 켜 두면 이메일이나 CI 해시 원값이 로그에 찍힌다. 그래서 이 로거는 ERROR부터만 남긴다.
-    # 서비스는 제약 위반을 중복 오류 코드로 바꿔 응답하고, 예상하지 못한 예외는 공통 예외 처리기가 로그로 남긴다.
+    # MySQL은 유니크 제약을 어긴 값을 오류 메시지에 그대로 담고, Hibernate는 그 메시지를 WARN으로 남겨 이메일이나 CI 해시 원값이 로그에 찍힌다.
     org.hibernate.orm.jdbc.error: ERROR
 
 moewadeul:
   identity:
-    # CI(본인확인기관의 고유 식별값)를 해시할 때 쓰는 HMAC 비밀 키다. 비밀값이라 파일에 쓰지 않고 환경 변수로만 받는다.
-    # 값이 없거나 32바이트보다 짧으면 앱이 시작하지 않는다. 키를 바꾸면 저장해 둔 CI 해시와 새 해시가 달라지므로 운영 키는 바꾸지 않는다.
     ci-hmac-key: ${CI_HMAC_KEY:}
   mail:
-    # Gmail은 발신 주소가 로그인한 계정과 다르면 계정 주소로 바꿔서 보낸다. 그래서 기본값을 SMTP 계정으로 둔다.
+    # Gmail은 발신 주소가 로그인한 계정과 다르면 계정 주소로 바꿔 보낸다.
     from: ${spring.mail.username:}
-    # 받는 사람의 메일함에 주소 대신 보이는 발신자 이름이다.
     from-name: ${MAIL_FROM_NAME:뫼와들}
-    # 메일 한 통을 보내는 데 걸리는 시간의 상한이다. 위의 연결·읽기·쓰기 제한 시간은 SMTP 명령마다 따로 걸려서, 서버가 명령마다 늦게 답하면
-    # 한 통이 1분 가까이 걸릴 수 있다. 앱이 종료를 시작하면 Spring이 실행 중인 작업을 30초까지만 기다리므로, 그보다 짧게 둔다.
     send-timeout: ${MAIL_SEND_TIMEOUT:20s}
   web:
-    # 메일 안의 링크에 쓰는 프론트엔드 주소다. 로컬 기본값은 Vite 개발 서버다.
     base-url: ${WEB_BASE_URL:http://localhost:5173}
   weather:
     kma:
-      # 기상청 단기·중기예보도 고캠핑과 같은 공공데이터포털 인증키(Decoding 키)를 쓴다. 비밀값이라 파일에 쓰지 않고 환경 변수로만 받는다.
-      # 값이 없으면 앱은 뜨지만 기상청 API가 인증 오류를 돌려주므로, 날씨 없이 응답한다.
       service-key: ${PUBLICDATA_SERVICE_KEY:}
     kasi:
-      # 천문연 출몰시각도 고캠핑과 같은 공공데이터포털 인증키(Decoding 키)를 쓴다. 비밀값이라 파일에 쓰지 않고 환경 변수로만 받는다.
-      # 값이 없으면 앱은 뜨지만 천문연 API가 인증 오류를 돌려주므로, 출몰시각 없이 응답한다.
       service-key: ${PUBLICDATA_SERVICE_KEY:}
   aisearch:
-    # 서비스 전체가 하루(한국 날짜)에 쓸 수 있는 OpenAI 비용 상한(달러)이다. 이 금액에 닿으면 그날은 AI 검색을 막는다.
     daily-budget-usd: 1.00
-    # gpt-4.1-mini의 공식 가격(100만 토큰당 달러)이다. 2026-10-13에 확인했다. 가격이 바뀌면 이 값을 고친다.
+    # gpt-4.1-mini의 공식 가격(100만 토큰당 달러)이다. 2026-10-13에 확인했다.
     input-price-per-million-usd: 0.40
     output-price-per-million-usd: 1.60
     openai:
-      # AI 검색이 문장을 해석할 때 쓰는 OpenAI 키다. 비밀값이라 파일에 쓰지 않고 환경 변수로만 받는다.
-      # 값이 없으면 앱은 뜨지만 AI 검색 요청만 실패한다.
       api-key: ${OPENAI_API_KEY:}
   publicdata:
     gocamping:
-      # 공공데이터포털 인증키(Decoding 키)다. 비밀값이라 파일에 쓰지 않고 환경 변수로만 받는다.
-      # 값이 없으면 앱은 뜨지만 고캠핑 API가 인증 오류를 돌려주므로 동기화가 실패한다.
+      # 공공데이터포털 인증키는 Decoding 키를 쓴다.
       service-key: ${PUBLICDATA_SERVICE_KEY:}
     forest:
-      # 국립자연휴양림 예약 정책 CSV 파일 경로다. 개발자가 공공데이터포털에서 파일을 받아 서버에 두고, 파일은 저장소에 커밋하지 않는다.
-      # 적재 서비스는 파일 이름 끝의 _YYYYMMDD.csv에서 기준일을 읽으므로, 받은 파일 이름을 바꾸지 않는다.
-      # 값이 없으면 앱은 뜨지만 적재를 실행하면 실패로 기록된다.
       file: ${PUBLICDATA_FOREST_FILE:}
     forest-standard:
-      # 전국휴양림표준데이터 JSON 파일 경로다. 개발자가 공공데이터포털에서 JSON 파일을 받아 서버에 두고, 파일은 저장소에 커밋하지 않는다.
-      # 파일 이름은 정하지 않는다. 행마다 데이터기준일자가 있어서 파일 이름에서 기준일을 읽지 않는다.
-      # 값이 없으면 앱은 뜨지만 적재를 실행하면 실패로 기록된다.
       file: ${PUBLICDATA_FOREST_STANDARD_FILE:}
     park-boundary:
-      # 공원 경계 TSV 파일 경로다. 개발자가 KDPA 보호지역 SHP를 받아 scripts/publicdata/extract-park-boundaries.py로 만든 파일을 서버에 두고,
-      # 파일은 저장소에 커밋하지 않는다. 적재 서비스는 파일 이름 끝의 _YYYYMMDD.tsv에서 기준일을 읽는다.
-      # 값이 없으면 앱은 뜨지만 적재를 실행하면 실패로 기록된다.
       file: ${PUBLICDATA_PARK_BOUNDARY_FILE:}
   image-storage:
-    # 커뮤니티 글과 장소 후기가 함께 쓰는 이미지 저장소다.
-    # 이미지 저장소 종류다. fake는 로컬 개발용으로 파일을 저장하지 않고, s3는 실제 S3 버킷에 사전 서명 URL을 발급한다.
-    # 운영(prod 프로필)은 s3로 덮어쓴다. 로컬에서 s3를 쓰려면 AWS 자격 증명을 기본 방식(환경 변수나 프로필)으로 준비한다.
     storage: ${COMMUNITY_IMAGE_STORAGE:fake}
-    # 업로드 버킷 이름이다. 비밀값이 아니다. storage가 s3인데 비어 있으면 앱이 시작하지 않는다.
     bucket: ${UPLOAD_BUCKET:}

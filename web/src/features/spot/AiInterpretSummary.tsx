@@ -1,19 +1,13 @@
 import type { SpotSetting } from '../../api/types';
 import { SPOT_SETTING_LABELS } from './spotLabels';
 
-// AI가 문장을 읽은 결과 중 조건 칩에 담기지 않는 것을 알린다.
 export type AiSummary = {
-  // 조건으로 바꾸지 못한 말이다.
   unparsed: string[];
-  // 유형과 맞지 않아 조건에서 뺀 입지다.
   droppedSettings?: SpotSetting[];
-  // 문장에 지역 이름이 있었지만 지도에서 찾지 못했을 때 그 이름이다.
   missingRegion?: string;
-  // 지역이나 조건을 하나도 읽지 못했을 때 켠다.
   empty: boolean;
 };
 
-// 칩 줄 아래에 흰 면 한 줄로 띄운다. 상태 안내라서 상자(Notice)로 감싸지 않는다.
 export function AiInterpretSummary({ summary, className }: { summary: AiSummary; className?: string }) {
   return (
     <div

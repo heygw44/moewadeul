@@ -55,7 +55,7 @@ class ReviewImageAttachConcurrencyIntegrationTest {
     @RepeatedTest(5)
     @DisplayName("[F-24][RI-02] 올린 이미지 하나를 후기 여러 개에 동시에 붙이면 하나만 성공하고 나머지는 imageIds 오류이며, 이미지는 후기 하나에만 붙는다")
     void sameImageAttachedByConcurrentReviewsSucceedsOnce() throws Exception {
-        // given: 같은 회원이 방문일만 다른 후기를 동시에 쓴다. 방문일이 같으면 중복 후기로 먼저 거부되기 때문이다.
+        // given
         long memberId = memberRepository.saveAndFlush(aMember().build()).getId();
         long spotId = spotRepository
                 .save(Spot.bakji(
@@ -87,7 +87,6 @@ class ReviewImageAttachConcurrencyIntegrationTest {
                 .isEqualTo(jdbc.queryForObject("SELECT id FROM spot_review", Long.class));
     }
 
-    // 작업마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runConcurrently(List<Callable<Object>> tasks) throws Exception {
         int threads = tasks.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

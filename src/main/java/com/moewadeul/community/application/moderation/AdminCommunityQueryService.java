@@ -16,18 +16,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 관리자가 검토 대기 또는 숨긴 글과 댓글의 목록을 읽는다. 신고 내용이 들어 있으므로 호출하는 쪽이 관리자 권한을 확인해야 한다. */
 @Service
 @RequiredArgsConstructor
 public class AdminCommunityQueryService {
 
     private final AdminCommunityMapper adminCommunityMapper;
 
-    /**
-     * 호출하면 status인 글을 금전 요구·사기 신고가 있는 글부터, 같은 묶음에서는 상태가 바뀐 시각이 이른 순서로 한 페이지 돌려준다. status가
-     * null이면 검토 대기(PENDING_REVIEW)를 읽는다. 검토 대기와 숨김(HIDDEN) 말고 다른 값이면 INVALID_INPUT으로 거부한다. 각 항목에는 검토 전
-     * 신고의 수, 사유별 수, 최근 5건을 담는다.
-     */
     @Transactional(readOnly = true)
     public AdminCommunityPage<AdminCommunityPostSummary> listPosts(String status, int page, int size) {
         CommunityPostStatus postStatus = parseStatus(status);
@@ -59,7 +53,6 @@ public class AdminCommunityQueryService {
         return new AdminCommunityPage<>(content, page, size, hasNext);
     }
 
-    /** 호출하면 status인 댓글을 {@link #listPosts}와 같은 순서와 규칙으로 한 페이지 돌려준다. */
     @Transactional(readOnly = true)
     public AdminCommunityPage<AdminCommunityCommentSummary> listComments(String status, int page, int size) {
         CommunityPostStatus commentStatus = parseStatus(status);
@@ -104,7 +97,6 @@ public class AdminCommunityQueryService {
                                 Collectors.toList())));
     }
 
-    // 글과 댓글의 상태 값이 같으므로 글의 상태 열거형으로 검증한다.
     private static CommunityPostStatus parseStatus(String status) {
         if (status == null) {
             return CommunityPostStatus.PENDING_REVIEW;

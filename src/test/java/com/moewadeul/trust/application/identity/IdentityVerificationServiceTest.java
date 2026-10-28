@@ -101,7 +101,7 @@ class IdentityVerificationServiceTest {
     @Test
     @DisplayName("[ID-04] 저장하다 DB 교착 상태로 두 번 연달아 롤백돼도 세 번째 실행의 사전 조회가 찾은 중복을 IDENTITY_CI_DUPLICATED로 거부한다")
     void retriesAfterRepeatedDeadlockAndRejectsDuplicate() {
-        // given: 첫 두 실행은 다른 요청과 교착 상태로 롤백되고, 세 번째 실행에서는 먼저 저장된 같은 CI가 보인다.
+        // given
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
         when(applier.apply(MEMBER_ID, command(1995)))
                 .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"))

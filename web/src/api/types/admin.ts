@@ -37,7 +37,6 @@ export interface AdminReportReview {
 export interface AdminSanctionHistoryItem {
   sanctionId: number;
   type: SanctionType;
-  // 단계가 없는 제재(임시 정지 등)는 null이다.
   level: number | null;
   status: SanctionStatus;
   reason: string;
@@ -46,7 +45,6 @@ export interface AdminSanctionHistoryItem {
   liftedAt: string | null;
 }
 
-// 후기 신고일 때만 companionReview가 있다. 처리 전에는 resultNote, handledBy, handledAt이 null이다.
 export interface AdminReportDetail extends AdminReportSummary {
   content: string;
   resultNote: string | null;
@@ -57,7 +55,6 @@ export interface AdminReportDetail extends AdminReportSummary {
   sanctionHistory: AdminSanctionHistoryItem[];
 }
 
-// 관리자가 새로 내릴 수 있는 제재 종류다. 임시 정지는 서버가 신고 접수 때 만든다.
 export type ConfirmableSanctionType = Exclude<SanctionType, 'TEMPORARY_72H'>;
 
 export interface AdminReportActionRequest {
@@ -82,7 +79,6 @@ export interface AdminSpotSummary {
   lat: number;
   lng: number;
   parkWarning: boolean;
-  // 공공데이터 장소는 null이다.
   reporter: { memberId: number; nickname: string } | null;
   reportCount: number;
   reasonCounts: Record<BakjiReportReason, number>;

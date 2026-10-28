@@ -5,7 +5,6 @@ import com.moewadeul.program.application.catalog.MyProgramApplicationPage;
 import java.time.Instant;
 import java.util.List;
 
-/** 내 행사 신청 목록의 한 페이지다. 전체 개수는 없고, 다음 페이지가 있는지만 hasNext로 알린다. 해당하지 않는 시각과 사유는 null로 내보낸다. */
 public record MyProgramApplicationPageResponse(List<ItemResponse> content, int page, int size, boolean hasNext) {
 
     static MyProgramApplicationPageResponse from(MyProgramApplicationPage page) {

@@ -7,8 +7,6 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
-// 단계는 문자열로 받고 허용 값인지 직접 검사한다. 모르는 값을 Spring의 enum 변환 오류가 아니라 필드 오류가 담긴 입력 오류로 돌려주려는 것이다.
-// 취소된 행사는 목록에서 빼므로 CANCELED는 허용하지 않는다. 생략하면 단계로 거르지 않는다.
 public record ProgramListRequest(
         @Schema(
                 description = "진행 단계. 생략하면 취소되지 않은 행사 모두.",

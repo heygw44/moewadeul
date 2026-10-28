@@ -22,7 +22,6 @@ export function MyPage() {
     document.title = '내 정보 · 뫼와들';
   }, []);
 
-  // 내 정보는 로그인한 세션으로만 볼 수 있다. 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', '/me'), { replace: true });
   }, [session.status]);
@@ -56,7 +55,6 @@ function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
   ];
   return (
     <BoardSection title="바로 가기">
-      {/* 링크마다 한 줄을 차지하고 오른쪽에 화살표를 둔다. */}
       <nav aria-label="바로 가기" className="flex flex-col">
         {links.map((link) => (
           <Link key={link.to} to={link.to} className={SHORTCUT_ROW_CLASS}>
@@ -64,7 +62,6 @@ function ShortcutAside({ me, onLogout }: { me: Me; onLogout: () => void }) {
             <Icon name="chevronRight" size={18} className="shrink-0 text-ink-muted" />
           </Link>
         ))}
-        {/* 데스크톱 머리글에는 로그아웃이 있어서 여기서는 모바일에만 둔다. 모바일 머리글에는 계정 자리가 없다. */}
         <button type="button" onClick={onLogout} className={`${SHORTCUT_ROW_CLASS} lg:hidden`}>
           로그아웃
         </button>
@@ -94,7 +91,6 @@ function AccountCard({ me }: { me: Me }) {
   );
 }
 
-// 판 안의 "라벨 — 굵은 값" 한 줄이다. 값이 길면 라벨 아래로 내려간다.
 function BoardRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3.5">
@@ -109,7 +105,6 @@ type TrustResult = { key: string; trust: MyTrust } | { key: string; error: { cau
 function TrustCard({ me }: { me: Me }) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<TrustResult | null>(null);
-  // 본인확인을 마치면 단계가 바뀌므로, 세션의 신뢰 단계가 바뀔 때도 다시 받는다. 어느 요청의 결과인지 key로 구분한다.
   const key = `${attempt}:${me.trustLevel}:${me.identityVerified}`;
 
   useEffect(() => {
@@ -190,8 +185,6 @@ function TrustCard({ me }: { me: Me }) {
   );
 }
 
-// 다음 단계 조건 한 줄이다. 막대는 채운 정도를 눈으로 빨리 보게 하는 장식이고, 값은 글로 함께 적는다.
-// 좁은 화면에서는 막대를 라벨 아래 한 줄로 내린다. 라벨과 값이 한 줄에 다 들어가지 않으면 값도 다음 줄 오른쪽으로 내린다.
 function ProgressRow({ label, value, ratio }: { label: string; value: string; ratio?: number }) {
   const percent = ratio === undefined ? null : Math.round(Math.min(Math.max(ratio, 0), 1) * 100);
   return (

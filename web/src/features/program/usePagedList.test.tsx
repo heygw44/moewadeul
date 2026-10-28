@@ -20,7 +20,6 @@ describe('usePagedList', () => {
   let container: HTMLDivElement;
   let root: Root;
   let latest: Result;
-  // 요청마다 응답을 직접 풀어 줄 수 있게 쪽 번호별로 대기열을 둔다.
   let pending: Map<string, Deferred[]>;
   let fetcher: (filter: string, pageNumber: number) => Promise<Page<number>>;
 
@@ -99,5 +98,26 @@ describe('usePagedList', () => {
 
     expect(latest.current?.items).toEqual([7]);
     expect(latest.current?.hasNext).toBe(true);
+  });
+
+  it('렌더마다 새로 만든 필터 객체라도 값이 같으면 다시 받지 않고 목록을 그대로 둔다', async () => {
+    let objectLatest: PagedList<number, { q: string }> | undefined;
+    const objectFetcher = vi.fn((filter: { q: string }, pageNumber: number) => fetcher(filter.q, pageNumber));
+    function ObjectProbe({ q }: { q: string }) {
+      objectLatest = usePagedList(true, { q }, objectFetcher);
+      return null;
+    }
+
+    await act(async () => root.render(<ObjectProbe q="A" />));
+    await settle('A:0', page([1, 2], 0, false));
+    await act(async () => root.render(<ObjectProbe q="A" />));
+
+    expect(objectFetcher).toHaveBeenCalledTimes(1);
+    expect(objectLatest?.current?.items).toEqual([1, 2]);
+
+    await act(async () => root.render(<ObjectProbe q="B" />));
+
+    expect(objectFetcher).toHaveBeenCalledTimes(2);
+    expect(objectLatest?.current).toBeNull();
   });
 });

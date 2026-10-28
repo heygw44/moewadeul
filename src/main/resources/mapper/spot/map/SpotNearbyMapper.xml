@@ -2,12 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.spot.infra.map.SpotNearbyMapper">
 
-    <!-- 중심에서 장소까지의 구면 거리(m). MySQL의 ST_Distance_Sphere와 같은 하버사인 공식이고, 위도·경도 생성 컬럼(latitude, longitude)을 숫자로 계산한다.
-         ST_Distance_Sphere는 SRID 4326 점에 WGS 84 타원체의 평균 반지름 (2a + b) / 3 = 6,371,008.771415060m를 쓴다(기본값 6,370,986m가 아니다).
-         그래서 같은 반지름을 쓰면 두 값이 소수점 아래 수 nm 안에서 같다. 장소 100만 건에서 50만 쌍을 비교했을 때 5·20·50km 경계에서 포함 여부가 갈린 행은 없었다.
-         공간 함수 대신 숫자를 쓰는 이유는, 반경 안 장소가 수만 곳이면 행마다 location을 읽고 ST_Distance_Sphere를 계산하는 시간이 조회 시간의 대부분이기
-         때문이다. 이 식은 (status, latitude, longitude, ...) 인덱스에 있는 컬럼만 읽어서 MySQL이 행을 다시 찾지 않는다.
-         반경 조건, 정렬, 결과에 싣는 거리에 모두 이 식을 써서, 응답의 거리가 반경보다 큰데 결과에 나오는 일이 없게 한다. -->
+    <!-- MySQL의 ST_Distance_Sphere와 같은 하버사인 공식이다. ST_Distance_Sphere는 SRID 4326 점에 WGS 84 타원체의 평균 반지름
+         (2a + b) / 3 = 6,371,008.771415060m를 쓴다(기본값 6,370,986m가 아니다). -->
     <sql id="distanceMeters">
         (2 * 6371008.771415060 * ASIN(SQRT(
             POW(SIN(RADIANS(s.latitude - #{nearby.centerLat}) / 2), 2)
@@ -15,15 +11,6 @@
               * POW(SIN(RADIANS(s.longitude - #{nearby.centerLng}) / 2), 2))))
     </sql>
 
-    <!-- 반경 안 후보를 고르는 FROM·WHERE. 후보 사각형의 BETWEEN은 MySQL이 (status, latitude, longitude, ...) 인덱스의 범위를 읽게 하려고 둔다.
-         서비스가 반경 원을 모두 덮도록 넉넉하게 잡은 사각형이라서, 이 조건만으로는 반경 밖 장소도 후보에 남는다. 그래서 그 뒤 거리 조건으로 반경 안(경계 포함)
-         장소만 남긴다. BETWEEN은 양 끝을 포함한다.
-         상세 테이블은 그 필터를 켰을 때만 조인한다. 필터 없는 요청에 붙이면 MySQL이 후보마다 상세 행을 한 번씩 더 찾는다.
-         매퍼는 시설 조건을 박지에만 건다. 야영장과 자연휴양림은 bakji_detail 행이 없지만, 유형이 BAKJI가 아니면 시설과 상관없이 조건을 통과한다.
-         휴장 제외 조건은 SpotClosure와 같은 규칙이다. 휴장 기간이 하나라도 있으면 오늘이 그 기간 안(양 끝 포함)일 때만 휴장이고, 비어 있는 쪽
-         끝은 제한이 없다고 본다. 기간이 둘 다 없으면 운영 상태가 임시 휴장이나 폐업일 때 휴장이다. 박지는 휴장 정보가 없어서 항상 남긴다.
-         public_spot_detail 행이 없거나 운영 상태가 비어 있는 공공 장소는 휴장이 아니다. 하지만 NOT 안의 식이 NULL이 되면 MySQL이 그 행을
-         빼므로, 운영 상태에 IS NOT NULL을 먼저 걸어 식이 항상 참이나 거짓이 되게 한다. 개발자가 한쪽 규칙을 바꾸면 다른 쪽도 함께 고쳐야 한다. -->
     <sql id="candidatesInRadius">
         FROM spot s
         <if test="nearby.hasWater or nearby.hasToilet">
@@ -61,20 +48,13 @@
                 </foreach>)
         </if>
         <if test="nearby.hideClosed">
-          AND NOT (
-                s.type &lt;&gt; 'BAKJI'
-                AND (
-                    ((d.closed_from IS NOT NULL OR d.closed_until IS NOT NULL)
-                        AND (d.closed_from IS NULL OR d.closed_from &lt;= #{nearby.today})
-                        AND (d.closed_until IS NULL OR d.closed_until &gt;= #{nearby.today}))
-                    OR (d.closed_from IS NULL AND d.closed_until IS NULL
-                        AND d.operating_status IS NOT NULL
-                        AND d.operating_status IN ('TEMPORARILY_CLOSED', 'PERMANENTLY_CLOSED'))))
+          AND NOT <include refid="com.moewadeul.spot.infra.map.SpotClosureSql.closedToday">
+              <property name="condition" value="nearby"/>
+          </include>
         </if>
           AND <include refid="distanceMeters"/> &lt;= #{nearby.radiusMeters}
     </sql>
 
-    <!-- 반경 안 장소가 limit개 이상인지 알면 되므로, 안쪽 조회는 limit개를 찾으면 멈추고 정렬하지 않는다. 결과는 반경 안 장소 수와 limit 중 작은 값이다. -->
     <select id="countNearbyUpTo" resultType="long">
         SELECT COUNT(*)
         FROM (
@@ -84,8 +64,6 @@
         ) n
     </select>
 
-    <!-- 안쪽 조회는 후보의 ID와 거리만으로 정렬하고 자른다. 이름과 휴장 표시 컬럼은 자른 행에만 바깥에서 붙인다.
-         거리가 같은 장소는 ID 순서로 정렬해서, 페이지를 넘겨도 같은 장소가 두 번 나오거나 빠지지 않게 한다. -->
     <select id="selectNearby" resultType="com.moewadeul.spot.infra.map.SpotNearbyRow">
         SELECT s.id AS spot_id,
                s.type AS type,

@@ -34,7 +34,6 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 class MemberControllerTest {
 
     private static final String VALID_PASSWORD = "Valid-pass-1!";
-    // MockMvc가 요청에 기본으로 넣는 원격 주소
     private static final String MOCK_REMOTE_ADDR = "127.0.0.1";
 
     @Autowired

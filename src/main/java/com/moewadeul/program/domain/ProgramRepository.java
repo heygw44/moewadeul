@@ -8,9 +8,6 @@ public interface ProgramRepository {
 
     Optional<Program> findById(Long id);
 
-    /**
-     * 호출하면 id인 행사를 쓰기 잠금으로 읽는다. 같은 행사를 바꾸려는 다른 트랜잭션은 이 트랜잭션이 끝날 때까지 기다린다.
-     * 호출하는 트랜잭션 안에서 첫 조회여야 잠금을 얻은 뒤 다른 트랜잭션이 커밋한 내용이 보인다.
-     */
+    // InnoDB REPEATABLE READ는 첫 일반 SELECT에서 스냅샷을 잡는다. 이 잠금 읽기가 트랜잭션의 첫 쿼리여야 뒤의 조회가 앞서 커밋된 행을 본다.
     Optional<Program> findByIdForUpdate(Long id);
 }

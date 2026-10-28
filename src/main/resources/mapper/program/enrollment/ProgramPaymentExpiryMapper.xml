@@ -2,8 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.program.infra.enrollment.ProgramPaymentExpiryMapper">
 
-    <!-- 마지막으로 읽은 ID 뒤부터 읽어서, 처리하지 못하고 남은 신청이 있어도 같은 행을 다시 읽지 않는다.
-         기한 정각부터 만료이므로 payment_due_at이 now와 같은 신청도 포함한다. -->
     <select id="selectDueTargets" resultType="com.moewadeul.program.infra.enrollment.ExpiryTarget">
         SELECT id AS application_id,
                member_id AS member_id,
@@ -16,7 +14,6 @@
         LIMIT #{limit}
     </select>
 
-    <!-- 신청하려는 회원 본인의 기한 지난 결제 대기 신청이다. 행사마다 회원의 활성 신청은 하나뿐이라 최대 한 행이다. -->
     <select id="selectOverdueByMember" resultType="com.moewadeul.program.infra.enrollment.ExpiryTarget">
         SELECT id AS application_id,
                member_id AS member_id,

@@ -2,10 +2,6 @@ package com.moewadeul.trust.application;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-/**
- * 관리자 조치의 감사 로그 detail로 저장할 값. 식별 정보와 상태 전후만 담고, 신고 내용·메모·제재 사유 원문은 담지 않는다.
- * 값이 없는 필드는 JSON에서 뺀다.
- */
 public final class TrustAuditDetails {
 
     private TrustAuditDetails() {}

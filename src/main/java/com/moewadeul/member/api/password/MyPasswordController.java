@@ -41,7 +41,6 @@ class MyPasswordController {
             @AuthenticationPrincipal LoginMember loginMember,
             @Valid @RequestBody PasswordChangeRequest request,
             HttpServletRequest httpRequest) {
-        // 로그인한 요청이라 세션이 반드시 있다. 서비스는 이 세션만 남기고 같은 회원의 다른 세션을 지운다.
         String currentSessionId = httpRequest.getSession(false).getId();
         passwordChangeService.change(new PasswordChangeCommand(
                 loginMember.memberId(),

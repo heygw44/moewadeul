@@ -51,7 +51,6 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
     document.title = props.mode === 'create' ? '기록 남기기 · 뫼와들' : '기록 수정 · 뫼와들';
   }, [props.mode]);
 
-  // 기록은 로그인한 세션으로만 남긴다. 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
@@ -122,7 +121,6 @@ function MemoryAside() {
   );
 }
 
-// 지도 메뉴는 누른 좌표를, 장소 상세는 장소 좌표와 장소 ID를 주소에 붙여 이 화면을 연다.
 function CreateForm() {
   const { search } = useLocation();
   const params = new URLSearchParams(search);
@@ -166,7 +164,6 @@ function EditLoader({ memoryId, myMemberId }: { memoryId: number; myMemberId: nu
   }, [memoryId, attempt]);
 
   const notMine = result !== null && 'memory' in result && result.memory.author.memberId !== myMemberId;
-  // 작성자가 아니면 고칠 수 없으므로 기록 상세로 돌려보낸다.
   useEffect(() => {
     if (notMine) navigate(`/memories/${memoryId}`, { replace: true });
   }, [notMine, memoryId]);
@@ -202,7 +199,6 @@ function EditLoader({ memoryId, myMemberId }: { memoryId: number; myMemberId: nu
     );
   }
   const { memory } = result;
-  // 작성자 응답에는 좌표가 늘 있다. 혹시 빠지면 위치 없이 그린다.
   const position = memory.lat !== undefined && memory.lng !== undefined ? { lat: memory.lat, lng: memory.lng } : null;
   return <MemoryForm mode="edit" memory={memory} position={position} initialSpot={memory.spot ?? null} />;
 }
@@ -220,7 +216,6 @@ type MemoryFormProps = { position: LatLng | null; initialSpot: LinkedSpot | null
   { mode: 'create' } | { mode: 'edit'; memory: MemoryDetail }
 );
 
-// 세션이 끊겨 로그인 화면으로 넘어갈 때 보관하는 값이다. 로그인한 뒤 돌아오면 폼이 이 값으로 다시 채운다.
 type MemoryDraft = {
   visitedDate: string;
   nights: string;
@@ -261,7 +256,6 @@ function MemoryForm(props: MemoryFormProps) {
     images: restorableImages(uploads.images),
   });
 
-  // 장소 상세에서 넘어오면 장소 이름을 모르므로 한 번 받아 보여 준다. 받지 못하면 이름 없이 둔다.
   const unnamedSpotId = spot !== null && spot.name === null ? spot.spotId : null;
   useEffect(() => {
     if (unnamedSpotId === null) return;
@@ -299,7 +293,6 @@ function MemoryForm(props: MemoryFormProps) {
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    // 공백뿐인 글은 서버가 거부하므로, 지운 것으로 보고 보내지 않는다.
     const trimmed = content.trim();
     const imageIds = uploads.imageIds;
     setSubmitting(true);
@@ -475,7 +468,6 @@ type FormValues = {
   imageIds: number[];
 };
 
-// 바뀐 값만 보낸다. 글을 모두 지웠으면 null로 보내 서버가 글을 지우게 한다.
 function collectChanges(memory: MemoryDetail, values: FormValues): MemoryUpdateRequest {
   const changes: MemoryUpdateRequest = {};
   if (values.visitedDate !== memory.visitedDate) changes.visitedDate = values.visitedDate;

@@ -20,7 +20,6 @@ class PasswordResetThrottleTest {
         return PasswordResetThrottle.open("throttle-key", now);
     }
 
-    /** 간격 제한이 있는 규칙에서 한도 안으로 요청을 센다. 요청마다 간격을 지켜서 센다. */
     private static void recordEvery(PasswordResetThrottle throttle, Rule rule, Duration step, int times) {
         for (int i = 0; i < times; i++) {
             throttle.record(rule, START.plus(step.multipliedBy(i)));
@@ -170,7 +169,6 @@ class PasswordResetThrottleTest {
             var blocked = throttle.blockedFor(rule, fifthAt.plusSeconds(10));
 
             // then
-            // 간격은 50초, 한도(구간 끝)는 20초 남았다.
             assertThat(blocked).contains(Duration.ofSeconds(50));
         }
 
@@ -185,7 +183,6 @@ class PasswordResetThrottleTest {
             var blocked = throttle.blockedFor(rule, START.plusSeconds(250));
 
             // then
-            // 간격은 50초, 한도는 하루에서 250초를 뺀 만큼 남았다.
             assertThat(blocked).contains(DAY.minusSeconds(250));
         }
 

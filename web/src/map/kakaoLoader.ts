@@ -18,8 +18,6 @@ export class MapLoadError extends Error {
   }
 }
 
-// 여러 화면이 동시에 지도를 열어도 스크립트는 한 번만 넣도록 진행 중인 약속을 공유한다.
-// 실패하면 비워 두어서 다음 호출이 처음부터 다시 시도할 수 있게 한다.
 let pending: Promise<void> | null = null;
 
 export function loadKakaoMaps(): Promise<void> {
@@ -53,7 +51,6 @@ function startLoading(): Promise<void> {
       if (settled) return;
       settled = true;
       window.clearTimeout(timer);
-      // 실패한 script 태그를 남겨 두면 다시 시도할 때 태그가 쌓이므로 지운다.
       script?.remove();
       reject(new MapLoadError('LOAD_FAILED'));
     }
@@ -68,14 +65,12 @@ function startLoading(): Promise<void> {
       maps.load(succeed);
     }
 
-    // 앞선 시도가 시간 초과로 끝난 뒤에 스크립트가 늦게 도착했다면 다시 넣지 않고 그대로 쓴다.
     if (window.kakao?.maps) {
       finishWithSdk();
       return;
     }
 
     script = document.createElement('script');
-    // 지역 검색이 주소 검색과 키워드 장소 검색을 쓰므로 services 라이브러리를 함께 받는다.
     script.src = `${SDK_URL}?appkey=${encodeURIComponent(key)}&libraries=services&autoload=false`;
     script.async = true;
     script.addEventListener('load', finishWithSdk);

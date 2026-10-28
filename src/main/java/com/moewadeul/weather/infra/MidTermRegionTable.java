@@ -13,9 +13,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
-/**
- * 클래스패스의 {@code weather/mid-term-regions.csv}를 읽어 중기예보 구역 목록을 빈으로 만든다. 파일 형식이 틀리면 앱이 뜨지 않는다.
- */
 @Configuration(proxyBeanMethods = false)
 public class MidTermRegionTable {
 

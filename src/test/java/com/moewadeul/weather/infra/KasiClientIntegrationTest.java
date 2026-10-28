@@ -47,7 +47,6 @@ class KasiClientIntegrationTest {
     private static final String OPERATION = "getLCRiseSetInfo";
     private static final String RECOVERED = "recovered";
     private static final LocalDate DATE = LocalDate.of(2026, 10, 4);
-    // 서울시청
     private static final double LAT = 37.5665;
     private static final double LNG = 126.9780;
 
@@ -247,7 +246,7 @@ class KasiClientIntegrationTest {
     @Test
     @DisplayName("[F-09][NFR-05] 응답이 응답 대기 시간보다 늦으면 한 번 다시 보낸 뒤 인증키 없는 예외를 던진다")
     void throwsAfterSecondReadTimeout() {
-        // given: 테스트 프로필의 응답 대기 시간은 1초다.
+        // given
         stub(xml(readFixture("rise-set.xml")).withFixedDelay(2_000));
         long failureBefore = timerCount("failure");
 
@@ -258,7 +257,6 @@ class KasiClientIntegrationTest {
         assertThat(thrown).hasMessageContaining("I/O 오류");
         assertNoServiceKey(thrown);
         assertThat(timerCount("failure") - failureBefore).isEqualTo(2);
-        // WireMock이 지연 응답을 다 보낸 뒤에야 요청을 기록한다. 그래서 테스트는 기록이 두 건이 될 때까지 기다린다.
         await().atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(requestCount()).isEqualTo(2));
     }
@@ -266,12 +264,12 @@ class KasiClientIntegrationTest {
     @Test
     @DisplayName("[NFR-05][NFR-06] 천문연이 재시도까지 실패하면 쉬는 시간 동안 천문연을 부르지 않고, 쉬는 시간이 지나면 다시 부른다")
     void restsAfterOutage() {
-        // given: 테스트 프로필은 쉬는 시간을 0으로 두므로, 30초를 쉬는 클라이언트를 따로 만든다. 천문연이 계속 500을 준다.
+        // given
         KasiClient resting =
                 new KasiClient(kasiProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), metrics, clock);
         stub(serverError());
 
-        // when: 첫 호출은 재시도까지 두 번 보낸 뒤 실패하고, 이어지는 호출은 쉬는 중이라 보내지 않는다.
+        // when
         KasiApiException first = catchThrowableOfType(KasiApiException.class, () -> resting.getRiseSet(DATE, LAT, LNG));
         KasiApiException second =
                 catchThrowableOfType(KasiApiException.class, () -> resting.getRiseSet(DATE, LAT, LNG));
@@ -282,7 +280,7 @@ class KasiClientIntegrationTest {
         assertThat(wireMock.findAll(getRequestedFor(urlPathEqualTo(RISE_SET_PATH))))
                 .hasSize(2);
 
-        // when: 쉬는 시간이 지난 뒤 천문연이 살아나면 다음 호출이 천문연에 간다.
+        // when
         clock.advance(Duration.ofSeconds(30));
         stub(xml(readFixture("rise-set.xml")));
 
@@ -344,8 +342,6 @@ class KasiClientIntegrationTest {
         assertNoServiceKey(thrown);
     }
 
-    // 키가 예외에 남으면 로그와 오류 추적 도구로 비밀값이 새어 나간다. 서버는 이 예외를 스택 트레이스째 로그에 남기므로,
-    // 메시지만이 아니라 로그에 찍히는 스택 트레이스 전체(원인 예외와 억제된 예외 포함)에 키가 없는지 확인한다.
     private static void assertNoServiceKey(Throwable thrown) {
         StringWriter stackTrace = new StringWriter();
         thrown.printStackTrace(new PrintWriter(stackTrace));

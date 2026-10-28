@@ -119,7 +119,6 @@ class ProgramApplyConcurrencyIntegrationTest {
         assertThat(fixture.activeCount(programId)).isEqualTo(1);
     }
 
-    // 컨트롤러와 같은 방식으로 멱등성 실행기를 거쳐 신청한다. 결과는 신청 ID로 비교한다.
     private Long applyWithKey(long memberId, long programId, String key) {
         ProgramApplyResult result = idempotencyExecutor.execute(
                 new IdempotentRequest(memberId, key, "POST /api/programs/" + programId + "/applications", null),
@@ -138,7 +137,6 @@ class ProgramApplyConcurrencyIntegrationTest {
 
     private record Outcomes(List<Object> successes, List<Throwable> failures) {}
 
-    // 회원마다 스레드 하나로 동시에 출발시키고, 반환값과 던져진 예외를 모아 돌려준다.
     private Outcomes runConcurrently(List<Long> memberIds, MemberAction action) throws Exception {
         int threads = memberIds.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

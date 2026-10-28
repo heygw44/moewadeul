@@ -10,8 +10,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
-// 빠진 값을 @NotNull 위반으로 돌려주려고 숫자와 불리언은 래퍼 타입으로 받는다.
-// 시각 순서(신청 시작 < 신청 마감 <= 행사 시작 < 행사 종료)와 행사 시작이 현재 이후인지는 서비스가 검사한다.
 public record AdminProgramCreateRequest(
         @NotBlank(message = "제목을 입력해 주세요.") @Size(max = ProgramLimits.TITLE_MAX_LENGTH, message = "제목은 100자 이하여야 해요.")
         String title,

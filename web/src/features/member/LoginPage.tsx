@@ -25,8 +25,6 @@ type FormError = { message: string; detail?: string; traceId?: string };
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
 
-// 이메일 인증을 마치지 않은 회원은 로그인은 되지만 인증 코드 화면부터 거친다.
-// 인증 코드 화면에서 로그인하러 왔다면 next가 이미 그 화면이라서 그대로 돌려보낸다.
 function destinationAfterLogin(me: Pick<Me, 'status'>, next: string | null): string {
   if (me.status !== 'UNVERIFIED') return next ?? '/map';
   return next?.startsWith('/verify-email') ? next : withNext('/verify-email', next);
@@ -48,7 +46,6 @@ export function LoginPage() {
     document.title = '로그인 · 뫼와들';
   }, []);
 
-  // 이미 로그인한 회원이 이 주소로 들어오면 갈 곳으로 바로 보낸다.
   useEffect(() => {
     if (session.status === 'authenticated' && session.me && !submitting) {
       navigate(destinationAfterLogin(session.me, next), { replace: true });

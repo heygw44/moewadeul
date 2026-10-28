@@ -12,7 +12,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-// 통신 상태와 바닥 유형은 문자열로 받고 서비스가 허용 값인지 검증한다. 모르는 값을 Jackson의 enum 변환 오류가 아니라 서비스의 입력 오류로 돌려주려는 것이다.
 @InWeatherGrid
 public record BakjiCreateRequest(
         @NotBlank(message = "이름을 입력해 주세요.") @Size(max = Spot.NAME_MAX_LENGTH, message = "이름은 100자 이하여야 해요.")

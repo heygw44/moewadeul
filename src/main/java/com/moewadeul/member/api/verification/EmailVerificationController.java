@@ -40,8 +40,6 @@ class EmailVerificationController {
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {
         VerificationResult result = emailVerificationService.verify(loginMember.memberId(), request.code());
-        // 세션에 저장된 권한은 로그인할 때 정해진다. 그래서 인증을 마친 지금 이 세션에 권한을 더해야 다시 로그인하지 않고 바로 쓸 수 있다.
-        // 이 회원이 다른 기기에서 로그인해 둔 세션은 고치지 않으므로, 그 세션은 다음에 로그인할 때까지 예전 권한을 가진다.
         loginSessionManager.markEmailVerified(httpRequest, httpResponse);
         return EmailVerificationResponse.from(result);
     }

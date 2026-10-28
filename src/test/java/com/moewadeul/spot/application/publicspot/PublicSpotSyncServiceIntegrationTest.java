@@ -28,10 +28,8 @@ import tools.jackson.databind.json.JsonMapper;
 @IntegrationTest
 class PublicSpotSyncServiceIntegrationTest {
 
-    // 서울시청 좌표다. 위도와 경도가 뒤바뀌면 위도 자리에 126.978이 들어가서 MySQL이 값을 거부하거나 읽은 좌표가 달라진다.
     private static final double SEOUL_LATITUDE = 37.5665;
     private static final double SEOUL_LONGITUDE = 126.978;
-    // 강원도 춘천 근처 좌표다. 서울시청과 기상청 격자가 다르다.
     private static final double CHUNCHEON_LATITUDE = 37.8813;
     private static final double CHUNCHEON_LONGITUDE = 127.7298;
     private static final Duration NEXT_SYNC = Duration.ofDays(1);
@@ -123,7 +121,7 @@ class PublicSpotSyncServiceIntegrationTest {
     @Test
     @DisplayName("[F-06] 같은 데이터를 두 번 적재하면 행이 늘지 않고 수정 시각과 동기화 시각도 바뀌지 않는다")
     void upsertingSameBatchTwiceLeavesRowsUntouched() {
-        // given: 키가 여러 개인 시설 정보를 넣는다. MySQL은 JSON 키 순서와 공백을 바꿔 저장하므로, 문자열로 비교하면 바뀐 것으로 잘못 본다.
+        // given: MySQL은 JSON 키 순서와 공백을 바꿔 저장하므로, 문자열로 비교하면 바뀐 것으로 잘못 본다.
         List<PublicSpotCommand> batch = List.of(
                 campsite("100", "솔숲 야영장", SEOUL_LATITUDE, SEOUL_LONGITUDE),
                 campsite("101", "갈대 야영장", CHUNCHEON_LATITUDE, CHUNCHEON_LONGITUDE));
@@ -572,7 +570,7 @@ class PublicSpotSyncServiceIntegrationTest {
         // given
         publicSpotSyncService.upsert(PublicSpotSource.FOREST, List.of(seoulCampsite("100", "솔숲 휴양림")));
 
-        // when & then: 빈 목록을 그대로 쓰면 출처의 장소를 모두 숨기게 되므로 서비스가 거부한다.
+        // when & then
         assertThatThrownBy(() -> publicSpotSyncService.markMissingRemoved(PublicSpotSource.FOREST, List.of(" ")))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(findSpot(PublicSpotSource.FOREST, "100").status()).isEqualTo("ACTIVE");
@@ -950,7 +948,6 @@ class PublicSpotSyncServiceIntegrationTest {
         return spotId;
     }
 
-    // 시각은 MyBatis가 Timestamp로 쓴 값이라, 같은 JDBC 변환을 거치도록 getTimestamp로 읽는다.
     private StoredSpot findSpot(PublicSpotSource source, String externalId) {
         return jdbcTemplate.queryForObject(
                 "SELECT s.type, s.status, s.name, s.address, ST_Latitude(s.location) AS latitude,"

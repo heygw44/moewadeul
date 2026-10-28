@@ -1,19 +1,15 @@
-// 가입·로그인·비밀번호 재설정 요청 화면의 이메일 칸은 아이디와 도메인을 따로 받는다. 화면 상태와 서버로 보낼 주소를 서로 바꾸는 함수를 둔다.
-
 export type EmailValue = {
   local: string;
   domainChoice: string;
   customDomain: string;
 };
 
-// 도메인 select에서 "직접 입력"을 나타내는 값. 실제 도메인과 겹치지 않는다.
 export const CUSTOM_DOMAIN = 'custom';
 
 export const EMAIL_DOMAINS = ['naver.com', 'gmail.com', 'daum.net', 'hanmail.net', 'kakao.com', 'nate.com'] as const;
 
 export const EMPTY_EMAIL: EmailValue = { local: '', domainChoice: '', customDomain: '' };
 
-// 대소문자는 바꾸지 않는다. 서버가 소문자로 저장한다.
 export function composeEmail(value: EmailValue): string {
   const domain = value.domainChoice === CUSTOM_DOMAIN ? value.customDomain : value.domainChoice;
   return `${value.local.trim()}@${domain.trim()}`;

@@ -29,15 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 관리자가 공식 행사를 등록, 수정, 취소하고 신청자 목록을 읽는다.
- *
- * <p>등록, 수정, 취소는 감사 로그를 같은 트랜잭션에서 남긴다. 수정과 취소는 첫 쿼리로 행사 행을 쓰기 잠금으로 읽는다.
- * 그래서 같은 행사를 동시에 고치거나 취소하면 뒤 요청은 잠금을 기다린 뒤 앞 요청이 커밋한 상태를 보고 판단한다.
- * 취소하는 동안에는 새 신청도 같은 행 잠금을 기다리므로, 취소 직후 이 행사에 활성 신청이 남지 않는다.
- *
- * <p>행사가 없으면 NOT_FOUND, 값의 범위나 시각 순서가 틀리거나 연결하려는 장소가 지도에 보이지 않으면 INVALID_INPUT으로 거부한다.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -52,7 +43,6 @@ public class ProgramAdminService {
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
 
-    /** 호출하면 adminId인 관리자가 command대로 행사를 등록하고 그 행사의 ID를 돌려준다. */
     @Transactional
     public long create(long adminId, ProgramCreateCommand command) {
         Program program = newProgram(adminId, command, clock.instant());
@@ -68,11 +58,6 @@ public class ProgramAdminService {
         return saved.getId();
     }
 
-    /**
-     * 호출하면 programId인 행사를 command에서 null이 아닌 필드로 고치고, 고친 뒤의 상세를 돌려준다(myApplication은 없다).
-     * 취소된 행사는 PROGRAM_INVALID_STATE로 거부한다. 신청 시작 뒤이거나 신청이 하나라도 들어온 행사의 정원 축소는
-     * PROGRAM_CAPACITY_DECREASE로 거부한다. 신청 기록은 행사 행을 잠근 뒤에 읽으므로, 신청과 겹쳐도 먼저 커밋된 신청이 보인다.
-     */
     @Transactional
     public ProgramDetail revise(long adminId, long programId, ProgramReviseCommand command) {
         Program program = lockProgram(programId);
@@ -89,17 +74,9 @@ public class ProgramAdminService {
                 programId,
                 updateDetail(change));
         log.info("program revised programId={} adminId={}", programId, adminId);
-        // 위에서 플러시했으므로 MyBatis가 고친 내용을 읽는다.
         return programQueryService.detail(programId, null);
     }
 
-    /**
-     * 호출하면 programId인 행사를 취소하고, 결제 대기·확정 신청을 모두 취소 사유 PROGRAM_CANCELED로 바꾸며, 결제 완료 건을 환불 처리한다.
-     * 이미 취소된 행사는 PROGRAM_INVALID_STATE로 거부한다. 취소된 신청마다 신청자에게 알릴 이벤트(환불 여부 포함)를 같은 트랜잭션에서 기록한다.
-     *
-     * <p>일괄 UPDATE 전에 활성 신청을 쓰기 잠금으로 읽는다. 결제가 진행 중이면 그 커밋을 기다린 뒤에 읽으므로, 이벤트의 환불 여부가
-     * 일괄 UPDATE가 실제로 환불한 결제와 같다.
-     */
     @Transactional
     public ProgramCancelResult cancel(long adminId, long programId) {
         Program program = lockProgram(programId);
@@ -129,7 +106,6 @@ public class ProgramAdminService {
         return new ProgramCancelResult(programId, program.getStatus().name(), canceledApplicationCount);
     }
 
-    // 신청자마다 이벤트를 하나씩 기록한다. 결제를 마친 신청은 환불했다고 알린다.
     private void recordCanceledEvents(
             long programId, List<ProgramApplication> applications, Set<Long> paidApplicationIds) {
         for (ProgramApplication application : applications) {
@@ -147,10 +123,6 @@ public class ProgramAdminService {
         }
     }
 
-    /**
-     * 호출하면 programId인 행사의 신청을 query.status로 거르고 신청한 순서로 한 페이지 읽는다. 행사가 없으면 NOT_FOUND로 실패한다.
-     * 다음 페이지가 있는지 알려고 한 건을 더 읽고, 그 건은 결과에서 뺀다.
-     */
     @Transactional(readOnly = true)
     public ProgramApplicantPage applications(long programId, ProgramApplicantQuery query) {
         programRepository.findById(programId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
@@ -166,7 +138,6 @@ public class ProgramAdminService {
         return new ProgramApplicantPage(content, query.page(), query.size(), hasNext);
     }
 
-    // 모르는 상태 이름은 서버가 조용히 무시하지 않고 입력 오류로 거부한다.
     private static ProgramApplicationStatus parseStatus(String status) {
         if (status == null) {
             return null;
@@ -184,14 +155,12 @@ public class ProgramAdminService {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 
-    // 장소가 없거나 지도에 보이지 않는 상태이면 연결하지 않는다. spotId가 null이면 연결하지 않는 행사라서 검사하지 않는다.
     private void requireVisibleSpot(Long spotId) {
         if (spotId != null && !programQueryMapper.existsActiveSpot(spotId)) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "spotId: 지도에 보이는 장소만 연결할 수 있어요.");
         }
     }
 
-    // 범위나 시각 순서 위반처럼 도메인이 IllegalArgumentException으로 알리는 요청 값 오류는 INVALID_INPUT으로 바꾼다.
     private static Program newProgram(long adminId, ProgramCreateCommand command, Instant now) {
         int paymentDeadlineMinutes = command.paymentDeadlineMinutes() == null
                 ? Program.DEFAULT_PAYMENT_DEADLINE_MINUTES

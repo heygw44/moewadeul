@@ -3,7 +3,6 @@ package com.moewadeul.admin.api.member;
 import com.moewadeul.trust.application.report.AdminMemberReportSummary;
 import java.time.Instant;
 
-/** 관리자 신고 목록의 한 항목. */
 public record AdminMemberReportSummaryResponse(
         long reportId,
         String kind,

@@ -2,6 +2,7 @@ package com.moewadeul.member.infra;
 
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberRepository;
+import com.moewadeul.member.domain.Nickname;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,8 +10,6 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-// 도메인 리포지토리와 JpaRepository가 같은 이름의 메서드를 따로 선언해서, 구현체 타입으로 호출하면 모호해진다.
-// 그래서 우리는 이 인터페이스에서 메서드를 다시 선언해 하나로 합친다.
 public interface MemberJpaRepository extends JpaRepository<Member, Long>, MemberRepository {
 
     @Override
@@ -19,9 +18,16 @@ public interface MemberJpaRepository extends JpaRepository<Member, Long>, Member
     @Override
     Optional<Member> findById(Long id);
 
-    // 이름만으로는 Spring Data가 쿼리를 만들 수 없어서 JPQL을 직접 쓴다.
     @Override
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT m FROM Member m WHERE m.id = :id")
     Optional<Member> findByIdForUpdate(@Param("id") long id);
+
+    @Override
+    @Query("SELECT COUNT(m) > 0 FROM Member m WHERE m.nickname = :#{#nickname.value()}")
+    boolean existsByNickname(@Param("nickname") Nickname nickname);
+
+    @Override
+    @Query("SELECT COUNT(m) > 0 FROM Member m WHERE m.nickname = :#{#nickname.value()} AND m.id <> :id")
+    boolean existsByNicknameAndIdNot(@Param("nickname") Nickname nickname, @Param("id") Long id);
 }

@@ -36,7 +36,6 @@ class SpotReviewConcurrencyIntegrationTest {
 
     private static final int THREADS = 20;
 
-    // 테스트 시계의 기본 시각은 한국 날짜로 2026-10-05 낮 12시다.
     private static final LocalDate VISITED = LocalDate.of(2026, 10, 4);
 
     @Autowired
@@ -99,12 +98,10 @@ class SpotReviewConcurrencyIntegrationTest {
         assertThat(spotDetailQueryService.findDetail(spotId).rating().count()).isEqualTo(1);
     }
 
-    // 1~5를 돌려 가며 쓰므로 평균이 정수로 떨어지지 않는 값이 나온다.
     private static int ratingOf(int index) {
         return index % 5 + 1;
     }
 
-    // 회원마다 후기를 하나씩만 쓰므로, 회원별 평균을 다시 평균 낸 상세의 값이 모든 행의 단순 평균과 같다.
     private double averageOfRows(long spotId) {
         Double average = jdbc.queryForObject(
                 "SELECT ROUND(AVG(rating), 1) FROM spot_review WHERE spot_id = ?", Double.class, spotId);
@@ -132,7 +129,6 @@ class SpotReviewConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM spot_review WHERE spot_id = ?", Integer.class, spotId);
     }
 
-    // 요청마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private <T> List<Throwable> runConcurrently(List<Long> memberIds, MemberAction<T> action) throws Exception {
         int threads = memberIds.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

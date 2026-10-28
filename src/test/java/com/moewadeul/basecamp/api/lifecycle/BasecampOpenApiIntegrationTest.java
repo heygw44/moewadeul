@@ -38,7 +38,6 @@ class BasecampOpenApiIntegrationTest {
     private static final String VALID_PASSWORD = "Valid-pass1";
     private static final String SESSION_COOKIE = "SESSION";
     private static final String LOCAL_IP = "127.0.0.1";
-    // 테스트 시계는 한국 날짜로 2026-10-05이다. 2007년생은 성인이다.
     private static final int ADULT_BIRTH_YEAR = 2007;
 
     @Autowired
@@ -371,7 +370,6 @@ class BasecampOpenApiIntegrationTest {
         return session;
     }
 
-    // 실제 흐름대로 로그인한 세션에서 인증 코드를 확인해야 그 세션이 이메일 인증 권한을 얻는다.
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService
@@ -389,7 +387,6 @@ class BasecampOpenApiIntegrationTest {
         return session;
     }
 
-    // 이메일 인증을 마치고 성인으로 본인확인까지 해서 신뢰 단계 1인 세션을 만든다. 회원마다 식별 문자열을 다르게 줘야 같은 사람으로 보지 않는다.
     private Cookie identityVerifiedSession(Member member, String gender) {
         Cookie session = verifiedSession(member);
         identitySequence++;

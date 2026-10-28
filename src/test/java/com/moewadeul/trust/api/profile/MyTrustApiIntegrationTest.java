@@ -74,7 +74,6 @@ class MyTrustApiIntegrationTest {
     @DisplayName("[TR-01] 본인확인을 마친 성인은 단계 1이고 nextLevel이 단계 2 조건을 알려 준다")
     void adultIsLevelOne() {
         Cookie session = verifiedSession(saveMember());
-        // 테스트 시계는 한국 날짜로 2026-10-05라서, 2007년생은 성인이고 2008년생은 미성년이다.
         verifyIdentity(session, 2007, "demo-adult");
 
         MvcTestResult result = mvc.get().uri(PATH).cookie(session).exchange();
@@ -181,7 +180,6 @@ class MyTrustApiIntegrationTest {
         return session;
     }
 
-    // 실제 흐름대로 로그인한 세션에서 인증 코드를 확인해야 그 세션이 이메일 인증 권한을 얻는다.
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService

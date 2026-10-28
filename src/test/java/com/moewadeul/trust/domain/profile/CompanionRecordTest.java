@@ -44,7 +44,6 @@ class CompanionRecordTest {
     @Test
     @DisplayName("[TR-01] 반올림하면 80이 되는 79.5%도 개수로 비교해서 미충족이다")
     void comparesCountsNotRoundedRate() {
-        // 200건 중 159건은 79.5%다.
         CompanionRecord record = new CompanionRecord(3, 200, 159, 0, false);
 
         assertThat(record.rejoinRate()).isEqualTo(79);

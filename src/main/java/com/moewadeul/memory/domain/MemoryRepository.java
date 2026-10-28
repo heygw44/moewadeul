@@ -8,7 +8,7 @@ public interface MemoryRepository {
 
     Optional<Memory> findById(Long id);
 
-    /** 호출하면 행을 쓰기 잠금(SELECT ... FOR UPDATE)으로 읽는다. 트랜잭션 안에서만 부른다. */
+    // InnoDB REPEATABLE READ는 첫 일반 SELECT에서 스냅샷을 잡는다. 이 잠금 읽기가 트랜잭션의 첫 쿼리여야 뒤의 조회가 앞서 커밋된 행을 본다.
     Optional<Memory> findByIdForUpdate(long id);
 
     void delete(Memory memory);

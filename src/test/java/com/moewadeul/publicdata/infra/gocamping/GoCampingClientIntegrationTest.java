@@ -10,7 +10,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.assertj.core.api.Assertions.tuple;
-import static org.awaitility.Awaitility.await;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
@@ -27,15 +26,12 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Arrays;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 
-// 테스트 프로필은 인증키를 "test+key/value=="로, 응답 대기 시간을 1초로 둔다.
-// 인증키에 +, /, = 를 일부러 넣었으므로, 클라이언트가 퍼센트 인코딩을 빠뜨리면 키가 바뀌어 아래 인코딩 테스트가 실패한다.
 @IntegrationTest
 class GoCampingClientIntegrationTest {
 
@@ -73,7 +69,6 @@ class GoCampingClientIntegrationTest {
         assertThat(first.facltNm()).isEqualTo("내산별빛캠핑장");
         assertThat(first.addr1()).isEqualTo("경기도 연천군 신서면 동내로 1402");
         assertThat(first.addr2()).isEmpty();
-        // 원천에서 mapX는 경도, mapY는 위도다.
         assertThat(first.mapX()).isEqualTo("127.146834160271");
         assertThat(first.mapY()).isEqualTo("38.1569737100084");
         assertThat(first.induty()).isEqualTo("일반야영장");
@@ -233,7 +228,7 @@ class GoCampingClientIntegrationTest {
     @Test
     @DisplayName("[F-06][NFR-06] 응답이 응답 대기 시간보다 늦으면 한 번 다시 보낸 뒤 인증키 없는 예외를 던진다")
     void throwsAfterSecondReadTimeout() {
-        // given: 테스트 프로필의 응답 대기 시간은 1초다.
+        // given
         stubBasedSyncList(okJson(readFixture("based-sync-list.json")).withFixedDelay(2_000));
         long failureBefore = requestCount("failure");
 
@@ -244,9 +239,7 @@ class GoCampingClientIntegrationTest {
         assertThat(thrown).hasMessageContaining("I/O 오류");
         assertNoServiceKey(thrown);
         assertThat(requestCount("failure") - failureBefore).isEqualTo(2);
-        // WireMock이 지연 응답을 다 보낸 뒤에야 요청을 기록할 수 있다. 그러면 기록 시점이 클라이언트 예외보다 늦으므로, 테스트는 기록이 두 건이 될 때까지 기다린다.
-        await().atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> assertThat(basedSyncListRequestCount()).isEqualTo(2));
+        assertThat(basedSyncListRequestCount()).isEqualTo(2);
     }
 
     private void stubBasedSyncList(ResponseDefinitionBuilder response) {
@@ -295,8 +288,6 @@ class GoCampingClientIntegrationTest {
         assertNoServiceKey(thrown);
     }
 
-    // 키가 예외에 남으면 로그와 오류 추적 도구로 비밀값이 새어 나간다. 서버는 이 예외를 스택 트레이스째 로그에 남기므로,
-    // 메시지만이 아니라 로그에 찍히는 스택 트레이스 전체(원인 예외와 억제된 예외 포함)에 키가 없는지 확인한다.
     private static void assertNoServiceKey(Throwable thrown) {
         StringWriter stackTrace = new StringWriter();
         thrown.printStackTrace(new PrintWriter(stackTrace));

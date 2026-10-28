@@ -114,7 +114,7 @@ class MemberReportConcurrencyIntegrationTest {
     @RepeatedTest(5)
     @DisplayName("[F-16][NFR-08] 두 회원이 동시에 서로를 긴급 신고하면 교착 없이 두 신고와 임시 정지 기록이 모두 남는다")
     void mutualUrgentReportsBothSucceed() throws Exception {
-        // given: 같은 베이스캠프의 두 회원이 서로를 성희롱·위협으로 신고한다.
+        // given
         Scenario scenario = scenario();
         long[] reporters = {scenario.reporterId, scenario.targetId};
         long[] targets = {scenario.targetId, scenario.reporterId};
@@ -159,7 +159,6 @@ class MemberReportConcurrencyIntegrationTest {
 
     private record Scenario(long basecampId, long reporterId, long targetId) {}
 
-    // 같은 작업을 스레드 둘로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runTwice(Callable<Long> task) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(2);

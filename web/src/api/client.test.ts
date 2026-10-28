@@ -7,8 +7,6 @@ function abortError() {
   return new DOMException('aborted', 'AbortError');
 }
 
-// 신호가 끊기기 전에는 답하지 않는 fetch. 서버가 응답을 붙잡고 있는 약한 망을 흉내 낸다.
-// 진짜 fetch처럼 이미 끊긴 신호를 받으면 바로 거부한다.
 function fetchThatNeverAnswers() {
   return vi.fn(
     (_url: string, init?: RequestInit) =>

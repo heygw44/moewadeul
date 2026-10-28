@@ -30,15 +30,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 회원이 박지를 제보하고, 자기가 제보한 박지를 고치거나 지운다.
- *
- * <p>서비스는 제보하거나 좌표를 바꿀 때 새 좌표로 공원 경계 판정을 한 번 하고, 결과를 박지 행에 저장한다. 응답에는 저장한 판정 결과와, 같은
- * 좌표 50m 안에 이미 있는 박지(중복 후보)를 싣는다. 중복 후보가 있어도 제보는 막지 않는다. 같은 박지를 다시 제보하는 것인지는 제보자가 정한다.
- *
- * <p>고치거나 지울 수 있는 박지는 지도에 보이는(ACTIVE) 박지뿐이다. 장소가 없거나, 박지가 아니거나, ACTIVE가 아니면 서비스는 NOT_FOUND로
- * 거부한다. 숨긴 박지가 있는지 드러내지 않으려고 이 경우들을 구분하지 않는다. 그다음 다른 회원이 제보한 박지면 ACCESS_DENIED로 거부한다.
- */
 @Service
 @RequiredArgsConstructor
 public class BakjiCommandService {
@@ -53,11 +44,6 @@ public class BakjiCommandService {
     private final BakjiDuplicateMapper bakjiDuplicateMapper;
     private final Clock clock;
 
-    /**
-     * 호출하면 memberId인 회원의 제보로 박지를 저장하고 결과를 돌려준다.
-     *
-     * <p>좌표가 기상청 격자 밖이거나, 값이 규칙을 어기거나, 통신 상태·바닥 유형이 허용 값이 아니면 서비스는 INVALID_INPUT으로 거부한다.
-     */
     @Transactional
     public BakjiSubmission report(long memberId, BakjiReportCommand command) {
         Instant now = clock.instant();
@@ -78,17 +64,9 @@ public class BakjiCommandService {
         return submissionOf(spot);
     }
 
-    /**
-     * 호출하면 제보자 memberId가 요청에 담은 필드만 고치고 결과를 돌려준다. 요청에 없는 필드는 그대로 둔다.
-     *
-     * <p>좌표가 실제로 바뀔 때만 서비스가 새 좌표로 공원 경계를 다시 판정한다. 같은 좌표를 다시 보내면 판정은 그대로다.
-     *
-     * <p>박지 행을 잠그지 않고 읽으므로, 그 사이 다른 쓰기가 먼저 커밋하면 커밋할 때 낙관적 잠금 충돌로 실패한다. 제보 상세만 고치는 요청도 같다. 다시
-     * 시도는 {@link BakjiEditService}가 한다. 컨트롤러는 그 서비스를 부른다.
-     */
     @Transactional
     public BakjiSubmission update(long memberId, long spotId, BakjiUpdateCommand command) {
-        Spot spot = loadActiveBakjiToUpdate(spotId, command);
+        Spot spot = loadActiveBakjiBumpingVersionOnDetailChange(spotId, command);
         BakjiDetail detail = loadOwnDetail(spotId, memberId);
         Instant now = clock.instant();
         applySpotChanges(spot, command, now);
@@ -96,7 +74,6 @@ public class BakjiCommandService {
         return submissionOf(spot);
     }
 
-    /** 호출하면 제보자 memberId의 박지를 삭제 상태로 바꾼다. 행은 지우지 않는다. */
     @Transactional
     public void delete(long memberId, long spotId) {
         Spot spot = loadActiveBakji(spotId);
@@ -111,12 +88,7 @@ public class BakjiCommandService {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 
-    // 제보 상세만 고치는 요청은 박지 행을 바꾸지 않는다. 그래서 그대로 두면 JPA가 박지 행의 낙관적 잠금 번호를 검사하지 않고, 읽은 뒤 관리자가
-    // 숨기거나 신고가 쌓여 검토 대기로 바뀌어도 수정이 그대로 커밋된다. 이를 막으려고 서비스는 상세를 고치는 요청이면 커밋할 때 박지 행의 번호를
-    // 올리도록 읽는다. 번호만 다시 읽어 비교하는 방식(OPTIMISTIC)은 쓰지 않는다. REPEATABLE READ에서는 일반 SELECT가 트랜잭션 처음의
-    // 스냅샷을 읽어서, 그 사이 커밋된 번호를 보지 못하기 때문이다. 이름이나 좌표만 고치는 요청은 박지 행을 쓸 때 JPA가 번호를 검사하고,
-    // 아무 필드도 없는 요청은 아무것도 쓰지 않으므로 둘 다 번호를 따로 올리지 않는다.
-    private Spot loadActiveBakjiToUpdate(long spotId, BakjiUpdateCommand command) {
+    private Spot loadActiveBakjiBumpingVersionOnDetailChange(long spotId, BakjiUpdateCommand command) {
         if (!changesDetail(command)) {
             return loadActiveBakji(spotId);
         }
@@ -134,7 +106,6 @@ public class BakjiCommandService {
                 || command.groundType().present();
     }
 
-    // 박지에 상세 행이 없는 것은 데이터가 어긋난 경우라서, 박지가 없는 경우와 같이 NOT_FOUND로 거부한다.
     private BakjiDetail loadOwnDetail(long spotId, long memberId) {
         BakjiDetail detail = bakjiDetailRepository
                 .findById(spotId)
@@ -152,7 +123,6 @@ public class BakjiCommandService {
         moveIfChanged(spot, command, now);
     }
 
-    // 위도와 경도는 한 쌍으로 움직인다. 하나만 바꾸는 요청은 어느 좌표로 옮기려는 것인지 알 수 없어서 거부한다.
     private void moveIfChanged(Spot spot, BakjiUpdateCommand command, Instant now) {
         PatchField<Double> lat = command.lat();
         PatchField<Double> lng = command.lng();
@@ -194,7 +164,6 @@ public class BakjiCommandService {
         }
     }
 
-    // 물과 화장실 유무는 제보할 때 꼭 적는 값이라 null로 지울 수 없다.
     private static boolean facilityOrCurrent(PatchField<Boolean> field, boolean current, String topic) {
         if (!field.present()) {
             return current;
@@ -205,8 +174,6 @@ public class BakjiCommandService {
         return field.value();
     }
 
-    // 저장하거나 고친 박지를 MyBatis로 읽기 전에 flush하지 않는다. 중복 후보 조회가 읽는 행은 이 박지를 뺀 다른 박지뿐이고,
-    // 이 트랜잭션은 다른 박지를 바꾸지 않아서 아직 DB에 반영되지 않은 변경이 조회 결과에 영향을 주지 않는다.
     private BakjiSubmission submissionOf(Spot spot) {
         boolean warned = spot.isParkWarning();
         SpotParkWarning parkWarning = warned ? warningOf(spot) : SpotParkWarning.notWarned();
@@ -219,7 +186,6 @@ public class BakjiCommandService {
                 findDuplicateCandidates(spot));
     }
 
-    // 장소 상세와 같이, 가리키는 경계 행이 없으면 근거 없이 경고와 고지·안내만 준다.
     private SpotParkWarning warningOf(Spot spot) {
         ProtectedAreaEvidenceRow area = spot.getProtectedAreaId() == null
                 ? null
@@ -272,7 +238,6 @@ public class BakjiCommandService {
         }
     }
 
-    // 위도·경도 범위를 어기면 GeoPoint가 IllegalArgumentException을 던진다. 요청 값 때문이므로 INVALID_INPUT으로 바꾼다.
     private static GeoPoint toLocation(double lat, double lng) {
         try {
             return new GeoPoint(lat, lng);

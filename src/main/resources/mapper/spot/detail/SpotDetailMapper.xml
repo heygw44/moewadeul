@@ -2,13 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.spot.infra.detail.SpotDetailMapper">
 
-    <!-- 장소 한 곳에 상세 테이블을 LEFT JOIN으로 붙인다. 장소 유형에 따라 public_spot_detail과 bakji_detail 중 하나만 행이 있어서,
-         없는 쪽의 열은 NULL로 나온다. 제보한 회원은 bakji_detail이 있을 때만 붙는다.
-         박지 확인 수는 상관 서브쿼리로 센다. 확인 행을 조인해서 GROUP BY로 세면 다른 열을 모두 묶어야 해서, 한 장소만 읽는 이 조회에서는
-         서브쿼리가 더 단순하다. 박지가 아니면 확인 행이 없으므로 0이 나온다.
-         공원 경계는 spot.protected_area_id가 있을 때만 붙고, 없으면 area_* 열은 NULL이다.
-         SRID 4326 점에서 ST_Latitude는 위도를, ST_Longitude는 경도를 꺼낸다. 그래서 좌표 순서를 직접 다루지 않는다. -->
-    <!-- checked_at은 장소의 원천(d.source)과 같은 종류 동기화 가운데 마지막으로 성공한 실행의 종료 시각이다. 허용된 모듈 의존이 publicdata에서 spot 쪽이라서, spot이 publicdata를 부르지 않고 sync_job_run을 직접 읽는다. 박지는 d.source가 NULL이라 NULL이다. -->
     <select id="selectActiveDetail" resultType="com.moewadeul.spot.infra.detail.SpotDetailRow">
         SELECT s.id AS spot_id,
                s.type AS type,
@@ -47,7 +40,6 @@
           AND s.status = 'ACTIVE'
     </select>
 
-    <!-- 날씨 조회는 장소 상세와 따로 들어와서, 서버가 외부 API를 부르기 전에 ACTIVE인지와 좌표·기상청 격자만 읽는다. -->
     <select id="selectActiveWeatherLocation" resultType="com.moewadeul.spot.infra.detail.SpotWeatherLocationRow">
         SELECT ST_Latitude(s.location) AS lat,
                ST_Longitude(s.location) AS lng,
@@ -58,9 +50,6 @@
           AND s.status = 'ACTIVE'
     </select>
 
-    <!-- 한 회원이 방문일마다 후기를 여러 개 써도 평균에는 한 표만 들어가도록, 먼저 회원마다 평점을 평균 내고 그 값들을 다시 평균 낸다.
-         평균은 소수 첫째 자리에서 반올림한다. 후기 수는 회원 수가 아니라 후기 개수다. 탈퇴한 회원의 후기도 회원 ID가 그대로 남아 있어서
-         회원마다 따로 묶인다. 후기가 없으면 바깥 집계가 행 하나를 돌려주고 SUM과 AVG가 NULL이라서, 후기 수는 COALESCE로 0을 준다. -->
     <select id="selectRating" resultType="com.moewadeul.spot.infra.detail.SpotRatingRow">
         SELECT COALESCE(SUM(per_member.review_count), 0) AS count,
                ROUND(AVG(per_member.member_average), 1) AS average
@@ -73,7 +62,6 @@
         ) per_member
     </select>
 
-    <!-- 작성 시각이 같은 후기가 있어도 어느 것이 최근인지 정해지도록 id를 보조 정렬 키로 쓴다. 작성자 닉네임은 조회할 때의 회원 값이다. -->
     <select id="selectRecentReviews" resultType="com.moewadeul.spot.infra.detail.SpotRecentReviewRow">
         SELECT r.id AS review_id,
                r.member_id AS author_id,
@@ -89,7 +77,6 @@
         LIMIT #{limit}
     </select>
 
-    <!-- 후기 이미지는 review 모듈의 테이블이지만, spot 모듈이 review 모듈에 기댈 수 없어서 최근 후기처럼 SQL로 직접 읽는다. -->
     <select id="selectReviewImages" resultType="com.moewadeul.spot.infra.detail.SpotReviewImageRow">
         SELECT id AS image_id, review_id, object_key
         FROM review_image
@@ -98,12 +85,10 @@
         ORDER BY review_id, display_order
     </select>
 
-    <!-- 현재 인원은 상태가 ACTIVE인 멤버 행의 수이고 캠프 리더도 센다. 베이스캠프 검색과 같은 식이다. -->
     <sql id="headcount">
         (SELECT COUNT(*) FROM basecamp_member m WHERE m.basecamp_id = b.id AND m.status = 'ACTIVE')
     </sql>
 
-    <!-- 종료일이 오늘 이전이면 남은 밤이 없으므로 SQL에서 미리 거른다. 종료일 당일은 밤으로 세지 않아서 end_date가 오늘이어도 제외한다. -->
     <select id="selectConfirmedStays" resultType="com.moewadeul.spot.infra.detail.SpotConfirmedStayRow">
         SELECT b.start_date AS start_date,
                b.end_date AS end_date,
@@ -114,8 +99,6 @@
           AND b.end_date &gt; #{today}
     </select>
 
-    <!-- 개인 일정은 한 건이 한 사람이라 인원을 1로 읽는다. 탈퇴한 회원은 그 장소에 가지 않으므로 그 회원의 일정은 세지 않는다.
-         일정을 등록한 회원이 누구인지는 읽지 않는다. 다른 사람에게는 인원 숫자로만 드러나야 하기 때문이다. -->
     <select id="selectSoloTrips" resultType="com.moewadeul.spot.infra.detail.SpotConfirmedStayRow">
         SELECT t.start_date AS start_date,
                t.end_date AS end_date,
@@ -127,8 +110,6 @@
           AND m.status &lt;&gt; 'WITHDRAWN'
     </select>
 
-    <!-- 결제를 마친(CONFIRMED) 신청만 참가자로 센다. 결제 대기 신청은 기한이 지나면 만료되므로 예상 인원에 넣지 않는다.
-         당일 행사는 밤을 보내지 않으므로 숙박 행사만 읽는다. 종료 시각이 오늘 0시(한국 시각) 이전인 행사는 남은 밤이 없어서 SQL에서 미리 거른다. -->
     <select id="selectConfirmedPrograms" resultType="com.moewadeul.spot.infra.detail.SpotConfirmedProgramRow">
         SELECT p.start_at AS start_at,
                p.end_at AS end_at,
@@ -143,7 +124,6 @@
           AND p.end_at &gt; #{from}
     </select>
 
-    <!-- 출발일이 같으면 ID 순서로 정렬해서 목록 순서가 조회할 때마다 바뀌지 않게 한다. -->
     <select id="selectRecruitingBasecamps" resultType="com.moewadeul.spot.infra.detail.SpotRecruitingBasecampRow">
         SELECT b.id AS basecamp_id,
                b.title AS title,

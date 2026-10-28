@@ -14,8 +14,6 @@ const TONE_CLASSES: Record<StatusTone, string> = {
   danger: 'text-danger',
 };
 
-// 상태를 면을 칠한 알약 대신 색 글자로 적는다. 판단에 필요한 상태만 쓰고, 여러 개는 MetaLine으로 잇는다.
-// 아이콘은 공원 경계 경고·휴장·본인확인처럼 색만으로 구분하면 안 되는 상태에만 붙인다.
 export function StatusText({ tone, icon, children }: { tone: StatusTone; icon?: IconName; children: ReactNode }) {
   return (
     <span className={`inline-flex items-center gap-1 font-semibold ${TONE_CLASSES[tone]}`}>
@@ -25,7 +23,6 @@ export function StatusText({ tone, icon, children }: { tone: StatusTone; icon?: 
   );
 }
 
-// 제목 아래 한 줄에 상태와 정보를 가운뎃점으로 잇는다. 빈 값(false, null)은 건너뛴다.
 export function MetaLine({ items: raw, className }: { items: ReactNode[]; className?: string }) {
   const items = raw.filter((child) => child !== null && child !== undefined && child !== false && child !== '');
   if (items.length === 0) return null;

@@ -13,8 +13,6 @@ import { LocationLabel } from './LocationLabel';
 import { ParkWarningNotice } from './ParkWarningNotice';
 import { SIGNAL_LEVEL_LABELS } from './spotLabels';
 
-// 박지 제보 폼과 수정 폼이 함께 쓰는 입력 칸과 결과 화면이다.
-
 const NAME_MAX = 100;
 const DESCRIPTION_MAX = 2000;
 
@@ -121,7 +119,6 @@ export function BakjiFields({
   );
 }
 
-// 제보와 수정의 결과다. 서버가 같은 모양으로 답하므로 경고·안내·중복 후보를 같은 방식으로 보여 준다.
 export function BakjiResultView({
   title,
   linkLabel,
@@ -131,7 +128,6 @@ export function BakjiResultView({
   title: string;
   linkLabel: string;
   result: BakjiSubmissionResponse;
-  // 공원 경계 경고가 붙었을 때 경고 아래에 더할 한 줄이다.
   warnedNote?: ReactNode;
 }) {
   const { parkWarning, guide, notice, duplicateCandidates } = result;
@@ -140,7 +136,6 @@ export function BakjiResultView({
     <div role="status" className="flex flex-col gap-4">
       <h2 className="text-xl font-bold tracking-tight text-ink">{title}</h2>
 
-      {/* 공원 경계 경고는 경고 상자 하나가 근거와 함께 알린다. */}
       {parkWarning.warned ? (
         <>
           <ParkWarningNotice warning={parkWarning} />

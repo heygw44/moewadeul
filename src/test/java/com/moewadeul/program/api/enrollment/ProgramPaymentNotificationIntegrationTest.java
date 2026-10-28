@@ -191,7 +191,6 @@ class ProgramPaymentNotificationIntegrationTest {
         return verifyEmail(member, loggedIn);
     }
 
-    // 쓰기 요청은 이메일 인증을 마친 회원만 보낼 수 있어서 인증 코드를 발급받아 인증한다.
     private Cookie verifyEmail(Member member, Cookie loggedIn) {
         String code = emailVerificationService
                 .issueFor(member.getId(), "127.0.0.1", TestSequence.next())

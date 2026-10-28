@@ -379,7 +379,7 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[F-01][PV-01] 탈퇴한 뒤에 만들어진 재설정 토큰으로 확인해도 400 PASSWORD_RESET_TOKEN_INVALID이고 비밀번호 해시는 NULL로 남는다")
     void tokenOfWithdrawnMemberIsRejected() {
-        // given: 토큰 발급 경로는 탈퇴 회원을 거르지만, 확인 단계도 탈퇴 회원의 토큰을 스스로 거부해야 한다. 그래서 토큰을 직접 저장한다.
+        // given
         Member member = saveMember();
         Cookie session = login(member);
         MvcTestResult withdrawal = mvc.delete()
@@ -417,7 +417,6 @@ class PasswordResetApiIntegrationTest {
                 .build());
     }
 
-    // 토큰 원값은 DB에 없다. 메일을 거치지 않는 테스트는 토큰을 직접 만들어 해시만 저장한다.
     private String issueToken(Member member) {
         ResetToken token = ResetToken.generate(new SecureRandom());
         tokenRepository.save(PasswordResetToken.issue(member.getId(), ResetToken.hash(token.value()), clock.instant()));

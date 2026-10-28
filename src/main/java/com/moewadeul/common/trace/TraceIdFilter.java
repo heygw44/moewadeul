@@ -23,7 +23,6 @@ public class TraceIdFilter extends OncePerRequestFilter {
 
     private static final int TRACE_ID_LENGTH = 12;
 
-    // 클라이언트가 보낸 X-Trace-Id는 로그 주입 공격에 쓰일 수 있다. 그래서 서버는 이 값을 믿지 않고 항상 새로 만든다.
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -33,9 +32,7 @@ public class TraceIdFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(request, response);
         } catch (RuntimeException | ServletException e) {
-            // 컨트롤러에서 난 예외는 공통 예외 처리기가 이미 로그로 남긴다. 여기까지 올라온 예외는 세션 읽기가 커넥션 풀 고갈로 실패한 것처럼
-            // 필터 단계에서 난 것이다. 컨테이너는 이 필터가 MDC를 지운 뒤에 예외를 처리하므로, 추적 ID가 남아 있는 지금 로그를 남기고 다시 던진다.
-            // 클라이언트가 연결을 끊어서 생기는 IOException은 오류가 아니라서 남기지 않는다.
+            // 컨테이너는 이 필터가 MDC를 지운 뒤에 예외를 처리한다. 필터 단계에서 난 예외는 추적 ID가 남아 있는 여기서 로그를 남긴다.
             log.error("unhandled exception in filter chain", e);
             throw e;
         } finally {

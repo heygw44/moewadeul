@@ -111,7 +111,6 @@ class BasecampMembershipConcurrencyIntegrationTest {
                 .isEqualTo("LEFT");
     }
 
-    // 캠프 리더와 본인확인한 멤버 2명이 모두 ACTIVE이고 정원 3명이 차서 자동 마감된 베이스캠프다. 첫 멤버가 대상이다.
     private Scenario saveFullBasecamp() {
         long leaderId = saveMember();
         long basecampId = saveBasecamp(leaderId, "CLOSED", "'AUTO_FULL'");
@@ -122,7 +121,6 @@ class BasecampMembershipConcurrencyIntegrationTest {
         return new Scenario(basecampId, leaderId, memberId, 0);
     }
 
-    // 캠프 리더와 멤버 한 명이 있는 정원 3명의 모집 중 베이스캠프에 대기 신청 한 건이 있다.
     private Scenario saveRecruitingBasecampWithPendingApplication() {
         long leaderId = saveMember();
         long basecampId = saveBasecamp(leaderId, "RECRUITING", "NULL");
@@ -173,7 +171,6 @@ class BasecampMembershipConcurrencyIntegrationTest {
         return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
-    // 본인확인을 마친 2007년생 성인 회원을 직접 저장한다. 신뢰 단계가 1이라 탈퇴할 자격이 있다.
     private long saveVerifiedMember() {
         long memberId = saveMember();
         jdbc.update(
@@ -210,7 +207,6 @@ class BasecampMembershipConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM outbox_event WHERE event_type = ?", Integer.class, eventType);
     }
 
-    // 작업마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private List<Throwable> runConcurrently(List<Callable<Object>> actions) throws Exception {
         int threads = actions.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

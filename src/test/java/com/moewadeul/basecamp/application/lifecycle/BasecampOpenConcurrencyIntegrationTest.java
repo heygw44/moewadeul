@@ -112,8 +112,6 @@ class BasecampOpenConcurrencyIntegrationTest {
                                 e -> assertThat(e.getErrorCode()).isEqualTo(BasecampErrorCode.BASECAMP_OPEN_LIMIT)));
     }
 
-    // 같은 캠프 리더의 열기 요청을 스레드마다 하나씩 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
-    // 출발일은 요청마다 달라서 일정 검사로는 막히지 않는다.
     private List<Throwable> openConcurrently(int threads) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         CountDownLatch ready = new CountDownLatch(threads);

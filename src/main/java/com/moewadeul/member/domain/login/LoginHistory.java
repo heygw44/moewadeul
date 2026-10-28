@@ -11,7 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 로그인 시도 한 건의 기록. 추가만 하고 고치지 않는다. */
 @Entity
 @Table(name = "login_history")
 @Getter
@@ -43,7 +42,6 @@ public class LoginHistory {
         this.createdAt = now;
     }
 
-    /** @param memberId 이메일에 해당하는 회원이 없으면 null이다. */
     public static LoginHistory failure(Long memberId, String attemptedEmail, String ip, Instant now) {
         return create(memberId, attemptedEmail, ip, false, now);
     }

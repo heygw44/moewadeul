@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reencodeImage } from './reencodeImage';
 
-// jsdom에는 실제 캔버스가 없어서, 사진 읽기·그리기·저장을 흉내 낸다.
-// encoded에 형식마다 브라우저가 돌려줄 결과를 정해 두고, toBlob이 받은 형식과 품질을 calls에 남긴다.
 describe('reencodeImage', () => {
   const MAX_BYTES = 100;
   let encoded: Record<string, Blob | null>;

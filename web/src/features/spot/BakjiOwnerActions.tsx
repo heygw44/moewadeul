@@ -10,11 +10,9 @@ import { useSession } from '../member/session';
 type BakjiOwnerActionsProps = {
   spotId: number;
   reporterId: number;
-  // 삭제에 성공하면 지도 화면이 마커를 다시 불러오도록 알린다.
   onDeleted?: () => void;
 };
 
-// 박지를 제보한 회원에게만 수정·삭제를 보여 준다. 버튼을 숨기는 것은 편의일 뿐이고, 권한은 서버가 다시 확인한다.
 export function BakjiOwnerActions({ spotId, reporterId, onDeleted }: BakjiOwnerActionsProps) {
   const session = useSession();
   const [deleting, setDeleting] = useState(false);
@@ -52,7 +50,6 @@ function DeleteBakjiDialog({
     try {
       await deleteBakji(spotId);
       onDeleted?.();
-      // 지운 박지의 상세는 더 열리지 않으므로, 뒤로 가기로 돌아오지 않게 주소를 바꿔치기한다.
       navigate('/map', { replace: true });
     } catch (cause) {
       setSubmitting(false);

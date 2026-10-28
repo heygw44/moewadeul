@@ -10,11 +10,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * 비밀번호와 비밀번호 확인 값이 같은지 검사한다. 다르면 확인 필드({@link ConfirmedPassword#confirmationFieldName()})에 오류를 붙인다.
- *
- * <p>둘 중 하나가 null이면 여기서 통과시킨다. 빠진 값은 {@code @NotNull}이 알리므로, 같은 필드에 오류가 두 개 나오지 않게 하려는 것이다.
- */
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

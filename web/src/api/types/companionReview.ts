@@ -30,7 +30,6 @@ export interface RevealedReceivedCompanionReview {
   revealed: true;
 }
 
-// 블라인드 공개 전에는 서버가 나머지 필드를 응답에서 뺀다.
 export interface SealedReceivedCompanionReview {
   basecampId: number;
   revealed: false;

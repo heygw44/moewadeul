@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { buttonClassName } from '../components/buttonClass';
 
 type RouteBoundaryProps = {
-  // 주소가 바뀌면 오류를 지우고 새 화면을 다시 그린다.
   resetKey: string;
   children: ReactNode;
 };
@@ -13,7 +12,6 @@ type RouteBoundaryState = {
   resetKey: string;
 };
 
-// 화면 코드를 받지 못했을 때(배포로 파일이 바뀐 뒤 옛 탭이 새 화면으로 옮겨 가는 경우 등) 빈 화면 대신 다시 불러오라고 안내한다.
 export class RouteBoundary extends Component<RouteBoundaryProps, RouteBoundaryState> {
   state: RouteBoundaryState = { failed: false, resetKey: this.props.resetKey };
 

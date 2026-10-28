@@ -26,17 +26,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class SpotMapQueryServiceIntegrationTest {
 
-    // 설악산 근처 영역이다. 서울시청은 위도만 이 영역 범위 안이고, 태백은 경도만 이 영역 범위 안이다.
-    // 그래서 위도와 경도 중 하나라도 뒤바뀌어 비교되면 두 장소 중 하나가 결과에 섞이거나 설악산이 빠진다.
     private static final Area SEORAK_AREA = new Area(37.5, 128.5, 38.0, 129.0);
     private static final Coordinate SEORAK = new Coordinate(37.71, 128.75);
     private static final Coordinate SEOUL_CITY_HALL = new Coordinate(37.5665, 126.978);
     private static final Coordinate TAEBAEK = new Coordinate(37.16, 128.98);
 
-    // 장소를 많이 넣을 때 쓰는 영역이다. 칸 하나는 위도·경도 0.05도 폭이다.
     private static final Area BULK_AREA = new Area(36.0, 127.0, 37.0, 128.0);
 
-    // 물 필터와 휴장 제외를 함께 켠 조회다. 매퍼는 두 필터가 쓰는 상세 테이블을 모두 조인해야 한다.
     private static final Function<Area, SpotAreaQuery> BULK_FILTER_QUERY = area -> new SpotAreaQuery(
             area.swLat(), area.swLng(), area.neLat(), area.neLng(), Set.of(), Set.of(), true, false, false, true);
 
@@ -52,7 +48,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 영역 안의 장소만 찾고, 저장한 위도·경도를 그대로 돌려준다")
     void findsOnlySpotsInsideAreaWithSameLatitudeAndLongitude() {
-        // given: 장소는 WKT(위도, 경도 순서)로 넣는다. 그래서 조회 SQL의 좌표 순서가 틀리면 결과가 달라진다.
+        // given
         long seorakId = insertSpot("CAMPSITE", "설악 야영장", SEORAK);
         insertSpot("CAMPSITE", "서울시청 야영장", SEOUL_CITY_HALL);
         insertSpot("CAMPSITE", "태백 야영장", TAEBAEK);
@@ -76,7 +72,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 영역 경계선 위의 장소도 찾고, 경계선 바로 밖의 장소는 뺀다")
     void includesSpotsOnAreaEdgeAndExcludesSpotsJustOutside() {
-        // given: 남쪽 변 한가운데는 측지선 다각형으로 판정하면 영역 밖으로 나가는 위치다.
+        // given
         long southEdgeId = insertSpot("CAMPSITE", "남쪽 경계 야영장", new Coordinate(37.5, 128.75));
         long westEdgeId = insertSpot("CAMPSITE", "서쪽 경계 야영장", new Coordinate(37.75, 128.5));
         long northEastCornerId = insertSpot("CAMPSITE", "북동 꼭짓점 야영장", new Coordinate(38.0, 129.0));
@@ -178,7 +174,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 휴장 여부는 한국 날짜로 계산하고, 휴장 중인 장소도 지도에서 숨기지 않는다")
     void computesClosedNowWithKoreanDateAndKeepsClosedSpots() {
-        // given: 한국은 2026-11-01 0시 30분이고, UTC로는 아직 2026-10-31이다.
+        // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         long reporterId = insertMember();
         long closedPeriodId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", SEORAK);
@@ -214,7 +210,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-31] 휴장 제외를 켜면 휴장 판정이 참인 장소만 빠지고, 빠진 장소는 휴장 표시가 붙던 장소와 같다")
     void hideClosedExcludesExactlySpotsMarkedClosed() {
-        // given: 한국은 2026-11-01 0시 30분이다. 기간이 시작일·종료일 하나만 있는 곳, 기간이 상태보다 앞서는 곳, 상세가 없는 곳을 섞는다.
+        // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         long reporterId = insertMember();
         long closedPeriodId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", SEORAK);
@@ -260,7 +256,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-31] 휴장 제외를 켜면 묶음 개수에서도 휴장 장소를 뺀다")
     void hideClosedAlsoAppliesToClusterCounts() {
-        // given: 운영 중인 장소만으로 500개를 넘기고, 휴장 장소를 더 넣는다.
+        // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         int openCount = SpotMapQueryService.MAX_ITEMS + 1;
         insertCampsites(spreadInBulkArea(openCount));
@@ -308,7 +304,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-31] 입지 필터로 500개를 넘으면 입지가 맞는 장소만 직접 세어 묶고, 휴장 제외도 함께 적용한다")
     void settingFilterClustersCountOnlyMatchingSpotsAndApplyHideClosed() {
-        // given: 계곡 야영장 501곳과 북동 꼭짓점의 한 곳, 입지가 다른 야영장과 입지 없는 야영장, 휴장 중인 계곡 야영장
+        // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         List<Coordinate> valleyCoordinates = new ArrayList<>(spreadInBulkArea(SpotMapQueryService.MAX_ITEMS + 1));
         valleyCoordinates.add(new Coordinate(BULK_AREA.neLat(), BULK_AREA.neLng()));
@@ -358,7 +354,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03][F-31] 묶음 개수에도 시설 필터와 휴장 제외를 각각, 또 함께 적용한다")
     void clusterCountsApplyFacilityFilterAndHideClosedSeparatelyAndTogether() {
-        // given: 운영 중인 야영장만으로 500개를 넘기고, 물이 있는 박지 4곳, 없는 박지 3곳, 휴장 야영장 2곳을 더한다.
+        // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         int openCount = SpotMapQueryService.MAX_ITEMS + 1;
         insertCampsites(spreadInBulkArea(openCount));
@@ -381,7 +377,7 @@ class SpotMapQueryServiceIntegrationTest {
         long open = clusterCount(BULK_AREA.hidingClosed());
         long waterAndOpen = clusterCount(BULK_FILTER_QUERY.apply(BULK_AREA));
 
-        // then: 시설 필터는 박지에만 걸리고, 휴장 제외는 공공 장소에만 걸린다.
+        // then
         assertThat(all).isEqualTo(openCount + 4 + 3 + 2);
         assertThat(water).isEqualTo(openCount + 4 + 2);
         assertThat(open).isEqualTo(openCount + 4 + 3);
@@ -427,8 +423,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 묶음은 고정 격자 칸 하나에 들어간 장소의 평균 좌표와 수를 남쪽 행부터, 같은 행에서는 서쪽 칸부터 준다")
     void clustersByFixedGridCellInRowOrderWithAverageOfSpots() {
-        // given: 영역(1도 폭)에서는 0.08도 격자가 고정 격자다. 격자 칸은 [36.08, 36.16) × [127.12, 127.20)처럼 0.08의 배수에서 시작한다.
-        // 한 칸에는 두 지점에 나눠 넣어 평균 좌표를 확인하고, 같은 행의 동쪽 끝 칸과 북쪽 칸에도 장소를 둔다.
+        // given
         List<Coordinate> coordinates = new ArrayList<>();
         coordinates.addAll(Collections.nCopies(100, new Coordinate(36.101, 127.131)));
         coordinates.addAll(Collections.nCopies(100, new Coordinate(36.141, 127.171)));
@@ -439,7 +434,7 @@ class SpotMapQueryServiceIntegrationTest {
         // when
         SpotAreaResult result = spotMapQueryService.findInArea(BULK_AREA.query());
 
-        // then: 같은 남쪽 행의 동쪽 끝 묶음이 북쪽 묶음보다 먼저 나온다.
+        // then
         assertThat(result.markers()).isEmpty();
         assertThat(result.clusters()).hasSize(3);
         assertCluster(result.clusters().get(0), new Coordinate(36.121, 127.151), 200);
@@ -450,7 +445,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 지도를 조금 옮겨도 두 영역에 모두 중심이 든 격자 칸의 묶음은 위치와 개수가 그대로다")
     void clusterOfCellInsideBothAreasStaysSameWhenAreaIsPanned() {
-        // given: 두 영역은 크기가 같고 북동쪽으로 0.01도 어긋나 있다. 두 장소 묶음의 칸은 두 영역에 모두 들어 있다.
+        // given
         Area panned = new Area(36.01, 127.01, 37.01, 128.01);
         List<Coordinate> coordinates = new ArrayList<>();
         coordinates.addAll(Collections.nCopies(300, new Coordinate(36.5, 127.5)));
@@ -469,8 +464,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 격자 칸이 가장 큰 격자로도 400개를 넘는 아주 넓은 영역은 화면을 20칸씩 나눠 묶는다")
     void wideAreaFallsBackToTwentyByTwentyViewCells() {
-        // given: 10도 × 10도 영역은 0.32도 격자로도 31×31칸이라서 고정 격자를 쓸 수 없다.
-        // 한 화면 칸(0.5도)에 든 두 지점은 한 묶음이 되고, 평균 좌표는 두 지점의 개수 가중 평균이다.
+        // given
         Area wide = new Area(30.0, 120.0, 40.0, 130.0);
         List<Coordinate> coordinates = new ArrayList<>();
         coordinates.addAll(Collections.nCopies(300, new Coordinate(36.5, 127.5)));
@@ -494,7 +488,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-31] 고정 격자 묶음에서 휴장 제외를 켜면 그 칸의 묶음 개수와 평균 좌표에서 휴장 장소가 빠진다")
     void hideClosedSubtractsClosedSpotsFromFixedGridCluster() {
-        // given: 한 칸(36.88~36.96 × 127.84~127.92)에 운영 중인 장소 2곳과 휴장 장소 3곳이 있다. 다른 칸에 운영 중인 장소 501곳을 둔다.
+        // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         insertCampsites(Collections.nCopies(SpotMapQueryService.MAX_ITEMS + 1, new Coordinate(36.2, 127.2)));
         insertCampsites(Collections.nCopies(2, new Coordinate(36.90, 127.90)));
@@ -519,7 +513,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 고정 격자 묶음에 유형 필터를 적용하면 조합별 표에서 그 유형의 장소만 센다")
     void typeFilterAppliesToFixedGridClusters() {
-        // given: 야영장 501곳과 휴양림 3곳이 서로 다른 칸에 있다.
+        // given
         insertCampsites(Collections.nCopies(SpotMapQueryService.MAX_ITEMS + 1, new Coordinate(36.2, 127.2)));
         for (int i = 0; i < 3; i++) {
             insertSpot("FOREST", "휴양림 " + i, new Coordinate(36.9, 127.9));
@@ -541,9 +535,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 묶음은 격자 칸 중심으로 세서, 가장자리 격자 칸의 장소는 영역 밖이어도 들어오고 영역 안이어도 빠질 수 있다")
     void clustersCountGridCellsByCenterAtAreaEdges() {
-        // given: 영역 경계가 0.08도 격자선에서 비켜 있다. 영역은 위도 36.10~37.07, 경도 127.02~128.02다.
-        // 남쪽 바깥 장소(36.085)의 칸 [36.08, 36.16)은 중심 36.12가 영역 안이라 묶음에 들어간다.
-        // 북쪽 안쪽 장소(37.06)의 칸 [37.04, 37.12)는 중심 37.08이 영역 밖이라 묶음에서 빠진다.
+        // given
         Area shifted = new Area(36.10, 127.02, 37.07, 128.02);
         int insideCount = SpotMapQueryService.MAX_ITEMS + 1;
         insertCampsites(Collections.nCopies(insideCount, new Coordinate(36.5, 127.5)));
@@ -566,7 +558,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 영역 안 장소가 500개를 넘는지는 격자와 상관없이 정확히 판단한다")
     void decidesMarkersOrClustersByExactCountInArea() {
-        // given: 영역 안 500곳에 더해, 격자 칸 중심으로는 묶음에 들어가는 영역 밖 장소를 하나 둔다.
+        // given
         Area shifted = new Area(36.005, 127.005, 37.005, 128.005);
         insertCampsites(spreadInBulkArea(SpotMapQueryService.MAX_ITEMS));
         insertSpot("CAMPSITE", "남쪽 바깥 야영장", new Coordinate(36.001, 127.905));
@@ -582,9 +574,7 @@ class SpotMapQueryServiceIntegrationTest {
     @Test
     @DisplayName("[F-03] 거친 격자로 세어 상한을 못 넘는다고 나와도, 실제로 500개를 넘으면 마커를 읽어 판단해 묶음을 준다")
     void returnsClustersByMarkerFallbackWhenCoarseCountUnderCounts() {
-        // given: 화면 칸이 0.05도라서 세는 격자는 0.08도다. 묶음 격자도 영역 크기에 따라 0.08도로 고른다.
-        // 장소 501개는 위도 36.03에 있다. 이 위치는 0.08도 격자 칸 [36.00, 36.08)에 들지만, 그 칸은 영역(남쪽 변 36.0125) 안에 통째로 들지 않아 세어지지 않는다.
-        // 그래서 먼저 세는 단계는 0개로 세고, 마커 501건을 읽는 단계에서 상한 초과로 판단한다.
+        // given
         Area shifted = new Area(36.0125, 127.0, 37.0125, 128.0);
         int spotCount = SpotMapQueryService.MAX_ITEMS + 1;
         insertCampsites(Collections.nCopies(spotCount, new Coordinate(36.03, 127.5)));
@@ -604,7 +594,6 @@ class SpotMapQueryServiceIntegrationTest {
         assertThat(cluster.count()).isEqualTo(expectedCount);
     }
 
-    // 25행 × 필요한 열 수만큼 0.04도 간격으로 늘어놓는다. 501개여도 열은 21개라서 모든 장소가 영역 안에 든다.
     private static List<Coordinate> spreadInBulkArea(int count) {
         List<Coordinate> coordinates = new ArrayList<>();
         for (int i = 0; i < count; i++) {
@@ -675,7 +664,6 @@ class SpotMapQueryServiceIntegrationTest {
                 closedUntil);
     }
 
-    // 장소 수백 개를 한 문장으로 넣는다. 값은 테스트가 만든 숫자와 순번 이름뿐이라 SQL에 바로 넣는다.
     private void insertCampsites(List<Coordinate> coordinates) {
         String values = coordinates.stream()
                 .map(at -> String.format(
@@ -702,7 +690,6 @@ class SpotMapQueryServiceIntegrationTest {
         }
     }
 
-    // 방금 넣은 야영장은 공공데이터 상세 행이 아직 없는 장소뿐이라, 그 장소에만 상세 행과 입지를 붙인다.
     private void insertBulkCampsitesWithSetting(List<Coordinate> coordinates, String setting) {
         insertCampsites(coordinates);
         List<Long> spotIds = jdbcTemplate.queryForList(

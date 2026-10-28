@@ -6,10 +6,8 @@ import type { LatLng } from '../../map/types';
 import { SessionProvider } from '../member/session';
 import { BakjiEditPanel } from './BakjiEditPanel';
 
-// 주소 찾기는 카카오 SDK를 불러오므로, 이 테스트에서는 주소가 없는 것으로 둔다.
 vi.mock('../../map/addressName', () => ({ addressAt: async () => null }));
 
-// React가 act 밖의 상태 변경을 경고하지 않도록 테스트 환경임을 알린다.
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const SPOT_ID = 7;
@@ -65,7 +63,6 @@ function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-// 지도 화면처럼 불러온 박지의 좌표에 위치 핀을 찍어 둔다. 지도 대신 버튼을 누르면 핀을 이 자리로 옮긴다.
 const MOVED_POSITION: LatLng = { lat: 37.2, lng: 127.654321 };
 
 function EditScreen() {
@@ -115,7 +112,6 @@ describe('박지 수정 화면', () => {
 
   beforeEach(async () => {
     container = document.createElement('div');
-    // 주소를 옮길 때 라우터가 맨 위로 스크롤하는데, jsdom에는 스크롤이 없다.
     vi.stubGlobal('scrollTo', vi.fn());
     document.body.appendChild(container);
     reporterId = 1;

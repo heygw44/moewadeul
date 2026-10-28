@@ -31,10 +31,6 @@ public class TrustSummaryService {
     private final TrustRecordMapper trustRecordMapper;
     private final Clock clock;
 
-    /**
-     * 호출하면 회원의 본인확인 여부와 신뢰 단계를 계산해 돌려준다. 본인확인 기록이 없으면 본인확인 전, 단계 0이다.
-     * 단계 2 판정은 본인확인을 마친 성인에게만 필요하므로, 그 밖의 회원은 동행 기록을 조회하지 않는다.
-     */
     @Transactional(readOnly = true)
     public TrustSummary summarize(long memberId) {
         Instant now = clock.instant();
@@ -44,11 +40,6 @@ public class TrustSummaryService {
                 .orElse(NOT_VERIFIED_LEVEL_ZERO);
     }
 
-    /**
-     * 호출하면 신뢰 단계와 그 근거(완료 동행, "다시 동행" 비율, 최근 임박 탈퇴, 제재 여부, 대표 태그)와 본인확인한
-     * 연령대·성별을 돌려준다. 연령대는 본인확인한 성인에게만 있고, 성별은 본인확인한 회원이면 미성년이어도 있다.
-     * 프로필에 동행 기록을 보여 주므로, 본인확인 여부와 상관없이 동행 기록을 항상 조회한다.
-     */
     @Transactional(readOnly = true)
     public TrustDetail detail(long memberId) {
         Instant now = clock.instant();
@@ -61,9 +52,9 @@ public class TrustSummaryService {
         String verifiedAgeGroup = found.flatMap(verification -> verification.ageGroupIn(currentYear))
                 .map(Enum::name)
                 .orElse(null);
-        // 탈퇴한 회원의 본인확인 기록은 CI 해시 보관 기한까지 남지만 성별은 이미 지워져 있다.
-        String verifiedGender =
-                found.map(IdentityVerification::getGender).map(Enum::name).orElse(null);
+        String verifiedGender = found.flatMap(IdentityVerification::retainedGender)
+                .map(Enum::name)
+                .orElse(null);
         return new TrustDetail(
                 found.isPresent(),
                 adult,
@@ -77,8 +68,6 @@ public class TrustSummaryService {
                 verifiedGender);
     }
 
-    // 본인확인을 마친 성인이 단계 1이고, 동행 기록이 단계 2 조건을 채우면 단계 2다. 성인 여부는 본인확인 기록이 한 곳에서 판정한다.
-    // 성인이 아니면 동행 기록과 상관없이 단계 0이라서 기록을 읽지 않는다.
     public TrustSummary summarizeOf(IdentityVerification verification, long memberId, Instant now) {
         if (!verification.isAdult(currentYear(now))) {
             return new TrustSummary(true, TrustLevelPolicy.judge(true, false, CompanionRecord.NONE));

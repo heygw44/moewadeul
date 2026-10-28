@@ -2,8 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.review.infra.SpotReviewMapper">
 
-    <!-- 작성자 닉네임은 조회할 때의 회원 값이다. 탈퇴한 회원은 member 행의 닉네임이 익명 값으로 바뀌어 있어서 그대로 내보낸다.
-         작성 시각이 같은 후기가 있어도 페이지 경계에서 순서가 흔들리지 않도록 id를 보조 정렬 키로 쓴다. -->
     <select id="selectBySpot" resultType="com.moewadeul.review.infra.SpotReviewRow">
         SELECT r.id AS review_id,
                r.member_id AS author_id,

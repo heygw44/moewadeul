@@ -7,7 +7,6 @@ type MemoryReportDialogProps = {
   onClose: () => void;
 };
 
-// 남의 공개 기록을 신고한다. 사유는 커뮤니티 신고와 같다.
 export function MemoryReportDialog({ memoryId, onClose }: MemoryReportDialogProps) {
   return (
     <ReportDialog

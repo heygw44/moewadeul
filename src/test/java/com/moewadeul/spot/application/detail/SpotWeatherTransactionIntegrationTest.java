@@ -56,7 +56,7 @@ class SpotWeatherTransactionIntegrationTest {
     @Test
     @DisplayName("[F-09][NFR-05] 장소 날씨를 조회할 때 기상청과 천문연을 부르는 동안에는 DB 트랜잭션이 열려 있지 않다")
     void callsExternalApisOutsideTransaction() {
-        // given: 한국 시각 2026-10-04 12:58. 날씨 픽스처를 받은 시각이다.
+        // given
         clock.setInstant(Instant.parse("2026-10-04T03:58:00Z"));
         String name = TestSequence.unique("야영장");
         jdbcTemplate.update(

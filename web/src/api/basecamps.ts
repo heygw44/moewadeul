@@ -16,7 +16,6 @@ import type {
   Page,
 } from './types';
 
-// 지도 영역 안의 모집 중 베이스캠프를 출발일이 빠른 순서로 받는다. 로그인했으면 항목마다 신청 가능 여부가 온다.
 export function searchBasecamps(query: BasecampSearchQuery, signal?: AbortSignal): Promise<Page<BasecampSearchItem>> {
   return apiFetch<Page<BasecampSearchItem>>('/api/basecamps', {
     query: {
@@ -63,14 +62,12 @@ export function applyToBasecamp(
   });
 }
 
-// 서버는 본문 없이 204만 준다.
 export function cancelMyApplication(basecampId: number, signal?: AbortSignal): Promise<void> {
   return apiFetch<void>(`/api/basecamps/${basecampId}/applications/me`, { method: 'DELETE', signal });
 }
 
 export const APPLICATION_PAGE_SIZE = 20;
 
-// 캠프 리더만 받을 수 있다. 대기 중인 신청을 오래된 순서로 준다.
 export function fetchBasecampApplications(
   basecampId: number,
   page: number,
@@ -101,7 +98,6 @@ export function kickMember(basecampId: number, memberId: number, reason: KickRea
   });
 }
 
-// 멤버가 스스로 나간다. 서버는 본문 없이 204만 준다.
 export function leaveBasecamp(basecampId: number): Promise<void> {
   return apiFetch<void>(`/api/basecamps/${basecampId}/members/me`, { method: 'DELETE' });
 }

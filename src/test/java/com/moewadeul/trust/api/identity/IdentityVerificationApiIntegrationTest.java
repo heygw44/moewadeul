@@ -36,7 +36,6 @@ class IdentityVerificationApiIntegrationTest {
     private static final String SESSION_COOKIE = "SESSION";
     private static final String LOCAL_IP = "127.0.0.1";
 
-    // 테스트 시계는 한국 날짜로 2026-10-05라서, 2007년생은 성인이고 2008년생은 미성년이다.
     private static final int ADULT_BIRTH_YEAR = 2007;
     private static final int MINOR_BIRTH_YEAR = 2008;
 

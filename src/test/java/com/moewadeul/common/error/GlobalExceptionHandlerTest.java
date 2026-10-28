@@ -320,8 +320,6 @@ class GlobalExceptionHandlerTest {
         }
     }
 
-    // 이 테스트는 오류 응답 처리를 검사하는 것이 목적이다. 그래서 인증과 CSRF는 끄고 모든 요청을 통과시킨다.
-    // 실제 보안 규칙은 SecurityConfigIntegrationTest가 검사한다.
     @TestConfiguration(proxyBeanMethods = false)
     @EnableWebSecurity
     static class PermitAllSecurityConfig {

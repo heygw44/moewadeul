@@ -5,7 +5,6 @@ import type { MemoryCellItem } from './memoryItems';
 import { MemoryGrid } from './MemoryGrid';
 import { MemoryMap } from './MemoryMap';
 
-// 지도와 격자를 한 묶음으로 보여 준다. 핀을 누르면 같은 기록의 격자 칸을 고르고 그 칸으로 스크롤한다.
 export function MemoryMapGrid({ items }: { items: MemoryCellItem[] }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const pins = useMemo<MemoryPinData[]>(

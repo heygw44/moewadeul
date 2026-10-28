@@ -437,7 +437,6 @@ class CommunityImageApiIntegrationTest {
         return idOf(result);
     }
 
-    // 썸네일과 함께 업로드 URL을 받고, 저장소에 원본과 썸네일이 올라온 것으로 표시한다.
     private long uploadedImageWithThumbnail(Cookie cookie) {
         long imageId = issueImageWithThumbnail(cookie);
         storage.markUploaded(keyOf(imageId), SIZE);
@@ -454,7 +453,6 @@ class CommunityImageApiIntegrationTest {
                 "SELECT thumbnail_object_key FROM community_image WHERE id = ?", String.class, imageId);
     }
 
-    // 업로드 URL을 받고, 저장소에 그 크기의 객체가 올라온 것으로 표시한다.
     private long uploadedImage(Cookie cookie, long sizeBytes) {
         long imageId = issueImage(cookie, sizeBytes);
         storage.markUploaded(keyOf(imageId), sizeBytes);

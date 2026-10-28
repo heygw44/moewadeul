@@ -12,7 +12,6 @@ export const BASECAMP_STATUS_META: Record<BasecampStatus, StatusMeta> = {
   CANCELED: { label: '취소', tone: 'neutral' },
 };
 
-// 모집 중이 아닌 베이스캠프의 상세에서 신청 버튼 자리에 보여 주는 안내다.
 export const BASECAMP_STATUS_GUIDE: Record<BasecampStatus, string> = {
   RECRUITING: '',
   CLOSED: '모집이 마감됐어요.',
@@ -21,7 +20,6 @@ export const BASECAMP_STATUS_GUIDE: Record<BasecampStatus, string> = {
   CANCELED: '취소된 베이스캠프예요.',
 };
 
-// 베이스캠프 목록과 열기 화면에 늘 보여 주는 안내다. 상세·관리 화면은 서버가 내려 주는 안전 안내 문구로 같은 뜻을 전한다.
 export const OFF_PLATFORM_PAYMENT_REMINDER = '플랫폼 밖 송금 요구는 신고해 주세요.';
 
 export const AGE_GROUP_STEPS = [20, 30, 40, 50, 60] as const;
@@ -30,7 +28,6 @@ export function ageGroupStepLabel(step: number): string {
   return step >= 60 ? '60대 이상' : `${step}대`;
 }
 
-// 예: "단계 1 이상 · 30~40대 · 동성만". 조건이 하나도 없으면 "조건 없음"이다.
 export function joinConditionSummary(condition: JoinCondition): string {
   const parts: string[] = [];
   if (condition.minTrustLevel !== null) {
@@ -53,9 +50,7 @@ export function joinConditionSummary(condition: JoinCondition): string {
 }
 
 type UnmetReasonText = {
-  // 사용자가 왜 못 하는지
   reason: string;
-  // 다음에 할 일. 없으면 비워 둔다.
   guide?: string;
 };
 
@@ -70,8 +65,6 @@ const UNMET_REASON_TEXT: Record<JoinUnmetReason, UnmetReasonText> = {
   REAPPLY_NOT_ALLOWED: { reason: '거절·강퇴되거나 직접 탈퇴한 적이 있어 다시 신청할 수 없어요.' },
 };
 
-// 신뢰 단계가 0이면 본인확인이 필요하고, 1 이상인데 모자라면 동행 기록을 더 쌓아야 한다.
-// myTrustLevel을 모르면 일반 문구를 쓴다.
 export function unmetReasonText(reason: JoinUnmetReason, myTrustLevel: number | null): UnmetReasonText {
   if (reason === 'TRUST_LEVEL' && myTrustLevel !== null) {
     return myTrustLevel === 0
@@ -81,10 +74,8 @@ export function unmetReasonText(reason: JoinUnmetReason, myTrustLevel: number | 
   return UNMET_REASON_TEXT[reason];
 }
 
-// 인원 표시. 예: "3/4"
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// 출발일과 돌아오는 날(YYYY-MM-DD, 한국 날짜)로 박 수를 센다.
 export function nightsBetween(startDate: string, endDate: string): number {
   return Math.round((Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / DAY_MS);
 }
@@ -93,7 +84,6 @@ export function headcountText(headcount: number, capacity: number): string {
   return `${headcount}/${capacity}`;
 }
 
-// 멤버·신청자 프로필의 한 줄 요약. 연령대와 성별은 본인확인 여부를 함께 적는다. 예: "30대 본인확인 · 남성 자기 신고 · 완료한 동행 2회"
 export function profileSummary(profile: Omit<BasecampApplicant, 'memberId' | 'nickname'>): string[] {
   const parts: string[] = [];
   if (profile.ageGroup) {

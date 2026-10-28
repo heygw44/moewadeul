@@ -104,7 +104,6 @@ class SoloTripTest {
         assertThat(trip.isRegisteredBy(MEMBER_ID + 1)).isFalse();
     }
 
-    // 오늘이 2026-10-05일 때 이미 등록돼 있던 일정을 만든다. 60일 안의 날짜만 쓴다.
     private static SoloTrip trip(String start, String end) {
         return register(LocalDate.parse(start), LocalDate.parse(end), List.of());
     }

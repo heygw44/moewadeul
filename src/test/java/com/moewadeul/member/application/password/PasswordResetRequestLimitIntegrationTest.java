@@ -288,7 +288,6 @@ class PasswordResetRequestLimitIntegrationTest {
         assertThat(countRows("password_reset_throttle")).isZero();
     }
 
-    // 같은 호출 순서(요청, 곧바로 요청, 60초 뒤 요청, 곧바로 요청)를 주고 결과를 모은 뒤 시계를 처음 시각으로 되돌린다.
     private List<Outcome> runSequence(String email, String ip) {
         Instant start = clock.instant();
         List<Outcome> outcomes = new ArrayList<>();
@@ -301,7 +300,6 @@ class PasswordResetRequestLimitIntegrationTest {
         return outcomes;
     }
 
-    // 간격(60초)을 지키며 4번 더 요청해서 이메일 구간의 횟수를 5로 채운다. 마지막 요청은 시계를 움직이지 않고 끝낸다.
     private void requestFourMore(String email, String ip) {
         for (int i = 0; i < 4; i++) {
             requestService.request(email, ip);
@@ -311,7 +309,6 @@ class PasswordResetRequestLimitIntegrationTest {
         }
     }
 
-    // 시계가 두 번째 요청이 통과한 시각에 있다고 보고, 3·4·5번째 요청을 간격대로 보내 횟수를 5로 채운다.
     private void requestThreeMoreAfterSecond(String email, String ip) {
         for (int i = 0; i < 3; i++) {
             clock.advance(INTERVAL);

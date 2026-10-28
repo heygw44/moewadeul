@@ -2,7 +2,6 @@ package com.moewadeul.member.application.verification;
 
 import com.moewadeul.common.mail.MailMessage;
 
-/** 이메일 인증 코드를 담은 메일을 만든다. 코드는 이 메일 본문에만 들어간다. */
 final class EmailVerificationMailFactory {
 
     static final String SUBJECT = "[뫼와들] 이메일 인증 코드";

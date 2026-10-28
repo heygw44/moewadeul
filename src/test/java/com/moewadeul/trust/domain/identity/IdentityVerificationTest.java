@@ -63,7 +63,7 @@ class IdentityVerificationTest {
         IdentityVerification verification = verificationBornIn(1995);
 
         assertThat(verification.getBirthYear()).isEqualTo((short) 1995);
-        assertThat(verification.getGender()).isEqualTo(Gender.FEMALE);
+        assertThat(verification.retainedGender()).contains(Gender.FEMALE);
         assertThat(verification.getCiHash()).isEqualTo(CI_HASH);
         assertThat(verification.getProvider()).isEqualTo(IdentityProviderType.FAKE);
         assertThat(verification.getVerifiedAt()).isEqualTo(NOW);
@@ -99,7 +99,7 @@ class IdentityVerificationTest {
         verification.withdraw(retainedUntil, withdrawnAt);
 
         assertThat(verification.getBirthYear()).isNull();
-        assertThat(verification.getGender()).isNull();
+        assertThat(verification.retainedGender()).isEmpty();
         assertThat(verification.getCiHash()).isEqualTo(CI_HASH);
         assertThat(verification.getCiRetainedUntil()).isEqualTo(retainedUntil);
         assertThat(verification.getUpdatedAt()).isEqualTo(withdrawnAt);

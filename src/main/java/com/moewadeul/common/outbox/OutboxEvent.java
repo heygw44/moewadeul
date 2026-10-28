@@ -15,10 +15,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * 원래 작업과 같은 트랜잭션에 기록하는 이벤트 행이다. JPA는 기록(INSERT)에만 쓴다.
- * 발행 상태, 시도 횟수, 임대 시각은 발행기가 MyBatis 조건부 UPDATE로 바꾸므로 이 엔티티에는 변경 메서드가 없다.
- */
 @Entity
 @Table(name = "outbox_event")
 @Getter

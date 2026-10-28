@@ -1,0 +1,202 @@
+package com.moewadeul.basecamp.application.lifecycle;
+
+import static com.moewadeul.basecamp.application.lifecycle.BasecampAutoTransitionFixture.END_DATE;
+import static com.moewadeul.basecamp.application.lifecycle.BasecampAutoTransitionFixture.START_DATE;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.moewadeul.basecamp.domain.Basecamp;
+import com.moewadeul.basecamp.domain.BasecampErrorCode;
+import com.moewadeul.basecamp.domain.BasecampException;
+import com.moewadeul.basecamp.domain.BasecampStatus;
+import com.moewadeul.basecamp.infra.BasecampJpaRepository;
+import com.moewadeul.basecamp.infra.lifecycle.BasecampAutoTransitionMapper;
+import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.time.KoreaTime;
+import com.moewadeul.member.infra.MemberJpaRepository;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.json.JsonMapper;
+
+@IntegrationTest
+class BasecampAutoTransitionSqlParityIntegrationTest {
+
+    private static final Instant NOW =
+            END_DATE.plusDays(1).atStartOfDay(KoreaTime.ZONE).toInstant().plusNanos(123_456_000);
+    private static final LocalDate TODAY = LocalDate.ofInstant(NOW, KoreaTime.ZONE);
+
+    private static final String BASECAMP_COLUMNS =
+            "status, closed_reason, confirmed_at, canceled_at, cancel_reason," + " completed_at, updated_at";
+
+    @Autowired
+    private BasecampAutoTransitionMapper mapper;
+
+    @Autowired
+    private BasecampJpaRepository basecampRepository;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    @Autowired
+    private MemberJpaRepository memberRepository;
+
+    @Autowired
+    private JsonMapper jsonMapper;
+
+    private BasecampAutoTransitionFixture fixture;
+
+    @BeforeEach
+    void createFixture() {
+        fixture = new BasecampAutoTransitionFixture(jdbc, memberRepository, jsonMapper);
+    }
+
+    private record Transition(
+            String name,
+            int extraMembers,
+            SqlTransition sql,
+            BiConsumer<Basecamp, Instant> domain,
+            DueSelection selection) {
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    @FunctionalInterface
+    private interface SqlTransition {
+        int apply(BasecampAutoTransitionMapper mapper, long id);
+    }
+
+    @FunctionalInterface
+    private interface DueSelection {
+        List<Long> select(BasecampAutoTransitionMapper mapper);
+    }
+
+    private static final Transition CONFIRM = new Transition(
+            "확정",
+            1,
+            (mapper, id) -> mapper.confirmIfBeforeConfirm(id, NOW),
+            Basecamp::processDayBeforeDeparture,
+            mapper -> mapper.selectDueForDepartureIds(START_DATE, 0, 100));
+
+    private static final Transition CANCEL_NOT_ENOUGH = new Transition(
+            "인원 부족 취소",
+            0,
+            (mapper, id) -> mapper.cancelForNotEnoughMembers(id, NOW),
+            Basecamp::processDayBeforeDeparture,
+            mapper -> mapper.selectDueForDepartureIds(START_DATE, 0, 100));
+
+    private static final Transition COMPLETE = new Transition(
+            "완료",
+            1,
+            (mapper, id) -> mapper.completeIfConfirmed(id, TODAY, NOW),
+            Basecamp::complete,
+            mapper -> mapper.selectDueForCompletionIds(TODAY, 0, 100));
+
+    static Stream<Arguments> everyTransitionFromEveryStatus() {
+        return Stream.of(CONFIRM, CANCEL_NOT_ENOUGH, COMPLETE)
+                .flatMap(transition ->
+                        Stream.of(BasecampStatus.values()).map(status -> Arguments.of(transition, status)));
+    }
+
+    @ParameterizedTest(name = "{0} / 시작 상태 {1}")
+    @MethodSource("everyTransitionFromEveryStatus")
+    @DisplayName("SQL이 한 행을 바꾸는 시작 상태에서만 도메인 전이가 허용되고, 바뀐 행의 컬럼이 같다")
+    void sqlAndDomainAgreeOnAllowedStatesAndResultingRow(Transition transition, BasecampStatus status) {
+        // given
+        long sqlSide = saveWithApplications(status, transition.extraMembers());
+        long domainSide = saveWithApplications(status, transition.extraMembers());
+
+        // when
+        boolean selectedByScheduler = transition.selection().select(mapper).contains(sqlSide);
+        int changed = applySql(transition, sqlSide);
+        boolean domainAllowed = applyDomain(transition, domainSide);
+
+        // then
+        assertThat(domainAllowed).isEqualTo(changed == 1);
+        assertThat(selectedByScheduler).isEqualTo(changed == 1);
+        assertThat(rowOf(domainSide)).isEqualTo(rowOf(sqlSide));
+        assertThat(applicationRowsOf(domainSide)).isEqualTo(applicationRowsOf(sqlSide));
+    }
+
+    @ParameterizedTest(name = "종료일 {0}")
+    @MethodSource("endDateOffsetsFromToday")
+    @DisplayName("완료 SQL은 종료일이 오늘보다 이전일 때만 확정된 베이스캠프를 바꾸고, 완료 대상 조회도 같은 기준을 쓴다")
+    void completionGuardOnEndDate(long daysBeforeToday, int expectedChanged) {
+        // given
+        LocalDate endDate = TODAY.minusDays(daysBeforeToday);
+        long id = fixture.saveBasecamp("CONFIRMED", null, endDate.minusDays(2), endDate);
+
+        // when
+        boolean selected = mapper.selectDueForCompletionIds(TODAY, 0, 100).contains(id);
+        int changed = mapper.completeIfConfirmed(id, TODAY, NOW);
+
+        // then
+        assertThat(changed).isEqualTo(expectedChanged);
+        assertThat(selected).isEqualTo(expectedChanged == 1);
+    }
+
+    static Stream<Arguments> endDateOffsetsFromToday() {
+        return Stream.of(Arguments.of(1L, 1), Arguments.of(0L, 0), Arguments.of(-1L, 0));
+    }
+
+    private long saveWithApplications(BasecampStatus status, int extraMembers) {
+        String closedReason = status == BasecampStatus.CLOSED ? "LEADER" : null;
+        long id = fixture.saveBasecamp(status.name(), closedReason, START_DATE, END_DATE);
+        for (int i = 0; i < extraMembers; i++) {
+            fixture.insertMember(id, fixture.saveVerifiedMember(), "MEMBER", "ACTIVE");
+        }
+        fixture.insertPendingApplication(id);
+        long approved = fixture.insertPendingApplication(id);
+        jdbc.update("UPDATE basecamp_application SET status = 'APPROVED' WHERE id = ?", approved);
+        return id;
+    }
+
+    private int applySql(Transition transition, long id) {
+        return transactionTemplate.execute(status -> {
+            int changed = transition.sql().apply(mapper, id);
+            if (changed == 1) {
+                mapper.expirePendingApplications(id, NOW);
+            }
+            return changed;
+        });
+    }
+
+    private boolean applyDomain(Transition transition, long id) {
+        return transactionTemplate.execute(status -> {
+            Basecamp basecamp = basecampRepository.findById(id).orElseThrow();
+            try {
+                transition.domain().accept(basecamp, NOW);
+            } catch (BasecampException e) {
+                assertThat(e.getErrorCode()).isEqualTo(BasecampErrorCode.BASECAMP_INVALID_STATE);
+                return false;
+            }
+            basecampRepository.saveAndFlush(basecamp);
+            return true;
+        });
+    }
+
+    private Map<String, Object> rowOf(long id) {
+        return jdbc.queryForMap("SELECT " + BASECAMP_COLUMNS + " FROM basecamp WHERE id = ?", id);
+    }
+
+    private List<Map<String, Object>> applicationRowsOf(long basecampId) {
+        return jdbc.queryForList(
+                "SELECT status, updated_at FROM basecamp_application WHERE basecamp_id = ? ORDER BY id", basecampId);
+    }
+}

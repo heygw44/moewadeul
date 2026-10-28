@@ -827,13 +827,11 @@ class AdminReportSanctionApiIntegrationTest {
         assertThat(invalid).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
     }
 
-    // 신고 한 건을 JDBC로 직접 넣는다. 신고자는 신고마다 새 회원이라서 같은 대상을 여러 번 신고해도 중복 제약에 걸리지 않는다.
     private long insertReport(String type, String status, Instant createdAt) {
         long newReporter = fixture.saveVerifiedMember(TestSequence.nickname());
         return reportFixture.insertMemberReport(newReporter, targetId, basecampId, type, status, createdAt);
     }
 
-    // 실제 신고 접수 서비스로 성희롱·위협 신고를 접수한다. 대상은 72시간 임시 정지된다.
     private long urgentReport(long target) {
         long newReporter = fixture.saveVerifiedMember(TestSequence.nickname());
         long newBasecamp = fixture.saveBasecamp("COMPLETED", BASE);

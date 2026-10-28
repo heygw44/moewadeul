@@ -11,6 +11,7 @@ import com.moewadeul.community.application.moderation.CommunityModerationService
 import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostWriteCommand;
 import com.moewadeul.community.domain.CommunityErrorCode;
+import com.moewadeul.community.domain.report.CommunityReportReason;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,7 +34,8 @@ class CommunityReportConcurrencyIntegrationTest {
 
     private static final int THREADS = 10;
     private static final int PENDING_REVIEW_REPORTS = 5;
-    private static final CommunityReportCommand REPORT = new CommunityReportCommand("SPAM", "광고입니다");
+    private static final CommunityReportCommand REPORT =
+            new CommunityReportCommand(CommunityReportReason.SPAM, "광고입니다");
 
     @Autowired
     private CommunityReportService communityReportService;
@@ -172,10 +174,8 @@ class CommunityReportConcurrencyIntegrationTest {
         assertThat(postStatus(postId)).isEqualTo("HIDDEN");
         assertThat(auditCount("COMMUNITY_HIDE")).isEqualTo(1);
         if (failures.isEmpty()) {
-            // 신고가 먼저 끝나 5건이 되어 검토 대기가 됐고, 그 뒤에 숨겼다.
             assertThat(reportCount("POST", postId)).isEqualTo(PENDING_REVIEW_REPORTS);
         } else {
-            // 숨김이 먼저 끝나서 ACTIVE가 아닌 글의 신고가 NOT_FOUND로 거부됐다.
             assertThat(failures).hasSize(1);
             assertThat(failures.get(0))
                     .isInstanceOfSatisfying(
@@ -221,7 +221,6 @@ class CommunityReportConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM admin_audit_log WHERE action = ?", Integer.class, action);
     }
 
-    // 회원마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private <T> List<Throwable> runConcurrently(List<Long> memberIds, MemberAction<T> action) throws Exception {
         List<Callable<Object>> tasks = new ArrayList<>();
         for (long memberId : memberIds) {

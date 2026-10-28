@@ -16,7 +16,6 @@ const NAV_ITEMS = [
   { to: '/admin/sync-jobs', label: '데이터 적재' },
 ] as const;
 
-// 관리자 화면의 공통 틀이다. 관리자가 아니면 안에 있는 화면을 그리지 않아서 관리자 API도 부르지 않는다. 권한은 서버도 검사한다.
 export function AdminPage({ title, current, children }: { title: string; current: string; children: ReactNode }) {
   const session = useSession();
   const { pathname, search } = useLocation();
@@ -26,7 +25,6 @@ export function AdminPage({ title, current, children }: { title: string; current
     document.title = `${title} · 관리자 · 뫼와들`;
   }, [title]);
 
-  // 로그인한 뒤 이 화면으로 돌아오게 한다.
   useEffect(() => {
     if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
   }, [session.status, pathname, search]);
@@ -62,7 +60,6 @@ export function AdminPage({ title, current, children }: { title: string; current
         </UnderlineNav>
       }
     >
-      {/* 선택 칸은 바탕 위에 두고, 목록과 묶음만 세이지 카드로 올린다. 화면 전체를 판 하나로 감싸면 안쪽 판이 겹쳐 보인다. */}
       <div className="flex min-w-0 flex-col gap-4">{children}</div>
     </PageLayout>
   );

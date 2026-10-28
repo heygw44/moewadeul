@@ -61,7 +61,6 @@ class OutboxReliabilityIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // 통합 테스트는 Spring 컨텍스트를 공유한다. 확장은 DB 행만 지우므로, 처리기의 기록은 테스트가 직접 지운다.
     @BeforeEach
     void resetHandler() {
         handler.reset();
@@ -261,7 +260,6 @@ class OutboxReliabilityIntegrationTest {
     void leasedEventIsClaimedAgainOnlyAfterLeaseExpires() {
         // given
         long eventId = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
-        // 처리기를 호출하는 도중에 다른 발행기가 같은 이벤트를 만난 상황이다. 집기만 하고 처리하지 않은 채로 둔다.
         assertThat(store.claim(clock.instant()).messages()).hasSize(1);
 
         // when
@@ -289,7 +287,6 @@ class OutboxReliabilityIntegrationTest {
         List<Long> eventIds = recordEvents(3, RecordingOutboxEventHandler.EVENT_TYPE);
         ShutdownSignal signal = new ShutdownSignal();
         List<Long> handledByStoppingPublisher = new ArrayList<>();
-        // 첫 이벤트를 처리하는 도중에 앱이 종료를 시작한 상황이다.
         OutboxEventHandler shutdownStartingHandler = new OutboxEventHandler() {
             @Override
             public String eventType() {
@@ -314,7 +311,7 @@ class OutboxReliabilityIntegrationTest {
         assertThat(findEvent(eventIds.get(1)).get("locked_until")).isNull();
         assertThat(findEvent(eventIds.get(2)).get("locked_until")).isNull();
 
-        // when: 새로 뜬 앱의 발행기는 임대 시간이 지나기를 기다리지 않는다.
+        // when
         int afterRestart = publisher.publishPending();
 
         // then

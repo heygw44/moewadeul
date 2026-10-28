@@ -81,7 +81,7 @@ class CommunityPostLikeConcurrencyIntegrationTest {
     @RepeatedTest(5)
     @DisplayName("[F-29][CM-05] 좋아요와 취소가 같은 글에 동시에 섞여 와도 글 행에 저장한 좋아요 수가 좋아요 행 수와 같다")
     void concurrentLikesAndUnlikesKeepStoredCountEqualToRows() throws Exception {
-        // given: 앞의 절반은 미리 눌러 두고, 동시에 앞의 절반은 취소하고 뒤의 절반은 누른다
+        // given
         List<Long> memberIds = saveMembers(THREADS);
         long postId = savePost(memberIds.get(0));
         List<Long> unlikers = memberIds.subList(0, THREADS / 2);
@@ -118,7 +118,6 @@ class CommunityPostLikeConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM community_post_like WHERE post_id = ?", Integer.class, postId);
     }
 
-    // 요청마다 스레드 하나로 동시에 출발시키고, 던져진 예외를 모아 돌려준다.
     private <T> List<Throwable> runConcurrently(List<Long> memberIds, MemberAction<T> action) throws Exception {
         int threads = memberIds.size();
         ExecutorService executor = Executors.newFixedThreadPool(threads);

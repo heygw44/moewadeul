@@ -19,17 +19,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-/**
- * 베이스캠프 조회 API 통합 테스트가 함께 쓰는 준비 코드다. 실제 로그인·이메일 인증·본인확인 흐름으로 세션을 만들고,
- * 베이스캠프와 멤버·신청 행은 SQL로 직접 넣어서 원하는 상태를 바로 만든다.
- */
 public final class BasecampApiFixture {
 
     public static final String VALID_PASSWORD = "Valid-pass1";
     public static final LocalDate DEFAULT_START_DATE = LocalDate.of(2026, 10, 20);
     private static final String SESSION_COOKIE = "SESSION";
     private static final String LOCAL_IP = "127.0.0.1";
-    // 테스트 시계는 한국 날짜로 2026-10-05이다. 2007년생은 성인이고 연령대는 20대다.
     private static final int ADULT_BIRTH_YEAR = 2007;
     private static final String AT_DEFAULT_INSTANT = "2026-10-05 03:00:00";
 
@@ -71,7 +66,6 @@ public final class BasecampApiFixture {
         return session;
     }
 
-    // 로그인하고 이메일 인증까지 마친 신뢰 단계 0인 세션을 만든다.
     public Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService
@@ -89,7 +83,6 @@ public final class BasecampApiFixture {
         return session;
     }
 
-    // 이메일 인증을 마치고 성인으로 본인확인까지 해서 신뢰 단계 1인 세션을 만든다. 회원마다 식별 문자열을 다르게 줘야 같은 사람으로 보지 않는다.
     public Cookie identityVerifiedSession(Member member, String gender) {
         Cookie session = verifiedSession(member);
         identitySequence++;
@@ -114,12 +107,10 @@ public final class BasecampApiFixture {
         return jdbc.queryForObject("SELECT MAX(id) FROM spot", Long.class);
     }
 
-    // 관리자 숨김이나 신고 누적으로 장소가 지도에서 내려간 상태를 만든다. 박지 수정과 같은 규칙대로 버전도 올린다.
     public void setSpotStatus(long spotId, String status) {
         jdbc.update("UPDATE spot SET status = ?, version = version + 1 WHERE id = ?", status, spotId);
     }
 
-    // 캠프 리더의 멤버 행도 함께 넣는다. 종료일은 출발일 이틀 뒤, 정원은 4명이다.
     public long insertBasecamp(Member leader, long spotId, String status, LocalDate startDate) {
         jdbc.update(
                 "INSERT INTO basecamp (leader_id, spot_id, title, description, start_date, end_date, capacity, status,"

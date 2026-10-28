@@ -42,8 +42,6 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
 
-  // 내 신청(myApplication)은 서버가 요청의 세션 쿠키로 정하므로 세션 확인을 기다리지 않고 함께 보낸다.
-  // 로그인 상태가 바뀔 때(viewerEpoch)만 다시 받고, 다시 받을 때는 화면을 비우지 않고 이전 내용을 둔 채 바꾼다.
   useEffect(() => {
     const controller = new AbortController();
     getProgram(programId, controller.signal).then(
@@ -107,7 +105,6 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
 
   const detail = current !== null && 'detail' in current ? current.detail : null;
   useApplyPhaseRefresh(detail, reload);
-  // 장소는 본문 근거 목록이, 취소는 본문 안내가 알리므로 제목 아래에는 상태와 숙박 여부만 둔다.
   const meta = detail ? (
     <MetaLine
       items={[
@@ -137,7 +134,6 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
   return (
     <div className="flex flex-col gap-4">
       <article className="flex flex-col gap-4">
-        {/* 머리는 상태·제목·장소 아래에 일시·남은 자리를 세이지 칸으로 적는다. 페이지 제목(h1)은 위 띠가 스크린 리더에 읽힌다. */}
         <header className="text-ink">
           {detail.status !== 'CANCELED' && (
             <p className="inline-flex items-center gap-1.5 text-[0.8125rem] font-bold">
@@ -234,7 +230,6 @@ function DetailContent({ detail, onChanged }: { detail: ProgramDetail; onChanged
 
 type Busy = 'apply' | 'pay' | 'cancel' | 'alert' | null;
 
-// 실패 안내 제목은 무엇을 하지 못했는지 동작으로 적는다.
 const FAIL_TITLES: Record<Exclude<Busy, null>, string> = {
   apply: '신청하지 못했어요',
   pay: '결제하지 못했어요',
@@ -255,7 +250,6 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   const [soldOut, setSoldOut] = useState(false);
   const [alertOn, setAlertOn] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  // 사용자가 버튼을 한 번 누를 때마다 키를 만든다. 서버에 닿지 못해 응답을 못 받았을 때만 다음 시도가 같은 키를 쓴다.
   const applyKey: KeyRef = useRef(null);
   const payKey: KeyRef = useRef(null);
 
@@ -266,7 +260,6 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   const dueAt = pending ? (mine.paymentDueAt ?? null) : null;
   const payExpired = dueAt !== null && now >= Date.parse(dueAt);
 
-  // 기한이 지나도 서버가 만료 처리하기 전에는 결제 대기로 보인다. 만료 처리 결과를 받으려고 가끔 다시 받는다.
   useEffect(() => {
     if (!payExpired) return;
     const timer = window.setInterval(onChanged, 15_000);
@@ -283,7 +276,6 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
       if (keyRef) keyRef.current = null;
     } catch (caught) {
       const apiError = caught instanceof ApiError ? caught : new ApiError(0, 'INTERNAL_ERROR', null);
-      // 응답을 받지 못한 경우(네트워크 오류)만 같은 키를 남겨 다시 시도할 때 중복 처리를 막는다.
       if (keyRef && apiError.code !== 'NETWORK_ERROR') keyRef.current = null;
       if (apiError.code === 'PROGRAM_SOLD_OUT') setSoldOut(true);
       setError({ kind, apiError });
@@ -484,7 +476,6 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   );
 }
 
-// 서버 상태와 화면이 어긋났다는 뜻이라서 응답 뒤에 행사 상세를 다시 받는다.
 const STALE_CODES = new Set([
   'PROGRAM_ALREADY_APPLIED',
   'PROGRAM_INVALID_STATE',

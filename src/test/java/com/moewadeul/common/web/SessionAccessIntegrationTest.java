@@ -31,8 +31,6 @@ import org.springframework.session.SessionRepository;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
-// MockMvc는 요청을 처리한 뒤 결과를 모으면서 세션을 직접 연다. 그래서 운영처럼 서버가 세션을 건드리는지 보려면
-// 실제 Tomcat을 띄우고 HTTP로 요청해야 한다.
 @IntegrationTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class SessionAccessIntegrationTest {
 
@@ -61,7 +59,7 @@ class SessionAccessIntegrationTest {
     @Test
     @DisplayName("[F-03] 로그인한 회원이 지도 영역을 조회해도 서버는 세션을 읽거나 저장하지 않는다")
     void publicMapRequestDoesNotTouchSession() throws Exception {
-        // given: 응답 본문이 커지도록 영역 안에 야영장을 여럿 넣고, 회원이 로그인해 세션을 받는다.
+        // given
         for (int i = 0; i < CAMPSITE_COUNT; i++) {
             insertCampsite("영역 안 야영장 " + i, 37.1 + i * 0.002, 127.1 + i * 0.002);
         }
@@ -71,7 +69,7 @@ class SessionAccessIntegrationTest {
         // when
         HttpResponse<String> response = get("/api/spots?swLat=37&swLng=127&neLat=38&neLng=128&zoom=7", cookie);
 
-        // then: 본문이 Tomcat 응답 버퍼(8KB)보다 커서 응답이 일찍 커밋되는 경우다.
+        // then
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body().length()).isGreaterThan(RESPONSE_BUFFER_BYTES);
         verify(sessionRepository, never()).findById(anyString());
@@ -101,8 +99,6 @@ class SessionAccessIntegrationTest {
         return (SessionRepository) sessionRepository;
     }
 
-    // 로그인 응답의 세션 쿠키를 Cookie 헤더 값으로 돌려준다. 세션 쿠키에는 Secure가 붙어서 HttpClient가 http 주소로는
-    // 쿠키를 다시 보내지 않으므로, 테스트가 헤더를 직접 만든다.
     private String login() throws Exception {
         String email = TestSequence.email();
         memberRepository.save(aMember()

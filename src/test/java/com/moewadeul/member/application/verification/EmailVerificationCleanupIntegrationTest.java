@@ -25,7 +25,6 @@ class EmailVerificationCleanupIntegrationTest {
 
     private static final String IP = "203.0.113.7";
     private static final Duration ONE_SECOND = Duration.ofSeconds(1);
-    // DATETIME 컬럼에 UTC 시각을 문자열로 넣는다. 드라이버의 시간대 변환이 끼어들지 않게 하려는 것이다.
     private static final DateTimeFormatter DATETIME_UTC =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").withZone(ZoneOffset.UTC);
 
@@ -124,6 +123,20 @@ class EmailVerificationCleanupIntegrationTest {
         assertThat(count()).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("[F-01][EV-03] 마지막 요청이 24시간보다 1마이크로초 더 지난 IP 잠금 행은 지우고, 정확히 24시간 된 행과 그보다 새 행은 남긴다")
+    void deletesOnlyIpLockRowsIdleLongerThanOneDay() {
+        Instant lockCutoff = clock.instant().minus(Duration.ofHours(24));
+        insertIpLockRow("idle", lockCutoff.minus(Duration.ofNanos(1_000)));
+        insertIpLockRow("exact", lockCutoff);
+        insertIpLockRow("recent", clock.instant());
+
+        cleanupService.deleteExpired();
+
+        assertThat(jdbc.queryForList("SELECT ip_key FROM email_verification_ip_lock ORDER BY ip_key", String.class))
+                .containsExactly(ipLockKey("exact"), ipLockKey("recent"));
+    }
+
     private Instant cutoff() {
         return clock.instant().minus(EmailVerificationPolicy.RECORD_RETENTION);
     }
@@ -146,6 +159,17 @@ class EmailVerificationCleanupIntegrationTest {
                 at,
                 at);
         return jdbc.queryForObject("SELECT MAX(id) FROM email_verification", Long.class);
+    }
+
+    private void insertIpLockRow(String name, Instant lastRequestedAt) {
+        jdbc.update(
+                "INSERT INTO email_verification_ip_lock (ip_key, last_requested_at) VALUES (?, ?)",
+                ipLockKey(name),
+                DATETIME_UTC.format(lastRequestedAt));
+    }
+
+    private static String ipLockKey(String name) {
+        return (name + "_".repeat(64)).substring(0, 64);
     }
 
     private boolean exists(long id) {

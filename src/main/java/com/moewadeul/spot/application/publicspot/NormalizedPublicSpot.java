@@ -3,6 +3,7 @@ package com.moewadeul.spot.application.publicspot;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.PublicSpotSetting;
 import com.moewadeul.spot.domain.GeoPoint;
+import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.WeatherGrid;
 import com.moewadeul.spot.infra.publicspot.PublicSpotColumns;
 import com.moewadeul.spot.infra.publicspot.PublicSpotRow;
@@ -14,14 +15,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-/**
- * 저장할 수 있게 다듬은 공공데이터 장소 한 건.
- *
- * <p>원천 데이터에는 앞뒤 공백, 빈 문자열, 열 크기보다 긴 값이 섞여 온다. 그래서 {@link #from}을 호출하면 문자열의 앞뒤 공백을 지우고, 빈 문자열은
- * null로 바꾸고, 열 크기를 넘는 값은 열 크기에 맞춰 자른다. 다만 홈페이지 주소는 자르면 열리지 않는 주소가 되므로 자르지 않고 버린다.
- *
- * <p>운영 상태와 휴장 기간은 원천이 준 대로 둔다. 휴장 시작일이 종료일보다 늦어도 거부하지 않는다.
- */
 record NormalizedPublicSpot(
         String externalId,
         String name,
@@ -38,9 +31,8 @@ record NormalizedPublicSpot(
         LocalDate sourceDate,
         Set<PublicSpotSetting> settings) {
 
-    // 열 크기는 spot, public_spot_detail 테이블 정의와 같다. MySQL VARCHAR는 바이트가 아니라 문자 수로 길이를 센다.
     static final int MAX_EXTERNAL_ID_LENGTH = 50;
-    static final int MAX_NAME_LENGTH = 100;
+    static final int MAX_NAME_LENGTH = Spot.NAME_MAX_LENGTH;
     static final int MAX_ADDRESS_LENGTH = 255;
     static final int MAX_CATEGORY_LENGTH = 50;
     static final int MAX_PHONE_LENGTH = 30;
@@ -51,10 +43,6 @@ record NormalizedPublicSpot(
     // 서버는 차이가 이 값(약 1cm) 이하이면 같은 좌표로 본다.
     static final double COORDINATE_TOLERANCE_DEGREES = 1e-7;
 
-    /**
-     * 호출하면 명령의 값을 다듬는다. 외부 ID나 이름이 비어 있거나, 외부 ID가 열 크기를 넘거나, 좌표가 기상청 격자 밖이면
-     * {@link IllegalArgumentException}을 던진다. 외부 ID는 원천 행을 찾는 열쇠라서 잘라서 저장하면 다른 행과 겹칠 수 있으므로 자르지 않는다.
-     */
     static NormalizedPublicSpot from(PublicSpotCommand command) {
         String externalId = requireText(command.externalId(), "외부 ID가 비어 있습니다.");
         if (lengthOf(externalId) > MAX_EXTERNAL_ID_LENGTH) {
@@ -79,7 +67,6 @@ record NormalizedPublicSpot(
                 command.settings());
     }
 
-    /** 호출하면 spot 테이블에 저장한 이름, 주소, 좌표 중 하나라도 이 값과 다른지 돌려준다. */
     boolean differsInSpotColumns(PublicSpotRow stored) {
         return !Objects.equals(name, stored.name())
                 || !Objects.equals(address, stored.address())
@@ -87,10 +74,6 @@ record NormalizedPublicSpot(
                 || !isSameDegree(location.longitude(), stored.longitude());
     }
 
-    /**
-     * 호출하면 public_spot_detail에 저장한 분류, 시설, 전화번호, 홈페이지, 운영 상태, 휴장 기간, 기준일 중 하나라도 이 값과 다른지 돌려준다. 값이 없는
-     * 쪽(null)과 있는 쪽은 다른 값으로 본다.
-     */
     boolean differsInDetailColumns(PublicSpotRow stored, Map<String, String> storedFacilities) {
         return !Objects.equals(category, stored.category())
                 || !Objects.equals(facilities, storedFacilities)
@@ -102,7 +85,6 @@ record NormalizedPublicSpot(
                 || !Objects.equals(sourceDate, stored.sourceDate());
     }
 
-    /** 호출하면 public_spot_setting에 저장한 입지가 이 값과 다른지 돌려준다. */
     boolean differsInSettings(Set<PublicSpotSetting> stored) {
         return !settings.equals(stored);
     }
@@ -148,7 +130,6 @@ record NormalizedPublicSpot(
         return value.strip();
     }
 
-    // 키 순서를 고정해 두면 같은 시설 정보가 언제나 같은 JSON 문자열이 된다. 값이 빈 항목은 정보가 없는 것과 같으므로 뺀다.
     private static SortedMap<String, String> normalizeFacilities(Map<String, String> source) {
         if (source == null) {
             return null;

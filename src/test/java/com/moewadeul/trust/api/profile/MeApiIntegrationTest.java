@@ -212,7 +212,6 @@ class MeApiIntegrationTest {
     void meReflectsIdentityVerification() {
         Cookie adult = verifiedSession(saveMember());
         Cookie minor = verifiedSession(saveMember());
-        // 테스트 시계는 한국 날짜로 2026-10-05라서, 2007년생은 성인이고 2008년생은 미성년이다.
         verifyIdentity(adult, 2007, "demo-adult");
         verifyIdentity(minor, 2008, "demo-minor");
 
@@ -258,8 +257,6 @@ class MeApiIntegrationTest {
         return session;
     }
 
-    // 실제 흐름대로 로그인한 세션에서 인증 코드를 확인해야 그 세션이 이메일 인증 권한을 얻는다.
-    // 코드 원값은 메일로만 나가므로, 테스트는 발송 처리기가 쓰는 서비스를 직접 불러 코드를 받는다.
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
         String code = emailVerificationService

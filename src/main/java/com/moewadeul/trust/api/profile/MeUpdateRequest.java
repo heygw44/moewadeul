@@ -4,14 +4,6 @@ import com.moewadeul.common.web.PatchField;
 import com.moewadeul.member.application.profile.MyInfoUpdateCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/**
- * 내 정보 수정 요청이다. 모든 필드가 선택이고, 필드를 빼는 것과 {@code null}을 보내는 것의 뜻이 다르다.
- * 서버는 요청에 없는 필드를 그대로 두고, {@code null}로 보낸 자기 신고 값은 지운다. 닉네임은 지울 수 없어서 서버가 {@code null}을 거부한다.
- *
- * <p>값의 형식(닉네임 길이, 허용된 연령대·성별 값)은 회원 모듈의 서비스가 검증한다. 이 요청은 받은 값을 그대로 넘긴다.
- *
- * <p>JSON에 빠진 필드를 Jackson이 Java {@code null}로 넘기는 경우가 있다. 그래서 생성자가 {@code null}을 "요청에 없음"으로 바꾼다.
- */
 public record MeUpdateRequest(
         @Schema(
                 implementation = String.class,

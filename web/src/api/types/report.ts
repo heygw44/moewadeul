@@ -19,7 +19,6 @@ export interface MemberReportCreateRequest {
   targetMemberId: number;
   basecampId: number;
   kind: ReportKind;
-  // 후기 신고(REVIEW)일 때만 보낸다.
   companionReviewId?: number;
   type: ReportType;
   content: string;

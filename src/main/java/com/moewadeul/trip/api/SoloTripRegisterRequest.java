@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
-// 날짜가 빠지거나 범위를 벗어나면 INVALID_INPUT이 아니라 일정 오류로 알려야 해서, 날짜는 여기서 검증하지 않고 도메인이 검사한다.
 public record SoloTripRegisterRequest(
         @Schema(description = "장소 ID", example = "101") @NotNull(message = "장소를 골라야 합니다.")
         Long spotId,

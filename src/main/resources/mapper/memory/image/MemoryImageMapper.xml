@@ -2,8 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.memory.infra.image.MemoryImageMapper">
 
-    <!-- 기록 안 순서(display_order)는 기록에 붙은 사진에만 있고, 기록마다 0부터 겹치지 않게 채운다. -->
-    <select id="selectByMemoryIds" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
+    <select id="selectByNonEmptyMemoryIds" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
         SELECT id AS image_id, memory_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM memory_image
         WHERE memory_id IN
@@ -30,7 +29,6 @@
         LIMIT #{limit}
     </select>
 
-    <!-- 읽은 뒤에 기록에 붙은 사진은 memory_id가 NULL이 아니라서 지워지지 않는다. -->
     <delete id="deleteIfUnattached">
         DELETE FROM memory_image
         WHERE id = #{imageId}

@@ -19,7 +19,6 @@ type LoadResult =
   | { memberId: number; attempt: number; memories: MemberMemorySummary[] }
   | { memberId: number; attempt: number; error: unknown };
 
-// 다른 회원이 공개한 기록만 약 1km로 줄인 좌표로 지도에 보여 준다.
 export function MemberMemoriesPage({ memberId }: { memberId: number }) {
   const session = useSession();
   const [attempt, setAttempt] = useState(0);
@@ -41,7 +40,6 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
     return () => controller.abort();
   }, [memberId, attempt, sessionReady]);
 
-  // 제목에 쓸 닉네임이다. 못 받아도 기록 보기에는 영향이 없어서 오류는 무시한다.
   useEffect(() => {
     const controller = new AbortController();
     fetchMemberProfile(memberId, controller.signal).then(

@@ -19,9 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// 테스트 설정(application-test.yml)이 휴양림과 공원 경계 픽스처 파일을 적재 경로로 지정해 둔다.
-// 실행기는 작업을 다른 스레드에서 돌리므로, 테스트는 실행 기록이 끝날 때까지 짧은 간격으로 다시 읽으며 기다린다.
-// 테스트가 끝나면 공통 확장이 테이블을 비우므로, 각 테스트는 시작한 작업이 끝난 것을 확인한 뒤에 끝낸다.
 @IntegrationTest
 class SyncJobLauncherIntegrationTest {
 
@@ -80,7 +77,7 @@ class SyncJobLauncherIntegrationTest {
     @Test
     @DisplayName("[F-06] 시작한 작업이 실패하면 실행 기록이 FAILED가 되고 오류 메시지가 남는다")
     void launchedJobFailureIsRecorded() throws InterruptedException {
-        // given: WireMock에 스텁이 없어서 고캠핑 API 호출이 실패한다.
+        // given
 
         // when
         long runId = syncJobLauncher.launch(SyncJobType.GOCAMPING, adminId);
@@ -157,13 +154,13 @@ class SyncJobLauncherIntegrationTest {
     @Test
     @DisplayName("[F-06] 공원 경계 적재가 성공하면 이어서 박지 재판정 실행 기록이 생겨 COMPLETED가 되고, 새 경계 안 박지에 공원 경고가 붙는다")
     void parkBoundaryLoadChainsBakjiRejudge() throws InterruptedException {
-        // given: 설정한 픽스처의 북한산 경계는 경도 126.9~127.0, 위도 37.6~37.7이다.
+        // given
         long spotId = insertBakji("북한산 안 박지", 37.65, 126.95);
 
         // when
         long runId = syncJobLauncher.launch(SyncJobType.PARK_BOUNDARY, adminId);
 
-        // then: 재판정은 적재 기록이 COMPLETED가 된 뒤에 시작하므로, 재판정 기록이 생길 때까지 따로 기다린다.
+        // then
         assertThat(awaitFinished(runId)).isEqualTo("COMPLETED");
         long rejudgeRunId = awaitRunOf(SyncJobType.BAKJI_REJUDGE);
         assertThat(awaitFinished(rejudgeRunId)).isEqualTo("COMPLETED");

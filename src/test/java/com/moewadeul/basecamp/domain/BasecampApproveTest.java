@@ -88,7 +88,6 @@ class BasecampApproveTest {
     @DisplayName("[F-13][BC-08] 모집 중이어도 정원이 이미 차 있으면 BASECAMP_FULL이다")
     void fullBasecampCannotApprove() {
         // given
-        // 정상 흐름에서는 정원이 차면 바로 마감되므로, 마감을 모집 중으로 되돌려 정원 검사만 따로 확인한다.
         Basecamp basecamp = aBasecamp().capacity(3).openOnly();
         BasecampBuilder.join(basecamp, MEMBER_ID);
         BasecampBuilder.apply(basecamp, APPLICANT_ID);

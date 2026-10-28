@@ -2,6 +2,7 @@ package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.trust.domain.CompanionReviewPolicy;
 import com.moewadeul.trust.domain.TrustErrorCode;
@@ -19,10 +20,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 신고 접수에서 트랜잭션 하나로 묶는 부분이다. 신고 저장, 임시 정지 기록, 회원 상태 변경을 함께 커밋하거나 함께 되돌린다.
- * 세션 삭제는 {@link MemberReportService}가 이 트랜잭션이 끝난 뒤에 한다.
- */
 @Service
 @RequiredArgsConstructor
 public class MemberReportApplier {
@@ -33,20 +30,6 @@ public class MemberReportApplier {
     private final MemberSuspensionService memberSuspensionService;
     private final Clock clock;
 
-    /**
-     * 호출하면 reporterId인 회원의 신고를 접수 상태로 저장한다. 긴급 유형은 언제나 긴급 신고로 저장하고, 신고자와 대상이 둘 다
-     * 그 베이스캠프의 멤버였던 적이 있으면(상태 무관, 캠프 리더 포함) 같은 트랜잭션에서 대상 회원을 72시간 임시 정지하고 그 기록을 남긴다.
-     * 어느 한쪽이라도 합류 신청만 했다면 신청만으로 상대를 바로 정지시킬 수 없도록 임시 정지는 하지 않는다.
-     *
-     * <p>다음 순서로 검사하고 처음 걸린 이유로 거부한다.
-     * <ol>
-     *   <li>신고 종류와 유형이 맞지 않거나, 후기 신고인데 후기 ID가 없거나, 회원 신고인데 후기 ID가 있으면 INVALID_INPUT
-     *   <li>자기 자신을 신고하면 REPORT_NOT_ELIGIBLE
-     *   <li>베이스캠프가 없거나, 신고자나 대상이 그 베이스캠프에 신청하거나 멤버였던 적이 없으면 REPORT_NOT_ELIGIBLE
-     *   <li>후기 신고인데 후기가 그 베이스캠프에서 대상이 신고자에게 쓴 숨기지 않은 후기가 아니거나 아직 공개되지 않았으면 REPORT_NOT_ELIGIBLE
-     *   <li>같은 신고를 이미 했으면 REPORT_DUPLICATED
-     * </ol>
-     */
     @Transactional
     public MemberReportResult apply(long reporterId, MemberReportCommand command) {
         requireConsistentKind(command);
@@ -105,7 +88,6 @@ public class MemberReportApplier {
         }
     }
 
-    // 신고자가 받은 후기여도 블라인드 공개 전이면 신고자는 그 내용을 볼 수 없다. 그래서 공개된 후기만 신고할 수 있다.
     private static boolean isReportableReview(MemberReportContextRow context, Instant now) {
         return context.reviewMatches()
                 && context.completedAt() != null
@@ -120,15 +102,10 @@ public class MemberReportApplier {
         }
     }
 
-    // 신고와 제재 행을 넣기 전에 회원 행의 쓰기 잠금부터 잡는다. 행을 넣으면 외래 키 때문에 신고자와 대상의 회원 행에 읽기 잠금이 걸리는데,
-    // 서로 다른 신고자가 같은 대상을 동시에 신고하면 둘 다 읽기 잠금을 쥔 채 쓰기 잠금을 기다리다가 데드락이 난다.
-    // 두 회원이 동시에 서로를 신고하는 경우에는 한쪽이 대상 행을, 다른 쪽이 신고자 행을 먼저 잡아 서로를 기다린다.
-    // 그래서 두 행을 항상 ID가 작은 쪽부터 잡아, 어느 신고든 같은 순서로 기다리게 한다.
     private Instant suspendTarget(long reporterId, long targetMemberId, Instant now) {
-        memberSuspensionService.lockForSanction(Math.min(reporterId, targetMemberId));
-        memberSuspensionService.lockForSanction(Math.max(reporterId, targetMemberId));
+        LockedMember target = memberSuspensionService.lockForSanctionAlongWith(targetMemberId, reporterId);
         Instant endsAt = now.plus(Sanction.TEMPORARY_SUSPENSION);
-        memberSuspensionService.suspendTemporarily(targetMemberId, endsAt);
+        memberSuspensionService.suspendTemporarily(target, endsAt);
         return endsAt;
     }
 }

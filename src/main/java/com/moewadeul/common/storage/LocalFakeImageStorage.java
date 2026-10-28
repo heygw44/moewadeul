@@ -8,10 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-/**
- * AWS 없이 로컬에서 개발할 때만 쓰는 가짜 저장소다. 파일을 저장하지 않고, 업로드 URL과 조회 URL도 실제로는 열리지 않는 주소다.
- * 발급한 업로드 URL의 키와 크기만 메모리에 기억해서, 글에 이미지를 붙이는 흐름이 로컬에서도 끝까지 돌게 한다.
- */
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(

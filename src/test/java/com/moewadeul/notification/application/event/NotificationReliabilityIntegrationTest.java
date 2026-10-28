@@ -188,7 +188,6 @@ class NotificationReliabilityIntegrationTest {
         return jdbcTemplate.queryForObject("SELECT MAX(id) FROM outbox_event", Long.class);
     }
 
-    // 호출하는 쪽의 트랜잭션 안에서 부른다.
     private void recordApprovedEvent(long applicantId, long basecampId) {
         recorder.record(
                 APPROVED,

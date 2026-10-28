@@ -18,7 +18,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class IdempotencyRecordCleanupIntegrationTest {
 
     private static final Duration ONE_SECOND = Duration.ofSeconds(1);
-    // DATETIME 컬럼에 UTC 시각을 문자열로 넣는다. 드라이버의 시간대 변환이 끼어들지 않게 하려는 것이다.
     private static final DateTimeFormatter DATETIME_UTC =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").withZone(ZoneOffset.UTC);
 

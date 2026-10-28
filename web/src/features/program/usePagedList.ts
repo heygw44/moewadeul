@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { serverTraceId, toUserMessage } from '../../api/errors';
 import type { Page } from '../../api/types';
 
-// traceId는 서버가 5xx로 답한 오류의 추적 ID다. 오류를 문구로만 들고 있어도 화면이 문의 번호를 보여 줄 수 있게 함께 둔다.
 type ListState<T, F> = {
   filter: F;
   items: T[];
@@ -18,17 +17,27 @@ export interface PagedList<T, F> {
   current: ListState<T, F> | null;
   loadingMore: boolean;
   loadMore: () => Promise<void>;
-  // 목록을 비우고 첫 쪽부터 다시 받는다.
   retry: () => void;
-  // 목록을 그대로 두고 첫 쪽부터 다시 받는다.
   reload: () => void;
 }
 
-// 필터가 바뀌면 처음부터 다시 받고, loadMore는 다음 페이지를 이어 붙인다.
-// reload는 목록을 비우지 않고 첫 페이지부터 다시 받는다. 목록 항목을 서버에서 바꾼 뒤(숨김·복구) 쪽 번호가 밀려
-// loadMore가 항목을 건너뛰지 않게 하려고 쓴다. 다시 받는 동안 이어 붙이던 loadMore 응답은 버린다.
-// current가 null이면 현재 필터의 첫 응답을 기다리는 중이다.
-export function usePagedList<T, F>(enabled: boolean, filter: F, fetcher: Fetcher<T, F>): PagedList<T, F> {
+type FilterValue = string | number | Readonly<Record<string, string | number | boolean | undefined>>;
+
+function useValueStable<V extends FilterValue>(value: V): V {
+  const [stable, setStable] = useState(value);
+  if (JSON.stringify(stable) !== JSON.stringify(value)) {
+    setStable(value);
+    return value;
+  }
+  return stable;
+}
+
+export function usePagedList<T, F extends FilterValue>(
+  enabled: boolean,
+  nextFilter: F,
+  fetcher: Fetcher<T, F>,
+): PagedList<T, F> {
+  const filter = useValueStable(nextFilter);
   const [state, setState] = useState<ListState<T, F> | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);

@@ -8,6 +8,7 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
+import com.moewadeul.member.domain.Nickname;
 import com.moewadeul.member.domain.SelfAgeGroup;
 import com.moewadeul.member.domain.SelfGender;
 import java.time.Clock;
@@ -29,7 +30,6 @@ public class MyInfoService {
         return MyInfo.from(loadMember(memberId));
     }
 
-    /** 호출하면 요청에 있는 필드만 바꾸고 바뀐 뒤의 내 정보를 돌려준다. 요청에 없는 필드는 그대로 둔다. */
     @Transactional
     public MyInfo update(long memberId, MyInfoUpdateCommand command) {
         Member member = loadMember(memberId);
@@ -53,8 +53,6 @@ public class MyInfoService {
         return memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 
-    // 닉네임은 회원마다 꼭 있어야 하는 값이라 null로 지울 수 없다.
-    // 지금 쓰는 닉네임을 그대로 보내면 바꿀 것이 없으므로, 서비스는 중복 검사도 하지 않고 그대로 성공시킨다.
     private void changeNickname(Member member, String nickname, Instant now) {
         if (nickname == null) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "닉네임은 지울 수 없어요.");
@@ -62,12 +60,11 @@ public class MyInfoService {
         if (nickname.equals(member.getNickname())) {
             return;
         }
-        Member.requireValidNickname(nickname);
-        // DB가 닉네임을 대소문자 구분 없이 비교하므로, 자기 닉네임의 대소문자만 바꾸는 요청도 중복으로 잡지 않게 본인 행을 뺀다.
-        if (memberRepository.existsByNicknameAndIdNot(nickname, member.getId())) {
+        Nickname validated = new Nickname(nickname);
+        if (memberRepository.existsByNicknameAndIdNot(validated, member.getId())) {
             throw new MemberException(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED);
         }
-        member.changeNickname(nickname, now);
+        member.changeNickname(validated.value(), now);
     }
 
     private static SelfAgeGroup parseSelfAgeGroup(String name) {
@@ -84,9 +81,6 @@ public class MyInfoService {
         return SelfGender.parse(name);
     }
 
-    // 중복 검사 뒤 커밋 전에 다른 회원이 같은 닉네임으로 먼저 바꿀 수 있다.
-    // 이 위반이 커밋 때 드러나면 서비스가 오류 코드로 바꿀 수 없어서 500이 나간다.
-    // 그래서 서비스는 트랜잭션 안에서 직접 flush해 위반을 여기서 드러내고 닉네임 중복 오류로 바꾼다.
     private void flushOrTranslate() {
         try {
             memberRepository.flush();

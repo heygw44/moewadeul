@@ -161,14 +161,12 @@ class PasswordChangeApiIntegrationTest {
         assertThat(loginRequest(member.getEmail(), NEW_PASSWORD)).hasStatus(HttpStatus.OK);
     }
 
-    // 회원을 만든 시각과 실패 시각이 같으면 잠금 계산이 그 실패를 비밀번호를 정하기 전의 것으로 보고 빼므로, 시계를 1초 옮겨 둔다.
     private Member saveMember() {
         Member member = memberRepository.save(aMember()
                 .email(TestSequence.email())
                 .passwordHash(passwordEncoder.encode(OLD_PASSWORD))
                 .now(clock.instant())
                 .build());
-        clock.advance(Duration.ofSeconds(1));
         return member;
     }
 

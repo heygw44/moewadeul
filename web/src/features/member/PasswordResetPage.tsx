@@ -23,7 +23,6 @@ import { useRetryCountdown } from './useRetryCountdown';
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
 
-// 재설정 메일의 링크는 `/password-reset#token=...`이다. 브라우저가 # 뒤를 서버로 보내지 않아서 접근 로그에 토큰이 남지 않는다.
 function tokenFromHash(hash: string): string | null {
   const token = new URLSearchParams(hash.slice(1)).get('token');
   return token && token.trim() !== '' ? token : null;
@@ -31,9 +30,7 @@ function tokenFromHash(hash: string): string | null {
 
 export function PasswordResetPage() {
   const { pathname, hash } = useLocation();
-  // 주소의 해시를 지운 뒤에도 토큰은 이 상태로 남는다.
   const [token, setToken] = useState<string | null>(() => tokenFromHash(hash));
-  // 요청 화면을 연 탭에서 메일 링크를 열면 해시만 바뀌고 화면은 그대로라서, 해시가 바뀔 때마다 토큰을 다시 읽는다.
   const [readHash, setReadHash] = useState(hash);
   if (hash !== readHash) {
     setReadHash(hash);
@@ -45,7 +42,6 @@ export function PasswordResetPage() {
     document.title = '비밀번호 재설정 · 뫼와들';
   }, []);
 
-  // 토큰을 읽은 뒤에는 주소창과 방문 기록에 남지 않게 해시를 지운다.
   useEffect(() => {
     if (hash !== '') navigate(pathname, { replace: true });
   }, [pathname, hash]);
@@ -62,7 +58,6 @@ function BackToLogin() {
   );
 }
 
-// 가입 여부와 상관없이 서버가 같은 응답을 주므로, 화면도 가입된 이메일일 때만 메일이 간다고 적는다.
 function RequestStep() {
   const [email, setEmail] = useState<EmailValue>(EMPTY_EMAIL);
   const [emailError, setEmailError] = useState<string | undefined>();
@@ -180,7 +175,6 @@ function ConfirmStep({ token, onTokenInvalid }: { token: string; onTokenInvalid:
       setNewPassword('');
       setNewPasswordConfirm('');
       setDone(true);
-      // 서버가 이 회원의 세션을 모두 지웠으므로, 이 브라우저에서 로그인돼 있었다면 화면의 로그인 상태도 비운다.
       void session.refresh();
     } catch (error) {
       handleError(error);

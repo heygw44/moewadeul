@@ -20,8 +20,6 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// 여러 스레드가 같은 순간에 실행을 시작하도록 모든 스레드가 준비될 때까지 기다렸다가 한꺼번에 출발시킨다.
-// 동시 실행 결과는 실행할 때마다 달라질 수 있어서, 각 경우를 여러 번 반복한다. 반복이 끝날 때마다 공통 확장이 테이블을 비운다.
 @IntegrationTest
 class SyncJobRunServiceConcurrencyIntegrationTest {
 
@@ -132,7 +130,6 @@ class SyncJobRunServiceConcurrencyIntegrationTest {
         return outcomes;
     }
 
-    // 이 테스트는 시작이 예외 없이 빈 값으로 끝나는지 확인한다. 그래서 어떤 예외가 나도 실패로 세려고 모든 런타임 예외를 결과로 모은다.
     private Outcome attemptBegin(SyncJobType jobType) {
         try {
             return new Outcome(

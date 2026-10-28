@@ -14,15 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 회원이 혼자 가는 일정을 등록하고, 자기 일정을 지운다.
- *
- * <p>일정을 등록할 수 있는 장소는 지도에 보이는(ACTIVE) 장소뿐이다. 베이스캠프와 달리 공원 경계 경고 박지도 막지 않는다. 다른 회원을 모으는 일이
- * 아니고, 장소 상세가 경고와 야영 금지 안내를 그대로 보여 주기 때문이다.
- *
- * <p>서비스는 회원의 진행 예정 일정을 저장하기 전에 읽어 개수와 밤 겹침을 확인한다. 그런데 같은 회원의 요청 두 개가 동시에 들어오면 서로의 새 일정을
- * 보지 못하고 둘 다 검사를 통과할 수 있다. 그래서 서비스는 등록 트랜잭션의 첫 쿼리로 회원 행을 잠가 같은 회원의 등록을 한 줄로 세운다.
- */
 @Service
 @RequiredArgsConstructor
 public class SoloTripCommandService {
@@ -32,12 +23,6 @@ public class SoloTripCommandService {
     private final SoloTripMemberLockMapper soloTripMemberLockMapper;
     private final Clock clock;
 
-    /**
-     * 호출하면 memberId인 회원의 일정을 저장하고 일정 ID를 돌려준다.
-     *
-     * <p>출발일이 내일부터 60일 안이 아니거나 1~3박이 아니면 SOLO_TRIP_SCHEDULE_INVALID로, 진행 예정 일정이 이미 3개면 SOLO_TRIP_LIMIT로,
-     * 그중 하나와 밤이 겹치면 SOLO_TRIP_OVERLAP으로 거부한다. 장소가 없거나 ACTIVE가 아니면 NOT_FOUND로 거부한다.
-     */
     @Transactional
     public long register(long memberId, SoloTripRegisterCommand command) {
         // 잠금이 트랜잭션의 첫 쿼리여야 한다. 그래야 아래 일정 조회가 잠금을 얻은 뒤의 스냅숏을 읽어서, 먼저 끝난 요청이 저장한 일정이 보인다.
@@ -55,7 +40,6 @@ public class SoloTripCommandService {
         return soloTripRepository.saveAndFlush(trip).getId();
     }
 
-    /** 호출하면 memberId인 회원의 일정을 지운다. 일정이 없으면 NOT_FOUND로, 다른 회원의 일정이면 ACCESS_DENIED로 거부한다. */
     @Transactional
     public void delete(long memberId, long soloTripId) {
         SoloTrip trip = soloTripRepository

@@ -7,25 +7,17 @@ import { AnnouncementBar } from '../features/program/AnnouncementBar';
 type HubLayoutProps = {
   title: string;
   description?: string;
-  // 제목 위에 놓는 이동 경로(뒤로 가기 링크 등)
   breadcrumb?: ReactNode;
-  // 제목 바로 아래 한 줄(분류, 글쓴이, 시각 같은 정보)
   meta?: ReactNode;
   actions?: ReactNode;
   tabs?: ReactNode;
   aside?: ReactNode;
-  // 'narrow'는 안내 열이 없을 때 본문 열을 max-w-2xl로 좁힌다(폼·카드가 퍼지지 않게). 띠와 본문 바깥 폭은 그대로다.
   width?: 'wide' | 'narrow';
-  // 공식 행사 알림 띠를 맨 위에 둘지 정한다. 행사 목록처럼 행사를 찾는 화면에서만 켠다.
-  // 작업하는 화면(내 정보, 알림, 커뮤니티 등)에 두면 할 일과 상관없는 홍보가 맨 위를 차지한다.
   announcement?: boolean;
-  // 본문 첫 판이 제목을 크게 보여 줄 때 켠다. 머리 띠에는 이동 경로만 남기고 제목(h1)은 스크린 리더에만 읽힌다.
   titleInContent?: boolean;
   children: ReactNode;
 };
 
-// 목록 중심 화면(커뮤니티, 공식 행사)의 틀이다. 큰 제목과 탭은 위 띠에 두고, 목록은 그 아래에 둔다.
-// 오른쪽 안내 열(aside)은 넓은 화면에서만 옆에 놓고, 좁은 화면에서는 목록 아래로 내려간다.
 export function HubLayout({
   title,
   description,
@@ -39,8 +31,6 @@ export function HubLayout({
   titleInContent = false,
   children,
 }: HubLayoutProps) {
-  // 머리 띠 안쪽과 본문은 같은 열을 쓴다. 그래야 제목·탭·오른쪽 버튼의 가장자리가 본문 가장자리와 맞는다.
-  // 좁은 화면은 그 열을 가운데의 max-w-2xl로 줄이고, 안내 열이 있거나 넓은 화면은 바깥 폭을 그대로 쓴다.
   const column = width === 'narrow' && !aside ? 'mx-auto w-full max-w-2xl' : '';
   return (
     <div className="flex min-h-dvh flex-col bg-canvas pb-(--bottom-nav-h)">
@@ -48,7 +38,6 @@ export function HubLayout({
       <SiteHeader />
       <div className="bg-canvas">
         <div className={`mx-auto max-w-screen-xl px-4 ${titleInContent ? 'pt-6' : 'pt-8'}`}>
-          {/* 제목 띠와 본문은 선 대신 간격으로 나눈다. */}
           <div className={column}>
             {breadcrumb && <div className="-mt-2 mb-1 text-sm text-ink-muted">{breadcrumb}</div>}
             <div
@@ -68,7 +57,6 @@ export function HubLayout({
         </div>
       </div>
       <div className="flex-1 bg-canvas">
-        {/* 안내 열이 없으면 두 열 격자를 쓰지 않는다. 쓰면 빈 오른쪽 열 폭만큼 본문이 머리 띠보다 좁아진다. */}
         <main
           className={`mx-auto max-w-screen-xl px-4 py-6 ${aside ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_18.75rem] lg:items-start lg:gap-12' : ''}`}
         >
@@ -82,8 +70,6 @@ export function HubLayout({
   );
 }
 
-// 안내 열의 한 묶음이다. 세이지 카드에 넣는다.
-// 본문 목록은 text-sm이고 항목 사이를 띄운다.
 export function AsideSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3 rounded-sheet bg-fill p-6">
@@ -93,7 +79,6 @@ export function AsideSection({ title, children }: { title: string; children: Rea
   );
 }
 
-// 목록이다. 판으로 감싸지 않고 항목 사이를 간격으로 나눈다. 항목은 hover와 고른 상태에서만 세이지 면을 깐다.
 export function ListPanel({ header, children }: { header?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">

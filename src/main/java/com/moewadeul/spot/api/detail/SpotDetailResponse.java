@@ -18,9 +18,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-// expectedPeople은 오늘부터 야영하는 밤별 인원이고, 인원이 있는 날짜만 날짜 순으로 준다. recruitingBasecamps는 모집 중인 베이스캠프만 출발일 순으로 준다.
-// 둘 다 없으면 빈 배열이다.
-// bakji.notice는 경고가 아닌 박지에만 내보낸다. parkWarning은 경고가 아니면 warned만 내보낸다. 날씨는 이 응답에 넣지 않고 SpotWeatherResponse로 따로 준다.
 public record SpotDetailResponse(
         long spotId,
         SpotType type,
@@ -62,7 +59,6 @@ public record SpotDetailResponse(
         }
     }
 
-    // 베이스캠프 검색 결과의 항목에서 장소와 상태, 신청 가능 여부를 뺀 모양이다. 신청 가능 여부는 로그인한 회원마다 달라서 베이스캠프 상세에서 본다.
     public record RecruitingBasecamp(
             long basecampId,
             String title,
@@ -173,7 +169,6 @@ public record SpotDetailResponse(
         }
     }
 
-    // 평균은 후기가 없으면 null이다. 후기 수는 항상 준다.
     public record Rating(Double average, long count) {
 
         static Rating from(SpotRating rating) {
@@ -183,7 +178,6 @@ public record SpotDetailResponse(
 
     public record Author(long memberId, String nickname) {}
 
-    // 후기 목록의 항목과 같은 모양이다. 작성자는 회원 ID와 닉네임만 내보낸다.
     public record RecentReview(
             long reviewId,
             Author author,

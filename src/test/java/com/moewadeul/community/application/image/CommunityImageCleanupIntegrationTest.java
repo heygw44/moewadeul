@@ -25,7 +25,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class CommunityImageCleanupIntegrationTest {
 
     private static final Duration ONE_SECOND = Duration.ofSeconds(1);
-    // DATETIME 컬럼에 UTC 시각을 문자열로 넣는다. 드라이버의 시간대 변환이 끼어들지 않게 하려는 것이다.
     private static final DateTimeFormatter DATETIME_UTC =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").withZone(ZoneOffset.UTC);
 
@@ -66,7 +65,7 @@ class CommunityImageCleanupIntegrationTest {
         long newer = insertImage(cutoff.plus(ONE_SECOND));
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);
@@ -88,7 +87,7 @@ class CommunityImageCleanupIntegrationTest {
         jdbc.update("UPDATE community_image SET post_id = ?, display_order = 0 WHERE id = ?", postId, attached);
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);
@@ -104,11 +103,11 @@ class CommunityImageCleanupIntegrationTest {
         long image = insertImage(clock.instant());
 
         // when
-        int before = cleanupService.deleteUnattached().deletedRows();
+        int before = cleanupService.deleteExpiredRowsThenObjects().deletedRows();
         clock.advance(CommunityImageCleanupService.RETENTION);
-        int atBoundary = cleanupService.deleteUnattached().deletedRows();
+        int atBoundary = cleanupService.deleteExpiredRowsThenObjects().deletedRows();
         clock.advance(ONE_SECOND);
-        int after = cleanupService.deleteUnattached().deletedRows();
+        int after = cleanupService.deleteExpiredRowsThenObjects().deletedRows();
 
         // then
         assertThat(before).isZero();
@@ -127,7 +126,7 @@ class CommunityImageCleanupIntegrationTest {
         storage.failDeleteOf(keyOf(failing));
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(2);
@@ -147,7 +146,7 @@ class CommunityImageCleanupIntegrationTest {
         storage.failDeleteOf(keyOf(failingOriginal));
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(2);
@@ -167,7 +166,7 @@ class CommunityImageCleanupIntegrationTest {
         }
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(total);
@@ -202,7 +201,6 @@ class CommunityImageCleanupIntegrationTest {
         return key.substring(0, key.length() - ".jpg".length()) + "_thumb.jpg";
     }
 
-    // 지워진 이미지의 키도 확인해야 해서 행을 만들 때 기록해 둔다.
     private String keyOf(long imageId) {
         return keys.get(imageId);
     }

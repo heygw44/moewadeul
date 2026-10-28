@@ -27,7 +27,6 @@ type SignupField = 'email' | 'password' | 'passwordConfirm' | 'nickname';
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
 
-// 서버가 특정 입력란 때문에 거절한 오류는 그 입력란 아래에 보여 준다.
 const FIELD_BY_CODE: Record<string, SignupField> = {
   MEMBER_EMAIL_DUPLICATED: 'email',
   MEMBER_DISPOSABLE_EMAIL: 'email',
@@ -60,7 +59,6 @@ export function SignupPage() {
     event.preventDefault();
     if (submitting) return;
 
-    // 비밀번호·닉네임 규칙은 서버가 검사한다. 화면은 빈 칸만 미리 막는다.
     const emptyErrors: Partial<Record<SignupField, string>> = {};
     const emailMissing = emailRequiredMessage(email);
     if (emailMissing) emptyErrors.email = emailMissing;
@@ -82,7 +80,6 @@ export function SignupPage() {
       return;
     }
 
-    // 가입하면 바로 로그인해서 인증 코드 화면으로 보낸다. 가입은 됐으므로 로그인에 실패하면 로그인 화면으로 보낸다.
     try {
       await login(credentials);
       await session.refresh();
@@ -92,14 +89,12 @@ export function SignupPage() {
     }
   }
 
-  // 확인 입력란을 벗어날 때 비밀번호와 다르면 바로 알린다. 입력하는 도중에는 알리지 않는다.
   function handlePasswordConfirmBlur() {
     if (passwordConfirm !== '' && passwordConfirm !== password) {
       setFieldErrors((current) => ({ ...current, passwordConfirm: PASSWORD_CONFIRM_MISMATCH }));
     }
   }
 
-  // 보이던 오류는 두 값이 같아지면 바로 지운다.
   function handlePasswordConfirmChange(value: string) {
     setPasswordConfirm(value);
     if (fieldErrors.passwordConfirm && value === password) {

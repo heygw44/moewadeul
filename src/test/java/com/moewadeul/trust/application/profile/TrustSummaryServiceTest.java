@@ -107,7 +107,6 @@ class TrustSummaryServiceTest {
     void yearBoundaryFollowsKoreaTime() {
         stubRecord(NO_RECORD);
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2007)));
-        // 2007년생은 2026년에 성인이므로 경계는 2025년에서 2026년으로 넘어갈 때다.
         assertThat(serviceAt("2025-12-31T14:59:59Z").summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, 0));
         assertThat(serviceAt("2025-12-31T15:00:00Z").summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, 1));
     }
@@ -140,7 +139,7 @@ class TrustSummaryServiceTest {
     @Test
     @DisplayName("[PV-01][TR-01] 탈퇴해서 출생연도·성별을 지운 본인확인 기록이면 상세는 오류 없이 단계 0이고 연령대·성별이 없다")
     void detailOfWithdrawnRecordHasNoVerifiedValues() {
-        // given: 회원이 탈퇴해서 본인확인 기록의 출생연도와 성별이 지워졌다. CI 해시는 보관 기한까지 남는다.
+        // given
         stubRecord(NO_RECORD);
         IdentityVerification withdrawn = recordBornIn(2000);
         withdrawn.withdraw(MutableClock.DEFAULT_INSTANT.plus(Duration.ofDays(30)), MutableClock.DEFAULT_INSTANT);
