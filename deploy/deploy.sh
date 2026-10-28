@@ -24,6 +24,9 @@ readonly CADDY_REPO=ghcr.io/heygw44/moewadeul-caddy
 readonly HEALTH_URL=http://127.0.0.1:8080/actuator/health
 # 앱은 시작할 때 Flyway 마이그레이션을 실행하므로, 처음 배포하거나 마이그레이션이 많으면 시간이 걸린다.
 readonly HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-240}"
+# 시작하다 죽는 앱은 restart 정책으로 계속 다시 뜬다. 상태 확인 주소만 보면 그동안 제한 시간을 다 기다리고, 옛 앱은 이미 내려가 있어 502가 이어진다.
+# 다시 시작한 횟수가 이보다 많으면 기다리지 않고 실패로 본다.
+readonly MAX_APP_RESTARTS="${MAX_APP_RESTARTS:-2}"
 
 # Parameter Store 이름(접두사 뒤) → .env 변수 이름
 declare -rA SECRET_PARAMS=(
@@ -42,6 +45,9 @@ readonly ALLOY_CONFIG_FILE="$DEPLOY_DIR/alloy/config.alloy"
 readonly ALLOY_CONTAINER_CONFIG=/etc/alloy/config.alloy
 readonly BACKUP_METRICS_FILE="$DEPLOY_DIR/metrics/backup.prom"
 readonly SYSTEMD_DIR=/etc/systemd/system
+readonly MYSQL_SLOW_LOG_DIR="$DEPLOY_DIR/mysql-log"
+readonly MYSQL_UID=999
+readonly LOGROTATE_FILE=/etc/logrotate.d/moewadeul-mysql-slow
 
 declare -A secrets=()
 declare -A server_env=()
@@ -144,11 +150,21 @@ check_image_architecture() {
     done
 }
 
+app_restart_count() {
+    local id
+    id="$(compose ps -a -q app 2> /dev/null)" && [[ -n "$id" ]] || return 1
+    docker inspect -f '{{.RestartCount}}' "$id" 2> /dev/null
+}
+
 # 앱의 상태 확인 주소가 200을 줄 때까지 기다린 뒤, caddy가 HTTP 요청에 응답하는지 본다.
 # caddy는 80번 요청에 HTTPS로 넘기는 응답(308)을 준다. 인증서 발급은 Let's Encrypt 상황에 따라 늦어질 수 있어서 HTTPS는 확인하지 않는다.
 wait_healthy() {
-    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) code
+    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) code restarts
     until curl -fsS -o /dev/null --max-time 5 "$HEALTH_URL" 2>/dev/null; do
+        if restarts="$(app_restart_count)" && ((restarts > MAX_APP_RESTARTS)); then
+            log "앱이 시작하다 ${restarts}번 다시 시작했다"
+            return 1
+        fi
         if ((SECONDS >= deadline)); then
             log "앱이 ${HEALTH_TIMEOUT_SECONDS}초 안에 정상 상태가 되지 않았다"
             return 1
@@ -242,6 +258,26 @@ install_backup_timer() {
     fi
 }
 
+# 폴더가 없으면 Docker가 root 소유로 만들어 MySQL이 기록을 끈다.
+# MySQL은 파일을 연 채 계속 쓰므로, logrotate는 파일을 옮기지 않고 복사한 뒤 비운다(copytruncate).
+prepare_mysql_slow_log() {
+    if ! install -d -o "$MYSQL_UID" -g "$MYSQL_UID" -m 700 "$MYSQL_SLOW_LOG_DIR"; then
+        log "MySQL 느린 쿼리 기록 폴더를 만들지 못했다. 서비스는 정상이고 기록만 빠진다"
+        return
+    fi
+    if ! printf '%s\n' \
+        "$MYSQL_SLOW_LOG_DIR/slow.log {" \
+        "    size 20M" \
+        "    rotate 2" \
+        "    copytruncate" \
+        "    compress" \
+        "    missingok" \
+        "    notifempty" \
+        "}" > "$LOGROTATE_FILE"; then
+        log "느린 쿼리 기록의 logrotate 설정을 쓰지 못했다. 기록 파일이 계속 커질 수 있다"
+    fi
+}
+
 main() {
     local tag="${1:-}"
     if [[ ! "$tag" =~ ^[A-Za-z0-9._-]{1,128}$ ]]; then
@@ -266,6 +302,7 @@ main() {
         exit 1
     fi
 
+    prepare_mysql_slow_log
     if start "$tag"; then
         echo "$tag" > "$LAST_TAG_FILE"
         ensure_exporter_user
