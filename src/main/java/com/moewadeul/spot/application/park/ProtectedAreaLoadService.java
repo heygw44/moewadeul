@@ -7,12 +7,11 @@ import com.moewadeul.spot.infra.park.ProtectedAreaUpdateRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,17 +27,18 @@ public class ProtectedAreaLoadService {
     public ProtectedAreaUpsertResult upsert(
             ProtectedAreaSource source, LocalDate sourceDate, List<ProtectedAreaCommand> commands) {
         requireUniqueKeys(commands);
-        Map<AreaKey, List<Long>> storedIds = findStoredIds(source);
+        Map<AreaKey, Long> storedIds = findStoredIds(source);
         Instant now = Instant.now(clock);
         int inserted = 0;
         for (ProtectedAreaCommand command : commands) {
-            List<Long> ids = storedIds.get(AreaKey.of(command));
-            if (ids == null) {
+            Long id = storedIds.get(AreaKey.of(command));
+            if (id == null) {
                 protectedAreaMapper.insert(toInsertRow(source, sourceDate, command), now);
                 inserted++;
                 continue;
             }
-            updateAll(ids, sourceDate, command, now);
+            protectedAreaMapper.updateBoundary(
+                    new ProtectedAreaUpdateRow(id, sourceDate, command.multiPolygonWkt()), now);
         }
         return new ProtectedAreaUpsertResult(inserted, commands.size() - inserted);
     }
@@ -53,21 +53,9 @@ public class ProtectedAreaLoadService {
         }
     }
 
-    private Map<AreaKey, List<Long>> findStoredIds(ProtectedAreaSource source) {
-        Map<AreaKey, List<Long>> storedIds = new HashMap<>();
-        for (ProtectedAreaKeyRow row : protectedAreaMapper.selectKeysBySource(source.name())) {
-            storedIds
-                    .computeIfAbsent(new AreaKey(row.areaType(), row.name()), key -> new ArrayList<>())
-                    .add(row.id());
-        }
-        return storedIds;
-    }
-
-    private void updateAll(List<Long> ids, LocalDate sourceDate, ProtectedAreaCommand command, Instant now) {
-        for (long id : ids) {
-            protectedAreaMapper.updateBoundary(
-                    new ProtectedAreaUpdateRow(id, sourceDate, command.multiPolygonWkt()), now);
-        }
+    private Map<AreaKey, Long> findStoredIds(ProtectedAreaSource source) {
+        return protectedAreaMapper.selectKeysBySource(source.name()).stream()
+                .collect(Collectors.toMap(row -> new AreaKey(row.areaType(), row.name()), ProtectedAreaKeyRow::id));
     }
 
     private static ProtectedAreaInsertRow toInsertRow(
