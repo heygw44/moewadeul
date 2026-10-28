@@ -129,6 +129,30 @@ loki.source.docker "containers" {
 	forward_to = [loki.write.grafana_cloud.receiver]
 }
 
+// 앱은 값을 SQL에 넣어 보내서 기록에 이메일 같은 값이 남을 수 있다. 그래서 따옴표로 감싼 문자열 값은 모두 '?'로 바꿔 보낸다.
+local.file_match "mysql_slow" {
+	path_targets = [{"__path__" = "/host/mysql-log/slow.log", "instance" = "moewadeul-prod", "service" = "mysql-slow"}]
+}
+
+loki.source.file "mysql_slow" {
+	targets    = local.file_match.mysql_slow.targets
+	forward_to = [loki.process.mysql_slow.receiver]
+}
+
+loki.process "mysql_slow" {
+	stage.multiline {
+		firstline     = "^# Time: "
+		max_wait_time = "3s"
+	}
+
+	stage.replace {
+		expression = "('(?:[^'\\\\]|\\\\.)*')"
+		replace    = "'?'"
+	}
+
+	forward_to = [loki.write.grafana_cloud.receiver]
+}
+
 loki.write "grafana_cloud" {
 	endpoint {
 		url = sys.env("GRAFANA_LOKI_URL")

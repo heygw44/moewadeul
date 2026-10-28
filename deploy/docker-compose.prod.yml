@@ -85,6 +85,10 @@ services:
       - --innodb-log-buffer-size=16M
       # 앱 커넥션 풀 10개와 지표 수집, 백업이 쓰는 연결이면 충분하다.
       - --max-connections=40
+      # 0.2초를 넘는 쿼리를 기록한다. 기본값 10초에서는 1~3초씩 걸리던 스케줄 작업의 표 전체 읽기가 보이지 않았다(#655).
+      - --slow-query-log=ON
+      - --long-query-time=0.2
+      - --slow-query-log-file=/var/log/mysql-slow/slow.log
       - --performance-schema-digests-size=1000
       - --performance-schema-events-statements-history-long-size=0
       - --performance-schema-events-stages-history-long-size=0
@@ -100,6 +104,7 @@ services:
     # 포트를 열지 않는다. 앱은 Compose 내부 네트워크로만 접속한다.
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./mysql-log:/var/log/mysql-slow
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 5s
@@ -135,6 +140,7 @@ services:
       - /:/host/root:ro
       # DB 백업 스크립트가 남기는 지표 파일(backup.prom)을 읽는다.
       - ./metrics:/host/textfile:ro
+      - ./mysql-log:/host/mysql-log:ro
       # 컨테이너를 찾고 로그를 읽으려고 Docker 소켓을 붙인다. 이 소켓을 가진 컨테이너는 사실상 서버 root 권한을 가진다.
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
