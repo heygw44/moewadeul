@@ -13,6 +13,7 @@ import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.verification.VerificationCode;
 import com.moewadeul.member.infra.MemberJpaRepository;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -223,6 +224,22 @@ class EmailVerificationServiceIntegrationTest {
         assertThatThrownBy(() -> emailVerificationService.verify(member.getId(), code))
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         assertThatThrownBy(() -> emailVerificationService.verify(member.getId(), wrongCodeFor(code)))
+                .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_ALREADY_VERIFIED);
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-02] 회원은 아직 UNVERIFIED로 읽혔지만 동시 요청이 최신 코드를 먼저 인증했으면 EMAIL_ALREADY_VERIFIED다")
+    void codeVerifiedByConcurrentRequestIsAlreadyVerified() {
+        // given
+        Member member = newMember();
+        String code = issue(member);
+        jdbc.update(
+                "UPDATE email_verification SET verified_at = ? WHERE member_id = ?",
+                Timestamp.from(clock.instant()),
+                member.getId());
+
+        // when & then
+        assertThatThrownBy(() -> emailVerificationService.verify(member.getId(), code))
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_ALREADY_VERIFIED);
     }
 

@@ -108,7 +108,7 @@ public class EmailVerificationService {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> memberNotFound(memberId));
         rejectIfAlreadyVerified(member);
 
-        EmailVerification verification = findLatestUnverified(memberId, code);
+        EmailVerification verification = findLatest(memberId, code);
         rejectIfExpiredOrExhausted(verification, now);
         if (!verification.matches(code)) {
             rejectWrongCode(verification, now);
@@ -119,14 +119,17 @@ public class EmailVerificationService {
         return new VerificationResult(MemberStatus.ACTIVE);
     }
 
-    private EmailVerification findLatestUnverified(long memberId, String code) {
+    private EmailVerification findLatest(long memberId, String code) {
         if (!VerificationCode.isWellFormed(code)) {
             throw new MemberException(MemberErrorCode.EMAIL_CODE_INVALID);
         }
-        return emailVerificationRepository
+        EmailVerification latest = emailVerificationRepository
                 .findLatestByMemberId(memberId)
-                .filter(found -> !found.isVerified())
                 .orElseThrow(() -> new MemberException(MemberErrorCode.EMAIL_CODE_INVALID));
+        if (latest.isVerified()) {
+            throw new MemberException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
+        }
+        return latest;
     }
 
     private void rejectIfExpiredOrExhausted(EmailVerification verification, Instant now) {
