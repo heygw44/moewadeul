@@ -2,6 +2,7 @@ package com.moewadeul.common.idempotency;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -16,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -33,7 +33,7 @@ public class IdempotencyExecutor {
 
     public <T> T execute(
             IdempotentRequest request, HttpStatus successStatus, Class<T> responseType, Supplier<T> action) {
-        requireNoTransaction();
+        OutsideTransaction.require("멱등성 기록은 작업과 따로 커밋해야 한다.");
         String key = validateKey(request.key());
         String requestHash = hash(request);
 
@@ -52,12 +52,6 @@ public class IdempotencyExecutor {
         T result = runAction(record, action);
         recordCompletion(record, successStatus, result, request.memberId());
         return result;
-    }
-
-    private void requireNoTransaction() {
-        if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("멱등성 처리는 트랜잭션 밖에서 호출해야 합니다.");
-        }
     }
 
     private String validateKey(String key) {

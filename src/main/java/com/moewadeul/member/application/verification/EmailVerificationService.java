@@ -4,6 +4,7 @@ import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.outbox.OutboxEventJpaRepository;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.outbox.OutboxEventStatus;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.application.EmailVerificationEvents;
 import com.moewadeul.member.application.MemberMetrics;
 import com.moewadeul.member.domain.Member;
@@ -19,7 +20,6 @@ import com.moewadeul.member.domain.verification.SendWindow;
 import com.moewadeul.member.domain.verification.VerificationCode;
 import com.moewadeul.member.infra.verification.EmailVerificationIpLockMapper;
 import com.moewadeul.member.infra.verification.EmailVerificationMapper;
-import com.moewadeul.member.infra.verification.MemberActivationMapper;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
@@ -30,7 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 @Slf4j
 @Service
@@ -41,7 +40,7 @@ public class EmailVerificationService {
     private final EmailVerificationRepository emailVerificationRepository;
     private final EmailVerificationMapper emailVerificationMapper;
     private final EmailVerificationIpLockMapper ipLockMapper;
-    private final MemberActivationMapper memberActivationMapper;
+    private final EmailVerificationActivator emailVerificationActivator;
     private final OutboxEventRecorder outboxEventRecorder;
     private final OutboxEventJpaRepository outboxEventRepository;
     private final MemberMetrics memberMetrics;
@@ -103,8 +102,8 @@ public class EmailVerificationService {
                 new EmailVerificationEvents.Payload(requestIp));
     }
 
-    @Transactional(noRollbackFor = MemberException.class)
     public VerificationResult verify(long memberId, String code) {
+        OutsideTransaction.require("트랜잭션 안이면 틀린 코드로 올린 시도 횟수가 예외와 함께 롤백된다.");
         Instant now = Instant.now(clock);
         Member member = memberRepository.findById(memberId).orElseThrow(() -> memberNotFound(memberId));
         rejectIfAlreadyVerified(member);
@@ -114,7 +113,9 @@ public class EmailVerificationService {
         if (!verification.matches(code)) {
             rejectWrongCode(verification, now);
         }
-        activate(verification, memberId, now);
+        emailVerificationActivator.activate(verification.getId(), memberId, now);
+        log.info("email verified memberId={}", memberId);
+        memberMetrics.recordEmailVerified();
         return new VerificationResult(MemberStatus.ACTIVE);
     }
 
@@ -144,20 +145,6 @@ public class EmailVerificationService {
             throw new MemberException(MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
         }
         throw new MemberException(MemberErrorCode.EMAIL_CODE_INVALID);
-    }
-
-    private void activate(EmailVerification verification, long memberId, Instant now) {
-        int verified =
-                emailVerificationMapper.markVerified(verification.getId(), EmailVerificationPolicy.MAX_ATTEMPTS, now);
-        if (verified == 0) {
-            throw new MemberException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
-        }
-        if (memberActivationMapper.activate(memberId, now) == 0) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            throw new MemberException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
-        }
-        log.info("email verified memberId={}", memberId);
-        memberMetrics.recordEmailVerified();
     }
 
     private ResendHistory loadResendHistory(long memberId, SendWindow sentByIp, Instant now) {
