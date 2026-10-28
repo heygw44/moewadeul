@@ -7,7 +7,8 @@ JOIN (
     FROM protected_area
     GROUP BY source, area_type, name
 ) k ON k.source = pa.source AND k.area_type = pa.area_type AND k.name = pa.name
-SET s.protected_area_id = k.keep_id
+SET s.protected_area_id = k.keep_id,
+    s.version = s.version + 1
 WHERE s.protected_area_id <> k.keep_id;
 
 DELETE pa

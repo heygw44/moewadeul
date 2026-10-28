@@ -64,6 +64,8 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
         assertThat(protectedAreaIdOf(spotOnDuplicate)).isEqualTo(kept);
         assertThat(protectedAreaIdOf(spotOnKept)).isEqualTo(kept);
         assertThat(protectedAreaIdOf(spotOnUnrelated)).isEqualTo(unrelated);
+        assertThat(versionOf(spotOnDuplicate)).isEqualTo(1);
+        assertThat(versionOf(spotOnKept)).isZero();
     }
 
     @Test
@@ -110,6 +112,10 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
                         + " 'ACTIVE', NOW(6), NOW(6))",
                 protectedAreaId);
         return jdbcTemplate.queryForObject("SELECT MAX(id) FROM spot", Long.class);
+    }
+
+    private long versionOf(long spotId) {
+        return jdbcTemplate.queryForObject("SELECT version FROM spot WHERE id = ?", Long.class, spotId);
     }
 
     private long protectedAreaIdOf(long spotId) {
