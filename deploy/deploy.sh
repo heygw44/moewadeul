@@ -45,6 +45,9 @@ readonly ALLOY_CONFIG_FILE="$DEPLOY_DIR/alloy/config.alloy"
 readonly ALLOY_CONTAINER_CONFIG=/etc/alloy/config.alloy
 readonly BACKUP_METRICS_FILE="$DEPLOY_DIR/metrics/backup.prom"
 readonly SYSTEMD_DIR=/etc/systemd/system
+readonly MYSQL_SLOW_LOG_DIR="$DEPLOY_DIR/mysql-log"
+readonly MYSQL_UID=999
+readonly LOGROTATE_FILE=/etc/logrotate.d/moewadeul-mysql-slow
 
 declare -A secrets=()
 declare -A server_env=()
@@ -255,6 +258,26 @@ install_backup_timer() {
     fi
 }
 
+# 폴더가 없으면 Docker가 root 소유로 만들어 MySQL이 기록을 끈다.
+# MySQL은 파일을 연 채 계속 쓰므로, logrotate는 파일을 옮기지 않고 복사한 뒤 비운다(copytruncate).
+prepare_mysql_slow_log() {
+    if ! install -d -o "$MYSQL_UID" -g "$MYSQL_UID" -m 700 "$MYSQL_SLOW_LOG_DIR"; then
+        log "MySQL 느린 쿼리 기록 폴더를 만들지 못했다. 서비스는 정상이고 기록만 빠진다"
+        return
+    fi
+    if ! printf '%s\n' \
+        "$MYSQL_SLOW_LOG_DIR/slow.log {" \
+        "    size 20M" \
+        "    rotate 2" \
+        "    copytruncate" \
+        "    compress" \
+        "    missingok" \
+        "    notifempty" \
+        "}" > "$LOGROTATE_FILE"; then
+        log "느린 쿼리 기록의 logrotate 설정을 쓰지 못했다. 기록 파일이 계속 커질 수 있다"
+    fi
+}
+
 main() {
     local tag="${1:-}"
     if [[ ! "$tag" =~ ^[A-Za-z0-9._-]{1,128}$ ]]; then
@@ -279,6 +302,7 @@ main() {
         exit 1
     fi
 
+    prepare_mysql_slow_log
     if start "$tag"; then
         echo "$tag" > "$LAST_TAG_FILE"
         ensure_exporter_user
