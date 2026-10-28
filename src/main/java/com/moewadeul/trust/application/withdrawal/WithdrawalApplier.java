@@ -24,7 +24,7 @@ public class WithdrawalApplier {
 
     @Transactional
     public void apply(long memberId) {
-        memberWithdrawalService.withdraw(memberId);
+        memberWithdrawalService.lockAndWithdraw(memberId);
         Instant now = clock.instant();
         identityVerificationRepository.findByMemberId(memberId).ifPresent(identity -> {
             boolean hasSanctionHistory =

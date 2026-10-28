@@ -52,7 +52,7 @@ public class MemberWithdrawalService {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void withdraw(long memberId) {
+    public void lockAndWithdraw(long memberId) {
         Member member = memberRepository.findByIdForUpdate(memberId).orElse(null);
         if (member == null || member.getStatus() == MemberStatus.WITHDRAWN) {
             throw new MemberException(MemberErrorCode.LOGIN_FAILED);
