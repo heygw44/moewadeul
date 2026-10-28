@@ -16,7 +16,7 @@ public record ReceivedCompanionReview(
         String comment,
         Instant createdAt) {
 
-    static ReceivedCompanionReview sealed(long basecampId) {
+    public static ReceivedCompanionReview sealed(long basecampId) {
         return new ReceivedCompanionReview(basecampId, false, null, null, null, null, null, null, null, null);
     }
 }

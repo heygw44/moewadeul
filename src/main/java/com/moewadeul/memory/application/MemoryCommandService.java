@@ -10,10 +10,10 @@ import org.springframework.stereotype.Service;
 public class MemoryCommandService {
 
     private final MemoryWriter memoryWriter;
-    private final MemoryImageAttachmentChecker memoryImageAttachmentChecker;
+    private final MemoryImageAttachmentPrecheck memoryImageAttachmentPrecheck;
 
     public long write(long memberId, MemoryWriteCommand command) {
-        memoryImageAttachmentChecker.verify(memberId, null, command.imageIds());
+        memoryImageAttachmentPrecheck.verify(memberId, null, command.imageIds());
         return memoryWriter.write(memberId, command);
     }
 
@@ -22,9 +22,9 @@ public class MemoryCommandService {
         if (imageIds.present()) {
             memoryWriter.requireOwnMemory(memberId, memoryId);
             if (imageIds.value() == null) {
-                throw MemoryImageAttachmentChecker.invalid("imageIds는 비울 수 없어요. 사진을 모두 떼려면 빈 배열을 보내 주세요.");
+                throw MemoryImageAttachmentPrecheck.invalid("imageIds는 비울 수 없어요. 사진을 모두 떼려면 빈 배열을 보내 주세요.");
             }
-            memoryImageAttachmentChecker.verify(memberId, memoryId, imageIds.value());
+            memoryImageAttachmentPrecheck.verify(memberId, memoryId, imageIds.value());
         }
         return memoryWriter.revise(memberId, memoryId, command);
     }

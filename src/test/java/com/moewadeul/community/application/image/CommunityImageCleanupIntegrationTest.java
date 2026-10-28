@@ -65,7 +65,7 @@ class CommunityImageCleanupIntegrationTest {
         long newer = insertImage(cutoff.plus(ONE_SECOND));
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);
@@ -87,7 +87,7 @@ class CommunityImageCleanupIntegrationTest {
         jdbc.update("UPDATE community_image SET post_id = ?, display_order = 0 WHERE id = ?", postId, attached);
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);
@@ -103,11 +103,11 @@ class CommunityImageCleanupIntegrationTest {
         long image = insertImage(clock.instant());
 
         // when
-        int before = cleanupService.deleteUnattached().deletedRows();
+        int before = cleanupService.deleteExpiredRowsThenObjects().deletedRows();
         clock.advance(CommunityImageCleanupService.RETENTION);
-        int atBoundary = cleanupService.deleteUnattached().deletedRows();
+        int atBoundary = cleanupService.deleteExpiredRowsThenObjects().deletedRows();
         clock.advance(ONE_SECOND);
-        int after = cleanupService.deleteUnattached().deletedRows();
+        int after = cleanupService.deleteExpiredRowsThenObjects().deletedRows();
 
         // then
         assertThat(before).isZero();
@@ -126,7 +126,7 @@ class CommunityImageCleanupIntegrationTest {
         storage.failDeleteOf(keyOf(failing));
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(2);
@@ -146,7 +146,7 @@ class CommunityImageCleanupIntegrationTest {
         storage.failDeleteOf(keyOf(failingOriginal));
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(2);
@@ -166,7 +166,7 @@ class CommunityImageCleanupIntegrationTest {
         }
 
         // when
-        CommunityImageCleanupService.Result result = cleanupService.deleteUnattached();
+        CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(total);

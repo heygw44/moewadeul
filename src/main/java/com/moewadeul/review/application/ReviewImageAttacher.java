@@ -53,7 +53,7 @@ class ReviewImageAttacher {
         boolean attachable =
                 image != null && image.isUploadedBy(memberId) && (!image.isAttached() || image.isAttachedTo(reviewId));
         if (!attachable) {
-            throw ReviewImageAttachmentChecker.invalid(ReviewImageAttachmentChecker.UNUSABLE_MESSAGE);
+            throw ReviewImageAttachmentPrecheck.invalid(ReviewImageAttachmentPrecheck.UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
         return image;
     }

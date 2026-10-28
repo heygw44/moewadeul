@@ -1,3 +1,5 @@
 package com.moewadeul.community.application.report;
 
-public record CommunityReportCommand(String reason, String content) {}
+import com.moewadeul.community.domain.report.CommunityReportReason;
+
+public record CommunityReportCommand(CommunityReportReason reason, String content) {}

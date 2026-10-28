@@ -11,5 +11,9 @@ public interface AdminMemoryMapper {
     List<AdminMemoryRow> selectMemories(
             @Param("status") String status, @Param("offset") long offset, @Param("limit") int limit);
 
-    List<AdminMemoryRecentReportRow> selectRecentReports(@Param("memoryIds") Collection<Long> memoryIds);
+    default List<AdminMemoryRecentReportRow> selectRecentReports(Collection<Long> memoryIds) {
+        return memoryIds.isEmpty() ? List.of() : selectRecentReportsOfNonEmpty(memoryIds);
+    }
+
+    List<AdminMemoryRecentReportRow> selectRecentReportsOfNonEmpty(@Param("memoryIds") Collection<Long> memoryIds);
 }

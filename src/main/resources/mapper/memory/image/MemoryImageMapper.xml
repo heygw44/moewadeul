@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.memory.infra.image.MemoryImageMapper">
 
-    <select id="selectByMemoryIds" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
+    <select id="selectByNonEmptyMemoryIds" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
         SELECT id AS image_id, memory_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM memory_image
         WHERE memory_id IN

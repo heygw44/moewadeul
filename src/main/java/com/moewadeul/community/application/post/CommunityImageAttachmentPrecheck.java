@@ -13,10 +13,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-class CommunityImageAttachmentChecker {
+class CommunityImageAttachmentPrecheck {
 
     static final String FIELD = "imageIds";
-    static final String UNUSABLE_MESSAGE = "붙일 수 없는 이미지가 있어요.";
+    static final String UNUSABLE_MESSAGE_FOR_ANY_REASON = "붙일 수 없는 이미지가 있어요.";
 
     private final CommunityImageRepository communityImageRepository;
     private final ImageStorage imageStorage;
@@ -45,16 +45,16 @@ class CommunityImageAttachmentChecker {
             throw invalid("같은 이미지를 두 번 붙일 수 없어요.");
         }
         if (imageIds.stream().anyMatch(id -> id == null)) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
     }
 
     private static void requireAttachable(CommunityImage image, long memberId, Long postId) {
         if (image == null || !image.isUploadedBy(memberId)) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
         if (image.isAttached() && !isAttachedTo(image, postId)) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
     }
 
@@ -66,7 +66,7 @@ class CommunityImageAttachmentChecker {
         boolean uploaded = isUploaded(image.getObjectKey(), image.getSizeBytes())
                 && (!image.hasThumbnail() || isUploaded(image.getThumbnailObjectKey(), image.getThumbnailSizeBytes()));
         if (!uploaded) {
-            throw invalid(UNUSABLE_MESSAGE);
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
     }
 

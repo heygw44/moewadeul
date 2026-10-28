@@ -10,7 +10,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.assertj.core.api.Assertions.tuple;
-import static org.awaitility.Awaitility.await;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
@@ -27,7 +26,6 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Arrays;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -241,8 +239,7 @@ class GoCampingClientIntegrationTest {
         assertThat(thrown).hasMessageContaining("I/O 오류");
         assertNoServiceKey(thrown);
         assertThat(requestCount("failure") - failureBefore).isEqualTo(2);
-        await().atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> assertThat(basedSyncListRequestCount()).isEqualTo(2));
+        assertThat(basedSyncListRequestCount()).isEqualTo(2);
     }
 
     private void stubBasedSyncList(ResponseDefinitionBuilder response) {

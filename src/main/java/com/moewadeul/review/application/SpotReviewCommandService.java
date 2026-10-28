@@ -8,17 +8,17 @@ import org.springframework.stereotype.Service;
 public class SpotReviewCommandService {
 
     private final SpotReviewWriter spotReviewWriter;
-    private final ReviewImageAttachmentChecker reviewImageAttachmentChecker;
+    private final ReviewImageAttachmentPrecheck reviewImageAttachmentPrecheck;
 
     public long write(long memberId, long spotId, SpotReviewWriteCommand command) {
-        reviewImageAttachmentChecker.verify(memberId, null, command.imageIds());
+        reviewImageAttachmentPrecheck.verify(memberId, null, command.imageIds());
         return spotReviewWriter.write(memberId, spotId, command);
     }
 
     public SpotReviewItem revise(long memberId, long reviewId, SpotReviewReviseCommand command) {
         if (command.imageIds() != null) {
             spotReviewWriter.requireOwnReview(memberId, reviewId);
-            reviewImageAttachmentChecker.verify(memberId, reviewId, command.imageIds());
+            reviewImageAttachmentPrecheck.verify(memberId, reviewId, command.imageIds());
         }
         return spotReviewWriter.revise(memberId, reviewId, command);
     }

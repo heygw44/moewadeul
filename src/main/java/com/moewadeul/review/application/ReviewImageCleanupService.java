@@ -24,7 +24,7 @@ public class ReviewImageCleanupService {
     private final ImageStorage imageStorage;
     private final Clock clock;
 
-    public Result deleteUnattached() {
+    public Result deleteExpiredRowsThenObjects() {
         Instant createdBefore = clock.instant().minus(RETENTION);
         int deletedRows = 0;
         int storageFailures = 0;

@@ -2,7 +2,9 @@ package com.moewadeul.common.error;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.method.ParameterErrors;
@@ -24,6 +27,8 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.exc.InvalidFormatException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -78,7 +83,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         List<ErrorResponse.FieldError> fieldErrors = new ArrayList<>();
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            String message = fieldError.isBindingFailure() ? "값의 형식이 맞지 않아요." : fieldError.getDefaultMessage();
+            String message = fieldError.isBindingFailure()
+                    ? typeMismatchMessage(requiredTypeOf(fieldError))
+                    : fieldError.getDefaultMessage();
             fieldErrors.add(new ErrorResponse.FieldError(fieldError.getField(), message));
         }
         for (ObjectError globalError : ex.getBindingResult().getGlobalErrors()) {
@@ -112,9 +119,51 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             TypeMismatchException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         if (ex instanceof MethodArgumentTypeMismatchException mismatch) {
             return invalidInput(
-                    headers, status, List.of(new ErrorResponse.FieldError(mismatch.getName(), "값의 형식이 맞지 않아요.")));
+                    headers,
+                    status,
+                    List.of(new ErrorResponse.FieldError(
+                            mismatch.getName(), typeMismatchMessage(mismatch.getRequiredType()))));
         }
         return invalidInput(headers, status, List.of());
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        if (ex.getCause() instanceof InvalidFormatException invalidFormat
+                && invalidFormat.getTargetType() != null
+                && invalidFormat.getTargetType().isEnum()) {
+            return invalidInput(
+                    headers,
+                    status,
+                    List.of(new ErrorResponse.FieldError(
+                            fieldPath(invalidFormat), typeMismatchMessage(invalidFormat.getTargetType()))));
+        }
+        return super.handleHttpMessageNotReadable(ex, headers, status, request);
+    }
+
+    private static Class<?> requiredTypeOf(FieldError fieldError) {
+        return fieldError.contains(TypeMismatchException.class)
+                ? fieldError.unwrap(TypeMismatchException.class).getRequiredType()
+                : null;
+    }
+
+    private static String typeMismatchMessage(Class<?> requiredType) {
+        if (requiredType == null || !requiredType.isEnum()) {
+            return "값의 형식이 맞지 않아요.";
+        }
+        String allowed = Arrays.stream(requiredType.getEnumConstants())
+                .map(constant -> ((Enum<?>) constant).name())
+                .collect(Collectors.joining(", "));
+        return allowed + " 중 하나여야 해요.";
+    }
+
+    private static String fieldPath(JacksonException e) {
+        return e.getPath().stream()
+                .map(reference -> reference.getPropertyName() != null
+                        ? reference.getPropertyName()
+                        : String.valueOf(reference.getIndex()))
+                .collect(Collectors.joining("."));
     }
 
     @Override

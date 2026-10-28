@@ -39,6 +39,7 @@ public class IdentityVerification {
     @Column(name = "birth_year")
     private Short birthYear;
 
+    @Getter(AccessLevel.NONE)
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
@@ -118,6 +119,10 @@ public class IdentityVerification {
 
     public boolean isAdult(Year currentYear) {
         return birthYear != null && birthYear + ADULT_AGE <= currentYear.getValue();
+    }
+
+    public Optional<Gender> retainedGender() {
+        return Optional.ofNullable(gender);
     }
 
     public Optional<AgeGroup> ageGroupIn(Year currentYear) {

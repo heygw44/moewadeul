@@ -31,7 +31,7 @@ public class MemoryImageCleanupScheduler {
     @Scheduled(cron = "${moewadeul.memory.image-cleanup.cron:0 30 5 * * *}", zone = KoreaTime.ZONE_ID)
     public void cleanUp() {
         try {
-            cleanupService.deleteUnattached();
+            cleanupService.deleteExpiredRowsThenObjects();
         } catch (Exception e) {
             log.error("memory image cleanup failed", e);
             scheduledJobMetrics.recordFailure(JOB_NAME);

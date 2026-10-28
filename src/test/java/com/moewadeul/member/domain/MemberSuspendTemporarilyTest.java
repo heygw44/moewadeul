@@ -8,7 +8,6 @@ import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 class MemberSuspendTemporarilyTest {
 
@@ -92,9 +91,6 @@ class MemberSuspendTemporarilyTest {
     }
 
     private static Member memberWithStatus(MemberStatus status, Instant suspendedUntil) {
-        Member member = aMember().build();
-        ReflectionTestUtils.setField(member, "status", status);
-        ReflectionTestUtils.setField(member, "suspendedUntil", suspendedUntil);
-        return member;
+        return aMember().status(status).suspendedUntil(suspendedUntil).build();
     }
 }

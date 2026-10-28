@@ -56,7 +56,7 @@ public class PasswordChangeService {
 
     private void verifyCurrentPassword(Member member, PasswordChangeCommand command) {
         boolean matched = passwordEncoder.matches(command.currentPassword(), member.getPasswordHash());
-        loginAttemptService.settle(member.getId(), member.getEmail(), command.ip(), matched);
+        loginAttemptService.recordAttemptUnderEmailLock(member.getId(), member.getEmail(), command.ip(), matched);
         if (!matched) {
             throw new MemberException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH);
         }

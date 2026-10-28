@@ -194,9 +194,9 @@ class MemoryImageIntegrationTest {
 
         // when
         commandService.delete(memberId, memoryId);
-        int beforeRetention = cleanupService.deleteUnattached().deletedRows();
+        int beforeRetention = cleanupService.deleteExpiredRowsThenObjects().deletedRows();
         clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
-        MemoryImageCleanupService.Result result = cleanupService.deleteUnattached();
+        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(beforeRetention).isZero();
@@ -218,7 +218,7 @@ class MemoryImageIntegrationTest {
         clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
 
         // when
-        MemoryImageCleanupService.Result result = cleanupService.deleteUnattached();
+        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);
@@ -237,7 +237,7 @@ class MemoryImageIntegrationTest {
         clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
 
         // when
-        MemoryImageCleanupService.Result result = cleanupService.deleteUnattached();
+        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);
@@ -255,7 +255,7 @@ class MemoryImageIntegrationTest {
         clock.advance(Duration.ofDays(3));
 
         // when
-        MemoryImageCleanupService.Result result = cleanupService.deleteUnattached();
+        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);

@@ -2,6 +2,7 @@ package com.moewadeul.member.infra;
 
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberRepository;
+import com.moewadeul.member.domain.Nickname;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,4 +22,12 @@ public interface MemberJpaRepository extends JpaRepository<Member, Long>, Member
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT m FROM Member m WHERE m.id = :id")
     Optional<Member> findByIdForUpdate(@Param("id") long id);
+
+    @Override
+    @Query("SELECT COUNT(m) > 0 FROM Member m WHERE m.nickname = :#{#nickname.value()}")
+    boolean existsByNickname(@Param("nickname") Nickname nickname);
+
+    @Override
+    @Query("SELECT COUNT(m) > 0 FROM Member m WHERE m.nickname = :#{#nickname.value()} AND m.id <> :id")
+    boolean existsByNicknameAndIdNot(@Param("nickname") Nickname nickname, @Param("id") Long id);
 }

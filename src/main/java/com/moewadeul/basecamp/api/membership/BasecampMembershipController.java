@@ -151,6 +151,6 @@ class BasecampMembershipController {
             @PathVariable long basecampId,
             @PathVariable long memberId,
             @Valid @RequestBody BasecampKickRequest request) {
-        basecampMembershipService.kick(basecampId, memberId, loginMember.memberId(), request.toReason());
+        basecampMembershipService.kick(basecampId, memberId, loginMember.memberId(), request.reason());
     }
 }

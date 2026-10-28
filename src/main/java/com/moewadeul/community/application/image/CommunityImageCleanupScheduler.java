@@ -31,7 +31,7 @@ public class CommunityImageCleanupScheduler {
     @Scheduled(cron = "${moewadeul.community.image-cleanup.cron:0 10 5 * * *}", zone = KoreaTime.ZONE_ID)
     public void cleanUp() {
         try {
-            cleanupService.deleteUnattached();
+            cleanupService.deleteExpiredRowsThenObjects();
         } catch (Exception e) {
             log.error("community image cleanup failed", e);
             scheduledJobMetrics.recordFailure(JOB_NAME);

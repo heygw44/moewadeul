@@ -31,7 +31,7 @@ public class MemberWithdrawalService {
         Member member = findWithdrawableMember(memberId);
         rejectIfLocked(member.getEmail());
         boolean matched = passwordEncoder.matches(password, member.getPasswordHash());
-        loginAttemptService.settle(member.getId(), member.getEmail(), ip, matched);
+        loginAttemptService.recordAttemptUnderEmailLock(member.getId(), member.getEmail(), ip, matched);
         if (!matched) {
             throw new MemberException(MemberErrorCode.LOGIN_FAILED);
         }

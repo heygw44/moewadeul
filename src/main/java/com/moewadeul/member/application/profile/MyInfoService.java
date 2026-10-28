@@ -8,6 +8,7 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
+import com.moewadeul.member.domain.Nickname;
 import com.moewadeul.member.domain.SelfAgeGroup;
 import com.moewadeul.member.domain.SelfGender;
 import java.time.Clock;
@@ -59,11 +60,11 @@ public class MyInfoService {
         if (nickname.equals(member.getNickname())) {
             return;
         }
-        Member.requireValidNickname(nickname);
-        if (memberRepository.existsByNicknameAndIdNot(nickname, member.getId())) {
+        Nickname validated = new Nickname(nickname);
+        if (memberRepository.existsByNicknameAndIdNot(validated, member.getId())) {
             throw new MemberException(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED);
         }
-        member.changeNickname(nickname, now);
+        member.changeNickname(validated.value(), now);
     }
 
     private static SelfAgeGroup parseSelfAgeGroup(String name) {

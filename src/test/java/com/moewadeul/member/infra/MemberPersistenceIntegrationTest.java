@@ -7,6 +7,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberBuilder;
+import com.moewadeul.member.domain.Nickname;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +30,10 @@ class MemberPersistenceIntegrationTest {
 
         // when & then
         assertThat(memberRepository.existsByEmail(email)).isTrue();
-        assertThat(memberRepository.existsByNickname(nickname)).isTrue();
+        assertThat(memberRepository.existsByNickname(new Nickname(nickname))).isTrue();
         assertThat(memberRepository.existsByEmail(TestSequence.email())).isFalse();
-        assertThat(memberRepository.existsByNickname(TestSequence.nickname())).isFalse();
+        assertThat(memberRepository.existsByNickname(new Nickname(TestSequence.nickname())))
+                .isFalse();
     }
 
     @Test

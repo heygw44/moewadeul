@@ -8,7 +8,6 @@ import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 class MemberResyncSuspensionTest {
 
@@ -97,10 +96,10 @@ class MemberResyncSuspensionTest {
     }
 
     private static Member memberWith(MemberStatus status, Instant suspendedUntil, Instant emailVerifiedAt) {
-        Member member = aMember().build();
-        ReflectionTestUtils.setField(member, "status", status);
-        ReflectionTestUtils.setField(member, "suspendedUntil", suspendedUntil);
-        ReflectionTestUtils.setField(member, "emailVerifiedAt", emailVerifiedAt);
-        return member;
+        return aMember()
+                .status(status)
+                .suspendedUntil(suspendedUntil)
+                .emailVerifiedAt(emailVerifiedAt)
+                .build();
     }
 }

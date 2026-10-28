@@ -15,7 +15,7 @@ public class MemoryWithdrawalCleanupService {
 
     public void cleanUp(long memberId) {
         int deletedMemories = memoryWriter.deleteAllOf(memberId);
-        MemoryImageCleanupService.Result images = memoryImageCleanupService.deleteUnattachedOf(memberId);
+        MemoryImageCleanupService.Result images = memoryImageCleanupService.deleteObjectsThenRowsOf(memberId);
         log.info("memory withdrawal cleanup memberId={} deletedMemories={}", memberId, deletedMemories);
         if (images.storageFailures() > 0) {
             throw new IllegalStateException(

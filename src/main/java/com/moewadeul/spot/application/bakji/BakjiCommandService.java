@@ -66,7 +66,7 @@ public class BakjiCommandService {
 
     @Transactional
     public BakjiSubmission update(long memberId, long spotId, BakjiUpdateCommand command) {
-        Spot spot = loadActiveBakjiToUpdate(spotId, command);
+        Spot spot = loadActiveBakjiBumpingVersionOnDetailChange(spotId, command);
         BakjiDetail detail = loadOwnDetail(spotId, memberId);
         Instant now = clock.instant();
         applySpotChanges(spot, command, now);
@@ -88,7 +88,7 @@ public class BakjiCommandService {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 
-    private Spot loadActiveBakjiToUpdate(long spotId, BakjiUpdateCommand command) {
+    private Spot loadActiveBakjiBumpingVersionOnDetailChange(long spotId, BakjiUpdateCommand command) {
         if (!changesDetail(command)) {
             return loadActiveBakji(spotId);
         }

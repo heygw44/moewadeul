@@ -14,9 +14,9 @@ public interface MemberRepository {
 
     boolean existsByEmail(String email);
 
-    boolean existsByNickname(String nickname);
+    boolean existsByNickname(Nickname nickname);
 
-    boolean existsByNicknameAndIdNot(String nickname, Long id);
+    boolean existsByNicknameAndIdNot(Nickname nickname, Long id);
 
     void flush();
 }

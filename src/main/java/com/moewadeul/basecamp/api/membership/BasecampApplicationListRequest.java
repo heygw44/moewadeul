@@ -3,14 +3,11 @@ package com.moewadeul.basecamp.api.membership;
 import com.moewadeul.basecamp.application.membership.BasecampApplicationListQuery;
 import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import java.util.Arrays;
 
 public record BasecampApplicationListRequest(
-        @Schema(implementation = BasecampApplicationStatus.class, description = "신청 상태. 생략하면 PENDING.")
-        String status,
+        @Schema(description = "신청 상태. 생략하면 PENDING.") BasecampApplicationStatus status,
 
         @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.") Integer page,
 
@@ -20,17 +17,10 @@ public record BasecampApplicationListRequest(
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 20;
 
-    @AssertTrue(message = "status는 PENDING, APPROVED, REJECTED, CANCELED, EXPIRED 중 하나여야 해요.")
-    public boolean isStatusValid() {
-        return status == null
-                || Arrays.stream(BasecampApplicationStatus.values())
-                        .anyMatch(candidate -> candidate.name().equals(status));
-    }
-
     BasecampApplicationListQuery toQuery() {
-        BasecampApplicationStatus requested =
-                status == null ? BasecampApplicationStatus.PENDING : BasecampApplicationStatus.valueOf(status);
         return new BasecampApplicationListQuery(
-                requested, page == null ? DEFAULT_PAGE : page, size == null ? DEFAULT_SIZE : size);
+                status == null ? BasecampApplicationStatus.PENDING : status,
+                page == null ? DEFAULT_PAGE : page,
+                size == null ? DEFAULT_SIZE : size);
     }
 }
