@@ -24,6 +24,9 @@ readonly CADDY_REPO=ghcr.io/heygw44/moewadeul-caddy
 readonly HEALTH_URL=http://127.0.0.1:8080/actuator/health
 # 앱은 시작할 때 Flyway 마이그레이션을 실행하므로, 처음 배포하거나 마이그레이션이 많으면 시간이 걸린다.
 readonly HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-240}"
+# 시작하다 죽는 앱은 restart 정책으로 계속 다시 뜬다. 상태 확인 주소만 보면 그동안 제한 시간을 다 기다리고, 옛 앱은 이미 내려가 있어 502가 이어진다.
+# 다시 시작한 횟수가 이보다 많으면 기다리지 않고 실패로 본다.
+readonly MAX_APP_RESTARTS="${MAX_APP_RESTARTS:-2}"
 
 # Parameter Store 이름(접두사 뒤) → .env 변수 이름
 declare -rA SECRET_PARAMS=(
@@ -144,11 +147,21 @@ check_image_architecture() {
     done
 }
 
+app_restart_count() {
+    local id
+    id="$(compose ps -a -q app 2> /dev/null)" && [[ -n "$id" ]] || return 1
+    docker inspect -f '{{.RestartCount}}' "$id" 2> /dev/null
+}
+
 # 앱의 상태 확인 주소가 200을 줄 때까지 기다린 뒤, caddy가 HTTP 요청에 응답하는지 본다.
 # caddy는 80번 요청에 HTTPS로 넘기는 응답(308)을 준다. 인증서 발급은 Let's Encrypt 상황에 따라 늦어질 수 있어서 HTTPS는 확인하지 않는다.
 wait_healthy() {
-    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) code
+    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) code restarts
     until curl -fsS -o /dev/null --max-time 5 "$HEALTH_URL" 2>/dev/null; do
+        if restarts="$(app_restart_count)" && ((restarts > MAX_APP_RESTARTS)); then
+            log "앱이 시작하다 ${restarts}번 다시 시작했다"
+            return 1
+        fi
         if ((SECONDS >= deadline)); then
             log "앱이 ${HEALTH_TIMEOUT_SECONDS}초 안에 정상 상태가 되지 않았다"
             return 1
