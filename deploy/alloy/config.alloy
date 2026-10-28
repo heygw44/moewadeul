@@ -37,7 +37,7 @@ prometheus.scrape "app" {
 // 기본 수집기가 연결 수와 락 대기(SHOW GLOBAL STATUS의 Innodb_row_lock_*)를 읽고, 느린 쿼리는 문장 요약 수집기로 본다.
 prometheus.exporter.mysql "db" {
 	data_source_name  = "moewadeul_exporter:" + sys.env("MYSQL_EXPORTER_PASSWORD") + "@(mysql:3306)/"
-	enable_collectors = ["perf_schema.eventsstatements"]
+	enable_collectors = ["perf_schema.eventsstatements", "binlog_size"]
 
 	// 문장 요약은 SQL 형태마다 시계열이 생긴다. 무료 한도를 아끼려고 최근에 실행된 50개만 읽고, 시스템 스키마는 뺀다.
 	perf_schema.eventsstatements {
