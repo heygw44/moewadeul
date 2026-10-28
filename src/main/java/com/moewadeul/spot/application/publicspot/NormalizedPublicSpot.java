@@ -3,6 +3,7 @@ package com.moewadeul.spot.application.publicspot;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.PublicSpotSetting;
 import com.moewadeul.spot.domain.GeoPoint;
+import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.WeatherGrid;
 import com.moewadeul.spot.infra.publicspot.PublicSpotColumns;
 import com.moewadeul.spot.infra.publicspot.PublicSpotRow;
@@ -31,7 +32,7 @@ record NormalizedPublicSpot(
         Set<PublicSpotSetting> settings) {
 
     static final int MAX_EXTERNAL_ID_LENGTH = 50;
-    static final int MAX_NAME_LENGTH = 100;
+    static final int MAX_NAME_LENGTH = Spot.NAME_MAX_LENGTH;
     static final int MAX_ADDRESS_LENGTH = 255;
     static final int MAX_CATEGORY_LENGTH = 50;
     static final int MAX_PHONE_LENGTH = 30;

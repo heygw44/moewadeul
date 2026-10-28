@@ -1,12 +1,16 @@
-package com.moewadeul.spot.infra;
+package com.moewadeul.spot.infra.map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,26 +19,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class SpotClusterCellTriggerIntegrationTest {
 
-    private static final String LEVELS =
-            "(SELECT 0 AS grid_level UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3"
-                    + " UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7) g";
-    private static final String EXPECTED_TOTAL = "SELECT g.grid_level,"
-            + " FLOOR(s.latitude / (0.0025 * POW(2, g.grid_level))) AS cell_row,"
-            + " FLOOR(s.longitude / (0.0025 * POW(2, g.grid_level))) AS cell_col,"
-            + " COUNT(*) AS spot_count, SUM(s.latitude) AS lat_sum, SUM(s.longitude) AS lng_sum"
-            + " FROM spot s CROSS JOIN " + LEVELS + " WHERE s.status = 'ACTIVE'"
-            + " GROUP BY 1, 2, 3 ORDER BY 1, 2, 3";
-    private static final String ACTUAL_TOTAL = "SELECT grid_level, cell_row, cell_col, spot_count, lat_sum, lng_sum"
-            + " FROM spot_cluster_total ORDER BY 1, 2, 3";
-    private static final String EXPECTED_CELL = "SELECT g.grid_level,"
-            + " FLOOR(s.latitude / (0.0025 * POW(2, g.grid_level))) AS cell_row,"
-            + " FLOOR(s.longitude / (0.0025 * POW(2, g.grid_level))) AS cell_col,"
-            + " s.type, COALESCE(b.has_water, FALSE) AS has_water, COALESCE(b.has_toilet, FALSE) AS has_toilet,"
-            + " s.park_warning, COUNT(*) AS spot_count, SUM(s.latitude) AS lat_sum, SUM(s.longitude) AS lng_sum"
-            + " FROM spot s LEFT JOIN bakji_detail b ON b.spot_id = s.id CROSS JOIN " + LEVELS
-            + " WHERE s.status = 'ACTIVE' GROUP BY 1, 2, 3, 4, 5, 6, 7 ORDER BY 1, 2, 3, 4, 5, 6, 7";
+    private static final String ACTIVE_SPOTS = "SELECT s.latitude, s.longitude, s.type,"
+            + " COALESCE(b.has_water, FALSE) AS has_water, COALESCE(b.has_toilet, FALSE) AS has_toilet, s.park_warning"
+            + " FROM spot s LEFT JOIN bakji_detail b ON b.spot_id = s.id WHERE s.status = 'ACTIVE'";
+    private static final String ACTUAL_TOTAL =
+            "SELECT grid_level, cell_row, cell_col, spot_count, lat_sum, lng_sum FROM spot_cluster_total";
     private static final String ACTUAL_CELL = "SELECT grid_level, cell_row, cell_col, type, has_water, has_toilet,"
-            + " park_warning, spot_count, lat_sum, lng_sum FROM spot_cluster_cell ORDER BY 1, 2, 3, 4, 5, 6, 7";
+            + " park_warning, spot_count, lat_sum, lng_sum FROM spot_cluster_cell";
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -112,38 +103,88 @@ class SpotClusterCellTriggerIntegrationTest {
                 .isZero();
     }
 
-    private void assertTablesMatchSpots() {
-        assertSameRows(jdbcTemplate.queryForList(ACTUAL_TOTAL), jdbcTemplate.queryForList(EXPECTED_TOTAL));
-        assertSameRows(jdbcTemplate.queryForList(ACTUAL_CELL), jdbcTemplate.queryForList(EXPECTED_CELL));
+    @Test
+    @DisplayName("[F-03] 음수 좌표와 칸 경계 위·근처의 장소도 서버 격자 공식이 정한 단계·칸에만 센다")
+    void triggersUseSameGridAsServerAtNegativeAndBoundaryCoordinates() {
+        // given
+        double coarsest = SpotGridCells.cellSize(SpotGridCells.LEVEL_COUNT - 1);
+
+        // when
+        insertSpot("CAMPSITE", "ACTIVE", false, -33.8688, -70.6693);
+        insertSpot("CAMPSITE", "ACTIVE", false, -0.00001, 0.00001);
+        insertSpot("CAMPSITE", "ACTIVE", false, 0.0, 0.0);
+        insertSpot("CAMPSITE", "ACTIVE", false, 37.08, 126.82);
+        insertSpot("CAMPSITE", "ACTIVE", false, 37.08 - 1e-9, 126.82 + 1e-9);
+        insertSpot("FOREST", "ACTIVE", false, -37.84, -70.68);
+        insertSpot("FOREST", "ACTIVE", false, 100 * coarsest, -100 * coarsest);
+
+        // then
+        assertTablesMatchSpots();
     }
 
-    private static void assertSameRows(List<Map<String, Object>> actual, List<Map<String, Object>> expected) {
-        assertThat(actual).hasSameSizeAs(expected);
-        for (int i = 0; i < expected.size(); i++) {
-            Map<String, Object> actualRow = actual.get(i);
-            Map<String, Object> expectedRow = expected.get(i);
-            for (String column : expectedRow.keySet()) {
-                Object expectedValue = expectedRow.get(column);
-                Object actualValue = actualRow.get(column);
-                if (column.endsWith("_sum")) {
-                    assertThat(((Number) actualValue).doubleValue())
-                            .as(column)
-                            .isCloseTo(((Number) expectedValue).doubleValue(), within(1e-9));
-                } else {
-                    assertThat(comparable(actualValue)).as(column).isEqualTo(comparable(expectedValue));
-                }
+    private void assertTablesMatchSpots() {
+        Map<List<Object>, Aggregate> expectedTotal = new HashMap<>();
+        Map<List<Object>, Aggregate> expectedCell = new HashMap<>();
+        for (Map<String, Object> spot : jdbcTemplate.queryForList(ACTIVE_SPOTS)) {
+            double lat = ((Number) spot.get("latitude")).doubleValue();
+            double lng = ((Number) spot.get("longitude")).doubleValue();
+            Aggregate one = new Aggregate(1, lat, lng);
+            for (int level = 0; level < SpotGridCells.LEVEL_COUNT; level++) {
+                double size = SpotGridCells.cellSize(level);
+                long cellRow = SpotGridCells.cellIndex(lat, size);
+                long cellCol = SpotGridCells.cellIndex(lng, size);
+                List<Object> cell = List.of((long) level, cellRow, cellCol);
+                expectedTotal.merge(cell, one, Aggregate::plus);
+                List<Object> cellWithAttributes = new ArrayList<>(cell);
+                Stream.of("type", "has_water", "has_toilet", "park_warning")
+                        .map(column -> comparable(spot.get(column)))
+                        .forEach(cellWithAttributes::add);
+                expectedCell.merge(cellWithAttributes, one, Aggregate::plus);
             }
         }
+        assertSameAggregates(aggregates(ACTUAL_TOTAL, 3), expectedTotal);
+        assertSameAggregates(aggregates(ACTUAL_CELL, 7), expectedCell);
+    }
+
+    private Map<List<Object>, Aggregate> aggregates(String sql, int keyColumns) {
+        Map<List<Object>, Aggregate> aggregates = new HashMap<>();
+        jdbcTemplate.query(sql, row -> {
+            List<Object> key = new ArrayList<>();
+            for (int column = 1; column <= keyColumns; column++) {
+                key.add(comparable(row.getObject(column)));
+            }
+            aggregates.put(
+                    key, new Aggregate(row.getLong("spot_count"), row.getDouble("lat_sum"), row.getDouble("lng_sum")));
+        });
+        return aggregates;
+    }
+
+    private static void assertSameAggregates(
+            Map<List<Object>, Aggregate> actual, Map<List<Object>, Aggregate> expected) {
+        assertThat(actual.keySet()).isEqualTo(expected.keySet());
+        expected.forEach((key, aggregate) -> {
+            Aggregate actualAggregate = actual.get(key);
+            assertThat(actualAggregate.spotCount()).as("%s spot_count", key).isEqualTo(aggregate.spotCount());
+            assertThat(actualAggregate.latSum()).as("%s lat_sum", key).isCloseTo(aggregate.latSum(), within(1e-9));
+            assertThat(actualAggregate.lngSum()).as("%s lng_sum", key).isCloseTo(aggregate.lngSum(), within(1e-9));
+        });
     }
 
     private static Object comparable(Object value) {
         if (value instanceof Boolean flag) {
-            return flag ? 1.0 : 0.0;
+            return flag ? 1L : 0L;
         }
         if (value instanceof Number number) {
-            return number.doubleValue();
+            return number.longValue();
         }
         return String.valueOf(value);
+    }
+
+    private record Aggregate(long spotCount, double latSum, double lngSum) {
+
+        Aggregate plus(Aggregate other) {
+            return new Aggregate(spotCount + other.spotCount, latSum + other.latSum, lngSum + other.lngSum);
+        }
     }
 
     private long insertSpot(String type, String status, boolean parkWarning, double lat, double lng) {
@@ -154,7 +195,8 @@ class SpotClusterCellTriggerIntegrationTest {
                         + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, ?, ?, NOW(6), NOW(6))",
                 type,
                 name,
-                "POINT(" + lat + " " + lng + ")",
+                "POINT(" + BigDecimal.valueOf(lat).toPlainString() + " "
+                        + BigDecimal.valueOf(lng).toPlainString() + ")",
                 parkWarning,
                 status);
         return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
