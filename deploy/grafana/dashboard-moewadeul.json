@@ -1454,7 +1454,7 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 8,
+        "w": 6,
         "x": 0,
         "y": 81
       },
@@ -1509,8 +1509,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 8,
-        "x": 8,
+        "w": 6,
+        "x": 6,
         "y": 81
       },
       "targets": [
@@ -1550,8 +1550,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 8,
-        "x": 16,
+        "w": 6,
+        "x": 12,
         "y": 81
       },
       "targets": [
@@ -1569,6 +1569,47 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "binlog 크기 (보관 3일)",
+      "id": 37,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__PROM_UID__"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 81
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__PROM_UID__"
+          },
+          "expr": "max(mysql_binlog_size_bytes{job=\"integrations/mysql\"})",
+          "legendFormat": "",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
         },
         "overrides": []
       },

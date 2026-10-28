@@ -77,6 +77,7 @@ services:
       # binlog가 켜진 MySQL은 SUPER 권한이 없는 앱 계정의 트리거 생성을 거부한다. 마이그레이션이 지도 묶음 집계용 트리거를 만들어서 켠다.
       # binlog 형식은 ROW라서 트리거가 바꾼 행이 그대로 기록된다.
       - --log-bin-trust-function-creators=1
+      - --binlog-expire-logs-seconds=259200
       # 메모리 한도 640MB 안에서 데이터 캐시(버퍼 풀)에 더 많이 쓰도록 나머지 몫을 줄인다.
       # 기본값에서는 performance_schema가 약 235MB, redo 로그 버퍼가 64MB를 써서, 버퍼 풀이 128MB인데도 한도에 닿았다.
       # performance_schema 통계 표의 크기에 상한을 두면 약 44MB다. Alloy가 읽는 쿼리 통계 표(digest 요약)는 남긴다.
