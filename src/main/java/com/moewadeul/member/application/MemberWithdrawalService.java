@@ -1,6 +1,7 @@
 package com.moewadeul.member.application;
 
 import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberException;
@@ -28,6 +29,7 @@ public class MemberWithdrawalService {
     private final Clock clock;
 
     public void verifyPassword(long memberId, String password, String ip) {
+        OutsideTransaction.require("트랜잭션 안이면 틀린 비밀번호 기록이 예외와 함께 롤백되어 로그인 잠금이 걸리지 않는다.");
         Member member = findWithdrawableMember(memberId);
         rejectIfLocked(member.getEmail());
         boolean matched = passwordEncoder.matches(password, member.getPasswordHash());

@@ -1,6 +1,7 @@
 package com.moewadeul.review.application;
 
 import com.moewadeul.common.storage.ImageStorage;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.review.infra.ReviewImageMapper;
 import com.moewadeul.review.infra.ReviewImageRow;
 import java.time.Clock;
@@ -25,6 +26,7 @@ public class ReviewImageCleanupService {
     private final Clock clock;
 
     public Result deleteExpiredRowsThenObjects() {
+        OutsideTransaction.require("저장소 삭제를 기다리는 동안 DB 커넥션과 행 잠금을 쥐면 안 된다.");
         Instant createdBefore = clock.instant().minus(RETENTION);
         int deletedRows = 0;
         int storageFailures = 0;
