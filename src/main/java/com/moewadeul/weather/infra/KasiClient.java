@@ -104,7 +104,8 @@ public class KasiClient {
         }
         Element root = parseXml(response);
         if (GATEWAY_ERROR_ROOT.equals(root.getTagName())) {
-            throw new KasiApiException(describe("HTTP " + response.status().value() + ", " + gatewayErrorOf(root)));
+            throw new KasiApiException(
+                    describe("HTTP " + response.status().value() + ", " + PublicDataHttp.xmlErrorOf(response.body())));
         }
         if (!response.status().is2xxSuccessful()) {
             throw new KasiApiException(describe("HTTP " + response.status().value()));
@@ -147,14 +148,6 @@ public class KasiClient {
         } catch (ParserConfigurationException e) {
             throw new KasiApiException(describe("XML 파서를 설정하지 못했다"), e);
         }
-    }
-
-    // 인증키가 없거나 등록되지 않았으면, 공공데이터포털 게이트웨이는 resultCode 없는 XML을 돌려준다.
-    // 예: <OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg>
-    //
-    // <returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg>...</cmmMsgHeader></OpenAPI_ServiceResponse>
-    private static String gatewayErrorOf(Element root) {
-        return "인증 오류 returnAuthMsg=" + textOf(root, "returnAuthMsg") + ", errMsg=" + textOf(root, "errMsg");
     }
 
     private static Optional<KasiRiseSetItem> toItem(Element root) {

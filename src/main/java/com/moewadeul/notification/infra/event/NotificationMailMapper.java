@@ -1,5 +1,6 @@
 package com.moewadeul.notification.infra.event;
 
+import com.moewadeul.common.retry.RetryPolicy;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -25,9 +26,7 @@ public interface NotificationMailMapper {
     int markFailedAttempt(
             @Param("id") long id,
             @Param("transientFailure") boolean transientFailure,
-            @Param("maxAttempts") int maxAttempts,
-            @Param("retryDelayMillis") long retryDelayMillis,
-            @Param("retryMaxDelayMillis") long retryMaxDelayMillis,
+            @Param("retry") RetryPolicy retry,
             @Param("now") Instant now);
 
     List<Long> selectDeliverableMemberIds(

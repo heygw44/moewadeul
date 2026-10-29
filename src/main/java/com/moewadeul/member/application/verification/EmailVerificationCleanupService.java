@@ -1,5 +1,6 @@
 package com.moewadeul.member.application.verification;
 
+import com.moewadeul.common.batch.BatchDeletion;
 import com.moewadeul.member.domain.verification.EmailVerificationPolicy;
 import com.moewadeul.member.infra.verification.EmailVerificationCleanupMapper;
 import com.moewadeul.member.infra.verification.EmailVerificationIpLockMapper;
@@ -28,12 +29,7 @@ public class EmailVerificationCleanupService {
     public int deleteExpired() {
         Instant now = Instant.now(clock);
         Instant cutoff = now.minus(EmailVerificationPolicy.RECORD_RETENTION);
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = cleanupMapper.deleteOlderThan(cutoff, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        int deletedTotal = BatchDeletion.untilDrained(BATCH_SIZE, size -> cleanupMapper.deleteOlderThan(cutoff, size));
         log.info("email verification deleted count={}", deletedTotal);
         deleteIdleIpLockRows(now.minus(IP_LOCK_ROW_IDLE_LIMIT));
         deleteDuplicateSignupAttempts(now.minus(EmailVerificationPolicy.IP_WINDOW));
@@ -41,22 +37,13 @@ public class EmailVerificationCleanupService {
     }
 
     private void deleteIdleIpLockRows(Instant cutoff) {
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = ipLockMapper.deleteIdleBefore(cutoff, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        int deletedTotal = BatchDeletion.untilDrained(BATCH_SIZE, size -> ipLockMapper.deleteIdleBefore(cutoff, size));
         log.info("email verification ip lock rows deleted count={}", deletedTotal);
     }
 
     private void deleteDuplicateSignupAttempts(Instant cutoff) {
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = signupDuplicateAttemptMapper.deleteBefore(cutoff, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        int deletedTotal =
+                BatchDeletion.untilDrained(BATCH_SIZE, size -> signupDuplicateAttemptMapper.deleteBefore(cutoff, size));
         log.info("signup duplicate attempts deleted count={}", deletedTotal);
     }
 }

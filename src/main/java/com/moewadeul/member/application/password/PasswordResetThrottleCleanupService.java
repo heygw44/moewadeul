@@ -1,5 +1,6 @@
 package com.moewadeul.member.application.password;
 
+import com.moewadeul.common.batch.BatchDeletion;
 import com.moewadeul.member.domain.password.PasswordResetRequestPolicy;
 import com.moewadeul.member.infra.password.PasswordResetThrottleMapper;
 import java.time.Clock;
@@ -22,12 +23,7 @@ public class PasswordResetThrottleCleanupService {
     @Transactional
     public int deleteStaleThrottles() {
         Instant cutoff = Instant.now(clock).minus(PasswordResetRequestPolicy.STALE_AFTER);
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = throttleMapper.deleteStale(cutoff, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        int deletedTotal = BatchDeletion.untilDrained(BATCH_SIZE, size -> throttleMapper.deleteStale(cutoff, size));
         log.info("password reset throttle deleted count={}", deletedTotal);
         return deletedTotal;
     }
