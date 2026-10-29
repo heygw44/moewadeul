@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -107,16 +108,8 @@ class AdminSpotReviewApiIntegrationTest {
         assertThat(result).bodyJson().extractingPath("$.content[0].reportCount").isEqualTo(6);
         assertThat(result)
                 .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.ILLEGAL_AREA")
-                .isEqualTo(3);
-        assertThat(result)
-                .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.CLOSED")
-                .isEqualTo(1);
-        assertThat(result)
-                .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.FALSE_INFO")
-                .isEqualTo(2);
+                .extractingPath("$.content[0].reasonCounts")
+                .isEqualTo(Map.of("ILLEGAL_AREA", 3, "CLOSED", 1, "FALSE_INFO", 2));
         List<String> recentContents = json(result, "$.content[0].recentReports[*].content");
         assertThat(recentContents)
                 .containsExactly(
@@ -134,7 +127,7 @@ class AdminSpotReviewApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-21] 목록은 상태가 바뀐 시각이 이른 순서이고, 공공데이터 장소는 reporter가 null이며, 페이지를 넘기면 hasNext를 알린다")
+    @DisplayName("[F-21] 목록은 상태가 바뀐 시각이 이른 순서이고, 신고 없는 공공데이터 장소는 reporter가 null이고 사유별 수가 모두 0이며, 페이지를 넘기면 hasNext를 알린다")
     void listIsOrderedByStatusChangeAndPaged() {
         // given
         long newer = insertBakji("PENDING_REVIEW", BASE.plus(Duration.ofHours(2)));
@@ -150,6 +143,10 @@ class AdminSpotReviewApiIntegrationTest {
         assertThat(ids(all, "$.content[*].spotId")).containsExactly(older, publicSpot, newer);
         assertThat(all).bodyJson().extractingPath("$.content[1].reporter").isNull();
         assertThat(all).bodyJson().extractingPath("$.content[1].reportCount").isEqualTo(0);
+        assertThat(all)
+                .bodyJson()
+                .extractingPath("$.content[1].reasonCounts")
+                .isEqualTo(Map.of("ILLEGAL_AREA", 0, "CLOSED", 0, "FALSE_INFO", 0));
         assertThat(all)
                 .bodyJson()
                 .extractingPath("$.content[1].recentReports")

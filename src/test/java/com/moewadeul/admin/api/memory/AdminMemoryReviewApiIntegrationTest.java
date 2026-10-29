@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -104,12 +105,8 @@ class AdminMemoryReviewApiIntegrationTest {
         assertThat(result).bodyJson().extractingPath("$.content[0].reportCount").isEqualTo(6);
         assertThat(result)
                 .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.SPAM")
-                .isEqualTo(3);
-        assertThat(result)
-                .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.PRIVACY")
-                .isEqualTo(0);
+                .extractingPath("$.content[0].reasonCounts")
+                .isEqualTo(reasonCounts(3, 3, 0, 0, 0, 0));
         List<String> recent = json(result, "$.content[0].recentReports[*].content");
         assertThat(recent)
                 .containsExactly(
@@ -147,7 +144,8 @@ class AdminMemoryReviewApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-33][MM-11] status=HIDDEN이면 숨긴 기록만 나오고, 허용하지 않는 status와 범위를 벗어난 size는 400 INVALID_INPUT이다")
+    @DisplayName(
+            "[F-33][MM-11] status=HIDDEN이면 숨긴 기록만 나오고 신고가 없는 기록은 사유별 수가 모두 0이며, 허용하지 않는 status와 범위를 벗어난 size는 400 INVALID_INPUT이다")
     void listFiltersByStatusAndValidatesInput() {
         // given
         long hidden = insertMemory("PUBLIC", "HIDDEN", BASE);
@@ -156,6 +154,14 @@ class AdminMemoryReviewApiIntegrationTest {
         // when // then
         assertThat(ids(get(MEMORIES + "?status=HIDDEN"), "$.content[*].memoryId"))
                 .containsExactly(hidden);
+        assertThat(get(MEMORIES + "?status=HIDDEN"))
+                .bodyJson()
+                .extractingPath("$.content[0].reportCount")
+                .isEqualTo(0);
+        assertThat(get(MEMORIES + "?status=HIDDEN"))
+                .bodyJson()
+                .extractingPath("$.content[0].reasonCounts")
+                .isEqualTo(reasonCounts(0, 0, 0, 0, 0, 0));
         for (String query : List.of("?status=ACTIVE", "?status=hidden", "?size=51", "?size=0")) {
             MvcTestResult result = get(MEMORIES + query);
             assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
@@ -342,6 +348,17 @@ class AdminMemoryReviewApiIntegrationTest {
     private static List<Long> ids(MvcTestResult result, String path) {
         List<Number> numbers = json(result, path);
         return numbers.stream().map(Number::longValue).toList();
+    }
+
+    private static Map<String, Integer> reasonCounts(
+            int spam, int abuse, int illegalCamping, int privacy, int moneyScam, int other) {
+        return Map.of(
+                "SPAM", spam,
+                "ABUSE", abuse,
+                "ILLEGAL_CAMPING", illegalCamping,
+                "PRIVACY", privacy,
+                "MONEY_SCAM", moneyScam,
+                "OTHER", other);
     }
 
     private String memoryStatus(long memoryId) {

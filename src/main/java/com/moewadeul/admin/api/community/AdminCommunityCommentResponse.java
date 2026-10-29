@@ -3,6 +3,7 @@ package com.moewadeul.admin.api.community;
 import com.moewadeul.community.application.moderation.AdminCommunityCommentSummary;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 public record AdminCommunityCommentResponse(
         long commentId,
@@ -11,7 +12,7 @@ public record AdminCommunityCommentResponse(
         AdminCommunityReports.Author author,
         String status,
         long reportCount,
-        AdminCommunityReports.ReasonCounts reasonCounts,
+        Map<String, Long> reasonCounts,
         List<AdminCommunityReports.RecentReport> recentReports,
         Instant statusChangedAt) {
 
@@ -23,7 +24,7 @@ public record AdminCommunityCommentResponse(
                 AdminCommunityReports.Author.from(summary.author()),
                 summary.status(),
                 summary.reportCount(),
-                AdminCommunityReports.ReasonCounts.from(summary.reasonCounts()),
+                summary.reasonCounts(),
                 AdminCommunityReports.RecentReport.fromAll(summary.recentReports()),
                 summary.statusChangedAt());
     }

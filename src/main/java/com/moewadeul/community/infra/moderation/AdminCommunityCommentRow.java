@@ -10,10 +10,4 @@ public record AdminCommunityCommentRow(
         String authorNickname,
         String status,
         long reportCount,
-        long spamCount,
-        long abuseCount,
-        long illegalCampingCount,
-        long privacyCount,
-        long moneyScamCount,
-        long otherCount,
         Instant statusChangedAt) {}

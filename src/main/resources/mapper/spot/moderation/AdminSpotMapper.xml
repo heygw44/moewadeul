@@ -13,19 +13,13 @@
                b.reporter_id AS reporter_id,
                m.nickname AS reporter_nickname,
                COALESCE(rc.report_count, 0) AS report_count,
-               COALESCE(rc.illegal_area_count, 0) AS illegal_area_count,
-               COALESCE(rc.closed_count, 0) AS closed_count,
-               COALESCE(rc.false_info_count, 0) AS false_info_count,
                s.updated_at AS status_changed_at
         FROM spot s
         LEFT JOIN bakji_detail b ON b.spot_id = s.id
         LEFT JOIN member m ON m.id = b.reporter_id
         LEFT JOIN (
             SELECT r.spot_id AS spot_id,
-                   COUNT(*) AS report_count,
-                   COUNT(CASE WHEN r.reason = 'ILLEGAL_AREA' THEN 1 END) AS illegal_area_count,
-                   COUNT(CASE WHEN r.reason = 'CLOSED' THEN 1 END) AS closed_count,
-                   COUNT(CASE WHEN r.reason = 'FALSE_INFO' THEN 1 END) AS false_info_count
+                   COUNT(*) AS report_count
             FROM bakji_report r
             JOIN spot target ON target.id = r.spot_id
             WHERE r.reviewed_at IS NULL
@@ -35,6 +29,19 @@
         WHERE s.status = #{status}
         ORDER BY s.updated_at ASC, s.id ASC
         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectReasonCounts" resultType="com.moewadeul.common.moderation.ReportReasonCount">
+        SELECT r.spot_id AS target_id,
+               r.reason AS reason,
+               COUNT(*) AS report_count
+        FROM bakji_report r
+        WHERE r.reviewed_at IS NULL
+          AND r.spot_id IN
+        <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
+            #{spotId}
+        </foreach>
+        GROUP BY r.spot_id, r.reason
     </select>
 
     <select id="selectRecentReports" resultType="com.moewadeul.spot.infra.moderation.AdminSpotRecentReportRow">

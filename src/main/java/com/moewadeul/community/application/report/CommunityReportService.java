@@ -3,13 +3,13 @@ package com.moewadeul.community.application.report;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
+import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import com.moewadeul.community.domain.comment.CommunityComment;
 import com.moewadeul.community.domain.comment.CommunityCommentRepository;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.domain.post.CommunityPostRepository;
 import com.moewadeul.community.domain.report.CommunityReport;
-import com.moewadeul.community.domain.report.CommunityReportReason;
 import com.moewadeul.community.domain.report.CommunityReportRepository;
 import com.moewadeul.community.domain.report.CommunityReportTargetType;
 import java.time.Clock;
@@ -30,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class CommunityReportService {
 
     private static final String REPORT_UNIQUE_CONSTRAINT = "uk_community_report_target_reporter";
-    private static final int PENDING_REVIEW_REPORT_THRESHOLD = 5;
 
     private final CommunityPostRepository communityPostRepository;
     private final CommunityCommentRepository communityCommentRepository;
@@ -44,10 +43,8 @@ public class CommunityReportService {
                 .findByIdForUpdate(postId)
                 .filter(CommunityPost::isActive)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        boolean reachedThreshold = saveReport(CommunityReportTargetType.POST, post.getId(), memberId, command);
-        if (reachedThreshold) {
-            post.markPendingReview(clock.instant());
-        }
+        long unreviewedReportCount = saveReport(CommunityReportTargetType.POST, post.getId(), memberId, command);
+        post.receiveReport(unreviewedReportCount, clock.instant());
     }
 
     @Transactional
@@ -61,15 +58,13 @@ public class CommunityReportService {
                 .findById(comment.getPostId())
                 .filter(CommunityPost::isActive)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        boolean reachedThreshold = saveReport(CommunityReportTargetType.COMMENT, comment.getId(), memberId, command);
-        if (reachedThreshold) {
-            comment.markPendingReview(clock.instant());
-        }
+        long unreviewedReportCount = saveReport(CommunityReportTargetType.COMMENT, comment.getId(), memberId, command);
+        comment.receiveReport(unreviewedReportCount, clock.instant());
     }
 
-    private boolean saveReport(
+    private long saveReport(
             CommunityReportTargetType targetType, long targetId, long memberId, CommunityReportCommand command) {
-        CommunityReportReason reason = command.reason();
+        ContentReportReason reason = command.reason();
         String content = command.content();
         if (content != null && content.length() > CommunityReport.CONTENT_MAX_LENGTH) {
             throw new BusinessException(
@@ -86,8 +81,7 @@ public class CommunityReportService {
             throw UniqueViolations.translate(
                     e, REPORT_UNIQUE_CONSTRAINT, CommunityErrorCode.COMMUNITY_ALREADY_REPORTED);
         }
-        return communityReportRepository.countByTargetTypeAndTargetIdAndReviewedAtIsNull(targetType, targetId)
-                >= PENDING_REVIEW_REPORT_THRESHOLD;
+        return communityReportRepository.countByTargetTypeAndTargetIdAndReviewedAtIsNull(targetType, targetId);
     }
 
     private static BusinessException alreadyReported() {

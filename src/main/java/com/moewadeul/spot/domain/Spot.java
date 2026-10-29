@@ -1,6 +1,7 @@
 package com.moewadeul.spot.domain;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.moderation.PendingReview;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -118,7 +119,10 @@ public class Spot {
         this.updatedAt = now;
     }
 
-    public void markPendingReview(Instant now) {
+    public void receiveReport(long unreviewedReportCount, Instant now) {
+        if (unreviewedReportCount < PendingReview.REPORT_THRESHOLD) {
+            return;
+        }
         if (status != SpotStatus.ACTIVE) {
             throw new IllegalStateException("지도에 보이는 장소만 검토 대기로 바꿀 수 있습니다. 현재 상태: " + status);
         }

@@ -4,6 +4,7 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.image.ImageUploadCommand;
+import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.common.web.PatchField;
@@ -16,7 +17,6 @@ import com.moewadeul.community.application.report.CommunityReportService;
 import com.moewadeul.community.domain.comment.CommunityCommentRepository;
 import com.moewadeul.community.domain.image.CommunityImageRepository;
 import com.moewadeul.community.domain.post.CommunityPostRepository;
-import com.moewadeul.community.domain.report.CommunityReportReason;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
@@ -48,8 +48,7 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
     private static final int REPETITIONS = 3;
     private static final long MIDDLE_WAIT_SECONDS = 2;
     private static final long IMAGE_SIZE = 1000L;
-    private static final CommunityReportCommand REPORT =
-            new CommunityReportCommand(CommunityReportReason.SPAM, "광고입니다");
+    private static final CommunityReportCommand REPORT = new CommunityReportCommand(ContentReportReason.SPAM, "광고입니다");
     private static final Set<String> POST_READ =
             Set.of("CommunityPostRepository.findById", "CommunityPostRepository.findByIdForUpdate");
     private static final Set<String> COMMENT_READ =

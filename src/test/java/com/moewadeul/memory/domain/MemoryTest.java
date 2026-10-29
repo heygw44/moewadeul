@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.moderation.PendingReview;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -84,7 +85,7 @@ class MemoryTest {
     }
 
     @Test
-    @DisplayName("[F-33][MM-10] 새 기록은 ACTIVE로 시작하고, 공개이면서 ACTIVE일 때만 다른 사람에게 보인다")
+    @DisplayName("[F-33][MM-10] 새 기록은 ACTIVE로 시작하고 공개이면서 ACTIVE일 때만 다른 사람에게 보이며, 검토 전 신고가 4건이면 그대로이고 5건이 되면 검토 대기가 된다")
     void newMemoryIsActiveAndVisibleOnlyWhenPublic() {
         Memory privateMemory = Memory.write(1L, details(1, null), NOW);
         Memory publicMemory = Memory.write(1L, publicDetails(), NOW);
@@ -93,7 +94,12 @@ class MemoryTest {
         assertThat(privateMemory.isVisibleToOthers()).isFalse();
         assertThat(publicMemory.isVisibleToOthers()).isTrue();
 
-        publicMemory.markPendingReview(NOW.plusSeconds(60));
+        publicMemory.receiveReport(4, NOW.plusSeconds(30));
+
+        assertThat(publicMemory.isVisibleToOthers()).isTrue();
+        assertThat(publicMemory.getUpdatedAt()).isEqualTo(NOW);
+
+        publicMemory.receiveReport(5, NOW.plusSeconds(60));
 
         assertThat(publicMemory.getStatus()).isEqualTo(MemoryStatus.PENDING_REVIEW);
         assertThat(publicMemory.isVisibleToOthers()).isFalse();
@@ -101,15 +107,15 @@ class MemoryTest {
     }
 
     @Test
-    @DisplayName("[F-33][MM-10] 검토 대기로는 ACTIVE에서만 바꾸고, 이미 검토 대기이거나 숨긴 기록이면 거부한다")
-    void markPendingReviewOnlyFromActive() {
+    @DisplayName("[F-33][MM-10] 검토 대기로는 ACTIVE에서만 바꾸고, 이미 검토 대기이거나 숨긴 기록의 신고가 5건이 되면 거부한다")
+    void receiveReportOnlyFromActive() {
         Memory pending = Memory.write(1L, publicDetails(), NOW);
-        pending.markPendingReview(NOW);
+        pending.receiveReport(5, NOW);
         Memory hidden = Memory.write(1L, publicDetails(), NOW);
         hidden.hide(NOW);
 
-        assertThatThrownBy(() -> pending.markPendingReview(NOW)).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> hidden.markPendingReview(NOW)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> pending.receiveReport(5, NOW)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> hidden.receiveReport(5, NOW)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -117,7 +123,7 @@ class MemoryTest {
     void hideFromActiveOrPendingReview() {
         Memory active = Memory.write(1L, publicDetails(), NOW);
         Memory pending = Memory.write(1L, publicDetails(), NOW);
-        pending.markPendingReview(NOW);
+        pending.receiveReport(PendingReview.REPORT_THRESHOLD, NOW);
 
         active.hide(NOW.plusSeconds(60));
         pending.hide(NOW.plusSeconds(60));
@@ -135,7 +141,7 @@ class MemoryTest {
     @DisplayName("[F-33][MM-11] 관리자는 검토 대기와 숨긴 기록을 ACTIVE로 복구하고, ACTIVE 기록을 복구하면 MEMORY_INVALID_STATE다")
     void restoreFromPendingReviewOrHidden() {
         Memory pending = Memory.write(1L, publicDetails(), NOW);
-        pending.markPendingReview(NOW);
+        pending.receiveReport(PendingReview.REPORT_THRESHOLD, NOW);
         Memory hidden = Memory.write(1L, publicDetails(), NOW);
         hidden.hide(NOW);
         Memory active = Memory.write(1L, publicDetails(), NOW);

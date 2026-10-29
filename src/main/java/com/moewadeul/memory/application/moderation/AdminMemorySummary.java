@@ -4,6 +4,7 @@ import com.moewadeul.memory.application.MemoryPhoto;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public record AdminMemorySummary(
         long memoryId,
@@ -17,11 +18,9 @@ public record AdminMemorySummary(
         List<MemoryPhoto> images,
         String status,
         long reportCount,
-        ReasonCounts reasonCounts,
+        Map<String, Long> reasonCounts,
         List<RecentReport> recentReports,
         Instant statusChangedAt) {
-
-    public record ReasonCounts(long spam, long abuse, long illegalCamping, long privacy, long moneyScam, long other) {}
 
     public record RecentReport(String reason, String content, Instant createdAt) {}
 }

@@ -14,10 +14,4 @@ public record AdminMemoryRow(
         String content,
         String status,
         long reportCount,
-        long spamCount,
-        long abuseCount,
-        long illegalCampingCount,
-        long privacyCount,
-        long moneyScamCount,
-        long otherCount,
         Instant statusChangedAt) {}
