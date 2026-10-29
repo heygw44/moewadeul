@@ -15,10 +15,10 @@ import tools.jackson.databind.json.JsonMapper;
 
 class EmailVerificationRequestedHandlerTest {
 
-    private final EmailVerificationService emailVerificationService = mock(EmailVerificationService.class);
+    private final EmailVerificationIssuer emailVerificationIssuer = mock(EmailVerificationIssuer.class);
     private final MailSender mailSender = mock(MailSender.class);
     private final EmailVerificationRequestedHandler handler = new EmailVerificationRequestedHandler(
-            emailVerificationService, mailSender, JsonMapper.builder().build());
+            emailVerificationIssuer, mailSender, JsonMapper.builder().build());
 
     @AfterEach
     void clearTransaction() {
@@ -34,6 +34,6 @@ class EmailVerificationRequestedHandlerTest {
                         new OutboxMessage(1L, "EmailVerificationRequested", "Member", 2L, "{}", Instant.EPOCH)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageStartingWith("트랜잭션 밖에서 불러야 합니다.");
-        verifyNoInteractions(emailVerificationService, mailSender);
+        verifyNoInteractions(emailVerificationIssuer, mailSender);
     }
 }

@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.verification.EmailVerificationPolicy;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -45,7 +45,7 @@ class EmailVerificationApiIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -277,7 +277,7 @@ class EmailVerificationApiIntegrationTest {
     }
 
     private String issueCode(Member member) {
-        return emailVerificationService
+        return emailVerificationIssuer
                 .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();

@@ -16,7 +16,7 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 class EmailVerificationRequestedHandler implements OutboxEventHandler {
 
-    private final EmailVerificationService emailVerificationService;
+    private final EmailVerificationIssuer emailVerificationIssuer;
     private final MailSender mailSender;
     private final JsonMapper jsonMapper;
 
@@ -30,7 +30,7 @@ class EmailVerificationRequestedHandler implements OutboxEventHandler {
         OutsideTransaction.require("메일 서버 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         EmailVerificationEvents.Payload payload = parse(message);
         Optional<IssuedVerification> issued =
-                emailVerificationService.issueFor(message.aggregateId(), payload.requestIp(), message.eventId());
+                emailVerificationIssuer.issueFor(message.aggregateId(), payload.requestIp(), message.eventId());
         issued.ifPresent(this::sendMail);
     }
 

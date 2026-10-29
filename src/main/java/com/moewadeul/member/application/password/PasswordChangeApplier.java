@@ -1,5 +1,7 @@
 package com.moewadeul.member.application.password;
 
+import static com.moewadeul.member.application.MemberGuards.memberNotFound;
+
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.Password;
@@ -26,9 +28,5 @@ class PasswordChangeApplier {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> memberNotFound(memberId));
         member.changePassword(passwordEncoder.encode(newPassword.value()), now);
         passwordResetTokenMapper.invalidateUnusedTokens(memberId, now);
-    }
-
-    private static IllegalStateException memberNotFound(long memberId) {
-        return new IllegalStateException("비밀번호를 바꿀 회원이 없습니다. memberId=" + memberId);
     }
 }

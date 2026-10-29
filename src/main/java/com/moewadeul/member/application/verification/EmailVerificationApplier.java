@@ -26,4 +26,8 @@ class EmailVerificationApplier {
             throw new BusinessException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         }
     }
+
+    boolean countWrongAttempt(long verificationId, Instant now) {
+        return emailVerificationMapper.incrementAttempt(verificationId, EmailVerificationPolicy.MAX_ATTEMPTS, now) > 0;
+    }
 }

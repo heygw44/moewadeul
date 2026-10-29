@@ -6,7 +6,7 @@ import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.EmailVerificationEvents;
 import com.moewadeul.member.application.MemberMetrics;
 import com.moewadeul.member.application.MemberUniqueConstraintTranslator;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailSendIpLimiter;
 import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
@@ -36,7 +36,7 @@ public class MemberSignupService {
     private final Clock clock;
     private final OutboxEventRecorder outboxEventRecorder;
     private final MemberMetrics memberMetrics;
-    private final EmailVerificationService emailVerificationService;
+    private final EmailSendIpLimiter emailSendIpLimiter;
 
     // 중복으로 거절한 가입 시도도 IP 한도에 세려면 그 기록을 커밋해야 한다.
     // 중복 예외는 회원을 저장하기 전에만 던지므로 롤백하지 않아도 회원이나 발송 요청이 남지 않는다.
@@ -47,7 +47,7 @@ public class MemberSignupService {
         Nickname nickname = new Nickname(command.nickname());
         // IP 잠금이 이 트랜잭션의 첫 SQL이어야 한다. MySQL은 첫 일반 조회 때 읽기 스냅숏을 정하므로, 이보다 앞서 조회하면
         // 잠금을 기다리는 동안 같은 IP의 다른 가입이 커밋한 발송 요청을 세지 못한다.
-        SendWindow sentByIp = emailVerificationService.lockSendsByIp(command.requestIp());
+        SendWindow sentByIp = emailSendIpLimiter.lockSendsByIp(command.requestIp());
         Instant now = Instant.now(clock);
         rejectDisposableDomain(email);
         rejectIfIpLimited(sentByIp, now);
@@ -89,7 +89,7 @@ public class MemberSignupService {
     }
 
     private DuplicateSignupException duplicateRecorded(MemberErrorCode errorCode, String requestIp) {
-        emailVerificationService.recordDuplicateSignup(requestIp);
+        emailSendIpLimiter.recordDuplicateSignup(requestIp);
         return new DuplicateSignupException(errorCode);
     }
 

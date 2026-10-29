@@ -1,5 +1,7 @@
 package com.moewadeul.member.application.password;
 
+import static com.moewadeul.member.application.MemberGuards.memberNotFound;
+
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
@@ -56,9 +58,5 @@ class PasswordResetApplier {
 
     private static BusinessException invalidToken() {
         return new BusinessException(MemberErrorCode.PASSWORD_RESET_TOKEN_INVALID);
-    }
-
-    private static IllegalStateException memberNotFound(long memberId) {
-        return new IllegalStateException("재설정 토큰의 회원이 없습니다. memberId=" + memberId);
     }
 }

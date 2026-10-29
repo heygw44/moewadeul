@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
@@ -49,7 +49,7 @@ class SoloTripApiIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -269,7 +269,7 @@ class SoloTripApiIntegrationTest {
 
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
-        String code = emailVerificationService
+        String code = emailVerificationIssuer
                 .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();

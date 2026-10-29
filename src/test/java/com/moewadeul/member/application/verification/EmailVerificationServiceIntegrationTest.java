@@ -37,6 +37,9 @@ class EmailVerificationServiceIntegrationTest {
     private EmailVerificationService emailVerificationService;
 
     @Autowired
+    private EmailVerificationIssuer emailVerificationIssuer;
+
+    @Autowired
     private EmailVerificationApplier emailVerificationApplier;
 
     @Autowired
@@ -100,9 +103,9 @@ class EmailVerificationServiceIntegrationTest {
         long rowsBefore = countVerificationRows();
 
         // when & then
-        assertThat(emailVerificationService.issueFor(activeMember.getId(), IP, TestSequence.next()))
+        assertThat(emailVerificationIssuer.issueFor(activeMember.getId(), IP, TestSequence.next()))
                 .isEmpty();
-        assertThat(emailVerificationService.issueFor(Long.MAX_VALUE, IP, TestSequence.next()))
+        assertThat(emailVerificationIssuer.issueFor(Long.MAX_VALUE, IP, TestSequence.next()))
                 .isEmpty();
         assertThat(countVerificationRows()).isEqualTo(rowsBefore);
     }
@@ -438,7 +441,7 @@ class EmailVerificationServiceIntegrationTest {
         Member member = newMember();
         long eventId = TestSequence.next();
         Instant firstIssuedAt = clock.instant();
-        String firstCode = emailVerificationService
+        String firstCode = emailVerificationIssuer
                 .issueFor(member.getId(), IP, eventId)
                 .orElseThrow()
                 .code();
@@ -447,7 +450,7 @@ class EmailVerificationServiceIntegrationTest {
         clock.advance(Duration.ofMinutes(5));
 
         // when
-        String secondCode = emailVerificationService
+        String secondCode = emailVerificationIssuer
                 .issueFor(member.getId(), IP, eventId)
                 .orElseThrow()
                 .code();
@@ -490,7 +493,7 @@ class EmailVerificationServiceIntegrationTest {
         }
         Member requester = newMember();
         emailVerificationService.requestResend(requester.getId(), IP);
-        emailVerificationService.issueFor(requester.getId(), IP, eventIdOf(requester));
+        emailVerificationIssuer.issueFor(requester.getId(), IP, eventIdOf(requester));
         Member another = newMember();
 
         // when
@@ -545,7 +548,7 @@ class EmailVerificationServiceIntegrationTest {
     }
 
     private String issue(Member member) {
-        return emailVerificationService
+        return emailVerificationIssuer
                 .issueFor(member.getId(), IP, TestSequence.next())
                 .orElseThrow(() -> new AssertionError("미인증 회원인데 코드를 발급하지 않았습니다."))
                 .code();

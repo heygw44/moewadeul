@@ -9,6 +9,7 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.signup.MemberSignupService;
 import com.moewadeul.member.application.signup.SignupCommand;
 import com.moewadeul.member.application.signup.SignupResult;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.MemberErrorCode;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -28,6 +29,9 @@ class MemberMetricsIntegrationTest {
 
     @Autowired
     private EmailVerificationService emailVerificationService;
+
+    @Autowired
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -77,7 +81,7 @@ class MemberMetricsIntegrationTest {
     void countsOnlySuccessfulEmailVerification() {
         // given
         long memberId = signUp(TestSequence.email()).memberId();
-        String code = emailVerificationService
+        String code = emailVerificationIssuer
                 .issueFor(memberId, REQUEST_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
