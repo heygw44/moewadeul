@@ -1,6 +1,7 @@
 package com.moewadeul.common.profile;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 public enum TrustLevel {
     EMAIL_VERIFIED(0),
@@ -18,10 +19,11 @@ public enum TrustLevel {
     }
 
     public static TrustLevel of(int level) {
-        return Arrays.stream(values())
-                .filter(value -> value.level == level)
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("신뢰 단계는 0~2 사이여야 합니다."));
+        return find(level).orElseThrow(() -> new IllegalArgumentException("신뢰 단계는 0~2 사이여야 합니다."));
+    }
+
+    public static Optional<TrustLevel> find(int level) {
+        return Arrays.stream(values()).filter(value -> value.level == level).findFirst();
     }
 
     public boolean atLeast(TrustLevel other) {

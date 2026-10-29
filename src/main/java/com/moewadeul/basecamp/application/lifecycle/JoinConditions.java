@@ -18,7 +18,8 @@ final class JoinConditions {
         try {
             JoinCondition condition = JoinCondition.none();
             if (requested.minTrustLevel() != null) {
-                condition = condition.withMinTrustLevel(TrustLevel.of(requested.minTrustLevel()));
+                condition = condition.withMinTrustLevel(
+                        TrustLevel.find(requested.minTrustLevel()).orElse(null));
             }
             condition = withAgeGroupRange(condition, requested);
             if (requested.sameGenderOnly()) {
