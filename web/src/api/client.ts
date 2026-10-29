@@ -72,22 +72,23 @@ function recordServerClock(response: Response): void {
   }
 }
 
-let csrfCookieRequest: Promise<void> | null = null;
+let csrfCookieRequest: Promise<boolean> | null = null;
 
-async function ensureCsrfCookie(): Promise<void> {
+// 서버에 닿았으면 true. 응답 코드는 보지 않는다. 401이어도 XSRF-TOKEN 쿠키는 함께 온다.
+function ensureCsrfCookie(): Promise<boolean> {
   csrfCookieRequest ??= fetch('/api/me', {
     method: 'GET',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
   })
     .then(
-      () => undefined,
-      () => undefined,
+      () => true,
+      () => false,
     )
     .finally(() => {
       csrfCookieRequest = null;
     });
-  await csrfCookieRequest;
+  return csrfCookieRequest;
 }
 
 function buildUrl(path: string, query: RequestOptions['query']): string {
@@ -225,8 +226,10 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   if (method !== 'GET') {
     let csrfToken = readCookie(CSRF_COOKIE);
     if (csrfToken === undefined) {
-      await ensureCsrfCookie();
+      const reached = await ensureCsrfCookie();
       csrfToken = readCookie(CSRF_COOKIE);
+      // 토큰 없이 보내면 서버가 403으로 막아 "권한이 없어요"가 뜬다. 실제 원인인 연결 실패로 알린다.
+      if (csrfToken === undefined && !reached) throw new ApiError(0, 'NETWORK_ERROR', null);
     }
     if (csrfToken !== undefined) {
       headers.set('X-XSRF-TOKEN', csrfToken);
