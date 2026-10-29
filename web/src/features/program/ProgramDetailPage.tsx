@@ -22,7 +22,7 @@ import { PageLayout } from '../../components/PageLayout';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { buttonClassName } from '../../components/buttonClass';
+import { buttonClassName, SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { formatKstDateTime } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -35,7 +35,6 @@ import { useDocumentTitle } from '../../components/useDocumentTitle';
 type LoadResult = { programId: number; detail: ProgramDetail } | { programId: number; error: unknown };
 
 const LINK_BUTTON_CLASS = buttonClassName('primary');
-const SECONDARY_LINK_CLASS = buttonClassName('secondary');
 const BOARD_ROW_CLASS =
   'grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 px-4 py-2.5 text-[0.9375rem] sm:grid-cols-[8rem_minmax(0,1fr)] sm:px-5';
 

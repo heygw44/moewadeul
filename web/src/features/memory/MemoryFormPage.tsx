@@ -23,7 +23,7 @@ import { restorableImages, useImageUploads } from '../../components/useImageUplo
 import type { UploadImageItem } from '../../components/useImageUploads';
 import { todayKst } from '../../lib/datetime';
 import type { LatLng } from '../../map/types';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
 import { useSession } from '../member/session';
 import { useRequireAuth } from '../member/useRequireAuth';

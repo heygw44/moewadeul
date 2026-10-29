@@ -8,7 +8,7 @@ import { HubLayout } from '../../components/HubLayout';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useRequireAuth } from '../member/useRequireAuth';
 import type { MemoryCellItem } from './memoryItems';
 import { MEMORY_STATUS_LABEL } from './memoryLabels';

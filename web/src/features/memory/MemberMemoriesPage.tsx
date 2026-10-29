@@ -10,7 +10,7 @@ import { HubLayout } from '../../components/HubLayout';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useSession } from '../member/session';
 import type { MemoryCellItem } from './memoryItems';
 import { MemoryMapGrid } from './MemoryMapGrid';

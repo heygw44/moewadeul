@@ -18,7 +18,7 @@ import { useSession } from '../member/session';
 import { useViewerEpoch } from '../member/useViewerEpoch';
 import { CommunityComments } from './CommunityComments';
 import { CommunityReportDialog } from './CommunityReportDialog';
-import { SECONDARY_LINK_CLASS } from './communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult = { postId: number; post: CommunityPostDetail } | { postId: number; error: unknown };

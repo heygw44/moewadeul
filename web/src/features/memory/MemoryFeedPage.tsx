@@ -10,7 +10,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useViewerEpoch } from '../member/useViewerEpoch';
 import { usePagedList } from '../../components/usePagedList';
 import { useDocumentTitle } from '../../components/useDocumentTitle';

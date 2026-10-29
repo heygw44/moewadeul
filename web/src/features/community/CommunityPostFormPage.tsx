@@ -22,7 +22,8 @@ import type { UploadImageItem } from '../../components/useImageUploads';
 import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
 import { useSession } from '../member/session';
 import { useRequireAuth } from '../member/useRequireAuth';
-import { parseSpotId, SECONDARY_LINK_CLASS } from './communityLabels';
+import { parseSpotId } from './communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const TITLE_MAX = 100;

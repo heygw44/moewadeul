@@ -14,7 +14,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useSession } from '../member/session';
 import { useViewerEpoch } from '../member/useViewerEpoch';
 import { LocationLabel } from '../spot/LocationLabel';

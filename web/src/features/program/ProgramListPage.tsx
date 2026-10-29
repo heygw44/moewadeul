@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { buttonClassName } from '../../components/buttonClass';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { listPrograms } from '../../api/programs';
 import type { ProgramListStatus } from '../../api/programs';
 import type { ProgramSummary } from '../../api/types';
@@ -20,8 +20,6 @@ import { usePagedList } from '../../components/usePagedList';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type ProgramFilter = ProgramListStatus | 'ALL';
-
-const SECONDARY_LINK_CLASS = buttonClassName('secondary');
 
 function fetchPrograms(filter: ProgramFilter, page: number, signal?: AbortSignal) {
   return listPrograms(filter === 'ALL' ? undefined : filter, page, signal);
