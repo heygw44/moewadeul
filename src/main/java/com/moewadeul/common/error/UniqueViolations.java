@@ -21,8 +21,7 @@ public final class UniqueViolations {
         return message != null && violatedKey(message).contains(constraintName);
     }
 
-    // 중복 값에는 이메일 같은 개인정보가 들어갈 수 있어 로그에는 값을 빼고 제약 이름만 남긴다. 외래 키·NOT NULL 메시지에는 값이 없어 그대로 둔다.
-    public static String describe(DataIntegrityViolationException e) {
+    public static String redactedMessage(DataIntegrityViolationException e) {
         String message = mostSpecificMessage(e);
         if (message == null) {
             return "none";

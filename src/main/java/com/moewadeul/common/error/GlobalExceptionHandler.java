@@ -87,13 +87,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(ErrorResponse.of(CommonErrorCode.RESOURCE_BUSY));
     }
 
-    // 서비스가 제약 이름으로 번역하지 못한 위반이다. 메시지에 중복 값이 들어 있을 수 있어 원문과 스택 트레이스는 남기지 않는다.
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleUntranslatedDataIntegrityViolation(DataIntegrityViolationException e) {
         log.warn(
                 "untranslated data integrity violation cause={}: {}",
                 e.getClass().getSimpleName(),
-                UniqueViolations.describe(e));
+                UniqueViolations.redactedMessage(e));
         return dataConflict();
     }
 

@@ -154,28 +154,28 @@ class UniqueViolationsTest {
     }
 
     @Test
-    @DisplayName("[describe] 중복 메시지에서 값은 빼고 제약 이름만 남긴다")
-    void describeDropsDuplicatedValue() {
+    @DisplayName("[redactedMessage] 중복 메시지에서 값은 빼고 제약 이름만 남긴다")
+    void redactedMessageDropsDuplicatedValue() {
         // given
         DataIntegrityViolationException e =
                 duplicate("Duplicate entry 'secret@example.com' for key 'member.uk_member_email'");
 
         // when
-        String described = UniqueViolations.describe(e);
+        String described = UniqueViolations.redactedMessage(e);
 
         // then
         assertThat(described).isEqualTo("Duplicate entry for key 'member.uk_member_email'");
     }
 
     @Test
-    @DisplayName("[describe] 외래 키 위반 메시지는 값이 없으므로 그대로 둔다")
-    void describeKeepsForeignKeyMessage() {
+    @DisplayName("[redactedMessage] 외래 키 위반 메시지는 값이 없으므로 그대로 둔다")
+    void redactedMessageKeepsForeignKeyMessage() {
         // given
         String message = "Cannot add or update a child row: a foreign key constraint fails (`moewadeul`.`spot_review`, "
                 + "CONSTRAINT `fk_spot_review_member` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`))";
 
         // when
-        String described = UniqueViolations.describe(duplicate(message));
+        String described = UniqueViolations.redactedMessage(duplicate(message));
 
         // then
         assertThat(described).isEqualTo(message);
