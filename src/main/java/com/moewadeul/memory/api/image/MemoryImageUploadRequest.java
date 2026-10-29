@@ -1,6 +1,6 @@
 package com.moewadeul.memory.api.image;
 
-import com.moewadeul.memory.application.image.MemoryImageUploadCommand;
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.memory.domain.image.MemoryImage;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -21,7 +21,7 @@ public record MemoryImageUploadRequest(
         @Max(value = MemoryImage.MAX_THUMBNAIL_SIZE_BYTES, message = "썸네일 크기는 256KB 이하여야 해요.")
         Long thumbnailSizeBytes) {
 
-    MemoryImageUploadCommand toCommand() {
-        return new MemoryImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
+    ImageUploadCommand toCommand() {
+        return new ImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
     }
 }

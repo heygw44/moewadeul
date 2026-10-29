@@ -1,10 +1,10 @@
-package com.moewadeul.memory.application.image;
+package com.moewadeul.common.image;
 
 import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
 import java.time.Instant;
 import java.util.Map;
 
-public record MemoryImageUpload(
+public record ImageUpload(
         long imageId,
         String uploadUrl,
         Map<String, String> headers,

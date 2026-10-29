@@ -24,6 +24,6 @@ public interface MemoryImageJpaRepository extends JpaRepository<MemoryImage, Lon
     List<MemoryImage> findAllByIdForUpdate(@Param("ids") Collection<Long> ids);
 
     @Override
-    @Query("SELECT i.id FROM MemoryImage i WHERE i.memoryId = :memoryId ORDER BY i.displayOrder")
-    List<Long> findIdsByMemoryId(@Param("memoryId") long memoryId);
+    @Query("SELECT i.id FROM MemoryImage i WHERE i.parentId = :memoryId ORDER BY i.displayOrder")
+    List<Long> findIdsByParentId(@Param("memoryId") long memoryId);
 }

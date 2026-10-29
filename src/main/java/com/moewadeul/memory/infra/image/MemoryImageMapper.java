@@ -1,13 +1,14 @@
 package com.moewadeul.memory.infra.image;
 
-import java.time.Instant;
+import com.moewadeul.common.image.AttachableImageMapper;
+import com.moewadeul.common.image.UnattachedImageRow;
 import java.util.Collection;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 @Mapper
-public interface MemoryImageMapper {
+public interface MemoryImageMapper extends AttachableImageMapper {
 
     default List<MemoryImageRow> selectByMemoryIds(Collection<Long> memoryIds) {
         return memoryIds.isEmpty() ? List.of() : selectByNonEmptyMemoryIds(memoryIds);
@@ -15,16 +16,6 @@ public interface MemoryImageMapper {
 
     List<MemoryImageRow> selectByNonEmptyMemoryIds(@Param("memoryIds") Collection<Long> memoryIds);
 
-    List<MemoryImageRow> selectUnattachedCreatedBefore(
-            @Param("createdBefore") Instant createdBefore, @Param("limit") int limit);
-
-    List<MemoryImageRow> selectUnattachedByMember(
+    List<UnattachedImageRow> selectUnattachedByMember(
             @Param("memberId") long memberId, @Param("afterId") long afterId, @Param("limit") int limit);
-
-    int deleteIfUnattached(@Param("imageId") long imageId);
-
-    Long lockMember(@Param("memberId") long memberId);
-
-    List<Instant> selectUnattachedCreatedAtsAfter(
-            @Param("memberId") long memberId, @Param("createdAfter") Instant createdAfter, @Param("limit") int limit);
 }

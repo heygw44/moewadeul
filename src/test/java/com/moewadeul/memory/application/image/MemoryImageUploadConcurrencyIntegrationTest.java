@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.memory.domain.image.MemoryImage;
@@ -27,7 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class MemoryImageUploadConcurrencyIntegrationTest {
 
     private static final int THREADS = 4;
-    private static final MemoryImageUploadCommand COMMAND = new MemoryImageUploadCommand("image/jpeg", 1000L, null);
+    private static final ImageUploadCommand COMMAND = new ImageUploadCommand("image/jpeg", 1000L, null);
 
     @Autowired
     private MemoryImageUploadService uploadService;

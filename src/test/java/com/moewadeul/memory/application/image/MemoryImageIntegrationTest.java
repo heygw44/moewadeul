@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.image.ImageUpload;
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
@@ -72,7 +74,7 @@ class MemoryImageIntegrationTest {
     @DisplayName("[F-33][MM-05] 업로드 URL을 발급하면 기록에 붙지 않은 행을 만들고, 객체 키는 memory/회원 ID/로 시작한다")
     void issueCreatesUnattachedRow() {
         // when
-        MemoryImageUpload upload = uploadService.issue(memberId, command("image/webp", SIZE));
+        ImageUpload upload = uploadService.issue(memberId, command("image/webp", SIZE));
 
         // then
         assertThat(keyOf(upload.imageId()))
@@ -88,7 +90,7 @@ class MemoryImageIntegrationTest {
     @DisplayName("[F-33][MM-05] 썸네일 크기를 보내면 원본과 같은 UUID에 _thumb.jpg를 붙인 키로 JPEG 썸네일 업로드 URL도 발급한다")
     void issueWithThumbnailCreatesThumbnailKey() {
         // when
-        MemoryImageUpload upload = uploadService.issue(memberId, withThumbnail("image/png", SIZE, THUMBNAIL_SIZE));
+        ImageUpload upload = uploadService.issue(memberId, withThumbnail("image/png", SIZE, THUMBNAIL_SIZE));
 
         // then
         String key = keyOf(upload.imageId());
@@ -188,7 +190,7 @@ class MemoryImageIntegrationTest {
         }
 
         // when
-        MemoryImageUpload upload = uploadService.issue(memberId, command("image/jpeg", SIZE));
+        ImageUpload upload = uploadService.issue(memberId, command("image/jpeg", SIZE));
 
         // then
         assertThat(memoryIdOf(upload.imageId())).isNull();
@@ -352,12 +354,12 @@ class MemoryImageIntegrationTest {
                 .isZero();
     }
 
-    private static MemoryImageUploadCommand command(String contentType, long sizeBytes) {
-        return new MemoryImageUploadCommand(contentType, sizeBytes, null);
+    private static ImageUploadCommand command(String contentType, long sizeBytes) {
+        return new ImageUploadCommand(contentType, sizeBytes, null);
     }
 
-    private static MemoryImageUploadCommand withThumbnail(String contentType, long sizeBytes, long thumbnailSizeBytes) {
-        return new MemoryImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
+    private static ImageUploadCommand withThumbnail(String contentType, long sizeBytes, long thumbnailSizeBytes) {
+        return new ImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
     }
 
     private long issueWithThumbnail() {

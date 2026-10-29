@@ -4,11 +4,11 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.memory.application.image.MemoryImageUploadCommand;
 import com.moewadeul.memory.application.image.MemoryImageUploadService;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
@@ -207,7 +207,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
 
     private long uploaded(long ownerId) {
         long imageId = uploadService
-                .issue(ownerId, new MemoryImageUploadCommand("image/png", SIZE, THUMBNAIL_SIZE))
+                .issue(ownerId, new ImageUploadCommand("image/png", SIZE, THUMBNAIL_SIZE))
                 .imageId();
         storage.markUploaded(keyOf(imageId), SIZE);
         storage.markUploaded(thumbnailKeyOf(imageId), THUMBNAIL_SIZE);

@@ -1,15 +1,5 @@
 package com.moewadeul.memory.domain.image;
 
-import java.util.Collection;
-import java.util.List;
+import com.moewadeul.common.image.AttachableImageRepository;
 
-public interface MemoryImageRepository {
-
-    MemoryImage saveAndFlush(MemoryImage image);
-
-    List<MemoryImage> findAllById(Iterable<Long> ids);
-
-    List<MemoryImage> findAllByIdForUpdate(Collection<Long> ids);
-
-    List<Long> findIdsByMemoryId(long memoryId);
-}
+public interface MemoryImageRepository extends AttachableImageRepository<MemoryImage> {}
