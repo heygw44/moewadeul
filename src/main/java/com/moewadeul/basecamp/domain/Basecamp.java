@@ -246,6 +246,30 @@ public class Basecamp {
         markCanceled(reason, now);
     }
 
+    public boolean departDayBefore(Instant now) {
+        if (!BEFORE_CONFIRM.contains(status) || startDate.isAfter(KoreaTime.dateOf(now).plusDays(1))) {
+            return false;
+        }
+        if (headcount() < MIN_CONFIRM_HEADCOUNT) {
+            markCanceled(CancelReason.NOT_ENOUGH_MEMBERS, now);
+        } else {
+            markConfirmed(now);
+        }
+        return true;
+    }
+
+    public boolean complete(LocalDate today, Instant now) {
+        if (status != BasecampStatus.CONFIRMED || !endDate.isBefore(today)) {
+            return false;
+        }
+        this.status = BasecampStatus.COMPLETED;
+        this.completedAt = now;
+        expirePendingApplications(now);
+        touch(now);
+        raiseMembers(BasecampEvents.COMPLETED, activeMemberIds());
+        return true;
+    }
+
     public void checkApplicable(long applicantId) {
         requireStatus(RECRUITING_ONLY);
         requireNotBlockedByMembership(applicantId);
@@ -409,7 +433,10 @@ public class Basecamp {
         this.cancelReason = reason;
         expirePendingApplications(now);
         touch(now);
-        raiseMembers(BasecampEvents.CANCELED, activeMembersExceptLeader());
+        // 인원 부족 취소만 캠프 리더가 고르지 않은 취소라서 캠프 리더에게도 알린다.
+        List<Long> recipients =
+                reason == CancelReason.NOT_ENOUGH_MEMBERS ? activeMemberIds() : activeMembersExceptLeader();
+        raiseMembers(BasecampEvents.CANCELED, recipients);
     }
 
     private void raise(String eventType, Supplier<Object> payload) {
