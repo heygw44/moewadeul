@@ -15,8 +15,12 @@ import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,8 +43,13 @@ class BasecampAutoTransitionSqlParityIntegrationTest {
     private static final String BASECAMP_COLUMNS =
             "status, closed_reason, confirmed_at, canceled_at, cancel_reason," + " completed_at, updated_at";
 
+    private static final LocalDateTime NOW_IN_DB = LocalDateTime.ofInstant(NOW, ZoneOffset.UTC);
+
     @Autowired
     private BasecampAutoTransitionMapper mapper;
+
+    @Autowired
+    private BasecampAutoTransitionApplier applier;
 
     @Autowired
     private BasecampJpaRepository basecampRepository;
@@ -132,6 +141,92 @@ class BasecampAutoTransitionSqlParityIntegrationTest {
         assertThat(selectedByScheduler).isEqualTo(changed == 1);
         assertThat(rowOf(domainSide)).isEqualTo(rowOf(sqlSide));
         assertThat(applicationRowsOf(domainSide)).isEqualTo(applicationRowsOf(sqlSide));
+    }
+
+    @FunctionalInterface
+    private interface ApplierTransition {
+        boolean apply(BasecampAutoTransitionApplier applier, long id);
+    }
+
+    private record Rule(
+            String name,
+            int extraMembers,
+            Set<BasecampStatus> allowedFrom,
+            ApplierTransition apply,
+            DueSelection selection,
+            Map<String, Object> changedColumns) {
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    private static final Rule CONFIRM_RULE = new Rule(
+            "확정",
+            1,
+            Set.of(BasecampStatus.RECRUITING, BasecampStatus.CLOSED),
+            (applier, id) -> applier.processDayBeforeDeparture(id, NOW),
+            mapper -> mapper.selectDueForDepartureIds(START_DATE, 0, 100),
+            Map.of("status", "CONFIRMED", "confirmed_at", NOW_IN_DB, "updated_at", NOW_IN_DB));
+
+    private static final Rule CANCEL_RULE = new Rule(
+            "인원 부족 취소",
+            0,
+            Set.of(BasecampStatus.RECRUITING, BasecampStatus.CLOSED),
+            (applier, id) -> applier.processDayBeforeDeparture(id, NOW),
+            mapper -> mapper.selectDueForDepartureIds(START_DATE, 0, 100),
+            Map.of(
+                    "status",
+                    "CANCELED",
+                    "canceled_at",
+                    NOW_IN_DB,
+                    "cancel_reason",
+                    "NOT_ENOUGH_MEMBERS",
+                    "updated_at",
+                    NOW_IN_DB));
+
+    private static final Rule COMPLETE_RULE = new Rule(
+            "완료",
+            1,
+            Set.of(BasecampStatus.CONFIRMED),
+            (applier, id) -> applier.complete(id, TODAY, NOW),
+            mapper -> mapper.selectDueForCompletionIds(TODAY, 0, 100),
+            Map.of("status", "COMPLETED", "completed_at", NOW_IN_DB, "updated_at", NOW_IN_DB));
+
+    static Stream<Arguments> everyRuleFromEveryStatus() {
+        return Stream.of(CONFIRM_RULE, CANCEL_RULE, COMPLETE_RULE)
+                .flatMap(rule -> Stream.of(BasecampStatus.values()).map(status -> Arguments.of(rule, status)));
+    }
+
+    @ParameterizedTest(name = "{0} / 시작 상태 {1}")
+    @MethodSource("everyRuleFromEveryStatus")
+    @DisplayName("자동 전이는 허용된 시작 상태에서만 일어나고, 그때 시각 컬럼과 대기 신청만 바뀌며 마감 사유는 지워진다")
+    void autoTransitionRuleFromEveryStatus(Rule rule, BasecampStatus status) {
+        // given
+        long id = saveWithApplications(status, rule.extraMembers());
+        Map<String, Object> rowBefore = rowOf(id);
+        List<Map<String, Object>> applicationsBefore = applicationRowsOf(id);
+
+        // when
+        boolean selectedByScheduler = rule.selection().select(mapper).contains(id);
+        boolean transitioned = transactionTemplate.execute(tx -> rule.apply().apply(applier, id));
+
+        // then
+        boolean allowed = rule.allowedFrom().contains(status);
+        assertThat(transitioned).isEqualTo(allowed);
+        assertThat(selectedByScheduler).isEqualTo(allowed);
+        if (!allowed) {
+            assertThat(rowOf(id)).isEqualTo(rowBefore);
+            assertThat(applicationRowsOf(id)).isEqualTo(applicationsBefore);
+            return;
+        }
+        Map<String, Object> expectedRow = new HashMap<>(rowBefore);
+        expectedRow.put("closed_reason", null);
+        expectedRow.putAll(rule.changedColumns());
+        assertThat(rowOf(id)).isEqualTo(expectedRow);
+        assertThat(applicationRowsOf(id))
+                .containsExactly(Map.of("status", "EXPIRED", "updated_at", NOW_IN_DB), applicationsBefore.get(1));
     }
 
     @ParameterizedTest(name = "종료일 {0}")
