@@ -1,5 +1,6 @@
 package com.moewadeul.trust.application.withdrawal;
 
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.MemberWithdrawalService;
 import com.moewadeul.trust.domain.identity.IdentityVerification;
@@ -31,13 +32,13 @@ class WithdrawalApplier {
                     sanctionRepository.existsByMemberIdAndStatusNot(memberId, SanctionStatus.LIFTED);
             identity.withdraw(IdentityVerification.ciRetainedUntil(now, hasSanctionHistory), now);
         });
-        recordCleanup(WithdrawalEvents.BASECAMP_CLEANUP_EVENT_TYPE, memberId);
-        recordCleanup(WithdrawalEvents.PROGRAM_CLEANUP_EVENT_TYPE, memberId);
-        recordCleanup(WithdrawalEvents.MEMORY_CLEANUP_EVENT_TYPE, memberId);
+        recordCleanup(TrustEvents.WITHDRAWAL_BASECAMP_CLEANUP, memberId);
+        recordCleanup(TrustEvents.WITHDRAWAL_PROGRAM_CLEANUP, memberId);
+        recordCleanup(TrustEvents.WITHDRAWAL_MEMORY_CLEANUP, memberId);
     }
 
     private void recordCleanup(String eventType, long memberId) {
         outboxEventRecorder.record(
-                eventType, WithdrawalEvents.AGGREGATE_TYPE, memberId, new WithdrawalEvents.Payload(memberId));
+                eventType, TrustEvents.MEMBER_AGGREGATE_TYPE, memberId, new TrustEvents.WithdrawalPayload(memberId));
     }
 }

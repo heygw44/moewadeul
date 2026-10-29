@@ -5,6 +5,7 @@ import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.member.application.EmailVerificationEvents;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
@@ -19,8 +20,8 @@ class EmailVerificationRequestedHandler implements OutboxEventHandler {
     private final JsonMapper jsonMapper;
 
     @Override
-    public String eventType() {
-        return EmailVerificationEvents.EVENT_TYPE;
+    public Set<String> eventTypes() {
+        return Set.of(EmailVerificationEvents.EVENT_TYPE);
     }
 
     @Override

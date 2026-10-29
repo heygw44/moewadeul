@@ -1,9 +1,10 @@
 package com.moewadeul.program.application.enrollment;
 
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.program.domain.ProgramCancelReason;
-import com.moewadeul.trust.application.sanction.SanctionEvents;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,8 +17,8 @@ class SanctionProgramCleanupHandler implements OutboxEventHandler {
     }
 
     @Override
-    public String eventType() {
-        return SanctionEvents.PROGRAM_CLEANUP_EVENT_TYPE;
+    public Set<String> eventTypes() {
+        return Set.of(TrustEvents.SANCTION_PROGRAM_CLEANUP);
     }
 
     @Override

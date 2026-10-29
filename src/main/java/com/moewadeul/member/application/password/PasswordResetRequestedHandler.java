@@ -4,6 +4,7 @@ import com.moewadeul.common.mail.MailSender;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -26,8 +27,8 @@ class PasswordResetRequestedHandler implements OutboxEventHandler {
     }
 
     @Override
-    public String eventType() {
-        return PasswordResetEvents.EVENT_TYPE;
+    public Set<String> eventTypes() {
+        return Set.of(PasswordResetEvents.EVENT_TYPE);
     }
 
     @Override

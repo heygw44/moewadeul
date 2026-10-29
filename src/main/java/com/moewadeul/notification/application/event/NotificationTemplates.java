@@ -1,7 +1,9 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.event.BasecampEvents;
+import com.moewadeul.common.event.ProgramEvents;
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.time.KoreaTime;
-import com.moewadeul.notification.application.NotificationEventTypes;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -12,109 +14,96 @@ final class NotificationTemplates {
 
     private NotificationTemplates() {}
 
-    static List<NotificationDraft> applied(long basecampId, NotificationPayloads.Applied payload) {
+    static List<NotificationDraft> applied(long basecampId, BasecampEvents.AppliedPayload payload) {
         return List.of(new NotificationDraft(
                 payload.leaderId(),
-                NotificationEventTypes.BASECAMP_APPLIED,
+                BasecampEvents.APPLIED,
                 "새 합류 신청",
                 "베이스캠프에 합류 신청이 들어왔어요. 신청자를 보고 승인하거나 거절해 주세요.",
                 "/basecamps/" + basecampId + "/manage"));
     }
 
-    static List<NotificationDraft> approved(NotificationPayloads.Decision payload) {
+    static List<NotificationDraft> approved(BasecampEvents.DecisionPayload payload) {
         return List.of(new NotificationDraft(
                 payload.applicantId(),
-                NotificationEventTypes.BASECAMP_APPROVED,
+                BasecampEvents.APPROVED,
                 "합류 승인",
                 "합류 신청이 승인돼 베이스캠프 멤버가 됐어요.",
                 basecampLink(payload.basecampId())));
     }
 
-    static List<NotificationDraft> rejected(NotificationPayloads.Decision payload) {
+    static List<NotificationDraft> rejected(BasecampEvents.DecisionPayload payload) {
         return List.of(new NotificationDraft(
                 payload.applicantId(),
-                NotificationEventTypes.BASECAMP_REJECTED,
+                BasecampEvents.REJECTED,
                 "합류 거절",
                 "합류 신청이 거절됐어요.",
                 basecampLink(payload.basecampId())));
     }
 
-    static List<NotificationDraft> kicked(NotificationPayloads.Kicked payload) {
+    static List<NotificationDraft> kicked(BasecampEvents.KickedPayload payload) {
         String body = "캠프 리더가 베이스캠프에서 내보냈어요. 사유: " + kickReasonLabel(payload.reason()) + ". 같은 베이스캠프에는 다시 신청할 수 없어요.";
         return List.of(new NotificationDraft(
-                payload.memberId(),
-                NotificationEventTypes.BASECAMP_KICKED,
-                "베이스캠프에서 제외됨",
-                body,
-                basecampLink(payload.basecampId())));
+                payload.memberId(), BasecampEvents.KICKED, "베이스캠프에서 제외됨", body, basecampLink(payload.basecampId())));
     }
 
-    static List<NotificationDraft> confirmed(NotificationPayloads.BasecampMembers payload) {
+    static List<NotificationDraft> confirmed(BasecampEvents.MembersPayload payload) {
         return toMembers(
                 payload,
-                NotificationEventTypes.BASECAMP_CONFIRMED,
+                BasecampEvents.CONFIRMED,
                 "베이스캠프 확정",
                 "베이스캠프가 확정됐어요. 안전 수칙: 일정을 가족이나 지인과 공유해 주세요. 되도록 일행과 떨어지지 말고 흔적을 남기지 마세요.",
                 basecampLink(payload.basecampId()));
     }
 
-    static List<NotificationDraft> canceled(NotificationPayloads.BasecampMembers payload) {
+    static List<NotificationDraft> canceled(BasecampEvents.MembersPayload payload) {
         return toMembers(
-                payload,
-                NotificationEventTypes.BASECAMP_CANCELED,
-                "베이스캠프 취소",
-                "합류한 베이스캠프가 취소됐어요.",
-                basecampLink(payload.basecampId()));
+                payload, BasecampEvents.CANCELED, "베이스캠프 취소", "합류한 베이스캠프가 취소됐어요.", basecampLink(payload.basecampId()));
     }
 
-    static List<NotificationDraft> completed(NotificationPayloads.BasecampMembers payload) {
+    static List<NotificationDraft> completed(BasecampEvents.MembersPayload payload) {
         return toMembers(
                 payload,
-                NotificationEventTypes.BASECAMP_COMPLETED,
+                BasecampEvents.COMPLETED,
                 "베이스캠프 완료",
                 "베이스캠프가 끝났어요. 14일 안에 함께한 멤버에게 동행 후기를 남겨 주세요.",
                 "/me/companion-reviews");
     }
 
-    static List<NotificationDraft> memberChanged(NotificationPayloads.BasecampMembers payload) {
+    static List<NotificationDraft> memberChanged(BasecampEvents.MembersPayload payload) {
         return toMembers(
                 payload,
-                NotificationEventTypes.BASECAMP_MEMBER_CHANGED,
+                BasecampEvents.MEMBER_CHANGED,
                 "멤버 변경",
                 "멤버 사정으로 베이스캠프 구성이 바뀌었어요.",
                 basecampLink(payload.basecampId()));
     }
 
-    static List<NotificationDraft> reportResolved(NotificationPayloads.ReportResolved payload) {
+    static List<NotificationDraft> reportResolved(TrustEvents.ReportResolvedPayload payload) {
         String body = switch (payload.result()) {
             case "ACTIONED" -> "신고한 내용을 검토해 조치했어요.";
             case "DISMISSED" -> "신고한 내용을 검토했지만 조치할 일은 아니라고 판단했어요.";
             default -> throw new IllegalArgumentException("알 수 없는 신고 처리 결과입니다: " + payload.result());
         };
-        return List.of(new NotificationDraft(
-                payload.reporterId(), NotificationEventTypes.MEMBER_REPORT_RESOLVED, "신고 처리 완료", body, null));
+        return List.of(
+                new NotificationDraft(payload.reporterId(), TrustEvents.REPORT_RESOLVED, "신고 처리 완료", body, null));
     }
 
-    static List<NotificationDraft> sanctionConfirmed(NotificationPayloads.SanctionConfirmed payload) {
+    static List<NotificationDraft> sanctionConfirmed(TrustEvents.SanctionConfirmedPayload payload) {
         return List.of(new NotificationDraft(
-                payload.memberId(),
-                NotificationEventTypes.SANCTION_CONFIRMED,
-                "이용 제재 안내",
-                sanctionBody(payload),
-                null));
+                payload.memberId(), TrustEvents.SANCTION_CONFIRMED, "이용 제재 안내", sanctionBody(payload), null));
     }
 
-    static List<NotificationDraft> programApplicationConfirmed(
-            NotificationPayloads.ProgramApplicationConfirmed payload) {
+    static List<NotificationDraft> programApplicationConfirmed(ProgramEvents.ApplicationPayload payload) {
         return List.of(new NotificationDraft(
                 payload.memberId(),
-                NotificationEventTypes.PROGRAM_APPLICATION_CONFIRMED,
+                ProgramEvents.APPLICATION_CONFIRMED,
                 "행사 신청 확정",
                 "결제를 마쳐 행사 신청이 확정됐어요.",
                 programLink(payload.programId())));
     }
 
-    static List<NotificationDraft> programApplicationCanceled(NotificationPayloads.ProgramApplicationCanceled payload) {
+    static List<NotificationDraft> programApplicationCanceled(ProgramEvents.CanceledPayload payload) {
         String body = switch (payload.reason()) {
             case "USER" -> "행사 신청을 취소했어요.";
             case "PROGRAM_CANCELED" -> "행사가 취소돼 신청도 취소됐어요.";
@@ -126,33 +115,33 @@ final class NotificationTemplates {
         }
         return List.of(new NotificationDraft(
                 payload.memberId(),
-                NotificationEventTypes.PROGRAM_APPLICATION_CANCELED,
+                ProgramEvents.APPLICATION_CANCELED,
                 "행사 신청 취소",
                 body,
                 programLink(payload.programId())));
     }
 
-    static List<NotificationDraft> programApplicationExpired(NotificationPayloads.ProgramApplicationExpired payload) {
+    static List<NotificationDraft> programApplicationExpired(ProgramEvents.ApplicationPayload payload) {
         return List.of(new NotificationDraft(
                 payload.memberId(),
-                NotificationEventTypes.PROGRAM_APPLICATION_EXPIRED,
+                ProgramEvents.APPLICATION_EXPIRED,
                 "행사 신청 만료",
                 "결제 기한이 지나 행사 신청이 취소됐어요.",
                 programLink(payload.programId())));
     }
 
-    static List<NotificationDraft> programSeatReleased(NotificationPayloads.ProgramSeatReleased payload) {
+    static List<NotificationDraft> programSeatReleased(ProgramEvents.SeatReleasedPayload payload) {
         return payload.memberIds().stream()
                 .map(memberId -> new NotificationDraft(
                         memberId,
-                        NotificationEventTypes.PROGRAM_SEAT_RELEASED,
+                        ProgramEvents.SEAT_RELEASED,
                         "행사 빈자리 알림",
                         "빈자리 알림을 신청한 행사에 자리가 생겼어요. 먼저 신청한 회원이 자리를 가져가요.",
                         programLink(payload.programId())))
                 .toList();
     }
 
-    private static String sanctionBody(NotificationPayloads.SanctionConfirmed payload) {
+    private static String sanctionBody(TrustEvents.SanctionConfirmedPayload payload) {
         return switch (payload.sanctionType()) {
             case "WARNING" -> "경고를 받았어요.";
             case "PERMANENT" -> "이용이 영구 정지됐어요.";
@@ -177,7 +166,7 @@ final class NotificationTemplates {
     }
 
     private static List<NotificationDraft> toMembers(
-            NotificationPayloads.BasecampMembers payload, String type, String title, String body, String link) {
+            BasecampEvents.MembersPayload payload, String type, String title, String body, String link) {
         return payload.memberIds().stream()
                 .map(memberId -> new NotificationDraft(memberId, type, title, body, link))
                 .toList();

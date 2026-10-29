@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -289,8 +290,8 @@ class OutboxReliabilityIntegrationTest {
         List<Long> handledByStoppingPublisher = new ArrayList<>();
         OutboxEventHandler shutdownStartingHandler = new OutboxEventHandler() {
             @Override
-            public String eventType() {
-                return RecordingOutboxEventHandler.EVENT_TYPE;
+            public Set<String> eventTypes() {
+                return Set.of(RecordingOutboxEventHandler.EVENT_TYPE);
             }
 
             @Override

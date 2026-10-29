@@ -5,6 +5,7 @@ import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.CancelReason;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import java.time.Clock;
 import java.util.List;
@@ -38,7 +39,7 @@ public class BasecampTransitionService {
     public BasecampStatusResult confirm(long basecampId, long leaderId) {
         Basecamp basecamp = lockLedBy(basecampId, leaderId);
         basecamp.confirm(clock.instant());
-        recordTransition(BasecampTransitionEvents.CONFIRMED_EVENT_TYPE, basecamp, basecamp.activeMemberIds());
+        recordTransition(BasecampEvents.CONFIRMED, basecamp, basecamp.activeMemberIds());
         return resultOf(basecamp);
     }
 
@@ -49,7 +50,7 @@ public class BasecampTransitionService {
         List<Long> memberIds = basecamp.activeMemberIds().stream()
                 .filter(memberId -> !basecamp.isLeader(memberId))
                 .toList();
-        recordTransition(BasecampTransitionEvents.CANCELED_EVENT_TYPE, basecamp, memberIds);
+        recordTransition(BasecampEvents.CANCELED, basecamp, memberIds);
         return resultOf(basecamp);
     }
 
@@ -68,9 +69,9 @@ public class BasecampTransitionService {
     private void recordTransition(String eventType, Basecamp basecamp, List<Long> memberIds) {
         outboxEventRecorder.record(
                 eventType,
-                BasecampTransitionEvents.AGGREGATE_TYPE,
+                BasecampEvents.AGGREGATE_TYPE,
                 basecamp.getId(),
-                new BasecampTransitionEvents.Payload(basecamp.getId(), memberIds));
+                new BasecampEvents.MembersPayload(basecamp.getId(), memberIds));
     }
 
     private static BasecampStatusResult resultOf(Basecamp basecamp) {

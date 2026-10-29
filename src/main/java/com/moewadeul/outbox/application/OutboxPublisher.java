@@ -104,11 +104,13 @@ public class OutboxPublisher {
     private static Map<String, OutboxEventHandler> indexByEventType(List<OutboxEventHandler> handlers) {
         Map<String, OutboxEventHandler> index = new HashMap<>();
         for (OutboxEventHandler handler : handlers) {
-            OutboxEventHandler previous = index.put(handler.eventType(), handler);
-            if (previous != null) {
-                throw new IllegalStateException("duplicate outbox event handler for eventType=" + handler.eventType()
-                        + ": " + previous.getClass().getName() + ", "
-                        + handler.getClass().getName());
+            for (String eventType : handler.eventTypes()) {
+                OutboxEventHandler previous = index.put(eventType, handler);
+                if (previous != null) {
+                    throw new IllegalStateException("duplicate outbox event handler for eventType=" + eventType + ": "
+                            + previous.getClass().getName() + ", "
+                            + handler.getClass().getName());
+                }
             }
         }
         return Map.copyOf(index);

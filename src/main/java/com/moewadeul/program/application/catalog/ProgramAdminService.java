@@ -6,9 +6,9 @@ import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.paging.PageSlice;
-import com.moewadeul.program.application.ProgramApplicationEvents;
 import com.moewadeul.program.domain.PaymentRepository;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplication;
@@ -113,10 +113,10 @@ public class ProgramAdminService {
         for (ProgramApplication application : applications) {
             long applicationId = application.getId();
             outboxEventRecorder.record(
-                    ProgramApplicationEvents.CANCELED_EVENT_TYPE,
-                    ProgramApplicationEvents.AGGREGATE_TYPE,
+                    ProgramEvents.APPLICATION_CANCELED,
+                    ProgramEvents.APPLICATION_AGGREGATE_TYPE,
                     applicationId,
-                    new ProgramApplicationEvents.CanceledPayload(
+                    new ProgramEvents.CanceledPayload(
                             applicationId,
                             application.getMemberId(),
                             programId,

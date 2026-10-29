@@ -8,6 +8,7 @@ import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.basecamp.infra.BasecampLockMapper;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
@@ -37,7 +38,7 @@ public class BasecampApprovalService {
         joinEligibilityChecker.requireEligible(basecamp, applicant, applicantId);
 
         basecamp.approve(applicationId, clock.instant());
-        recordDecision(BasecampDecisionEvents.APPROVED_EVENT_TYPE, basecamp, application);
+        recordDecision(BasecampEvents.APPROVED, basecamp, application);
         return new BasecampApproveResult(basecamp.headcount(), basecamp.getStatus());
     }
 
@@ -45,7 +46,7 @@ public class BasecampApprovalService {
     public BasecampRejectResult reject(long basecampId, long applicationId, long leaderId) {
         Basecamp basecamp = lockLedBy(basecampId, leaderId);
         BasecampApplication application = basecamp.reject(applicationId, clock.instant());
-        recordDecision(BasecampDecisionEvents.REJECTED_EVENT_TYPE, basecamp, application);
+        recordDecision(BasecampEvents.REJECTED, basecamp, application);
         return new BasecampRejectResult(application.getId(), application.getStatus());
     }
 
@@ -73,9 +74,9 @@ public class BasecampApprovalService {
     private void recordDecision(String eventType, Basecamp basecamp, BasecampApplication application) {
         outboxEventRecorder.record(
                 eventType,
-                BasecampDecisionEvents.AGGREGATE_TYPE,
+                BasecampEvents.AGGREGATE_TYPE,
                 basecamp.getId(),
-                new BasecampDecisionEvents.Payload(
+                new BasecampEvents.DecisionPayload(
                         application.getId(), application.getApplicantId(), basecamp.getId()));
     }
 }

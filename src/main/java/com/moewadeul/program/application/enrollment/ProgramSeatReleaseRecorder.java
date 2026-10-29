@@ -1,5 +1,6 @@
 package com.moewadeul.program.application.enrollment;
 
+import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
@@ -43,10 +44,10 @@ public class ProgramSeatReleaseRecorder {
         }
         vacancyAlertRepository.markNotified(programId, targets, now);
         outboxEventRecorder.record(
-                ProgramSeatEvents.SEAT_RELEASED_EVENT_TYPE,
-                ProgramSeatEvents.AGGREGATE_TYPE,
+                ProgramEvents.SEAT_RELEASED,
+                ProgramEvents.PROGRAM_AGGREGATE_TYPE,
                 programId,
-                new ProgramSeatEvents.SeatReleasedPayload(programId, targets));
+                new ProgramEvents.SeatReleasedPayload(programId, targets));
         log.info("program seat released programId={} targetCount={}", programId, targets.size());
     }
 }

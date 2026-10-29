@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.basecamp.application.membership.BasecampMembershipService;
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.time.Instant;
@@ -70,10 +71,8 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
                 () -> countIfTrue(applier.processDayBeforeDeparture(basecampId, AUTO_NOW), autoProcessed)));
 
         assertThat(fixture.statusOf(basecampId)).isEqualTo("CONFIRMED");
-        assertThat(fixture.eventCount(BasecampTransitionEvents.CONFIRMED_EVENT_TYPE, basecampId))
-                .isEqualTo(1);
-        assertThat(fixture.eventCount(BasecampTransitionEvents.CANCELED_EVENT_TYPE))
-                .isZero();
+        assertThat(fixture.eventCount(BasecampEvents.CONFIRMED, basecampId)).isEqualTo(1);
+        assertThat(fixture.eventCount(BasecampEvents.CANCELED)).isZero();
         int leaderWins = failures.isEmpty() ? 1 : 0;
         assertThat(leaderWins + autoProcessed.get()).isEqualTo(1);
         assertThat(failures).allSatisfy(failure -> assertInvalidState(failure));
@@ -108,8 +107,7 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
         assertThat(failures).isEmpty();
         assertThat(processed.get()).isEqualTo(1);
         assertThat(fixture.statusOf(basecampId)).isEqualTo("COMPLETED");
-        assertThat(fixture.eventCount(BasecampTransitionEvents.COMPLETED_EVENT_TYPE, basecampId))
-                .isEqualTo(1);
+        assertThat(fixture.eventCount(BasecampEvents.COMPLETED, basecampId)).isEqualTo(1);
     }
 
     @RepeatedTest(5)
@@ -127,10 +125,8 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
         assertThat(jdbc.queryForMap("SELECT status, cancel_reason FROM basecamp WHERE id = ?", basecampId))
                 .containsEntry("status", "CANCELED")
                 .containsEntry("cancel_reason", "LEADER");
-        assertThat(fixture.eventCount(BasecampTransitionEvents.CANCELED_EVENT_TYPE, basecampId))
-                .isEqualTo(1);
-        assertThat(fixture.eventCount(BasecampTransitionEvents.CONFIRMED_EVENT_TYPE, basecampId))
-                .isEqualTo(autoProcessed.get());
+        assertThat(fixture.eventCount(BasecampEvents.CANCELED, basecampId)).isEqualTo(1);
+        assertThat(fixture.eventCount(BasecampEvents.CONFIRMED, basecampId)).isEqualTo(autoProcessed.get());
         assertThat(fixture.totalEventCount()).isEqualTo(1 + autoProcessed.get());
     }
 
@@ -152,18 +148,18 @@ class BasecampAutoTransitionConcurrencyIntegrationTest {
         assertThat(failures).isEmpty();
         assertThat(autoProcessed.get()).isEqualTo(1);
         assertThat(fixture.activeMemberCount(basecampId)).isEqualTo(1);
-        assertThat(fixture.eventCount(BasecampTransitionEvents.CONFIRMED_EVENT_TYPE, basecampId)
-                        + fixture.eventCount(BasecampTransitionEvents.CANCELED_EVENT_TYPE, basecampId))
+        assertThat(fixture.eventCount(BasecampEvents.CONFIRMED, basecampId)
+                        + fixture.eventCount(BasecampEvents.CANCELED, basecampId))
                 .isEqualTo(1);
         if (fixture.statusOf(basecampId).equals("CANCELED")) {
             assertThat(jdbc.queryForObject("SELECT cancel_reason FROM basecamp WHERE id = ?", String.class, basecampId))
                     .isEqualTo("NOT_ENOUGH_MEMBERS");
-            assertThat(fixture.payloadMemberIdsOf(BasecampTransitionEvents.CANCELED_EVENT_TYPE, basecampId))
+            assertThat(fixture.payloadMemberIdsOf(BasecampEvents.CANCELED, basecampId))
                     .containsExactly(leaderId);
             return;
         }
         assertThat(fixture.statusOf(basecampId)).isEqualTo("CONFIRMED");
-        assertThat(fixture.payloadMemberIdsOf(BasecampTransitionEvents.CONFIRMED_EVENT_TYPE, basecampId))
+        assertThat(fixture.payloadMemberIdsOf(BasecampEvents.CONFIRMED, basecampId))
                 .containsExactly(leaderId, memberId);
     }
 

@@ -2,8 +2,8 @@ package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
-import com.moewadeul.program.application.ProgramApplicationEvents;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramRepository;
 import com.moewadeul.program.infra.enrollment.ExpiryTarget;
@@ -30,11 +30,10 @@ class ProgramPaymentExpiryApplier {
             return false;
         }
         outboxEventRecorder.record(
-                ProgramApplicationEvents.EXPIRED_EVENT_TYPE,
-                ProgramApplicationEvents.AGGREGATE_TYPE,
+                ProgramEvents.APPLICATION_EXPIRED,
+                ProgramEvents.APPLICATION_AGGREGATE_TYPE,
                 target.applicationId(),
-                new ProgramApplicationEvents.ExpiredPayload(
-                        target.applicationId(), target.memberId(), target.programId()));
+                new ProgramEvents.ApplicationPayload(target.applicationId(), target.memberId(), target.programId()));
         Program program = programRepository
                 .findById(target.programId())
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
