@@ -25,6 +25,8 @@ public class ReviewImage {
 
     public static final int MAX_PER_REVIEW = 3;
 
+    public static final int MAX_UNATTACHED_PER_MEMBER = MAX_PER_REVIEW * 3;
+
     private static final Map<String, String> EXTENSIONS =
             Map.of("image/jpeg", "jpg", "image/png", "png", "image/webp", "webp");
 

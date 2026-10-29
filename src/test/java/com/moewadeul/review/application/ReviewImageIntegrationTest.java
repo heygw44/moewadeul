@@ -4,11 +4,14 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.review.domain.ReviewImage;
 import com.moewadeul.spot.application.detail.SpotDetail;
 import com.moewadeul.spot.application.detail.SpotDetailQueryService;
 import com.moewadeul.spot.application.detail.SpotRecentReview;
@@ -92,6 +95,31 @@ class ReviewImageIntegrationTest {
     void issueRejectsTypeAndSize() {
         assertInvalid(() -> uploadService.issue(memberId, "image/gif", SIZE), "contentType");
         assertInvalid(() -> uploadService.issue(memberId, "image/png", 5L * 1024 * 1024 + 1), "sizeBytes");
+    }
+
+    @Test
+    @DisplayName(
+            "[F-24][RI-01] 24시간 안에 발급해 후기에 붙지 않은 이미지가 9장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED이고 행을 만들지 않으며, 가장 오래된 이미지가 24시간을 넘기면 다시 발급한다")
+    void issueLimitsUnattachedUploads() {
+        // given
+        uploadService.issue(memberId, "image/jpeg", SIZE);
+        clock.advance(Duration.ofHours(1));
+        for (int i = 1; i < ReviewImage.MAX_UNATTACHED_PER_MEMBER; i++) {
+            uploadService.issue(memberId, "image/jpeg", SIZE);
+        }
+
+        // when
+        ThrowingCallable overLimit = () -> uploadService.issue(memberId, "image/jpeg", SIZE);
+
+        // then
+        assertThatThrownBy(overLimit).isInstanceOfSatisfying(RateLimitedException.class, e -> {
+            assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_UPLOAD_LIMITED);
+            assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(23));
+        });
+        assertThat(imageRowCount()).isEqualTo(ReviewImage.MAX_UNATTACHED_PER_MEMBER);
+        clock.advance(Duration.ofHours(23));
+        uploadService.issue(memberId, "image/jpeg", SIZE);
+        assertThat(imageRowCount()).isEqualTo(ReviewImage.MAX_UNATTACHED_PER_MEMBER + 1);
     }
 
     @Test
@@ -235,6 +263,10 @@ class ReviewImageIntegrationTest {
 
     private Long reviewIdOf(long imageId) {
         return jdbc.queryForObject("SELECT review_id FROM review_image WHERE id = ?", Long.class, imageId);
+    }
+
+    private int imageRowCount() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM review_image", Integer.class);
     }
 
     private long saveSpot() {

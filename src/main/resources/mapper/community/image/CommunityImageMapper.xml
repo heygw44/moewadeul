@@ -23,4 +23,21 @@
         WHERE id = #{imageId}
           AND post_id IS NULL
     </delete>
+
+    <select id="lockMember" resultType="long">
+        SELECT id
+        FROM member
+        WHERE id = #{memberId}
+        FOR UPDATE
+    </select>
+
+    <select id="selectUnattachedCreatedAtsAfter" resultType="java.time.Instant">
+        SELECT created_at
+        FROM community_image
+        WHERE member_id = #{memberId}
+          AND post_id IS NULL
+          AND created_at &gt; #{createdAfter}
+        ORDER BY created_at
+        LIMIT #{limit}
+    </select>
 </mapper>

@@ -29,6 +29,8 @@ public class MemoryImage {
 
     public static final int MAX_PER_MEMORY = 10;
 
+    public static final int MAX_UNATTACHED_PER_MEMBER = MAX_PER_MEMORY * 3;
+
     private static final Map<String, String> EXTENSIONS =
             Map.of("image/jpeg", "jpg", "image/png", "png", "image/webp", "webp");
 
