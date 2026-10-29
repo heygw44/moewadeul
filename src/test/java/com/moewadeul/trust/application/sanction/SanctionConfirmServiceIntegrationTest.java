@@ -142,14 +142,26 @@ class SanctionConfirmServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[SN-10] 다음 단계 계산에서 해제된 제재와 임시 정지는 빼고, 기간이 끝난 제재는 넣는다")
-    void nextLevelIgnoresLiftedAndTemporaryButCountsExpired() {
+    @DisplayName("[SN-10] 다음 단계 계산에서 처분 취소된 제재와 임시 정지는 빼고, 기간이 끝난 제재는 넣는다")
+    void nextLevelIgnoresRevokedAndTemporaryButCountsExpired() {
         insertSanction("TEMPORARY_72H", null, "ACTIVE");
-        insertSanction("SUSPEND_7D", 2, "LIFTED");
+        insertSanction("SUSPEND_7D", 2, "REVOKED");
         confirm(SanctionType.WARNING);
         insertSanction("SUSPEND_7D", 2, "EXPIRED");
 
         assertThatThrownBy(() -> confirm(SanctionType.SUSPEND_7D)).isInstanceOf(BusinessException.class);
+        confirm(SanctionType.SUSPEND_30D);
+
+        assertThat(jdbc.queryForObject("SELECT MAX(level) FROM sanction WHERE type = 'SUSPEND_30D'", Integer.class))
+                .isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("[SN-10] 조기 종료한 제재도 다음 단계 계산에 넣는다")
+    void nextLevelCountsEndedEarly() {
+        insertSanction("SUSPEND_7D", 2, "ENDED_EARLY");
+
+        assertThatThrownBy(() -> confirm(SanctionType.WARNING)).isInstanceOf(BusinessException.class);
         confirm(SanctionType.SUSPEND_30D);
 
         assertThat(jdbc.queryForObject("SELECT MAX(level) FROM sanction WHERE type = 'SUSPEND_30D'", Integer.class))

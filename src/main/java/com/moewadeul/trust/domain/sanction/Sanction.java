@@ -132,20 +132,31 @@ public class Sanction {
         return new Sanction(memberId, reportId, type, level, reason, startsAt, createdBy);
     }
 
-    public void lift(long adminId, Instant now) {
+    public void lift(long adminId, SanctionLiftReason reason, Instant now) {
         requireNow(now);
+        if (reason == null) {
+            throw new IllegalArgumentException("제재를 해제하는 사유가 null입니다.");
+        }
         if (status != SanctionStatus.ACTIVE) {
             throw new BusinessException(TrustErrorCode.SANCTION_INVALID_STATE);
         }
-        markLifted(adminId, now);
+        markLifted(adminId, reason.resultingStatus(), now);
     }
 
     public void liftForDismissedReport(long adminId, Instant now) {
         requireNow(now);
-        if (type != SanctionType.TEMPORARY_72H || status == SanctionStatus.LIFTED) {
+        if (type != SanctionType.TEMPORARY_72H || status == SanctionStatus.REVOKED) {
             throw new BusinessException(TrustErrorCode.SANCTION_INVALID_STATE);
         }
-        markLifted(adminId, now);
+        markLifted(adminId, SanctionStatus.REVOKED, now);
+    }
+
+    public boolean countsAsHistory() {
+        return type != SanctionType.TEMPORARY_72H && status != SanctionStatus.REVOKED;
+    }
+
+    public boolean countsForCiRetention() {
+        return status != SanctionStatus.REVOKED;
     }
 
     private static void requireNow(Instant now) {
@@ -154,8 +165,8 @@ public class Sanction {
         }
     }
 
-    private void markLifted(long adminId, Instant now) {
-        this.status = SanctionStatus.LIFTED;
+    private void markLifted(long adminId, SanctionStatus liftedStatus, Instant now) {
+        this.status = liftedStatus;
         this.liftedBy = adminId;
         this.liftedAt = now;
         this.updatedAt = now;

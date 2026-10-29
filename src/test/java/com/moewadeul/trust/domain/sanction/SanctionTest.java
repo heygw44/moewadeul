@@ -89,14 +89,28 @@ class SanctionTest {
     }
 
     @Test
-    @DisplayName("[SN-15] 적용 중인 제재를 해제하면 LIFTED가 되고 해제한 관리자와 시각을 남긴다")
-    void liftRecordsAdminAndTime() {
+    @DisplayName("[SN-15] 조기 종료로 해제하면 ENDED_EARLY가 되고 해제한 관리자와 시각을 남긴다")
+    void endEarlyRecordsAdminAndTime() {
         Sanction sanction = Sanction.confirm(11L, null, SanctionType.SUSPEND_7D, 2, "반복 위반", NOW, 99L);
         Instant later = NOW.plusSeconds(3600);
 
-        sanction.lift(98L, later);
+        sanction.lift(98L, SanctionLiftReason.END_EARLY, later);
 
-        assertThat(sanction.getStatus()).isEqualTo(SanctionStatus.LIFTED);
+        assertThat(sanction.getStatus()).isEqualTo(SanctionStatus.ENDED_EARLY);
+        assertThat(sanction.getLiftedBy()).isEqualTo(98L);
+        assertThat(sanction.getLiftedAt()).isEqualTo(later);
+        assertThat(sanction.getUpdatedAt()).isEqualTo(later);
+    }
+
+    @Test
+    @DisplayName("[SN-15] 처분 취소로 해제하면 REVOKED가 되고 해제한 관리자와 시각을 남긴다")
+    void revokeRecordsAdminAndTime() {
+        Sanction sanction = Sanction.confirm(11L, null, SanctionType.SUSPEND_7D, 2, "반복 위반", NOW, 99L);
+        Instant later = NOW.plusSeconds(3600);
+
+        sanction.lift(98L, SanctionLiftReason.REVOKE, later);
+
+        assertThat(sanction.getStatus()).isEqualTo(SanctionStatus.REVOKED);
         assertThat(sanction.getLiftedBy()).isEqualTo(98L);
         assertThat(sanction.getLiftedAt()).isEqualTo(later);
         assertThat(sanction.getUpdatedAt()).isEqualTo(later);
@@ -105,43 +119,48 @@ class SanctionTest {
     @Test
     @DisplayName("[SN-15] 이미 해제됐거나 기간이 끝난 제재는 해제하지 못한다")
     void cannotLiftInactiveSanction() {
-        Sanction lifted = Sanction.confirm(11L, null, SanctionType.WARNING, 1, "욕설", NOW, 99L);
-        lifted.lift(98L, NOW);
+        Sanction endedEarly = Sanction.confirm(11L, null, SanctionType.WARNING, 1, "욕설", NOW, 99L);
+        endedEarly.lift(98L, SanctionLiftReason.END_EARLY, NOW);
+        Sanction revoked = Sanction.confirm(11L, null, SanctionType.WARNING, 1, "욕설", NOW, 99L);
+        revoked.lift(98L, SanctionLiftReason.REVOKE, NOW);
         Sanction expired = Sanction.confirm(11L, null, SanctionType.SUSPEND_7D, 2, "반복 위반", NOW, 99L);
         ReflectionTestUtils.setField(expired, "status", SanctionStatus.EXPIRED);
 
-        assertThatThrownBy(() -> lifted.lift(98L, NOW))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.SANCTION_INVALID_STATE));
-        assertThatThrownBy(() -> expired.lift(98L, NOW))
-                .isInstanceOfSatisfying(
-                        BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.SANCTION_INVALID_STATE));
+        for (Sanction inactive : List.of(endedEarly, revoked, expired)) {
+            assertThatThrownBy(() -> inactive.lift(97L, SanctionLiftReason.REVOKE, NOW))
+                    .isInstanceOfSatisfying(
+                            BusinessException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.SANCTION_INVALID_STATE));
+        }
         assertThat(expired.getLiftedBy()).isNull();
+        assertThat(endedEarly.getStatus()).isEqualTo(SanctionStatus.ENDED_EARLY);
+        assertThat(revoked.getStatus()).isEqualTo(SanctionStatus.REVOKED);
     }
 
     @Test
-    @DisplayName("[SN-05] 기각한 신고의 임시 정지는 적용 중이든 이미 만료됐든 LIFTED가 되고 기각한 관리자와 시각을 남긴다")
-    void liftForDismissedReportLiftsActiveAndExpiredTemporary() {
+    @DisplayName("[SN-05] 기각한 신고의 임시 정지는 적용 중이든 이미 만료됐든 조기 종료됐든 REVOKED가 되고 기각한 관리자와 시각을 남긴다")
+    void liftForDismissedReportRevokesActiveExpiredAndEndedEarlyTemporary() {
         Sanction active = Sanction.temporary(11L, 5L, NOW);
         Sanction expired = Sanction.temporary(11L, 6L, NOW);
         ReflectionTestUtils.setField(expired, "status", SanctionStatus.EXPIRED);
+        Sanction endedEarly = Sanction.temporary(11L, 7L, NOW);
+        endedEarly.lift(97L, SanctionLiftReason.END_EARLY, NOW);
         Instant later = NOW.plusSeconds(3600 * 100);
 
         active.liftForDismissedReport(98L, later);
         expired.liftForDismissedReport(98L, later);
+        endedEarly.liftForDismissedReport(98L, later);
 
-        for (Sanction sanction : List.of(active, expired)) {
-            assertThat(sanction.getStatus()).isEqualTo(SanctionStatus.LIFTED);
+        for (Sanction sanction : List.of(active, expired, endedEarly)) {
+            assertThat(sanction.getStatus()).isEqualTo(SanctionStatus.REVOKED);
             assertThat(sanction.getLiftedBy()).isEqualTo(98L);
             assertThat(sanction.getLiftedAt()).isEqualTo(later);
         }
     }
 
     @Test
-    @DisplayName("[SN-05] 이미 해제된 임시 정지와 임시 정지가 아닌 제재는 기각으로 해제하지 못한다")
-    void liftForDismissedReportRejectsLiftedOrConfirmedSanction() {
+    @DisplayName("[SN-05] 이미 취소된 임시 정지와 임시 정지가 아닌 제재는 기각으로 해제하지 못한다")
+    void liftForDismissedReportRejectsRevokedOrConfirmedSanction() {
         Sanction lifted = Sanction.temporary(11L, 5L, NOW);
         lifted.liftForDismissedReport(98L, NOW);
         Sanction warning = Sanction.confirm(11L, null, SanctionType.WARNING, 1, "욕설", NOW, 99L);
@@ -162,6 +181,60 @@ class SanctionTest {
     void liftRejectsNullTime() {
         Sanction sanction = Sanction.temporary(11L, 5L, NOW);
 
-        assertThatThrownBy(() -> sanction.lift(98L, null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> sanction.lift(98L, SanctionLiftReason.END_EARLY, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("[SN-15] 해제 사유가 null이면 거부하고 제재는 그대로 적용 중이다")
+    void liftRejectsNullReason() {
+        Sanction sanction = Sanction.confirm(11L, null, SanctionType.SUSPEND_7D, 2, "반복 위반", NOW, 99L);
+
+        assertThatThrownBy(() -> sanction.lift(98L, null, NOW)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(sanction.getStatus()).isEqualTo(SanctionStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("[SN-10][TR-01][PV-05] 임시 정지는 어떤 상태여도 제재 이력이 아니다")
+    void temporarySuspensionNeverCountsAsHistory() {
+        for (SanctionStatus status : SanctionStatus.values()) {
+            assertThat(sanctionOf(SanctionType.TEMPORARY_72H, status).countsAsHistory())
+                    .as("TEMPORARY_72H %s", status)
+                    .isFalse();
+        }
+    }
+
+    @Test
+    @DisplayName("[SN-10][TR-01][PV-05] 확정 제재는 적용 중이든 만료됐든 조기 종료됐든 이력이고, 처분 취소됐을 때만 이력이 아니다")
+    void confirmedSanctionCountsAsHistoryUnlessRevoked() {
+        for (SanctionType type : SanctionType.values()) {
+            if (type == SanctionType.TEMPORARY_72H) {
+                continue;
+            }
+            for (SanctionStatus status : SanctionStatus.values()) {
+                assertThat(sanctionOf(type, status).countsAsHistory())
+                        .as("%s %s", type, status)
+                        .isEqualTo(status != SanctionStatus.REVOKED);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("[PV-05] 탈퇴 CI 보관은 임시 정지를 포함한 모든 제재를 세고, 처분 취소된 제재만 세지 않는다")
+    void everySanctionCountsForCiRetentionUnlessRevoked() {
+        for (SanctionType type : SanctionType.values()) {
+            for (SanctionStatus status : SanctionStatus.values()) {
+                assertThat(sanctionOf(type, status).countsForCiRetention())
+                        .as("%s %s", type, status)
+                        .isEqualTo(status != SanctionStatus.REVOKED);
+            }
+        }
+    }
+
+    private static Sanction sanctionOf(SanctionType type, SanctionStatus status) {
+        Sanction sanction = Sanction.temporary(11L, 5L, NOW);
+        ReflectionTestUtils.setField(sanction, "type", type);
+        ReflectionTestUtils.setField(sanction, "status", status);
+        return sanction;
     }
 }

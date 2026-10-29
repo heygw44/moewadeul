@@ -14,6 +14,8 @@ import java.time.format.DateTimeFormatter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -115,14 +117,15 @@ class ReportContentCleanupIntegrationTest {
         assertThat(reasonErased(recent)).isFalse();
     }
 
-    @Test
-    @DisplayName("[F-16][PV-07] 해제한 지 1년이 지난 제재의 사유를 지우고, 최근에 해제한 제재는 남긴다")
-    void clearsLiftedSanctionReason() {
+    @ParameterizedTest
+    @ValueSource(strings = {"ENDED_EARLY", "REVOKED"})
+    @DisplayName("[F-16][PV-07] 조기 종료하거나 처분 취소한 지 1년이 지난 제재의 사유를 지우고, 최근에 해제한 제재는 남긴다")
+    void clearsLiftedSanctionReason(String liftedStatus) {
         Instant cutoff = cutoff();
-        long older =
-                sanction("SUSPEND_30D", "LIFTED", cutoff.minus(Duration.ofDays(60)), null, cutoff.minus(ONE_SECOND));
+        long older = sanction(
+                "SUSPEND_30D", liftedStatus, cutoff.minus(Duration.ofDays(60)), null, cutoff.minus(ONE_SECOND));
         long recent =
-                sanction("SUSPEND_30D", "LIFTED", cutoff.minus(Duration.ofDays(60)), null, cutoff.plus(ONE_SECOND));
+                sanction("SUSPEND_30D", liftedStatus, cutoff.minus(Duration.ofDays(60)), null, cutoff.plus(ONE_SECOND));
 
         ReportContentCleanupService.Result result = cleanupService.clearExpiredContent();
 

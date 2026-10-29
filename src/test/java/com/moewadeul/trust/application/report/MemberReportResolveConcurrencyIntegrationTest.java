@@ -12,6 +12,7 @@ import com.moewadeul.trust.application.sanction.SanctionConfirmService;
 import com.moewadeul.trust.application.sanction.SanctionLiftService;
 import com.moewadeul.trust.domain.report.ReportKind;
 import com.moewadeul.trust.domain.report.ReportType;
+import com.moewadeul.trust.domain.sanction.SanctionLiftReason;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.util.ArrayList;
 import java.util.List;
@@ -101,7 +102,7 @@ class MemberReportResolveConcurrencyIntegrationTest {
         } else {
             assertThat(status).isEqualTo("DISMISSED");
             assertThat(count("sanction WHERE type = 'WARNING'")).isZero();
-            assertThat(temporaryStatus).isEqualTo("LIFTED");
+            assertThat(temporaryStatus).isEqualTo("REVOKED");
         }
     }
 
@@ -131,8 +132,8 @@ class MemberReportResolveConcurrencyIntegrationTest {
                 .sanctionId();
 
         List<Outcome> outcomes = runConcurrently(List.of(
-                () -> sanctionLiftService.lift(sanctionId, adminId),
-                () -> sanctionLiftService.lift(sanctionId, adminId)));
+                () -> sanctionLiftService.lift(sanctionId, SanctionLiftReason.REVOKE.name(), adminId),
+                () -> sanctionLiftService.lift(sanctionId, SanctionLiftReason.REVOKE.name(), adminId)));
 
         assertThat(outcomes.stream().filter(Outcome::succeeded)).hasSize(1);
         assertThat(outcomes.stream().filter(outcome -> !outcome.succeeded()))
@@ -147,14 +148,14 @@ class MemberReportResolveConcurrencyIntegrationTest {
     }
 
     @RepeatedTest(5)
-    @DisplayName("[F-21][SN-05] 신고 기각과 그 임시 정지의 직접 해제가 동시에 와도 데드락 없이 임시 정지는 LIFTED, 회원은 정지가 풀린다")
+    @DisplayName("[F-21][SN-05] 신고 기각과 그 임시 정지의 직접 해제가 동시에 와도 데드락 없이 임시 정지는 REVOKED, 회원은 정지가 풀린다")
     void dismissAndLiftOfTemporarySuspensionDoNotDeadlock() throws Exception {
         long reportId = inReviewUrgentReport();
         long temporaryId = jdbc.queryForObject("SELECT id FROM sanction WHERE report_id = ?", Long.class, reportId);
 
         List<Outcome> outcomes = runConcurrently(List.of(
                 () -> dismissService.dismiss(reportId, adminId, null),
-                () -> sanctionLiftService.lift(temporaryId, adminId)));
+                () -> sanctionLiftService.lift(temporaryId, SanctionLiftReason.END_EARLY.name(), adminId)));
 
         for (Outcome outcome : outcomes) {
             if (!outcome.succeeded()) {
@@ -166,7 +167,7 @@ class MemberReportResolveConcurrencyIntegrationTest {
         }
         assertThat(outcomes.get(0).succeeded()).isTrue();
         assertThat(jdbc.queryForObject("SELECT status FROM sanction WHERE id = ?", String.class, temporaryId))
-                .isEqualTo("LIFTED");
+                .isEqualTo("REVOKED");
         assertThat(jdbc.queryForObject("SELECT status FROM member_report WHERE id = ?", String.class, reportId))
                 .isEqualTo("DISMISSED");
         assertThat(jdbc.queryForObject("SELECT status FROM member WHERE id = ?", String.class, targetId))

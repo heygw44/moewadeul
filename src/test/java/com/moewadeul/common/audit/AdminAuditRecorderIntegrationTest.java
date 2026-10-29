@@ -48,7 +48,7 @@ class AdminAuditRecorderIntegrationTest {
                 AdminAuditAction.SANCTION_LIFT,
                 AdminAuditTargetType.SANCTION,
                 7L,
-                Map.of("fromStatus", "ACTIVE", "toStatus", "LIFTED")));
+                Map.of("fromStatus", "ACTIVE", "toStatus", "ENDED_EARLY")));
 
         List<AdminAuditLog> logs = repository.findAll();
         assertThat(logs).hasSize(1);
@@ -58,7 +58,7 @@ class AdminAuditRecorderIntegrationTest {
         assertThat(log.getTargetType()).isEqualTo("SANCTION");
         assertThat(log.getTargetId()).isEqualTo(7L);
         assertThat(log.getCreatedAt()).isEqualTo(clock.instant());
-        assertThat(log.getDetail()).contains("\"fromStatus\": \"ACTIVE\"").contains("\"toStatus\": \"LIFTED\"");
+        assertThat(log.getDetail()).contains("\"fromStatus\": \"ACTIVE\"").contains("\"toStatus\": \"ENDED_EARLY\"");
     }
 
     @Test

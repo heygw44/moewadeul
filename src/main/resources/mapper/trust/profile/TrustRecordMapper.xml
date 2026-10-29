@@ -33,7 +33,7 @@
                        FROM sanction s
                        WHERE s.member_id = #{memberId}
                          AND s.type &lt;&gt; 'TEMPORARY_72H'
-                         AND s.status &lt;&gt; 'LIFTED'
+                         AND s.status &lt;&gt; 'REVOKED'
                          AND s.starts_at &gt;= #{recentSince}) AS recent_sanction
     </select>
 

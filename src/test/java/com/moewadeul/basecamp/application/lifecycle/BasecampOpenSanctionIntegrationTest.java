@@ -74,7 +74,8 @@ class BasecampOpenSanctionIntegrationTest {
     void warningExpiredAndLiftedDoNotBlock() {
         insertSanction("WARNING", "ACTIVE", null);
         insertSanction("SUSPEND_7D", "EXPIRED", NOW.minus(Duration.ofDays(1)));
-        insertSanction("SUSPEND_30D", "LIFTED", NOW.plus(Duration.ofDays(20)));
+        insertSanction("SUSPEND_30D", "ENDED_EARLY", NOW.plus(Duration.ofDays(20)));
+        insertSanction("SUSPEND_30D", "REVOKED", NOW.plus(Duration.ofDays(20)));
         insertSanction("SUSPEND_7D", "ACTIVE", NOW.minusSeconds(1));
 
         BasecampOpenResult result = open();

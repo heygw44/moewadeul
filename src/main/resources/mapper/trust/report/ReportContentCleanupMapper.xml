@@ -18,8 +18,8 @@
         WHERE reason IS NOT NULL
           AND (
                 (status = 'EXPIRED' AND ends_at &lt;= #{cutoff})
-                OR (status = 'LIFTED' AND lifted_at &lt;= #{cutoff})
-                OR (type = 'WARNING' AND status &lt;&gt; 'LIFTED' AND starts_at &lt;= #{cutoff})
+                OR (status IN ('ENDED_EARLY', 'REVOKED') AND lifted_at &lt;= #{cutoff})
+                OR (type = 'WARNING' AND status NOT IN ('ENDED_EARLY', 'REVOKED') AND starts_at &lt;= #{cutoff})
               )
         LIMIT #{limit}
     </update>
