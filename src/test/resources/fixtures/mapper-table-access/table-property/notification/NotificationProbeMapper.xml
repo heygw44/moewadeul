@@ -19,4 +19,7 @@
     <select id="missingTable" resultType="long">
         <include refid="com.moewadeul.common.probe.ProbeSql.selectAll"/>
     </select>
+    <select id="missingQuotedTable" resultType="long">
+        <include refid="com.moewadeul.common.probe.ProbeSql.selectAllQuoted"/>
+    </select>
 </mapper>

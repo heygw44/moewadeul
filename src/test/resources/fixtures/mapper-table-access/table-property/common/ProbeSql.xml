@@ -5,6 +5,10 @@
         SELECT id
         FROM ${table}
     </sql>
+    <sql id="selectAllQuoted">
+        SELECT id
+        FROM `${table}`
+    </sql>
     <sql id="deleteById">
         DELETE FROM ${table}
         WHERE id = #{id}

@@ -116,9 +116,11 @@ class MapperTableAccessTest {
     private static final Pattern UPDATE =
             Pattern.compile("\\b((?:FOR|KEY)\\s+)?UPDATE" + TABLE, Pattern.CASE_INSENSITIVE);
     private static final Pattern UNRESOLVED_TABLE =
-            Pattern.compile("\\b(?:FROM|JOIN|INTO|UPDATE)\\s+(\\$\\{\\w+})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern COMMA_JOIN = Pattern.compile(
-            "\\bFROM\\s+`?[a-z_][a-z0-9_]*`?(?:\\s+(?:AS\\s+)?[a-z_][a-z0-9_]*)?\\s*,", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("\\b(?:FROM|JOIN|INTO|UPDATE)\\s+`?(\\$\\{\\w+})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern FROM_OR_JOIN = Pattern.compile("\\b(?:FROM|JOIN)\\s+", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TABLE_NAME = Pattern.compile("`?[a-z_$][a-z0-9_{}]*`?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ALIAS_THEN_COMMA =
+            Pattern.compile("(?:\\s+(?:AS\\s+)?[a-z_][a-z0-9_]*)?\\s*,", Pattern.CASE_INSENSITIVE);
 
     @Test
     @DisplayName("[ADR-005] 매퍼 SQL은 자기 모듈이 소유했거나 허용된 교차 읽기 테이블만 건드린다")
@@ -145,7 +147,8 @@ class MapperTableAccessTest {
                         "notification/NotificationProbeMapper.xml#readOther: notification -> sanction (소유: trust)",
                         "notification/NotificationProbeMapper.xml#deleteOther: notification -> sanction"
                                 + " (쓰기는 소유 모듈만 가능, 소유: trust)",
-                        "notification/NotificationProbeMapper.xml#missingTable: 테이블 자리의 ${table} 값을 찾지 못했다");
+                        "notification/NotificationProbeMapper.xml#missingTable: 테이블 자리의 ${table} 값을 찾지 못했다",
+                        "notification/NotificationProbeMapper.xml#missingQuotedTable: 테이블 자리의 ${table} 값을 찾지 못했다");
     }
 
     @Test
@@ -158,10 +161,13 @@ class MapperTableAccessTest {
     }
 
     @Test
-    @DisplayName("FROM a, b 쉼표 조인은 뒤 테이블을 놓치므로 실패한다")
+    @DisplayName("FROM·JOIN 뒤 테이블이나 파생 테이블 다음의 쉼표 조인은 뒤 테이블을 놓치므로 실패한다")
     void commaJoinIsRejected() throws Exception {
         assertThat(scan(FIXTURE_ROOT.resolve("comma-join")).violations())
-                .containsExactly("trip/TripProbeMapper.xml#commaJoin: 쉼표 조인 대신 JOIN을 쓴다");
+                .containsExactlyInAnyOrder(
+                        "trip/TripProbeMapper.xml#commaJoin: 쉼표 조인 대신 JOIN을 쓴다",
+                        "trip/TripProbeMapper.xml#joinComma: 쉼표 조인 대신 JOIN을 쓴다",
+                        "trip/TripProbeMapper.xml#derivedComma: 쉼표 조인 대신 JOIN을 쓴다");
     }
 
     private record Scan(int statementCount, List<String> violations, Map<String, Set<String>> crossReads) {}
@@ -204,7 +210,7 @@ class MapperTableAccessTest {
         while (unresolved.find()) {
             violations.add(where + ": 테이블 자리의 " + unresolved.group(1) + " 값을 찾지 못했다");
         }
-        if (COMMA_JOIN.matcher(sql).find()) {
+        if (hasCommaJoin(sql)) {
             violations.add(where + ": 쉼표 조인 대신 JOIN을 쓴다");
         }
 
@@ -272,6 +278,38 @@ class MapperTableAccessTest {
             }
             out.append(' ');
         }
+    }
+
+    private static boolean hasCommaJoin(String sql) {
+        Matcher source = FROM_OR_JOIN.matcher(sql);
+        while (source.find()) {
+            int end;
+            if (sql.charAt(source.end()) == '(') {
+                end = afterClosingParen(sql, source.end());
+            } else {
+                Matcher name = TABLE_NAME.matcher(sql).region(source.end(), sql.length());
+                if (!name.lookingAt()) {
+                    continue;
+                }
+                end = name.end();
+            }
+            if (ALIAS_THEN_COMMA.matcher(sql).region(end, sql.length()).lookingAt()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int afterClosingParen(String sql, int open) {
+        int depth = 0;
+        for (int i = open; i < sql.length(); i++) {
+            if (sql.charAt(i) == '(') {
+                depth++;
+            } else if (sql.charAt(i) == ')' && --depth == 0) {
+                return i + 1;
+            }
+        }
+        return sql.length();
     }
 
     private static String substitute(String text, Map<String, String> properties) {

@@ -6,4 +6,21 @@
         FROM solo_trip t, basecamp b
         WHERE b.id = t.id
     </select>
+    <select id="joinComma" resultType="long">
+        SELECT t.id
+        FROM solo_trip t
+        JOIN spot s, basecamp b
+        WHERE b.id = t.id
+    </select>
+    <select id="derivedComma" resultType="long">
+        SELECT t.id
+        FROM (SELECT id FROM solo_trip WHERE id IN (1, 2)) t, basecamp b
+        WHERE b.id = t.id
+    </select>
+    <select id="derivedJoin" resultType="long">
+        SELECT t.id
+        FROM (SELECT id FROM solo_trip WHERE id IN (1, 2)) t
+        JOIN spot s ON s.id = t.id
+        ORDER BY t.id, s.id
+    </select>
 </mapper>
