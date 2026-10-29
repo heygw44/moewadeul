@@ -69,7 +69,7 @@ public class MemberLoginService {
     public void ensureStillLoginable(LoginResult loggedIn) {
         Member current = memberRepository
                 .findById(loggedIn.memberId())
-                .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN)
+                .filter(found -> !found.isWithdrawn())
                 .filter(found -> Objects.equals(found.getPasswordChangedAt(), loggedIn.passwordChangedAt()))
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
         rejectIfSuspended(current);
@@ -102,7 +102,7 @@ public class MemberLoginService {
     private Member authenticate(String attemptedEmail, LoginCommand command) {
         Member member = memberRepository
                 .findByEmail(attemptedEmail)
-                .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN)
+                .filter(found -> !found.isWithdrawn())
                 .orElse(null);
         String passwordHash = member != null ? member.getPasswordHash() : timingDecoyPasswordHash;
         boolean authenticated = passwordEncoder.matches(command.password(), passwordHash) && member != null;

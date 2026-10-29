@@ -7,7 +7,6 @@ import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
-import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.Password;
 import java.time.Duration;
 import java.util.Optional;
@@ -43,7 +42,7 @@ public class PasswordChangeService {
     private Member findChangeableMember(long memberId) {
         return memberRepository
                 .findById(memberId)
-                .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN && found.getPasswordHash() != null)
+                .filter(Member::canAuthenticateWithPassword)
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH));
     }
 

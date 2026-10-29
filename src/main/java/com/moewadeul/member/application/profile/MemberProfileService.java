@@ -4,7 +4,6 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberRepository;
-import com.moewadeul.member.domain.MemberStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +18,7 @@ public class MemberProfileService {
     public MemberProfile find(long memberId) {
         Member member = memberRepository
                 .findById(memberId)
-                .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN)
+                .filter(found -> !found.isWithdrawn())
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         return MemberProfile.from(member);
     }
