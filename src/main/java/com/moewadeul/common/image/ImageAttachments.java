@@ -2,6 +2,7 @@ package com.moewadeul.common.image;
 
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.storage.ImageStorage;
+import com.moewadeul.common.transaction.InsideTransaction;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 public abstract class ImageAttachments<T extends AttachableImage> {
 
@@ -46,9 +46,7 @@ public abstract class ImageAttachments<T extends AttachableImage> {
     }
 
     public boolean replace(long memberId, long parentId, List<Long> imageIds) {
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("이미지는 대상을 저장하는 트랜잭션 안에서 붙여야 합니다.");
-        }
+        InsideTransaction.require("이미지 행을 잠근 채 대상과 같은 트랜잭션에서 붙여야 한다.");
         List<Long> currentIds = imageRepository.findIdsByParentId(parentId);
         if (currentIds.isEmpty() && imageIds.isEmpty()) {
             return false;

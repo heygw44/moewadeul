@@ -6,6 +6,7 @@ import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.image.AttachableImage.Thumbnail;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
+import com.moewadeul.common.transaction.InsideTransaction;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -39,6 +40,7 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
             long memberId, String objectKey, String contentType, long sizeBytes, Instant now, Thumbnail thumbnail);
 
     protected ImageUpload issueUpload(long memberId, ImageUploadCommand command) {
+        InsideTransaction.require("회원 행을 잠근 채 세고 저장해야 발급 상한을 지킨다.");
         String noun = kind.noun().word();
         String extension = AttachableImage.extensionOf(command.contentType())
                 .orElseThrow(() -> new InvalidFieldException("contentType", "허용하지 않는 " + noun + " 형식이에요."));
