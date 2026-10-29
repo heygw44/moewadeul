@@ -186,12 +186,13 @@ class AiInterpretServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-27][AI-04] 오늘 서비스 전체 비용이 1달러에 닿았으면 503이고 OpenAI를 부르지 않으며, 그 요청도 횟수에는 센다")
+    @DisplayName("[F-27][AI-04] 오늘 서비스 전체 비용이 1달러에 닿았으면 503이고 OpenAI를 부르지 않으며, 그 요청은 회원의 하루 횟수에서 빼지 않는다")
     void budgetExceededBlocksOpenAiCall() {
         // given
         long other = saveMember();
         long caller = saveMember();
         insertUsage(other, TODAY, 1, 2_500_000, 0);
+        insertUsage(caller, TODAY, 3, 0, 0);
         stubOk(content(), 10, 5);
         long budgetBefore = counter("budget_exceeded");
 
@@ -201,7 +202,7 @@ class AiInterpretServiceIntegrationTest {
         // then
         assertThat(e.getErrorCode()).isEqualTo(AiSearchErrorCode.AI_SEARCH_UNAVAILABLE);
         assertThat(wireMock.findAll(postRequestedFor(urlPathEqualTo(PATH)))).isEmpty();
-        assertThat(usage(caller, TODAY)).containsExactly(1, 0, 0);
+        assertThat(usage(caller, TODAY)).containsExactly(3, 0, 0);
         assertThat(counter("budget_exceeded") - budgetBefore).isEqualTo(1);
     }
 
