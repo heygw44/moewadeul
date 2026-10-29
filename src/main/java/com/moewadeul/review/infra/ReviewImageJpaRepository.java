@@ -24,6 +24,6 @@ public interface ReviewImageJpaRepository extends JpaRepository<ReviewImage, Lon
     List<ReviewImage> findAllByIdForUpdate(@Param("ids") Collection<Long> ids);
 
     @Override
-    @Query("SELECT i.id FROM ReviewImage i WHERE i.reviewId = :reviewId ORDER BY i.displayOrder")
-    List<Long> findIdsByReviewId(@Param("reviewId") long reviewId);
+    @Query("SELECT i.id FROM ReviewImage i WHERE i.parentId = :reviewId ORDER BY i.displayOrder")
+    List<Long> findIdsByParentId(@Param("reviewId") long reviewId);
 }

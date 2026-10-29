@@ -10,8 +10,8 @@
         ORDER BY review_id, display_order
     </select>
 
-    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.review.infra.ReviewImageRow">
-        SELECT id AS image_id, review_id, object_key
+    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.UnattachedImageRow">
+        SELECT id AS image_id, object_key, NULL AS thumbnail_key
         FROM review_image
         WHERE review_id IS NULL
           AND created_at &lt; #{createdBefore}

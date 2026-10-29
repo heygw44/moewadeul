@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.image.ImageUpload;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
@@ -81,7 +82,7 @@ class ReviewImageIntegrationTest {
     @DisplayName("[F-24][RI-01] 업로드 URL을 발급하면 후기에 붙지 않은 행을 만들고, 객체 키는 review/회원 ID/로 시작한다")
     void issueCreatesUnattachedRow() {
         // when
-        ReviewImageUpload upload = uploadService.issue(memberId, "image/webp", SIZE);
+        ImageUpload upload = uploadService.issue(memberId, "image/webp", SIZE);
 
         // then
         assertThat(keyOf(upload.imageId()))
