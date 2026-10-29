@@ -129,7 +129,12 @@ class MemoryReportControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.message").isEqualTo("입력한 값이 맞지 않아요.");
         assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("reason");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("SPAM, ABUSE, ILLEGAL_CAMPING, PRIVACY, MONEY_SCAM, OTHER 중 하나여야 해요.");
         verifyNoInteractions(memoryReportService);
     }
 
