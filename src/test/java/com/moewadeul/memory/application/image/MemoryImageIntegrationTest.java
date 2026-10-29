@@ -21,6 +21,7 @@ import com.moewadeul.memory.domain.image.MemoryImage;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,8 @@ class MemoryImageIntegrationTest {
     private static final LocalDate YESTERDAY = LocalDate.of(2026, 10, 4);
     private static final long SIZE = 1024;
     private static final long THUMBNAIL_SIZE = 64;
+    private static final String UNUSABLE = "붙일 수 없는 사진이 있어요.";
+    private static final String THUMBNAIL_SIZE_REASON = "썸네일 크기는 1바이트 이상 256KB 이하여야 해요.";
 
     @Autowired
     private MemoryImageUploadService uploadService;
@@ -103,10 +106,14 @@ class MemoryImageIntegrationTest {
     @Test
     @DisplayName("[F-33][MM-05] 썸네일 크기가 0이거나 256KB를 넘으면 thumbnailSizeBytes 필드의 INVALID_INPUT으로 거부한다")
     void issueRejectsThumbnailSize() {
-        assertInvalid(() -> uploadService.issue(memberId, withThumbnail("image/png", SIZE, 0)), "thumbnailSizeBytes");
+        assertInvalid(
+                () -> uploadService.issue(memberId, withThumbnail("image/png", SIZE, 0)),
+                "thumbnailSizeBytes",
+                THUMBNAIL_SIZE_REASON);
         assertInvalid(
                 () -> uploadService.issue(memberId, withThumbnail("image/png", SIZE, 256L * 1024 + 1)),
-                "thumbnailSizeBytes");
+                "thumbnailSizeBytes",
+                THUMBNAIL_SIZE_REASON);
     }
 
     @Test
@@ -126,16 +133,20 @@ class MemoryImageIntegrationTest {
         long memoryId = commandService.write(memberId, write(List.of(complete)));
 
         // then
-        assertInvalid(() -> commandService.write(memberId, write(List.of(missing))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, write(List.of(wrongSize))), "imageIds");
+        assertInvalid(() -> commandService.write(memberId, write(List.of(missing))), "imageIds", UNUSABLE);
+        assertInvalid(() -> commandService.write(memberId, write(List.of(wrongSize))), "imageIds", UNUSABLE);
         assertThat(memoryIdOf(complete)).isEqualTo(memoryId);
     }
 
     @Test
     @DisplayName("[F-33][MM-05] 허용하지 않는 형식이나 5MB를 넘는 크기는 INVALID_INPUT으로 거부한다")
     void issueRejectsTypeAndSize() {
-        assertInvalid(() -> uploadService.issue(memberId, command("image/gif", SIZE)), "contentType");
-        assertInvalid(() -> uploadService.issue(memberId, command("image/png", 5L * 1024 * 1024 + 1)), "sizeBytes");
+        assertInvalid(
+                () -> uploadService.issue(memberId, command("image/gif", SIZE)), "contentType", "허용하지 않는 사진 형식이에요.");
+        assertInvalid(
+                () -> uploadService.issue(memberId, command("image/png", 5L * 1024 * 1024 + 1)),
+                "sizeBytes",
+                "사진 크기는 1바이트 이상 5MB 이하여야 해요.");
     }
 
     @Test
@@ -202,12 +213,40 @@ class MemoryImageIntegrationTest {
         assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM memory_image WHERE memory_id = ?", Integer.class, memoryId))
                 .isEqualTo(10);
-        assertInvalid(() -> commandService.write(memberId, write(eleven)), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, write(List.of(mine, mine))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, write(List.of(notUploaded))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, write(List.of(attached))), "imageIds");
+        assertInvalid(() -> commandService.write(memberId, write(eleven)), "imageIds", "사진은 10장까지 붙일 수 있어요.");
+        assertInvalid(
+                () -> commandService.write(memberId, write(List.of(mine, mine))), "imageIds", "같은 사진을 두 번 붙일 수 없어요.");
+        assertInvalid(() -> commandService.write(memberId, write(List.of(notUploaded))), "imageIds", UNUSABLE);
+        assertInvalid(() -> commandService.write(memberId, write(List.of(attached))), "imageIds", UNUSABLE);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory", Integer.class))
                 .isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 다른 회원의 사진과 빈 사진 ID는 붙일 수 없는 사진으로 거부하고, 수정에서 imageIds를 null로 보내면 빈 배열을 보내라고 안내한다")
+    void reviseRejectsOthersImagesAndNullIds() {
+        // given
+        long others = uploaded(saveMember());
+        long mine = uploaded(memberId);
+        long memoryId = commandService.write(memberId, write(List.of()));
+
+        // when, then
+        assertInvalid(
+                () -> commandService.revise(memberId, memoryId, imagesOnly(List.of(others))), "imageIds", UNUSABLE);
+        assertInvalid(
+                () -> commandService.revise(memberId, memoryId, imagesOnly(Arrays.asList(mine, null))),
+                "imageIds",
+                UNUSABLE);
+        assertInvalid(
+                () -> commandService.revise(memberId, memoryId, imagesOnly(Arrays.asList(null, null))),
+                "imageIds",
+                UNUSABLE);
+        assertInvalid(
+                () -> commandService.revise(memberId, memoryId, imagesOnly(null)),
+                "imageIds",
+                "imageIds는 비울 수 없어요. 사진을 모두 떼려면 빈 배열을 보내 주세요.");
+        assertThat(memoryIdOf(others)).isNull();
+        assertThat(memoryIdOf(mine)).isNull();
     }
 
     @Test
@@ -385,10 +424,10 @@ class MemoryImageIntegrationTest {
         return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
-    private static void assertInvalid(ThrowingCallable action, String field) {
-        assertThatThrownBy(action)
-                .isInstanceOfSatisfying(
-                        InvalidFieldException.class,
-                        e -> assertThat(e.getField()).isEqualTo(field));
+    private static void assertInvalid(ThrowingCallable action, String field, String reason) {
+        assertThatThrownBy(action).isInstanceOfSatisfying(InvalidFieldException.class, e -> {
+            assertThat(e.getField()).isEqualTo(field);
+            assertThat(e.getMessage()).isEqualTo(reason);
+        });
     }
 }

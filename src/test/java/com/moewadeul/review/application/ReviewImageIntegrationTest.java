@@ -21,6 +21,7 @@ import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.infra.SpotJpaRepository;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
@@ -35,6 +36,7 @@ class ReviewImageIntegrationTest {
 
     private static final LocalDate YESTERDAY = LocalDate.of(2026, 10, 4);
     private static final long SIZE = 1024;
+    private static final String UNUSABLE = "붙일 수 없는 이미지가 있어요.";
 
     @Autowired
     private ReviewImageUploadService uploadService;
@@ -93,8 +95,11 @@ class ReviewImageIntegrationTest {
     @Test
     @DisplayName("[F-24][RI-01] 허용하지 않는 형식이나 5MB를 넘는 크기는 INVALID_INPUT으로 거부한다")
     void issueRejectsTypeAndSize() {
-        assertInvalid(() -> uploadService.issue(memberId, "image/gif", SIZE), "contentType");
-        assertInvalid(() -> uploadService.issue(memberId, "image/png", 5L * 1024 * 1024 + 1), "sizeBytes");
+        assertInvalid(() -> uploadService.issue(memberId, "image/gif", SIZE), "contentType", "허용하지 않는 이미지 형식이에요.");
+        assertInvalid(
+                () -> uploadService.issue(memberId, "image/png", 5L * 1024 * 1024 + 1),
+                "sizeBytes",
+                "이미지 크기는 1바이트 이상 5MB 이하여야 해요.");
     }
 
     @Test
@@ -144,7 +149,7 @@ class ReviewImageIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-24][RI-02] 이미지 4장, 같은 ID 두 번, 다른 회원의 이미지, 저장소에 없는 이미지는 imageIds 오류로 거부하고 후기를 저장하지 않는다")
+    @DisplayName("[F-24][RI-02] 이미지 4장, 같은 ID 두 번, 다른 회원의 이미지, 저장소에 없는 이미지, 빈 ID는 imageIds 오류로 거부하고 후기를 저장하지 않는다")
     void rejectsUnusableImages() {
         // given
         long otherMember = saveMember();
@@ -154,10 +159,17 @@ class ReviewImageIntegrationTest {
         long mine = uploaded(memberId);
 
         // when, then
-        assertInvalid(() -> commandService.write(memberId, spotId, write(four)), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(mine, mine))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(others))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(notUploaded))), "imageIds");
+        assertInvalid(() -> commandService.write(memberId, spotId, write(four)), "imageIds", "이미지는 3장까지 붙일 수 있어요.");
+        assertInvalid(
+                () -> commandService.write(memberId, spotId, write(List.of(mine, mine))),
+                "imageIds",
+                "같은 이미지를 두 번 붙일 수 없어요.");
+        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(others))), "imageIds", UNUSABLE);
+        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(notUploaded))), "imageIds", UNUSABLE);
+        assertInvalid(
+                () -> commandService.write(memberId, spotId, write(Arrays.asList(mine, null))), "imageIds", UNUSABLE);
+        assertInvalid(
+                () -> commandService.write(memberId, spotId, write(Arrays.asList(null, null))), "imageIds", UNUSABLE);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM spot_review", Integer.class))
                 .isZero();
     }
@@ -175,7 +187,8 @@ class ReviewImageIntegrationTest {
                         memberId,
                         spotId,
                         new SpotReviewWriteCommand(YESTERDAY.minusDays(1), 4, "또 갔다", List.of(image))),
-                "imageIds");
+                "imageIds",
+                UNUSABLE);
     }
 
     @Test
@@ -282,10 +295,10 @@ class ReviewImageIntegrationTest {
         return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
-    private static void assertInvalid(ThrowingCallable action, String field) {
-        assertThatThrownBy(action)
-                .isInstanceOfSatisfying(
-                        InvalidFieldException.class,
-                        e -> assertThat(e.getField()).isEqualTo(field));
+    private static void assertInvalid(ThrowingCallable action, String field, String reason) {
+        assertThatThrownBy(action).isInstanceOfSatisfying(InvalidFieldException.class, e -> {
+            assertThat(e.getField()).isEqualTo(field);
+            assertThat(e.getMessage()).isEqualTo(reason);
+        });
     }
 }
