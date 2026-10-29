@@ -20,10 +20,14 @@ public final class LoginLockout {
         return now.minus(WINDOW);
     }
 
-    public static String attemptKey(String attemptedEmail) {
+    /**
+     * DB는 전각 문자나 보이지 않는 문자가 섞인 표기도 같은 회원으로 찾는다. 표기로 잠그면 표기마다 다른 행을 잡아 서로 기다리지 않으므로,
+     * 회원을 찾았으면 회원 id로 잠근다. 회원이 없는 이메일은 어떤 비밀번호도 통과하지 못해서 표기대로 잠가도 된다.
+     */
+    public static String attemptKey(Long memberId, String attemptedEmail) {
+        String subject = memberId != null ? "member:" + memberId : "email:" + attemptedEmail;
         try {
-            byte[] digest =
-                    MessageDigest.getInstance("SHA-256").digest(attemptedEmail.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(subject.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256을 쓸 수 없습니다.", e);

@@ -11,6 +11,7 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -19,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
@@ -60,9 +62,26 @@ class LoginLockConcurrencyIntegrationTest {
     void burstOfWrongPasswordsRecordsOnlyFiveFailures() throws Exception {
         Member member = saveMember();
 
-        List<Throwable> outcomes = loginTogether(member.getEmail());
+        List<Throwable> outcomes = loginTogether(Collections.nCopies(BURST_SIZE, member.getEmail()));
 
         assertThat(failureCount(member.getEmail())).isEqualTo(MAX_FAILURES);
+        assertThat(outcomes.stream().filter(e -> codeOf(e) == MemberErrorCode.LOGIN_FAILED))
+                .hasSize(MAX_FAILURES);
+        assertThat(outcomes.stream().filter(e -> codeOf(e) == MemberErrorCode.LOGIN_LOCKED))
+                .hasSize(BURST_SIZE - MAX_FAILURES);
+    }
+
+    @RepeatedTest(3)
+    @DisplayName("[PW-03] DB가 같은 이메일로 보는 표기 변형(보이지 않는 문자)으로 동시에 로그인해도 그 회원의 실패는 5번만 기록한다")
+    void burstOfEmailVariantsRecordsOnlyFiveFailures() throws Exception {
+        Member member = saveMember();
+        List<String> variants = IntStream.range(0, BURST_SIZE)
+                .mapToObj(i -> withZeroWidthSpaces(member.getEmail(), i))
+                .toList();
+
+        List<Throwable> outcomes = loginTogether(variants);
+
+        assertThat(memberFailureCount(member.getId())).isEqualTo(MAX_FAILURES);
         assertThat(outcomes.stream().filter(e -> codeOf(e) == MemberErrorCode.LOGIN_FAILED))
                 .hasSize(MAX_FAILURES);
         assertThat(outcomes.stream().filter(e -> codeOf(e) == MemberErrorCode.LOGIN_LOCKED))
@@ -96,13 +115,14 @@ class LoginLockConcurrencyIntegrationTest {
         }
     }
 
-    private List<Throwable> loginTogether(String email) throws Exception {
-        ExecutorService executor = Executors.newFixedThreadPool(BURST_SIZE);
-        CountDownLatch ready = new CountDownLatch(BURST_SIZE);
+    private List<Throwable> loginTogether(List<String> emails) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(emails.size());
+        CountDownLatch ready = new CountDownLatch(emails.size());
         CountDownLatch start = new CountDownLatch(1);
         try {
             List<Future<?>> futures = new ArrayList<>();
-            for (int i = 0; i < BURST_SIZE; i++) {
+            for (int i = 0; i < emails.size(); i++) {
+                String email = emails.get(i);
                 String wrongPassword = wrongPassword(i);
                 futures.add(executor.submit(() -> {
                     ready.countDown();
@@ -131,6 +151,11 @@ class LoginLockConcurrencyIntegrationTest {
         }
     }
 
+    private static String withZeroWidthSpaces(String email, int count) {
+        int at = email.indexOf('@');
+        return email.substring(0, at) + "\u200B".repeat(count) + email.substring(at);
+    }
+
     private static String wrongPassword(int index) {
         return "Wrong-pass" + index + "!";
     }
@@ -156,6 +181,11 @@ class LoginLockConcurrencyIntegrationTest {
                 "SELECT COUNT(*) FROM login_history WHERE attempted_email = ? AND success = FALSE",
                 Integer.class,
                 email);
+    }
+
+    private int memberFailureCount(long memberId) {
+        return jdbc.queryForObject(
+                "SELECT COUNT(*) FROM login_history WHERE member_id = ? AND success = FALSE", Integer.class, memberId);
     }
 
     private Member saveMember() {
