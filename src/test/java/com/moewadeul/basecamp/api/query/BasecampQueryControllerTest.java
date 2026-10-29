@@ -27,6 +27,9 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
@@ -526,12 +529,36 @@ class BasecampQueryControllerTest {
                 BasecampStatus.CONFIRMED,
                 new JoinConditionSummary(1, null, null, false),
                 new BasecampDetail.DetailMember(
-                        31L, "새벽능선", BasecampMemberRole.LEADER, "THIRTIES", true, "FEMALE", true, 2, 5),
+                        31L,
+                        "새벽능선",
+                        BasecampMemberRole.LEADER,
+                        AgeGroup.THIRTIES,
+                        true,
+                        Gender.FEMALE,
+                        true,
+                        TrustLevel.TRUSTED,
+                        5),
                 List.of(
                         new BasecampDetail.DetailMember(
-                                31L, "새벽능선", BasecampMemberRole.LEADER, "THIRTIES", true, "FEMALE", true, 2, 5),
+                                31L,
+                                "새벽능선",
+                                BasecampMemberRole.LEADER,
+                                AgeGroup.THIRTIES,
+                                true,
+                                Gender.FEMALE,
+                                true,
+                                TrustLevel.TRUSTED,
+                                5),
                         new BasecampDetail.DetailMember(
-                                32L, "달빛야영", BasecampMemberRole.MEMBER, null, false, null, false, 1, 0)),
+                                32L,
+                                "달빛야영",
+                                BasecampMemberRole.MEMBER,
+                                null,
+                                false,
+                                null,
+                                false,
+                                TrustLevel.IDENTITY_VERIFIED,
+                                0)),
                 relation,
                 contactInfo,
                 eligibility);

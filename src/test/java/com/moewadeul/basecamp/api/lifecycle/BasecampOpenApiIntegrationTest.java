@@ -21,6 +21,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
@@ -272,6 +274,28 @@ class BasecampOpenApiIntegrationTest {
         assertThat(today).bodyJson().extractingPath("$.code").isEqualTo("BASECAMP_SCHEDULE_INVALID");
         assertThat(fourNights).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(fourNights).bodyJson().extractingPath("$.code").isEqualTo("BASECAMP_SCHEDULE_INVALID");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 3, -1})
+    @DisplayName("[F-12][BC-05] 최소 신뢰 단계가 1·2가 아니면 400 INVALID_INPUT과 허용 값을 알려 준다")
+    void invalidMinTrustLevelIsRejected(int minTrustLevel) {
+        // given
+        long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
+        Cookie session = identityVerifiedSession(saveMember(), "FEMALE");
+
+        // when
+        MvcTestResult result = open(
+                session,
+                spotId,
+                "\"capacity\":4",
+                "\"joinCondition\":{\"minTrustLevel\":" + minTrustLevel + ",\"sameGenderOnly\":false}");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.message").isEqualTo("최소 신뢰 단계는 1 또는 2이어야 합니다.");
+        assertThat(countBasecamps()).isZero();
     }
 
     @Test

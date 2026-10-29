@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.schedule.CampingSchedule;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ class BasecampOpenPolicyTest {
         LocalDate start = TODAY.plusDays(daysFromToday);
 
         // when & then
-        assertThatCode(() -> BasecampOpenPolicy.requireSchedule(start, start.plusDays(1), TODAY))
+        assertThatCode(() -> BasecampOpenPolicy.requireSchedule(new CampingSchedule(start, start.plusDays(1)), TODAY))
                 .doesNotThrowAnyException();
     }
 
@@ -34,7 +35,8 @@ class BasecampOpenPolicyTest {
         LocalDate start = TODAY.plusDays(daysFromToday);
 
         // when & then
-        assertThatThrownBy(() -> BasecampOpenPolicy.requireSchedule(start, start.plusDays(1), TODAY))
+        assertThatThrownBy(
+                        () -> BasecampOpenPolicy.requireSchedule(new CampingSchedule(start, start.plusDays(1)), TODAY))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(BasecampErrorCode.BASECAMP_SCHEDULE_INVALID.message());
     }
@@ -47,7 +49,8 @@ class BasecampOpenPolicyTest {
         LocalDate start = TODAY.plusDays(10);
 
         // when & then
-        assertThatCode(() -> BasecampOpenPolicy.requireSchedule(start, start.plusDays(nights), TODAY))
+        assertThatCode(() ->
+                        BasecampOpenPolicy.requireSchedule(new CampingSchedule(start, start.plusDays(nights)), TODAY))
                 .doesNotThrowAnyException();
     }
 
@@ -59,7 +62,8 @@ class BasecampOpenPolicyTest {
         LocalDate start = TODAY.plusDays(10);
 
         // when & then
-        assertThatThrownBy(() -> BasecampOpenPolicy.requireSchedule(start, start.plusDays(nights), TODAY))
+        assertThatThrownBy(() ->
+                        BasecampOpenPolicy.requireSchedule(new CampingSchedule(start, start.plusDays(nights)), TODAY))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(BasecampErrorCode.BASECAMP_SCHEDULE_INVALID.message());
     }
@@ -68,10 +72,12 @@ class BasecampOpenPolicyTest {
     @DisplayName("[F-12][BC-03] 출발일이나 종료일이 null이면 BASECAMP_SCHEDULE_INVALID로 거부한다")
     void nullDatesAreRejected() {
         // when & then
-        assertThatThrownBy(() -> BasecampOpenPolicy.requireSchedule(null, TODAY.plusDays(3), TODAY))
+        assertThatThrownBy(
+                        () -> BasecampOpenPolicy.requireSchedule(new CampingSchedule(null, TODAY.plusDays(3)), TODAY))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(BasecampErrorCode.BASECAMP_SCHEDULE_INVALID.message());
-        assertThatThrownBy(() -> BasecampOpenPolicy.requireSchedule(TODAY.plusDays(2), null, TODAY))
+        assertThatThrownBy(
+                        () -> BasecampOpenPolicy.requireSchedule(new CampingSchedule(TODAY.plusDays(2), null), TODAY))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(BasecampErrorCode.BASECAMP_SCHEDULE_INVALID.message());
     }

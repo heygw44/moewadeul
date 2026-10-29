@@ -2,6 +2,7 @@ package com.moewadeul.trust.application.profile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -48,9 +49,9 @@ class TrustSummaryServiceIntegrationTest {
         long member = fixture.saveVerifiedMember(TestSequence.nickname());
         makeQualified(member);
 
-        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(2);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.TRUSTED);
         TrustDetail detail = trustSummaryService.detail(member);
-        assertThat(detail.trustLevel()).isEqualTo(2);
+        assertThat(detail.trustLevel()).isEqualTo(TrustLevel.TRUSTED);
         assertThat(detail.completedCompanions()).isEqualTo(3);
         assertThat(detail.rejoinRate()).isEqualTo(80);
         assertThat(detail.recentEarlyLeaves()).isZero();
@@ -67,7 +68,7 @@ class TrustSummaryServiceIntegrationTest {
                     basecampId, fixture.leaderIdOf(basecampId), member, true, COMPLETED_PAST_REVIEW_DEADLINE);
         }
 
-        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(1);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.IDENTITY_VERIFIED);
         assertThat(trustSummaryService.detail(member).completedCompanions()).isEqualTo(2);
     }
 
@@ -95,7 +96,7 @@ class TrustSummaryServiceIntegrationTest {
 
         assertThat(detail.completedCompanions()).isEqualTo(5);
         assertThat(detail.rejoinRate()).isEqualTo(80);
-        assertThat(detail.trustLevel()).isEqualTo(2);
+        assertThat(detail.trustLevel()).isEqualTo(TrustLevel.TRUSTED);
     }
 
     @Test
@@ -125,7 +126,7 @@ class TrustSummaryServiceIntegrationTest {
         addEarlyLeave(member, NOW.minus(Duration.ofDays(20)));
         addEarlyLeave(member, NOW.minus(Duration.ofDays(1)));
 
-        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(1);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.IDENTITY_VERIFIED);
         assertThat(trustSummaryService.detail(member).recentEarlyLeaves()).isEqualTo(3);
     }
 
@@ -138,7 +139,7 @@ class TrustSummaryServiceIntegrationTest {
         addEarlyLeave(member, NOW.minus(Duration.ofDays(20)));
         addEarlyLeave(member, NOW.minus(Duration.ofDays(1)));
 
-        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(2);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.TRUSTED);
         assertThat(trustSummaryService.detail(member).recentEarlyLeaves()).isEqualTo(2);
     }
 
@@ -161,8 +162,8 @@ class TrustSummaryServiceIntegrationTest {
         makeQualified(member);
         insertSanction(member, "WARNING", "ACTIVE", NOW.minus(RECENT_PERIOD));
 
-        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(1);
-        assertThat(trustSummaryService.detail(member).trustLevel()).isEqualTo(1);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.IDENTITY_VERIFIED);
+        assertThat(trustSummaryService.detail(member).trustLevel()).isEqualTo(TrustLevel.IDENTITY_VERIFIED);
         assertThat(trustSummaryService.detail(member).noRecentSanction()).isFalse();
     }
 
@@ -175,7 +176,7 @@ class TrustSummaryServiceIntegrationTest {
         insertSanction(member, "SUSPEND_7D", "REVOKED", NOW.minus(Duration.ofDays(1)));
         insertSanction(member, "TEMPORARY_72H", "ACTIVE", NOW.minus(Duration.ofDays(1)));
 
-        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(2);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.TRUSTED);
         assertThat(trustSummaryService.detail(member).noRecentSanction()).isTrue();
     }
 
@@ -186,7 +187,7 @@ class TrustSummaryServiceIntegrationTest {
         makeQualified(member);
         insertSanction(member, "SUSPEND_7D", "ENDED_EARLY", NOW.minus(Duration.ofDays(30)));
 
-        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(1);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.IDENTITY_VERIFIED);
         assertThat(trustSummaryService.detail(member).noRecentSanction()).isFalse();
     }
 
@@ -197,7 +198,7 @@ class TrustSummaryServiceIntegrationTest {
         makeQualified(member);
         insertSanction(member, "SUSPEND_7D", "EXPIRED", NOW.minus(Duration.ofDays(30)));
 
-        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(1);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.IDENTITY_VERIFIED);
     }
 
     @Test

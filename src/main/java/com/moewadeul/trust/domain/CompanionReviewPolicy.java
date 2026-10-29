@@ -1,5 +1,6 @@
 package com.moewadeul.trust.domain;
 
+import com.moewadeul.common.profile.TrustLevel;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -7,7 +8,7 @@ public final class CompanionReviewPolicy {
 
     public static final Duration WRITE_PERIOD = Duration.ofDays(14);
 
-    public static final int MIN_TRUST_LEVEL = 1;
+    public static final TrustLevel MIN_TRUST_LEVEL = TrustLevel.IDENTITY_VERIFIED;
 
     private CompanionReviewPolicy() {}
 

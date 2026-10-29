@@ -11,11 +11,13 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.companion.CompanionReviewTag;
 import com.moewadeul.trust.domain.identity.CiHash;
-import com.moewadeul.trust.domain.identity.Gender;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.IdentityVerification;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
@@ -48,7 +50,7 @@ class TrustSummaryServiceTest {
 
         TrustSummary summary = serviceAt("2026-10-05T03:00:00Z").summarize(MEMBER_ID);
 
-        assertThat(summary).isEqualTo(new TrustSummary(false, 0));
+        assertThat(summary).isEqualTo(new TrustSummary(false, TrustLevel.EMAIL_VERIFIED));
         verifyNoInteractions(recordMapper);
     }
 
@@ -59,7 +61,7 @@ class TrustSummaryServiceTest {
 
         TrustSummary summary = serviceAt("2026-10-05T03:00:00Z").summarize(MEMBER_ID);
 
-        assertThat(summary).isEqualTo(new TrustSummary(true, 0));
+        assertThat(summary).isEqualTo(new TrustSummary(true, TrustLevel.EMAIL_VERIFIED));
         verifyNoInteractions(recordMapper);
     }
 
@@ -69,10 +71,12 @@ class TrustSummaryServiceTest {
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2007)));
         stubRecord(new TrustRecordRow(3, 5, 4, 2, false));
 
-        assertThat(serviceAt("2026-10-05T03:00:00Z").summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, 2));
+        assertThat(serviceAt("2026-10-05T03:00:00Z").summarize(MEMBER_ID))
+                .isEqualTo(new TrustSummary(true, TrustLevel.TRUSTED));
 
         stubRecord(new TrustRecordRow(3, 5, 4, 3, false));
-        assertThat(serviceAt("2026-10-05T03:00:00Z").summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, 1));
+        assertThat(serviceAt("2026-10-05T03:00:00Z").summarize(MEMBER_ID))
+                .isEqualTo(new TrustSummary(true, TrustLevel.IDENTITY_VERIFIED));
     }
 
     @Test
@@ -81,7 +85,8 @@ class TrustSummaryServiceTest {
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2007)));
         stubRecord(new TrustRecordRow(3, 5, 4, 0, true));
 
-        assertThat(serviceAt("2026-10-05T03:00:00Z").summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, 1));
+        assertThat(serviceAt("2026-10-05T03:00:00Z").summarize(MEMBER_ID))
+                .isEqualTo(new TrustSummary(true, TrustLevel.IDENTITY_VERIFIED));
     }
 
     @Test
@@ -102,10 +107,10 @@ class TrustSummaryServiceTest {
         stubRecord(NO_RECORD);
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2007)));
         TrustSummaryService service = serviceAt("2026-10-05T03:00:00Z");
-        assertThat(service.summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, 1));
+        assertThat(service.summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, TrustLevel.IDENTITY_VERIFIED));
 
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2008)));
-        assertThat(service.summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, 0));
+        assertThat(service.summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, TrustLevel.EMAIL_VERIFIED));
     }
 
     @Test
@@ -113,8 +118,10 @@ class TrustSummaryServiceTest {
     void yearBoundaryFollowsKoreaTime() {
         stubRecord(NO_RECORD);
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2007)));
-        assertThat(serviceAt("2025-12-31T14:59:59Z").summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, 0));
-        assertThat(serviceAt("2025-12-31T15:00:00Z").summarize(MEMBER_ID)).isEqualTo(new TrustSummary(true, 1));
+        assertThat(serviceAt("2025-12-31T14:59:59Z").summarize(MEMBER_ID))
+                .isEqualTo(new TrustSummary(true, TrustLevel.EMAIL_VERIFIED));
+        assertThat(serviceAt("2025-12-31T15:00:00Z").summarize(MEMBER_ID))
+                .isEqualTo(new TrustSummary(true, TrustLevel.IDENTITY_VERIFIED));
     }
 
     @Test
@@ -124,11 +131,24 @@ class TrustSummaryServiceTest {
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2007)));
         TrustSummaryService service = serviceAt("2026-10-05T03:00:00Z");
         TrustDetail adult = service.detail(MEMBER_ID);
-        assertThat(adult).isEqualTo(new TrustDetail(true, true, 1, 0, null, 0, true, List.of(), "TWENTIES", "MALE"));
+        assertThat(adult)
+                .isEqualTo(new TrustDetail(
+                        true,
+                        true,
+                        TrustLevel.IDENTITY_VERIFIED,
+                        0,
+                        null,
+                        0,
+                        true,
+                        List.of(),
+                        AgeGroup.TWENTIES,
+                        Gender.MALE));
 
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2008)));
         TrustDetail minor = service.detail(MEMBER_ID);
-        assertThat(minor).isEqualTo(new TrustDetail(true, false, 0, 0, null, 0, true, List.of(), null, "MALE"));
+        assertThat(minor)
+                .isEqualTo(new TrustDetail(
+                        true, false, TrustLevel.EMAIL_VERIFIED, 0, null, 0, true, List.of(), null, Gender.MALE));
     }
 
     @Test
@@ -139,7 +159,9 @@ class TrustSummaryServiceTest {
 
         TrustDetail detail = serviceAt("2026-10-05T03:00:00Z").detail(MEMBER_ID);
 
-        assertThat(detail).isEqualTo(new TrustDetail(false, false, 0, 0, null, 0, true, List.of(), null, null));
+        assertThat(detail)
+                .isEqualTo(new TrustDetail(
+                        false, false, TrustLevel.EMAIL_VERIFIED, 0, null, 0, true, List.of(), null, null));
     }
 
     @Test
@@ -155,7 +177,7 @@ class TrustSummaryServiceTest {
         TrustDetail detail = serviceAt("2026-10-05T03:00:00Z").detail(MEMBER_ID);
 
         // then
-        assertThat(detail.trustLevel()).isZero();
+        assertThat(detail.trustLevel()).isEqualTo(TrustLevel.EMAIL_VERIFIED);
         assertThat(detail.verifiedAgeGroup()).isNull();
         assertThat(detail.verifiedGender()).isNull();
     }
@@ -175,7 +197,16 @@ class TrustSummaryServiceTest {
 
         assertThat(detail)
                 .isEqualTo(new TrustDetail(
-                        true, true, 2, 4, 80, 1, true, List.of("ON_TIME", "LATE", "NO_SHOW"), "TWENTIES", "MALE"));
+                        true,
+                        true,
+                        TrustLevel.TRUSTED,
+                        4,
+                        80,
+                        1,
+                        true,
+                        List.of("ON_TIME", "LATE", "NO_SHOW"),
+                        AgeGroup.TWENTIES,
+                        Gender.MALE));
     }
 
     @Test
@@ -184,18 +215,20 @@ class TrustSummaryServiceTest {
         TrustSummaryService service = serviceAt("2026-10-05T03:00:00Z");
 
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.empty());
-        assertInsufficient(() -> service.requireLevel(MEMBER_ID, 1));
+        assertInsufficient(() -> service.requireLevel(MEMBER_ID, TrustLevel.IDENTITY_VERIFIED));
 
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2008)));
-        assertInsufficient(() -> service.requireLevel(MEMBER_ID, 1));
+        assertInsufficient(() -> service.requireLevel(MEMBER_ID, TrustLevel.IDENTITY_VERIFIED));
 
         stubRecord(NO_RECORD);
         when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2007)));
-        assertThatCode(() -> service.requireLevel(MEMBER_ID, 1)).doesNotThrowAnyException();
-        assertInsufficient(() -> service.requireLevel(MEMBER_ID, 2));
+        assertThatCode(() -> service.requireLevel(MEMBER_ID, TrustLevel.IDENTITY_VERIFIED))
+                .doesNotThrowAnyException();
+        assertInsufficient(() -> service.requireLevel(MEMBER_ID, TrustLevel.TRUSTED));
 
         stubRecord(new TrustRecordRow(3, 5, 4, 2, false));
-        assertThatCode(() -> service.requireLevel(MEMBER_ID, 2)).doesNotThrowAnyException();
+        assertThatCode(() -> service.requireLevel(MEMBER_ID, TrustLevel.TRUSTED))
+                .doesNotThrowAnyException();
     }
 
     private static void assertInsufficient(ThrowingCallable call) {

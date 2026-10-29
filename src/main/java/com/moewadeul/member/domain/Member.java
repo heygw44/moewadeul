@@ -2,6 +2,8 @@ package com.moewadeul.member.domain;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -60,11 +62,11 @@ public class Member {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "self_age_group")
-    private SelfAgeGroup selfAgeGroup;
+    private AgeGroup selfAgeGroup;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "self_gender")
-    private SelfGender selfGender;
+    private Gender selfGender;
 
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
@@ -219,13 +221,13 @@ public class Member {
         this.updatedAt = now;
     }
 
-    public void changeSelfAgeGroup(SelfAgeGroup selfAgeGroup, Instant now) {
+    public void changeSelfAgeGroup(AgeGroup selfAgeGroup, Instant now) {
         requireNow(now);
         this.selfAgeGroup = selfAgeGroup;
         this.updatedAt = now;
     }
 
-    public void changeSelfGender(SelfGender selfGender, Instant now) {
+    public void changeSelfGender(Gender selfGender, Instant now) {
         requireNow(now);
         this.selfGender = selfGender;
         this.updatedAt = now;

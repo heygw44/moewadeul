@@ -1,16 +1,18 @@
 package com.moewadeul.trust.domain.profile;
 
+import com.moewadeul.common.profile.TrustLevel;
+
 public final class TrustLevelPolicy {
 
     private TrustLevelPolicy() {}
 
-    public static int judge(boolean identityVerified, boolean adult, CompanionRecord record) {
+    public static TrustLevel judge(boolean identityVerified, boolean adult, CompanionRecord record) {
         if (!identityVerified || !adult) {
-            return 0;
+            return TrustLevel.EMAIL_VERIFIED;
         }
         if (record.meetsTrustedCondition()) {
-            return 2;
+            return TrustLevel.TRUSTED;
         }
-        return 1;
+        return TrustLevel.IDENTITY_VERIFIED;
     }
 }

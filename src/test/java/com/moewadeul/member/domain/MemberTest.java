@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Duration;
 import java.time.Instant;
@@ -211,9 +213,9 @@ class MemberTest {
     }
 
     @ParameterizedTest
-    @EnumSource(SelfAgeGroup.class)
+    @EnumSource(AgeGroup.class)
     @DisplayName("자기 신고 연령대를 정하면 그 값과 수정 시각이 바뀐다")
-    void changeSelfAgeGroup_setsValue(SelfAgeGroup selfAgeGroup) {
+    void changeSelfAgeGroup_setsValue(AgeGroup selfAgeGroup) {
         // given
         Member member = Member.register(EMAIL, HASH, "nick", NOW);
 
@@ -230,7 +232,7 @@ class MemberTest {
     void changeSelfAgeGroup_clearsWithNull() {
         // given
         Member member = Member.register(EMAIL, HASH, "nick", NOW);
-        member.changeSelfAgeGroup(SelfAgeGroup.THIRTIES, NOW);
+        member.changeSelfAgeGroup(AgeGroup.THIRTIES, NOW);
 
         // when
         member.changeSelfAgeGroup(null, LATER);
@@ -241,9 +243,9 @@ class MemberTest {
     }
 
     @ParameterizedTest
-    @EnumSource(SelfGender.class)
+    @EnumSource(Gender.class)
     @DisplayName("자기 신고 성별을 정하면 그 값과 수정 시각이 바뀐다")
-    void changeSelfGender_setsValue(SelfGender selfGender) {
+    void changeSelfGender_setsValue(Gender selfGender) {
         // given
         Member member = Member.register(EMAIL, HASH, "nick", NOW);
 
@@ -260,7 +262,7 @@ class MemberTest {
     void changeSelfGender_clearsWithNull() {
         // given
         Member member = Member.register(EMAIL, HASH, "nick", NOW);
-        member.changeSelfGender(SelfGender.FEMALE, NOW);
+        member.changeSelfGender(Gender.FEMALE, NOW);
 
         // when
         member.changeSelfGender(null, LATER);
@@ -278,9 +280,9 @@ class MemberTest {
 
         // when & then
         assertThatThrownBy(() -> member.changeNickname("nick2", null)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> member.changeSelfAgeGroup(SelfAgeGroup.TWENTIES, null))
+        assertThatThrownBy(() -> member.changeSelfAgeGroup(AgeGroup.TWENTIES, null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> member.changeSelfGender(SelfGender.MALE, null))
+        assertThatThrownBy(() -> member.changeSelfGender(Gender.MALE, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
