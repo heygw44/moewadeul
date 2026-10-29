@@ -20,6 +20,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @IntegrationTest
 class ProgramSeatSqlParityIntegrationTest {
@@ -45,6 +46,9 @@ class ProgramSeatSqlParityIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     private ProgramApplyFixture fixture;
 
@@ -87,6 +91,25 @@ class ProgramSeatSqlParityIntegrationTest {
         // then
         assertThat(atCapacity).isZero();
         assertThat(belowCapacity).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[PG-03] 같은 트랜잭션에서 취소한 신청은 바로 이어 센 좌석 점유 수에서 빠진다")
+    void countSeesCancellationInSameTransactionWithoutPriorQuery() {
+        // given
+        long programId = fixture.saveProgram(2, false);
+        long canceledId = fixture.saveApplication(
+                programId, fixture.saveMember(), "PENDING_PAYMENT", NOW.plus(Duration.ofMinutes(15)));
+        fixture.saveApplication(programId, fixture.saveMember(), "CONFIRMED", NOW.plus(Duration.ofMinutes(15)));
+
+        // when
+        long count = transactionTemplate.execute(status -> {
+            applicationJpaRepository.findById(canceledId).orElseThrow().cancelByMember(NOW, NOW);
+            return applicationRepository.countSeatHolders(programId, NOW);
+        });
+
+        // then
+        assertThat(count).isEqualTo(1);
     }
 
     private SeatCase insertEveryStatusAndPaymentDue() {
