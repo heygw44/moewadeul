@@ -36,7 +36,7 @@ public class MemoryModerationService {
         }
 
         @Override
-        public String auditTargetType() {
+        public AdminAuditTargetType auditTargetType() {
             return AdminAuditTargetType.MEMORY;
         }
 

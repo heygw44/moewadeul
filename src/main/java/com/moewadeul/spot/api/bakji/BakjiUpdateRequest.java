@@ -1,6 +1,6 @@
 package com.moewadeul.spot.api.bakji;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.spot.application.bakji.BakjiUpdateCommand;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.bakji.BakjiContent;

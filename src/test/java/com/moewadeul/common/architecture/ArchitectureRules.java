@@ -40,16 +40,17 @@ public final class ArchitectureRules {
             "memory",
             "aisearch",
             "admin",
+            "idempotency",
             COMMON);
 
     static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.of(
             "admin", Set.of("trust", "program", "spot", "community", "memory"),
-            "community", Set.of("spot"),
-            "basecamp", Set.of("trust", "spot"),
-            "program", Set.of("trust"),
+            "community", Set.of("spot", "idempotency"),
+            "basecamp", Set.of("trust", "spot", "idempotency"),
+            "program", Set.of("trust", "idempotency"),
             "review", Set.of("spot"),
-            "trip", Set.of("spot"),
-            "memory", Set.of("spot"),
+            "trip", Set.of("spot", "idempotency"),
+            "memory", Set.of("spot", "idempotency"),
             "spot", Set.of("weather"),
             "publicdata", Set.of("spot"),
             "trust", Set.of("member"));
@@ -60,6 +61,7 @@ public final class ArchitectureRules {
     private static final String API = "api";
     private static final String DOMAIN = "domain";
     private static final String INFRA = "infra";
+    private static final Set<String> LAYERS = Set.of(API, APPLICATION, DOMAIN, INFRA);
 
     private static final String SCHEDULED = "org.springframework.scheduling.annotation.Scheduled";
     private static final String SCHEDULES = "org.springframework.scheduling.annotation.Schedules";
@@ -117,10 +119,10 @@ public final class ArchitectureRules {
                         return Optional.empty();
                     }
                     return scope.locate(dep.getTargetClass())
-                            .filter(t -> t.module().equals(source.module()))
+                            .filter(t -> t.module().equals(source.module()) || COMMON.equals(t.module()))
                             .filter(t ->
                                     API.equals(t.layer()) || APPLICATION.equals(t.layer()) || INFRA.equals(t.layer()))
-                            .map(t -> "domain 은(는) 같은 모듈의 " + t.layer() + " 에 의존할 수 없다");
+                            .map(t -> "domain 은(는) " + t.module() + " 의 " + t.layer() + " 에 의존할 수 없다");
                 }))
                 .as("domain 패키지는 api·application·infra 패키지에 의존하지 않는다")
                 .allowEmptyShould(true);
@@ -273,7 +275,7 @@ public final class ArchitectureRules {
     }
 
     private static ArchCondition<JavaClass> domainPortsAreRepositories(Scope scope) {
-        return new ArchCondition<>("name every domain interface implemented in infra *Repository") {
+        return new ArchCondition<>("name every domain interface implemented by an adapter *Repository") {
             @Override
             public void check(JavaClass item, ConditionEvents events) {
                 boolean domainInterface = item.isInterface()
@@ -282,15 +284,14 @@ public final class ArchitectureRules {
                     return;
                 }
                 item.getAllSubclasses().stream()
-                        .filter(sub -> scope.locate(sub)
-                                .map(l -> INFRA.equals(l.layer()))
-                                .orElse(false))
+                        .filter(sub ->
+                                scope.locate(sub).map(Location::isAdapter).orElse(false))
                         .findFirst()
                         .ifPresent(sub -> events.add(SimpleConditionEvent.violated(
                                 item,
-                                "domain 인터페이스 " + item.getName() + " 을(를) infra 의 " + sub.getName()
+                                "domain 인터페이스 " + item.getName() + " 을(를) 어댑터 " + sub.getName()
                                         + " 이(가) 구현한다. 저장소가 아닌 포트는 application 에 두고,"
-                                        + " 여러 모듈이 쓰면 common 에 둔다")));
+                                        + " 여러 모듈이 쓰면 common.<패키지>.application 에 둔다")));
             }
         };
     }
@@ -397,7 +398,11 @@ public final class ArchitectureRules {
     private record Location(String module, String layer) {
 
         boolean isApplication() {
-            return !COMMON.equals(module) && APPLICATION.equals(layer);
+            return APPLICATION.equals(layer);
+        }
+
+        boolean isAdapter() {
+            return INFRA.equals(layer) || (COMMON.equals(module) && layer.isEmpty());
         }
     }
 
@@ -411,8 +416,11 @@ public final class ArchitectureRules {
             }
             String[] segments = packageName.substring(prefix.length()).split("\\.");
             String module = segments[0];
-            boolean layered = !COMMON.equals(module) && segments.length > 1;
-            return Optional.of(new Location(module, layered ? segments[1] : ""));
+            if (!COMMON.equals(module)) {
+                return Optional.of(new Location(module, segments.length > 1 ? segments[1] : ""));
+            }
+            boolean layered = segments.length > 2 && LAYERS.contains(segments[2]);
+            return Optional.of(new Location(module, layered ? segments[2] : ""));
         }
 
         GivenClassesConjunction moduleClasses() {

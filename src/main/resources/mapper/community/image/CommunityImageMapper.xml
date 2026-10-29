@@ -9,7 +9,7 @@
         ORDER BY display_order
     </select>
 
-    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.UnattachedImageRow">
+    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
         SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM community_image
         WHERE post_id IS NULL

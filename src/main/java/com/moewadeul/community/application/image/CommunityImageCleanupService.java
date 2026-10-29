@@ -1,6 +1,6 @@
 package com.moewadeul.community.application.image;
 
-import com.moewadeul.common.image.ImageCleanup;
+import com.moewadeul.common.image.application.ImageCleanup;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.community.domain.image.CommunityImage;
 import com.moewadeul.community.infra.image.CommunityImageMapper;

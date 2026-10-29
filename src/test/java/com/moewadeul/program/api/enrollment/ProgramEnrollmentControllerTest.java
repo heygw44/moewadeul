@@ -11,12 +11,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import com.moewadeul.program.application.enrollment.ProgramApplyResult;
 import com.moewadeul.program.application.enrollment.ProgramApplyService;
 import com.moewadeul.program.application.enrollment.ProgramVacancyAlertService;
@@ -63,7 +63,7 @@ class ProgramEnrollmentControllerTest {
     private ProgramVacancyAlertService programVacancyAlertService;
 
     @MockitoBean
-    private IdempotencyRecordJpaRepository idempotencyRecordRepository;
+    private IdempotencyRecordRepository idempotencyRecordRepository;
 
     @Test
     @DisplayName("[F-18] 인증 회원이 신청하면 201과 신청 ID, 상태, 결제 기한, 금액을 응답한다")

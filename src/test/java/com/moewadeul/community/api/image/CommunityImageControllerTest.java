@@ -10,8 +10,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 import com.moewadeul.common.error.GlobalExceptionHandler;
-import com.moewadeul.common.image.ImageUpload;
-import com.moewadeul.common.image.ImageUploadCommand;
+import com.moewadeul.common.image.application.ImageUpload;
+import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;

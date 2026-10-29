@@ -3,11 +3,11 @@ package com.moewadeul.community.application.post;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.moewadeul.common.image.ImageUploadCommand;
+import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.moderation.ContentReportReason;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
-import com.moewadeul.common.web.PatchField;
 import com.moewadeul.community.application.comment.CommunityCommentCommandService;
 import com.moewadeul.community.application.comment.CommunityCommentWriteCommand;
 import com.moewadeul.community.application.image.CommunityImageUploadService;

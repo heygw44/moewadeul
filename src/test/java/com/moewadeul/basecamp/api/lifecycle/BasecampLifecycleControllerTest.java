@@ -22,12 +22,12 @@ import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -83,7 +83,7 @@ class BasecampLifecycleControllerTest {
     private BasecampEditService basecampEditService;
 
     @MockitoBean
-    private IdempotencyRecordJpaRepository idempotencyRecordRepository;
+    private IdempotencyRecordRepository idempotencyRecordRepository;
 
     @Test
     @DisplayName("[F-12] 베이스캠프를 열면 201과 basecampId·status를 응답하고, 요청 값과 로그인한 회원의 ID를 서비스에 넘긴다")

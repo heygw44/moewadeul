@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.spot.application.SpotParkWarning;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import java.util.List;

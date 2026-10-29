@@ -1,6 +1,6 @@
 package com.moewadeul.memory.application;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.memory.domain.MemoryDetails;
 import java.time.LocalDate;
 import java.util.List;

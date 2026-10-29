@@ -1,8 +1,8 @@
 package com.moewadeul.community.domain.image;
 
-import com.moewadeul.common.image.ImageKind;
-import com.moewadeul.common.image.ImageMessages;
-import com.moewadeul.common.image.ThumbnailedImage;
+import com.moewadeul.common.image.domain.ImageKind;
+import com.moewadeul.common.image.domain.ImageMessages;
+import com.moewadeul.common.image.domain.ThumbnailedImage;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

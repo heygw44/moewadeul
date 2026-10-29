@@ -5,7 +5,6 @@ import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
@@ -49,11 +48,7 @@ public class MemberReportDismissService {
         Long liftedSanctionId = liftTemporarySuspensions(report, target, adminId, now);
         ReportStatus before = report.getStatus();
         report.dismiss(adminId, note, now);
-        outboxEventRecorder.record(
-                TrustEvents.REPORT_RESOLVED,
-                TrustEvents.REPORT_AGGREGATE_TYPE,
-                reportId,
-                new TrustEvents.ReportResolvedPayload(reportId, report.getReporterId(), ReportStatus.DISMISSED.name()));
+        outboxEventRecorder.recordAll(report.pullEvents());
         adminAuditRecorder.record(
                 adminId,
                 AdminAuditAction.REPORT_DISMISS,

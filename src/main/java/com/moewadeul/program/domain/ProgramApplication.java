@@ -2,6 +2,8 @@ package com.moewadeul.program.domain;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.ProgramEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,7 +12,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -56,6 +62,10 @@ public class ProgramApplication {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Transient
+    @Getter(AccessLevel.NONE)
+    private final List<Supplier<OutboxEventDraft>> deferredEvents = new ArrayList<>();
+
     public boolean isSeatHolderAt(Instant now) {
         return status == ProgramApplicationStatus.CONFIRMED
                 || (status == ProgramApplicationStatus.PENDING_PAYMENT && now.isBefore(paymentDueAt));
@@ -72,6 +82,9 @@ public class ProgramApplication {
         this.status = ProgramApplicationStatus.CONFIRMED;
         this.confirmedAt = now;
         this.updatedAt = now;
+        long memberId = this.memberId;
+        long programId = this.programId;
+        raise(ProgramEvents.APPLICATION_CONFIRMED, () -> new ProgramEvents.ApplicationPayload(id, memberId, programId));
     }
 
     public boolean cancelByMember(Instant now, Instant refundDeadline) {
@@ -91,6 +104,7 @@ public class ProgramApplication {
         this.cancelReason = ProgramCancelReason.USER;
         this.canceledAt = now;
         this.updatedAt = now;
+        raiseCanceled(ProgramCancelReason.USER, wasConfirmed);
         return wasConfirmed;
     }
 
@@ -111,5 +125,29 @@ public class ProgramApplication {
         this.cancelReason = reason;
         this.canceledAt = now;
         this.updatedAt = now;
+        if (reason == ProgramCancelReason.SANCTIONED) {
+            raiseCanceled(reason, false);
+        }
+    }
+
+    public List<OutboxEventDraft> pullEvents() {
+        List<OutboxEventDraft> events =
+                deferredEvents.stream().map(Supplier::get).toList();
+        deferredEvents.clear();
+        return events;
+    }
+
+    private void raiseCanceled(ProgramCancelReason reason, boolean refunded) {
+        long memberId = this.memberId;
+        long programId = this.programId;
+        String reasonName = reason.name();
+        raise(
+                ProgramEvents.APPLICATION_CANCELED,
+                () -> new ProgramEvents.CanceledPayload(id, memberId, programId, reasonName, refunded));
+    }
+
+    private void raise(String eventType, Supplier<Object> payload) {
+        deferredEvents.add(
+                () -> new OutboxEventDraft(eventType, ProgramEvents.APPLICATION_AGGREGATE_TYPE, id, payload.get()));
     }
 }

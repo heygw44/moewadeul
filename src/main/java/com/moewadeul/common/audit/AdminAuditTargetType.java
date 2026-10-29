@@ -1,15 +1,12 @@
 package com.moewadeul.common.audit;
 
-public final class AdminAuditTargetType {
-
-    public static final String MEMBER_REPORT = "MEMBER_REPORT";
-    public static final String SANCTION = "SANCTION";
-    public static final String SPOT = "SPOT";
-    public static final String COMMUNITY_POST = "COMMUNITY_POST";
-    public static final String COMMUNITY_COMMENT = "COMMUNITY_COMMENT";
-    public static final String MEMORY = "MEMORY";
-    public static final String PROGRAM = "PROGRAM";
-    public static final String SYNC_JOB_RUN = "SYNC_JOB_RUN";
-
-    private AdminAuditTargetType() {}
+public enum AdminAuditTargetType {
+    MEMBER_REPORT,
+    SANCTION,
+    SPOT,
+    COMMUNITY_POST,
+    COMMUNITY_COMMENT,
+    MEMORY,
+    PROGRAM,
+    SYNC_JOB_RUN
 }

@@ -1,11 +1,11 @@
 package com.moewadeul.community.api.comment;
 
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotentRequest;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.community.application.comment.CommunityCommentCommandService;
 import com.moewadeul.community.application.comment.CommunityCommentQueryService;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.application.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;

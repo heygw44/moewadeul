@@ -1,6 +1,6 @@
 package com.moewadeul.memory.api;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.memory.application.MemoryReviseCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;

@@ -1,6 +1,6 @@
 package com.moewadeul.spot.application.bakji;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import java.util.Objects;
 
 public record BakjiUpdateCommand(

@@ -1,6 +1,6 @@
 package com.moewadeul.community.api.image;
 
-import com.moewadeul.common.image.ImageUploadCommand;
+import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.community.domain.image.CommunityImage;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
