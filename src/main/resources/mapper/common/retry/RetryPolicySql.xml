@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.common.retry.RetryPolicySql">
+
+    <sql id="exhausted">NOT #{transientFailure} AND ${attemptCount} + 1 &gt;= #{retry.maxAttempts}</sql>
+
+    <sql id="nextAttemptAt">DATE_ADD(#{now}, INTERVAL
+        LEAST(#{retry.retryDelayMillis} * POW(2, LEAST(${attemptCount}, 20)), #{retry.retryMaxDelayMillis}) * 1000 MICROSECOND)</sql>
+
+</mapper>

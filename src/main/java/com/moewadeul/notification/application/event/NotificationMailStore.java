@@ -5,7 +5,6 @@ import com.moewadeul.notification.infra.event.NotificationMailMapper;
 import com.moewadeul.notification.infra.event.NotificationMailRow;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +22,7 @@ class NotificationMailStore {
 
     @Transactional
     Claim claim(Instant now) {
-        // 컬럼이 마이크로초까지만 저장하므로, 나노초가 붙은 시각은 저장한 값과 같은지 비교할 때 어긋날 수 있다.
-        Instant leaseUntil = now.plus(properties.lease()).truncatedTo(ChronoUnit.MICROS);
+        Instant leaseUntil = properties.retryPolicy().leaseUntil(now);
         int remaining = remainingQuota(now);
         if (remaining == 0) {
             return new Claim(leaseUntil, List.of());
@@ -67,12 +65,7 @@ class NotificationMailStore {
     @Transactional
     void markFailedAttempt(long notificationId, boolean transientFailure) {
         int updated = mailMapper.markFailedAttempt(
-                notificationId,
-                transientFailure,
-                properties.maxAttempts(),
-                properties.retryDelay().toMillis(),
-                properties.retryMaxDelay().toMillis(),
-                clock.instant());
+                notificationId, transientFailure, properties.retryPolicy(), clock.instant());
         if (updated == 0) {
             log.warn("notification mail was not pending when marking failed notificationId={}", notificationId);
         }

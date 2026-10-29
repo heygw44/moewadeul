@@ -1,5 +1,6 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.retry.RetryPolicy;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -21,15 +22,13 @@ public record NotificationMailProperties(
 
     public NotificationMailProperties {
         requirePositive(batchSize, "batchSize");
-        requirePositive(maxAttempts, "maxAttempts");
         requirePositive(pollDelay, "pollDelay");
-        requirePositive(lease, "lease");
-        requirePositive(retryDelay, "retryDelay");
-        requirePositive(retryMaxDelay, "retryMaxDelay");
-        if (retryMaxDelay.compareTo(retryDelay) < 0) {
-            throw new IllegalArgumentException(
-                    "moewadeul.notification.mail.retryMaxDelay must not be shorter than retryDelay");
-        }
+        // 잘못된 재시도 설정은 처음 쓸 때가 아니라 설정 바인딩 때 막는다.
+        new RetryPolicy(lease, retryDelay, retryMaxDelay, maxAttempts);
+    }
+
+    public RetryPolicy retryPolicy() {
+        return new RetryPolicy(lease, retryDelay, retryMaxDelay, maxAttempts);
     }
 
     void requireLeaseOutlastsBatch(Duration sendTimeout) {
