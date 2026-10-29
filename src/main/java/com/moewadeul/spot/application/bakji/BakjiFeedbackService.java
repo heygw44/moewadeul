@@ -31,7 +31,6 @@ public class BakjiFeedbackService {
 
     private static final String CONFIRMATION_UNIQUE_CONSTRAINT = "PRIMARY";
     private static final String REPORT_UNIQUE_CONSTRAINT = "uk_bakji_report_spot_id_reporter_id";
-    private static final int PENDING_REVIEW_REPORT_THRESHOLD = 5;
     private static final String REASON_MESSAGE = "신고 사유는 " + EnumParser.names(BakjiReportReason.class) + " 중 하나여야 해요.";
 
     private final SpotRepository spotRepository;
@@ -64,9 +63,7 @@ public class BakjiFeedbackService {
         }
         Instant now = clock.instant();
         saveReport(BakjiReport.of(spot.getId(), memberId, reason, command.content(), now));
-        if (bakjiReportRepository.countBySpotIdAndReviewedAtIsNull(spot.getId()) >= PENDING_REVIEW_REPORT_THRESHOLD) {
-            spot.markPendingReview(now);
-        }
+        spot.receiveReport(bakjiReportRepository.countBySpotIdAndReviewedAtIsNull(spot.getId()), now);
     }
 
     private void saveConfirmation(BakjiConfirmation confirmation) {

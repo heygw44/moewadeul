@@ -13,7 +13,4 @@ public record AdminSpotRow(
         Long reporterId,
         String reporterNickname,
         long reportCount,
-        long illegalAreaCount,
-        long closedCount,
-        long falseInfoCount,
         Instant statusChangedAt) {}

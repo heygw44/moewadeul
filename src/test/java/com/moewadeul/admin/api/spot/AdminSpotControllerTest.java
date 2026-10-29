@@ -24,6 +24,7 @@ import com.moewadeul.spot.application.moderation.SpotStatusResult;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,7 +88,7 @@ class AdminSpotControllerTest {
                 true,
                 new AdminSpotSummary.Reporter(4L, "제보자"),
                 5L,
-                new AdminSpotSummary.ReasonCounts(2L, 1L, 2L),
+                Map.of("ILLEGAL_AREA", 2L, "CLOSED", 1L, "FALSE_INFO", 2L),
                 List.of(new AdminSpotSummary.RecentReport("CLOSED", "길이 막혔다", AT)),
                 AT);
         var publicSpot = new AdminSpotSummary(
@@ -100,7 +101,7 @@ class AdminSpotControllerTest {
                 false,
                 null,
                 0L,
-                new AdminSpotSummary.ReasonCounts(0L, 0L, 0L),
+                Map.of("ILLEGAL_AREA", 0L, "CLOSED", 0L, "FALSE_INFO", 0L),
                 List.of(),
                 AT);
         when(spotQueryService.list(eq(null), anyInt(), anyInt()))

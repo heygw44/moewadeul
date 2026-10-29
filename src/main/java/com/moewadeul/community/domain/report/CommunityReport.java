@@ -1,5 +1,6 @@
 package com.moewadeul.community.domain.report;
 
+import com.moewadeul.common.moderation.ContentReportReason;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -36,7 +37,7 @@ public class CommunityReport {
     private long reporterId;
 
     @Enumerated(EnumType.STRING)
-    private CommunityReportReason reason;
+    private ContentReportReason reason;
 
     private String content;
 
@@ -50,7 +51,7 @@ public class CommunityReport {
             CommunityReportTargetType targetType,
             long targetId,
             long reporterId,
-            CommunityReportReason reason,
+            ContentReportReason reason,
             String content,
             Instant now) {
         this.targetType = targetType;
@@ -65,7 +66,7 @@ public class CommunityReport {
             CommunityReportTargetType targetType,
             long targetId,
             long reporterId,
-            CommunityReportReason reason,
+            ContentReportReason reason,
             String content,
             Instant now) {
         if (targetType == null || reason == null || now == null) {

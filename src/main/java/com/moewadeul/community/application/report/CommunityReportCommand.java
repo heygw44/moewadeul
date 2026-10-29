@@ -1,5 +1,5 @@
 package com.moewadeul.community.application.report;
 
-import com.moewadeul.community.domain.report.CommunityReportReason;
+import com.moewadeul.common.moderation.ContentReportReason;
 
-public record CommunityReportCommand(CommunityReportReason reason, String content) {}
+public record CommunityReportCommand(ContentReportReason reason, String content) {}

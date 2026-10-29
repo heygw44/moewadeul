@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.moderation.PendingReview;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
@@ -179,7 +180,7 @@ class CommunityPostTest {
         CommunityPost post = CommunityPost.write(7L, "제목", "본문", null, NOW);
         switch (status) {
             case ACTIVE -> {}
-            case PENDING_REVIEW -> post.markPendingReview(NOW);
+            case PENDING_REVIEW -> post.receiveReport(PendingReview.REPORT_THRESHOLD, NOW);
             case HIDDEN -> post.hide(NOW);
             case DELETED -> post.delete(NOW);
         }
@@ -187,13 +188,20 @@ class CommunityPostTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-07] ACTIVE 글을 검토 대기로 바꾸면 상태와 수정 시각이 바뀐다")
-    void markPendingReviewFromActive() {
+    @DisplayName("[F-29][CM-07] 검토 전 신고가 4건이면 ACTIVE 글은 그대로이고, 5건이 되면 검토 대기로 바뀌며 수정 시각이 바뀐다")
+    void receiveReportMovesToPendingReviewAtFive() {
         // given
         CommunityPost post = postIn(CommunityPostStatus.ACTIVE);
 
         // when
-        post.markPendingReview(LATER);
+        post.receiveReport(4, NOW.plusSeconds(1));
+
+        // then
+        assertThat(post.getStatus()).isEqualTo(CommunityPostStatus.ACTIVE);
+        assertThat(post.getUpdatedAt()).isEqualTo(NOW);
+
+        // when
+        post.receiveReport(5, LATER);
 
         // then
         assertThat(post.getStatus()).isEqualTo(CommunityPostStatus.PENDING_REVIEW);
@@ -205,13 +213,13 @@ class CommunityPostTest {
     @EnumSource(
             value = CommunityPostStatus.class,
             names = {"PENDING_REVIEW", "HIDDEN", "DELETED"})
-    @DisplayName("[F-29][CM-07] ACTIVE가 아닌 글을 검토 대기로 바꾸려 하면 IllegalStateException을 던진다")
-    void markPendingReviewRejectsNonActive(CommunityPostStatus status) {
+    @DisplayName("[F-29][CM-07] ACTIVE가 아닌 글의 검토 전 신고가 5건이 되면 IllegalStateException을 던진다")
+    void receiveReportRejectsNonActive(CommunityPostStatus status) {
         // given
         CommunityPost post = postIn(status);
 
         // when // then
-        assertThatThrownBy(() -> post.markPendingReview(LATER)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> post.receiveReport(5, LATER)).isInstanceOf(IllegalStateException.class);
     }
 
     @ParameterizedTest(name = "[{index}] {0}")

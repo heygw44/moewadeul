@@ -1,8 +1,10 @@
 package com.moewadeul.spot.application.moderation;
 
 import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.moderation.ReportReasonCount;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.spot.domain.SpotStatus;
+import com.moewadeul.spot.domain.bakji.BakjiReportReason;
 import com.moewadeul.spot.infra.moderation.AdminSpotMapper;
 import com.moewadeul.spot.infra.moderation.AdminSpotRecentReportRow;
 import com.moewadeul.spot.infra.moderation.AdminSpotRow;
@@ -31,15 +33,22 @@ public class AdminSpotQueryService {
         List<AdminSpotRow> rows = adminSpotMapper.selectPage(
                 spotStatus.name(), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
         PageSlice<AdminSpotRow> slice = PageSlice.of(rows, page, size);
-        Map<Long, List<AdminSpotSummary.RecentReport>> recentBySpot = readRecentReports(slice.content());
-        return slice.map(row -> toSummary(row, recentBySpot.getOrDefault(row.spotId(), List.of())));
+        List<Long> spotIds = slice.content().stream().map(AdminSpotRow::spotId).toList();
+        Map<Long, List<AdminSpotSummary.RecentReport>> recentBySpot = readRecentReports(spotIds);
+        Map<Long, Map<String, Long>> reasonCounts = readReasonCounts(spotIds);
+        return slice.map(row ->
+                toSummary(row, reasonCounts.get(row.spotId()), recentBySpot.getOrDefault(row.spotId(), List.of())));
     }
 
-    private Map<Long, List<AdminSpotSummary.RecentReport>> readRecentReports(List<AdminSpotRow> pageRows) {
-        if (pageRows.isEmpty()) {
+    private Map<Long, Map<String, Long>> readReasonCounts(List<Long> spotIds) {
+        List<ReportReasonCount> counts = spotIds.isEmpty() ? List.of() : adminSpotMapper.selectReasonCounts(spotIds);
+        return ReportReasonCount.byTarget(BakjiReportReason.class, spotIds, counts);
+    }
+
+    private Map<Long, List<AdminSpotSummary.RecentReport>> readRecentReports(List<Long> spotIds) {
+        if (spotIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<Long> spotIds = pageRows.stream().map(AdminSpotRow::spotId).toList();
         return adminSpotMapper.selectRecentReports(spotIds).stream()
                 .collect(Collectors.groupingBy(
                         AdminSpotRecentReportRow::spotId,
@@ -55,7 +64,8 @@ public class AdminSpotQueryService {
         return EnumParser.parseAmong(REVIEWABLE_STATUSES, status, STATUS_MESSAGE);
     }
 
-    private static AdminSpotSummary toSummary(AdminSpotRow row, List<AdminSpotSummary.RecentReport> recentReports) {
+    private static AdminSpotSummary toSummary(
+            AdminSpotRow row, Map<String, Long> reasonCounts, List<AdminSpotSummary.RecentReport> recentReports) {
         AdminSpotSummary.Reporter reporter = row.reporterId() == null
                 ? null
                 : new AdminSpotSummary.Reporter(row.reporterId(), row.reporterNickname());
@@ -69,7 +79,7 @@ public class AdminSpotQueryService {
                 row.parkWarning(),
                 reporter,
                 row.reportCount(),
-                new AdminSpotSummary.ReasonCounts(row.illegalAreaCount(), row.closedCount(), row.falseInfoCount()),
+                reasonCounts,
                 recentReports,
                 row.statusChangedAt());
     }

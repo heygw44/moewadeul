@@ -27,6 +27,7 @@ import com.moewadeul.memory.domain.MemoryErrorCode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -91,7 +92,7 @@ class AdminMemoryControllerTest {
                 List.of(new MemoryPhoto(11L, "https://example.test/view")),
                 "PENDING_REVIEW",
                 5,
-                new AdminMemorySummary.ReasonCounts(2, 0, 0, 0, 3, 0),
+                Map.of("SPAM", 2L, "ABUSE", 0L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 3L, "OTHER", 0L),
                 List.of(new AdminMemorySummary.RecentReport("MONEY_SCAM", "송금 요구", AT)),
                 AT);
         when(queryService.list(null, 0, 20)).thenReturn(new PageSlice<>(List.of(summary), 0, 20, false));

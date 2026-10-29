@@ -1,5 +1,6 @@
 package com.moewadeul.memory.domain.report;
 
+import com.moewadeul.common.moderation.ContentReportReason;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,7 +33,7 @@ public class MemoryReport {
     private long reporterId;
 
     @Enumerated(EnumType.STRING)
-    private MemoryReportReason reason;
+    private ContentReportReason reason;
 
     private String content;
 
@@ -42,7 +43,7 @@ public class MemoryReport {
     @Column(name = "created_at")
     private Instant createdAt;
 
-    private MemoryReport(long memoryId, long reporterId, MemoryReportReason reason, String content, Instant now) {
+    private MemoryReport(long memoryId, long reporterId, ContentReportReason reason, String content, Instant now) {
         this.memoryId = memoryId;
         this.reporterId = reporterId;
         this.reason = reason;
@@ -51,7 +52,7 @@ public class MemoryReport {
     }
 
     public static MemoryReport of(
-            long memoryId, long reporterId, MemoryReportReason reason, String content, Instant now) {
+            long memoryId, long reporterId, ContentReportReason reason, String content, Instant now) {
         if (reason == null || now == null) {
             throw new IllegalArgumentException("신고를 만드는 데 필요한 값이 null입니다.");
         }
