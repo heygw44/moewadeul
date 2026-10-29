@@ -1,6 +1,7 @@
 package com.moewadeul.trust.domain.report;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -101,11 +102,15 @@ public class MemberReport {
         if (type == null || now == null) {
             throw new IllegalArgumentException("신고 유형이나 접수 시각이 null입니다.");
         }
-        if (reporterId == targetMemberId) {
-            throw new IllegalArgumentException("자기 자신은 신고할 수 없습니다.");
+        boolean isReviewReport = type.kind() == ReportKind.REVIEW;
+        if (isReviewReport && companionReviewId == null) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "후기를 신고하려면 동행 후기 ID가 필요해요.");
         }
-        if ((type.kind() == ReportKind.REVIEW) != (companionReviewId != null)) {
-            throw new IllegalArgumentException("후기 신고에만 동행 후기 ID가 필요합니다.");
+        if (!isReviewReport && companionReviewId != null) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "회원 신고에는 동행 후기 ID를 넣을 수 없어요.");
+        }
+        if (reporterId == targetMemberId) {
+            throw new BusinessException(TrustErrorCode.REPORT_NOT_ELIGIBLE);
         }
         if (content == null || content.isBlank() || content.length() > CONTENT_MAX_LENGTH) {
             throw new IllegalArgumentException("신고 내용은 1~" + CONTENT_MAX_LENGTH + "자여야 합니다.");

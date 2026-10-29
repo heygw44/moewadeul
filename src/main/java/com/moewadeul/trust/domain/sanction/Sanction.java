@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Sanction {
 
-    public static final Duration TEMPORARY_SUSPENSION = Duration.ofHours(72);
+    private static final Duration TEMPORARY_SUSPENSION = Duration.ofHours(72);
 
     public static final int REASON_MAX_LENGTH = 500;
 
