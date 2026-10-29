@@ -14,6 +14,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.moderation.ModerationResult;
+import com.moewadeul.common.moderation.RecentReport;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
@@ -22,7 +23,6 @@ import com.moewadeul.community.application.moderation.AdminCommunityAuthor;
 import com.moewadeul.community.application.moderation.AdminCommunityCommentSummary;
 import com.moewadeul.community.application.moderation.AdminCommunityPostSummary;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
-import com.moewadeul.community.application.moderation.AdminCommunityRecentReport;
 import com.moewadeul.community.application.moderation.CommunityModerationService;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
@@ -89,7 +89,7 @@ class AdminCommunityControllerTest {
                 "PENDING_REVIEW",
                 5L,
                 Map.of("SPAM", 2L, "ABUSE", 1L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 1L, "OTHER", 1L),
-                List.of(new AdminCommunityRecentReport("MONEY_SCAM", "돈을 요구한다", AT)),
+                List.of(new RecentReport("MONEY_SCAM", "돈을 요구한다", AT)),
                 AT);
         when(queryService.listPosts(eq(null), anyInt(), anyInt()))
                 .thenReturn(new PageSlice<>(List.of(summary), 0, 20, true));

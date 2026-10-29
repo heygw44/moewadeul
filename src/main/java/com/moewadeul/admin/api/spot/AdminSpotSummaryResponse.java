@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.spot;
 
+import com.moewadeul.admin.api.AdminModerationReports;
 import com.moewadeul.spot.application.moderation.AdminSpotSummary;
 import java.time.Instant;
 import java.util.List;
@@ -13,15 +14,11 @@ public record AdminSpotSummaryResponse(
         double lat,
         double lng,
         boolean parkWarning,
-        Reporter reporter,
+        AdminModerationReports.Member reporter,
         long reportCount,
         Map<String, Long> reasonCounts,
-        List<RecentReport> recentReports,
+        List<AdminModerationReports.RecentReport> recentReports,
         Instant statusChangedAt) {
-
-    public record Reporter(long memberId, String nickname) {}
-
-    public record RecentReport(String reason, String content, Instant createdAt) {}
 
     static AdminSpotSummaryResponse from(AdminSpotSummary summary) {
         AdminSpotSummary.Reporter reporter = summary.reporter();
@@ -33,12 +30,10 @@ public record AdminSpotSummaryResponse(
                 summary.lat(),
                 summary.lng(),
                 summary.parkWarning(),
-                reporter == null ? null : new Reporter(reporter.memberId(), reporter.nickname()),
+                reporter == null ? null : new AdminModerationReports.Member(reporter.memberId(), reporter.nickname()),
                 summary.reportCount(),
                 summary.reasonCounts(),
-                summary.recentReports().stream()
-                        .map(report -> new RecentReport(report.reason(), report.content(), report.createdAt()))
-                        .toList(),
+                AdminModerationReports.RecentReport.fromAll(summary.recentReports()),
                 summary.statusChangedAt());
     }
 }

@@ -1,7 +1,7 @@
 package com.moewadeul.admin.api.memory;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.moewadeul.admin.api.community.AdminCommunityReports;
+import com.moewadeul.admin.api.AdminModerationReports;
 import com.moewadeul.memory.application.moderation.AdminMemorySummary;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -10,7 +10,7 @@ import java.util.Map;
 
 public record AdminMemoryResponse(
         long memoryId,
-        AdminCommunityReports.Author author,
+        AdminModerationReports.Member author,
         double approxLat,
         double approxLng,
         LocalDate visitedDate,
@@ -20,13 +20,13 @@ public record AdminMemoryResponse(
         String status,
         long reportCount,
         Map<String, Long> reasonCounts,
-        List<AdminCommunityReports.RecentReport> recentReports,
+        List<AdminModerationReports.RecentReport> recentReports,
         Instant statusChangedAt) {
 
     static AdminMemoryResponse from(AdminMemorySummary summary) {
         return new AdminMemoryResponse(
                 summary.memoryId(),
-                new AdminCommunityReports.Author(summary.authorId(), summary.authorNickname()),
+                new AdminModerationReports.Member(summary.authorId(), summary.authorNickname()),
                 summary.approxLat(),
                 summary.approxLng(),
                 summary.visitedDate(),
@@ -38,10 +38,7 @@ public record AdminMemoryResponse(
                 summary.status(),
                 summary.reportCount(),
                 summary.reasonCounts(),
-                summary.recentReports().stream()
-                        .map(report -> new AdminCommunityReports.RecentReport(
-                                report.reason(), report.content(), report.createdAt()))
-                        .toList(),
+                AdminModerationReports.RecentReport.fromAll(summary.recentReports()),
                 summary.statusChangedAt());
     }
 

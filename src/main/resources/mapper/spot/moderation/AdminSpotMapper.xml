@@ -32,39 +32,19 @@
     </select>
 
     <select id="selectReasonCounts" resultType="com.moewadeul.common.moderation.ReportReasonCount">
-        SELECT r.spot_id AS target_id,
-               r.reason AS reason,
-               COUNT(*) AS report_count
-        FROM bakji_report r
-        WHERE r.reviewed_at IS NULL
-          AND r.spot_id IN
-        <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
-            #{spotId}
-        </foreach>
-        GROUP BY r.spot_id, r.reason
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.reasonCounts">
+            <property name="reportTable" value="bakji_report"/>
+            <property name="targetColumn" value="spot_id"/>
+            <property name="targetScope" value="com.moewadeul.common.moderation.ModerationReportSql.anyTarget"/>
+        </include>
     </select>
 
-    <select id="selectRecentReports" resultType="com.moewadeul.spot.infra.moderation.AdminSpotRecentReportRow">
-        SELECT ranked.spot_id AS spot_id,
-               ranked.reason AS reason,
-               ranked.content AS content,
-               ranked.created_at AS created_at
-        FROM (
-            SELECT r.spot_id AS spot_id,
-                   r.reason AS reason,
-                   r.content AS content,
-                   r.created_at AS created_at,
-                   r.id AS id,
-                   ROW_NUMBER() OVER (PARTITION BY r.spot_id ORDER BY r.created_at DESC, r.id DESC) AS row_num
-            FROM bakji_report r
-            WHERE r.reviewed_at IS NULL
-              AND r.spot_id IN
-            <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
-                #{spotId}
-            </foreach>
-        ) ranked
-        WHERE ranked.row_num &lt;= 5
-        ORDER BY ranked.spot_id ASC, ranked.row_num ASC
+    <select id="selectRecentReports" resultType="com.moewadeul.common.moderation.RecentReportRow">
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.recentReports">
+            <property name="reportTable" value="bakji_report"/>
+            <property name="targetColumn" value="spot_id"/>
+            <property name="targetScope" value="com.moewadeul.common.moderation.ModerationReportSql.anyTarget"/>
+        </include>
     </select>
 
 </mapper>

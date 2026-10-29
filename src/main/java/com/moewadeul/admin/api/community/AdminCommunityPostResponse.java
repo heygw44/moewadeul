@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.community;
 
+import com.moewadeul.admin.api.AdminModerationReports;
 import com.moewadeul.community.application.moderation.AdminCommunityPostSummary;
 import java.time.Instant;
 import java.util.List;
@@ -9,11 +10,11 @@ public record AdminCommunityPostResponse(
         long postId,
         String title,
         String content,
-        AdminCommunityReports.Author author,
+        AdminModerationReports.Member author,
         String status,
         long reportCount,
         Map<String, Long> reasonCounts,
-        List<AdminCommunityReports.RecentReport> recentReports,
+        List<AdminModerationReports.RecentReport> recentReports,
         Instant statusChangedAt) {
 
     static AdminCommunityPostResponse from(AdminCommunityPostSummary summary) {
@@ -21,11 +22,12 @@ public record AdminCommunityPostResponse(
                 summary.postId(),
                 summary.title(),
                 summary.content(),
-                AdminCommunityReports.Author.from(summary.author()),
+                new AdminModerationReports.Member(
+                        summary.author().memberId(), summary.author().nickname()),
                 summary.status(),
                 summary.reportCount(),
                 summary.reasonCounts(),
-                AdminCommunityReports.RecentReport.fromAll(summary.recentReports()),
+                AdminModerationReports.RecentReport.fromAll(summary.recentReports()),
                 summary.statusChangedAt());
     }
 }

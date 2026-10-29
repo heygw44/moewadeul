@@ -15,6 +15,8 @@ import com.moewadeul.community.domain.post.CommunityPostRepository;
 import com.moewadeul.community.domain.report.CommunityReportRepository;
 import com.moewadeul.community.domain.report.CommunityReportTargetType;
 import java.time.Instant;
+import java.util.Optional;
+import java.util.function.LongFunction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,29 +30,11 @@ public class CommunityModerationService {
     private final CommunityReportRepository communityReportRepository;
     private final AdminModeration adminModeration;
 
-    private final ModerationTarget<CommunityPost> postTarget =
-            new CommunityTarget<>(AdminAuditTargetType.COMMUNITY_POST, CommunityReportTargetType.POST) {
+    private final ModerationTarget<CommunityPost> postTarget = new CommunityTarget<>(
+            AdminAuditTargetType.COMMUNITY_POST, CommunityReportTargetType.POST, this::lockAlivePost);
 
-                @Override
-                public CommunityPost lock(long postId) {
-                    return communityPostRepository
-                            .findByIdForUpdate(postId)
-                            .filter(post -> !post.isDeleted())
-                            .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-                }
-            };
-
-    private final ModerationTarget<CommunityComment> commentTarget =
-            new CommunityTarget<>(AdminAuditTargetType.COMMUNITY_COMMENT, CommunityReportTargetType.COMMENT) {
-
-                @Override
-                public CommunityComment lock(long commentId) {
-                    return communityCommentRepository
-                            .findByIdForUpdate(commentId)
-                            .filter(comment -> !comment.isDeleted())
-                            .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-                }
-            };
+    private final ModerationTarget<CommunityComment> commentTarget = new CommunityTarget<>(
+            AdminAuditTargetType.COMMUNITY_COMMENT, CommunityReportTargetType.COMMENT, this::lockAliveComment);
 
     @Transactional
     public ModerationResult hidePost(long postId, long adminId) {
@@ -72,14 +56,32 @@ public class CommunityModerationService {
         return adminModeration.restore(commentTarget, commentId, adminId);
     }
 
-    private abstract class CommunityTarget<T extends Moderatable> implements ModerationTarget<T> {
+    private Optional<CommunityPost> lockAlivePost(long postId) {
+        return communityPostRepository.findByIdForUpdate(postId).filter(post -> !post.isDeleted());
+    }
+
+    private Optional<CommunityComment> lockAliveComment(long commentId) {
+        return communityCommentRepository.findByIdForUpdate(commentId).filter(comment -> !comment.isDeleted());
+    }
+
+    private final class CommunityTarget<T extends Moderatable> implements ModerationTarget<T> {
 
         private final String auditTargetType;
         private final CommunityReportTargetType reportTargetType;
+        private final LongFunction<Optional<T>> lockAlive;
 
-        CommunityTarget(String auditTargetType, CommunityReportTargetType reportTargetType) {
+        CommunityTarget(
+                String auditTargetType,
+                CommunityReportTargetType reportTargetType,
+                LongFunction<Optional<T>> lockAlive) {
             this.auditTargetType = auditTargetType;
             this.reportTargetType = reportTargetType;
+            this.lockAlive = lockAlive;
+        }
+
+        @Override
+        public T lock(long id) {
+            return lockAlive.apply(id).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         }
 
         @Override

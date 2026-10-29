@@ -1,5 +1,6 @@
 package com.moewadeul.publicdata.application.rejudge;
 
+import com.moewadeul.publicdata.application.SyncJob;
 import com.moewadeul.publicdata.application.SyncJobRunService;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
 import com.moewadeul.publicdata.domain.SyncJobType;
@@ -7,6 +8,7 @@ import com.moewadeul.spot.application.park.BakjiRejudgeChunk;
 import com.moewadeul.spot.application.park.BakjiRejudgeCounts;
 import com.moewadeul.spot.application.park.ParkAreaJudgeService;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +18,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class BakjiRejudgeService {
+public class BakjiRejudgeService implements SyncJob<BakjiRejudgeResult> {
 
     private final SyncJobRunService syncJobRunService;
     private final ParkAreaJudgeService parkAreaJudgeService;
@@ -29,6 +31,17 @@ public class BakjiRejudgeService {
                 .map(this::run);
     }
 
+    @Override
+    public SyncJobType type() {
+        return SyncJobType.BAKJI_REJUDGE;
+    }
+
+    @Override
+    public Duration staleAfter() {
+        return properties.staleAfter();
+    }
+
+    @Override
     public BakjiRejudgeResult run(SyncJobStart start) {
         SyncJobStart current = start;
         while (true) {

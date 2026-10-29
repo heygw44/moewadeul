@@ -1,5 +1,6 @@
 package com.moewadeul.community.infra.moderation;
 
+import com.moewadeul.common.moderation.RecentReportRow;
 import com.moewadeul.common.moderation.ReportReasonCount;
 import com.moewadeul.community.domain.comment.CommunityCommentStatus;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
@@ -21,6 +22,6 @@ public interface AdminCommunityMapper {
     List<ReportReasonCount> selectReasonCounts(
             @Param("targetType") CommunityReportTargetType targetType, @Param("targetIds") Collection<Long> targetIds);
 
-    List<AdminCommunityRecentReportRow> selectRecentReports(
+    List<RecentReportRow> selectRecentReports(
             @Param("targetType") CommunityReportTargetType targetType, @Param("targetIds") Collection<Long> targetIds);
 }

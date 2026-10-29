@@ -31,11 +31,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class IdentityVerificationServiceTest {
 
     private static final long MEMBER_ID = 7L;
     private static final CiHash CI_HASH = new CiHash("c".repeat(64));
+    private static final VerifiedIdentity IDENTITY = new VerifiedIdentity("ci-raw", 1995, Gender.FEMALE);
 
     private final IdentityVerificationRepository repository = mock(IdentityVerificationRepository.class);
     private final IdentityProvider provider = mock(IdentityProvider.class);
@@ -85,6 +87,7 @@ class IdentityVerificationServiceTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.IDENTITY_ALREADY_VERIFIED));
+        verify(provider, never()).verify(any());
     }
 
     @Test
@@ -101,21 +104,23 @@ class IdentityVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("[ID-04] 저장하다 DB 교착 상태로 두 번 연달아 롤백돼도 세 번째 실행의 사전 조회가 찾은 중복을 IDENTITY_CI_DUPLICATED로 거부한다")
+    @DisplayName(
+            "[ID-04] 저장하다 DB 교착 상태로 두 번 연달아 롤백돼도 본인확인 업체는 한 번만 부르고, 세 번째 실행의 사전 조회가 찾은 중복을 IDENTITY_CI_DUPLICATED로 거부한다")
     void retriesAfterRepeatedDeadlockAndRejectsDuplicate() {
         // given
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
-        when(applier.apply(MEMBER_ID, command(1995)))
+        when(applier.apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE))
                 .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"))
                 .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"))
                 .thenThrow(new BusinessException(TrustErrorCode.IDENTITY_CI_DUPLICATED));
 
         // when, then
-        assertThatThrownBy(() -> new IdentityVerificationService(applier).verify(MEMBER_ID, command(1995)))
+        assertThatThrownBy(() -> serviceWith(applier).verify(MEMBER_ID, command(1995)))
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.IDENTITY_CI_DUPLICATED));
-        verify(applier, times(3)).apply(MEMBER_ID, command(1995));
+        verify(applier, times(3)).apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE);
+        verify(provider, times(1)).verify(any());
     }
 
     @Test
@@ -123,13 +128,14 @@ class IdentityVerificationServiceTest {
     void givesUpAfterThirdLockFailure() {
         // given
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
-        when(applier.apply(MEMBER_ID, command(1995)))
+        when(applier.apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE))
                 .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"));
 
         // when, then
-        assertThatThrownBy(() -> new IdentityVerificationService(applier).verify(MEMBER_ID, command(1995)))
+        assertThatThrownBy(() -> serviceWith(applier).verify(MEMBER_ID, command(1995)))
                 .isInstanceOf(CannotAcquireLockException.class);
-        verify(applier, times(3)).apply(MEMBER_ID, command(1995));
+        verify(applier, times(3)).apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE);
+        verify(provider, times(1)).verify(any());
     }
 
     @Test
@@ -137,13 +143,26 @@ class IdentityVerificationServiceTest {
     void doesNotRetryOtherFailures() {
         // given
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
-        when(applier.apply(MEMBER_ID, command(1995)))
+        when(applier.apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE))
                 .thenThrow(new BusinessException(TrustErrorCode.IDENTITY_ALREADY_VERIFIED));
 
         // when, then
-        assertThatThrownBy(() -> new IdentityVerificationService(applier).verify(MEMBER_ID, command(1995)))
+        assertThatThrownBy(() -> serviceWith(applier).verify(MEMBER_ID, command(1995)))
                 .isInstanceOf(BusinessException.class);
-        verify(applier, times(1)).apply(MEMBER_ID, command(1995));
+        verify(applier, times(1)).apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE);
+    }
+
+    @Test
+    @DisplayName("트랜잭션 안에서 부르면 본인확인 업체를 부르지 않고 거부한다")
+    void refusesInsideTransaction() {
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            assertThatThrownBy(() -> serviceAt("2026-10-05T03:00:00Z").verify(MEMBER_ID, command(1995)))
+                    .isInstanceOf(IllegalStateException.class);
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
+        verify(provider, never()).verify(any());
     }
 
     private void stubSuccess(int birthYear) {
@@ -157,12 +176,24 @@ class IdentityVerificationServiceTest {
 
     private IdentityVerificationService serviceAt(String instant) {
         MutableClock clock = MutableClock.at(Instant.parse(instant));
-        return new IdentityVerificationService(new IdentityVerificationApplier(
+        return service(
+                new IdentityVerificationApplier(
+                        repository, hasher, new TrustSummaryService(repository, recordMapper, clock), clock),
+                clock);
+    }
+
+    private IdentityVerificationService serviceWith(IdentityVerificationApplier applier) {
+        when(provider.verify(any())).thenReturn(IDENTITY);
+        when(provider.type()).thenReturn(IdentityProviderType.FAKE);
+        return service(applier, MutableClock.at(Instant.parse("2026-10-05T03:00:00Z")));
+    }
+
+    private IdentityVerificationService service(IdentityVerificationApplier applier, MutableClock clock) {
+        return new IdentityVerificationService(
+                applier,
                 repository,
                 new StaticListableBeanFactory(Map.of("provider", provider)).getBeanProvider(IdentityProvider.class),
-                hasher,
-                new TrustSummaryService(repository, recordMapper, clock),
-                clock));
+                clock);
     }
 
     private static IdentityVerifyCommand command(int birthYear) {

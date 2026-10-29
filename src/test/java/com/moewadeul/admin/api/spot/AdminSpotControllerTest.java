@@ -14,6 +14,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.moderation.ModerationResult;
+import com.moewadeul.common.moderation.RecentReport;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
@@ -89,7 +90,7 @@ class AdminSpotControllerTest {
                 new AdminSpotSummary.Reporter(4L, "제보자"),
                 5L,
                 Map.of("ILLEGAL_AREA", 2L, "CLOSED", 1L, "FALSE_INFO", 2L),
-                List.of(new AdminSpotSummary.RecentReport("CLOSED", "길이 막혔다", AT)),
+                List.of(new RecentReport("CLOSED", "길이 막혔다", AT)),
                 AT);
         var publicSpot = new AdminSpotSummary(
                 10L,
