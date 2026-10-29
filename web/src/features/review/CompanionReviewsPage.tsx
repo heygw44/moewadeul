@@ -5,12 +5,7 @@ import {
   fetchPendingCompanionReviews,
   fetchReceivedCompanionReviews,
 } from '../../api/companionReviews';
-import type {
-  PendingCompanionReview,
-  PendingCompanionTarget,
-  ReceivedCompanionReview,
-  RevealedReceivedCompanionReview,
-} from '../../api/types';
+import type { PendingCompanionReview, PendingCompanionTarget, RevealedReceivedCompanionReview } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
@@ -26,6 +21,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { TextArea } from '../../components/TextArea';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { usePagedList } from '../../components/usePagedList';
 import { daysUntilKst, formatKstDateTime } from '../../lib/datetime';
 import { companionTagLabel, NEGATIVE_COMPANION_TAGS, POSITIVE_COMPANION_TAGS } from '../member/memberLabels';
 import { withNext } from '../member/nextPath';
@@ -306,51 +302,14 @@ function WriteDialog({
   );
 }
 
-type ReceivedState = {
-  items: ReceivedCompanionReview[];
-  page: number;
-  hasNext: boolean;
-  error: { cause: unknown } | null;
-};
+function fetchReceivedPage(_filter: string, page: number, signal?: AbortSignal) {
+  return fetchReceivedCompanionReviews(page, signal);
+}
 
 function ReceivedTab() {
-  const [state, setState] = useState<ReceivedState | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const { current: state, loadingMore, loadMore, retry } = usePagedList(true, '', fetchReceivedPage);
   const [reportTarget, setReportTarget] = useState<RevealedReceivedCompanionReview | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchReceivedCompanionReviews(0, controller.signal).then(
-      (page) => {
-        if (!controller.signal.aborted)
-          setState({ items: page.content, page: page.page, hasNext: page.hasNext, error: null });
-      },
-      (caught: unknown) => {
-        if (!controller.signal.aborted) setState({ items: [], page: 0, hasNext: false, error: { cause: caught } });
-      },
-    );
-    return () => controller.abort();
-  }, [attempt]);
-
   const showSkeleton = useDelayedFlag(state === null);
-
-  async function loadMore() {
-    if (!state || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const next = await fetchReceivedCompanionReviews(state.page + 1);
-      setState((previous) =>
-        previous
-          ? { items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null }
-          : previous,
-      );
-    } catch (caught) {
-      setState((previous) => (previous ? { ...previous, error: { cause: caught } } : previous));
-    } finally {
-      setLoadingMore(false);
-    }
-  }
 
   if (state === null) return showSkeleton ? <Skeleton className="h-40 w-full" /> : null;
 
@@ -358,10 +317,10 @@ function ReceivedTab() {
     <>
       {state.error && (
         <div className="flex flex-col gap-3">
-          <ErrorNotice title="받은 후기를 불러오지 못했어요" error={state.error.cause} />
+          <ErrorNotice title="받은 후기를 불러오지 못했어요" error={state.error} traceId={state.traceId ?? undefined} />
           {state.items.length === 0 && (
             <div>
-              <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
+              <Button variant="secondary" onClick={retry}>
                 다시 불러오기
               </Button>
             </div>
