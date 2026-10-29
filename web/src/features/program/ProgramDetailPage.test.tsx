@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../api/client';
-import { applyProgram, getProgram, payApplication } from '../../api/programs';
+import { applyProgram, getProgram, payApplication, subscribeVacancyAlert } from '../../api/programs';
 import type { ProgramApplyResponse, ProgramDetail, ProgramPayResponse } from '../../api/types';
 import { ProgramDetailPage } from './ProgramDetailPage';
 
@@ -12,6 +12,7 @@ vi.mock('../../api/programs', async (importOriginal) => ({
   getProgram: vi.fn(),
   applyProgram: vi.fn(),
   payApplication: vi.fn(),
+  subscribeVacancyAlert: vi.fn(),
 }));
 
 vi.mock('../../app/session/session', async (importOriginal) => ({
@@ -120,5 +121,43 @@ describe('행사 신청의 멱등 키', () => {
     const [first, second, third] = vi.mocked(payApplication).mock.calls.map((call) => call[1]);
     expect(second).toBe(first);
     expect(third).not.toBe(second);
+  });
+});
+
+describe('빈자리 알림', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  const button = (text: string) =>
+    [...container.querySelectorAll('button')].find((element) => element.textContent === text);
+
+  beforeEach(async () => {
+    container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    vi.mocked(getProgram).mockResolvedValue(DETAIL);
+    await act(async () => root.render(<ProgramDetailPage programId={3} />));
+  });
+
+  afterEach(async () => {
+    vi.mocked(applyProgram).mockReset();
+    vi.mocked(subscribeVacancyAlert).mockReset();
+    await act(async () => root.unmount());
+    container.remove();
+  });
+
+  it('매진 응답 뒤 알림 신청이 PROGRAM_SEATS_AVAILABLE로 거절되면 매진 안내와 알림 버튼을 거두고 신청하기를 남긴다', async () => {
+    vi.mocked(applyProgram).mockRejectedValueOnce(new ApiError(409, 'PROGRAM_SOLD_OUT', null));
+    await act(async () => button('신청하기')?.click());
+    expect(container.textContent).toContain('남은 자리가 없어요');
+    expect(button('빈자리 알림 받기')).toBeDefined();
+
+    vi.mocked(subscribeVacancyAlert).mockRejectedValueOnce(new ApiError(409, 'PROGRAM_SEATS_AVAILABLE', null));
+    vi.mocked(getProgram).mockResolvedValue({ ...DETAIL, remainingSeats: 1 });
+    await act(async () => button('빈자리 알림 받기')?.click());
+
+    expect(container.textContent).not.toContain('남은 자리가 없어요');
+    expect(button('빈자리 알림 받기')).toBeUndefined();
+    expect(button('신청하기')).toBeDefined();
   });
 });

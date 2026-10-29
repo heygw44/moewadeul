@@ -320,6 +320,55 @@ class ProgramTest {
     }
 
     @Test
+    @DisplayName("[F-20][PG-07] 빈자리 알림은 취소되거나 신청이 마감된 행사에는 받지 않고, 신청 시작 전과 모집 중에는 받는다")
+    void takesVacancyAlertsUntilCanceledOrClosed() {
+        Program program = create(details());
+        Instant open = program.getApplyOpenAt();
+        Instant close = program.getApplyCloseAt();
+
+        assertThat(program.takesVacancyAlertsAt(open.minusNanos(1000))).isTrue();
+        assertThat(program.takesVacancyAlertsAt(open)).isTrue();
+        assertThat(program.takesVacancyAlertsAt(close.minusNanos(1000))).isTrue();
+        assertThat(program.takesVacancyAlertsAt(close)).isFalse();
+
+        program.cancel(NOW);
+
+        assertThat(program.takesVacancyAlertsAt(open)).isFalse();
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 자리 보유 수가 정원 이상일 때만 빈자리 알림을 받고, 모자라면 PROGRAM_SEATS_AVAILABLE이다")
+    void vacancyAlertRequiresFullSeats() {
+        Program program = create(details());
+        Instant open = program.getApplyOpenAt();
+
+        assertThatCode(() -> program.requireVacancyAlertAcceptableAt(open, 20)).doesNotThrowAnyException();
+        assertThatCode(() -> program.requireVacancyAlertAcceptableAt(open, 21)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> program.requireVacancyAlertAcceptableAt(open, 19))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_SEATS_AVAILABLE));
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 취소되거나 마감된 행사는 자리가 남았어도 PROGRAM_INVALID_STATE가 먼저다")
+    void vacancyAlertInvalidStateComesBeforeSeatsAvailable() {
+        Program program = create(details());
+
+        assertThatThrownBy(() -> program.requireVacancyAlertAcceptableAt(program.getApplyCloseAt(), 0))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
+
+        program.cancel(NOW);
+
+        assertThatThrownBy(() -> program.requireVacancyAlertAcceptableAt(program.getApplyOpenAt(), 0))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
+    }
+
+    @Test
     @DisplayName("[F-18][PG-04] 결제 기한은 신청 시각에 결제 기한(분)을 더한 시각이다")
     void paymentDueAtAddsDeadlineMinutes() {
         Program program = create(detail("제목", "설명", "장소", 20, 30000, 45));

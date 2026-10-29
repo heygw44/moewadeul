@@ -209,19 +209,24 @@ class ProgramEnrollmentControllerTest {
     }
 
     @Test
-    @DisplayName("[F-20][PG-07] 서비스가 던진 NOT_FOUND와 PROGRAM_INVALID_STATE를 404와 409로 응답한다")
+    @DisplayName("[F-20][PG-07] 서비스가 던진 NOT_FOUND, PROGRAM_INVALID_STATE, PROGRAM_SEATS_AVAILABLE를 404와 409로 응답한다")
     void subscribeVacancyAlertMapsServiceErrors() {
         when(programVacancyAlertService.subscribe(4L, 1L)).thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
         when(programVacancyAlertService.subscribe(4L, 2L))
                 .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE));
+        when(programVacancyAlertService.subscribe(4L, 3L))
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_SEATS_AVAILABLE));
 
         MvcTestResult notFound = vacancyAlertPost(1L).with(member(4L)).exchange();
         MvcTestResult invalidState = vacancyAlertPost(2L).with(member(4L)).exchange();
+        MvcTestResult seatsAvailable = vacancyAlertPost(3L).with(member(4L)).exchange();
 
         assertThat(notFound).hasStatus(HttpStatus.NOT_FOUND);
         assertThat(notFound).bodyJson().extractingPath("$.code").isEqualTo("NOT_FOUND");
         assertThat(invalidState).hasStatus(HttpStatus.CONFLICT);
         assertThat(invalidState).bodyJson().extractingPath("$.code").isEqualTo("PROGRAM_INVALID_STATE");
+        assertThat(seatsAvailable).hasStatus(HttpStatus.CONFLICT);
+        assertThat(seatsAvailable).bodyJson().extractingPath("$.code").isEqualTo("PROGRAM_SEATS_AVAILABLE");
     }
 
     private MockMvcTester.MockMvcRequestBuilder vacancyAlertPost(long programId) {
