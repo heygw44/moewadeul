@@ -242,8 +242,8 @@ class MemberControllerTest {
                 .uri("/api/members")
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"hiker@example.com\",\"passwordConfirm\":\"%s\",\"nickname\":\"hiker\"}"
-                        .formatted(VALID_PASSWORD))
+                .content("{\"email\":\"hiker@example.com\",\"passwordConfirm\":\"%s\",\"nickname\":\"hiker\","
+                        + "\"ageConfirmed\":true}".formatted(VALID_PASSWORD))
                 .exchange();
 
         assertInvalidInput(result, "password");
@@ -256,8 +256,8 @@ class MemberControllerTest {
                 .uri("/api/members")
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"hiker@example.com\",\"password\":\"%s\",\"nickname\":\"hiker\"}"
-                        .formatted(VALID_PASSWORD))
+                .content("{\"email\":\"hiker@example.com\",\"password\":\"%s\",\"nickname\":\"hiker\","
+                        + "\"ageConfirmed\":true}".formatted(VALID_PASSWORD))
                 .exchange();
 
         assertInvalidInput(result, "passwordConfirm");
@@ -272,7 +272,7 @@ class MemberControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"hiker@example.com\",\"password\":\"%s\",\"passwordConfirm\":\"Other-pass-2!\","
                                 .formatted(VALID_PASSWORD)
-                        + "\"nickname\":\"hiker\"}")
+                        + "\"nickname\":\"hiker\",\"ageConfirmed\":true}")
                 .exchange();
 
         assertInvalidInput(result, "passwordConfirm");
@@ -281,9 +281,35 @@ class MemberControllerTest {
     }
 
     @Test
+    @DisplayName("[F-01] 만 14세 확인이 없으면 ageConfirmed 필드 오류로 400을 응답하고 서비스를 부르지 않는다")
+    void missingAgeConfirmedReturnsFieldError() {
+        MvcTestResult result = postBody(
+                "{\"email\":\"hiker@example.com\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"hiker\"}"
+                        .formatted(VALID_PASSWORD, VALID_PASSWORD));
+
+        assertInvalidInput(result, "ageConfirmed");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[?(@.field=='ageConfirmed')].reason")
+                .asList()
+                .containsExactly("만 14세 이상만 가입할 수 있어요.");
+    }
+
+    @Test
+    @DisplayName("[F-01] 만 14세 확인이 false면 ageConfirmed 필드 오류로 400을 응답하고 서비스를 부르지 않는다")
+    void falseAgeConfirmedReturnsFieldError() {
+        MvcTestResult result = postBody(
+                "{\"email\":\"hiker@example.com\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"hiker\",\"ageConfirmed\":false}"
+                        .formatted(VALID_PASSWORD, VALID_PASSWORD));
+
+        assertInvalidInput(result, "ageConfirmed");
+    }
+
+    @Test
     @DisplayName("[F-01] 요청 객체의 문자열 표현에는 이메일과 비밀번호가 없다")
     void requestToStringHidesSecrets() {
-        SignupRequest request = new SignupRequest("hiker@example.com", VALID_PASSWORD, "Confirm-value-9?", "hiker");
+        SignupRequest request =
+                new SignupRequest("hiker@example.com", VALID_PASSWORD, "Confirm-value-9?", "hiker", true);
 
         assertThat(request.toString())
                 .doesNotContain("hiker@example.com")
@@ -303,8 +329,12 @@ class MemberControllerTest {
     }
 
     private MvcTestResult post(String email, String password, String nickname) {
-        String body = "{\"email\":\"%s\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"%s\"}"
-                .formatted(email, password, password, nickname);
+        return postBody(
+                "{\"email\":\"%s\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"%s\",\"ageConfirmed\":true}"
+                        .formatted(email, password, password, nickname));
+    }
+
+    private MvcTestResult postBody(String body) {
         return mvc.post()
                 .uri("/api/members")
                 .with(csrf())
