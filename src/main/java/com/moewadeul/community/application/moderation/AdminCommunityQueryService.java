@@ -1,7 +1,6 @@
 package com.moewadeul.community.application.moderation;
 
-import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.domain.report.CommunityReportTargetType;
 import com.moewadeul.community.infra.moderation.AdminCommunityCommentRow;
@@ -9,8 +8,10 @@ import com.moewadeul.community.infra.moderation.AdminCommunityMapper;
 import com.moewadeul.community.infra.moderation.AdminCommunityPostRow;
 import com.moewadeul.community.infra.moderation.AdminCommunityRecentReportRow;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AdminCommunityQueryService {
+
+    private static final Set<CommunityPostStatus> REVIEWABLE_STATUSES =
+            EnumSet.of(CommunityPostStatus.PENDING_REVIEW, CommunityPostStatus.HIDDEN);
+    private static final String STATUS_MESSAGE = "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요.";
 
     private final AdminCommunityMapper adminCommunityMapper;
 
@@ -101,11 +106,6 @@ public class AdminCommunityQueryService {
         if (status == null) {
             return CommunityPostStatus.PENDING_REVIEW;
         }
-        for (CommunityPostStatus candidate : List.of(CommunityPostStatus.PENDING_REVIEW, CommunityPostStatus.HIDDEN)) {
-            if (candidate.name().equals(status)) {
-                return candidate;
-            }
-        }
-        throw new BusinessException(CommonErrorCode.INVALID_INPUT, "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요.");
+        return EnumParser.parseAmong(REVIEWABLE_STATUSES, status, STATUS_MESSAGE);
     }
 }

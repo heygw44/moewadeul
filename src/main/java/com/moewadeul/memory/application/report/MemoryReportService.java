@@ -2,6 +2,7 @@ package com.moewadeul.memory.application.report;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryErrorCode;
 import com.moewadeul.memory.domain.MemoryRepository;
@@ -10,7 +11,6 @@ import com.moewadeul.memory.domain.report.MemoryReportReason;
 import com.moewadeul.memory.domain.report.MemoryReportRepository;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemoryReportService {
 
     private static final int PENDING_REVIEW_REPORT_THRESHOLD = 5;
+    private static final String REASON_MESSAGE = "신고 사유는 " + EnumParser.names(MemoryReportReason.class) + " 중 하나여야 해요.";
 
     private final MemoryRepository memoryRepository;
     private final MemoryReportRepository memoryReportRepository;
@@ -32,7 +33,7 @@ public class MemoryReportService {
                 .findByIdForUpdate(memoryId)
                 .filter(Memory::isVisibleToOthers)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        MemoryReportReason reason = parseReason(command.reason());
+        MemoryReportReason reason = EnumParser.parse(MemoryReportReason.class, command.reason(), REASON_MESSAGE);
         String content = command.content();
         if (content != null && content.length() > MemoryReport.CONTENT_MAX_LENGTH) {
             throw new BusinessException(
@@ -50,19 +51,6 @@ public class MemoryReportService {
         if (memoryReportRepository.countByMemoryIdAndReviewedAtIsNull(memoryId) >= PENDING_REVIEW_REPORT_THRESHOLD) {
             memory.markPendingReview(now);
         }
-    }
-
-    private static MemoryReportReason parseReason(String value) {
-        return Arrays.stream(MemoryReportReason.values())
-                .filter(reason -> reason.name().equals(value))
-                .findFirst()
-                .orElseThrow(() -> new BusinessException(
-                        CommonErrorCode.INVALID_INPUT, "신고 사유는 " + allowedReasons() + " 중 하나여야 해요."));
-    }
-
-    private static String allowedReasons() {
-        return String.join(
-                ", ", Arrays.stream(MemoryReportReason.values()).map(Enum::name).toList());
     }
 
     private static BusinessException alreadyReported() {

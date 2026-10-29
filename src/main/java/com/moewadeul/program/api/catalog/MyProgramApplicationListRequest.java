@@ -1,12 +1,12 @@
 package com.moewadeul.program.api.catalog;
 
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.program.application.catalog.MyProgramApplicationQuery;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import java.util.Arrays;
 
 public record MyProgramApplicationListRequest(
         @Schema(implementation = ProgramApplicationStatus.class, description = "신청 상태. 생략하면 모든 상태.")
@@ -24,13 +24,12 @@ public record MyProgramApplicationListRequest(
     @AssertTrue(message = "status는 PENDING_PAYMENT, CONFIRMED, CANCELED, EXPIRED 중 하나여야 해요.")
     public boolean isStatusValid() {
         return status == null
-                || Arrays.stream(ProgramApplicationStatus.values())
-                        .anyMatch(candidate -> candidate.name().equals(status));
+                || EnumParser.find(ProgramApplicationStatus.class, status).isPresent();
     }
 
     MyProgramApplicationQuery toQuery() {
         return new MyProgramApplicationQuery(
-                status == null ? null : ProgramApplicationStatus.valueOf(status),
+                EnumParser.find(ProgramApplicationStatus.class, status).orElse(null),
                 page == null ? DEFAULT_PAGE : page,
                 size == null ? DEFAULT_SIZE : size);
     }

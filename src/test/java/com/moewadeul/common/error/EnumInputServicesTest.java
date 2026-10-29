@@ -20,6 +20,8 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberRole;
 import com.moewadeul.member.domain.MemberStatus;
+import com.moewadeul.member.domain.SelfAgeGroup;
+import com.moewadeul.member.domain.SelfGender;
 import com.moewadeul.memory.application.MemoryImageReader;
 import com.moewadeul.memory.application.moderation.AdminMemoryQueryService;
 import com.moewadeul.memory.application.report.MemoryReportCommand;
@@ -235,6 +237,21 @@ class EnumInputServicesTest {
 
         assertThatThrownBy(() -> service.update(1L, command))
                 .satisfies(e -> assertInvalidInput(e, "성별은 FEMALE, MALE 중 하나여야 해요."));
+    }
+
+    @Test
+    @DisplayName("내 정보 수정은 허용 목록의 연령대와 성별 이름을 그대로 반영한다")
+    void myInfoAppliesAllowedNames() {
+        Member member = mock(Member.class);
+        when(member.getStatus()).thenReturn(MemberStatus.ACTIVE);
+        when(member.getRole()).thenReturn(MemberRole.USER);
+        MyInfoUpdateCommand command =
+                new MyInfoUpdateCommand(PatchField.absent(), PatchField.of("SIXTIES_PLUS"), PatchField.of("FEMALE"));
+
+        myInfoService(member).update(1L, command);
+
+        verify(member).changeSelfAgeGroup(SelfAgeGroup.SIXTIES_PLUS, CLOCK.instant());
+        verify(member).changeSelfGender(SelfGender.FEMALE, CLOCK.instant());
     }
 
     @Test
