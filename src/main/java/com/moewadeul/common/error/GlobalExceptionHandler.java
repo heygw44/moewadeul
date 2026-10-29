@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.core.MethodParameter;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -83,6 +85,30 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(CommonErrorCode.RESOURCE_BUSY.httpStatus())
                 .header(HttpHeaders.RETRY_AFTER, LOCK_RETRY_AFTER_SECONDS)
                 .body(ErrorResponse.of(CommonErrorCode.RESOURCE_BUSY));
+    }
+
+    // 서비스가 제약 이름으로 번역하지 못한 위반이다. 메시지에 중복 값이 들어 있을 수 있어 원문과 스택 트레이스는 남기지 않는다.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleUntranslatedDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn(
+                "untranslated data integrity violation cause={}: {}",
+                e.getClass().getSimpleName(),
+                UniqueViolations.describe(e));
+        return dataConflict();
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailure(OptimisticLockingFailureException e) {
+        log.warn(
+                "optimistic locking failed cause={}: {}",
+                e.getClass().getSimpleName(),
+                e.getMostSpecificCause().getMessage());
+        return dataConflict();
+    }
+
+    private static ResponseEntity<ErrorResponse> dataConflict() {
+        return ResponseEntity.status(CommonErrorCode.DATA_CONFLICT.httpStatus())
+                .body(ErrorResponse.of(CommonErrorCode.DATA_CONFLICT));
     }
 
     @ExceptionHandler(Exception.class)

@@ -15,6 +15,7 @@ public enum CommonErrorCode implements ErrorCode {
     IMAGE_UPLOAD_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "올려 두고 아직 붙이지 않은 사진이 너무 많아요. 잠시 뒤 다시 올려 주세요."),
     IMAGE_STORAGE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "지금은 사진을 확인할 수 없어요. 잠시 뒤 다시 시도해 주세요."),
     RESOURCE_BUSY(HttpStatus.SERVICE_UNAVAILABLE, "요청이 몰려 처리하지 못했어요. 잠시 뒤 다시 시도해 주세요."),
+    DATA_CONFLICT(HttpStatus.CONFLICT, "다른 요청과 겹쳐 처리하지 못했어요. 새로고침한 뒤 다시 시도해 주세요."),
     IDEMPOTENCY_KEY_REQUIRED(HttpStatus.BAD_REQUEST, "멱등성 키가 필요해요."),
     IDEMPOTENCY_KEY_REUSED(HttpStatus.UNPROCESSABLE_CONTENT, "같은 멱등성 키로 다른 요청을 보낼 수 없어요."),
     IDEMPOTENCY_IN_PROGRESS(HttpStatus.CONFLICT, "같은 멱등성 키로 보낸 요청을 아직 처리하고 있어요.");

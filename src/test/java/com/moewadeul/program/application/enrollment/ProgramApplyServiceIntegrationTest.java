@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
@@ -267,6 +268,18 @@ class ProgramApplyServiceIntegrationTest {
         // when, then
         assertErrorCode(() -> programApplyService.apply(memberId, programId), ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
         assertThat(fixture.applicationStatus(first.applicationId())).isEqualTo("PENDING_PAYMENT");
+    }
+
+    @Test
+    @DisplayName("[F-18][PG-03] 다른 제약 위반은 PROGRAM_ALREADY_APPLIED로 바꾸지 않는다")
+    void doesNotTranslateOtherConstraintViolation() {
+        // given
+        long programId = fixture.saveProgram(3, false);
+        long missingMemberId = Long.MAX_VALUE;
+
+        // when, then
+        assertThatThrownBy(() -> programApplyService.apply(missingMemberId, programId))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private static void assertErrorCode(Runnable action, ErrorCode expected) {
