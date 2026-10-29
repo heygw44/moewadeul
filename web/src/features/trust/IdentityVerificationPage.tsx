@@ -12,12 +12,12 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { todayKst } from '../../lib/datetime';
 import { AuthLayout } from '../member/AuthLayout';
 import { safeNextPath, withNext } from '../member/nextPath';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { buttonClassName } from '../../components/buttonClass';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const MIN_BIRTH_YEAR = 1900;
 const DEMO_KEY_MAX_LENGTH = 100;

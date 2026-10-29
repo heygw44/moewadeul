@@ -13,6 +13,7 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatLocalDate } from '../../lib/datetime';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useSession } from '../member/session';
@@ -23,7 +24,6 @@ import { MEMORY_STATUS_LABEL, nightsLabel, VISIBILITY_LABEL } from './memoryLabe
 import { MemoryLikeButton } from './MemoryLikeButton';
 import { MemoryPhotoCarousel } from './MemoryPhotoCarousel';
 import { MemoryReportDialog } from './MemoryReportDialog';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult = { memoryId: number; memory: MemoryDetail } | { memoryId: number; error: unknown };
 

@@ -12,6 +12,7 @@ import type { EmailValue } from '../../components/emailValue';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { PasswordField } from '../../components/PasswordField';
 import { TextField } from '../../components/TextField';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
 import { enterAfterAuth } from './enterAfterAuth';
 import { safeNextPath, withNext } from './nextPath';
@@ -24,7 +25,6 @@ import {
   PASSWORD_REQUIRED,
 } from './requiredMessages';
 import { useSession } from './session';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type SignupField = 'email' | 'password' | 'passwordConfirm' | 'nickname' | 'ageConfirmed';
 

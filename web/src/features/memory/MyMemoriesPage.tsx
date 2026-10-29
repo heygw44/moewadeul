@@ -9,11 +9,11 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { useRequireAuth } from '../member/useRequireAuth';
 import type { MemoryCellItem } from './memoryItems';
 import { MEMORY_STATUS_LABEL } from './memoryLabels';
 import { MemoryMapGrid } from './MemoryMapGrid';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult = { attempt: number; memories: MemorySummary[] } | { attempt: number; error: unknown };
 

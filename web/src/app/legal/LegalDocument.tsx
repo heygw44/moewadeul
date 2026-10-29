@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { HubLayout } from '../../components/HubLayout';
-import { CONTACT_EMAIL } from './siteInfo';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
+import { CONTACT_EMAIL } from './siteInfo';
 
 export type LegalSection = { id: string; title: string; body: ReactNode };
 

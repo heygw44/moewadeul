@@ -10,6 +10,7 @@ import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { PasswordField } from '../../components/PasswordField';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
 import {
   emailRequiredMessage,
@@ -19,7 +20,6 @@ import {
 } from './requiredMessages';
 import { useSession } from './session';
 import { useRetryCountdown } from './useRetryCountdown';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';

@@ -11,10 +11,10 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { useSession } from '../member/session';
 import type { MemoryCellItem } from './memoryItems';
 import { MemoryMapGrid } from './MemoryMapGrid';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult =
   | { memberId: number; attempt: number; memories: MemberMemorySummary[] }

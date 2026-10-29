@@ -12,6 +12,7 @@ import { Icon } from '../../components/icons';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime, formatRelativeKst } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -19,7 +20,6 @@ import { useViewerEpoch } from '../member/useViewerEpoch';
 import { CommunityComments } from './CommunityComments';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult = { postId: number; post: CommunityPostDetail } | { postId: number; error: unknown };
 

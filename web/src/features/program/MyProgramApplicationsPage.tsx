@@ -13,12 +13,12 @@ import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime } from '../../lib/datetime';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { APPLICATION_FILTERS, APPLICATION_STATUS_META, CANCEL_REASON_LABELS, countdownText } from './programLabels';
 import { useNow } from './useNow';
 import { usePagedList } from '../../components/usePagedList';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type ApplicationFilter = ProgramApplicationStatus | 'ALL';
 

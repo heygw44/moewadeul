@@ -4,8 +4,8 @@ import { PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { UnderlineNav, UnderlineNavLink } from '../../components/UnderlineNav';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { useRequireAuth } from '../member/useRequireAuth';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
+import { useRequireAuth } from '../member/useRequireAuth';
 
 const NAV_ITEMS = [
   { to: '/admin/reports', label: '신고 처리' },

@@ -11,6 +11,7 @@ import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { TextField } from '../../components/TextField';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime } from '../../lib/datetime';
 import { AuthLayout } from './AuthLayout';
 import { enterAfterAuth } from './enterAfterAuth';
@@ -18,7 +19,6 @@ import { safeNextPath, withNext } from './nextPath';
 import { emailRequiredMessage, PASSWORD_REQUIRED } from './requiredMessages';
 import { useSession } from './session';
 import { useRetryCountdown } from './useRetryCountdown';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoginField = 'email' | 'password';
 

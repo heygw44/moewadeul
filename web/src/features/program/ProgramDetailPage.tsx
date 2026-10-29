@@ -23,6 +23,7 @@ import { MetaLine, StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { buttonClassName, SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -30,7 +31,6 @@ import { useViewerEpoch } from '../member/useViewerEpoch';
 import { countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { useApplyPhaseRefresh } from './useApplyPhaseRefresh';
 import { useNow } from './useNow';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult = { programId: number; detail: ProgramDetail } | { programId: number; error: unknown };
 

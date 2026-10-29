@@ -11,12 +11,12 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { MemberBoard, MEMBER_BOARD_LINK_CLASS } from './MemberBoard';
 import { AGE_GROUP_LABELS, companionTagLabel, GENDER_LABELS } from './memberLabels';
 import { withNext } from './nextPath';
 import { useSession } from './session';
 import { useViewerEpoch } from './useViewerEpoch';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type ProfileResult =
   { memberId: number; attempt: number; profile: MemberProfile } | { memberId: number; attempt: number; error: unknown };

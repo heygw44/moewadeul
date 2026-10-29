@@ -19,6 +19,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { restorableImages, useImageUploads } from '../../components/useImageUploads';
 import type { UploadImageItem } from '../../components/useImageUploads';
 import { todayKst } from '../../lib/datetime';
@@ -36,7 +37,6 @@ import {
   parsePositiveId,
   VISIBILITY_OPTIONS,
 } from './memoryLabels';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type MemoryFormPageProps = { mode: 'create' } | { mode: 'edit'; memoryId: number };
 

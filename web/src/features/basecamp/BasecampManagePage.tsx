@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { buttonClassName } from '../../components/buttonClass';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import type { FormEvent, ReactNode } from 'react';
 import {
   approveApplication,
@@ -29,13 +29,13 @@ import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { usePagedList } from '../../components/usePagedList';
 import type { PagedList } from '../../components/usePagedList';
 import { formatKstDateTime, todayKst } from '../../lib/datetime';
 import { trustLevelBadge } from '../member/memberLabels';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText, profileSummary } from './basecampLabels';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const CONTACT_MAX = 255;
 const MIN_CONFIRM_HEADCOUNT = 2;
@@ -46,8 +46,6 @@ const KICK_OPTIONS: ReadonlyArray<ChoiceOption<KickReason>> = [
   { value: 'INAPPROPRIATE_BEHAVIOR', label: '부적절한 행동' },
   { value: 'OTHER', label: '기타' },
 ];
-
-const LINK_BUTTON_CLASS = buttonClassName('secondary');
 
 type DetailResult =
   | { basecampId: number; attempt: number; detail: BasecampDetail }
@@ -125,7 +123,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
       current.error instanceof ApiError && current.error.code === 'NOT_FOUND' ? (
         <PageCard title="베이스캠프를 찾을 수 없어요">
           <p className="text-base text-ink">삭제됐거나 주소가 잘못됐어요.</p>
-          <Link to="/basecamps" className={`${LINK_BUTTON_CLASS} self-start`}>
+          <Link to="/basecamps" className={`${SECONDARY_LINK_CLASS} self-start`}>
             목록으로
           </Link>
         </PageCard>
@@ -146,7 +144,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
         title="캠프 리더만 관리할 수 있어요"
         description="내가 연 베이스캠프가 아니에요."
         action={
-          <Link to={`/basecamps/${basecampId}`} className={LINK_BUTTON_CLASS}>
+          <Link to={`/basecamps/${basecampId}`} className={SECONDARY_LINK_CLASS}>
             베이스캠프 보기
           </Link>
         }

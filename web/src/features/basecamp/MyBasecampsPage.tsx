@@ -13,11 +13,11 @@ import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { usePagedList } from '../../components/usePagedList';
 import { formatLocalDate } from '../../lib/datetime';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText } from './basecampLabels';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type RelationFilter = MyBasecampRelation | 'ALL';
 

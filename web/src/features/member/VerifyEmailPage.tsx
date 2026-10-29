@@ -9,13 +9,13 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
 import { enterAfterAuth } from './enterAfterAuth';
 import { safeNextPath, withNext } from './nextPath';
 import { useRequireAuth } from './useRequireAuth';
 import { useRetryCountdown } from './useRetryCountdown';
 import { buttonClassName } from '../../components/buttonClass';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 

@@ -1,8 +1,8 @@
 import { SiteFooter } from '../../app/layout/SiteFooter';
 import { SiteHeader } from '../../app/layout/SiteHeader';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AnnouncementBar } from '../program/AnnouncementBar';
 import { LandingStage } from './LandingStage';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 export function LandingPage() {
   useDocumentTitle('뫼와들 · 잘 수 있는 박지와 믿을 수 있는 동행');

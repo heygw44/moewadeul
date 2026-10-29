@@ -1,11 +1,11 @@
 import { PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { PasswordChangeForm } from './PasswordChangeForm';
 import { SelfReportForm } from './SelfReportForm';
 import { useRequireAuth } from './useRequireAuth';
 import { WithdrawalSection } from './WithdrawalSection';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const TITLE = '계정 설정';
 const DESCRIPTION = '프로필과 비밀번호를 바꾸거나 회원 탈퇴를 할 수 있어요.';

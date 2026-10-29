@@ -21,13 +21,13 @@ import { Skeleton } from '../../components/Skeleton';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { TextArea } from '../../components/TextArea';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { usePagedList } from '../../components/usePagedList';
 import { daysUntilKst, formatKstDateTime } from '../../lib/datetime';
 import { companionTagLabel, NEGATIVE_COMPANION_TAGS, POSITIVE_COMPANION_TAGS } from '../member/memberLabels';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { MemberReportDialog } from '../report/MemberReportDialog';
-import { buttonClassName } from '../../components/buttonClass';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 
 const COMMENT_MAX = 300;
 
@@ -42,8 +42,6 @@ const REJOIN_OPTIONS: ReadonlyArray<ChoiceOption<'YES' | 'NO'>> = [
   { value: 'YES', label: '예' },
   { value: 'NO', label: '아니요' },
 ];
-
-const LINK_BUTTON_CLASS = buttonClassName('secondary');
 
 function tabFromSearch(search: string): Tab {
   return new URLSearchParams(search).get('tab') === 'received' ? 'received' : 'pending';
@@ -355,7 +353,7 @@ function ReceivedTab() {
               className="flex flex-col gap-3 rounded-sheet bg-fill p-4 lg:p-5"
             >
               <p className="text-base text-ink">내 후기를 남기면 상대가 쓴 후기를 볼 수 있어요.</p>
-              <Link to={`/basecamps/${item.basecampId}`} className={`${LINK_BUTTON_CLASS} self-start`}>
+              <Link to={`/basecamps/${item.basecampId}`} className={`${SECONDARY_LINK_CLASS} self-start`}>
                 베이스캠프 보기
               </Link>
             </section>

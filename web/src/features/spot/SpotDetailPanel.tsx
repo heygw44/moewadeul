@@ -20,6 +20,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstMonthDay, formatKstTime, formatLocalDate } from '../../lib/datetime';
 import { parseHttpsUrl } from '../../lib/url';
 import { newMemoryPath } from '../memory/memoryLabels';
@@ -32,7 +33,6 @@ import { ParkWarningNotice } from './ParkWarningNotice';
 import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META, sourceLabel } from './spotLabels';
 import { useSpotWeather } from './useSpotWeather';
 import type { SpotWeatherState } from './useSpotWeather';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { PanelBackBar } from '../../components/PanelBackBar';
 
 type SpotDetailPanelProps = {

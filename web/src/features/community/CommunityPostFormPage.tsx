@@ -17,6 +17,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { restorableImages, useImageUploads } from '../../components/useImageUploads';
 import type { UploadImageItem } from '../../components/useImageUploads';
 import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
@@ -24,7 +25,6 @@ import { useSession } from '../member/session';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { parseSpotId } from './communityLabels';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
-import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const TITLE_MAX = 100;
 const CONTENT_MAX = 10000;
