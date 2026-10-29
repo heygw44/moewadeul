@@ -121,7 +121,7 @@ moewadeul:
     park-boundary:
       file: ${PUBLICDATA_PARK_BOUNDARY_FILE:}
   image-storage:
-    storage: ${IMAGE_STORAGE:${COMMUNITY_IMAGE_STORAGE:fake}}
+    storage: ${IMAGE_STORAGE:fake}
     bucket: ${UPLOAD_BUCKET:}
   community:
     image-cleanup:
