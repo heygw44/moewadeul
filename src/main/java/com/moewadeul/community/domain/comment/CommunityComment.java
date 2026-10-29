@@ -92,6 +92,9 @@ public class CommunityComment implements Moderatable {
         if (isDeleted()) {
             return;
         }
+        if (status != CommunityCommentStatus.ACTIVE) {
+            throw new BusinessException(CommunityErrorCode.COMMUNITY_INVALID_STATE);
+        }
         this.status = CommunityCommentStatus.DELETED;
         this.content = null;
         this.updatedAt = now;

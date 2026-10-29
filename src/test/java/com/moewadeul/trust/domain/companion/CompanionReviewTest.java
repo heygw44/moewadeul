@@ -47,6 +47,18 @@ class CompanionReviewTest {
     }
 
     @Test
+    @DisplayName("[RV-04] 태그 목록은 밖에서 고칠 수 없는 읽기 전용이고, 고치려 해도 후기의 태그는 그대로다")
+    void tagsAreUnmodifiable() {
+        CompanionReview review =
+                CompanionReview.write(3L, 10L, 11L, true, List.of(CompanionReviewTag.ON_TIME), null, NOW);
+
+        assertThatThrownBy(() -> review.getTags().add(CompanionReviewTag.LATE))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> review.getTags().clear()).isInstanceOf(UnsupportedOperationException.class);
+        assertThat(review.getTags()).containsExactly(CompanionReviewTag.ON_TIME);
+    }
+
+    @Test
     @DisplayName("[RV-04] 공백뿐인 코멘트는 없는 것으로 저장하고, 300자는 받고 301자는 거부한다")
     void commentIsNormalizedAndBounded() {
         CompanionReview blank = CompanionReview.write(3L, 10L, 11L, true, List.of(), "   ", NOW);

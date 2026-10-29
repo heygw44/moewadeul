@@ -180,6 +180,25 @@ class CommunityCommentTest {
         assertThat(comment.getUpdatedAt()).isEqualTo(LATER);
     }
 
+    @ParameterizedTest(name = "[{index}] {0}")
+    @EnumSource(
+            value = CommunityCommentStatus.class,
+            names = {"HIDDEN", "PENDING_REVIEW"})
+    @DisplayName("[F-29][CM-03] 숨겼거나 검토 대기인 댓글은 지울 수 없고 COMMUNITY_INVALID_STATE이며 상태와 내용은 그대로다")
+    void deleteRejectsHiddenOrPendingReview(CommunityCommentStatus status) {
+        // given
+        CommunityComment comment = commentIn(status);
+
+        // when // then
+        assertThatThrownBy(() -> comment.delete(LATER))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommunityErrorCode.COMMUNITY_INVALID_STATE));
+        assertThat(comment.getStatus()).isEqualTo(status);
+        assertThat(comment.getContent()).isEqualTo("내용");
+        assertThat(comment.getUpdatedAt()).isEqualTo(NOW);
+    }
+
     @Test
     @DisplayName("[F-29] 작성자가 아니면 requireWrittenBy가 ACCESS_DENIED이고, 글 ID를 비교한다")
     void requireWrittenByAndBelongsTo() {
