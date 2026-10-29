@@ -51,6 +51,11 @@ export function navigate(to: string, options?: { replace?: boolean }): void {
   notify();
 }
 
+// navigate와 달리 앱의 메모리 상태를 버리고 그 주소를 처음부터 다시 연다.
+export function loadPage(to: string): void {
+  window.location.replace(to);
+}
+
 export function useLocation(): { pathname: string; search: string; hash: string } {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
