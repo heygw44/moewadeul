@@ -74,6 +74,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
   PROGRAM_NOT_IN_APPLY_PERIOD: '지금은 신청 기간이 아니에요. 행사 상세에서 신청 기간을 볼 수 있어요.',
   PROGRAM_SOLD_OUT: '남은 자리가 없어요. 빈자리 알림을 신청해 주세요.',
+  PROGRAM_SEATS_AVAILABLE: '남은 자리가 있어요. 바로 신청해 주세요.',
   PROGRAM_ALREADY_APPLIED: '이미 신청한 행사예요. 내 행사 신청에서 볼 수 있어요.',
   PROGRAM_PAYMENT_EXPIRED: '결제 기한이 지났어요. 남은 자리가 있으면 다시 신청해 주세요.',
   PROGRAM_INVALID_STATE: STATE_CHANGED,
