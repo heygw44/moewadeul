@@ -1,65 +1,70 @@
 package com.moewadeul.memory.application.moderation;
 
 import com.moewadeul.common.audit.AdminAuditAction;
-import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.moderation.AdminModeration;
+import com.moewadeul.common.moderation.ModerationResult;
+import com.moewadeul.common.moderation.ModerationTarget;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryRepository;
-import com.moewadeul.memory.domain.MemoryStatus;
 import com.moewadeul.memory.domain.report.MemoryReportRepository;
-import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemoryModerationService {
 
     private final MemoryRepository memoryRepository;
     private final MemoryReportRepository memoryReportRepository;
-    private final AdminAuditRecorder adminAuditRecorder;
-    private final Clock clock;
+    private final AdminModeration adminModeration;
+
+    private final ModerationTarget<Memory> target = new ModerationTarget<>() {
+
+        @Override
+        public AdminAuditAction hideAction() {
+            return AdminAuditAction.MEMORY_HIDE;
+        }
+
+        @Override
+        public AdminAuditAction restoreAction() {
+            return AdminAuditAction.MEMORY_RESTORE;
+        }
+
+        @Override
+        public String auditTargetType() {
+            return AdminAuditTargetType.MEMORY;
+        }
+
+        @Override
+        public Memory lock(long memoryId) {
+            return memoryRepository
+                    .findByIdForUpdate(memoryId)
+                    .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        }
+
+        @Override
+        public boolean isHideTarget(Memory memory) {
+            return memory.isPublic();
+        }
+
+        @Override
+        public int markReviewed(long memoryId, Instant now) {
+            return memoryReportRepository.markReviewed(memoryId, now);
+        }
+    };
 
     @Transactional
-    public MemoryModerationResult hide(long memoryId, long adminId) {
-        Memory memory = memoryRepository
-                .findByIdForUpdate(memoryId)
-                .filter(Memory::isPublic)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        MemoryStatus before = memory.getStatus();
-        memory.hide(clock.instant());
-        adminAuditRecorder.record(
-                adminId,
-                AdminAuditAction.MEMORY_HIDE,
-                AdminAuditTargetType.MEMORY,
-                memoryId,
-                new MemoryAuditDetails.Hide(before.name(), memory.getStatus().name()));
-        log.info("memory hidden memoryId={} adminId={}", memoryId, adminId);
-        return new MemoryModerationResult(memoryId, memory.getStatus().name());
+    public ModerationResult hide(long memoryId, long adminId) {
+        return adminModeration.hide(target, memoryId, adminId);
     }
 
     @Transactional
-    public MemoryModerationResult restore(long memoryId, long adminId) {
-        Memory memory = memoryRepository
-                .findByIdForUpdate(memoryId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        MemoryStatus before = memory.getStatus();
-        Instant now = clock.instant();
-        memory.restore(now);
-        int reviewed = memoryReportRepository.markReviewed(memoryId, now);
-        adminAuditRecorder.record(
-                adminId,
-                AdminAuditAction.MEMORY_RESTORE,
-                AdminAuditTargetType.MEMORY,
-                memoryId,
-                new MemoryAuditDetails.Restore(before.name(), memory.getStatus().name(), reviewed));
-        log.info("memory restored memoryId={} adminId={} reviewedReportCount={}", memoryId, adminId, reviewed);
-        return new MemoryModerationResult(memoryId, memory.getStatus().name());
+    public ModerationResult restore(long memoryId, long adminId) {
+        return adminModeration.restore(target, memoryId, adminId);
     }
 }

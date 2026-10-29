@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.moderation.PendingReview;
+import com.moewadeul.common.moderation.ModerationTransition;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
@@ -200,7 +200,7 @@ class CommunityCommentTest {
         CommunityComment comment = CommunityComment.write(3L, 7L, null, "내용", NOW);
         switch (status) {
             case ACTIVE -> {}
-            case PENDING_REVIEW -> comment.receiveReport(PendingReview.REPORT_THRESHOLD, NOW);
+            case PENDING_REVIEW -> comment.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW);
             case HIDDEN -> comment.hide(NOW);
             case DELETED -> comment.delete(NOW);
         }

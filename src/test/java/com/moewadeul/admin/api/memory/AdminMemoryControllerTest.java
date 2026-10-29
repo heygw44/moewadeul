@@ -14,6 +14,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.moderation.ModerationResult;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
@@ -21,7 +22,6 @@ import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.memory.application.MemoryPhoto;
 import com.moewadeul.memory.application.moderation.AdminMemoryQueryService;
 import com.moewadeul.memory.application.moderation.AdminMemorySummary;
-import com.moewadeul.memory.application.moderation.MemoryModerationResult;
 import com.moewadeul.memory.application.moderation.MemoryModerationService;
 import com.moewadeul.memory.domain.MemoryErrorCode;
 import java.time.Instant;
@@ -143,8 +143,8 @@ class AdminMemoryControllerTest {
     @DisplayName("[F-33][MM-11] 숨김과 복구는 로그인한 관리자 ID로 서비스를 부르고 처리 뒤 상태를 응답한다")
     void hideAndRestoreCallServiceWithAdminId() {
         // given
-        when(moderationService.hide(9L, ADMIN_ID)).thenReturn(new MemoryModerationResult(9L, "HIDDEN"));
-        when(moderationService.restore(9L, ADMIN_ID)).thenReturn(new MemoryModerationResult(9L, "ACTIVE"));
+        when(moderationService.hide(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "HIDDEN"));
+        when(moderationService.restore(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "ACTIVE"));
 
         // when
         MvcTestResult hide = post(admin(), BASE + "/9/hide");
