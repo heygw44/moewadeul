@@ -17,6 +17,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.Year;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,13 +27,17 @@ import org.springframework.transaction.annotation.Transactional;
 class IdentityVerificationApplier {
 
     private final IdentityVerificationRepository identityVerificationRepository;
-    private final IdentityProvider identityProvider;
+    private final ObjectProvider<IdentityProvider> identityProviders;
     private final CiHasher ciHasher;
     private final TrustSummaryService trustSummaryService;
     private final Clock clock;
 
     @Transactional
     IdentityVerificationResult apply(long memberId, IdentityVerifyCommand command) {
+        IdentityProvider identityProvider = identityProviders.getIfAvailable();
+        if (identityProvider == null) {
+            throw new BusinessException(TrustErrorCode.IDENTITY_UNAVAILABLE);
+        }
         Instant now = clock.instant();
         Year currentYear = Year.from(now.atZone(KoreaTime.ZONE));
         requireBirthYearInRange(command.birthYear(), currentYear);

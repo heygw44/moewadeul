@@ -85,6 +85,9 @@ logging:
 moewadeul:
   identity:
     ci-hmac-key: ${CI_HMAC_KEY:}
+    # 실제 본인확인기관을 붙이기 전까지 쓰는 가짜 공급자다. false로 끄면 본인확인 요청이 503으로 끝난다.
+    fake-provider:
+      enabled: ${IDENTITY_FAKE_PROVIDER_ENABLED:true}
   member:
     mail-secret:
       hmac-key: ${MAIL_SECRET_HMAC_KEY:}
