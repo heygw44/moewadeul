@@ -454,19 +454,6 @@ class BasecampApplyApiIntegrationTest {
         assertFailure(approvedApplication, HttpStatus.CONFLICT, "BASECAMP_INVALID_STATE");
     }
 
-    @Test
-    @DisplayName("[F-13] 본인확인하지 않은 회원이 취소하면 403 TRUST_LEVEL_INSUFFICIENT다")
-    void cancelRequiresIdentityVerification() {
-        // given
-        Cookie session = fixture.verifiedSession(fixture.saveMember());
-
-        // when
-        MvcTestResult result = cancel(session, basecampId);
-
-        // then
-        assertFailure(result, HttpStatus.FORBIDDEN, "TRUST_LEVEL_INSUFFICIENT");
-    }
-
     private MvcTestResult apply(Cookie session, long id, String message) {
         String body = message == null ? "{}" : "{\"message\":\"%s\"}".formatted(message);
         return mvc.post()

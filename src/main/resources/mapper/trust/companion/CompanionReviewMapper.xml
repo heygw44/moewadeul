@@ -3,7 +3,7 @@
 <mapper namespace="com.moewadeul.trust.infra.companion.CompanionReviewMapper">
 
     <select id="selectWriteContext" resultType="com.moewadeul.trust.infra.companion.CompanionReviewWriteContextRow">
-        SELECT b.status AS basecamp_status,
+        SELECT b.status = 'COMPLETED' AS basecamp_completed,
                b.completed_at AS completed_at,
                EXISTS (SELECT 1 FROM basecamp_member bm
                        WHERE bm.basecamp_id = b.id AND bm.member_id = #{reviewerId} AND bm.status = 'ACTIVE') AS reviewer_active,

@@ -19,6 +19,16 @@ public final class CompanionReviewPolicy {
         return !now.isAfter(deadlineOf(completedAt));
     }
 
+    public static boolean isEligible(
+            boolean basecampCompleted,
+            Instant completedAt,
+            boolean reviewerActive,
+            boolean revieweeActive,
+            long reviewerId,
+            long revieweeId) {
+        return basecampCompleted && completedAt != null && reviewerActive && revieweeActive && reviewerId != revieweeId;
+    }
+
     public static Instant revealCutoff(Instant now) {
         return now.minus(WRITE_PERIOD);
     }

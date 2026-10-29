@@ -13,6 +13,7 @@ import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.application.catalog.ProgramQueryService;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -133,7 +134,7 @@ class ProgramApplyServiceIntegrationTest {
         long level1 = fixture.saveVerifiedMember();
 
         // then
-        assertErrorCode(() -> programApplyService.apply(level0, programId), CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
+        assertErrorCode(() -> programApplyService.apply(level0, programId), TrustErrorCode.TRUST_LEVEL_INSUFFICIENT);
         assertThat(fixture.applicationCount(programId, level0)).isZero();
         assertThat(programApplyService.apply(level1, programId).status())
                 .isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);

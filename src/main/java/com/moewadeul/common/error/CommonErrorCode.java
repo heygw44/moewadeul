@@ -7,7 +7,6 @@ public enum CommonErrorCode implements ErrorCode {
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "로그인이 필요해요."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없어요."),
     MEMBER_NOT_VERIFIED(HttpStatus.FORBIDDEN, "이메일 인증이 필요해요."),
-    TRUST_LEVEL_INSUFFICIENT(HttpStatus.FORBIDDEN, "신뢰 단계가 부족해요."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "대상을 찾을 수 없어요."),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 HTTP 메서드예요."),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 Content-Type이에요."),

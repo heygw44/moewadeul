@@ -54,10 +54,7 @@ public class ProgramApplyService {
         if (!program.isOvernight()) {
             return;
         }
-        int trustLevel = trustSummaryService.summarize(memberId).trustLevel();
-        if (!program.isTrustLevelSufficient(trustLevel)) {
-            throw new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
-        }
+        trustSummaryService.requireLevel(memberId, Program.MIN_TRUST_LEVEL_FOR_OVERNIGHT);
     }
 
     private void expireOwnOverdueApplication(long programId, long memberId, Instant now) {

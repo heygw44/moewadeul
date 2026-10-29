@@ -171,10 +171,6 @@ public class Program {
         }
     }
 
-    public boolean isTrustLevelSufficient(int trustLevel) {
-        return !overnight || trustLevel >= MIN_TRUST_LEVEL_FOR_OVERNIGHT;
-    }
-
     public Instant paymentDueAt(Instant now) {
         return now.plus(Duration.ofMinutes(paymentDeadlineMinutes));
     }

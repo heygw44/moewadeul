@@ -1,7 +1,5 @@
 package com.moewadeul.trust.application.companion;
 
-import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.member.application.profile.MemberProfileService;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
@@ -31,9 +29,7 @@ public class CompanionReviewQueryService {
 
     @Transactional(readOnly = true)
     public List<PendingCompanionReview> pending(long memberId) {
-        if (trustSummaryService.detail(memberId).trustLevel() < CompanionReviewPolicy.MIN_TRUST_LEVEL) {
-            throw new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
-        }
+        trustSummaryService.requireLevel(memberId, CompanionReviewPolicy.MIN_TRUST_LEVEL);
         Instant writableSince = CompanionReviewPolicy.revealCutoff(clock.instant());
         Map<Long, List<CompanionReviewPendingRow>> byBasecamp =
                 companionReviewMapper.selectPending(memberId, writableSince).stream()

@@ -57,9 +57,9 @@ class BasecampMembershipController {
 
     @Operation(
             summary = "베이스캠프 합류 신청 취소",
-            description = "본인확인을 마친 회원(신뢰 단계 1 이상)이 대기 중인 자기 합류 신청을 취소하고 204로 응답한다. "
+            description = "회원이 대기 중인 자기 합류 신청을 취소하고 204로 응답한다. "
                     + "모집 중이거나 마감된 베이스캠프에서만 할 수 있다. 취소한 신청은 같은 베이스캠프에 다시 낼 수 있다. "
-                    + "베이스캠프가 없거나 내 신청이 없으면 404 NOT_FOUND, 신뢰 단계가 1 미만이면 403 TRUST_LEVEL_INSUFFICIENT, "
+                    + "베이스캠프가 없거나 내 신청이 없으면 404 NOT_FOUND, "
                     + "베이스캠프가 모집 중이거나 마감된 상태가 아니거나 신청이 대기 중이 아니면 409 BASECAMP_INVALID_STATE로 응답한다.")
     @DeleteMapping("/api/basecamps/{basecampId}/applications/me")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -122,11 +122,11 @@ class BasecampMembershipController {
 
     @Operation(
             summary = "베이스캠프 탈퇴",
-            description = "본인확인을 마친 회원(신뢰 단계 1 이상)인 멤버가 베이스캠프에서 탈퇴하고 204로 응답한다. 탈퇴한 회원은 같은 베이스캠프에 다시 신청할 수 없다. "
+            description = "멤버가 베이스캠프에서 탈퇴하고 204로 응답한다. 탈퇴한 회원은 같은 베이스캠프에 다시 신청할 수 없다. "
                     + "확정된 뒤 출발 48시간 안에 탈퇴하면 임박 탈퇴로 기록된다. 정원이 차서 자동 마감된 베이스캠프는 빈자리가 생기면 다시 모집 중이 되고, "
                     + "캠프 리더가 직접 마감한 베이스캠프는 마감 그대로다. "
                     + "다음 순서로 검사하고 처음 걸린 이유로 응답한다. "
-                    + "베이스캠프가 없으면 404 NOT_FOUND, 신뢰 단계가 1 미만이면 403 TRUST_LEVEL_INSUFFICIENT, "
+                    + "베이스캠프가 없으면 404 NOT_FOUND, "
                     + "베이스캠프가 완료되었거나 취소되었으면 409 BASECAMP_INVALID_STATE, ACTIVE 멤버가 아니면 404 NOT_FOUND, "
                     + "캠프 리더이면 409 BASECAMP_LEADER_CANNOT_LEAVE이다.")
     @DeleteMapping("/api/basecamps/{basecampId}/members/me")
