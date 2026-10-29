@@ -2,6 +2,7 @@ package com.moewadeul.review.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.review.domain.ReviewErrorCode;
 import com.moewadeul.review.domain.SpotReview;
@@ -20,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 class SpotReviewWriter {
+
+    private static final String UNIQUE_CONSTRAINT = "uk_spot_review_spot_member_visited_date";
 
     private final ActiveSpotChecker activeSpotChecker;
     private final SpotReviewRepository spotReviewRepository;
@@ -83,7 +86,7 @@ class SpotReviewWriter {
         try {
             return spotReviewRepository.saveAndFlush(review);
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(ReviewErrorCode.SPOT_REVIEW_DUPLICATED);
+            throw UniqueViolations.translate(e, UNIQUE_CONSTRAINT, ReviewErrorCode.SPOT_REVIEW_DUPLICATED);
         }
     }
 

@@ -3,6 +3,7 @@ package com.moewadeul.memory.application.report;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryErrorCode;
 import com.moewadeul.memory.domain.MemoryRepository;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MemoryReportService {
 
+    private static final String REPORT_UNIQUE_CONSTRAINT = "uk_memory_report_memory_reporter";
     private static final int PENDING_REVIEW_REPORT_THRESHOLD = 5;
     private static final String REASON_MESSAGE = "신고 사유는 " + EnumParser.names(MemoryReportReason.class) + " 중 하나여야 해요.";
 
@@ -46,7 +48,7 @@ public class MemoryReportService {
         try {
             memoryReportRepository.saveAndFlush(MemoryReport.of(memoryId, memberId, reason, content, now));
         } catch (DataIntegrityViolationException e) {
-            throw alreadyReported();
+            throw UniqueViolations.translate(e, REPORT_UNIQUE_CONSTRAINT, MemoryErrorCode.MEMORY_ALREADY_REPORTED);
         }
         if (memoryReportRepository.countByMemoryIdAndReviewedAtIsNull(memoryId) >= PENDING_REVIEW_REPORT_THRESHOLD) {
             memory.markPendingReview(now);
