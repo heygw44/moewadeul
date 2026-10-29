@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
+import com.moewadeul.common.mail.MailProperties;
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
 import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -48,7 +49,11 @@ class NotificationMailSchedulerTest {
         doThrow(new IllegalStateException("DB 연결 실패")).when(mailer).sendDue();
 
         new NotificationMailScheduler(
-                        mailer, jobRunner(meterRegistry), properties(20, Duration.ofMinutes(10)), SEND_TIMEOUT, 4)
+                        mailer,
+                        jobRunner(meterRegistry),
+                        properties(20, Duration.ofMinutes(10)),
+                        mailProperties(SEND_TIMEOUT),
+                        4)
                 .send();
 
         assertThat(meterRegistry
@@ -65,8 +70,12 @@ class NotificationMailSchedulerTest {
                 mock(NotificationMailer.class),
                 jobRunner(new SimpleMeterRegistry()),
                 properties,
-                sendTimeout,
+                mailProperties(sendTimeout),
                 poolSize);
+    }
+
+    private static MailProperties mailProperties(Duration sendTimeout) {
+        return new MailProperties("moewadeul@example.com", "뫼와들", sendTimeout);
     }
 
     private static ScheduledJobRunner jobRunner(SimpleMeterRegistry meterRegistry) {

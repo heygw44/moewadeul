@@ -5,7 +5,6 @@ import jakarta.mail.internet.MimeMessage;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
@@ -19,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -36,21 +34,13 @@ public class SmtpMailSender implements MailSender, DisposableBean {
     private static final Pattern TRANSIENT_REPLY = Pattern.compile("^4\\d\\d\\b");
 
     private final JavaMailSender javaMailSender;
-    private final String from;
-    private final String fromName;
-    private final Duration sendTimeout;
+    private final MailProperties properties;
     // 가상 스레드에서 보내면 상한을 넘겨 취소할 때 인터럽트가 소켓 읽기·쓰기를 끊는다. 플랫폼 스레드는 소켓 입출력에서 인터럽트로 깨어나지 못한다.
     private final ExecutorService sender = Executors.newVirtualThreadPerTaskExecutor();
 
-    public SmtpMailSender(
-            JavaMailSender javaMailSender,
-            @Value("${moewadeul.mail.from}") String from,
-            @Value("${moewadeul.mail.from-name}") String fromName,
-            @Value("${moewadeul.mail.send-timeout}") Duration sendTimeout) {
+    public SmtpMailSender(JavaMailSender javaMailSender, MailProperties properties) {
         this.javaMailSender = javaMailSender;
-        this.from = from;
-        this.fromName = fromName;
-        this.sendTimeout = sendTimeout;
+        this.properties = properties;
     }
 
     @Override
@@ -66,7 +56,7 @@ public class SmtpMailSender implements MailSender, DisposableBean {
     private void sendWithinTimeout(MimeMessage mimeMessage) {
         Future<?> sending = sender.submit(() -> javaMailSender.send(mimeMessage));
         try {
-            sending.get(sendTimeout.toMillis(), TimeUnit.MILLISECONDS);
+            sending.get(properties.sendTimeout().toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             sending.cancel(true);
             throw new MailDeliveryException("mail delivery timed out", e, true);
@@ -133,7 +123,7 @@ public class SmtpMailSender implements MailSender, DisposableBean {
     private MimeMessage toMimeMessage(MailMessage message) throws MessagingException, UnsupportedEncodingException {
         MimeMessage mimeMessage = javaMailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, StandardCharsets.UTF_8.name());
-        helper.setFrom(from, fromName);
+        helper.setFrom(properties.from(), properties.fromName());
         helper.setTo(message.to());
         helper.setSubject(message.subject());
         helper.setText(message.body(), false);
