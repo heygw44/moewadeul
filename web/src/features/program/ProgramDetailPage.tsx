@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ApiError, newIdempotencyKey } from '../../api/client';
+import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
-import { isUnanswered } from '../../api/idempotency';
+import { createIdempotentRunner } from '../../api/idempotency';
 import {
   applyProgram,
   cancelApplication,
@@ -236,8 +236,6 @@ const FAIL_TITLES: Record<Exclude<Busy, null>, string> = {
   alert: '빈자리 알림을 바꾸지 못했어요',
 };
 
-type KeyRef = { current: { scope: number; key: string } | null };
-
 const HOUR_MS = 60 * 60 * 1000;
 const REFUND_BEFORE_START_HOURS = 72;
 
@@ -249,8 +247,8 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   const [soldOut, setSoldOut] = useState(false);
   const [alertOn, setAlertOn] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const applyKey: KeyRef = useRef(null);
-  const payKey: KeyRef = useRef(null);
+  const [applyRunner] = useState(createIdempotentRunner);
+  const [payRunner] = useState(createIdempotentRunner);
 
   const mine = detail.myApplication;
   const pending = mine?.status === 'PENDING_PAYMENT';
@@ -265,17 +263,15 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
     return () => window.clearInterval(timer);
   }, [payExpired, onChanged]);
 
-  async function run(kind: Exclude<Busy, null>, keyRef: KeyRef | null, call: () => Promise<void>): Promise<void> {
+  async function run(kind: Exclude<Busy, null>, call: () => Promise<void>): Promise<void> {
     if (busy !== null) return;
     setBusy(kind);
     setError(null);
     setNotice(null);
     try {
       await call();
-      if (keyRef) keyRef.current = null;
     } catch (caught) {
       const apiError = caught instanceof ApiError ? caught : new ApiError(0, 'INTERNAL_ERROR', null);
-      if (keyRef && !isUnanswered(apiError)) keyRef.current = null;
       if (apiError.code === 'PROGRAM_SOLD_OUT') setSoldOut(true);
       setError({ kind, apiError });
       if (STALE_CODES.has(apiError.code)) onChanged();
@@ -284,24 +280,17 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
     }
   }
 
-  function keyFor(keyRef: KeyRef, scope: number): string {
-    if (keyRef.current === null || keyRef.current.scope !== scope) {
-      keyRef.current = { scope, key: newIdempotencyKey() };
-    }
-    return keyRef.current.key;
-  }
-
   const apply = () =>
-    run('apply', applyKey, async () => {
-      await applyProgram(detail.programId, keyFor(applyKey, detail.programId));
+    run('apply', async () => {
+      await applyRunner.run({ programId: detail.programId }, (key) => applyProgram(detail.programId, key));
       setNotice('신청했어요. 결제 기한 안에 결제해 주세요.');
       onChanged();
     });
 
   const pay = () => {
     if (!mine) return;
-    return run('pay', payKey, async () => {
-      await payApplication(mine.applicationId, keyFor(payKey, mine.applicationId));
+    return run('pay', async () => {
+      await payRunner.run({ applicationId: mine.applicationId }, (key) => payApplication(mine.applicationId, key));
       setNotice('결제를 마쳤어요. 신청이 확정됐어요.');
       onChanged();
     });
@@ -309,7 +298,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
   const cancel = async () => {
     if (!mine) return;
-    await run('cancel', null, async () => {
+    await run('cancel', async () => {
       const response = await cancelApplication(mine.applicationId);
       setNotice(response.refunded ? '신청을 취소하고 환불했어요.' : '신청을 취소했어요.');
       onChanged();
@@ -318,14 +307,14 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   };
 
   const subscribe = () =>
-    run('alert', null, async () => {
+    run('alert', async () => {
       await subscribeVacancyAlert(detail.programId);
       setAlertOn(true);
       setNotice('빈자리 알림을 신청했어요. 자리가 나면 알림이 가요.');
     });
 
   const unsubscribe = () =>
-    run('alert', null, async () => {
+    run('alert', async () => {
       await unsubscribeVacancyAlert(detail.programId);
       setAlertOn(false);
       setNotice('빈자리 알림을 껐어요.');
