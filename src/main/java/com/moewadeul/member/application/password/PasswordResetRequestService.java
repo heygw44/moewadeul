@@ -1,5 +1,7 @@
 package com.moewadeul.member.application.password;
 
+import static com.moewadeul.member.application.MemberGuards.requireRequestIp;
+
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.MailSecretDeriver;
@@ -78,12 +80,6 @@ public class PasswordResetRequestService {
 
     private static IllegalStateException throttleRowMissing() {
         return new IllegalStateException("재설정 요청 한도 행을 만들었는데 읽을 수 없습니다.");
-    }
-
-    private static void requireRequestIp(String requestIp) {
-        if (requestIp == null || requestIp.isBlank()) {
-            throw new IllegalArgumentException("요청 IP가 비어 있습니다.");
-        }
     }
 
     @Transactional

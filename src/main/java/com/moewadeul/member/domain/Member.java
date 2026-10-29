@@ -185,10 +185,14 @@ public class Member {
         if (!isSuspensionOverAt(now)) {
             return false;
         }
+        endSuspension(now);
+        return true;
+    }
+
+    private void endSuspension(Instant now) {
         this.status = isEmailVerified() ? MemberStatus.ACTIVE : MemberStatus.UNVERIFIED;
         this.suspendedUntil = null;
         this.updatedAt = now;
-        return true;
     }
 
     public void resyncSuspension(boolean permanent, Instant latestEnd, Instant now) {
@@ -209,9 +213,7 @@ public class Member {
         if (status != MemberStatus.SUSPENDED) {
             return;
         }
-        this.status = isEmailVerified() ? MemberStatus.ACTIVE : MemberStatus.UNVERIFIED;
-        this.suspendedUntil = null;
-        this.updatedAt = now;
+        endSuspension(now);
     }
 
     public void changeNickname(String nickname, Instant now) {

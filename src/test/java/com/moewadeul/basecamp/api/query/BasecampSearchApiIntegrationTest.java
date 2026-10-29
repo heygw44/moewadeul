@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.api.BasecampApiFixture;
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
@@ -38,7 +38,7 @@ class BasecampSearchApiIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -49,7 +49,7 @@ class BasecampSearchApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        fixture = new BasecampApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationService, jdbc);
+        fixture = new BasecampApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationIssuer, jdbc);
         leader = fixture.saveMember();
         spotId = fixture.insertSpot("능선 끝 평지", 37.25, 127.25);
     }

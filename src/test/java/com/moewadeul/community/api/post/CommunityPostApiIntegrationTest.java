@@ -11,7 +11,7 @@ import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.api.CommunityApiFixture;
 import com.moewadeul.community.application.post.CommunityViewCountFlusher;
 import com.moewadeul.community.domain.post.CommunityPost;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
@@ -48,7 +48,7 @@ class CommunityPostApiIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -63,7 +63,7 @@ class CommunityPostApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        fixture = new CommunityApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationService, jdbc);
+        fixture = new CommunityApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationIssuer, jdbc);
     }
 
     @Test

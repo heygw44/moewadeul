@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.basecamp.api.BasecampApiFixture;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
@@ -92,7 +92,7 @@ class BasecampContactVisibilityApiIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -116,7 +116,7 @@ class BasecampContactVisibilityApiIntegrationTest {
     void contactInfoVisibility(Relation relation, Timing timing, boolean expectedVisible) {
         // given
         BasecampApiFixture fixture =
-                new BasecampApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationService, jdbc);
+                new BasecampApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationIssuer, jdbc);
         Member leader = fixture.saveMember();
         Member viewer = relation == Relation.LEADER ? leader : fixture.saveMember();
         long spotId = fixture.insertSpot("개머리언덕", 37.25, 127.25);

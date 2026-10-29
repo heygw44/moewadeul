@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
@@ -48,7 +48,7 @@ class ProgramPaymentNotificationIntegrationTest {
     private JdbcTemplate jdbc;
 
     @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private OutboxPublisher outboxPublisher;
@@ -192,7 +192,7 @@ class ProgramPaymentNotificationIntegrationTest {
     }
 
     private Cookie verifyEmail(Member member, Cookie loggedIn) {
-        String code = emailVerificationService
+        String code = emailVerificationIssuer
                 .issueFor(member.getId(), "127.0.0.1", TestSequence.next())
                 .orElseThrow()
                 .code();
