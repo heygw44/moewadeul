@@ -563,13 +563,8 @@ export async function createMapView(
       terrainOn = on;
     },
 
-    setInteractive(drag, zoomGestures = drag) {
-      map.setDraggable(drag);
-      map.setZoomable(zoomGestures);
-    },
-
     relayout() {
-      map.relayout();
+      if (!destroyed) map.relayout();
     },
 
     destroy() {
@@ -596,7 +591,11 @@ export async function createMapView(
       draftOverlay = null;
       searchOverlay?.setMap(null);
       searchOverlay = null;
-      radiusCircle?.setMap(null);
+      if (radiusCircle) {
+        kakao.maps.event.removeListener(radiusCircle, 'click', handleMapClick);
+        kakao.maps.event.removeListener(radiusCircle, 'rightclick', handleRightClick);
+        radiusCircle.setMap(null);
+      }
       radiusCircle = null;
       menuOverlay?.setMap(null);
       menuOverlay = null;
