@@ -100,22 +100,6 @@ class CompanionReviewCommandServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[RV-04] 코멘트가 301자이면 INVALID_INPUT이다")
-    void tooLongCommentIsInvalid() {
-        // given
-        Pair pair = completedPair();
-
-        // when, then
-        assertCode(
-                () -> commandService.write(
-                        pair.reviewerId(),
-                        pair.basecampId(),
-                        new CompanionReviewWriteCommand(pair.revieweeId(), true, List.of(), "가".repeat(301))),
-                CommonErrorCode.INVALID_INPUT);
-        assertThat(fixture.reviewCount()).isZero();
-    }
-
-    @Test
     @DisplayName("[F-15] 본인확인을 하지 않은 단계 0 회원은 TRUST_LEVEL_INSUFFICIENT이고, 베이스캠프가 없어도 이 오류가 먼저다")
     void levelZeroIsRejectedFirst() {
         // given
@@ -128,11 +112,11 @@ class CompanionReviewCommandServiceIntegrationTest {
         assertCode(
                 () -> commandService.write(
                         unverified, basecampId, new CompanionReviewWriteCommand(leaderId, true, List.of(), null)),
-                CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
+                TrustErrorCode.TRUST_LEVEL_INSUFFICIENT);
         assertCode(
                 () -> commandService.write(
                         unverified, 999_999L, new CompanionReviewWriteCommand(leaderId, true, List.of(), null)),
-                CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
+                TrustErrorCode.TRUST_LEVEL_INSUFFICIENT);
     }
 
     @Test

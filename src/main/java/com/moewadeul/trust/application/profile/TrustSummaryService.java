@@ -1,7 +1,9 @@
 package com.moewadeul.trust.application.profile;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.trust.domain.CompanionReviewPolicy;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.companion.CompanionReviewTag;
 import com.moewadeul.trust.domain.identity.IdentityVerification;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
@@ -38,6 +40,13 @@ public class TrustSummaryService {
                 .findByMemberId(memberId)
                 .map(verification -> summarizeOf(verification, memberId, now))
                 .orElse(NOT_VERIFIED_LEVEL_ZERO);
+    }
+
+    @Transactional(readOnly = true)
+    public void requireLevel(long memberId, int minLevel) {
+        if (summarize(memberId).trustLevel() < minLevel) {
+            throw new BusinessException(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT);
+        }
     }
 
     @Transactional(readOnly = true)

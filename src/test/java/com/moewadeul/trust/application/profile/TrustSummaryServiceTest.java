@@ -1,6 +1,8 @@
 package com.moewadeul.trust.application.profile;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -8,7 +10,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.companion.CompanionReviewTag;
 import com.moewadeul.trust.domain.identity.CiHash;
 import com.moewadeul.trust.domain.identity.Gender;
@@ -23,6 +27,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -171,6 +176,33 @@ class TrustSummaryServiceTest {
         assertThat(detail)
                 .isEqualTo(new TrustDetail(
                         true, true, 2, 4, 80, 1, true, List.of("ON_TIME", "LATE", "NO_SHOW"), "TWENTIES", "MALE"));
+    }
+
+    @Test
+    @DisplayName("[TR-01] 요구 단계 바로 아래인 회원은 TRUST_LEVEL_INSUFFICIENT이고, 요구 단계인 회원은 통과한다")
+    void requireLevelRejectsBelowMinimumOnly() {
+        TrustSummaryService service = serviceAt("2026-10-05T03:00:00Z");
+
+        when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.empty());
+        assertInsufficient(() -> service.requireLevel(MEMBER_ID, 1));
+
+        when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2008)));
+        assertInsufficient(() -> service.requireLevel(MEMBER_ID, 1));
+
+        stubRecord(NO_RECORD);
+        when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(recordBornIn(2007)));
+        assertThatCode(() -> service.requireLevel(MEMBER_ID, 1)).doesNotThrowAnyException();
+        assertInsufficient(() -> service.requireLevel(MEMBER_ID, 2));
+
+        stubRecord(new TrustRecordRow(3, 5, 4, 2, false));
+        assertThatCode(() -> service.requireLevel(MEMBER_ID, 2)).doesNotThrowAnyException();
+    }
+
+    private static void assertInsufficient(ThrowingCallable call) {
+        assertThatThrownBy(call)
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT));
     }
 
     private void stubRecord(TrustRecordRow row) {

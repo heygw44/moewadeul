@@ -24,8 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BasecampOpenService {
 
-    private static final int MIN_TRUST_LEVEL_TO_OPEN = 1;
-
     private final TrustSummaryService trustSummaryService;
     private final SanctionQueryService sanctionQueryService;
     private final ActiveSpotChecker activeSpotChecker;
@@ -39,8 +37,8 @@ public class BasecampOpenService {
         basecampLockMapper.lockMember(leaderId);
         Instant now = clock.instant();
         Capacity capacity = Capacity.of(command.capacity());
+        trustSummaryService.requireLevel(leaderId, BasecampOpenPolicy.MIN_TRUST_LEVEL);
         TrustDetail trust = trustSummaryService.detail(leaderId);
-        requireTrustLevel(trust);
         requireNotSuspended(leaderId);
         JoinCondition joinCondition = JoinConditions.from(command.joinCondition(), trust);
         requireNotWarningSpot(command.spotId());
@@ -56,12 +54,6 @@ public class BasecampOpenService {
                 joinCondition);
         Basecamp basecamp = basecampRepository.saveAndFlush(open(leaderId, command.spotId(), details, now));
         return new BasecampOpenResult(basecamp.getId(), basecamp.getStatus());
-    }
-
-    private static void requireTrustLevel(TrustDetail trust) {
-        if (trust.trustLevel() < MIN_TRUST_LEVEL_TO_OPEN) {
-            throw new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
-        }
     }
 
     private void requireNotSuspended(long leaderId) {

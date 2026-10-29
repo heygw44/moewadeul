@@ -182,7 +182,7 @@ class CompanionReviewControllerTest {
         when(commandService.write(anyLong(), eq(3L), any()))
                 .thenThrow(new BusinessException(TrustErrorCode.COMPANION_REVIEW_DUPLICATED));
         when(commandService.write(anyLong(), eq(4L), any()))
-                .thenThrow(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT));
+                .thenThrow(new BusinessException(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT));
 
         // when
         MvcTestResult notEligible = postTo(verified(), 1L, VALID_BODY);

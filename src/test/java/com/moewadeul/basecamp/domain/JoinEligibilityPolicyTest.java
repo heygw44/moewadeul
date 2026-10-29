@@ -153,22 +153,38 @@ class JoinEligibilityPolicyTest {
 
     @Test
     @DisplayName("[F-12][BC-06] 두 기간은 양 끝을 포함해서 하루라도 겹치면 충돌이고, 하루도 겹치지 않으면 충돌이 아니다")
-    void overlapsIncludesBothEnds() {
+    void dateConflictIncludesBothEnds() {
         // given
         LocalDate start = LocalDate.of(2026, 10, 20);
         LocalDate end = LocalDate.of(2026, 10, 22);
+        BasecampSchedule target = new BasecampSchedule(1L, start, end);
 
         // when & then
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, end, end.plusDays(2)))
-                .isTrue();
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, start.minusDays(2), start))
-                .isTrue();
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, start.plusDays(1), start.plusDays(1)))
-                .isTrue();
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, end.plusDays(1), end.plusDays(3)))
+        assertThat(conflictsWith(target, end, end.plusDays(2))).isTrue();
+        assertThat(conflictsWith(target, start.minusDays(2), start)).isTrue();
+        assertThat(conflictsWith(target, start.plusDays(1), start.plusDays(1))).isTrue();
+        assertThat(conflictsWith(target, end.plusDays(1), end.plusDays(3))).isFalse();
+        assertThat(conflictsWith(target, start.minusDays(3), start.minusDays(1)))
                 .isFalse();
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, start.minusDays(3), start.minusDays(1)))
+    }
+
+    @Test
+    @DisplayName("[F-12][BC-06] 같은 베이스캠프의 일정은 겹쳐도 충돌에서 뺀다")
+    void dateConflictIgnoresSameBasecamp() {
+        LocalDate start = LocalDate.of(2026, 10, 20);
+        LocalDate end = LocalDate.of(2026, 10, 22);
+        BasecampSchedule target = new BasecampSchedule(1L, start, end);
+
+        assertThat(JoinEligibilityPolicy.hasDateConflict(target, List.of(new BasecampSchedule(1L, start, end))))
                 .isFalse();
+        assertThat(JoinEligibilityPolicy.hasDateConflict(
+                        target, List.of(new BasecampSchedule(1L, start, end), new BasecampSchedule(2L, start, end))))
+                .isTrue();
+        assertThat(JoinEligibilityPolicy.hasDateConflict(target, List.of())).isFalse();
+    }
+
+    private static boolean conflictsWith(BasecampSchedule target, LocalDate start, LocalDate end) {
+        return JoinEligibilityPolicy.hasDateConflict(target, List.of(new BasecampSchedule(2L, start, end)));
     }
 
     private static Applicant applicant(int trustLevel, Integer ageGroup, JoinGender gender) {

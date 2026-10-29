@@ -2,12 +2,12 @@ package com.moewadeul.basecamp.application;
 
 import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
+import com.moewadeul.basecamp.domain.BasecampSchedule;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.basecamp.domain.JoinUnmetReason;
 import com.moewadeul.basecamp.domain.PriorRelation;
 import com.moewadeul.basecamp.infra.query.BasecampSearchMapper;
-import com.moewadeul.basecamp.infra.query.InProgressScheduleRow;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.List;
@@ -45,11 +45,9 @@ public class JoinEligibilityChecker {
     }
 
     private boolean hasDateConflict(Basecamp basecamp, long memberId) {
-        List<InProgressScheduleRow> schedules = basecampSearchMapper.selectInProgressSchedules(memberId);
-        return schedules.stream()
-                .filter(schedule -> schedule.basecampId() != basecamp.getId())
-                .anyMatch(schedule -> JoinEligibilityPolicy.overlaps(
-                        basecamp.getStartDate(), basecamp.getEndDate(), schedule.startDate(), schedule.endDate()));
+        BasecampSchedule target =
+                new BasecampSchedule(basecamp.getId(), basecamp.getStartDate(), basecamp.getEndDate());
+        return JoinEligibilityPolicy.hasDateConflict(target, basecampSearchMapper.selectInProgressSchedules(memberId));
     }
 
     private static BusinessException toException(JoinUnmetReason reason) {

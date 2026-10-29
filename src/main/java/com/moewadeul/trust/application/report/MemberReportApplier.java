@@ -36,9 +36,15 @@ class MemberReportApplier {
     @Transactional
     MemberReportResult apply(long reporterId, MemberReportCommand command) {
         requireConsistentKind(command);
-        if (reporterId == command.targetMemberId()) {
-            throw new BusinessException(TrustErrorCode.REPORT_NOT_ELIGIBLE);
-        }
+        Instant now = clock.instant();
+        MemberReport received = MemberReport.receive(
+                reporterId,
+                command.targetMemberId(),
+                command.basecampId(),
+                command.companionReviewId(),
+                command.type(),
+                command.content(),
+                now);
         MemberReportContextRow context = memberReportMapper
                 .selectContext(
                         command.basecampId(),
@@ -47,24 +53,20 @@ class MemberReportApplier {
                         command.kind(),
                         command.companionReviewId())
                 .orElseThrow(() -> new BusinessException(TrustErrorCode.REPORT_NOT_ELIGIBLE));
-        Instant now = clock.instant();
         requireEligible(context, command, now);
         if (context.alreadyReported()) {
             throw new BusinessException(TrustErrorCode.REPORT_DUPLICATED);
         }
-        Instant suspensionEndsAt = command.type().isUrgent() && context.bothMembers()
-                ? suspendTarget(reporterId, command.targetMemberId(), now)
+        LockedMember target = command.type().isUrgent() && context.bothMembers()
+                ? memberSuspensionService.lockForSanctionAlongWith(command.targetMemberId(), reporterId)
                 : null;
-        MemberReport report = save(MemberReport.receive(
-                reporterId,
-                command.targetMemberId(),
-                command.basecampId(),
-                command.companionReviewId(),
-                command.type(),
-                command.content(),
-                now));
-        if (suspensionEndsAt != null) {
-            sanctionRepository.save(Sanction.temporary(report.getTargetMemberId(), report.getId(), now));
+        MemberReport report = save(received);
+        Instant suspensionEndsAt = null;
+        if (target != null) {
+            Sanction sanction =
+                    sanctionRepository.save(Sanction.temporary(report.getTargetMemberId(), report.getId(), now));
+            suspensionEndsAt = sanction.getEndsAt();
+            memberSuspensionService.suspendTemporarily(target, suspensionEndsAt);
         }
         return new MemberReportResult(report.getId(), report.getTargetMemberId(), suspensionEndsAt);
     }
@@ -72,13 +74,6 @@ class MemberReportApplier {
     private static void requireConsistentKind(MemberReportCommand command) {
         if (command.kind() != command.type().kind()) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "신고 종류와 유형이 맞지 않아요.");
-        }
-        boolean isReviewReport = command.kind() == ReportKind.REVIEW;
-        if (isReviewReport && command.companionReviewId() == null) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "후기를 신고하려면 동행 후기 ID가 필요해요.");
-        }
-        if (!isReviewReport && command.companionReviewId() != null) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "회원 신고에는 동행 후기 ID를 넣을 수 없어요.");
         }
     }
 
@@ -103,12 +98,5 @@ class MemberReportApplier {
         } catch (DataIntegrityViolationException e) {
             throw UniqueViolations.translate(e, UNIQUE_CONSTRAINT, TrustErrorCode.REPORT_DUPLICATED);
         }
-    }
-
-    private Instant suspendTarget(long reporterId, long targetMemberId, Instant now) {
-        LockedMember target = memberSuspensionService.lockForSanctionAlongWith(targetMemberId, reporterId);
-        Instant endsAt = now.plus(Sanction.TEMPORARY_SUSPENSION);
-        memberSuspensionService.suspendTemporarily(target, endsAt);
-        return endsAt;
     }
 }

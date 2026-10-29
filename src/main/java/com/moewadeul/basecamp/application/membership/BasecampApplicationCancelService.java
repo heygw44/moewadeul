@@ -2,10 +2,8 @@ package com.moewadeul.basecamp.application.membership;
 
 import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.domain.BasecampRepository;
-import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class BasecampApplicationCancelService {
 
     private final BasecampRepository basecampRepository;
-    private final TrustSummaryService trustSummaryService;
     private final Clock clock;
 
     @Transactional
@@ -27,9 +24,6 @@ public class BasecampApplicationCancelService {
         Basecamp basecamp = basecampRepository
                 .findByIdForUpdate(basecampId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (trustSummaryService.detail(memberId).trustLevel() < JoinEligibilityPolicy.BASE_TRUST_LEVEL) {
-            throw new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
-        }
         basecamp.cancelApplication(memberId, clock.instant());
     }
 }

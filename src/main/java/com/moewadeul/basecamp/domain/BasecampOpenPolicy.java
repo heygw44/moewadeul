@@ -7,6 +7,8 @@ import java.util.Set;
 
 public final class BasecampOpenPolicy {
 
+    public static final int MIN_TRUST_LEVEL = 1;
+
     public static final int MAX_OPEN_PER_LEADER = 3;
 
     public static final Set<BasecampStatus> OPEN_COUNTED_STATUSES =

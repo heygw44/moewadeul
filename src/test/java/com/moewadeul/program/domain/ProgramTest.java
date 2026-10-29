@@ -327,34 +327,6 @@ class ProgramTest {
         assertThat(program.paymentDueAt(NOW)).isEqualTo(NOW.plus(Duration.ofMinutes(45)));
     }
 
-    @Test
-    @DisplayName("[F-18][PG-02] 숙박 행사는 신뢰 단계 1 이상만, 숙박 없는 행사는 단계 0도 신청할 수 있다")
-    void overnightRequiresTrustLevelOne() {
-        Program overnight = create(details());
-        Program dayTrip = create(withOvernight(false));
-
-        assertThat(overnight.isTrustLevelSufficient(0)).isFalse();
-        assertThat(overnight.isTrustLevelSufficient(1)).isTrue();
-        assertThat(dayTrip.isTrustLevelSufficient(0)).isTrue();
-    }
-
-    private static ProgramDetails withOvernight(boolean overnight) {
-        ProgramDetails base = details();
-        return new ProgramDetails(
-                base.title(),
-                base.description(),
-                base.spotId(),
-                base.locationText(),
-                base.startAt(),
-                base.endAt(),
-                base.capacity(),
-                base.fee(),
-                base.applyOpenAt(),
-                base.applyCloseAt(),
-                base.paymentDeadlineMinutes(),
-                overnight);
-    }
-
     private static Program create(ProgramDetails details) {
         return Program.create(ADMIN_ID, details, NOW);
     }

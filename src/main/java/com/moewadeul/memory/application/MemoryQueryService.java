@@ -4,7 +4,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.memory.domain.ApproximateLocation;
-import com.moewadeul.memory.domain.MemoryStatus;
+import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryVisibility;
 import com.moewadeul.memory.infra.MemoryFeedRow;
 import com.moewadeul.memory.infra.MemoryMapper;
@@ -26,8 +26,7 @@ public class MemoryQueryService {
     public MemoryView findVisible(long memoryId, Long viewerId) {
         return memoryViewReader
                 .read(memoryId, viewerId)
-                .filter(view -> view.viewedByAuthor()
-                        || (view.visibility() == MemoryVisibility.PUBLIC && view.status() == MemoryStatus.ACTIVE))
+                .filter(view -> view.viewedByAuthor() || Memory.isVisibleToOthers(view.visibility(), view.status()))
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 

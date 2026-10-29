@@ -52,7 +52,7 @@ public class EmailVerificationService {
         requireRequestIp(requestIp);
         return memberRepository
                 .findById(memberId)
-                .filter(EmailVerificationService::isUnverified)
+                .filter(Member::isAwaitingEmailVerification)
                 .map(member -> issue(member, requestIp, outboxEventId));
     }
 
@@ -186,13 +186,9 @@ public class EmailVerificationService {
     }
 
     private void rejectIfAlreadyVerified(Member member) {
-        if (!isUnverified(member)) {
+        if (!member.isAwaitingEmailVerification()) {
             throw new BusinessException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         }
-    }
-
-    private static boolean isUnverified(Member member) {
-        return member.getStatus() == MemberStatus.UNVERIFIED;
     }
 
     private static IllegalStateException memberNotFound(long memberId) {

@@ -122,7 +122,7 @@
           AND (m.id IS NOT NULL OR a.id IS NOT NULL)
     </select>
 
-    <select id="selectInProgressSchedules" resultType="com.moewadeul.basecamp.infra.query.InProgressScheduleRow">
+    <select id="selectInProgressSchedules" resultType="com.moewadeul.basecamp.domain.BasecampSchedule">
         SELECT b.id AS basecamp_id,
                b.start_date AS start_date,
                b.end_date AS end_date
