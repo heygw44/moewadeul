@@ -4,20 +4,19 @@ import static com.moewadeul.basecamp.application.lifecycle.BasecampAutoTransitio
 import static com.moewadeul.basecamp.application.lifecycle.BasecampAutoTransitionFixture.START_DATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.moewadeul.basecamp.domain.Basecamp;
-import com.moewadeul.basecamp.domain.BasecampErrorCode;
-import com.moewadeul.basecamp.domain.BasecampException;
 import com.moewadeul.basecamp.domain.BasecampStatus;
-import com.moewadeul.basecamp.infra.BasecampJpaRepository;
 import com.moewadeul.basecamp.infra.lifecycle.BasecampAutoTransitionMapper;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,7 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 @IntegrationTest
-class BasecampAutoTransitionSqlParityIntegrationTest {
+class BasecampAutoTransitionRuleIntegrationTest {
 
     private static final Instant NOW =
             END_DATE.plusDays(1).atStartOfDay(KoreaTime.ZONE).toInstant().plusNanos(123_456_000);
@@ -39,11 +38,13 @@ class BasecampAutoTransitionSqlParityIntegrationTest {
     private static final String BASECAMP_COLUMNS =
             "status, closed_reason, confirmed_at, canceled_at, cancel_reason," + " completed_at, updated_at";
 
+    private static final LocalDateTime NOW_IN_DB = LocalDateTime.ofInstant(NOW, ZoneOffset.UTC);
+
     @Autowired
     private BasecampAutoTransitionMapper mapper;
 
     @Autowired
-    private BasecampJpaRepository basecampRepository;
+    private BasecampAutoTransitionApplier applier;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -64,12 +65,23 @@ class BasecampAutoTransitionSqlParityIntegrationTest {
         fixture = new BasecampAutoTransitionFixture(jdbc, memberRepository, jsonMapper);
     }
 
-    private record Transition(
+    @FunctionalInterface
+    private interface DueSelection {
+        List<Long> select(BasecampAutoTransitionMapper mapper);
+    }
+
+    @FunctionalInterface
+    private interface AutoTransition {
+        boolean apply(BasecampAutoTransitionApplier applier, long id);
+    }
+
+    private record Rule(
             String name,
             int extraMembers,
-            SqlTransition sql,
-            BiConsumer<Basecamp, Instant> domain,
-            DueSelection selection) {
+            Set<BasecampStatus> allowedFrom,
+            AutoTransition apply,
+            DueSelection selection,
+            Map<String, Object> changedColumns) {
 
         @Override
         public String toString() {
@@ -77,61 +89,71 @@ class BasecampAutoTransitionSqlParityIntegrationTest {
         }
     }
 
-    @FunctionalInterface
-    private interface SqlTransition {
-        int apply(BasecampAutoTransitionMapper mapper, long id);
-    }
-
-    @FunctionalInterface
-    private interface DueSelection {
-        List<Long> select(BasecampAutoTransitionMapper mapper);
-    }
-
-    private static final Transition CONFIRM = new Transition(
+    private static final Rule CONFIRM_RULE = new Rule(
             "확정",
             1,
-            (mapper, id) -> mapper.confirmIfBeforeConfirm(id, NOW),
-            Basecamp::processDayBeforeDeparture,
-            mapper -> mapper.selectDueForDepartureIds(START_DATE, 0, 100));
+            Set.of(BasecampStatus.RECRUITING, BasecampStatus.CLOSED),
+            (applier, id) -> applier.processDayBeforeDeparture(id, NOW),
+            mapper -> mapper.selectDueForDepartureIds(START_DATE, 0, 100),
+            Map.of("status", "CONFIRMED", "confirmed_at", NOW_IN_DB, "updated_at", NOW_IN_DB));
 
-    private static final Transition CANCEL_NOT_ENOUGH = new Transition(
+    private static final Rule CANCEL_RULE = new Rule(
             "인원 부족 취소",
             0,
-            (mapper, id) -> mapper.cancelForNotEnoughMembers(id, NOW),
-            Basecamp::processDayBeforeDeparture,
-            mapper -> mapper.selectDueForDepartureIds(START_DATE, 0, 100));
+            Set.of(BasecampStatus.RECRUITING, BasecampStatus.CLOSED),
+            (applier, id) -> applier.processDayBeforeDeparture(id, NOW),
+            mapper -> mapper.selectDueForDepartureIds(START_DATE, 0, 100),
+            Map.of(
+                    "status",
+                    "CANCELED",
+                    "canceled_at",
+                    NOW_IN_DB,
+                    "cancel_reason",
+                    "NOT_ENOUGH_MEMBERS",
+                    "updated_at",
+                    NOW_IN_DB));
 
-    private static final Transition COMPLETE = new Transition(
+    private static final Rule COMPLETE_RULE = new Rule(
             "완료",
             1,
-            (mapper, id) -> mapper.completeIfConfirmed(id, TODAY, NOW),
-            Basecamp::complete,
-            mapper -> mapper.selectDueForCompletionIds(TODAY, 0, 100));
+            Set.of(BasecampStatus.CONFIRMED),
+            (applier, id) -> applier.complete(id, TODAY, NOW),
+            mapper -> mapper.selectDueForCompletionIds(TODAY, 0, 100),
+            Map.of("status", "COMPLETED", "completed_at", NOW_IN_DB, "updated_at", NOW_IN_DB));
 
-    static Stream<Arguments> everyTransitionFromEveryStatus() {
-        return Stream.of(CONFIRM, CANCEL_NOT_ENOUGH, COMPLETE)
-                .flatMap(transition ->
-                        Stream.of(BasecampStatus.values()).map(status -> Arguments.of(transition, status)));
+    static Stream<Arguments> everyRuleFromEveryStatus() {
+        return Stream.of(CONFIRM_RULE, CANCEL_RULE, COMPLETE_RULE)
+                .flatMap(rule -> Stream.of(BasecampStatus.values()).map(status -> Arguments.of(rule, status)));
     }
 
     @ParameterizedTest(name = "{0} / 시작 상태 {1}")
-    @MethodSource("everyTransitionFromEveryStatus")
-    @DisplayName("SQL이 한 행을 바꾸는 시작 상태에서만 도메인 전이가 허용되고, 바뀐 행의 컬럼이 같다")
-    void sqlAndDomainAgreeOnAllowedStatesAndResultingRow(Transition transition, BasecampStatus status) {
+    @MethodSource("everyRuleFromEveryStatus")
+    @DisplayName("자동 전이는 허용된 시작 상태에서만 일어나고, 그때 시각 컬럼과 대기 신청만 바뀌며 마감 사유는 지워진다")
+    void autoTransitionRuleFromEveryStatus(Rule rule, BasecampStatus status) {
         // given
-        long sqlSide = saveWithApplications(status, transition.extraMembers());
-        long domainSide = saveWithApplications(status, transition.extraMembers());
+        long id = saveWithApplications(status, rule.extraMembers());
+        Map<String, Object> rowBefore = rowOf(id);
+        List<Map<String, Object>> applicationsBefore = applicationRowsOf(id);
 
         // when
-        boolean selectedByScheduler = transition.selection().select(mapper).contains(sqlSide);
-        int changed = applySql(transition, sqlSide);
-        boolean domainAllowed = applyDomain(transition, domainSide);
+        boolean selectedByScheduler = rule.selection().select(mapper).contains(id);
+        boolean transitioned = transactionTemplate.execute(tx -> rule.apply().apply(applier, id));
 
         // then
-        assertThat(domainAllowed).isEqualTo(changed == 1);
-        assertThat(selectedByScheduler).isEqualTo(changed == 1);
-        assertThat(rowOf(domainSide)).isEqualTo(rowOf(sqlSide));
-        assertThat(applicationRowsOf(domainSide)).isEqualTo(applicationRowsOf(sqlSide));
+        boolean allowed = rule.allowedFrom().contains(status);
+        assertThat(transitioned).isEqualTo(allowed);
+        assertThat(selectedByScheduler).isEqualTo(allowed);
+        if (!allowed) {
+            assertThat(rowOf(id)).isEqualTo(rowBefore);
+            assertThat(applicationRowsOf(id)).isEqualTo(applicationsBefore);
+            return;
+        }
+        Map<String, Object> expectedRow = new HashMap<>(rowBefore);
+        expectedRow.put("closed_reason", null);
+        expectedRow.putAll(rule.changedColumns());
+        assertThat(rowOf(id)).isEqualTo(expectedRow);
+        assertThat(applicationRowsOf(id))
+                .containsExactly(Map.of("status", "EXPIRED", "updated_at", NOW_IN_DB), applicationsBefore.get(1));
     }
 
     @ParameterizedTest(name = "종료일 {0}")
@@ -165,30 +187,6 @@ class BasecampAutoTransitionSqlParityIntegrationTest {
         long approved = fixture.insertPendingApplication(id);
         jdbc.update("UPDATE basecamp_application SET status = 'APPROVED' WHERE id = ?", approved);
         return id;
-    }
-
-    private int applySql(Transition transition, long id) {
-        return transactionTemplate.execute(status -> {
-            int changed = transition.sql().apply(mapper, id);
-            if (changed == 1) {
-                mapper.expirePendingApplications(id, NOW);
-            }
-            return changed;
-        });
-    }
-
-    private boolean applyDomain(Transition transition, long id) {
-        return transactionTemplate.execute(status -> {
-            Basecamp basecamp = basecampRepository.findById(id).orElseThrow();
-            try {
-                transition.domain().accept(basecamp, NOW);
-            } catch (BasecampException e) {
-                assertThat(e.getErrorCode()).isEqualTo(BasecampErrorCode.BASECAMP_INVALID_STATE);
-                return false;
-            }
-            basecampRepository.saveAndFlush(basecamp);
-            return true;
-        });
     }
 
     private Map<String, Object> rowOf(long id) {
