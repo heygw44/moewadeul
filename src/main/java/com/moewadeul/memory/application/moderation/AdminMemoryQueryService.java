@@ -1,5 +1,6 @@
 package com.moewadeul.memory.application.moderation;
 
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.moderation.ModerationStatus;
 import com.moewadeul.common.moderation.RecentReport;
@@ -7,7 +8,6 @@ import com.moewadeul.common.moderation.RecentReportRow;
 import com.moewadeul.common.moderation.ReportReasonCount;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.memory.application.MemoryImageReader;
-import com.moewadeul.memory.application.MemoryPhoto;
 import com.moewadeul.memory.domain.ApproximateLocation;
 import com.moewadeul.memory.domain.MemoryStatus;
 import com.moewadeul.memory.infra.moderation.AdminMemoryMapper;
@@ -37,13 +37,13 @@ public class AdminMemoryQueryService {
                 RecentReportRow.byTarget(adminMemoryMapper.selectRecentReports(memoryIds));
         Map<Long, Map<String, Long>> reasonCounts = ReportReasonCount.byTarget(
                 ContentReportReason.class, memoryIds, adminMemoryMapper.selectReasonCounts(memoryIds));
-        Map<Long, List<MemoryPhoto>> images = memoryImageReader.readByMemoryIds(memoryIds);
+        Map<Long, List<ImageView>> images = memoryImageReader.readByMemoryIds(memoryIds);
         return slice.map(row -> toSummary(row, images, reasonCounts.get(row.memoryId()), recent));
     }
 
     private static AdminMemorySummary toSummary(
             AdminMemoryRow row,
-            Map<Long, List<MemoryPhoto>> images,
+            Map<Long, List<ImageView>> images,
             Map<String, Long> reasonCounts,
             Map<Long, List<RecentReport>> recent) {
         ApproximateLocation approximate = ApproximateLocation.of(row.latitude(), row.longitude());

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.review.domain.ReviewImage;
@@ -43,11 +44,11 @@ class ReviewImageUploadConcurrencyIntegrationTest {
         // given
         long memberId = memberRepository.saveAndFlush(aMember().build()).getId();
         for (int i = 1; i < ReviewImage.KIND.maxUnattachedPerMember(); i++) {
-            uploadService.issue(memberId, "image/jpeg", 1000L);
+            uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", 1000L, null));
         }
         List<Callable<Object>> tasks = new ArrayList<>();
         for (int i = 0; i < THREADS; i++) {
-            tasks.add(() -> uploadService.issue(memberId, "image/jpeg", 1000L));
+            tasks.add(() -> uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", 1000L, null)));
         }
 
         // when

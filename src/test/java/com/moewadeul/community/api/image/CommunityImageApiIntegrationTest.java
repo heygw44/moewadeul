@@ -21,6 +21,8 @@ import java.util.stream.LongStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
@@ -191,6 +193,29 @@ class CommunityImageApiIntegrationTest {
         assertThat(anonymous).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(notVerified).hasStatus(HttpStatus.FORBIDDEN);
         assertThat(gif).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(imageRowCount()).isZero();
+    }
+
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource(delimiter = '|', textBlock = """
+                    {"contentType":"image/gif","sizeBytes":1000}                                 | contentType
+                    {"contentType":"IMAGE/JPEG","sizeBytes":1000}                                | contentType
+                    {"contentType":"image/png","sizeBytes":0}                                    | sizeBytes
+                    {"contentType":"image/png","sizeBytes":-1}                                   | sizeBytes
+                    {"contentType":"image/png","sizeBytes":5242881}                              | sizeBytes
+                    {"contentType":"image/png","sizeBytes":1000,"thumbnailSizeBytes":0}          | thumbnailSizeBytes
+                    {"contentType":"image/png","sizeBytes":1000,"thumbnailSizeBytes":-1}         | thumbnailSizeBytes
+                    {"contentType":"image/png","sizeBytes":1000,"thumbnailSizeBytes":262145}     | thumbnailSizeBytes
+                    """)
+    @DisplayName("[F-29][CM-06] 허용하지 않는 형식이거나 크기와 썸네일 크기가 한도 밖이면 400 INVALID_INPUT과 해당 필드 오류이고 이미지 행이 생기지 않는다")
+    void issueUploadUrlRejectsUnsupportedTypeAndOutOfRangeSizes(String body, String field) {
+        // when
+        MvcTestResult result = fixture.send(mvc.post().uri(IMAGES), session, body);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo(field);
         assertThat(imageRowCount()).isZero();
     }
 

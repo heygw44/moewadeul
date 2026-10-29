@@ -16,6 +16,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.security.LoginMember;
@@ -23,7 +24,6 @@ import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.community.application.post.CommunityPostCommandService;
-import com.moewadeul.community.application.post.CommunityPostImage;
 import com.moewadeul.community.application.post.CommunityPostItem;
 import com.moewadeul.community.application.post.CommunityPostListQuery;
 import com.moewadeul.community.application.post.CommunityPostQueryService;
@@ -605,8 +605,8 @@ class CommunityPostControllerTest {
                 null,
                 2L,
                 List.of(
-                        new CommunityPostImage(41L, "https://example.test/view/a"),
-                        new CommunityPostImage(40L, "https://example.test/view/b")),
+                        new ImageView(41L, "https://example.test/view/a"),
+                        new ImageView(40L, "https://example.test/view/b")),
                 5L,
                 3L,
                 12L,

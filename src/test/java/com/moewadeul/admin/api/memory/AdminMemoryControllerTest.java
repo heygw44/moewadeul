@@ -14,13 +14,13 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.moderation.ModerationResult;
 import com.moewadeul.common.moderation.RecentReport;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
-import com.moewadeul.memory.application.MemoryPhoto;
 import com.moewadeul.memory.application.moderation.AdminMemoryQueryService;
 import com.moewadeul.memory.application.moderation.AdminMemorySummary;
 import com.moewadeul.memory.application.moderation.MemoryModerationService;
@@ -90,7 +90,7 @@ class AdminMemoryControllerTest {
                 LocalDate.of(2026, 9, 30),
                 1,
                 null,
-                List.of(new MemoryPhoto(11L, "https://example.test/view")),
+                List.of(new ImageView(11L, "https://example.test/view")),
                 "PENDING_REVIEW",
                 5,
                 Map.of("SPAM", 2L, "ABUSE", 0L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 3L, "OTHER", 0L),

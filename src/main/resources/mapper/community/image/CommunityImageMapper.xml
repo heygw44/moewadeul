@@ -10,34 +10,28 @@
     </select>
 
     <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
-        SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
-        FROM community_image
-        WHERE post_id IS NULL
-          AND created_at &lt; #{createdBefore}
-        ORDER BY id
-        LIMIT #{limit}
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedBefore">
+            <property name="table" value="community_image"/>
+            <property name="parentColumn" value="post_id"/>
+            <property name="thumbnailColumn" value="thumbnail_object_key"/>
+        </include>
     </select>
 
     <delete id="deleteIfUnattached">
-        DELETE FROM community_image
-        WHERE id = #{imageId}
-          AND post_id IS NULL
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.deleteIfUnattached">
+            <property name="table" value="community_image"/>
+            <property name="parentColumn" value="post_id"/>
+        </include>
     </delete>
 
     <select id="lockMember" resultType="long">
-        SELECT id
-        FROM member
-        WHERE id = #{memberId}
-        FOR UPDATE
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.lockMember"/>
     </select>
 
     <select id="selectUnattachedCreatedAtsAfter" resultType="java.time.Instant">
-        SELECT created_at
-        FROM community_image
-        WHERE member_id = #{memberId}
-          AND post_id IS NULL
-          AND created_at &gt; #{createdAfter}
-        ORDER BY created_at
-        LIMIT #{limit}
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedAtsAfter">
+            <property name="table" value="community_image"/>
+            <property name="parentColumn" value="post_id"/>
+        </include>
     </select>
 </mapper>

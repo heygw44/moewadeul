@@ -1,5 +1,6 @@
 package com.moewadeul.community.application.post;
 
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.community.infra.image.CommunityImageMapper;
 import com.moewadeul.community.infra.post.CommunityPostMapper;
@@ -24,8 +25,8 @@ class CommunityPostItemReader {
 
     Optional<CommunityPostItem> findDetail(long postId, Long viewerId) {
         return communityPostMapper.selectActiveById(postId, viewerId).map(row -> {
-            List<CommunityPostImage> images = communityImageMapper.selectByPostId(postId).stream()
-                    .map(image -> new CommunityPostImage(image.imageId(), imageStorage.presignView(image.objectKey())))
+            List<ImageView> images = communityImageMapper.selectByPostId(postId).stream()
+                    .map(image -> new ImageView(image.imageId(), imageStorage.presignView(image.objectKey())))
                     .toList();
             return CommunityPostItem.from(row, null, images);
         });

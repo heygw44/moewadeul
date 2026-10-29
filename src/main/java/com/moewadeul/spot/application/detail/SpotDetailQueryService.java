@@ -2,6 +2,7 @@ package com.moewadeul.spot.application.detail;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.ParkWarningTexts;
@@ -109,13 +110,13 @@ public class SpotDetailQueryService {
 
     private List<SpotRecentReview> readRecentReviews(long spotId) {
         List<SpotRecentReviewRow> rows = spotDetailMapper.selectRecentReviews(spotId, RECENT_REVIEW_COUNT);
-        Map<Long, List<SpotRecentReview.Image>> images = new HashMap<>();
+        Map<Long, List<ImageView>> images = new HashMap<>();
         if (!rows.isEmpty()) {
             List<Long> reviewIds =
                     rows.stream().map(SpotRecentReviewRow::reviewId).toList();
             for (SpotReviewImageRow image : spotDetailMapper.selectReviewImages(reviewIds)) {
                 images.computeIfAbsent(image.reviewId(), id -> new ArrayList<>())
-                        .add(new SpotRecentReview.Image(image.imageId(), imageStorage.presignView(image.objectKey())));
+                        .add(new ImageView(image.imageId(), imageStorage.presignView(image.objectKey())));
             }
         }
         return rows.stream()
@@ -123,7 +124,7 @@ public class SpotDetailQueryService {
                 .toList();
     }
 
-    private static SpotRecentReview toRecentReview(SpotRecentReviewRow row, List<SpotRecentReview.Image> images) {
+    private static SpotRecentReview toRecentReview(SpotRecentReviewRow row, List<ImageView> images) {
         return new SpotRecentReview(
                 row.reviewId(),
                 row.authorId(),

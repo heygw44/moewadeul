@@ -123,3 +123,12 @@ moewadeul:
   image-storage:
     storage: ${COMMUNITY_IMAGE_STORAGE:fake}
     bucket: ${UPLOAD_BUCKET:}
+  community:
+    image-cleanup:
+      cron: 0 10 5 * * *
+  review:
+    image-cleanup:
+      cron: 0 20 5 * * *
+  memory:
+    image-cleanup:
+      cron: 0 30 5 * * *

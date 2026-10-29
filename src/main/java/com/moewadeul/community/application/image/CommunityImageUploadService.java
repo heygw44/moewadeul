@@ -1,7 +1,5 @@
 package com.moewadeul.community.application.image;
 
-import com.moewadeul.common.image.application.ImageUpload;
-import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.image.application.ImageUploadIssuer;
 import com.moewadeul.common.image.domain.AttachableImage.Thumbnail;
 import com.moewadeul.common.storage.ImageStorage;
@@ -11,7 +9,6 @@ import com.moewadeul.community.infra.image.CommunityImageMapper;
 import java.time.Clock;
 import java.time.Instant;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CommunityImageUploadService extends ImageUploadIssuer<CommunityImage> {
@@ -22,11 +19,6 @@ public class CommunityImageUploadService extends ImageUploadIssuer<CommunityImag
             ImageStorage imageStorage,
             Clock clock) {
         super(CommunityImage.KIND, communityImageRepository, communityImageMapper, imageStorage, clock);
-    }
-
-    @Transactional
-    public ImageUpload issue(long memberId, ImageUploadCommand command) {
-        return issueUpload(memberId, command);
     }
 
     @Override
