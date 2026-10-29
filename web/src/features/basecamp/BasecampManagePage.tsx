@@ -29,6 +29,8 @@ import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { usePagedList } from '../../components/usePagedList';
+import type { PagedList } from '../../components/usePagedList';
 import { formatKstDateTime, todayKst } from '../../lib/datetime';
 import { trustLevelBadge } from '../member/memberLabels';
 import { withNext } from '../member/nextPath';
@@ -51,15 +53,6 @@ type DetailResult =
   | { basecampId: number; attempt: number; detail: BasecampDetail }
   | { basecampId: number; attempt: number; error: unknown };
 
-type ApplicationsState = {
-  basecampId: number;
-  attempt: number;
-  items: BasecampApplicationItem[];
-  page: number;
-  hasNext: boolean;
-  error: { cause: unknown } | null;
-};
-
 type DialogState =
   | { kind: 'confirm' }
   | { kind: 'cancel' }
@@ -72,8 +65,6 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const { pathname, search } = useLocation();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
-  const [applications, setApplications] = useState<ApplicationsState | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [kickReason, setKickReason] = useState<KickReason | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -108,37 +99,12 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const detail = current && 'detail' in current ? current.detail : null;
   const isLeader = detail?.myRelation === 'LEADER';
 
-  useEffect(() => {
-    if (!isLeader) return;
-    const controller = new AbortController();
-    fetchBasecampApplications(basecampId, 0, controller.signal).then(
-      (page) => {
-        if (controller.signal.aborted) return;
-        setApplications({
-          basecampId,
-          attempt,
-          items: page.content,
-          page: page.page,
-          hasNext: page.hasNext,
-          error: null,
-        });
-      },
-      (caught: unknown) => {
-        if (controller.signal.aborted) return;
-        setApplications((previous) => ({
-          basecampId,
-          attempt,
-          items: previous?.basecampId === basecampId ? previous.items : [],
-          page: previous?.page ?? 0,
-          hasNext: false,
-          error: { cause: caught },
-        }));
-      },
-    );
-    return () => controller.abort();
-  }, [isLeader, basecampId, attempt]);
+  const applications = usePagedList(isLeader, basecampId, fetchBasecampApplications);
 
-  const reload = () => setAttempt((value) => value + 1);
+  const reload = () => {
+    setAttempt((value) => value + 1);
+    applications.reload();
+  };
   const showSkeleton = useDelayedFlag(session.status === 'loading' || (authenticated && current === null));
 
   async function run(action: () => Promise<unknown>, successText: string, failTitle: string) {
@@ -155,29 +121,6 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
       setDialog(null);
       setKickReason(null);
       reload();
-    }
-  }
-
-  async function loadMore() {
-    if (!applications || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const next = await fetchBasecampApplications(basecampId, applications.page + 1);
-      setApplications((previous) =>
-        previous && previous.basecampId === basecampId
-          ? {
-              ...previous,
-              items: [...previous.items, ...next.content],
-              page: next.page,
-              hasNext: next.hasNext,
-              error: null,
-            }
-          : previous,
-      );
-    } catch (caught) {
-      setApplications((previous) => (previous ? { ...previous, error: { cause: caught } } : previous));
-    } finally {
-      setLoadingMore(false);
     }
   }
 
@@ -235,9 +178,9 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
         {active && <StatusActions detail={view} submitting={submitting} run={run} onDialog={setDialog} />}
         <ApplicationsCard
           detail={view}
-          state={applications && applications.basecampId === basecampId ? applications : null}
+          state={applications.current}
           submitting={submitting}
-          loadingMore={loadingMore}
+          loadingMore={applications.loadingMore}
           onApprove={(application) =>
             run(
               () => approveApplication(basecampId, application.applicationId),
@@ -246,7 +189,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
             )
           }
           onReject={(application) => setDialog({ kind: 'reject', application })}
-          onLoadMore={loadMore}
+          onLoadMore={() => void applications.loadMore()}
           onRetry={reload}
         />
         <MembersCard
@@ -492,7 +435,7 @@ function ApplicationsCard({
   onRetry,
 }: {
   detail: BasecampDetail;
-  state: ApplicationsState | null;
+  state: PagedList<BasecampApplicationItem, number>['current'];
   submitting: boolean;
   loadingMore: boolean;
   onApprove: (application: BasecampApplicationItem) => void;
@@ -509,7 +452,11 @@ function ApplicationsCard({
         <>
           {state.error && (
             <div className="flex flex-col gap-2">
-              <ErrorNotice title="신청 목록을 불러오지 못했어요" error={state.error.cause} />
+              <ErrorNotice
+                title="신청 목록을 불러오지 못했어요"
+                error={state.error}
+                traceId={state.traceId ?? undefined}
+              />
               <div>
                 <Button variant="secondary" onClick={onRetry}>
                   다시 불러오기
