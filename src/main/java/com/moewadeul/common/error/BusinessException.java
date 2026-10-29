@@ -18,7 +18,7 @@ public class BusinessException extends RuntimeException {
     }
 
     public static BusinessException notFound() {
-        return BusinessException.notFound();
+        return new BusinessException(CommonErrorCode.NOT_FOUND);
     }
 
     public Map<String, Object> extraFields() {
