@@ -2,17 +2,8 @@ package com.moewadeul.common.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.moewadeul.basecamp.application.BasecampMembershipEvents;
-import com.moewadeul.basecamp.application.lifecycle.BasecampTransitionEvents;
-import com.moewadeul.basecamp.application.membership.BasecampApplicationEvents;
-import com.moewadeul.basecamp.application.membership.BasecampDecisionEvents;
 import com.moewadeul.member.application.EmailVerificationEvents;
 import com.moewadeul.member.application.password.PasswordResetEvents;
-import com.moewadeul.program.application.ProgramApplicationEvents;
-import com.moewadeul.program.application.enrollment.ProgramSeatEvents;
-import com.moewadeul.trust.application.report.MemberReportEvents;
-import com.moewadeul.trust.application.sanction.SanctionEvents;
-import com.moewadeul.trust.application.withdrawal.WithdrawalEvents;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Stream;
@@ -52,66 +43,66 @@ class OutboxEventWireFormatTest {
         return Stream.of(
                 new Wire(
                         "BASECAMP_APPLIED",
-                        BasecampApplicationEvents.EVENT_TYPE,
+                        BasecampEvents.APPLIED,
                         "BASECAMP",
-                        BasecampApplicationEvents.AGGREGATE_TYPE,
-                        new BasecampApplicationEvents.Payload(1L, 2L, 3L),
+                        BasecampEvents.AGGREGATE_TYPE,
+                        new BasecampEvents.AppliedPayload(1L, 2L, 3L),
                         "{\"applicationId\":1,\"applicantId\":2,\"leaderId\":3}",
                         "{\"leaderId\": 3, \"applicantId\": 2, \"applicationId\": 1}"),
                 new Wire(
                         "BASECAMP_APPROVED",
-                        BasecampDecisionEvents.APPROVED_EVENT_TYPE,
+                        BasecampEvents.APPROVED,
                         "BASECAMP",
-                        BasecampDecisionEvents.AGGREGATE_TYPE,
-                        new BasecampDecisionEvents.Payload(1L, 2L, 30L),
+                        BasecampEvents.AGGREGATE_TYPE,
+                        new BasecampEvents.DecisionPayload(1L, 2L, 30L),
                         "{\"applicationId\":1,\"applicantId\":2,\"basecampId\":30}",
                         "{\"basecampId\": 30, \"applicantId\": 2, \"applicationId\": 1}"),
                 new Wire(
                         "BASECAMP_REJECTED",
-                        BasecampDecisionEvents.REJECTED_EVENT_TYPE,
+                        BasecampEvents.REJECTED,
                         "BASECAMP",
-                        BasecampDecisionEvents.AGGREGATE_TYPE,
-                        new BasecampDecisionEvents.Payload(1L, 2L, 30L),
+                        BasecampEvents.AGGREGATE_TYPE,
+                        new BasecampEvents.DecisionPayload(1L, 2L, 30L),
                         "{\"applicationId\":1,\"applicantId\":2,\"basecampId\":30}",
                         "{\"basecampId\": 30, \"applicantId\": 2, \"applicationId\": 1}"),
                 new Wire(
                         "BASECAMP_KICKED",
-                        BasecampMembershipEvents.KICKED_EVENT_TYPE,
+                        BasecampEvents.KICKED,
                         "BASECAMP",
-                        BasecampMembershipEvents.AGGREGATE_TYPE,
-                        new BasecampMembershipEvents.KickedPayload(30L, 4L, "NO_CONTACT"),
+                        BasecampEvents.AGGREGATE_TYPE,
+                        new BasecampEvents.KickedPayload(30L, 4L, "NO_CONTACT"),
                         "{\"basecampId\":30,\"memberId\":4,\"reason\":\"NO_CONTACT\"}",
                         "{\"reason\": \"NO_CONTACT\", \"memberId\": 4, \"basecampId\": 30}"),
                 new Wire(
                         "BASECAMP_MEMBER_CHANGED",
-                        BasecampMembershipEvents.MEMBER_CHANGED_EVENT_TYPE,
+                        BasecampEvents.MEMBER_CHANGED,
                         "BASECAMP",
-                        BasecampMembershipEvents.AGGREGATE_TYPE,
-                        new BasecampMembershipEvents.MemberChangedPayload(30L, List.of(4L, 5L)),
+                        BasecampEvents.AGGREGATE_TYPE,
+                        new BasecampEvents.MembersPayload(30L, List.of(4L, 5L)),
                         "{\"basecampId\":30,\"memberIds\":[4,5]}",
                         "{\"memberIds\": [4, 5], \"basecampId\": 30}"),
                 new Wire(
                         "BASECAMP_CONFIRMED",
-                        BasecampTransitionEvents.CONFIRMED_EVENT_TYPE,
+                        BasecampEvents.CONFIRMED,
                         "BASECAMP",
-                        BasecampTransitionEvents.AGGREGATE_TYPE,
-                        new BasecampTransitionEvents.Payload(30L, List.of(4L, 5L)),
+                        BasecampEvents.AGGREGATE_TYPE,
+                        new BasecampEvents.MembersPayload(30L, List.of(4L, 5L)),
                         "{\"basecampId\":30,\"memberIds\":[4,5]}",
                         "{\"memberIds\": [4, 5], \"basecampId\": 30}"),
                 new Wire(
                         "BASECAMP_CANCELED",
-                        BasecampTransitionEvents.CANCELED_EVENT_TYPE,
+                        BasecampEvents.CANCELED,
                         "BASECAMP",
-                        BasecampTransitionEvents.AGGREGATE_TYPE,
-                        new BasecampTransitionEvents.Payload(30L, List.of(4L, 5L)),
+                        BasecampEvents.AGGREGATE_TYPE,
+                        new BasecampEvents.MembersPayload(30L, List.of(4L, 5L)),
                         "{\"basecampId\":30,\"memberIds\":[4,5]}",
                         "{\"memberIds\": [4, 5], \"basecampId\": 30}"),
                 new Wire(
                         "BASECAMP_COMPLETED",
-                        BasecampTransitionEvents.COMPLETED_EVENT_TYPE,
+                        BasecampEvents.COMPLETED,
                         "BASECAMP",
-                        BasecampTransitionEvents.AGGREGATE_TYPE,
-                        new BasecampTransitionEvents.Payload(30L, List.of(4L, 5L)),
+                        BasecampEvents.AGGREGATE_TYPE,
+                        new BasecampEvents.MembersPayload(30L, List.of(4L, 5L)),
                         "{\"basecampId\":30,\"memberIds\":[4,5]}",
                         "{\"memberIds\": [4, 5], \"basecampId\": 30}"),
                 new Wire(
@@ -132,67 +123,67 @@ class OutboxEventWireFormatTest {
                         "{}"),
                 new Wire(
                         "PROGRAM_APPLICATION_CONFIRMED",
-                        ProgramApplicationEvents.CONFIRMED_EVENT_TYPE,
+                        ProgramEvents.APPLICATION_CONFIRMED,
                         "PROGRAM_APPLICATION",
-                        ProgramApplicationEvents.AGGREGATE_TYPE,
-                        new ProgramApplicationEvents.ConfirmedPayload(1L, 2L, 3L),
+                        ProgramEvents.APPLICATION_AGGREGATE_TYPE,
+                        new ProgramEvents.ApplicationPayload(1L, 2L, 3L),
                         "{\"applicationId\":1,\"memberId\":2,\"programId\":3}",
                         "{\"memberId\": 2, \"programId\": 3, \"applicationId\": 1}"),
                 new Wire(
                         "PROGRAM_APPLICATION_CANCELED",
-                        ProgramApplicationEvents.CANCELED_EVENT_TYPE,
+                        ProgramEvents.APPLICATION_CANCELED,
                         "PROGRAM_APPLICATION",
-                        ProgramApplicationEvents.AGGREGATE_TYPE,
-                        new ProgramApplicationEvents.CanceledPayload(1L, 2L, 3L, "USER", true),
+                        ProgramEvents.APPLICATION_AGGREGATE_TYPE,
+                        new ProgramEvents.CanceledPayload(1L, 2L, 3L, "USER", true),
                         "{\"applicationId\":1,\"memberId\":2,\"programId\":3,\"reason\":\"USER\",\"refunded\":true}",
                         "{\"reason\": \"USER\", \"memberId\": 2, \"refunded\": true, \"programId\": 3,"
                                 + " \"applicationId\": 1}"),
                 new Wire(
                         "PROGRAM_APPLICATION_EXPIRED",
-                        ProgramApplicationEvents.EXPIRED_EVENT_TYPE,
+                        ProgramEvents.APPLICATION_EXPIRED,
                         "PROGRAM_APPLICATION",
-                        ProgramApplicationEvents.AGGREGATE_TYPE,
-                        new ProgramApplicationEvents.ExpiredPayload(1L, 2L, 3L),
+                        ProgramEvents.APPLICATION_AGGREGATE_TYPE,
+                        new ProgramEvents.ApplicationPayload(1L, 2L, 3L),
                         "{\"applicationId\":1,\"memberId\":2,\"programId\":3}",
                         "{\"memberId\": 2, \"programId\": 3, \"applicationId\": 1}"),
                 new Wire(
                         "PROGRAM_SEAT_RELEASED",
-                        ProgramSeatEvents.SEAT_RELEASED_EVENT_TYPE,
+                        ProgramEvents.SEAT_RELEASED,
                         "PROGRAM",
-                        ProgramSeatEvents.AGGREGATE_TYPE,
-                        new ProgramSeatEvents.SeatReleasedPayload(3L, List.of(4L, 5L)),
+                        ProgramEvents.PROGRAM_AGGREGATE_TYPE,
+                        new ProgramEvents.SeatReleasedPayload(3L, List.of(4L, 5L)),
                         "{\"programId\":3,\"memberIds\":[4,5]}",
                         "{\"memberIds\": [4, 5], \"programId\": 3}"),
                 new Wire(
                         "MEMBER_REPORT_RESOLVED",
-                        MemberReportEvents.RESOLVED_EVENT_TYPE,
+                        TrustEvents.REPORT_RESOLVED,
                         "MEMBER_REPORT",
-                        MemberReportEvents.AGGREGATE_TYPE,
-                        new MemberReportEvents.ResolvedPayload(7L, 8L, "ACTIONED"),
+                        TrustEvents.REPORT_AGGREGATE_TYPE,
+                        new TrustEvents.ReportResolvedPayload(7L, 8L, "ACTIONED"),
                         "{\"reportId\":7,\"reporterId\":8,\"result\":\"ACTIONED\"}",
                         "{\"result\": \"ACTIONED\", \"reportId\": 7, \"reporterId\": 8}"),
                 new Wire(
                         "SANCTION_BASECAMP_CLEANUP",
-                        SanctionEvents.BASECAMP_CLEANUP_EVENT_TYPE,
+                        TrustEvents.SANCTION_BASECAMP_CLEANUP,
                         "MEMBER",
-                        SanctionEvents.AGGREGATE_TYPE,
-                        new SanctionEvents.Payload(4L, 9L),
+                        TrustEvents.MEMBER_AGGREGATE_TYPE,
+                        new TrustEvents.SanctionPayload(4L, 9L),
                         "{\"memberId\":4,\"sanctionId\":9}",
                         "{\"memberId\": 4, \"sanctionId\": 9}"),
                 new Wire(
                         "SANCTION_PROGRAM_CLEANUP",
-                        SanctionEvents.PROGRAM_CLEANUP_EVENT_TYPE,
+                        TrustEvents.SANCTION_PROGRAM_CLEANUP,
                         "MEMBER",
-                        SanctionEvents.AGGREGATE_TYPE,
-                        new SanctionEvents.Payload(4L, 9L),
+                        TrustEvents.MEMBER_AGGREGATE_TYPE,
+                        new TrustEvents.SanctionPayload(4L, 9L),
                         "{\"memberId\":4,\"sanctionId\":9}",
                         "{\"memberId\": 4, \"sanctionId\": 9}"),
                 new Wire(
                         "SANCTION_CONFIRMED",
-                        SanctionEvents.NOTIFICATION_EVENT_TYPE,
+                        TrustEvents.SANCTION_CONFIRMED,
                         "MEMBER",
-                        SanctionEvents.AGGREGATE_TYPE,
-                        new SanctionEvents.NotificationPayload(
+                        TrustEvents.MEMBER_AGGREGATE_TYPE,
+                        new TrustEvents.SanctionConfirmedPayload(
                                 4L, 9L, "SUSPEND_7D", Instant.parse("2026-11-05T15:00:00Z")),
                         "{\"memberId\":4,\"sanctionId\":9,\"sanctionType\":\"SUSPEND_7D\","
                                 + "\"endsAt\":\"2026-11-05T15:00:00Z\"}",
@@ -200,34 +191,34 @@ class OutboxEventWireFormatTest {
                                 + " \"sanctionType\": \"SUSPEND_7D\"}"),
                 new Wire(
                         "SANCTION_CONFIRMED",
-                        SanctionEvents.NOTIFICATION_EVENT_TYPE,
+                        TrustEvents.SANCTION_CONFIRMED,
                         "MEMBER",
-                        SanctionEvents.AGGREGATE_TYPE,
-                        new SanctionEvents.NotificationPayload(4L, 9L, "WARNING", null),
+                        TrustEvents.MEMBER_AGGREGATE_TYPE,
+                        new TrustEvents.SanctionConfirmedPayload(4L, 9L, "WARNING", null),
                         "{\"memberId\":4,\"sanctionId\":9,\"sanctionType\":\"WARNING\",\"endsAt\":null}",
                         "{\"endsAt\": null, \"memberId\": 4, \"sanctionId\": 9, \"sanctionType\": \"WARNING\"}"),
                 new Wire(
                         "WITHDRAWAL_BASECAMP_CLEANUP",
-                        WithdrawalEvents.BASECAMP_CLEANUP_EVENT_TYPE,
+                        TrustEvents.WITHDRAWAL_BASECAMP_CLEANUP,
                         "MEMBER",
-                        WithdrawalEvents.AGGREGATE_TYPE,
-                        new WithdrawalEvents.Payload(4L),
+                        TrustEvents.MEMBER_AGGREGATE_TYPE,
+                        new TrustEvents.WithdrawalPayload(4L),
                         "{\"memberId\":4}",
                         "{\"memberId\": 4}"),
                 new Wire(
                         "WITHDRAWAL_PROGRAM_CLEANUP",
-                        WithdrawalEvents.PROGRAM_CLEANUP_EVENT_TYPE,
+                        TrustEvents.WITHDRAWAL_PROGRAM_CLEANUP,
                         "MEMBER",
-                        WithdrawalEvents.AGGREGATE_TYPE,
-                        new WithdrawalEvents.Payload(4L),
+                        TrustEvents.MEMBER_AGGREGATE_TYPE,
+                        new TrustEvents.WithdrawalPayload(4L),
                         "{\"memberId\":4}",
                         "{\"memberId\": 4}"),
                 new Wire(
                         "WITHDRAWAL_MEMORY_CLEANUP",
-                        WithdrawalEvents.MEMORY_CLEANUP_EVENT_TYPE,
+                        TrustEvents.WITHDRAWAL_MEMORY_CLEANUP,
                         "MEMBER",
-                        WithdrawalEvents.AGGREGATE_TYPE,
-                        new WithdrawalEvents.Payload(4L),
+                        TrustEvents.MEMBER_AGGREGATE_TYPE,
+                        new TrustEvents.WithdrawalPayload(4L),
                         "{\"memberId\":4}",
                         "{\"memberId\": 4}"));
     }

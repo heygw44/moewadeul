@@ -1,10 +1,10 @@
 package com.moewadeul.basecamp.application.lifecycle;
 
-import com.moewadeul.basecamp.application.BasecampMembershipEvents;
 import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.MemberRemoval;
 import com.moewadeul.basecamp.domain.RemovalCause;
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import java.time.Clock;
 import java.util.List;
@@ -43,17 +43,17 @@ class BasecampSanctionCleanupApplier {
                 .filter(memberId -> !basecamp.isLeader(memberId))
                 .toList();
         outboxEventRecorder.record(
-                BasecampTransitionEvents.CANCELED_EVENT_TYPE,
-                BasecampTransitionEvents.AGGREGATE_TYPE,
+                BasecampEvents.CANCELED,
+                BasecampEvents.AGGREGATE_TYPE,
                 basecamp.getId(),
-                new BasecampTransitionEvents.Payload(basecamp.getId(), memberIds));
+                new BasecampEvents.MembersPayload(basecamp.getId(), memberIds));
     }
 
     private void recordMemberChanged(Basecamp basecamp) {
         outboxEventRecorder.record(
-                BasecampMembershipEvents.MEMBER_CHANGED_EVENT_TYPE,
-                BasecampMembershipEvents.AGGREGATE_TYPE,
+                BasecampEvents.MEMBER_CHANGED,
+                BasecampEvents.AGGREGATE_TYPE,
                 basecamp.getId(),
-                new BasecampMembershipEvents.MemberChangedPayload(basecamp.getId(), basecamp.activeMemberIds()));
+                new BasecampEvents.MembersPayload(basecamp.getId(), basecamp.activeMemberIds()));
     }
 }

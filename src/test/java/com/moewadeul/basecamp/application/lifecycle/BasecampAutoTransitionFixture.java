@@ -2,6 +2,7 @@ package com.moewadeul.basecamp.application.lifecycle;
 
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.time.LocalDate;
 import java.util.List;
@@ -150,8 +151,6 @@ final class BasecampAutoTransitionFixture {
                 String.class,
                 eventType,
                 basecampId);
-        return jsonMapper
-                .readValue(json, BasecampTransitionEvents.Payload.class)
-                .memberIds();
+        return jsonMapper.readValue(json, BasecampEvents.MembersPayload.class).memberIds();
     }
 }

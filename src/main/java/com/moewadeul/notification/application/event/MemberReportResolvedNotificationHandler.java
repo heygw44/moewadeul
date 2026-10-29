@@ -1,24 +1,20 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxMessage;
-import com.moewadeul.notification.application.NotificationEventTypes;
 import java.util.List;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
-class MemberReportResolvedNotificationHandler extends NotificationEventHandler<NotificationPayloads.ReportResolved> {
+class MemberReportResolvedNotificationHandler extends NotificationEventHandler<TrustEvents.ReportResolvedPayload> {
 
     MemberReportResolvedNotificationHandler(JsonMapper jsonMapper, NotificationWriter notificationWriter) {
-        super(
-                NotificationEventTypes.MEMBER_REPORT_RESOLVED,
-                NotificationPayloads.ReportResolved.class,
-                jsonMapper,
-                notificationWriter);
+        super(TrustEvents.REPORT_RESOLVED, TrustEvents.ReportResolvedPayload.class, jsonMapper, notificationWriter);
     }
 
     @Override
-    List<NotificationDraft> drafts(OutboxMessage message, NotificationPayloads.ReportResolved payload) {
+    List<NotificationDraft> drafts(OutboxMessage message, TrustEvents.ReportResolvedPayload payload) {
         return NotificationTemplates.reportResolved(payload);
     }
 }

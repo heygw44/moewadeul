@@ -6,6 +6,7 @@ import static org.mockito.Mockito.reset;
 
 import com.moewadeul.basecamp.application.lifecycle.BasecampSanctionCleanupService;
 import com.moewadeul.basecamp.domain.RemovalCause;
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -77,7 +78,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
                 .isEqualTo("SUSPENDED");
         Map<String, Object> event = jdbc.queryForMap(
                 "SELECT status, attempt_count FROM outbox_event WHERE event_type = ?",
-                SanctionEvents.BASECAMP_CLEANUP_EVENT_TYPE);
+                TrustEvents.SANCTION_BASECAMP_CLEANUP);
         assertThat(event.get("status")).isEqualTo("PENDING");
         assertThat(event.get("attempt_count")).isEqualTo(1);
 
@@ -88,7 +89,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
         assertThat(jdbc.queryForObject(
                         "SELECT status FROM outbox_event WHERE event_type = ?",
                         String.class,
-                        SanctionEvents.BASECAMP_CLEANUP_EVENT_TYPE))
+                        TrustEvents.SANCTION_BASECAMP_CLEANUP))
                 .isEqualTo("PUBLISHED");
     }
 
@@ -113,7 +114,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
                 .isEqualTo("SUSPENDED");
         Map<String, Object> event = jdbc.queryForMap(
                 "SELECT status, attempt_count FROM outbox_event WHERE event_type = ?",
-                SanctionEvents.PROGRAM_CLEANUP_EVENT_TYPE);
+                TrustEvents.SANCTION_PROGRAM_CLEANUP);
         assertThat(event.get("status")).isEqualTo("PENDING");
         assertThat(event.get("attempt_count")).isEqualTo(1);
 
@@ -124,7 +125,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
         assertThat(jdbc.queryForObject(
                         "SELECT status FROM outbox_event WHERE event_type = ?",
                         String.class,
-                        SanctionEvents.PROGRAM_CLEANUP_EVENT_TYPE))
+                        TrustEvents.SANCTION_PROGRAM_CLEANUP))
                 .isEqualTo("PUBLISHED");
     }
 }

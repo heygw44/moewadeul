@@ -1,24 +1,20 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxMessage;
-import com.moewadeul.notification.application.NotificationEventTypes;
 import java.util.List;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
-class BasecampCompletedNotificationHandler extends NotificationEventHandler<NotificationPayloads.BasecampMembers> {
+class BasecampCompletedNotificationHandler extends NotificationEventHandler<BasecampEvents.MembersPayload> {
 
     BasecampCompletedNotificationHandler(JsonMapper jsonMapper, NotificationWriter notificationWriter) {
-        super(
-                NotificationEventTypes.BASECAMP_COMPLETED,
-                NotificationPayloads.BasecampMembers.class,
-                jsonMapper,
-                notificationWriter);
+        super(BasecampEvents.COMPLETED, BasecampEvents.MembersPayload.class, jsonMapper, notificationWriter);
     }
 
     @Override
-    List<NotificationDraft> drafts(OutboxMessage message, NotificationPayloads.BasecampMembers payload) {
+    List<NotificationDraft> drafts(OutboxMessage message, BasecampEvents.MembersPayload payload) {
         return NotificationTemplates.completed(payload);
     }
 }

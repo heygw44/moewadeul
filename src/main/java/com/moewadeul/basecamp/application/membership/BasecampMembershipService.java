@@ -1,12 +1,12 @@
 package com.moewadeul.basecamp.application.membership;
 
-import com.moewadeul.basecamp.application.BasecampMembershipEvents;
 import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.basecamp.domain.KickReason;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.time.Clock;
@@ -40,10 +40,10 @@ public class BasecampMembershipService {
         }
         basecamp.kick(targetMemberId, reason, clock.instant());
         outboxEventRecorder.record(
-                BasecampMembershipEvents.KICKED_EVENT_TYPE,
-                BasecampMembershipEvents.AGGREGATE_TYPE,
+                BasecampEvents.KICKED,
+                BasecampEvents.AGGREGATE_TYPE,
                 basecamp.getId(),
-                new BasecampMembershipEvents.KickedPayload(basecamp.getId(), targetMemberId, reason.name()));
+                new BasecampEvents.KickedPayload(basecamp.getId(), targetMemberId, reason.name()));
     }
 
     // 베이스캠프 행의 잠금이 이 트랜잭션의 첫 조회여야 한다. MySQL의 반복 가능한 읽기에서는 잠그지 않는 조회가 먼저 일어나면

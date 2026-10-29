@@ -5,6 +5,7 @@ import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.trust.application.TrustAuditDetails;
 import com.moewadeul.trust.application.sanction.SanctionConfirmApplier;
@@ -52,10 +53,10 @@ class MemberReportActionApplier {
         ReportStatus before = report.getStatus();
         report.action(command.adminId(), command.note(), now);
         outboxEventRecorder.record(
-                MemberReportEvents.RESOLVED_EVENT_TYPE,
-                MemberReportEvents.AGGREGATE_TYPE,
+                TrustEvents.REPORT_RESOLVED,
+                TrustEvents.REPORT_AGGREGATE_TYPE,
                 report.getId(),
-                new MemberReportEvents.ResolvedPayload(
+                new TrustEvents.ReportResolvedPayload(
                         report.getId(), report.getReporterId(), ReportStatus.ACTIONED.name()));
         Long sanctionId = confirmed == null ? null : confirmed.sanctionId();
         recordAudit(report, before, command, sanctionId);

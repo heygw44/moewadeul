@@ -8,6 +8,7 @@ import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
@@ -43,10 +44,10 @@ public class BasecampApplyService {
         // saveAndFlush를 쓰면 JPA가 병합하면서 새 신청을 복사본으로 저장해서, 돌려받은 객체에 ID가 없다.
         basecampRepository.flush();
         outboxEventRecorder.record(
-                BasecampApplicationEvents.EVENT_TYPE,
-                BasecampApplicationEvents.AGGREGATE_TYPE,
+                BasecampEvents.APPLIED,
+                BasecampEvents.AGGREGATE_TYPE,
                 basecamp.getId(),
-                new BasecampApplicationEvents.Payload(application.getId(), command.memberId(), basecamp.getLeaderId()));
+                new BasecampEvents.AppliedPayload(application.getId(), command.memberId(), basecamp.getLeaderId()));
         return new BasecampApplyResult(application.getId(), application.getStatus());
     }
 

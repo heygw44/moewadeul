@@ -3,6 +3,7 @@ package com.moewadeul.basecamp.application.lifecycle;
 import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.infra.lifecycle.BasecampAutoTransitionMapper;
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -35,8 +36,7 @@ class BasecampAutoTransitionApplier {
             return false;
         }
         autoTransitionMapper.expirePendingApplications(basecampId, now);
-        String eventType =
-                enough ? BasecampTransitionEvents.CONFIRMED_EVENT_TYPE : BasecampTransitionEvents.CANCELED_EVENT_TYPE;
+        String eventType = enough ? BasecampEvents.CONFIRMED : BasecampEvents.CANCELED;
         recordTransition(eventType, basecampId);
         return true;
     }
@@ -47,7 +47,7 @@ class BasecampAutoTransitionApplier {
             return false;
         }
         autoTransitionMapper.expirePendingApplications(basecampId, now);
-        recordTransition(BasecampTransitionEvents.COMPLETED_EVENT_TYPE, basecampId);
+        recordTransition(BasecampEvents.COMPLETED, basecampId);
         return true;
     }
 
@@ -59,8 +59,8 @@ class BasecampAutoTransitionApplier {
         List<Long> memberIds = autoTransitionMapper.selectActiveMemberIds(basecampId);
         outboxEventRecorder.record(
                 eventType,
-                BasecampTransitionEvents.AGGREGATE_TYPE,
+                BasecampEvents.AGGREGATE_TYPE,
                 basecampId,
-                new BasecampTransitionEvents.Payload(basecampId, memberIds));
+                new BasecampEvents.MembersPayload(basecampId, memberIds));
     }
 }

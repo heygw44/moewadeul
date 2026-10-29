@@ -1,9 +1,9 @@
 package com.moewadeul.basecamp.application.lifecycle;
 
 import com.moewadeul.basecamp.domain.RemovalCause;
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
-import com.moewadeul.trust.application.sanction.SanctionEvents;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,7 +17,7 @@ class SanctionBasecampCleanupHandler implements OutboxEventHandler {
 
     @Override
     public String eventType() {
-        return SanctionEvents.BASECAMP_CLEANUP_EVENT_TYPE;
+        return TrustEvents.SANCTION_BASECAMP_CLEANUP;
     }
 
     @Override

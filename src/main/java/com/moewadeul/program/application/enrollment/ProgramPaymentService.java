@@ -3,8 +3,8 @@ package com.moewadeul.program.application.enrollment;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
+import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
-import com.moewadeul.program.application.ProgramApplicationEvents;
 import com.moewadeul.program.domain.Payment;
 import com.moewadeul.program.domain.PaymentRepository;
 import com.moewadeul.program.domain.Program;
@@ -44,10 +44,10 @@ public class ProgramPaymentService {
         Program program = findProgram(application.getProgramId());
         savePayment(Payment.paid(applicationId, program.getFee(), now));
         outboxEventRecorder.record(
-                ProgramApplicationEvents.CONFIRMED_EVENT_TYPE,
-                ProgramApplicationEvents.AGGREGATE_TYPE,
+                ProgramEvents.APPLICATION_CONFIRMED,
+                ProgramEvents.APPLICATION_AGGREGATE_TYPE,
                 applicationId,
-                new ProgramApplicationEvents.ConfirmedPayload(applicationId, memberId, application.getProgramId()));
+                new ProgramEvents.ApplicationPayload(applicationId, memberId, application.getProgramId()));
         log.info("program payment confirmed applicationId={} memberId={}", applicationId, memberId);
         return new ProgramPayResult(applicationId, ProgramApplicationStatus.CONFIRMED, now);
     }
@@ -62,10 +62,10 @@ public class ProgramPaymentService {
             refundPayment(applicationId, now);
         }
         outboxEventRecorder.record(
-                ProgramApplicationEvents.CANCELED_EVENT_TYPE,
-                ProgramApplicationEvents.AGGREGATE_TYPE,
+                ProgramEvents.APPLICATION_CANCELED,
+                ProgramEvents.APPLICATION_AGGREGATE_TYPE,
                 applicationId,
-                new ProgramApplicationEvents.CanceledPayload(
+                new ProgramEvents.CanceledPayload(
                         applicationId,
                         memberId,
                         application.getProgramId(),
