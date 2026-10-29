@@ -7,8 +7,7 @@
             p.capacity - (SELECT COUNT(*)
                           FROM program_application a
                           WHERE a.program_id = p.id
-                            AND a.status IN ('PENDING_PAYMENT', 'CONFIRMED')
-                            AND (a.status = 'CONFIRMED' OR a.payment_due_at &gt; #{now})),
+                            AND <include refid="com.moewadeul.program.infra.ProgramSeatSql.seatHolder"/>),
             0)
     </sql>
 

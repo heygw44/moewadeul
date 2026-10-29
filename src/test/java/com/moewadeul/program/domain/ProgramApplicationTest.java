@@ -11,6 +11,8 @@ import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -174,6 +176,19 @@ class ProgramApplicationTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
+    }
+
+    @ParameterizedTest
+    @EnumSource(ProgramApplicationStatus.class)
+    @DisplayName("[PG-03] 좌석은 확정 신청이 항상 차지하고, 결제 대기 신청은 결제 기한 전에만 차지하며, 취소·만료 신청은 차지하지 않는다")
+    void holdsSeatByStatusAndPaymentDue(ProgramApplicationStatus status) {
+        ProgramApplication application = application(status);
+        boolean pending = status == ProgramApplicationStatus.PENDING_PAYMENT;
+        boolean confirmed = status == ProgramApplicationStatus.CONFIRMED;
+
+        assertThat(application.isSeatHolderAt(DUE.minusSeconds(1))).isEqualTo(pending || confirmed);
+        assertThat(application.isSeatHolderAt(DUE)).isEqualTo(confirmed);
+        assertThat(application.isSeatHolderAt(DUE.plusSeconds(1))).isEqualTo(confirmed);
     }
 
     private static ProgramApplication application(ProgramApplicationStatus status) {

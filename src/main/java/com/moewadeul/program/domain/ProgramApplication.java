@@ -56,6 +56,11 @@ public class ProgramApplication {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    public boolean isSeatHolderAt(Instant now) {
+        return status == ProgramApplicationStatus.CONFIRMED
+                || (status == ProgramApplicationStatus.PENDING_PAYMENT && now.isBefore(paymentDueAt));
+    }
+
     public void confirmPayment(Instant now) {
         boolean dueReached = status == ProgramApplicationStatus.PENDING_PAYMENT && !now.isBefore(paymentDueAt);
         if (status == ProgramApplicationStatus.EXPIRED || dueReached) {

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.program.infra.ProgramSeatSql">
+
+    <!-- ProgramApplication.isSeatHolderAt과 같은 규칙이다. IN은 (program_id, status) 인덱스를 타게 하려고 남긴다. -->
+    <sql id="seatHolder">
+        (a.status IN ('PENDING_PAYMENT', 'CONFIRMED')
+            AND (a.status = 'CONFIRMED' OR a.payment_due_at &gt; #{now}))
+    </sql>
+
+</mapper>
