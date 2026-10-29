@@ -18,9 +18,6 @@ import type { SheetSnap } from '../../components/sheetSnap';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
-import { createMapView } from '../../map/KakaoMap';
-import { MapLoadError } from '../../map/kakaoLoader';
-import type { MapLoadErrorReason } from '../../map/kakaoLoader';
 import { searchRegions } from '../../map/regionSearch';
 import type { RegionCandidate } from '../../map/regionSearch';
 import type { RegionLabel } from '../../map/regionLabel';
@@ -51,7 +48,9 @@ import { NO_SPOT_FILTERS, filtersFromInterpretation, spotFilterChips } from '../
 import type { SpotFilters } from '../spot/spotFilters';
 import { SpotListRow } from '../spot/SpotListRow';
 import { SpotPreviewBoard } from '../spot/SpotPreviewBoard';
+import { useIsDesktop, DESKTOP_QUERY } from './useIsDesktop';
 import { useMapMoving } from './useMapMoving';
+import { useMapView } from './useMapView';
 import { useRegionLabelInView } from './useRegionLabelInView';
 import { useSpotsInView } from '../spot/useSpotsInView';
 import type { SpotsInView } from '../spot/useSpotsInView';
@@ -114,19 +113,13 @@ function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData | null {
   };
 }
 
-type MapFailure = { reason: MapLoadErrorReason; message: string };
-
 type ContextMenu = { position: LatLng; host: HTMLElement };
-
-const INITIAL_VIEW = { center: { lat: 36.35, lng: 127.85 }, level: 12 };
 
 const SPOT_FOCUS_LEVEL = 7;
 
 const DRAFT_FOCUS_LEVEL = 5;
 
 const CLUSTER_ZOOM_STEP = 2;
-
-const DESKTOP_QUERY = '(min-width: 64rem)';
 
 const MAP_BUTTON_CLASS =
   'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-[0.875rem] bg-surface px-3.5 text-[0.9375rem] font-semibold text-ink shadow-raise hover:bg-fill';
@@ -139,17 +132,6 @@ const TYPE_SEGMENTS: ReadonlyArray<{ value: SpotType | null; label: string }> = 
   { value: 'FOREST', label: '휴양림' },
   { value: 'BAKJI', label: '박지' },
 ];
-
-function useIsDesktop(): boolean {
-  const [desktop, setDesktop] = useState(() => window.matchMedia(DESKTOP_QUERY).matches);
-  useEffect(() => {
-    const query = window.matchMedia(DESKTOP_QUERY);
-    const onChange = () => setDesktop(query.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
-  return desktop;
-}
 
 type MapPageProps = {
   spotId?: number;
@@ -177,10 +159,7 @@ export function MapPage({
   const opening = mode === 'basecampOpen';
   const contentOpen = spotId !== undefined || placing || basecampId !== undefined || opening;
   const session = useSession();
-  const hostRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<MapView | null>(null);
-  const [mapFailure, setMapFailure] = useState<MapFailure | null>(null);
-  const [mapAttempt, setMapAttempt] = useState(0);
+  const { hostRef, map, failure: mapFailure, retry: retryMap } = useMapView();
   const [terrainOn, setTerrainOn] = useState(false);
   const [snap, setSnap] = useState<SheetSnap>(contentOpen ? 'half' : 'peek');
   const [snapOpen, setSnapOpen] = useState(contentOpen);
@@ -273,54 +252,8 @@ export function MapPage({
   }
 
   useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    const element = document.createElement('div');
-    element.className = 'absolute inset-0';
-    host.appendChild(element);
-
-    let cancelled = false;
-    let created: MapView | null = null;
-    createMapView(element, readMapScreen().view ?? INITIAL_VIEW).then(
-      (view) => {
-        if (cancelled) {
-          view.destroy();
-          return;
-        }
-        created = view;
-        setMap(view);
-      },
-      (error: unknown) => {
-        if (cancelled) return;
-        const failure = error instanceof MapLoadError ? error : new MapLoadError('LOAD_FAILED');
-        setMapFailure({ reason: failure.reason, message: failure.message });
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      created?.destroy();
-      element.remove();
-      setMap(null);
-    };
-  }, [mapAttempt]);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!map || !host) return;
-    const observer = new ResizeObserver(() => map.relayout());
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, [map]);
-
-  useEffect(() => {
     rememberMapScreen({ spotFilters, basecampFilters: filters, radiusSearch, aiSummary });
   }, [spotFilters, filters, radiusSearch, aiSummary]);
-
-  useEffect(() => {
-    if (!map) return;
-    return map.onIdle(() => rememberMapScreen({ view: { center: map.getCenter(), level: map.getLevel() } }));
-  }, [map]);
 
   const moveToSpot = useEffectEvent((position: LatLng) => {
     const host = hostRef.current;
@@ -550,11 +483,6 @@ export function MapPage({
         {aiSummary && <AiInterpretSummary summary={aiSummary} className={inPanel ? 'w-full' : 'w-fit max-w-full'} />}
       </>
     );
-  }
-
-  function retryMap() {
-    setMapFailure(null);
-    setMapAttempt((value) => value + 1);
   }
 
   const hideMapOverlays = snap === 'full' || contextMenu !== null;
