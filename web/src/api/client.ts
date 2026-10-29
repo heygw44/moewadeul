@@ -72,22 +72,23 @@ function recordServerClock(response: Response): void {
   }
 }
 
-let csrfCookieRequest: Promise<void> | null = null;
+let csrfCookieRequest: Promise<boolean> | null = null;
 
-async function ensureCsrfCookie(): Promise<void> {
+// 서버에 닿았으면 true. 응답 코드는 보지 않는다. 401이어도 XSRF-TOKEN 쿠키는 함께 온다.
+function ensureCsrfCookie(): Promise<boolean> {
   csrfCookieRequest ??= fetch('/api/me', {
     method: 'GET',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
   })
     .then(
-      () => undefined,
-      () => undefined,
+      () => true,
+      () => false,
     )
     .finally(() => {
       csrfCookieRequest = null;
     });
-  await csrfCookieRequest;
+  return csrfCookieRequest;
 }
 
 function buildUrl(path: string, query: RequestOptions['query']): string {
@@ -186,6 +187,8 @@ function parseJson(text: string): unknown {
 }
 
 const GET_TIMEOUT_MS = 15_000;
+// 변경 요청은 서버가 처리를 마쳤을 수 있어 더 기다린다. 끊긴 요청을 다시 보낼 때는 멱등 키를 그대로 쓴다(idempotency.ts).
+const MUTATION_TIMEOUT_MS = 30_000;
 
 function startDeadline(callerSignal: AbortSignal | undefined, timeoutMs: number) {
   const controller = new AbortController();
@@ -223,15 +226,17 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   if (method !== 'GET') {
     let csrfToken = readCookie(CSRF_COOKIE);
     if (csrfToken === undefined) {
-      await ensureCsrfCookie();
+      const reached = await ensureCsrfCookie();
       csrfToken = readCookie(CSRF_COOKIE);
+      // 토큰 없이 보내면 서버가 403으로 막아 "권한이 없어요"가 뜬다. 실제 원인인 연결 실패로 알린다.
+      if (csrfToken === undefined && !reached) throw new ApiError(0, 'NETWORK_ERROR', null);
     }
     if (csrfToken !== undefined) {
       headers.set('X-XSRF-TOKEN', csrfToken);
     }
   }
 
-  const deadline = method === 'GET' ? startDeadline(options.signal, GET_TIMEOUT_MS) : null;
+  const deadline = startDeadline(options.signal, method === 'GET' ? GET_TIMEOUT_MS : MUTATION_TIMEOUT_MS);
   let response: Response;
   let text: string;
   try {
@@ -240,12 +245,12 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       headers,
       credentials: 'same-origin',
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: deadline?.signal ?? options.signal,
+      signal: deadline.signal,
     });
     recordServerClock(response);
     text = response.status === 204 ? '' : await response.text();
   } catch (error) {
-    if (deadline?.expired()) {
+    if (deadline.expired()) {
       throw new ApiError(0, 'REQUEST_TIMEOUT', null);
     }
     if (error instanceof DOMException && error.name === 'AbortError') {
@@ -253,7 +258,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     }
     throw new ApiError(0, 'NETWORK_ERROR', null);
   } finally {
-    deadline?.clear();
+    deadline.clear();
   }
 
   if (response.ok) {

@@ -4,12 +4,16 @@
 // 읽은 경로가 '//'로 시작하면(예: '/..//evil.com') 다시 넘겼을 때 다른 사이트 주소가 되므로 함께 버린다.
 export function safeNextPath(search: string): string | null {
   const next = new URLSearchParams(search).get('next');
-  if (!next || !next.startsWith('/') || next.startsWith('//') || hasUnsafeChar(next)) {
+  return next ? safeInternalPath(next) : null;
+}
+
+export function safeInternalPath(path: string): string | null {
+  if (!path.startsWith('/') || path.startsWith('//') || hasUnsafeChar(path)) {
     return null;
   }
   let url: URL;
   try {
-    url = new URL(next, window.location.origin);
+    url = new URL(path, window.location.origin);
   } catch {
     return null;
   }

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, apiFetch } from './client';
 
 const TIMEOUT_MS = 15_000;
+const MUTATION_TIMEOUT_MS = 30_000;
 
 function abortError() {
   return new DOMException('aborted', 'AbortError');
@@ -105,21 +106,70 @@ describe('apiFetch 제한 시간', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it('POST는 15초가 지나도 끊지 않는다. 서버가 처리를 마쳤을 수 있기 때문이다', async () => {
+  it('POST는 15초가 지나도 기다려 늦게 온 응답을 돌려준다', async () => {
     document.cookie = 'XSRF-TOKEN=token';
-    let seenSignal: AbortSignal | null | undefined;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (_url: string, init?: RequestInit) => {
-        seenSignal = init?.signal;
-        await new Promise((resolve) => setTimeout(resolve, 60_000));
+      vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20_000));
         return new Response(JSON.stringify({ id: 7 }), { status: 201 });
       }),
     );
     const result = apiFetch('/api/memories', { method: 'POST', body: { title: 'x' } });
 
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(20_000);
     await expect(result).resolves.toEqual({ id: 7 });
-    expect(seenSignal).toBeUndefined();
+  });
+
+  it('POST는 30초 안에 응답이 없으면 REQUEST_TIMEOUT으로 끝난다', async () => {
+    document.cookie = 'XSRF-TOKEN=token';
+    vi.stubGlobal('fetch', fetchThatNeverAnswers());
+    let finished = false;
+    const result = settle(apiFetch('/api/memories', { method: 'POST', body: { title: 'x' } })).then((r) => {
+      finished = true;
+      return r;
+    });
+
+    await vi.advanceTimersByTimeAsync(MUTATION_TIMEOUT_MS - 1);
+    expect(finished).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(finished).toBe(true);
+    expect((await result).error).toMatchObject({ status: 0, code: 'REQUEST_TIMEOUT' });
+  });
+});
+
+describe('apiFetch CSRF 쿠키', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  });
+
+  it('CSRF 쿠키가 없고 받으러 간 요청도 실패하면 변경 요청을 보내지 않고 NETWORK_ERROR로 끝난다', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/api/me') throw new TypeError('Failed to fetch');
+      return new Response(JSON.stringify({ code: 'ACCESS_DENIED', message: '권한' }), { status: 403 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { error } = await settle(apiFetch('/api/memories', { method: 'POST', body: { title: 'x' } }));
+
+    expect(error).toMatchObject({ status: 0, code: 'NETWORK_ERROR' });
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/me']);
+  });
+
+  it('CSRF 쿠키를 받아 오면 그 토큰을 실어 변경 요청을 보낸다', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/api/me') {
+        document.cookie = 'XSRF-TOKEN=fresh';
+        return new Response(null, { status: 401 });
+      }
+      return new Response(JSON.stringify({ id: 7 }), { status: 201 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(apiFetch('/api/memories', { method: 'POST', body: { title: 'x' } })).resolves.toEqual({ id: 7 });
+    const [, init] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
+    expect(new Headers(init.headers).get('X-XSRF-TOKEN')).toBe('fresh');
   });
 });

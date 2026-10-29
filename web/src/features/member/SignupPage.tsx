@@ -13,6 +13,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { PasswordField } from '../../components/PasswordField';
 import { TextField } from '../../components/TextField';
 import { AuthLayout } from './AuthLayout';
+import { enterAfterAuth } from './enterAfterAuth';
 import { safeNextPath, withNext } from './nextPath';
 import {
   AGE_CONFIRM_REQUIRED,
@@ -94,11 +95,11 @@ export function SignupPage() {
 
     try {
       await login(credentials);
-      await session.refresh();
-      navigate(withNext('/verify-email', next), { replace: true });
     } catch {
       navigate(withNext('/login', next), { replace: true });
+      return;
     }
+    await enterAfterAuth(session, () => withNext('/verify-email', next));
   }
 
   function handlePasswordConfirmBlur() {

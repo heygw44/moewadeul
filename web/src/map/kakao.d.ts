@@ -57,8 +57,6 @@ declare namespace kakao.maps {
     constructor(container: HTMLElement, options: MapOptions);
     setCenter(latlng: LatLng): void;
     panTo(latlng: LatLng): void;
-    setDraggable(draggable: boolean): void;
-    setZoomable(zoomable: boolean): void;
     getCenter(): LatLng;
     setLevel(level: number, options?: SetLevelOptions): void;
     setBounds(
@@ -125,6 +123,7 @@ declare namespace kakao.maps {
     function addListener(target: Map, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
     function removeListener(target: Map, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
     function addListener(target: Circle, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
+    function removeListener(target: Circle, type: 'click' | 'rightclick', handler: (event: MouseEvent) => void): void;
     function addListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
     function removeListener(target: Map, type: 'dragstart' | 'zoom_start', handler: () => void): void;
   }
