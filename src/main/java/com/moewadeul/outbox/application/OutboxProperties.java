@@ -20,6 +20,7 @@ public record OutboxProperties(
     public OutboxProperties {
         requirePositive(batchSize, "batchSize");
         requirePositive(pollDelay, "pollDelay");
+        RetryPolicy.requireValid("moewadeul.outbox", lease, retryDelay, retryMaxDelay, maxAttempts);
     }
 
     public RetryPolicy retryPolicy() {

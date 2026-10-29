@@ -23,6 +23,7 @@ public record NotificationMailProperties(
     public NotificationMailProperties {
         requirePositive(batchSize, "batchSize");
         requirePositive(pollDelay, "pollDelay");
+        RetryPolicy.requireValid("moewadeul.notification.mail", lease, retryDelay, retryMaxDelay, maxAttempts);
     }
 
     public RetryPolicy retryPolicy() {

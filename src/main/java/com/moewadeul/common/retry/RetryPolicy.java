@@ -6,15 +6,16 @@ import java.time.temporal.ChronoUnit;
 
 public record RetryPolicy(Duration lease, Duration retryDelay, Duration retryMaxDelay, int maxAttempts) {
 
-    public RetryPolicy {
-        requirePositive(lease, "lease");
-        requirePositive(retryDelay, "retryDelay");
-        requirePositive(retryMaxDelay, "retryMaxDelay");
+    public static void requireValid(
+            String prefix, Duration lease, Duration retryDelay, Duration retryMaxDelay, int maxAttempts) {
+        requirePositive(prefix, lease, "lease");
+        requirePositive(prefix, retryDelay, "retryDelay");
+        requirePositive(prefix, retryMaxDelay, "retryMaxDelay");
         if (maxAttempts <= 0) {
-            throw new IllegalArgumentException("retryPolicy.maxAttempts must be positive");
+            throw new IllegalArgumentException(prefix + ".maxAttempts must be positive");
         }
         if (retryMaxDelay.compareTo(retryDelay) < 0) {
-            throw new IllegalArgumentException("retryPolicy.retryMaxDelay must not be shorter than retryDelay");
+            throw new IllegalArgumentException(prefix + ".retryMaxDelay must not be shorter than retryDelay");
         }
     }
 
@@ -31,9 +32,9 @@ public record RetryPolicy(Duration lease, Duration retryDelay, Duration retryMax
         return retryMaxDelay.toMillis();
     }
 
-    private static void requirePositive(Duration value, String name) {
+    private static void requirePositive(String prefix, Duration value, String name) {
         if (value.isZero() || value.isNegative()) {
-            throw new IllegalArgumentException("retryPolicy." + name + " must be positive");
+            throw new IllegalArgumentException(prefix + "." + name + " must be positive");
         }
     }
 }
