@@ -2,6 +2,7 @@ package com.moewadeul.basecamp.application.lifecycle;
 
 import com.moewadeul.basecamp.infra.lifecycle.BasecampAutoTransitionMapper;
 import com.moewadeul.common.time.KoreaTime;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -23,6 +24,7 @@ public class BasecampAutoTransitionService {
     private final Clock clock;
 
     public Result run() {
+        OutsideTransaction.require("베이스캠프마다 따로 커밋해야 한 건의 실패가 나머지 전환을 되돌리지 않는다.");
         Instant now = clock.instant();
         LocalDate today = KoreaTime.dateOf(now);
         Outcome completed = processAll(
