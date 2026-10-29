@@ -54,7 +54,7 @@ public class MyInfoService {
     }
 
     private Member loadMember(long memberId) {
-        return memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return memberRepository.findById(memberId).orElseThrow(BusinessException::notFound);
     }
 
     private void changeNickname(Member member, String nickname, Instant now) {

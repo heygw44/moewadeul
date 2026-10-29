@@ -1,7 +1,6 @@
 package com.moewadeul.trust.application.companion;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.CompanionReviewPolicy;
@@ -33,7 +32,7 @@ public class CompanionReviewCommandService {
         trustSummaryService.requireLevel(reviewerId, CompanionReviewPolicy.MIN_TRUST_LEVEL);
         CompanionReviewWriteContextRow context = companionReviewMapper
                 .selectWriteContext(basecampId, reviewerId, command.revieweeId())
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
         if (!CompanionReviewPolicy.isEligible(
                 context.basecampCompleted(),
                 context.completedAt(),

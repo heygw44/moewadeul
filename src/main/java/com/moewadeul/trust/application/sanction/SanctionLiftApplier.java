@@ -4,7 +4,6 @@ import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.trust.application.TrustAuditDetails;
@@ -32,9 +31,7 @@ class SanctionLiftApplier {
     @Transactional
     SanctionLiftResult apply(long memberId, long sanctionId, SanctionLiftReason reason, long adminId) {
         LockedMember member = memberSuspensionService.lockForSanction(memberId);
-        Sanction sanction = sanctionRepository
-                .findByIdForUpdate(sanctionId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        Sanction sanction = sanctionRepository.findByIdForUpdate(sanctionId).orElseThrow(BusinessException::notFound);
         SanctionStatus before = sanction.getStatus();
         sanction.lift(adminId, reason, clock.instant());
         if (sanction.getType().isSuspension()) {

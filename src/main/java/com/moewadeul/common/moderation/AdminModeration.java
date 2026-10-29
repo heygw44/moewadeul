@@ -2,7 +2,6 @@ package com.moewadeul.common.moderation;
 
 import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,7 @@ public class AdminModeration {
     public <T extends Moderatable> ModerationResult hide(ModerationTarget<T> target, long targetId, long adminId) {
         T entity = target.lock(targetId);
         if (!target.canBeHidden(entity)) {
-            throw new BusinessException(CommonErrorCode.NOT_FOUND);
+            throw BusinessException.notFound();
         }
         ModerationStatus before = entity.getStatus();
         Instant now = clock.instant();

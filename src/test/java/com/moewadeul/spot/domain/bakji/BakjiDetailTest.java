@@ -33,8 +33,8 @@ class BakjiDetailTest {
         // then
         assertThat(detail.getReporterId()).isEqualTo(REPORTER_ID);
         assertThat(detail.getDescription()).isEqualTo("바람이 약한 평지");
-        assertThat(detail.isHasWater()).isTrue();
-        assertThat(detail.isHasToilet()).isFalse();
+        assertThat(detail.hasWater()).isTrue();
+        assertThat(detail.hasToilet()).isFalse();
         assertThat(detail.getSignalLevel()).isEqualTo(BakjiSignalLevel.WEAK);
         assertThat(detail.getGroundType()).isEqualTo(BakjiGroundType.GRASS);
         assertThat(detail.getCreatedAt()).isEqualTo(NOW);
@@ -70,8 +70,8 @@ class BakjiDetailTest {
 
         // then
         assertThat(detail.getDescription()).isNull();
-        assertThat(detail.isHasWater()).isFalse();
-        assertThat(detail.isHasToilet()).isTrue();
+        assertThat(detail.hasWater()).isFalse();
+        assertThat(detail.hasToilet()).isTrue();
         assertThat(detail.getSignalLevel()).isNull();
         assertThat(detail.getGroundType()).isEqualTo(BakjiGroundType.DECK);
         assertThat(detail.getUpdatedAt()).isEqualTo(changedAt);

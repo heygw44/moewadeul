@@ -4,7 +4,6 @@ import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
@@ -39,9 +38,8 @@ public class MemberReportDismissService {
 
     @Transactional
     public MemberReportStatusResult dismiss(long reportId, long adminId, String note) {
-        MemberReport report = memberReportRepository
-                .findByIdForUpdate(reportId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        MemberReport report =
+                memberReportRepository.findByIdForUpdate(reportId).orElseThrow(BusinessException::notFound);
         report.requireInReview();
         Instant now = clock.instant();
         LockedMember target = memberSuspensionService.lockForSanction(report.getTargetMemberId());

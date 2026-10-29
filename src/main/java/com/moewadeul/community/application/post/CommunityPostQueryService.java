@@ -1,7 +1,6 @@
 package com.moewadeul.community.application.post;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.infra.post.CommunityPostListCondition;
@@ -29,9 +28,8 @@ public class CommunityPostQueryService {
 
     @Transactional(readOnly = true)
     public CommunityPostItem detail(long postId, Long viewerId) {
-        CommunityPostItem item = communityPostItemReader
-                .findDetail(postId, viewerId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        CommunityPostItem item =
+                communityPostItemReader.findDetail(postId, viewerId).orElseThrow(BusinessException::notFound);
         if (viewerId != null && viewerId == item.authorId()) {
             return item;
         }

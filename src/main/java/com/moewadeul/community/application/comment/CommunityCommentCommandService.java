@@ -41,9 +41,7 @@ public class CommunityCommentCommandService {
         comment.revise(content, clock.instant());
         // 고친 내용을 MyBatis로 읽기 전에 DB에 반영한다.
         communityCommentRepository.flush();
-        CommunityCommentRow row = communityCommentMapper
-                .selectById(commentId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        CommunityCommentRow row = communityCommentMapper.selectById(commentId).orElseThrow(BusinessException::notFound);
         return CommunityCommentItem.from(row, repliesOf(comment));
     }
 
@@ -65,7 +63,7 @@ public class CommunityCommentCommandService {
         CommunityComment comment = communityCommentRepository
                 .findByIdForUpdate(commentId)
                 .filter(CommunityComment::isActive)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
         requireActivePost(comment.getPostId());
         comment.requireWrittenBy(memberId);
         return comment;
@@ -75,7 +73,7 @@ public class CommunityCommentCommandService {
         communityPostRepository
                 .findById(postId)
                 .filter(CommunityPost::isActive)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
     }
 
     private CommunityComment loadReplyTarget(long postId, long targetId) {

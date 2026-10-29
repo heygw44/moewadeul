@@ -1,7 +1,6 @@
 package com.moewadeul.community.application.report;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.moderation.ReportIntake;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import com.moewadeul.community.domain.comment.CommunityComment;
@@ -33,7 +32,7 @@ public class CommunityReportService {
         CommunityPost post = communityPostRepository
                 .findByIdForUpdate(postId)
                 .filter(CommunityPost::isActive)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
         long unreviewedReportCount = saveReport(CommunityReportTargetType.POST, post.getId(), memberId, command);
         post.receiveReport(unreviewedReportCount, clock.instant());
     }
@@ -43,11 +42,11 @@ public class CommunityReportService {
         CommunityComment comment = communityCommentRepository
                 .findByIdForUpdate(commentId)
                 .filter(CommunityComment::isActive)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
         communityPostRepository
                 .findById(comment.getPostId())
                 .filter(CommunityPost::isActive)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
         long unreviewedReportCount = saveReport(CommunityReportTargetType.COMMENT, comment.getId(), memberId, command);
         comment.receiveReport(unreviewedReportCount, clock.instant());
     }

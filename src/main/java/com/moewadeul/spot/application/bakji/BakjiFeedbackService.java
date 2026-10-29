@@ -1,7 +1,6 @@
 package com.moewadeul.spot.application.bakji;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.spot.domain.Spot;
@@ -40,10 +39,8 @@ public class BakjiFeedbackService {
 
     @Transactional
     public long confirm(long memberId, long spotId) {
-        Spot spot = spotRepository
-                .findById(spotId)
-                .filter(Spot::isActiveBakji)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        Spot spot =
+                spotRepository.findById(spotId).filter(Spot::isActiveBakji).orElseThrow(BusinessException::notFound);
         if (bakjiConfirmationRepository.existsBySpotIdAndMemberId(spot.getId(), memberId)) {
             throw alreadyConfirmed();
         }
@@ -56,7 +53,7 @@ public class BakjiFeedbackService {
         Spot spot = spotRepository
                 .findByIdForUpdate(spotId)
                 .filter(Spot::isActiveBakji)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
         BakjiReportReason reason = EnumParser.parse(BakjiReportReason.class, command.reason(), REASON_MESSAGE);
         if (bakjiReportRepository.existsBySpotIdAndReporterId(spot.getId(), memberId)) {
             throw alreadyReported();

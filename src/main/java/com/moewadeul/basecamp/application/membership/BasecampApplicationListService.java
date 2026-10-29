@@ -24,9 +24,7 @@ public class BasecampApplicationListService {
 
     @Transactional(readOnly = true)
     public PageSlice<BasecampApplicationItem> list(long basecampId, long leaderId, BasecampApplicationListQuery query) {
-        Basecamp basecamp = basecampRepository
-                .findById(basecampId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        Basecamp basecamp = basecampRepository.findById(basecampId).orElseThrow(BusinessException::notFound);
         if (!basecamp.isLeader(leaderId)) {
             throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }

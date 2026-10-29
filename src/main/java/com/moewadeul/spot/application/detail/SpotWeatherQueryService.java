@@ -1,7 +1,6 @@
 package com.moewadeul.spot.application.detail;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.infra.detail.SpotDetailMapper;
 import com.moewadeul.spot.infra.detail.SpotWeatherLocationRow;
@@ -25,9 +24,8 @@ public class SpotWeatherQueryService {
     private final Clock clock;
 
     public Optional<SpotWeather> findWeather(long spotId) {
-        SpotWeatherLocationRow location = spotDetailMapper
-                .selectActiveWeatherLocation(spotId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        SpotWeatherLocationRow location =
+                spotDetailMapper.selectActiveWeatherLocation(spotId).orElseThrow(BusinessException::notFound);
         Optional<WeatherForecast> forecast = weatherQueryService.forecast(
                 location.weatherNx(), location.weatherNy(), location.lat(), location.lng());
         if (forecast.isEmpty()) {

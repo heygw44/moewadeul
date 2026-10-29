@@ -1,7 +1,6 @@
 package com.moewadeul.community.application.like;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.infra.like.CommunityPostLikeMapper;
 import java.time.Clock;
@@ -38,7 +37,7 @@ public class CommunityPostLikeService {
 
     private void lockActivePost(long postId) {
         if (communityPostLikeMapper.lockPostStatus(postId) != CommunityPostStatus.ACTIVE) {
-            throw new BusinessException(CommonErrorCode.NOT_FOUND);
+            throw BusinessException.notFound();
         }
     }
 }

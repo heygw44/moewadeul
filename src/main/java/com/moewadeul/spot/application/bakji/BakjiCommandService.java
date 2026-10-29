@@ -86,10 +86,7 @@ public class BakjiCommandService {
     }
 
     private Spot loadActiveBakji(long spotId) {
-        return spotRepository
-                .findById(spotId)
-                .filter(Spot::isActiveBakji)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return spotRepository.findById(spotId).filter(Spot::isActiveBakji).orElseThrow(BusinessException::notFound);
     }
 
     private Spot loadActiveBakjiBumpingVersionOnDetailChange(long spotId, BakjiUpdateCommand command) {
@@ -99,7 +96,7 @@ public class BakjiCommandService {
         return spotRepository
                 .findByIdForVersionIncrement(spotId)
                 .filter(Spot::isActiveBakji)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
     }
 
     private static boolean changesDetail(BakjiUpdateCommand command) {
@@ -111,9 +108,7 @@ public class BakjiCommandService {
     }
 
     private BakjiDetail loadOwnDetail(long spotId, long memberId) {
-        BakjiDetail detail = bakjiDetailRepository
-                .findById(spotId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        BakjiDetail detail = bakjiDetailRepository.findById(spotId).orElseThrow(BusinessException::notFound);
         detail.requireReportedBy(memberId);
         return detail;
     }
@@ -152,8 +147,8 @@ public class BakjiCommandService {
         }
         if (command.hasWater().present() || command.hasToilet().present()) {
             detail.changeFacilities(
-                    facilityOrCurrent(command.hasWater(), detail.isHasWater(), "물 유무는"),
-                    facilityOrCurrent(command.hasToilet(), detail.isHasToilet(), "화장실 유무는"),
+                    facilityOrCurrent(command.hasWater(), detail.hasWater(), "물 유무는"),
+                    facilityOrCurrent(command.hasToilet(), detail.hasToilet(), "화장실 유무는"),
                     now);
         }
         if (command.signalLevel().present()) {
