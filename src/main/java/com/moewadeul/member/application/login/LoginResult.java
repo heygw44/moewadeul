@@ -5,4 +5,9 @@ import com.moewadeul.member.domain.MemberStatus;
 import java.time.Instant;
 
 public record LoginResult(
-        long memberId, String nickname, MemberStatus status, MemberRole role, Instant passwordChangedAt) {}
+        long memberId,
+        String nickname,
+        MemberStatus status,
+        boolean emailVerified,
+        MemberRole role,
+        Instant passwordChangedAt) {}

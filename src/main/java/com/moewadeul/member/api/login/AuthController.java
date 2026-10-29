@@ -6,7 +6,6 @@ import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.LoginSessionManager;
 import com.moewadeul.member.application.login.LoginResult;
 import com.moewadeul.member.application.login.MemberLoginService;
-import com.moewadeul.member.domain.MemberStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,9 +36,10 @@ class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {
         LoginResult result = memberLoginService.login(request.toCommand(httpRequest.getRemoteAddr()));
-        boolean emailVerified = result.status() == MemberStatus.ACTIVE;
         loginSessionManager.login(
-                new LoginMember(result.memberId(), result.role().name(), emailVerified), httpRequest, httpResponse);
+                new LoginMember(result.memberId(), result.role().name(), result.emailVerified()),
+                httpRequest,
+                httpResponse);
         discardSessionIfMemberChanged(result, httpRequest, httpResponse);
         revokeSessionAfterCommitIfMemberChanged(result, httpRequest);
         return LoginResponse.from(result);
