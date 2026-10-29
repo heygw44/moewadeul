@@ -53,8 +53,10 @@ class ProgramEnrollmentController {
     @Operation(
             summary = "행사 빈자리 알림 신청",
             description = "로그인한 인증 회원이 행사의 빈자리 알림을 신청한다. 새로 신청하면 201, 이미 신청한 상태이면 200이고 본문은 없다. "
-                    + "남은 자리가 있어도 신청을 저장한다. 신청은 회원이 해제할 때까지 남고, 자리가 돌아올 때마다 알림을 보낸다. "
-                    + "행사가 없으면 404 NOT_FOUND, 취소된 행사이거나 신청 마감 시각 이후이면 409 PROGRAM_INVALID_STATE이다.")
+                    + "자리가 모두 찬 행사에만 신청할 수 있다. 신청은 회원이 해제할 때까지 남고, 자리가 돌아올 때마다 알림을 보낸다. "
+                    + "오류는 이 순서로 처음 걸린 하나만 응답한다. 행사가 없으면 404 NOT_FOUND, "
+                    + "취소된 행사이거나 신청 마감 시각 이후이면 409 PROGRAM_INVALID_STATE, "
+                    + "남은 자리가 있으면 409 PROGRAM_SEATS_AVAILABLE이다.")
     @PostMapping("/api/programs/{programId}/vacancy-alerts")
     ResponseEntity<Void> subscribeVacancyAlert(
             @PathVariable long programId, @AuthenticationPrincipal LoginMember loginMember) {

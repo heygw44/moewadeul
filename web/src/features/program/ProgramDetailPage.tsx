@@ -469,6 +469,7 @@ const STALE_CODES = new Set([
   'PROGRAM_INVALID_STATE',
   'PROGRAM_NOT_IN_APPLY_PERIOD',
   'PROGRAM_PAYMENT_EXPIRED',
+  'PROGRAM_SEATS_AVAILABLE',
 ]);
 
 function ClosedApplyButton({ detail }: { detail: ProgramDetail }) {

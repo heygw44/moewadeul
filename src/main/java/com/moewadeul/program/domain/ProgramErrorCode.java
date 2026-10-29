@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 public enum ProgramErrorCode implements ErrorCode {
     PROGRAM_NOT_IN_APPLY_PERIOD(HttpStatus.BAD_REQUEST, "신청 기간이 아니에요."),
     PROGRAM_SOLD_OUT(HttpStatus.CONFLICT, "남은 자리가 없어요. 빈자리 알림을 신청하면 자리가 났을 때 알림을 보내요."),
+    PROGRAM_SEATS_AVAILABLE(HttpStatus.CONFLICT, "남은 자리가 있어요. 빈자리 알림 대신 바로 신청해 주세요."),
     PROGRAM_ALREADY_APPLIED(HttpStatus.CONFLICT, "이미 신청한 행사예요."),
     PROGRAM_PAYMENT_EXPIRED(HttpStatus.CONFLICT, "결제 기한이 지났어요."),
     PROGRAM_INVALID_STATE(HttpStatus.CONFLICT, "현재 상태에서는 할 수 없는 동작이에요."),
