@@ -1,6 +1,7 @@
 package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.util.EnumSet;
@@ -22,6 +23,7 @@ public class MemberReportActionService {
     private final MemberSessions memberSessions;
 
     public MemberReportActionResult act(MemberReportActionCommand command) {
+        OutsideTransaction.require("제재·신고 처리가 커밋된 뒤에 세션을 지워야 하고, 세션 삭제는 트랜잭션 안에서 부르면 커넥션을 하나 더 잡는다.");
         MemberReportActionResult result = memberReportActionApplier.apply(command, parseSanctionType(command));
         if (result.suspended()) {
             memberSessions.invalidateAll(result.targetMemberId());
