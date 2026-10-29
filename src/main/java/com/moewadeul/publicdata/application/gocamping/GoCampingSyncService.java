@@ -1,5 +1,6 @@
 package com.moewadeul.publicdata.application.gocamping;
 
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.publicdata.application.SyncJob;
 import com.moewadeul.publicdata.application.SyncJobRunService;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
@@ -52,6 +53,7 @@ public class GoCampingSyncService implements SyncJob<GoCampingSyncResult> {
 
     @Override
     public GoCampingSyncResult run(SyncJobStart start) {
+        OutsideTransaction.require("고캠핑 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         long runId = start.runId();
         try {
             int firstPage = firstPage(start.resumeCursor());

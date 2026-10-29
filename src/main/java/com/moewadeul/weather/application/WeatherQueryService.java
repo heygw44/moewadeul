@@ -2,6 +2,7 @@ package com.moewadeul.weather.application;
 
 import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.time.KoreaTime;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.weather.application.WeatherForecast.MidTermForecast;
 import com.moewadeul.weather.application.WeatherForecast.ShortTermForecast;
 import com.moewadeul.weather.domain.KmaBaseTimes;
@@ -36,6 +37,7 @@ public class WeatherQueryService {
     private final Clock clock;
 
     public Optional<WeatherForecast> forecast(int nx, int ny, double lat, double lng) {
+        OutsideTransaction.require("기상청 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         try {
             return Optional.of(fetchForecast(nx, ny, lat, lng));
         } catch (KmaApiException e) {

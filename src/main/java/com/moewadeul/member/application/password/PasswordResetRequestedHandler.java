@@ -3,9 +3,10 @@ package com.moewadeul.member.application.password;
 import com.moewadeul.common.mail.MailSender;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
+import com.moewadeul.common.transaction.OutsideTransaction;
+import com.moewadeul.common.web.WebProperties;
 import java.util.Optional;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,15 +16,15 @@ class PasswordResetRequestedHandler implements OutboxEventHandler {
 
     private final PasswordResetRequestService passwordResetRequestService;
     private final MailSender mailSender;
-    private final String baseUrl;
+    private final WebProperties webProperties;
 
     PasswordResetRequestedHandler(
             PasswordResetRequestService passwordResetRequestService,
             MailSender mailSender,
-            @Value("${moewadeul.web.base-url}") String baseUrl) {
+            WebProperties webProperties) {
         this.passwordResetRequestService = passwordResetRequestService;
         this.mailSender = mailSender;
-        this.baseUrl = stripTrailingSlashes(baseUrl);
+        this.webProperties = webProperties;
     }
 
     @Override
@@ -33,6 +34,7 @@ class PasswordResetRequestedHandler implements OutboxEventHandler {
 
     @Override
     public void handle(OutboxMessage message) {
+        OutsideTransaction.require("메일 서버 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         Optional<IssuedPasswordReset> issued =
                 passwordResetRequestService.issueFor(message.aggregateId(), message.eventId());
         issued.ifPresent(this::sendMail);
@@ -45,14 +47,6 @@ class PasswordResetRequestedHandler implements OutboxEventHandler {
     // 토큰을 쿼리 문자열이 아니라 프래그먼트(#)에 싣는다. 브라우저는 프래그먼트를 서버로 보내지 않아서
     // 접근 로그, 프록시 로그, Referer에 토큰이 남지 않는다.
     private String link(String token) {
-        return baseUrl + LINK_PATH + token;
-    }
-
-    private static String stripTrailingSlashes(String url) {
-        int end = url.length();
-        while (end > 0 && url.charAt(end - 1) == '/') {
-            end--;
-        }
-        return url.substring(0, end);
+        return webProperties.baseUrl() + LINK_PATH + token;
     }
 }
