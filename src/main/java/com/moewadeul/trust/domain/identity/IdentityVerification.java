@@ -1,5 +1,7 @@
 package com.moewadeul.trust.domain.identity;
 
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -129,6 +131,10 @@ public class IdentityVerification {
         if (birthYear == null) {
             return Optional.empty();
         }
-        return AgeGroup.fromAge(currentYear.getValue() - birthYear);
+        int age = currentYear.getValue() - birthYear;
+        if (age < ADULT_AGE) {
+            return Optional.empty();
+        }
+        return Optional.of(AgeGroup.ofAge(age));
     }
 }

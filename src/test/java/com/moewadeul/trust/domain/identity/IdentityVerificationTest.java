@@ -3,6 +3,8 @@ package com.moewadeul.trust.domain.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.Year;

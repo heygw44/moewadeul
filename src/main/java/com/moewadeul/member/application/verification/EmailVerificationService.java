@@ -41,7 +41,7 @@ public class EmailVerificationService {
     private final EmailVerificationMapper emailVerificationMapper;
     private final EmailVerificationIpLockMapper ipLockMapper;
     private final SignupDuplicateAttemptMapper signupDuplicateAttemptMapper;
-    private final EmailVerificationActivator emailVerificationActivator;
+    private final EmailVerificationApplier emailVerificationApplier;
     private final OutboxEventRecorder outboxEventRecorder;
     private final MemberMetrics memberMetrics;
     private final MailSecretDeriver mailSecretDeriver;
@@ -52,7 +52,7 @@ public class EmailVerificationService {
         requireRequestIp(requestIp);
         return memberRepository
                 .findById(memberId)
-                .filter(EmailVerificationService::isUnverified)
+                .filter(Member::isAwaitingEmailVerification)
                 .map(member -> issue(member, requestIp, outboxEventId));
     }
 
@@ -118,7 +118,7 @@ public class EmailVerificationService {
         if (!verification.matches(code)) {
             rejectWrongCode(verification, now);
         }
-        emailVerificationActivator.activate(verification.getId(), memberId, now);
+        emailVerificationApplier.activate(verification.getId(), memberId, now);
         log.info("email verified memberId={}", memberId);
         memberMetrics.recordEmailVerified();
         return new VerificationResult(MemberStatus.ACTIVE);
@@ -186,13 +186,9 @@ public class EmailVerificationService {
     }
 
     private void rejectIfAlreadyVerified(Member member) {
-        if (!isUnverified(member)) {
+        if (!member.isAwaitingEmailVerification()) {
             throw new BusinessException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         }
-    }
-
-    private static boolean isUnverified(Member member) {
-        return member.getStatus() == MemberStatus.UNVERIFIED;
     }
 
     private static IllegalStateException memberNotFound(long memberId) {

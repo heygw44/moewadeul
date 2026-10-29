@@ -5,6 +5,9 @@ import com.moewadeul.basecamp.application.JoinEligibility;
 import com.moewadeul.basecamp.domain.BasecampMemberRole;
 import com.moewadeul.basecamp.domain.BasecampRelation;
 import com.moewadeul.basecamp.domain.BasecampStatus;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -31,10 +34,10 @@ public record BasecampDetail(
             long memberId,
             String nickname,
             BasecampMemberRole role,
-            String ageGroup,
+            AgeGroup ageGroup,
             boolean ageGroupVerified,
-            String gender,
+            Gender gender,
             boolean genderVerified,
-            int trustLevel,
+            TrustLevel trustLevel,
             int completedCompanions) {}
 }

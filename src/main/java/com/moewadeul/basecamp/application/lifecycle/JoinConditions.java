@@ -1,9 +1,10 @@
 package com.moewadeul.basecamp.application.lifecycle;
 
 import com.moewadeul.basecamp.domain.JoinCondition;
-import com.moewadeul.basecamp.domain.JoinGender;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.trust.application.profile.TrustDetail;
 
 final class JoinConditions {
@@ -17,11 +18,12 @@ final class JoinConditions {
         try {
             JoinCondition condition = JoinCondition.none();
             if (requested.minTrustLevel() != null) {
-                condition = condition.withMinTrustLevel(requested.minTrustLevel());
+                condition = condition.withMinTrustLevel(
+                        TrustLevel.find(requested.minTrustLevel()).orElse(null));
             }
             condition = withAgeGroupRange(condition, requested);
             if (requested.sameGenderOnly()) {
-                condition = condition.withSameGenderOnly(JoinGender.valueOf(trust.verifiedGender()));
+                condition = condition.withSameGenderOnly(trust.verifiedGender());
             }
             return condition;
         } catch (IllegalArgumentException e) {
@@ -39,6 +41,6 @@ final class JoinConditions {
         if (min == null || max == null) {
             throw new IllegalArgumentException("연령대 하한과 상한은 함께 보내야 합니다.");
         }
-        return condition.withAgeGroupRange(min, max);
+        return condition.withAgeGroupRange(AgeGroup.ofDecade(min), AgeGroup.ofDecade(max));
     }
 }

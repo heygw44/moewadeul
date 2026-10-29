@@ -1,6 +1,7 @@
 package com.moewadeul.weather.application;
 
 import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.weather.infra.KasiApiException;
 import com.moewadeul.weather.infra.KasiClient;
 import com.moewadeul.weather.infra.KasiRiseSetItem;
@@ -22,6 +23,7 @@ public class SunQueryService {
     private final ExternalApiMetrics metrics;
 
     public Optional<SunTimes> sunTimes(double lat, double lng, LocalDate date) {
+        OutsideTransaction.require("천문연 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         return caches.sunTimes(lat, lng, date, () -> fetch(lat, lng, date));
     }
 

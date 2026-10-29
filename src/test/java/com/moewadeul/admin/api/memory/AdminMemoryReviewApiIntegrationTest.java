@@ -4,6 +4,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -230,7 +231,7 @@ class AdminMemoryReviewApiIntegrationTest {
             insertReport(memoryId, "SPAM", null, BASE.plus(Duration.ofMinutes(i)), null);
         }
         assertThat(post(MEMORIES + "/" + memoryId + "/restore")).hasStatus(HttpStatus.OK);
-        MemoryReportCommand report = new MemoryReportCommand("SPAM", "다시 확인했다");
+        MemoryReportCommand report = new MemoryReportCommand(ContentReportReason.SPAM, "다시 확인했다");
 
         // when
         memoryReportService.report(newMemberId(), memoryId, report);

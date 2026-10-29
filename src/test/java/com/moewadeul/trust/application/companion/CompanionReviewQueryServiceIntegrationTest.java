@@ -10,6 +10,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.companion.CompanionReviewTag;
 import java.time.Duration;
 import java.time.Instant;
@@ -128,7 +129,7 @@ class CompanionReviewQueryServiceIntegrationTest {
         assertThatThrownBy(() -> queryService.pending(unverified))
                 .isInstanceOfSatisfying(
                         BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT));
+                        e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT));
     }
 
     @Test

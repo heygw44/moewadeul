@@ -32,6 +32,14 @@ public record NotificationMailProperties(
         }
     }
 
+    void requireLeaseOutlastsBatch(Duration sendTimeout) {
+        Duration worstBatch = sendTimeout.multipliedBy(batchSize);
+        if (lease.compareTo(worstBatch) <= 0) {
+            throw new IllegalStateException("moewadeul.notification.mail.lease(" + lease
+                    + ") must be longer than batchSize x moewadeul.mail.send-timeout(" + worstBatch + ")");
+        }
+    }
+
     private static void requirePositive(int value, String name) {
         if (value <= 0) {
             throw new IllegalArgumentException("moewadeul.notification.mail." + name + " must be positive");

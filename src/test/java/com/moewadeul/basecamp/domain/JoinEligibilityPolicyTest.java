@@ -3,6 +3,9 @@ package com.moewadeul.basecamp.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -19,12 +22,13 @@ class JoinEligibilityPolicyTest {
     @DisplayName("[F-12][BC-05] 신뢰 단계는 최소 단계(조건이 없으면 1)보다 낮으면 TRUST_LEVEL로 걸린다")
     void trustLevelBoundary(String minLevel, int trustLevel, boolean met) {
         // given
-        JoinCondition condition =
-                "없음".equals(minLevel) ? NO_CONDITION : NO_CONDITION.withMinTrustLevel(Integer.parseInt(minLevel));
+        JoinCondition condition = "없음".equals(minLevel)
+                ? NO_CONDITION
+                : NO_CONDITION.withMinTrustLevel(TrustLevel.of(Integer.parseInt(minLevel)));
 
         // when
         List<JoinUnmetReason> reasons = JoinEligibilityPolicy.unmetReasons(
-                condition, applicant(trustLevel, 20, JoinGender.MALE), false, PriorRelation.NONE);
+                condition, applicant(trustLevel, 20, Gender.MALE), false, PriorRelation.NONE);
 
         // then
         assertThat(reasons.contains(JoinUnmetReason.TRUST_LEVEL)).isEqualTo(!met);
@@ -35,11 +39,11 @@ class JoinEligibilityPolicyTest {
     @DisplayName("[F-12][BC-05] 연령대는 하한과 상한을 포함한 범위 안이어야 하고, 밖이면 AGE_GROUP으로 걸린다")
     void ageGroupBoundary(int ageGroup, boolean met) {
         // given
-        JoinCondition condition = NO_CONDITION.withAgeGroupRange(30, 40);
+        JoinCondition condition = NO_CONDITION.withAgeGroupRange(AgeGroup.THIRTIES, AgeGroup.FORTIES);
 
         // when
         List<JoinUnmetReason> reasons = JoinEligibilityPolicy.unmetReasons(
-                condition, applicant(1, ageGroup, JoinGender.MALE), false, PriorRelation.NONE);
+                condition, applicant(1, ageGroup, Gender.MALE), false, PriorRelation.NONE);
 
         // then
         assertThat(reasons.contains(JoinUnmetReason.AGE_GROUP)).isEqualTo(!met);
@@ -49,13 +53,13 @@ class JoinEligibilityPolicyTest {
     @DisplayName("[F-12][BC-05] 범위의 양 끝인 20과 60도 그 값의 연령대는 충족한다")
     void ageGroupExtremes() {
         // given
-        JoinCondition condition = NO_CONDITION.withAgeGroupRange(20, 60);
+        JoinCondition condition = NO_CONDITION.withAgeGroupRange(AgeGroup.TWENTIES, AgeGroup.SIXTIES_PLUS);
 
         // when
-        List<JoinUnmetReason> twenties = JoinEligibilityPolicy.unmetReasons(
-                condition, applicant(1, 20, JoinGender.MALE), false, PriorRelation.NONE);
-        List<JoinUnmetReason> sixtiesPlus = JoinEligibilityPolicy.unmetReasons(
-                condition, applicant(1, 60, JoinGender.MALE), false, PriorRelation.NONE);
+        List<JoinUnmetReason> twenties =
+                JoinEligibilityPolicy.unmetReasons(condition, applicant(1, 20, Gender.MALE), false, PriorRelation.NONE);
+        List<JoinUnmetReason> sixtiesPlus =
+                JoinEligibilityPolicy.unmetReasons(condition, applicant(1, 60, Gender.MALE), false, PriorRelation.NONE);
 
         // then
         assertThat(twenties).isEmpty();
@@ -66,13 +70,13 @@ class JoinEligibilityPolicyTest {
     @DisplayName("[F-12][BC-05] 연령대 조건이 있는데 본인확인한 연령대가 없으면 AGE_GROUP으로 걸리고, 조건이 없으면 연령대가 없어도 통과한다")
     void ageGroupMissingVerification() {
         // given
-        JoinCondition condition = NO_CONDITION.withAgeGroupRange(20, 30);
+        JoinCondition condition = NO_CONDITION.withAgeGroupRange(AgeGroup.TWENTIES, AgeGroup.THIRTIES);
 
         // when
         List<JoinUnmetReason> withCondition = JoinEligibilityPolicy.unmetReasons(
-                condition, applicant(1, null, JoinGender.MALE), false, PriorRelation.NONE);
+                condition, applicant(1, null, Gender.MALE), false, PriorRelation.NONE);
         List<JoinUnmetReason> withoutCondition = JoinEligibilityPolicy.unmetReasons(
-                NO_CONDITION, applicant(1, null, JoinGender.MALE), false, PriorRelation.NONE);
+                NO_CONDITION, applicant(1, null, Gender.MALE), false, PriorRelation.NONE);
 
         // then
         assertThat(withCondition).containsExactly(JoinUnmetReason.AGE_GROUP);
@@ -83,13 +87,13 @@ class JoinEligibilityPolicyTest {
     @DisplayName("[F-12][BC-05] 동성만 받는 조건이면 같은 성별은 통과하고 다른 성별이나 본인확인 성별이 없는 신청자는 GENDER로 걸린다")
     void sameGenderOnly() {
         // given
-        JoinCondition condition = NO_CONDITION.withSameGenderOnly(JoinGender.FEMALE);
+        JoinCondition condition = NO_CONDITION.withSameGenderOnly(Gender.FEMALE);
 
         // when
         List<JoinUnmetReason> same = JoinEligibilityPolicy.unmetReasons(
-                condition, applicant(1, 20, JoinGender.FEMALE), false, PriorRelation.NONE);
-        List<JoinUnmetReason> different = JoinEligibilityPolicy.unmetReasons(
-                condition, applicant(1, 20, JoinGender.MALE), false, PriorRelation.NONE);
+                condition, applicant(1, 20, Gender.FEMALE), false, PriorRelation.NONE);
+        List<JoinUnmetReason> different =
+                JoinEligibilityPolicy.unmetReasons(condition, applicant(1, 20, Gender.MALE), false, PriorRelation.NONE);
         List<JoinUnmetReason> unknown =
                 JoinEligibilityPolicy.unmetReasons(condition, applicant(1, 20, null), false, PriorRelation.NONE);
 
@@ -104,7 +108,7 @@ class JoinEligibilityPolicyTest {
     void dateConflict() {
         // when
         List<JoinUnmetReason> reasons = JoinEligibilityPolicy.unmetReasons(
-                NO_CONDITION, applicant(1, 20, JoinGender.MALE), true, PriorRelation.NONE);
+                NO_CONDITION, applicant(1, 20, Gender.MALE), true, PriorRelation.NONE);
 
         // then
         assertThat(reasons).containsExactly(JoinUnmetReason.DATE_CONFLICT);
@@ -114,7 +118,7 @@ class JoinEligibilityPolicyTest {
     @DisplayName("[F-12][BC-07] 이미 멤버이거나 대기 중이면 ALREADY_JOINED, 거절·탈퇴·강퇴된 적이 있으면 REAPPLY_NOT_ALLOWED로 걸린다")
     void priorRelation() {
         // given
-        Applicant applicant = applicant(1, 20, JoinGender.MALE);
+        Applicant applicant = applicant(1, 20, Gender.MALE);
 
         // when
         List<JoinUnmetReason> none =
@@ -134,8 +138,10 @@ class JoinEligibilityPolicyTest {
     @DisplayName("[F-12][BC-05] 이유가 여러 개이면 TRUST_LEVEL, AGE_GROUP, GENDER, DATE_CONFLICT, ALREADY_JOINED 순서로 모두 돌려준다")
     void multipleReasonsKeepDeclarationOrder() {
         // given
-        JoinCondition condition =
-                NO_CONDITION.withMinTrustLevel(2).withAgeGroupRange(30, 40).withSameGenderOnly(JoinGender.FEMALE);
+        JoinCondition condition = NO_CONDITION
+                .withMinTrustLevel(TrustLevel.TRUSTED)
+                .withAgeGroupRange(AgeGroup.THIRTIES, AgeGroup.FORTIES)
+                .withSameGenderOnly(Gender.FEMALE);
 
         // when
         List<JoinUnmetReason> reasons =
@@ -153,25 +159,41 @@ class JoinEligibilityPolicyTest {
 
     @Test
     @DisplayName("[F-12][BC-06] 두 기간은 양 끝을 포함해서 하루라도 겹치면 충돌이고, 하루도 겹치지 않으면 충돌이 아니다")
-    void overlapsIncludesBothEnds() {
+    void dateConflictIncludesBothEnds() {
         // given
         LocalDate start = LocalDate.of(2026, 10, 20);
         LocalDate end = LocalDate.of(2026, 10, 22);
+        BasecampSchedule target = new BasecampSchedule(1L, start, end);
 
         // when & then
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, end, end.plusDays(2)))
-                .isTrue();
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, start.minusDays(2), start))
-                .isTrue();
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, start.plusDays(1), start.plusDays(1)))
-                .isTrue();
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, end.plusDays(1), end.plusDays(3)))
-                .isFalse();
-        assertThat(JoinEligibilityPolicy.overlaps(start, end, start.minusDays(3), start.minusDays(1)))
+        assertThat(conflictsWith(target, end, end.plusDays(2))).isTrue();
+        assertThat(conflictsWith(target, start.minusDays(2), start)).isTrue();
+        assertThat(conflictsWith(target, start.plusDays(1), start.plusDays(1))).isTrue();
+        assertThat(conflictsWith(target, end.plusDays(1), end.plusDays(3))).isFalse();
+        assertThat(conflictsWith(target, start.minusDays(3), start.minusDays(1)))
                 .isFalse();
     }
 
-    private static Applicant applicant(int trustLevel, Integer ageGroup, JoinGender gender) {
-        return new Applicant(trustLevel, ageGroup, gender);
+    @Test
+    @DisplayName("[F-12][BC-06] 같은 베이스캠프의 일정은 겹쳐도 충돌에서 뺀다")
+    void dateConflictIgnoresSameBasecamp() {
+        LocalDate start = LocalDate.of(2026, 10, 20);
+        LocalDate end = LocalDate.of(2026, 10, 22);
+        BasecampSchedule target = new BasecampSchedule(1L, start, end);
+
+        assertThat(JoinEligibilityPolicy.hasDateConflict(target, List.of(new BasecampSchedule(1L, start, end))))
+                .isFalse();
+        assertThat(JoinEligibilityPolicy.hasDateConflict(
+                        target, List.of(new BasecampSchedule(1L, start, end), new BasecampSchedule(2L, start, end))))
+                .isTrue();
+        assertThat(JoinEligibilityPolicy.hasDateConflict(target, List.of())).isFalse();
+    }
+
+    private static boolean conflictsWith(BasecampSchedule target, LocalDate start, LocalDate end) {
+        return JoinEligibilityPolicy.hasDateConflict(target, List.of(new BasecampSchedule(2L, start, end)));
+    }
+
+    private static Applicant applicant(int trustLevel, Integer ageGroup, Gender gender) {
+        return new Applicant(TrustLevel.of(trustLevel), ageGroup == null ? null : AgeGroup.ofDecade(ageGroup), gender);
     }
 }

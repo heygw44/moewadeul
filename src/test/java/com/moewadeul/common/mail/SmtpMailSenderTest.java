@@ -41,7 +41,8 @@ class SmtpMailSenderTest {
     private static final Duration SEND_TIMEOUT = Duration.ofSeconds(20);
 
     private final JavaMailSender javaMailSender = mock(JavaMailSender.class);
-    private final SmtpMailSender mailSender = new SmtpMailSender(javaMailSender, FROM, FROM_NAME, SEND_TIMEOUT);
+    private final SmtpMailSender mailSender =
+            new SmtpMailSender(javaMailSender, new MailProperties(FROM, FROM_NAME, SEND_TIMEOUT));
 
     @BeforeEach
     void stubMimeMessageCreation() {
@@ -164,7 +165,8 @@ class SmtpMailSenderTest {
                 })
                 .given(javaMailSender)
                 .send(any(MimeMessage.class));
-        SmtpMailSender limited = new SmtpMailSender(javaMailSender, FROM, FROM_NAME, Duration.ofMillis(100));
+        SmtpMailSender limited =
+                new SmtpMailSender(javaMailSender, new MailProperties(FROM, FROM_NAME, Duration.ofMillis(100)));
 
         // when & then
         assertThatThrownBy(() -> limited.send(new MailMessage(RECIPIENT, SUBJECT, BODY)))

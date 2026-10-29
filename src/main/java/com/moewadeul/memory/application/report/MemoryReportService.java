@@ -2,9 +2,7 @@ package com.moewadeul.memory.application.report;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.error.EnumParser;
-import com.moewadeul.common.error.UniqueViolations;
-import com.moewadeul.common.moderation.ContentReportReason;
+import com.moewadeul.common.moderation.ReportIntake;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryErrorCode;
 import com.moewadeul.memory.domain.MemoryRepository;
@@ -13,7 +11,6 @@ import com.moewadeul.memory.domain.report.MemoryReportRepository;
 import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MemoryReportService {
 
-    private static final String REPORT_UNIQUE_CONSTRAINT = "uk_memory_report_memory_reporter";
-    private static final String REASON_MESSAGE =
-            "신고 사유는 " + EnumParser.names(ContentReportReason.class) + " 중 하나여야 해요.";
+    private static final ReportIntake REPORT_INTAKE =
+            new ReportIntake("uk_memory_report_memory_reporter", MemoryErrorCode.MEMORY_ALREADY_REPORTED);
 
     private final MemoryRepository memoryRepository;
     private final MemoryReportRepository memoryReportRepository;
@@ -35,25 +31,12 @@ public class MemoryReportService {
                 .findByIdForUpdate(memoryId)
                 .filter(Memory::isVisibleToOthers)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        ContentReportReason reason = EnumParser.parse(ContentReportReason.class, command.reason(), REASON_MESSAGE);
-        String content = command.content();
-        if (content != null && content.length() > MemoryReport.CONTENT_MAX_LENGTH) {
-            throw new BusinessException(
-                    CommonErrorCode.INVALID_INPUT, "신고 내용은 " + MemoryReport.CONTENT_MAX_LENGTH + "자 이하여야 해요.");
-        }
-        if (memoryReportRepository.existsByMemoryIdAndReporterId(memoryId, memberId)) {
-            throw alreadyReported();
-        }
         Instant now = clock.instant();
-        try {
-            memoryReportRepository.saveAndFlush(MemoryReport.of(memoryId, memberId, reason, content, now));
-        } catch (DataIntegrityViolationException e) {
-            throw UniqueViolations.translate(e, REPORT_UNIQUE_CONSTRAINT, MemoryErrorCode.MEMORY_ALREADY_REPORTED);
-        }
-        memory.receiveReport(memoryReportRepository.countByMemoryIdAndReviewedAtIsNull(memoryId), now);
-    }
-
-    private static BusinessException alreadyReported() {
-        return new BusinessException(MemoryErrorCode.MEMORY_ALREADY_REPORTED);
+        long unreviewedReportCount = REPORT_INTAKE.accept(
+                () -> memoryReportRepository.existsByMemoryIdAndReporterId(memoryId, memberId),
+                () -> memoryReportRepository.saveAndFlush(
+                        MemoryReport.of(memoryId, memberId, command.reason(), command.content(), now)),
+                () -> memoryReportRepository.countByMemoryIdAndReviewedAtIsNull(memoryId));
+        memory.receiveReport(unreviewedReportCount, now);
     }
 }

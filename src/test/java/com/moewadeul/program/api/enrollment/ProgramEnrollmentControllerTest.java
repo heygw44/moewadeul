@@ -22,6 +22,7 @@ import com.moewadeul.program.application.enrollment.ProgramApplyService;
 import com.moewadeul.program.application.enrollment.ProgramVacancyAlertService;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -143,7 +144,7 @@ class ProgramEnrollmentControllerTest {
                 .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD));
         when(programApplyService.apply(4L, 3L)).thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_SOLD_OUT));
         when(programApplyService.apply(4L, 4L))
-                .thenThrow(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT));
+                .thenThrow(new BusinessException(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT));
         when(programApplyService.apply(4L, 5L))
                 .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED));
 

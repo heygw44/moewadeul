@@ -14,22 +14,22 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 // 유니크 제약 위반이 이 트랜잭션 안에서 나면 Spring이 롤백 전용으로 표시해서, 안에서 잡아도 커밋할 때 다시 예외가 난다.
 // 그래서 SyncJobRunService.begin이 이 트랜잭션 밖에서 예외를 받는다.
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-class SyncJobRunStartService {
+class SyncJobRunStartApplier {
 
     private final SyncJobRunRepository syncJobRunRepository;
     private final AdminAuditRecorder adminAuditRecorder;
     private final Clock clock;
 
     @Transactional
-    public Optional<SyncJobStart> start(SyncJobType jobType, Duration staleAfter, Long adminId) {
+    Optional<SyncJobStart> start(SyncJobType jobType, Duration staleAfter, Long adminId) {
         Instant now = clock.instant();
         Optional<SyncJobRun> latest = syncJobRunRepository.findFirstByJobTypeOrderByIdDesc(jobType);
         if (latest.isPresent() && latest.get().isRunning()) {

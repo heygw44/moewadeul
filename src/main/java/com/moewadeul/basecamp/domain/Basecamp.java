@@ -4,6 +4,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventDraft;
+import com.moewadeul.common.schedule.CampingSchedule;
 import com.moewadeul.common.time.KoreaTime;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -144,7 +145,8 @@ public class Basecamp {
         if (details == null || now == null) {
             throw new IllegalArgumentException("베이스캠프를 만드는 데 필요한 값이 null입니다.");
         }
-        BasecampOpenPolicy.requireSchedule(details.startDate(), details.endDate(), KoreaTime.dateOf(now));
+        BasecampOpenPolicy.requireSchedule(
+                new CampingSchedule(details.startDate(), details.endDate()), KoreaTime.dateOf(now));
         requireValidText(details.title(), details.description());
         if (details.capacity() == null || details.joinCondition() == null) {
             throw new IllegalArgumentException("정원과 합류 조건은 null일 수 없습니다.");

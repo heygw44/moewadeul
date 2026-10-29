@@ -13,7 +13,6 @@ import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.MemberSuspendedException;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -64,6 +63,7 @@ public class MemberLoginService {
                 member.getId(),
                 member.getNickname(),
                 member.getStatus(),
+                member.isEmailVerified(),
                 member.getRole(),
                 member.getPasswordChangedAt());
     }
@@ -119,11 +119,7 @@ public class MemberLoginService {
     }
 
     private Member releaseIfSuspensionEnded(Member member) {
-        if (member.getStatus() != MemberStatus.SUSPENDED || member.getSuspendedUntil() == null) {
-            return member;
-        }
-        Instant now = clock.instant();
-        if (member.getSuspendedUntil().isAfter(now)) {
+        if (!member.isSuspensionOverAt(clock.instant())) {
             return member;
         }
         memberSuspensionService.releaseIfExpired(member.getId());

@@ -12,7 +12,9 @@ import com.moewadeul.basecamp.domain.BasecampMemberRole;
 import com.moewadeul.basecamp.domain.BasecampOpenPolicy;
 import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.domain.JoinCondition;
-import com.moewadeul.basecamp.domain.JoinGender;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
@@ -55,9 +57,9 @@ class BasecampJpaRepositoryIntegrationTest {
         Member leader = saveMember();
         long spotId = saveSpot();
         JoinCondition condition = JoinCondition.none()
-                .withMinTrustLevel(2)
-                .withAgeGroupRange(20, 40)
-                .withSameGenderOnly(JoinGender.FEMALE);
+                .withMinTrustLevel(TrustLevel.TRUSTED)
+                .withAgeGroupRange(AgeGroup.TWENTIES, AgeGroup.FORTIES)
+                .withSameGenderOnly(Gender.FEMALE);
         BasecampDetails details = new BasecampDetails(
                 "북한산 백패킹",
                 "함께 가요",

@@ -1,6 +1,7 @@
 package com.moewadeul.program.domain;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.profile.TrustLevel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -36,7 +37,7 @@ public class Program {
     public static final int PAYMENT_DEADLINE_MINUTES_MIN = 1;
     public static final int PAYMENT_DEADLINE_MINUTES_MAX = 1440;
     public static final int DEFAULT_PAYMENT_DEADLINE_MINUTES = 15;
-    public static final int MIN_TRUST_LEVEL_FOR_OVERNIGHT = 1;
+    public static final TrustLevel MIN_TRUST_LEVEL_FOR_OVERNIGHT = TrustLevel.IDENTITY_VERIFIED;
     public static final int REFUND_CANCEL_HOURS_BEFORE_START = 72;
 
     @Id
@@ -169,10 +170,6 @@ public class Program {
             case UPCOMING, CLOSED -> throw new BusinessException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD);
             case OPEN -> {}
         }
-    }
-
-    public boolean isTrustLevelSufficient(int trustLevel) {
-        return !overnight || trustLevel >= MIN_TRUST_LEVEL_FOR_OVERNIGHT;
     }
 
     public Instant paymentDueAt(Instant now) {

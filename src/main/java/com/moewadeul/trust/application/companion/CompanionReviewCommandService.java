@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class CompanionReviewCommandService {
 
     private static final String UNIQUE_CONSTRAINT = "uk_companion_review_basecamp_reviewer_reviewee";
-    private static final String COMPLETED = "COMPLETED";
 
     private final TrustSummaryService trustSummaryService;
     private final CompanionReviewRepository companionReviewRepository;
@@ -31,13 +30,17 @@ public class CompanionReviewCommandService {
 
     @Transactional
     public long write(long reviewerId, long basecampId, CompanionReviewWriteCommand command) {
-        if (trustSummaryService.detail(reviewerId).trustLevel() < CompanionReviewPolicy.MIN_TRUST_LEVEL) {
-            throw new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
-        }
+        trustSummaryService.requireLevel(reviewerId, CompanionReviewPolicy.MIN_TRUST_LEVEL);
         CompanionReviewWriteContextRow context = companionReviewMapper
                 .selectWriteContext(basecampId, reviewerId, command.revieweeId())
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!isEligible(context, reviewerId, command.revieweeId())) {
+        if (!CompanionReviewPolicy.isEligible(
+                context.basecampCompleted(),
+                context.completedAt(),
+                context.reviewerActive(),
+                context.revieweeActive(),
+                reviewerId,
+                command.revieweeId())) {
             throw new BusinessException(TrustErrorCode.COMPANION_REVIEW_NOT_ELIGIBLE);
         }
         Instant now = clock.instant();
@@ -50,20 +53,8 @@ public class CompanionReviewCommandService {
         return save(newReview(basecampId, reviewerId, command, now)).getId();
     }
 
-    private static boolean isEligible(CompanionReviewWriteContextRow context, long reviewerId, long revieweeId) {
-        return COMPLETED.equals(context.basecampStatus())
-                && context.completedAt() != null
-                && context.reviewerActive()
-                && context.revieweeActive()
-                && reviewerId != revieweeId;
-    }
-
     private static CompanionReview newReview(
             long basecampId, long reviewerId, CompanionReviewWriteCommand command, Instant now) {
-        if (command.comment() != null && command.comment().length() > CompanionReview.COMMENT_MAX_LENGTH) {
-            throw new BusinessException(
-                    CommonErrorCode.INVALID_INPUT, "코멘트는 " + CompanionReview.COMMENT_MAX_LENGTH + "자 이하여야 해요.");
-        }
         return CompanionReview.write(
                 basecampId,
                 reviewerId,

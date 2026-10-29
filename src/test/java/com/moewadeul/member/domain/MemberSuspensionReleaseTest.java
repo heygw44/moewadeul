@@ -94,4 +94,39 @@ class MemberSuspensionReleaseTest {
                 .emailVerifiedAt(emailVerifiedAt)
                 .build();
     }
+
+    @Test
+    @DisplayName("[SN-10] 정지가 끝났는지는 정지 중이고 종료 시각이 now 이전이거나 정각일 때만 참이다")
+    void isSuspensionOverAt() {
+        assertThat(memberWith(MemberStatus.ACTIVE, null, NOW).isSuspensionOverAt(NOW))
+                .isFalse();
+        assertThat(memberWith(MemberStatus.SUSPENDED, null, NOW).isSuspensionOverAt(NOW))
+                .isFalse();
+        assertThat(memberWith(MemberStatus.SUSPENDED, NOW.plusSeconds(1), NOW).isSuspensionOverAt(NOW))
+                .isFalse();
+        assertThat(memberWith(MemberStatus.SUSPENDED, NOW, NOW).isSuspensionOverAt(NOW))
+                .isTrue();
+        assertThat(memberWith(MemberStatus.SUSPENDED, NOW.minusSeconds(1), NOW).isSuspensionOverAt(NOW))
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("[ID-01] 이메일 인증 여부는 인증 시각으로 판단하고, 인증 대기는 UNVERIFIED 상태일 때만 참이다")
+    void emailVerificationJudgments() {
+        Member verified = memberWith(MemberStatus.ACTIVE, null, NOW);
+        Member unverified = memberWith(MemberStatus.UNVERIFIED, null, null);
+        Member suspendedBeforeVerifying = memberWith(MemberStatus.SUSPENDED, NOW.plusSeconds(60), null);
+        Member suspendedAfterVerifying = memberWith(MemberStatus.SUSPENDED, NOW.plusSeconds(60), NOW);
+
+        assertThat(verified.isEmailVerified()).isTrue();
+        assertThat(unverified.isEmailVerified()).isFalse();
+        assertThat(suspendedBeforeVerifying.isEmailVerified()).isFalse();
+        assertThat(suspendedAfterVerifying.isEmailVerified()).isTrue();
+
+        assertThat(unverified.isAwaitingEmailVerification()).isTrue();
+        assertThat(verified.isAwaitingEmailVerification()).isFalse();
+        assertThat(suspendedBeforeVerifying.isAwaitingEmailVerification()).isFalse();
+        assertThat(memberWith(MemberStatus.WITHDRAWN, null, null).isAwaitingEmailVerification())
+                .isFalse();
+    }
 }

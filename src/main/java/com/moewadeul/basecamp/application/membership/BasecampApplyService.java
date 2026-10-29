@@ -10,6 +10,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.spot.application.ActiveSpotChecker;
+import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class BasecampApplyService {
 
     private final BasecampRepository basecampRepository;
     private final JoinEligibilityChecker joinEligibilityChecker;
+    private final TrustSummaryService trustSummaryService;
     private final ActiveSpotChecker activeSpotChecker;
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
@@ -33,8 +35,8 @@ public class BasecampApplyService {
                 .findByIdForUpdate(command.basecampId())
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         activeSpotChecker.requireActive(basecamp.getSpotId());
+        trustSummaryService.requireLevel(command.memberId(), JoinEligibilityPolicy.BASE_TRUST_LEVEL);
         Applicant applicant = joinEligibilityChecker.applicantOf(command.memberId());
-        requireBaseTrustLevel(applicant);
         basecamp.checkApplicable(command.memberId());
         joinEligibilityChecker.requireEligible(basecamp, applicant, command.memberId());
 
@@ -44,12 +46,6 @@ public class BasecampApplyService {
         basecampRepository.flush();
         outboxEventRecorder.recordAll(basecamp.pullEvents());
         return new BasecampApplyResult(application.getId(), application.getStatus());
-    }
-
-    private static void requireBaseTrustLevel(Applicant applicant) {
-        if (applicant.trustLevel() < JoinEligibilityPolicy.BASE_TRUST_LEVEL) {
-            throw new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
-        }
     }
 
     private BasecampApplication submit(Basecamp basecamp, BasecampApplyCommand command) {

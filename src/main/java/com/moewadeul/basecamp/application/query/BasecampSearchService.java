@@ -3,6 +3,7 @@ package com.moewadeul.basecamp.application.query;
 import com.moewadeul.basecamp.application.JoinApplicants;
 import com.moewadeul.basecamp.application.JoinConditionSummary;
 import com.moewadeul.basecamp.application.JoinEligibility;
+import com.moewadeul.basecamp.domain.BasecampSchedule;
 import com.moewadeul.basecamp.domain.JoinCondition;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
@@ -10,9 +11,10 @@ import com.moewadeul.basecamp.domain.PriorRelation;
 import com.moewadeul.basecamp.infra.query.BasecampSearchCondition;
 import com.moewadeul.basecamp.infra.query.BasecampSearchMapper;
 import com.moewadeul.basecamp.infra.query.BasecampSearchRow;
-import com.moewadeul.basecamp.infra.query.InProgressScheduleRow;
 import com.moewadeul.basecamp.infra.query.ViewerHistoryRow;
 import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.spot.application.SpotSearchBox;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.HashMap;
@@ -57,6 +59,7 @@ public class BasecampSearchService {
                 query.spotTypes(),
                 query.nights(),
                 query.maxTrustLevel(),
+                JoinEligibilityPolicy.BASE_TRUST_LEVEL.level(),
                 query.noAgeLimit(),
                 query.noSameGenderOnly());
     }
@@ -107,7 +110,7 @@ public class BasecampSearchService {
     }
 
     private record EligibilityJudge(
-            Applicant applicant, Map<Long, PriorRelation> priorRelations, List<InProgressScheduleRow> schedules) {
+            Applicant applicant, Map<Long, PriorRelation> priorRelations, List<BasecampSchedule> schedules) {
 
         JoinEligibility judge(BasecampSearchRow row) {
             JoinCondition condition = toJoinCondition(row);
@@ -117,19 +120,18 @@ public class BasecampSearchService {
         }
 
         private boolean hasDateConflict(BasecampSearchRow row) {
-            return schedules.stream()
-                    .filter(schedule -> schedule.basecampId() != row.basecampId())
-                    .anyMatch(schedule -> JoinEligibilityPolicy.overlaps(
-                            row.startDate(), row.endDate(), schedule.startDate(), schedule.endDate()));
+            return JoinEligibilityPolicy.hasDateConflict(
+                    new BasecampSchedule(row.basecampId(), row.startDate(), row.endDate()), schedules);
         }
 
         private static JoinCondition toJoinCondition(BasecampSearchRow row) {
             JoinCondition condition = JoinCondition.none();
             if (row.minTrustLevel() != null) {
-                condition = condition.withMinTrustLevel(row.minTrustLevel());
+                condition = condition.withMinTrustLevel(TrustLevel.of(row.minTrustLevel()));
             }
             if (row.ageGroupMin() != null && row.ageGroupMax() != null) {
-                condition = condition.withAgeGroupRange(row.ageGroupMin(), row.ageGroupMax());
+                condition = condition.withAgeGroupRange(
+                        AgeGroup.ofDecade(row.ageGroupMin()), AgeGroup.ofDecade(row.ageGroupMax()));
             }
             if (row.sameGenderOnly()) {
                 condition = condition.withSameGenderOnly(row.requiredGender());

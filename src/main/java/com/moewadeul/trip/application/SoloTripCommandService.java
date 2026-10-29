@@ -2,6 +2,7 @@ package com.moewadeul.trip.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.schedule.CampingSchedule;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import com.moewadeul.trip.domain.SoloTrip;
@@ -33,7 +34,7 @@ public class SoloTripCommandService {
         SoloTrip trip = SoloTrip.register(
                 memberId,
                 command.spotId(),
-                new SoloTrip.Schedule(command.startDate(), command.endDate()),
+                new CampingSchedule(command.startDate(), command.endDate()),
                 today,
                 soloTripRepository.findByMemberIdAndEndDateAfter(memberId, today),
                 now);

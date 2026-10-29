@@ -28,6 +28,7 @@ import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
@@ -265,7 +266,7 @@ class BasecampLifecycleControllerTest {
 
     static Stream<Arguments> serviceErrors() {
         return Stream.of(
-                Arguments.of(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT), HttpStatus.FORBIDDEN),
+                Arguments.of(new BusinessException(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT), HttpStatus.FORBIDDEN),
                 Arguments.of(new BusinessException(CommonErrorCode.NOT_FOUND), HttpStatus.NOT_FOUND),
                 Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_OPEN_LIMIT), HttpStatus.BAD_REQUEST),
                 Arguments.of(

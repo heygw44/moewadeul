@@ -1,7 +1,7 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.mail.MailProperties;
 import com.moewadeul.common.scheduling.ScheduledJobRunner;
-import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -26,9 +26,9 @@ class NotificationMailScheduler {
             NotificationMailer mailer,
             ScheduledJobRunner jobRunner,
             NotificationMailProperties properties,
-            @Value("${moewadeul.mail.send-timeout}") Duration sendTimeout,
+            MailProperties mailProperties,
             @Value("${spring.task.scheduling.pool.size:1}") int schedulingPoolSize) {
-        requireLeaseOutlastsBatch(properties, sendTimeout);
+        properties.requireLeaseOutlastsBatch(mailProperties.sendTimeout());
         requireSchedulerThreadNotShared(schedulingPoolSize);
         this.mailer = mailer;
         this.jobRunner = jobRunner;
@@ -45,14 +45,6 @@ class NotificationMailScheduler {
                 log.debug("notification mails processed count={}", sent);
             }
         });
-    }
-
-    private static void requireLeaseOutlastsBatch(NotificationMailProperties properties, Duration sendTimeout) {
-        Duration worstBatch = sendTimeout.multipliedBy(properties.batchSize());
-        if (properties.lease().compareTo(worstBatch) <= 0) {
-            throw new IllegalStateException("moewadeul.notification.mail.lease(" + properties.lease()
-                    + ") must be longer than batchSize x moewadeul.mail.send-timeout(" + worstBatch + ")");
-        }
     }
 
     private static void requireSchedulerThreadNotShared(int schedulingPoolSize) {

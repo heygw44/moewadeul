@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -48,19 +49,36 @@ class MemberReportTest {
     }
 
     @Test
-    @DisplayName("후기 신고에 후기 ID가 없거나 회원 신고에 후기 ID가 있으면 만들지 못한다")
+    @DisplayName("후기 신고에 후기 ID가 없거나 회원 신고에 후기 ID가 있으면 INVALID_INPUT이다")
     void reviewIdMustMatchKind() {
         assertThatThrownBy(() -> MemberReport.receive(10L, 11L, 3L, null, ReportType.INAPPROPRIATE_REVIEW, "내용", NOW))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT);
+                    assertThat(e.getMessage()).isEqualTo("후기를 신고하려면 동행 후기 ID가 필요해요.");
+                });
         assertThatThrownBy(() -> MemberReport.receive(10L, 11L, 3L, 77L, ReportType.NO_SHOW, "내용", NOW))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT);
+                    assertThat(e.getMessage()).isEqualTo("회원 신고에는 동행 후기 ID를 넣을 수 없어요.");
+                });
     }
 
     @Test
-    @DisplayName("자기 자신을 신고하거나 내용이 비었거나 1000자를 넘으면 만들지 못한다")
-    void rejectsInvalidValues() {
+    @DisplayName("자기 자신을 신고하면 REPORT_NOT_ELIGIBLE이고, 후기 ID가 맞지 않으면 자기 신고보다 먼저 걸린다")
+    void rejectsSelfReport() {
         assertThatThrownBy(() -> MemberReport.receive(10L, 10L, 3L, null, ReportType.NO_SHOW, "내용", NOW))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.REPORT_NOT_ELIGIBLE));
+        assertThatThrownBy(() -> MemberReport.receive(10L, 10L, 3L, 77L, ReportType.NO_SHOW, "내용", NOW))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT));
+    }
+
+    @Test
+    @DisplayName("내용이 비었거나 1000자를 넘거나 유형이 null이면 만들지 못한다")
+    void rejectsInvalidValues() {
         assertThatThrownBy(() -> MemberReport.receive(10L, 11L, 3L, null, ReportType.NO_SHOW, " ", NOW))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> MemberReport.receive(10L, 11L, 3L, null, ReportType.NO_SHOW, "가".repeat(1001), NOW))

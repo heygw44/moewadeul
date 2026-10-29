@@ -3,6 +3,7 @@ package com.moewadeul.memory.application.image;
 import com.moewadeul.common.image.ImageCleanup;
 import com.moewadeul.common.image.UnattachedImageRow;
 import com.moewadeul.common.storage.ImageStorage;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.memory.domain.image.MemoryImage;
 import com.moewadeul.memory.infra.image.MemoryImageMapper;
 import java.time.Clock;
@@ -22,6 +23,7 @@ public class MemoryImageCleanupService extends ImageCleanup {
     }
 
     public Result deleteObjectsThenRowsOf(long memberId) {
+        OutsideTransaction.require("저장소 삭제를 기다리는 동안 DB 커넥션과 행 잠금을 쥐면 안 된다.");
         int deletedRows = 0;
         int storageFailures = 0;
         long lastImageId = 0;

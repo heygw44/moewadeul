@@ -115,9 +115,15 @@ public class BasecampDetailQueryService {
 
     private static JoinConditionSummary toSummary(JoinCondition condition) {
         return new JoinConditionSummary(
-                condition.getMinTrustLevel(),
-                condition.getAgeGroupMin(),
-                condition.getAgeGroupMax(),
+                condition.getMinTrustLevel() == null
+                        ? null
+                        : condition.getMinTrustLevel().level(),
+                condition.getAgeGroupMin() == null
+                        ? null
+                        : condition.getAgeGroupMin().decade(),
+                condition.getAgeGroupMax() == null
+                        ? null
+                        : condition.getAgeGroupMax().decade(),
                 condition.isSameGenderOnly());
     }
 }

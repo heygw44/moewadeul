@@ -32,6 +32,7 @@ import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
@@ -197,7 +198,7 @@ class BasecampMembershipControllerTest {
 
     static Stream<Arguments> applyErrors() {
         return Stream.of(
-                Arguments.of(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT), HttpStatus.FORBIDDEN),
+                Arguments.of(new BusinessException(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT), HttpStatus.FORBIDDEN),
                 Arguments.of(new BusinessException(CommonErrorCode.NOT_FOUND), HttpStatus.NOT_FOUND),
                 Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE), HttpStatus.CONFLICT),
                 Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED), HttpStatus.CONFLICT),
@@ -436,8 +437,7 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13] 탈퇴·강퇴 서비스가 던진 오류는 코드와 상태 그대로 응답한다")
     void membershipErrorsAreMapped() {
         // given
-        doThrow(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT))
-                .doThrow(new BusinessException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE))
+        doThrow(new BusinessException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE))
                 .when(basecampMembershipService)
                 .leave(77L, MEMBER_ID);
         doThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED))
@@ -446,16 +446,12 @@ class BasecampMembershipControllerTest {
                 .kick(77L, 31L, MEMBER_ID, KickReason.OTHER);
 
         // when
-        MvcTestResult lowTrust =
-                mvc.delete().uri(LEAVE).with(verified()).with(csrf()).exchange();
         MvcTestResult leader =
                 mvc.delete().uri(LEAVE).with(verified()).with(csrf()).exchange();
         MvcTestResult denied = postKick(verified(), "{\"reason\":\"OTHER\"}");
         MvcTestResult invalidState = postKick(verified(), "{\"reason\":\"OTHER\"}");
 
         // then
-        assertThat(lowTrust).hasStatus(HttpStatus.FORBIDDEN);
-        assertThat(lowTrust).bodyJson().extractingPath("$.code").isEqualTo("TRUST_LEVEL_INSUFFICIENT");
         assertThat(leader).hasStatus(HttpStatus.CONFLICT);
         assertThat(leader).bodyJson().extractingPath("$.code").isEqualTo("BASECAMP_LEADER_CANNOT_LEAVE");
         assertThat(denied).hasStatus(HttpStatus.FORBIDDEN);

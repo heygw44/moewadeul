@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.schedule.CampingSchedule;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -114,7 +115,7 @@ class SoloTripTest {
     }
 
     private static SoloTrip register(LocalDate start, LocalDate end, List<SoloTrip> upcoming) {
-        return SoloTrip.register(MEMBER_ID, SPOT_ID, new SoloTrip.Schedule(start, end), TODAY, upcoming, NOW);
+        return SoloTrip.register(MEMBER_ID, SPOT_ID, new CampingSchedule(start, end), TODAY, upcoming, NOW);
     }
 
     private static void assertRejected(Runnable action, TripErrorCode expected) {

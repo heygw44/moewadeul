@@ -12,13 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-class EmailVerificationActivator {
+class EmailVerificationApplier {
 
     private final EmailVerificationMapper emailVerificationMapper;
     private final MemberActivationMapper memberActivationMapper;
 
     @Transactional
-    public void activate(long verificationId, long memberId, Instant now) {
+    void activate(long verificationId, long memberId, Instant now) {
         if (emailVerificationMapper.markVerified(verificationId, EmailVerificationPolicy.MAX_ATTEMPTS, now) == 0) {
             throw new BusinessException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         }

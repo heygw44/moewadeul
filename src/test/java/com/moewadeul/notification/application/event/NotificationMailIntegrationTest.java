@@ -10,6 +10,7 @@ import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.web.WebProperties;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.notification.application.NotificationEventTypes;
@@ -30,7 +31,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -58,8 +58,8 @@ class NotificationMailIntegrationTest {
     @Autowired
     private NotificationMailStore mailStore;
 
-    @Value("${moewadeul.web.base-url}")
-    private String baseUrl;
+    @Autowired
+    private WebProperties webProperties;
 
     @Autowired
     private TestMailSender mailSender;
@@ -392,7 +392,7 @@ class NotificationMailIntegrationTest {
             signal.request();
         };
         NotificationMailer stoppingMailer =
-                new NotificationMailer(mailStore, shutdownStartingSender, clock, baseUrl, signal);
+                new NotificationMailer(mailStore, shutdownStartingSender, clock, webProperties, signal);
 
         // when
         int handled = stoppingMailer.sendDue();
@@ -423,7 +423,7 @@ class NotificationMailIntegrationTest {
         publisher.publishPending();
         ShutdownSignal signal = new ShutdownSignal();
         signal.request();
-        NotificationMailer stoppedMailer = new NotificationMailer(mailStore, mailSender, clock, baseUrl, signal);
+        NotificationMailer stoppedMailer = new NotificationMailer(mailStore, mailSender, clock, webProperties, signal);
 
         // when
         int handled = stoppedMailer.sendDue();

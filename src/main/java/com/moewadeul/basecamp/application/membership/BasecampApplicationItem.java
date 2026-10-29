@@ -1,6 +1,9 @@
 package com.moewadeul.basecamp.application.membership;
 
 import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import java.time.Instant;
 
 public record BasecampApplicationItem(
@@ -9,10 +12,10 @@ public record BasecampApplicationItem(
     public record Applicant(
             long memberId,
             String nickname,
-            String ageGroup,
+            AgeGroup ageGroup,
             boolean ageGroupVerified,
-            String gender,
+            Gender gender,
             boolean genderVerified,
-            int trustLevel,
+            TrustLevel trustLevel,
             int completedCompanions) {}
 }

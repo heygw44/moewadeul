@@ -1,7 +1,7 @@
 package com.moewadeul.trust.api.identity;
 
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.trust.application.identity.IdentityVerifyCommand;
-import com.moewadeul.trust.domain.identity.Gender;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

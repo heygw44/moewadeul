@@ -1,5 +1,7 @@
 package com.moewadeul.trust.api.profile;
 
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.member.application.profile.MyInfo;
 import com.moewadeul.trust.application.profile.TrustSummary;
 
@@ -9,8 +11,8 @@ public record MeResponse(
         String nickname,
         String status,
         String role,
-        String selfAgeGroup,
-        String selfGender,
+        AgeGroup selfAgeGroup,
+        Gender selfGender,
         boolean identityVerified,
         int trustLevel) {
 
@@ -24,7 +26,7 @@ public record MeResponse(
                 myInfo.selfAgeGroup(),
                 myInfo.selfGender(),
                 trustSummary.identityVerified(),
-                trustSummary.trustLevel());
+                trustSummary.trustLevel().level());
     }
 
     @Override

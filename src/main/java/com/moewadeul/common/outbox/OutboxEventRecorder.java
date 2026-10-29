@@ -1,11 +1,11 @@
 package com.moewadeul.common.outbox;
 
+import com.moewadeul.common.transaction.InsideTransaction;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -18,7 +18,7 @@ public class OutboxEventRecorder {
     private final Clock clock;
 
     public void record(String eventType, String aggregateType, long aggregateId, Object payload) {
-        requireActiveTransaction();
+        InsideTransaction.require("outbox 이벤트는 원래 작업과 같은 트랜잭션에서 기록해야 한다.");
         String payloadJson = toJson(payload);
         outboxEventRepository.save(
                 OutboxEvent.pending(eventType, aggregateType, aggregateId, payloadJson, Instant.now(clock)));
@@ -31,12 +31,6 @@ public class OutboxEventRecorder {
     public boolean hasPending(String eventType, String aggregateType, long aggregateId) {
         return outboxEventRepository.existsByEventTypeAndAggregateTypeAndAggregateIdAndStatus(
                 eventType, aggregateType, aggregateId, OutboxEventStatus.PENDING);
-    }
-
-    private void requireActiveTransaction() {
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("outbox 이벤트는 원래 작업과 같은 트랜잭션 안에서 기록해야 합니다.");
-        }
     }
 
     private String toJson(Object payload) {

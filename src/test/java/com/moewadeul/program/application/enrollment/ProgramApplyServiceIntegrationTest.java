@@ -13,6 +13,7 @@ import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.application.catalog.ProgramQueryService;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
@@ -133,7 +135,7 @@ class ProgramApplyServiceIntegrationTest {
         long level1 = fixture.saveVerifiedMember();
 
         // then
-        assertErrorCode(() -> programApplyService.apply(level0, programId), CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
+        assertErrorCode(() -> programApplyService.apply(level0, programId), TrustErrorCode.TRUST_LEVEL_INSUFFICIENT);
         assertThat(fixture.applicationCount(programId, level0)).isZero();
         assertThat(programApplyService.apply(level1, programId).status())
                 .isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
@@ -266,6 +268,18 @@ class ProgramApplyServiceIntegrationTest {
         // when, then
         assertErrorCode(() -> programApplyService.apply(memberId, programId), ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
         assertThat(fixture.applicationStatus(first.applicationId())).isEqualTo("PENDING_PAYMENT");
+    }
+
+    @Test
+    @DisplayName("[F-18][PG-03] 다른 제약 위반은 PROGRAM_ALREADY_APPLIED로 바꾸지 않는다")
+    void doesNotTranslateOtherConstraintViolation() {
+        // given
+        long programId = fixture.saveProgram(3, false);
+        long missingMemberId = Long.MAX_VALUE;
+
+        // when, then
+        assertThatThrownBy(() -> programApplyService.apply(missingMemberId, programId))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private static void assertErrorCode(Runnable action, ErrorCode expected) {

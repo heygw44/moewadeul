@@ -68,4 +68,21 @@ class CompanionReviewPolicyTest {
         assertThat(COMPLETED_AT.isBefore(cutoff)).isFalse();
         assertThat(CompanionReviewPolicy.isWritable(COMPLETED_AT, now)).isTrue();
     }
+
+    @Test
+    @DisplayName("[RV-01] 완료된 베이스캠프에서 둘 다 ACTIVE 멤버이고 서로 다른 회원일 때만 후기를 쓸 자격이 있다")
+    void eligibleOnlyWhenEveryConditionHolds() {
+        assertThat(CompanionReviewPolicy.isEligible(true, COMPLETED_AT, true, true, 1L, 2L))
+                .isTrue();
+        assertThat(CompanionReviewPolicy.isEligible(false, COMPLETED_AT, true, true, 1L, 2L))
+                .isFalse();
+        assertThat(CompanionReviewPolicy.isEligible(true, null, true, true, 1L, 2L))
+                .isFalse();
+        assertThat(CompanionReviewPolicy.isEligible(true, COMPLETED_AT, false, true, 1L, 2L))
+                .isFalse();
+        assertThat(CompanionReviewPolicy.isEligible(true, COMPLETED_AT, true, false, 1L, 2L))
+                .isFalse();
+        assertThat(CompanionReviewPolicy.isEligible(true, COMPLETED_AT, true, true, 1L, 1L))
+                .isFalse();
+    }
 }

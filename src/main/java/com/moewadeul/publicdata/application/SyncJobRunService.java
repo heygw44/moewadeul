@@ -1,6 +1,7 @@
 package com.moewadeul.publicdata.application;
 
 import com.moewadeul.common.error.UniqueViolations;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.publicdata.domain.SyncJobRun;
 import com.moewadeul.publicdata.domain.SyncJobRunRepository;
 import com.moewadeul.publicdata.domain.SyncJobStatus;
@@ -27,7 +28,7 @@ public class SyncJobRunService {
     // 같은 종류를 동시에 시작하면 InnoDB가 같은 키를 넣으려는 트랜잭션 하나를 교착 상태 오류로 중단시키기도 해서 다시 시도한다.
     private static final int MAX_START_ATTEMPTS = 3;
 
-    private final SyncJobRunStartService syncJobRunStartService;
+    private final SyncJobRunStartApplier syncJobRunStartApplier;
     private final SyncJobRunRepository syncJobRunRepository;
     private final Clock clock;
 
@@ -36,9 +37,10 @@ public class SyncJobRunService {
     }
 
     public Optional<SyncJobStart> begin(SyncJobType jobType, Duration staleAfter, Long adminId) {
+        OutsideTransaction.require("잠금 충돌로 다시 시도하려면 시도마다 새 트랜잭션이어야 한다.");
         for (int attempt = 1; ; attempt++) {
             try {
-                return syncJobRunStartService.start(jobType, staleAfter, adminId);
+                return syncJobRunStartApplier.start(jobType, staleAfter, adminId);
             } catch (DataIntegrityViolationException e) {
                 if (!UniqueViolations.violates(e, RUNNING_UNIQUE_CONSTRAINT)) {
                     throw e;

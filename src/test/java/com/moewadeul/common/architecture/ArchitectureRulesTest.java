@@ -25,6 +25,7 @@ class ArchitectureRulesTest {
         API_PERSISTENCE(ArchitectureRules::apiPersistenceRule),
         TRANSACTIONAL_PLACEMENT(ArchitectureRules::transactionalPlacementRule),
         APPLIER_VISIBILITY(ArchitectureRules::applierVisibilityRule),
+        APPLIER_CALLER(ArchitectureRules::applierCallerRule),
         SCHEDULED_JOB_RUNNER(ArchitectureRules::scheduledJobsRunThroughRunnerRule);
 
         private final Function<String, ArchRule> factory;
@@ -150,6 +151,18 @@ class ArchitectureRulesTest {
                 "member.application.MemberCleanupScheduler.cleanUp",
                 "member.application.MemberRegisterOnlyScheduler.cleanUp",
                 "member.application.MemberMultiScheduleScheduler.cleanUp");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] *Service 가 아닌 클래스가 *Applier 를 부르면 R8 위반이다")
+    void applierCallerRuleRejectsNonServiceCaller() {
+        assertOnlyRuleFails(Rule.APPLIER_CALLER, "violation.r8.caller", "member.application.MemberCleanupJob");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] OutsideTransaction 가드 없이 *Applier 를 부르는 *Service 는 R8 위반이다")
+    void applierCallerRuleRejectsUnguardedService() {
+        assertOnlyRuleFails(Rule.APPLIER_CALLER, "violation.r8.unguarded", "member.application.MemberService");
     }
 
     private static void assertOnlyRuleFails(Rule failing, String subRoot, String... expectedFixtures) {

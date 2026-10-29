@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.memory.application.MemoryCommandService;
@@ -37,7 +38,7 @@ class MemoryReportConcurrencyIntegrationTest {
 
     private static final int THREADS = 10;
     private static final int PENDING_REVIEW_REPORTS = 5;
-    private static final MemoryReportCommand REPORT = new MemoryReportCommand("SPAM", "광고 사진입니다");
+    private static final MemoryReportCommand REPORT = new MemoryReportCommand(ContentReportReason.SPAM, "광고 사진입니다");
 
     @Autowired
     private MemoryReportService memoryReportService;

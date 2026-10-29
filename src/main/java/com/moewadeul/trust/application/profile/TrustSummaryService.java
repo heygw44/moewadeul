@@ -1,7 +1,12 @@
 package com.moewadeul.trust.application.profile;
 
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.trust.domain.CompanionReviewPolicy;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.companion.CompanionReviewTag;
 import com.moewadeul.trust.domain.identity.IdentityVerification;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
@@ -25,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TrustSummaryService {
 
-    private static final TrustSummary NOT_VERIFIED_LEVEL_ZERO = new TrustSummary(false, 0);
+    private static final TrustSummary NOT_VERIFIED_LEVEL_ZERO = new TrustSummary(false, TrustLevel.EMAIL_VERIFIED);
 
     private final IdentityVerificationRepository identityVerificationRepository;
     private final TrustRecordMapper trustRecordMapper;
@@ -41,6 +46,13 @@ public class TrustSummaryService {
     }
 
     @Transactional(readOnly = true)
+    public void requireLevel(long memberId, TrustLevel minLevel) {
+        if (!summarize(memberId).trustLevel().atLeast(minLevel)) {
+            throw new BusinessException(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT);
+        }
+    }
+
+    @Transactional(readOnly = true)
     public TrustDetail detail(long memberId) {
         Instant now = clock.instant();
         Year currentYear = currentYear(now);
@@ -48,13 +60,11 @@ public class TrustSummaryService {
         boolean adult =
                 found.map(verification -> verification.isAdult(currentYear)).orElse(false);
         CompanionRecord record = companionRecordOf(memberId, now);
-        int trustLevel = TrustLevelPolicy.judge(found.isPresent(), adult, record);
-        String verifiedAgeGroup = found.flatMap(verification -> verification.ageGroupIn(currentYear))
-                .map(Enum::name)
+        TrustLevel trustLevel = TrustLevelPolicy.judge(found.isPresent(), adult, record);
+        AgeGroup verifiedAgeGroup = found.flatMap(verification -> verification.ageGroupIn(currentYear))
                 .orElse(null);
-        String verifiedGender = found.flatMap(IdentityVerification::retainedGender)
-                .map(Enum::name)
-                .orElse(null);
+        Gender verifiedGender =
+                found.flatMap(IdentityVerification::retainedGender).orElse(null);
         return new TrustDetail(
                 found.isPresent(),
                 adult,
@@ -72,7 +82,7 @@ public class TrustSummaryService {
         if (!verification.isAdult(currentYear(now))) {
             return new TrustSummary(true, TrustLevelPolicy.judge(true, false, CompanionRecord.NONE));
         }
-        int level = TrustLevelPolicy.judge(true, true, companionRecordOf(memberId, now));
+        TrustLevel level = TrustLevelPolicy.judge(true, true, companionRecordOf(memberId, now));
         return new TrustSummary(true, level);
     }
 
