@@ -18,7 +18,6 @@ import type { SheetSnap } from '../../components/sheetSnap';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
-import { searchRegions } from '../../map/regionSearch';
 import type { RegionCandidate } from '../../map/regionSearch';
 import type { RegionLabel } from '../../map/regionLabel';
 import { radiusBounds } from '../../map/radiusBounds';
@@ -52,6 +51,7 @@ import { useIsDesktop, DESKTOP_QUERY } from './useIsDesktop';
 import { useMapContextMenu } from './useMapContextMenu';
 import { useMapMoving } from './useMapMoving';
 import { useMapView } from './useMapView';
+import { useRegionQueryLink } from './useRegionQueryLink';
 import { useSearchPin } from './useSearchPin';
 import { useRegionLabelInView } from './useRegionLabelInView';
 import { useSpotsInView } from '../spot/useSpotsInView';
@@ -355,22 +355,7 @@ export function MapPage({
     moveToRegion(candidate);
   }
 
-  const selectSearchedRegion = useEffectEvent((candidate: RegionCandidate) => selectRegion(candidate));
-  useEffect(() => {
-    if (!map || mode !== 'browse') return;
-    const query = new URLSearchParams(window.location.search).get('q')?.trim();
-    if (!query) return;
-    navigate('/map', { replace: true });
-    let cancelled = false;
-    searchRegions(query)
-      .then(([first]) => {
-        if (!cancelled && first) selectSearchedRegion(first);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [map, mode]);
+  useRegionQueryLink(map, mode === 'browse', selectRegion);
 
   function applyAiResult(result: AiInterpretResponse, candidate: RegionCandidate | null) {
     if (!map) return;
