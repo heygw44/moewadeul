@@ -2,6 +2,7 @@ package com.moewadeul.community.domain.post;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.moderation.PendingReview;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -112,7 +113,10 @@ public class CommunityPost {
         this.updatedAt = now;
     }
 
-    public void markPendingReview(Instant now) {
+    public void receiveReport(long unreviewedReportCount, Instant now) {
+        if (unreviewedReportCount < PendingReview.REPORT_THRESHOLD) {
+            return;
+        }
         if (status != CommunityPostStatus.ACTIVE) {
             throw new IllegalStateException("보이는 글만 검토 대기로 바꿀 수 있습니다. 현재 상태: " + status);
         }

@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemoryReportService {
 
     private static final String REPORT_UNIQUE_CONSTRAINT = "uk_memory_report_memory_reporter";
-    private static final int PENDING_REVIEW_REPORT_THRESHOLD = 5;
     private static final String REASON_MESSAGE = "신고 사유는 " + EnumParser.names(MemoryReportReason.class) + " 중 하나여야 해요.";
 
     private final MemoryRepository memoryRepository;
@@ -50,9 +49,7 @@ public class MemoryReportService {
         } catch (DataIntegrityViolationException e) {
             throw UniqueViolations.translate(e, REPORT_UNIQUE_CONSTRAINT, MemoryErrorCode.MEMORY_ALREADY_REPORTED);
         }
-        if (memoryReportRepository.countByMemoryIdAndReviewedAtIsNull(memoryId) >= PENDING_REVIEW_REPORT_THRESHOLD) {
-            memory.markPendingReview(now);
-        }
+        memory.receiveReport(memoryReportRepository.countByMemoryIdAndReviewedAtIsNull(memoryId), now);
     }
 
     private static BusinessException alreadyReported() {
