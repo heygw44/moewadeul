@@ -196,6 +196,21 @@ class MemberRemovalTest {
     }
 
     @Test
+    @DisplayName("[SN-13] 한 번에 두 멤버를 정리하고 이벤트를 함께 꺼내도, 각 이벤트의 남은 멤버는 그 전이 직후의 상태다")
+    void eventsKeepMembersAtEachTransition() {
+        Basecamp basecamp = aBasecamp().autoClosed();
+
+        basecamp.removeMember(MEMBER_ID, RemovalCause.WITHDRAWAL, LATER);
+        basecamp.removeMember(APPLICANT_ID, RemovalCause.WITHDRAWAL, LATER);
+
+        assertThat(basecamp.pullEvents())
+                .extracting(OutboxEventDraft::payload)
+                .containsExactly(
+                        new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(LEADER_ID, APPLICANT_ID)),
+                        new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(LEADER_ID)));
+    }
+
+    @Test
     @DisplayName("[SN-13] 대기 중인 신청자를 정리하거나 정리할 대상이 없으면 이벤트를 남기지 않는다")
     void pendingApplicantAndNothingRaiseNoEvent() {
         Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);

@@ -327,7 +327,7 @@ public class Basecamp {
         if (activeMember.isPresent()) {
             activeMember.get().removeByCleanup(now);
             reopenIfAutoClosed(now);
-            raise(BasecampEvents.MEMBER_CHANGED, () -> new BasecampEvents.MembersPayload(id, activeMemberIds()));
+            raiseMembers(BasecampEvents.MEMBER_CHANGED, activeMemberIds());
             return MemberRemoval.MEMBER_LEFT;
         }
         Optional<BasecampApplication> pending = findApplicationOf(memberId).filter(BasecampApplication::isPending);
@@ -397,7 +397,7 @@ public class Basecamp {
         this.confirmedAt = now;
         expirePendingApplications(now);
         touch(now);
-        raise(BasecampEvents.CONFIRMED, () -> new BasecampEvents.MembersPayload(id, activeMemberIds()));
+        raiseMembers(BasecampEvents.CONFIRMED, activeMemberIds());
     }
 
     private void markCanceled(CancelReason reason, Instant now) {
@@ -407,7 +407,7 @@ public class Basecamp {
         this.cancelReason = reason;
         expirePendingApplications(now);
         touch(now);
-        raise(BasecampEvents.CANCELED, () -> new BasecampEvents.MembersPayload(id, activeMembersExceptLeader()));
+        raiseMembers(BasecampEvents.CANCELED, activeMembersExceptLeader());
     }
 
     private void raise(String eventType, Supplier<Object> payload) {
@@ -420,10 +420,14 @@ public class Basecamp {
                 () -> new BasecampEvents.AppliedPayload(application.getId(), applicantId, leaderId));
     }
 
+    private void raiseMembers(String eventType, List<Long> memberIds) {
+        List<Long> snapshot = List.copyOf(memberIds);
+        raise(eventType, () -> new BasecampEvents.MembersPayload(id, snapshot));
+    }
+
     private void raiseDecision(String eventType, BasecampApplication application) {
-        raise(
-                eventType,
-                () -> new BasecampEvents.DecisionPayload(application.getId(), application.getApplicantId(), id));
+        long applicantId = application.getApplicantId();
+        raise(eventType, () -> new BasecampEvents.DecisionPayload(application.getId(), applicantId, id));
     }
 
     private List<Long> activeMembersExceptLeader() {
