@@ -4,7 +4,9 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
@@ -15,6 +17,7 @@ import com.moewadeul.memory.application.MemoryPhoto;
 import com.moewadeul.memory.application.MemoryReviseCommand;
 import com.moewadeul.memory.application.MemoryView;
 import com.moewadeul.memory.application.MemoryWriteCommand;
+import com.moewadeul.memory.domain.image.MemoryImage;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -24,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
@@ -132,6 +136,51 @@ class MemoryImageIntegrationTest {
     void issueRejectsTypeAndSize() {
         assertInvalid(() -> uploadService.issue(memberId, command("image/gif", SIZE)), "contentType");
         assertInvalid(() -> uploadService.issue(memberId, command("image/png", 5L * 1024 * 1024 + 1)), "sizeBytes");
+    }
+
+    @Test
+    @DisplayName(
+            "[F-33][MM-05] 24시간 안에 발급해 기록에 붙지 않은 사진이 30장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED이고 행을 만들지 않으며, 가장 오래된 사진이 24시간을 넘기면 다시 발급한다")
+    void issueLimitsUnattachedUploads() {
+        // given
+        uploadService.issue(memberId, command("image/jpeg", SIZE));
+        clock.advance(Duration.ofHours(1));
+        for (int i = 1; i < MemoryImage.MAX_UNATTACHED_PER_MEMBER; i++) {
+            uploadService.issue(memberId, command("image/jpeg", SIZE));
+        }
+
+        // when
+        ThrowingCallable overLimit = () -> uploadService.issue(memberId, command("image/jpeg", SIZE));
+
+        // then
+        assertThatThrownBy(overLimit).isInstanceOfSatisfying(RateLimitedException.class, e -> {
+            assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_UPLOAD_LIMITED);
+            assertThat(e.getErrorCode().httpStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+            assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(23));
+        });
+        assertThat(imageRowCount()).isEqualTo(MemoryImage.MAX_UNATTACHED_PER_MEMBER);
+        clock.advance(Duration.ofHours(23));
+        uploadService.issue(memberId, command("image/jpeg", SIZE));
+        assertThat(imageRowCount()).isEqualTo(MemoryImage.MAX_UNATTACHED_PER_MEMBER + 1);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 기록에 붙인 사진과 다른 회원의 사진은 발급 상한에 세지 않는다")
+    void issueLimitCountsOnlyOwnUnattachedUploads() {
+        // given
+        List<Long> attached = uploadedImages(MemoryImage.MAX_PER_MEMORY);
+        uploadedImages(MemoryImage.MAX_UNATTACHED_PER_MEMBER - MemoryImage.MAX_PER_MEMORY);
+        commandService.write(memberId, write(attached));
+        long otherMemberId = saveMember();
+        for (int i = 0; i < MemoryImage.MAX_UNATTACHED_PER_MEMBER; i++) {
+            uploadService.issue(otherMemberId, command("image/jpeg", SIZE));
+        }
+
+        // when
+        MemoryImageUpload upload = uploadService.issue(memberId, command("image/jpeg", SIZE));
+
+        // then
+        assertThat(memoryIdOf(upload.imageId())).isNull();
     }
 
     @Test
@@ -326,6 +375,10 @@ class MemoryImageIntegrationTest {
 
     private Long memoryIdOf(long imageId) {
         return jdbc.queryForObject("SELECT memory_id FROM memory_image WHERE id = ?", Long.class, imageId);
+    }
+
+    private int imageRowCount() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM memory_image", Integer.class);
     }
 
     private long saveMember() {
