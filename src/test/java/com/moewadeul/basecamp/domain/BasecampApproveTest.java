@@ -3,6 +3,7 @@ package com.moewadeul.basecamp.domain;
 import static com.moewadeul.basecamp.domain.BasecampAssertions.assertFailsWith;
 import static com.moewadeul.basecamp.domain.BasecampAssertions.assertFailsWithInvalidState;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.APPLICANT_ID;
+import static com.moewadeul.basecamp.domain.BasecampBuilder.BASECAMP_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.MEMBER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.NOW;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.aBasecamp;
@@ -10,6 +11,8 @@ import static com.moewadeul.basecamp.domain.BasecampBuilder.applicationIdOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.BasecampEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -158,5 +161,86 @@ class BasecampApproveTest {
         // then
         assertFailsWith(CommonErrorCode.NOT_FOUND, () -> closed.reject(999L, LATER));
         assertFailsWithInvalidState(() -> closed.reject(applicationIdOf(APPLICANT_ID), LATER));
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-08] 승인하면 BASECAMP_APPROVED 이벤트 하나를 남긴다")
+    void approveRaisesApprovedEvent() {
+        // given
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+        // when
+        basecamp.approve(applicationIdOf(APPLICANT_ID), LATER);
+
+        // then
+        assertThat(basecamp.pullEvents())
+                .containsExactly(new OutboxEventDraft(
+                        BasecampEvents.APPROVED,
+                        BasecampEvents.AGGREGATE_TYPE,
+                        BASECAMP_ID,
+                        new BasecampEvents.DecisionPayload(applicationIdOf(APPLICANT_ID), APPLICANT_ID, BASECAMP_ID)));
+        assertThat(basecamp.pullEvents()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-07] 거절하면 BASECAMP_REJECTED 이벤트 하나를 남긴다")
+    void rejectRaisesRejectedEvent() {
+        // given
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+        // when
+        basecamp.reject(applicationIdOf(APPLICANT_ID), LATER);
+
+        // then
+        assertThat(basecamp.pullEvents())
+                .containsExactly(new OutboxEventDraft(
+                        BasecampEvents.REJECTED,
+                        BasecampEvents.AGGREGATE_TYPE,
+                        BASECAMP_ID,
+                        new BasecampEvents.DecisionPayload(applicationIdOf(APPLICANT_ID), APPLICANT_ID, BASECAMP_ID)));
+    }
+
+    @Test
+    @DisplayName("[F-13][BC-08] 승인할 수 없어서 거부하면 이벤트를 남기지 않는다")
+    void failedApproveRaisesNothing() {
+        // given
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.CLOSED);
+
+        // when
+        assertFailsWithInvalidState(() -> basecamp.approve(applicationIdOf(APPLICANT_ID), LATER));
+
+        // then
+        assertThat(basecamp.pullEvents()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("강퇴하면 BASECAMP_KICKED 이벤트 하나를 남기고, 사유는 이름으로 담긴다")
+    void kickRaisesKickedEvent() {
+        // given
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+        // when
+        basecamp.kick(MEMBER_ID, KickReason.NO_CONTACT, LATER);
+
+        // then
+        assertThat(basecamp.pullEvents())
+                .containsExactly(new OutboxEventDraft(
+                        BasecampEvents.KICKED,
+                        BasecampEvents.AGGREGATE_TYPE,
+                        BASECAMP_ID,
+                        new BasecampEvents.KickedPayload(BASECAMP_ID, MEMBER_ID, KickReason.NO_CONTACT.name())));
+    }
+
+    @Test
+    @DisplayName("멤버가 스스로 탈퇴하는 것은 이벤트를 남기지 않는다")
+    void leaveRaisesNothing() {
+        // given
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+        // when
+        basecamp.leave(MEMBER_ID, LATER);
+
+        // then
+        assertThat(basecamp.pullEvents()).isEmpty();
     }
 }

@@ -8,7 +8,6 @@ import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
@@ -45,11 +44,7 @@ public class BasecampApplyService {
         // 베이스캠프는 이미 영속 상태라 flush만 하면 새 신청이 저장되고 ID가 채워진다.
         // saveAndFlush를 쓰면 JPA가 병합하면서 새 신청을 복사본으로 저장해서, 돌려받은 객체에 ID가 없다.
         basecampRepository.flush();
-        outboxEventRecorder.record(
-                BasecampEvents.APPLIED,
-                BasecampEvents.AGGREGATE_TYPE,
-                basecamp.getId(),
-                new BasecampEvents.AppliedPayload(application.getId(), command.memberId(), basecamp.getLeaderId()));
+        outboxEventRecorder.recordAll(basecamp.pullEvents());
         return new BasecampApplyResult(application.getId(), application.getStatus());
     }
 
