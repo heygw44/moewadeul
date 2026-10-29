@@ -36,7 +36,7 @@ public class MemberProfileQueryService {
                 detail.topTags());
     }
 
-    private static String firstNonNull(String verified, String selfReported) {
+    private static <T> T firstNonNull(T verified, T selfReported) {
         if (verified != null) {
             return verified;
         }

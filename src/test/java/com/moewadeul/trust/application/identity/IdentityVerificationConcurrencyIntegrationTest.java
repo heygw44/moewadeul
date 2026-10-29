@@ -4,10 +4,10 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.domain.TrustErrorCode;
-import com.moewadeul.trust.domain.identity.Gender;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;

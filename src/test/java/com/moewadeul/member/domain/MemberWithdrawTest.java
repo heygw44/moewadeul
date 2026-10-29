@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Duration;
 import java.time.Instant;
@@ -25,8 +27,8 @@ class MemberWithdrawTest {
     @DisplayName("[F-01][PV-01][PV-02][PV-03] 탈퇴하면 이메일·비밀번호 해시·자기 신고 값을 지우고 닉네임을 탈퇴회원_{id}로 바꾼다")
     void withdrawErasesPersonalData() {
         Member member = savedMember(12L);
-        member.changeSelfAgeGroup(SelfAgeGroup.TWENTIES, NOW);
-        member.changeSelfGender(SelfGender.FEMALE, NOW);
+        member.changeSelfAgeGroup(AgeGroup.TWENTIES, NOW);
+        member.changeSelfGender(Gender.FEMALE, NOW);
 
         member.withdraw(LATER);
 

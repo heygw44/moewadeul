@@ -1,5 +1,7 @@
 package com.moewadeul.member.application.profile;
 
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.member.domain.Member;
 
 public record MyInfo(
@@ -8,8 +10,8 @@ public record MyInfo(
         String nickname,
         String status,
         String role,
-        String selfAgeGroup,
-        String selfGender) {
+        AgeGroup selfAgeGroup,
+        Gender selfGender) {
 
     static MyInfo from(Member member) {
         return new MyInfo(
@@ -18,15 +20,8 @@ public record MyInfo(
                 member.getNickname(),
                 member.getStatus().name(),
                 member.getRole().name(),
-                nameOrNull(member.getSelfAgeGroup()),
-                nameOrNull(member.getSelfGender()));
-    }
-
-    private static String nameOrNull(Enum<?> value) {
-        if (value == null) {
-            return null;
-        }
-        return value.name();
+                member.getSelfAgeGroup(),
+                member.getSelfGender());
     }
 
     @Override

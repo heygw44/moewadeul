@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.web.PatchField;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
@@ -20,8 +22,6 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberRole;
 import com.moewadeul.member.domain.MemberStatus;
-import com.moewadeul.member.domain.SelfAgeGroup;
-import com.moewadeul.member.domain.SelfGender;
 import com.moewadeul.memory.application.MemoryImageReader;
 import com.moewadeul.memory.application.moderation.AdminMemoryQueryService;
 import com.moewadeul.memory.application.report.MemoryReportCommand;
@@ -248,8 +248,8 @@ class EnumInputServicesTest {
 
         myInfoService(member).update(1L, command);
 
-        verify(member).changeSelfAgeGroup(SelfAgeGroup.SIXTIES_PLUS, CLOCK.instant());
-        verify(member).changeSelfGender(SelfGender.FEMALE, CLOCK.instant());
+        verify(member).changeSelfAgeGroup(AgeGroup.SIXTIES_PLUS, CLOCK.instant());
+        verify(member).changeSelfGender(Gender.FEMALE, CLOCK.instant());
     }
 
     @Test

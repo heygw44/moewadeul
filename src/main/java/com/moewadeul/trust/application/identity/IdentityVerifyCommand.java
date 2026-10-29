@@ -1,6 +1,6 @@
 package com.moewadeul.trust.application.identity;
 
-import com.moewadeul.trust.domain.identity.Gender;
+import com.moewadeul.common.profile.Gender;
 
 public record IdentityVerifyCommand(int birthYear, Gender gender, String demoIdentityKey) {
 
