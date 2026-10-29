@@ -10,8 +10,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 import com.moewadeul.common.error.GlobalExceptionHandler;
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
@@ -21,6 +19,8 @@ import com.moewadeul.community.application.comment.CommunityCommentCommandServic
 import com.moewadeul.community.application.comment.CommunityCommentItem;
 import com.moewadeul.community.application.comment.CommunityCommentQueryService;
 import com.moewadeul.community.application.comment.CommunityCommentWriteCommand;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -76,7 +76,7 @@ class CommunityCommentControllerTest {
     private CommunityCommentQueryService communityCommentQueryService;
 
     @MockitoBean
-    private IdempotencyRecordJpaRepository idempotencyRecordRepository;
+    private IdempotencyRecordRepository idempotencyRecordRepository;
 
     @Test
     @DisplayName("[F-29][CM-04] 로그인하지 않은 사용자도 댓글 목록을 조회하면 댓글 아래에 답글이 묶여 나오고, 답글에 답한 답글에만 replyTo가 있다")

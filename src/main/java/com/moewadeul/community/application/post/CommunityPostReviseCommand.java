@@ -1,6 +1,6 @@
 package com.moewadeul.community.application.post;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import java.util.List;
 import java.util.Objects;
 

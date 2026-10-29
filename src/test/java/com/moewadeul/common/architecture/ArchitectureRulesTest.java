@@ -107,6 +107,28 @@ class ArchitectureRulesTest {
     }
 
     @Test
+    @DisplayName("[ADR-005] common.<패키지>.domain이나 모듈 domain이 common의 application·infra에 의존하면 R3 위반이다")
+    void domainIndependenceRuleRejectsDependencyOnCommonOuterLayers() {
+        assertOnlyRuleFails(
+                Rule.DOMAIN_INDEPENDENCE,
+                "violation.r3.common",
+                "common.media.domain.Media",
+                "common.media.infra.MediaRow",
+                "member.domain.Member",
+                "common.media.application.MediaUploader");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] api가 common.<패키지>.infra를 쓰면 R4 위반이다")
+    void apiPersistenceRuleRejectsCommonInfraDependency() {
+        assertOnlyRuleFails(
+                Rule.API_PERSISTENCE,
+                "violation.r4.common",
+                "member.api.MemberController",
+                "common.media.infra.MediaRow");
+    }
+
+    @Test
     @DisplayName("[ADR-005] api가 infra 패키지를 쓰면 R4 위반이다")
     void apiPersistenceRuleRejectsInfraDependency() {
         assertOnlyRuleFails(
@@ -191,6 +213,18 @@ class ArchitectureRulesTest {
                 "member.domain.MemberGateway",
                 "member.infra.MemberGatewayAdapter");
         assertThatThrownBy(() -> Rule.DOMAIN_PORT.check("violation.r10.port")).hasMessageNotContaining("MemberPolicy");
+    }
+
+    @Test
+    @DisplayName("[ADR-009] common.<패키지>.domain 인터페이스를 common의 infra나 계층 없는 어댑터가 구현하면 R10 위반이다")
+    void domainPortRuleRejectsCommonAdapterImplementation() {
+        assertOnlyRuleFails(
+                Rule.DOMAIN_PORT,
+                "violation.r10.common",
+                "common.media.domain.MediaScanner",
+                "common.media.infra.S3MediaScanner",
+                "common.media.domain.MediaNotifier",
+                "common.mail.MailMediaNotifier");
     }
 
     @Test

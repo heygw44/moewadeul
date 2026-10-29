@@ -1,7 +1,7 @@
 package com.moewadeul.memory.application.image;
 
-import com.moewadeul.common.image.ImageCleanup;
-import com.moewadeul.common.image.UnattachedImageRow;
+import com.moewadeul.common.image.application.ImageCleanup;
+import com.moewadeul.common.image.infra.UnattachedImageRow;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.memory.domain.image.MemoryImage;

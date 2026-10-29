@@ -55,7 +55,7 @@ class AdminAuditRecorderIntegrationTest {
         AdminAuditLog log = logs.get(0);
         assertThat(log.getAdminId()).isEqualTo(adminId);
         assertThat(log.getAction()).isEqualTo(AdminAuditAction.SANCTION_LIFT);
-        assertThat(log.getTargetType()).isEqualTo("SANCTION");
+        assertThat(log.getTargetType()).isEqualTo(AdminAuditTargetType.SANCTION);
         assertThat(log.getTargetId()).isEqualTo(7L);
         assertThat(log.getCreatedAt()).isEqualTo(clock.instant());
         assertThat(log.getDetail()).contains("\"fromStatus\": \"ACTIVE\"").contains("\"toStatus\": \"ENDED_EARLY\"");

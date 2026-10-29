@@ -1,7 +1,7 @@
 package com.moewadeul.memory.infra.image;
 
-import com.moewadeul.common.image.AttachableImageMapper;
-import com.moewadeul.common.image.UnattachedImageRow;
+import com.moewadeul.common.image.infra.AttachableImageMapper;
+import com.moewadeul.common.image.infra.UnattachedImageRow;
 import java.util.Collection;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;

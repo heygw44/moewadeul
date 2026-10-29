@@ -1,8 +1,8 @@
 package com.moewadeul.community.application.post;
 
 import com.moewadeul.common.error.InvalidFieldException;
-import com.moewadeul.common.image.ImageAttachments;
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.image.application.ImageAttachments;
+import com.moewadeul.common.patch.PatchField;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

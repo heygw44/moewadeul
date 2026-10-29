@@ -1,6 +1,6 @@
 package com.moewadeul.memory.application;
 
-import com.moewadeul.common.image.ImageAttachments;
+import com.moewadeul.common.image.application.ImageAttachments;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.memory.domain.image.MemoryImage;
 import com.moewadeul.memory.domain.image.MemoryImageRepository;

@@ -1,6 +1,6 @@
 package com.moewadeul.community.api.post;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.community.application.post.CommunityPostReviseCommand;
 import com.moewadeul.community.domain.post.CommunityPost;
 import io.swagger.v3.oas.annotations.media.Schema;
