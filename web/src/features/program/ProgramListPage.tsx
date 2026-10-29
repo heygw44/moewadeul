@@ -13,6 +13,7 @@ import { MetaLine, StatusText } from '../../components/StatusText';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
+import { AnnouncementBar } from './AnnouncementBar';
 import { formatKstDateTime, kstDateBlock } from '../../lib/datetime';
 import { useSession } from '../../app/session/session';
 import { feeText, PROGRAM_FILTERS, PROGRAM_STATUS_META, seatsText } from './programLabels';
@@ -36,7 +37,7 @@ export function ProgramListPage() {
 
   return (
     <HubLayout
-      announcement
+      banner={<AnnouncementBar />}
       title="공식 행사"
       description="지자체와 브랜드가 여는 백패킹 행사에 참여할 수 있어요."
       actions={

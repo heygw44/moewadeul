@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { BottomTabBar } from '../app/layout/BottomTabBar';
 import { SiteFooter } from '../app/layout/SiteFooter';
 import { SiteHeader } from '../app/layout/SiteHeader';
-import { AnnouncementBar } from '../features/program/AnnouncementBar';
 
 type HubLayoutProps = {
   title: string;
@@ -13,7 +12,7 @@ type HubLayoutProps = {
   tabs?: ReactNode;
   aside?: ReactNode;
   width?: 'wide' | 'narrow';
-  announcement?: boolean;
+  banner?: ReactNode;
   titleInContent?: boolean;
   children: ReactNode;
 };
@@ -27,14 +26,14 @@ export function HubLayout({
   tabs,
   aside,
   width = 'wide',
-  announcement = false,
+  banner,
   titleInContent = false,
   children,
 }: HubLayoutProps) {
   const column = width === 'narrow' && !aside ? 'mx-auto w-full max-w-2xl' : '';
   return (
     <div className="flex min-h-dvh flex-col bg-canvas pb-(--bottom-nav-h)">
-      {announcement && <AnnouncementBar />}
+      {banner}
       <SiteHeader />
       <div className="bg-canvas">
         <div className={`mx-auto max-w-screen-xl px-4 ${titleInContent ? 'pt-6' : 'pt-8'}`}>
