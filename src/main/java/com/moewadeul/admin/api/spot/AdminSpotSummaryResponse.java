@@ -1,9 +1,9 @@
 package com.moewadeul.admin.api.spot;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.moewadeul.spot.application.moderation.AdminSpotSummary;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 public record AdminSpotSummaryResponse(
         long spotId,
@@ -15,22 +15,16 @@ public record AdminSpotSummaryResponse(
         boolean parkWarning,
         Reporter reporter,
         long reportCount,
-        ReasonCounts reasonCounts,
+        Map<String, Long> reasonCounts,
         List<RecentReport> recentReports,
         Instant statusChangedAt) {
 
     public record Reporter(long memberId, String nickname) {}
 
-    public record ReasonCounts(
-            @JsonProperty("ILLEGAL_AREA") long illegalArea,
-            @JsonProperty("CLOSED") long closed,
-            @JsonProperty("FALSE_INFO") long falseInfo) {}
-
     public record RecentReport(String reason, String content, Instant createdAt) {}
 
     static AdminSpotSummaryResponse from(AdminSpotSummary summary) {
         AdminSpotSummary.Reporter reporter = summary.reporter();
-        AdminSpotSummary.ReasonCounts counts = summary.reasonCounts();
         return new AdminSpotSummaryResponse(
                 summary.spotId(),
                 summary.type(),
@@ -41,7 +35,7 @@ public record AdminSpotSummaryResponse(
                 summary.parkWarning(),
                 reporter == null ? null : new Reporter(reporter.memberId(), reporter.nickname()),
                 summary.reportCount(),
-                new ReasonCounts(counts.illegalArea(), counts.closed(), counts.falseInfo()),
+                summary.reasonCounts(),
                 summary.recentReports().stream()
                         .map(report -> new RecentReport(report.reason(), report.content(), report.createdAt()))
                         .toList(),

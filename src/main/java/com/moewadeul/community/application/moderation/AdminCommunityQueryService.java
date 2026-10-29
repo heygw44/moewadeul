@@ -1,6 +1,8 @@
 package com.moewadeul.community.application.moderation;
 
 import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.moderation.ContentReportReason;
+import com.moewadeul.common.moderation.ReportReasonCount;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.domain.report.CommunityReportTargetType;
@@ -34,9 +36,10 @@ public class AdminCommunityQueryService {
         List<AdminCommunityPostRow> rows = adminCommunityMapper.selectPosts(
                 postStatus.name(), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
         PageSlice<AdminCommunityPostRow> slice = PageSlice.of(rows, page, size);
-        Map<Long, List<AdminCommunityRecentReport>> recent = readRecentReports(
-                CommunityReportTargetType.POST,
-                slice.content().stream().map(AdminCommunityPostRow::postId).toList());
+        List<Long> postIds =
+                slice.content().stream().map(AdminCommunityPostRow::postId).toList();
+        Map<Long, List<AdminCommunityRecentReport>> recent = readRecentReports(CommunityReportTargetType.POST, postIds);
+        Map<Long, Map<String, Long>> reasonCounts = readReasonCounts(CommunityReportTargetType.POST, postIds);
         return slice.map(row -> new AdminCommunityPostSummary(
                 row.postId(),
                 row.title(),
@@ -44,13 +47,7 @@ public class AdminCommunityQueryService {
                 new AdminCommunityAuthor(row.authorId(), row.authorNickname()),
                 row.status(),
                 row.reportCount(),
-                new AdminCommunityReasonCounts(
-                        row.spamCount(),
-                        row.abuseCount(),
-                        row.illegalCampingCount(),
-                        row.privacyCount(),
-                        row.moneyScamCount(),
-                        row.otherCount()),
+                reasonCounts.get(row.postId()),
                 recent.getOrDefault(row.postId(), List.of()),
                 row.statusChangedAt()));
     }
@@ -61,11 +58,12 @@ public class AdminCommunityQueryService {
         List<AdminCommunityCommentRow> rows = adminCommunityMapper.selectComments(
                 commentStatus.name(), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
         PageSlice<AdminCommunityCommentRow> slice = PageSlice.of(rows, page, size);
-        Map<Long, List<AdminCommunityRecentReport>> recent = readRecentReports(
-                CommunityReportTargetType.COMMENT,
-                slice.content().stream()
-                        .map(AdminCommunityCommentRow::commentId)
-                        .toList());
+        List<Long> commentIds = slice.content().stream()
+                .map(AdminCommunityCommentRow::commentId)
+                .toList();
+        Map<Long, List<AdminCommunityRecentReport>> recent =
+                readRecentReports(CommunityReportTargetType.COMMENT, commentIds);
+        Map<Long, Map<String, Long>> reasonCounts = readReasonCounts(CommunityReportTargetType.COMMENT, commentIds);
         return slice.map(row -> new AdminCommunityCommentSummary(
                 row.commentId(),
                 row.postId(),
@@ -73,15 +71,15 @@ public class AdminCommunityQueryService {
                 new AdminCommunityAuthor(row.authorId(), row.authorNickname()),
                 row.status(),
                 row.reportCount(),
-                new AdminCommunityReasonCounts(
-                        row.spamCount(),
-                        row.abuseCount(),
-                        row.illegalCampingCount(),
-                        row.privacyCount(),
-                        row.moneyScamCount(),
-                        row.otherCount()),
+                reasonCounts.get(row.commentId()),
                 recent.getOrDefault(row.commentId(), List.of()),
                 row.statusChangedAt()));
+    }
+
+    private Map<Long, Map<String, Long>> readReasonCounts(CommunityReportTargetType targetType, List<Long> targetIds) {
+        List<ReportReasonCount> counts =
+                targetIds.isEmpty() ? List.of() : adminCommunityMapper.selectReasonCounts(targetType.name(), targetIds);
+        return ReportReasonCount.byTarget(ContentReportReason.class, targetIds, counts);
     }
 
     private Map<Long, List<AdminCommunityRecentReport>> readRecentReports(

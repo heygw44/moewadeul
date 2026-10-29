@@ -21,13 +21,13 @@ import com.moewadeul.community.application.moderation.AdminCommunityAuthor;
 import com.moewadeul.community.application.moderation.AdminCommunityCommentSummary;
 import com.moewadeul.community.application.moderation.AdminCommunityPostSummary;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
-import com.moewadeul.community.application.moderation.AdminCommunityReasonCounts;
 import com.moewadeul.community.application.moderation.AdminCommunityRecentReport;
 import com.moewadeul.community.application.moderation.CommunityModerationResult;
 import com.moewadeul.community.application.moderation.CommunityModerationService;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,7 +88,7 @@ class AdminCommunityControllerTest {
                 new AdminCommunityAuthor(4L, "작성자"),
                 "PENDING_REVIEW",
                 5L,
-                new AdminCommunityReasonCounts(2L, 1L, 0L, 0L, 1L, 1L),
+                Map.of("SPAM", 2L, "ABUSE", 1L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 1L, "OTHER", 1L),
                 List.of(new AdminCommunityRecentReport("MONEY_SCAM", "돈을 요구한다", AT)),
                 AT);
         when(queryService.listPosts(eq(null), anyInt(), anyInt()))
@@ -125,7 +125,7 @@ class AdminCommunityControllerTest {
                 new AdminCommunityAuthor(4L, "작성자"),
                 "HIDDEN",
                 0L,
-                new AdminCommunityReasonCounts(0L, 0L, 0L, 0L, 0L, 0L),
+                Map.of("SPAM", 0L, "ABUSE", 0L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 0L, "OTHER", 0L),
                 List.of(),
                 AT);
         when(queryService.listComments(eq("HIDDEN"), anyInt(), anyInt()))
