@@ -49,6 +49,7 @@ import type { SpotFilters } from '../spot/spotFilters';
 import { SpotListRow } from '../spot/SpotListRow';
 import { SpotPreviewBoard } from '../spot/SpotPreviewBoard';
 import { useIsDesktop, DESKTOP_QUERY } from './useIsDesktop';
+import { useMapContextMenu } from './useMapContextMenu';
 import { useMapMoving } from './useMapMoving';
 import { useMapView } from './useMapView';
 import { useRegionLabelInView } from './useRegionLabelInView';
@@ -58,13 +59,6 @@ import { useSpotsNearby } from '../spot/useSpotsNearby';
 import { readMapScreen, rememberMapScreen } from './mapScreenMemory';
 import type { RadiusSearch } from './mapScreenMemory';
 import type { SpotsNearby } from '../spot/useSpotsNearby';
-
-function visibleMapHeight(host: HTMLElement | null): number | undefined {
-  if (!host || window.matchMedia(DESKTOP_QUERY).matches) return undefined;
-  const sheet = host.closest('[data-map-root]')?.querySelector('[data-sheet]');
-  if (!sheet) return undefined;
-  return sheet.getBoundingClientRect().top - host.getBoundingClientRect().top;
-}
 
 const MIN_OPEN_SPAN_PX = 48;
 
@@ -112,8 +106,6 @@ function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData | null {
     closed: false,
   };
 }
-
-type ContextMenu = { position: LatLng; host: HTMLElement };
 
 const SPOT_FOCUS_LEVEL = 7;
 
@@ -167,7 +159,6 @@ export function MapPage({
   const [searchPin, setSearchPin] = useState<LatLng | null>(null);
   const searchMoveLevelRef = useRef<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [pickSpots, setPickSpots] = useState<NearbySpot[] | null>(null);
   const [appliedDraftKey, setAppliedDraftKey] = useState<string | null>(null);
   const [filters, setFilters] = useState<BasecampFilters>(() => readMapScreen().basecampFilters);
@@ -195,6 +186,7 @@ export function MapPage({
   const [previewId, setPreviewId] = useState<number | null>(null);
   const desktop = useIsDesktop();
   const browsing = mode === 'browse';
+  const { contextMenu, closeContextMenu } = useMapContextMenu(map, browsing || basecampMode, hostRef, focusKey);
   const previewEnabled = browsing && desktop && spotId === undefined;
   if (!previewEnabled && previewId !== null) setPreviewId(null);
   if (!browsing && (radiusSearch !== null || aiSummary !== null)) {
@@ -317,28 +309,6 @@ export function MapPage({
     const inside = initialLat >= sw.lat && initialLat <= ne.lat && initialLng >= sw.lng && initialLng <= ne.lng;
     if (!inside) map.setCenter({ lat: initialLat, lng: initialLng }, Math.min(map.getLevel(), DRAFT_FOCUS_LEVEL));
   }, [map, initialLat, initialLng]);
-
-  const contextMenuEnabled = browsing || basecampMode;
-  const closeContextMenu = useCallback(() => {
-    map?.showMenu(null);
-    setContextMenu(null);
-  }, [map]);
-
-  useEffect(() => {
-    if (!map || !contextMenuEnabled) return;
-    const offContextMenu = map.onContextMenu((position) => {
-      const host = map.showMenu(position, visibleMapHeight(hostRef.current));
-      setContextMenu(host ? { position, host } : null);
-    });
-    const offMoveStart = map.onMoveStart(closeContextMenu);
-    const offClick = map.onMapClick(closeContextMenu);
-    return () => {
-      offContextMenu();
-      offMoveStart();
-      offClick();
-      closeContextMenu();
-    };
-  }, [map, contextMenuEnabled, closeContextMenu, spotId, basecampId]);
 
   useEffect(() => {
     if (!map || !previewEnabled) return;
