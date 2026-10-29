@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
@@ -380,8 +381,8 @@ class SpotReviewServiceIntegrationTest {
         long third = commandService.write(saveMember(), spotId, write(TODAY, 3, "셋째, 둘째와 같은 시각"));
 
         // when
-        SpotReviewPage firstPage = queryService.list(spotId, 0, 2);
-        SpotReviewPage secondPage = queryService.list(spotId, 1, 2);
+        PageSlice<SpotReviewItem> firstPage = queryService.list(spotId, 0, 2);
+        PageSlice<SpotReviewItem> secondPage = queryService.list(spotId, 1, 2);
 
         // then
         assertThat(ids(firstPage)).containsExactly(third, second);
@@ -448,7 +449,7 @@ class SpotReviewServiceIntegrationTest {
         jdbc.update("UPDATE member SET nickname = ? WHERE id = ?", "탈퇴회원_" + memberId, memberId);
 
         // when
-        SpotReviewPage page = queryService.list(spotId, 0, 20);
+        PageSlice<SpotReviewItem> page = queryService.list(spotId, 0, 20);
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
 
         // then
@@ -461,7 +462,7 @@ class SpotReviewServiceIntegrationTest {
         return commandService.write(saveMember(), spotId, write(TODAY, rating, "평점 " + rating));
     }
 
-    private static List<Long> ids(SpotReviewPage page) {
+    private static List<Long> ids(PageSlice<SpotReviewItem> page) {
         return page.content().stream().map(SpotReviewItem::reviewId).toList();
     }
 

@@ -2,7 +2,9 @@ package com.moewadeul.admin.api.trust;
 
 import com.moewadeul.admin.api.trust.AdminMemberReportRequests.ActionRequest;
 import com.moewadeul.admin.api.trust.AdminMemberReportRequests.DismissRequest;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.trust.application.report.AdminMemberReportQueryService;
 import com.moewadeul.trust.application.report.MemberReportActionCommand;
 import com.moewadeul.trust.application.report.MemberReportActionService;
@@ -24,8 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/member-reports")
 class AdminMemberReportController {
-
-    private static final int MAX_PAGE_SIZE = 50;
 
     private final AdminMemberReportQueryService queryService;
     private final MemberReportReviewService reviewService;
@@ -49,12 +49,12 @@ class AdminMemberReportController {
                     + "status(RECEIVED, IN_REVIEW, ACTIONED, DISMISSED)와 urgent는 선택이고, 알 수 없는 status는 400 INVALID_INPUT이다. "
                     + "page는 0부터 세고, size는 기본 20, 1~50이다.")
     @GetMapping
-    AdminMemberReportPageResponse list(
+    PageResponse<AdminMemberReportSummaryResponse> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Boolean urgent,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size) {
-        return AdminMemberReportPageResponse.from(queryService.list(status, urgent, page, size));
+            @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
+        return PageResponse.from(queryService.list(status, urgent, page, size), AdminMemberReportSummaryResponse::from);
     }
 
     @Operation(

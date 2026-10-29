@@ -1,6 +1,7 @@
 package com.moewadeul.memory.application.moderation;
 
 import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.memory.application.MemoryImageReader;
 import com.moewadeul.memory.application.MemoryPhoto;
 import com.moewadeul.memory.domain.ApproximateLocation;
@@ -29,17 +30,16 @@ public class AdminMemoryQueryService {
     private final MemoryImageReader memoryImageReader;
 
     @Transactional(readOnly = true)
-    public AdminMemoryPage list(String status, int page, int size) {
+    public PageSlice<AdminMemorySummary> list(String status, int page, int size) {
         MemoryStatus memoryStatus = parseStatus(status);
-        List<AdminMemoryRow> rows = adminMemoryMapper.selectMemories(memoryStatus.name(), (long) page * size, size + 1);
-        boolean hasNext = rows.size() > size;
-        List<AdminMemoryRow> pageRows = rows.stream().limit(size).toList();
-        List<Long> memoryIds = pageRows.stream().map(AdminMemoryRow::memoryId).toList();
+        List<AdminMemoryRow> rows = adminMemoryMapper.selectMemories(
+                memoryStatus.name(), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+        PageSlice<AdminMemoryRow> slice = PageSlice.of(rows, page, size);
+        List<Long> memoryIds =
+                slice.content().stream().map(AdminMemoryRow::memoryId).toList();
         Map<Long, List<AdminMemorySummary.RecentReport>> recent = readRecentReports(memoryIds);
         Map<Long, List<MemoryPhoto>> images = memoryImageReader.readByMemoryIds(memoryIds);
-        List<AdminMemorySummary> content =
-                pageRows.stream().map(row -> toSummary(row, images, recent)).toList();
-        return new AdminMemoryPage(content, page, size, hasNext);
+        return slice.map(row -> toSummary(row, images, recent));
     }
 
     private static AdminMemorySummary toSummary(

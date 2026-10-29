@@ -2,6 +2,7 @@ package com.moewadeul.program.application.catalog;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.program.domain.ProgramPhase;
 import com.moewadeul.program.infra.catalog.MyApplicationRow;
 import com.moewadeul.program.infra.catalog.MyProgramApplicationRow;
@@ -26,15 +27,11 @@ public class ProgramQueryService {
     public ProgramPage list(ProgramListQuery query) {
         Instant now = clock.instant();
         String phase = query.phase() == null ? null : query.phase().name();
-        long offset = (long) query.page() * query.size();
-        List<ProgramListRow> rows = programQueryMapper.selectList(phase, now, offset, query.size() + 1);
-        boolean hasNext = rows.size() > query.size();
-        List<ProgramSummary> content = rows.stream()
-                .limit(query.size())
-                .map(row -> toSummary(row, now))
-                .toList();
-        Instant nextApplyOpenAt = programQueryMapper.selectNextApplyOpenAt(now);
-        return new ProgramPage(content, query.page(), query.size(), hasNext, nextApplyOpenAt);
+        List<ProgramListRow> rows = programQueryMapper.selectList(
+                phase, now, PageSlice.offsetOf(query.page(), query.size()), PageSlice.fetchSize(query.size()));
+        PageSlice<ProgramSummary> slice =
+                PageSlice.of(rows, query.page(), query.size()).map(row -> toSummary(row, now));
+        return new ProgramPage(slice, programQueryMapper.selectNextApplyOpenAt(now));
     }
 
     @Transactional(readOnly = true)
@@ -48,15 +45,14 @@ public class ProgramQueryService {
     }
 
     @Transactional(readOnly = true)
-    public MyProgramApplicationPage listMine(long memberId, MyProgramApplicationQuery query) {
+    public PageSlice<MyProgramApplicationItem> listMine(long memberId, MyProgramApplicationQuery query) {
         Instant now = clock.instant();
-        long offset = (long) query.page() * query.size();
-        List<MyProgramApplicationRow> rows =
-                programQueryMapper.selectMyApplications(memberId, query.status(), offset, query.size() + 1);
-        boolean hasNext = rows.size() > query.size();
-        List<MyProgramApplicationItem> content =
-                rows.stream().limit(query.size()).map(row -> toMyItem(row, now)).toList();
-        return new MyProgramApplicationPage(content, query.page(), query.size(), hasNext);
+        List<MyProgramApplicationRow> rows = programQueryMapper.selectMyApplications(
+                memberId,
+                query.status(),
+                PageSlice.offsetOf(query.page(), query.size()),
+                PageSlice.fetchSize(query.size()));
+        return PageSlice.of(rows, query.page(), query.size()).map(row -> toMyItem(row, now));
     }
 
     private ProgramDetail.MyApplication findMyApplication(long programId, Long viewerId) {

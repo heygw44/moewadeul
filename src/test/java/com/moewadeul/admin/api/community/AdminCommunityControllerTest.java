@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.community;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -12,12 +13,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.community.application.moderation.AdminCommunityAuthor;
 import com.moewadeul.community.application.moderation.AdminCommunityCommentSummary;
-import com.moewadeul.community.application.moderation.AdminCommunityPage;
 import com.moewadeul.community.application.moderation.AdminCommunityPostSummary;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
 import com.moewadeul.community.application.moderation.AdminCommunityReasonCounts;
@@ -91,7 +92,7 @@ class AdminCommunityControllerTest {
                 List.of(new AdminCommunityRecentReport("MONEY_SCAM", "돈을 요구한다", AT)),
                 AT);
         when(queryService.listPosts(eq(null), anyInt(), anyInt()))
-                .thenReturn(new AdminCommunityPage<>(List.of(summary), 0, 20, true));
+                .thenReturn(new PageSlice<>(List.of(summary), 0, 20, true));
 
         // when
         MvcTestResult result = mvc.get().uri(BASE + "/posts").with(admin()).exchange();
@@ -128,7 +129,7 @@ class AdminCommunityControllerTest {
                 List.of(),
                 AT);
         when(queryService.listComments(eq("HIDDEN"), anyInt(), anyInt()))
-                .thenReturn(new AdminCommunityPage<>(List.of(summary), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(summary), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get()
@@ -146,7 +147,7 @@ class AdminCommunityControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].author.nickname")
                 .isEqualTo("작성자");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(result, 0, 20, false);
     }
 
     @Test

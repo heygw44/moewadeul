@@ -1,6 +1,8 @@
 package com.moewadeul.admin.api.community;
 
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
 import com.moewadeul.community.application.moderation.CommunityModerationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,8 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin/community")
 class AdminCommunityController {
 
-    private static final int MAX_PAGE_SIZE = 50;
-
     private final AdminCommunityQueryService queryService;
     private final CommunityModerationService moderationService;
 
@@ -34,12 +34,11 @@ class AdminCommunityController {
                     + "같은 묶음에서는 상태가 바뀐 시각이 이른 순서다. 각 항목에는 작성자, 본문 전체, 검토 전 신고의 수, 사유별 수, 최근 신고 5건의 내용을 담는다. "
                     + "다른 status는 400 INVALID_INPUT이다. page는 0부터 세고, size는 기본 20, 1~50이다.")
     @GetMapping("/posts")
-    AdminCommunityPageResponse<AdminCommunityPostResponse> listPosts(
+    PageResponse<AdminCommunityPostResponse> listPosts(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size) {
-        return AdminCommunityPageResponse.from(
-                queryService.listPosts(status, page, size), AdminCommunityPostResponse::from);
+            @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
+        return PageResponse.from(queryService.listPosts(status, page, size), AdminCommunityPostResponse::from);
     }
 
     @Operation(
@@ -66,12 +65,11 @@ class AdminCommunityController {
             description = "글 검토 목록과 같은 파라미터와 정렬로 댓글을 돌려준다. 항목에는 댓글이 달린 글의 postId, 작성자, 내용 전체, 검토 전 신고 정보를 담는다. "
                     + "작성자가 지운 댓글의 content는 null이다. 다른 status는 400 INVALID_INPUT이다.")
     @GetMapping("/comments")
-    AdminCommunityPageResponse<AdminCommunityCommentResponse> listComments(
+    PageResponse<AdminCommunityCommentResponse> listComments(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size) {
-        return AdminCommunityPageResponse.from(
-                queryService.listComments(status, page, size), AdminCommunityCommentResponse::from);
+            @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
+        return PageResponse.from(queryService.listComments(status, page, size), AdminCommunityCommentResponse::from);
     }
 
     @Operation(

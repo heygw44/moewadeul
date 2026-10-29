@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.memory;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -13,11 +14,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.memory.application.MemoryPhoto;
-import com.moewadeul.memory.application.moderation.AdminMemoryPage;
 import com.moewadeul.memory.application.moderation.AdminMemoryQueryService;
 import com.moewadeul.memory.application.moderation.AdminMemorySummary;
 import com.moewadeul.memory.application.moderation.MemoryModerationResult;
@@ -93,7 +94,7 @@ class AdminMemoryControllerTest {
                 new AdminMemorySummary.ReasonCounts(2, 0, 0, 0, 3, 0),
                 List.of(new AdminMemorySummary.RecentReport("MONEY_SCAM", "송금 요구", AT)),
                 AT);
-        when(queryService.list(null, 0, 20)).thenReturn(new AdminMemoryPage(List.of(summary), 0, 20, false));
+        when(queryService.list(null, 0, 20)).thenReturn(new PageSlice<>(List.of(summary), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(BASE).with(admin()).exchange();
@@ -120,7 +121,7 @@ class AdminMemoryControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].recentReports[0].content")
                 .isEqualTo("송금 요구");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(result, 0, 20, false);
     }
 
     @Test

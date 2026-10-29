@@ -1,6 +1,8 @@
 package com.moewadeul.publicdata.api;
 
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.publicdata.application.SyncJobLauncher;
 import com.moewadeul.publicdata.application.SyncJobRunQueryService;
 import com.moewadeul.publicdata.domain.SyncJobType;
@@ -21,8 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/sync-jobs")
 class SyncJobAdminController {
-
-    private static final int MAX_PAGE_SIZE = 50;
 
     private final SyncJobLauncher syncJobLauncher;
     private final SyncJobRunQueryService syncJobRunQueryService;
@@ -51,10 +51,10 @@ class SyncJobAdminController {
             summary = "공공데이터 적재·동기화 실행 기록 조회",
             description = "실행 기록을 최근 것부터 돌려준다. jobType을 주면 그 종류만 돌려준다. " + "page는 0부터 세고, size는 기본 20, 최대 50이다.")
     @GetMapping
-    SyncJobRunPageResponse findRuns(
+    PageResponse<SyncJobRunResponse> findRuns(
             @RequestParam(required = false) SyncJobType jobType,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size) {
-        return SyncJobRunPageResponse.from(syncJobRunQueryService.findRuns(jobType, page, size));
+            @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
+        return PageResponse.from(syncJobRunQueryService.findRuns(jobType, page, size), SyncJobRunResponse::from);
     }
 }

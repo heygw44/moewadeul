@@ -7,6 +7,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.program.application.ProgramApplicationEvents;
 import com.moewadeul.program.domain.PaymentRepository;
 import com.moewadeul.program.domain.Program;
@@ -125,19 +126,13 @@ public class ProgramAdminService {
     }
 
     @Transactional(readOnly = true)
-    public ProgramApplicantPage applications(long programId, ProgramApplicantQuery query) {
+    public PageSlice<ProgramApplicantItem> applications(long programId, ProgramApplicantQuery query) {
         programRepository.findById(programId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         ProgramApplicationStatus status =
                 EnumParser.parseNullable(ProgramApplicationStatus.class, query.status(), "status: 신청 상태가 맞지 않아요.");
-        long offset = (long) query.page() * query.size();
-        List<ProgramApplicantRow> rows =
-                programQueryMapper.selectApplicants(programId, status, offset, query.size() + 1);
-        boolean hasNext = rows.size() > query.size();
-        List<ProgramApplicantItem> content = rows.stream()
-                .limit(query.size())
-                .map(ProgramAdminService::toItem)
-                .toList();
-        return new ProgramApplicantPage(content, query.page(), query.size(), hasNext);
+        List<ProgramApplicantRow> rows = programQueryMapper.selectApplicants(
+                programId, status, PageSlice.offsetOf(query.page(), query.size()), PageSlice.fetchSize(query.size()));
+        return PageSlice.of(rows, query.page(), query.size()).map(ProgramAdminService::toItem);
     }
 
     private Program lockProgram(long programId) {

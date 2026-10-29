@@ -10,11 +10,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.notification.application.inbox.NotificationItem;
-import com.moewadeul.notification.application.inbox.NotificationPage;
 import com.moewadeul.notification.application.inbox.NotificationQueryService;
 import com.moewadeul.notification.application.inbox.NotificationReadService;
 import java.time.Instant;
@@ -66,7 +66,7 @@ class NotificationControllerTest {
     void listReturnsPageFormat() {
         Instant createdAt = Instant.parse("2026-10-05T03:00:00Z");
         when(notificationQueryService.list(MEMBER_ID, 0, 20))
-                .thenReturn(new NotificationPage(
+                .thenReturn(new PageSlice<>(
                         List.of(new NotificationItem(
                                 11L, "BASECAMP_APPROVED", "합류 승인", "승인됐습니다.", "/basecamps/3", null, createdAt)),
                         0,
@@ -99,7 +99,7 @@ class NotificationControllerTest {
     @Test
     @DisplayName("[F-20] page와 size를 보내면 그대로 서비스에 넘긴다")
     void listPassesPageAndSize() {
-        when(notificationQueryService.list(MEMBER_ID, 2, 50)).thenReturn(new NotificationPage(List.of(), 2, 50, false));
+        when(notificationQueryService.list(MEMBER_ID, 2, 50)).thenReturn(new PageSlice<>(List.of(), 2, 50, false));
 
         MvcTestResult result =
                 mvc.get().uri(PATH + "?page=2&size=50").with(login()).exchange();

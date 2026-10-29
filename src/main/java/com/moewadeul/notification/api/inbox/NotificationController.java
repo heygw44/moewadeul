@@ -1,6 +1,7 @@
 package com.moewadeul.notification.api.inbox;
 
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.notification.application.inbox.NotificationQueryService;
 import com.moewadeul.notification.application.inbox.NotificationReadService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,11 +34,12 @@ class NotificationController {
                     + "link는 연결할 화면이 없으면 null이고, readAt은 아직 읽지 않았으면 null이다. "
                     + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, page·size가 범위를 벗어나면 400 INVALID_INPUT이다.")
     @GetMapping
-    NotificationPageResponse list(
+    PageResponse<NotificationResponse> list(
             @AuthenticationPrincipal LoginMember loginMember,
             @Valid @ParameterObject @ModelAttribute NotificationListRequest request) {
-        return NotificationPageResponse.from(notificationQueryService.list(
-                loginMember.memberId(), request.pageOrDefault(), request.sizeOrDefault()));
+        return PageResponse.from(
+                notificationQueryService.list(loginMember.memberId(), request.pageOrDefault(), request.sizeOrDefault()),
+                NotificationResponse::from);
     }
 
     @Operation(

@@ -1,6 +1,7 @@
 package com.moewadeul.review.api;
 
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.review.application.SpotReviewCommandService;
 import com.moewadeul.review.application.SpotReviewQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,10 +41,11 @@ class SpotReviewController {
                     + "파라미터가 범위를 벗어나면 400 INVALID_INPUT으로 응답한다. "
                     + "장소가 없거나 지도에 보이는(ACTIVE) 상태가 아니면 404 NOT_FOUND로 응답한다.")
     @GetMapping("/api/spots/{spotId}/reviews")
-    SpotReviewPageResponse list(
+    PageResponse<SpotReviewItemResponse> list(
             @PathVariable long spotId, @Valid @ParameterObject @ModelAttribute SpotReviewListRequest request) {
-        return SpotReviewPageResponse.from(
-                spotReviewQueryService.list(spotId, request.pageOrDefault(), request.sizeOrDefault()));
+        return PageResponse.from(
+                spotReviewQueryService.list(spotId, request.pageOrDefault(), request.sizeOrDefault()),
+                SpotReviewItemResponse::from);
     }
 
     @Operation(
