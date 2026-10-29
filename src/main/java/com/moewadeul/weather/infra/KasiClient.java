@@ -4,10 +4,10 @@ import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.external.ExternalCallLimit;
 import com.moewadeul.common.external.ExternalFailureCooldown;
+import com.moewadeul.common.external.PublicDataHttp;
+import com.moewadeul.common.external.PublicDataHttp.RawResponse;
 import java.io.IOException;
 import java.io.StringReader;
-import java.net.http.HttpClient;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -20,15 +20,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.client.ClientHttpResponse;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StreamUtils;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.util.DefaultUriBuilderFactory;
-import org.springframework.web.util.DefaultUriBuilderFactory.EncodingMode;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -60,7 +53,8 @@ public class KasiClient {
             ExternalApiProperties externalApiProperties,
             ExternalApiMetrics metrics,
             Clock clock) {
-        this.restClient = createRestClient(properties);
+        this.restClient = PublicDataHttp.createRestClient(
+                properties.baseUrl(), properties.connectTimeout(), properties.readTimeout());
         this.serviceKey = properties.serviceKey();
         this.metrics = metrics;
         this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
@@ -80,26 +74,12 @@ public class KasiClient {
     private <T> T fetch(Map<String, Object> variables, Function<Element, T> parser) {
         return callLimit.call(
                 () -> failureCooldown.call(
-                        () -> fetchWithRetry(variables, parser),
-                        KasiClient::isOutage,
+                        () -> PublicDataHttp.retryOnce(
+                                () -> fetchOnce(variables, parser),
+                                e -> log.warn("천문연 API 호출이 실패해서 한 번 다시 보낸다. reason={}", e.getMessage())),
+                        PublicDataHttp::isOutage,
                         () -> new KasiApiException(describe("최근 호출이 재시도까지 실패해서 쉬는 중이라 호출하지 않았다"))),
                 () -> new KasiApiException(describe("동시 호출 수가 한도에 닿아 호출하지 않았다")));
-    }
-
-    private static boolean isOutage(RuntimeException e) {
-        return e instanceof KasiApiException kasiException && kasiException.isRetryable();
-    }
-
-    private <T> T fetchWithRetry(Map<String, Object> variables, Function<Element, T> parser) {
-        try {
-            return fetchOnce(variables, parser);
-        } catch (KasiApiException e) {
-            if (!e.isRetryable()) {
-                throw e;
-            }
-            log.warn("천문연 API 호출이 실패해서 한 번 다시 보낸다. reason={}", e.getMessage());
-            return fetchOnce(variables, parser);
-        }
     }
 
     private <T> T fetchOnce(Map<String, Object> variables, Function<Element, T> parser) {
@@ -110,18 +90,11 @@ public class KasiClient {
     }
 
     private RawResponse send(Map<String, Object> variables) {
-        try {
-            return restClient.get().uri(RISE_SET_URI, variables).exchange((request, response) -> read(response));
-        } catch (ResourceAccessException e) {
-            // Spring은 이 예외 메시지에서 쿼리를 뺀 주소만 남긴다. 그래서 원인으로 이어도 메시지에 키가 들어가지 않는다.
-            throw KasiApiException.retryable(
-                    describe("I/O 오류 " + e.getMostSpecificCause().getClass().getSimpleName()), e);
-        }
-    }
-
-    private static RawResponse read(ClientHttpResponse response) throws IOException {
-        String body = StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8);
-        return new RawResponse(response.getStatusCode(), body);
+        return PublicDataHttp.get(
+                restClient,
+                RISE_SET_URI,
+                variables,
+                (reason, cause) -> KasiApiException.retryable(describe(reason), cause));
     }
 
     private Element parseBody(RawResponse response) {
@@ -207,28 +180,4 @@ public class KasiClient {
     private static String describe(String reason) {
         return "천문연 " + RISE_SET + " 호출 실패: " + reason;
     }
-
-    private static RestClient createRestClient(KasiProperties properties) {
-        // 공공데이터포털 Decoding 키에는 +, /, = 가 들어 있다. 키를 주소 문자열에 그대로 이어 붙이거나 URI_COMPONENT 방식으로 인코딩하면
-        // +가 그대로 나가고, 서버는 +를 공백으로 읽어 인증에 실패한다. 그래서 클라이언트는 키를 URI 변수로 넘기고,
-        // URI 변수 값의 예약 문자를 모두 퍼센트 인코딩하는 TEMPLATE_AND_VALUES 방식을 명시해서 고정한다.
-        DefaultUriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory(properties.baseUrl());
-        uriBuilderFactory.setEncodingMode(EncodingMode.TEMPLATE_AND_VALUES);
-        // JDK HttpClient는 평문 http 주소에도 HTTP/2 업그레이드를 시도한다. 천문연 API는 HTTP/1.1로 충분하므로 버전을 고정해서 이 협상을 없앤다.
-        HttpClient httpClient = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
-                .connectTimeout(properties.connectTimeout())
-                .build();
-        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(properties.readTimeout());
-        // 압축 응답을 받으면, 응답 대기 시간이 지나 다른 스레드가 본문을 닫는 순간 압축 해제기가 IOException이 아닌 IllegalStateException을
-        // 던질 수 있다. 그 예외는 RestClient가 I/O 오류로 감싸지 않아서 이 클라이언트의 실패 처리를 건너뛴다. 그래서 압축을 받지 않는다.
-        requestFactory.enableCompression(false);
-        return RestClient.builder()
-                .uriBuilderFactory(uriBuilderFactory)
-                .requestFactory(requestFactory)
-                .build();
-    }
-
-    private record RawResponse(HttpStatusCode status, String body) {}
 }
