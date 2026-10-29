@@ -13,6 +13,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
@@ -22,6 +23,8 @@ import com.moewadeul.memory.domain.MemoryErrorCode;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -56,7 +59,8 @@ class MemoryReportControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.CREATED);
         assertThat(result.getResponse().getContentAsByteArray()).isEmpty();
-        verify(memoryReportService).report(MEMBER_ID, 9L, new MemoryReportCommand("SPAM", "광고 사진입니다"));
+        verify(memoryReportService)
+                .report(MEMBER_ID, 9L, new MemoryReportCommand(ContentReportReason.SPAM, "광고 사진입니다"));
     }
 
     @Test
@@ -114,6 +118,37 @@ class MemoryReportControllerTest {
         assertThat(conflict).bodyJson().extractingPath("$.code").isEqualTo("MEMORY_ALREADY_REPORTED");
         assertThat(notFound).hasStatus(HttpStatus.NOT_FOUND);
         assertThat(notFound).bodyJson().extractingPath("$.code").isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-10] 모르는 reason은 서비스를 부르지 않고 reason 필드 오류로 400 INVALID_INPUT을 응답한다")
+    void unknownReasonIsFieldError() {
+        // when
+        MvcTestResult result = send(REPORTS, verified(), "{\"reason\":\"UNKNOWN\"}");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.message").isEqualTo("입력한 값이 맞지 않아요.");
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("reason");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("SPAM, ABUSE, ILLEGAL_CAMPING, PRIVACY, MONEY_SCAM, OTHER 중 하나여야 해요.");
+        verifyNoInteractions(memoryReportService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"reason\":0}", "{\"reason\":\"5\"}"})
+    @DisplayName("[F-33][MM-10] reason을 숫자로 보내면 enum 순서로 받지 않고 reason 필드 오류로 400 INVALID_INPUT을 응답한다")
+    void numericReasonIsFieldError(String body) {
+        // when
+        MvcTestResult result = send(REPORTS, verified(), body);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("reason");
+        verifyNoInteractions(memoryReportService);
     }
 
     private MvcTestResult send(String uri, RequestPostProcessor user, String body) {

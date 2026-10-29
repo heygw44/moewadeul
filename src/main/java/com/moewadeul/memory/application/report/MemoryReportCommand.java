@@ -1,3 +1,5 @@
 package com.moewadeul.memory.application.report;
 
-public record MemoryReportCommand(String reason, String content) {}
+import com.moewadeul.common.moderation.ContentReportReason;
+
+public record MemoryReportCommand(ContentReportReason reason, String content) {}

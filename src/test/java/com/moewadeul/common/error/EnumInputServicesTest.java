@@ -24,12 +24,7 @@ import com.moewadeul.member.domain.SelfAgeGroup;
 import com.moewadeul.member.domain.SelfGender;
 import com.moewadeul.memory.application.MemoryImageReader;
 import com.moewadeul.memory.application.moderation.AdminMemoryQueryService;
-import com.moewadeul.memory.application.report.MemoryReportCommand;
-import com.moewadeul.memory.application.report.MemoryReportService;
-import com.moewadeul.memory.domain.Memory;
-import com.moewadeul.memory.domain.MemoryRepository;
 import com.moewadeul.memory.domain.MemoryStatus;
-import com.moewadeul.memory.domain.report.MemoryReportRepository;
 import com.moewadeul.memory.infra.moderation.AdminMemoryMapper;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
 import com.moewadeul.program.application.catalog.ProgramApplicantQuery;
@@ -65,8 +60,6 @@ class EnumInputServicesTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-01T00:00:00Z"), ZoneOffset.UTC);
     private static final String ADMIN_STATUS_MESSAGE = "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요.";
     private static final String BAKJI_REASON_MESSAGE = "신고 사유는 ILLEGAL_AREA, CLOSED, FALSE_INFO 중 하나여야 해요.";
-    private static final String MEMORY_REASON_MESSAGE =
-            "신고 사유는 SPAM, ABUSE, ILLEGAL_CAMPING, PRIVACY, MONEY_SCAM, OTHER 중 하나여야 해요.";
 
     @ParameterizedTest
     @ValueSource(strings = {"ACTIVE", "DELETED", "hidden", ""})
@@ -193,23 +186,6 @@ class EnumInputServicesTest {
                 .satisfies(e -> assertInvalidInput(e, BAKJI_REASON_MESSAGE));
         assertThatThrownBy(() -> service.reportProblem(1L, 5L, new BakjiProblemReportCommand(null, null)))
                 .satisfies(e -> assertInvalidInput(e, BAKJI_REASON_MESSAGE));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "spam", "UNKNOWN"})
-    @DisplayName("기록 신고는 허용하지 않는 사유와 null을 허용 목록을 담은 INVALID_INPUT으로 거절한다")
-    void memoryReportRejectsUnknownReason(String reason) {
-        MemoryRepository memoryRepository = mock(MemoryRepository.class);
-        Memory memory = mock(Memory.class);
-        when(memory.isVisibleToOthers()).thenReturn(true);
-        when(memoryRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(memory));
-        MemoryReportService service =
-                new MemoryReportService(memoryRepository, mock(MemoryReportRepository.class), CLOCK);
-
-        assertThatThrownBy(() -> service.report(1L, 5L, new MemoryReportCommand(reason, null)))
-                .satisfies(e -> assertInvalidInput(e, MEMORY_REASON_MESSAGE));
-        assertThatThrownBy(() -> service.report(1L, 5L, new MemoryReportCommand(null, null)))
-                .satisfies(e -> assertInvalidInput(e, MEMORY_REASON_MESSAGE));
     }
 
     @ParameterizedTest
