@@ -2,6 +2,7 @@ package com.moewadeul.member.application.profile;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.web.PatchField;
 import com.moewadeul.member.application.MemberUniqueConstraintTranslator;
 import com.moewadeul.member.domain.Member;
@@ -21,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MyInfoService {
 
+    private static final String AGE_GROUP_MESSAGE = "연령대는 " + EnumParser.names(SelfAgeGroup.class) + " 중 하나여야 해요.";
+    private static final String GENDER_MESSAGE = "성별은 " + EnumParser.names(SelfGender.class) + " 중 하나여야 해요.";
+
     private final MemberRepository memberRepository;
     private final Clock clock;
 
@@ -38,11 +42,13 @@ public class MyInfoService {
         }
         PatchField<String> selfAgeGroup = command.selfAgeGroup();
         if (selfAgeGroup.present()) {
-            member.changeSelfAgeGroup(parseSelfAgeGroup(selfAgeGroup.value()), now);
+            member.changeSelfAgeGroup(
+                    EnumParser.parseNullable(SelfAgeGroup.class, selfAgeGroup.value(), AGE_GROUP_MESSAGE), now);
         }
         PatchField<String> selfGender = command.selfGender();
         if (selfGender.present()) {
-            member.changeSelfGender(parseSelfGender(selfGender.value()), now);
+            member.changeSelfGender(
+                    EnumParser.parseNullable(SelfGender.class, selfGender.value(), GENDER_MESSAGE), now);
         }
         flushOrTranslate();
         return MyInfo.from(member);
@@ -64,20 +70,6 @@ public class MyInfoService {
             throw new BusinessException(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED);
         }
         member.changeNickname(validated.value(), now);
-    }
-
-    private static SelfAgeGroup parseSelfAgeGroup(String name) {
-        if (name == null) {
-            return null;
-        }
-        return SelfAgeGroup.parse(name);
-    }
-
-    private static SelfGender parseSelfGender(String name) {
-        if (name == null) {
-            return null;
-        }
-        return SelfGender.parse(name);
     }
 
     private void flushOrTranslate() {

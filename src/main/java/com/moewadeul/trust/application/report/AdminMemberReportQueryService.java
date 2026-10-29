@@ -2,6 +2,7 @@ package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.trust.domain.report.ReportStatus;
 import com.moewadeul.trust.infra.report.AdminMemberReportDetailRow;
 import com.moewadeul.trust.infra.report.AdminMemberReportMapper;
@@ -16,11 +17,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AdminMemberReportQueryService {
 
+    private static final String STATUS_MESSAGE = "알 수 없는 신고 상태예요.";
+
     private final AdminMemberReportMapper adminMemberReportMapper;
 
     @Transactional(readOnly = true)
     public AdminMemberReportPage list(String status, Boolean urgent, int page, int size) {
-        String statusName = status == null ? null : parseStatus(status).name();
+        String statusName = status == null
+                ? null
+                : EnumParser.parse(ReportStatus.class, status, STATUS_MESSAGE).name();
         long offset = (long) page * size;
         List<AdminMemberReportRow> rows = adminMemberReportMapper.selectList(statusName, urgent, offset, size + 1);
         boolean hasNext = rows.size() > size;
@@ -50,14 +55,6 @@ public class AdminMemberReportQueryService {
                         row.basecampId(), row.basecampTitle(), row.basecampStatus(), row.basecampStartDate()),
                 toReview(row),
                 history);
-    }
-
-    private static ReportStatus parseStatus(String status) {
-        try {
-            return ReportStatus.valueOf(status);
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "알 수 없는 신고 상태예요.");
-        }
     }
 
     private AdminMemberReportDetail.Review toReview(AdminMemberReportDetailRow row) {

@@ -79,14 +79,6 @@ class MemoryTest {
     }
 
     @Test
-    @DisplayName("[F-33][MM-01] 공개 범위 이름은 PRIVATE와 PUBLIC만 알아본다")
-    void parsesVisibility() {
-        assertThat(MemoryVisibility.from("PUBLIC")).contains(MemoryVisibility.PUBLIC);
-        assertThat(MemoryVisibility.from("public")).isEmpty();
-        assertThat(MemoryVisibility.from(null)).isEmpty();
-    }
-
-    @Test
     @DisplayName("[F-33][MM-10] 새 기록은 ACTIVE로 시작하고, 공개이면서 ACTIVE일 때만 다른 사람에게 보인다")
     void newMemoryIsActiveAndVisibleOnlyWhenPublic() {
         Memory privateMemory = Memory.write(1L, details(1, null), NOW);

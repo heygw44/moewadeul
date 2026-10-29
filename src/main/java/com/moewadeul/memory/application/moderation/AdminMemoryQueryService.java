@@ -1,7 +1,6 @@
 package com.moewadeul.memory.application.moderation;
 
-import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.memory.application.MemoryImageReader;
 import com.moewadeul.memory.application.MemoryPhoto;
 import com.moewadeul.memory.domain.ApproximateLocation;
@@ -9,8 +8,10 @@ import com.moewadeul.memory.domain.MemoryStatus;
 import com.moewadeul.memory.infra.moderation.AdminMemoryMapper;
 import com.moewadeul.memory.infra.moderation.AdminMemoryRecentReportRow;
 import com.moewadeul.memory.infra.moderation.AdminMemoryRow;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AdminMemoryQueryService {
+
+    private static final Set<MemoryStatus> REVIEWABLE_STATUSES =
+            EnumSet.of(MemoryStatus.PENDING_REVIEW, MemoryStatus.HIDDEN);
+    private static final String STATUS_MESSAGE = "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요.";
 
     private final AdminMemoryMapper adminMemoryMapper;
     private final MemoryImageReader memoryImageReader;
@@ -79,11 +84,6 @@ public class AdminMemoryQueryService {
         if (status == null) {
             return MemoryStatus.PENDING_REVIEW;
         }
-        for (MemoryStatus candidate : List.of(MemoryStatus.PENDING_REVIEW, MemoryStatus.HIDDEN)) {
-            if (candidate.name().equals(status)) {
-                return candidate;
-            }
-        }
-        throw new BusinessException(CommonErrorCode.INVALID_INPUT, "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요.");
+        return EnumParser.parseAmong(REVIEWABLE_STATUSES, status, STATUS_MESSAGE);
     }
 }

@@ -1,10 +1,10 @@
 package com.moewadeul.trust.application.report;
 
-import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.trust.domain.sanction.SanctionType;
-import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,6 +13,10 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class MemberReportActionService {
+
+    private static final Set<SanctionType> ADMIN_SANCTION_TYPES =
+            EnumSet.complementOf(EnumSet.of(SanctionType.TEMPORARY_72H));
+    private static final String SANCTION_TYPE_MESSAGE = "관리자가 내릴 수 없는 제재 종류예요.";
 
     private final MemberReportActionApplier memberReportActionApplier;
     private final MemberSessions memberSessions;
@@ -34,10 +38,6 @@ public class MemberReportActionService {
         if (command.sanctionType() == null) {
             return null;
         }
-        return Arrays.stream(SanctionType.values())
-                .filter(type -> type != SanctionType.TEMPORARY_72H)
-                .filter(type -> type.name().equals(command.sanctionType()))
-                .findFirst()
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.INVALID_INPUT, "관리자가 내릴 수 없는 제재 종류예요."));
+        return EnumParser.parseAmong(ADMIN_SANCTION_TYPES, command.sanctionType(), SANCTION_TYPE_MESSAGE);
     }
 }

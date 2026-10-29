@@ -1,5 +1,6 @@
 package com.moewadeul.memory.application;
 
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.memory.domain.MemoryDetails;
 import com.moewadeul.memory.domain.MemoryVisibility;
@@ -50,7 +51,7 @@ public record MemoryWriteCommand(
         if (visibility == null) {
             return MemoryVisibility.PRIVATE;
         }
-        return MemoryVisibility.from(visibility)
+        return EnumParser.find(MemoryVisibility.class, visibility)
                 .orElseThrow(() -> invalid("visibility", "공개 범위는 PRIVATE나 PUBLIC이어야 해요."));
     }
 

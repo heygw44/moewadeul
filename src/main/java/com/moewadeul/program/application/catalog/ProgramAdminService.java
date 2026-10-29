@@ -5,6 +5,7 @@ import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.application.ProgramApplicationEvents;
 import com.moewadeul.program.domain.PaymentRepository;
@@ -126,7 +127,8 @@ public class ProgramAdminService {
     @Transactional(readOnly = true)
     public ProgramApplicantPage applications(long programId, ProgramApplicantQuery query) {
         programRepository.findById(programId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        ProgramApplicationStatus status = parseStatus(query.status());
+        ProgramApplicationStatus status =
+                EnumParser.parseNullable(ProgramApplicationStatus.class, query.status(), "status: 신청 상태가 맞지 않아요.");
         long offset = (long) query.page() * query.size();
         List<ProgramApplicantRow> rows =
                 programQueryMapper.selectApplicants(programId, status, offset, query.size() + 1);
@@ -136,17 +138,6 @@ public class ProgramAdminService {
                 .map(ProgramAdminService::toItem)
                 .toList();
         return new ProgramApplicantPage(content, query.page(), query.size(), hasNext);
-    }
-
-    private static ProgramApplicationStatus parseStatus(String status) {
-        if (status == null) {
-            return null;
-        }
-        try {
-            return ProgramApplicationStatus.valueOf(status);
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "status: 신청 상태가 맞지 않아요.");
-        }
     }
 
     private Program lockProgram(long programId) {

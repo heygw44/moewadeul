@@ -1,14 +1,15 @@
 package com.moewadeul.spot.application.moderation;
 
-import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.spot.domain.SpotStatus;
 import com.moewadeul.spot.infra.moderation.AdminSpotMapper;
 import com.moewadeul.spot.infra.moderation.AdminSpotRecentReportRow;
 import com.moewadeul.spot.infra.moderation.AdminSpotRow;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AdminSpotQueryService {
+
+    private static final Set<SpotStatus> REVIEWABLE_STATUSES = EnumSet.of(SpotStatus.PENDING_REVIEW, SpotStatus.HIDDEN);
+    private static final String STATUS_MESSAGE = "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요.";
 
     private final AdminSpotMapper adminSpotMapper;
 
@@ -51,12 +55,7 @@ public class AdminSpotQueryService {
         if (status == null) {
             return SpotStatus.PENDING_REVIEW;
         }
-        for (SpotStatus candidate : List.of(SpotStatus.PENDING_REVIEW, SpotStatus.HIDDEN)) {
-            if (candidate.name().equals(status)) {
-                return candidate;
-            }
-        }
-        throw new BusinessException(CommonErrorCode.INVALID_INPUT, "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요.");
+        return EnumParser.parseAmong(REVIEWABLE_STATUSES, status, STATUS_MESSAGE);
     }
 
     private static AdminSpotSummary toSummary(AdminSpotRow row, List<AdminSpotSummary.RecentReport> recentReports) {
