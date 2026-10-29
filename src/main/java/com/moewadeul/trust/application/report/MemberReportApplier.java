@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class MemberReportApplier {
+class MemberReportApplier {
 
     private final MemberReportRepository memberReportRepository;
     private final SanctionRepository sanctionRepository;
@@ -31,7 +31,7 @@ public class MemberReportApplier {
     private final Clock clock;
 
     @Transactional
-    public MemberReportResult apply(long reporterId, MemberReportCommand command) {
+    MemberReportResult apply(long reporterId, MemberReportCommand command) {
         requireConsistentKind(command);
         if (reporterId == command.targetMemberId()) {
             throw new BusinessException(TrustErrorCode.REPORT_NOT_ELIGIBLE);

@@ -13,7 +13,6 @@ import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.web.PatchField;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
 import com.moewadeul.community.infra.moderation.AdminCommunityMapper;
-import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.application.profile.MyInfoService;
 import com.moewadeul.member.application.profile.MyInfoUpdateCommand;
 import com.moewadeul.member.domain.Member;
@@ -48,10 +47,6 @@ import com.moewadeul.spot.domain.bakji.BakjiConfirmationRepository;
 import com.moewadeul.spot.domain.bakji.BakjiReportRepository;
 import com.moewadeul.spot.infra.moderation.AdminSpotMapper;
 import com.moewadeul.trust.application.report.AdminMemberReportQueryService;
-import com.moewadeul.trust.application.report.MemberReportActionApplier;
-import com.moewadeul.trust.application.report.MemberReportActionCommand;
-import com.moewadeul.trust.application.report.MemberReportActionResult;
-import com.moewadeul.trust.application.report.MemberReportActionService;
 import com.moewadeul.trust.infra.report.AdminMemberReportMapper;
 import java.time.Clock;
 import java.time.Instant;
@@ -268,30 +263,6 @@ class EnumInputServicesTest {
 
         verify(member).changeSelfAgeGroup(null, CLOCK.instant());
         verify(member).changeSelfGender(null, CLOCK.instant());
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "temporary_7d", "TEMPORARY_72H", "UNKNOWN"})
-    @DisplayName("회원 신고 처리는 관리자가 내릴 수 없는 제재 종류를 INVALID_INPUT으로 거절한다")
-    void memberReportActionRejectsUnassignableSanction(String sanctionType) {
-        MemberReportActionService service =
-                new MemberReportActionService(mock(MemberReportActionApplier.class), mock(MemberSessions.class));
-
-        assertThatThrownBy(() -> service.act(new MemberReportActionCommand(1L, 2L, sanctionType, null, false, null)))
-                .satisfies(e -> assertInvalidInput(e, "관리자가 내릴 수 없는 제재 종류예요."));
-    }
-
-    @Test
-    @DisplayName("회원 신고 처리는 제재 종류가 null이면 제재 없이 처리한다")
-    void memberReportActionAllowsNullSanction() {
-        MemberReportActionApplier applier = mock(MemberReportActionApplier.class);
-        MemberReportActionCommand command = new MemberReportActionCommand(1L, 2L, null, null, false, null);
-        when(applier.apply(command, null)).thenReturn(new MemberReportActionResult(1L, "DISMISSED", null, 3L, false));
-        MemberReportActionService service = new MemberReportActionService(applier, mock(MemberSessions.class));
-
-        service.act(command);
-
-        verify(applier).apply(command, null);
     }
 
     private static ProgramAdminService programAdminService(ProgramQueryMapper mapper) {

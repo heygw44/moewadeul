@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class MemberReportActionApplier {
+class MemberReportActionApplier {
 
     private final MemberReportRepository memberReportRepository;
     private final CompanionReviewRepository companionReviewRepository;
@@ -38,7 +38,7 @@ public class MemberReportActionApplier {
     private final Clock clock;
 
     @Transactional
-    public MemberReportActionResult apply(MemberReportActionCommand command, SanctionType sanctionType) {
+    MemberReportActionResult apply(MemberReportActionCommand command, SanctionType sanctionType) {
         MemberReport report = memberReportRepository
                 .findByIdForUpdate(command.reportId())
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));

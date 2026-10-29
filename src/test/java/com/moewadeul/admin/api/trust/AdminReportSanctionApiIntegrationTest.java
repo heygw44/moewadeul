@@ -18,7 +18,7 @@ import com.moewadeul.trust.application.report.ReportContentCleanupService;
 import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
 import com.moewadeul.trust.application.sanction.SanctionConfirmService;
 import com.moewadeul.trust.application.sanction.SanctionExpiryService;
-import com.moewadeul.trust.application.withdrawal.WithdrawalApplier;
+import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import com.moewadeul.trust.domain.report.ReportKind;
 import com.moewadeul.trust.domain.report.ReportType;
 import com.moewadeul.trust.domain.sanction.SanctionType;
@@ -50,6 +50,7 @@ class AdminReportSanctionApiIntegrationTest {
     private static final String SANCTIONS = "/api/admin/sanctions";
     private static final String AUDIT_LOGS = "/api/admin/audit-logs";
     private static final String PASSWORD = "Valid-pass1";
+    private static final String REQUEST_IP = "203.0.113.7";
     private static final String SESSION_COOKIE = "SESSION";
     private static final String SECRET_REASON = "비밀사유가들어간문장";
     private static final String SECRET_NOTE = "비밀메모가들어간문장";
@@ -89,7 +90,7 @@ class AdminReportSanctionApiIntegrationTest {
     private SanctionExpiryService sanctionExpiryService;
 
     @Autowired
-    private WithdrawalApplier withdrawalApplier;
+    private WithdrawalService withdrawalService;
 
     private CompanionReviewFixture fixture;
     private MemberReportFixture reportFixture;
@@ -262,7 +263,7 @@ class AdminReportSanctionApiIntegrationTest {
         assertThat(sanctionStatuses(dismissedTarget)).containsExactly("EXPIRED");
 
         MvcTestResult dismissed = post(REPORTS + "/" + reportId + "/dismiss", null);
-        withdrawalApplier.apply(dismissedTarget);
+        withdraw(dismissedTarget);
 
         assertThat(dismissed).hasStatus(HttpStatus.OK);
         assertThat(sanctionStatuses(dismissedTarget)).containsExactly("LIFTED");
@@ -283,7 +284,7 @@ class AdminReportSanctionApiIntegrationTest {
         clock.advance(Duration.ofHours(73));
         sanctionExpiryService.run();
 
-        withdrawalApplier.apply(target);
+        withdraw(target);
 
         assertThat(jdbc.queryForObject(
                         "SELECT status FROM sanction WHERE report_id = ? AND type = 'TEMPORARY_72H'",
@@ -847,6 +848,11 @@ class AdminReportSanctionApiIntegrationTest {
         return sanctionConfirmService
                 .confirm(new SanctionConfirmCommand(targetId, null, type, "사유", adminId))
                 .sanctionId();
+    }
+
+    private void withdraw(long memberId) {
+        jdbc.update("UPDATE member SET password_hash = ? WHERE id = ?", passwordEncoder.encode(PASSWORD), memberId);
+        withdrawalService.withdraw(memberId, PASSWORD, REQUEST_IP);
     }
 
     private long ledBasecamp(long leaderId) {

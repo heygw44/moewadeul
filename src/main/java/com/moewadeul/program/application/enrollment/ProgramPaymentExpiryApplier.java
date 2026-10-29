@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ProgramPaymentExpiryApplier {
+class ProgramPaymentExpiryApplier {
 
     private final ProgramPaymentExpiryMapper expiryMapper;
     private final OutboxEventRecorder outboxEventRecorder;
@@ -25,7 +25,7 @@ public class ProgramPaymentExpiryApplier {
     private final ProgramSeatReleaseRecorder seatReleaseRecorder;
 
     @Transactional
-    public boolean expire(ExpiryTarget target, Instant now) {
+    boolean expire(ExpiryTarget target, Instant now) {
         if (expiryMapper.expireIfDue(target.applicationId(), now) == 0) {
             return false;
         }
