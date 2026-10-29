@@ -52,7 +52,7 @@ import type { SpotFilters } from './spotFilters';
 import { SpotListRow } from './SpotListRow';
 import { SpotPreviewBoard } from './SpotPreviewBoard';
 import { useMapMoving } from './useMapMoving';
-import { useRegionName } from './useRegionName';
+import { useRegionLabelInView } from './useRegionLabelInView';
 import { useSpotsInView } from './useSpotsInView';
 import type { SpotsInView } from './useSpotsInView';
 import { useSpotsNearby } from './useSpotsNearby';
@@ -253,7 +253,7 @@ export function MapPage({
     session.me?.memberId ?? null,
   );
 
-  const regionName = useRegionName(map);
+  const regionName = useRegionLabelInView(map);
   const overlayRef = useRef<HTMLDivElement>(null);
   const mapButtonsRef = useRef<HTMLDivElement>(null);
   const keepOverlay = useCallback(() => overlayRef.current?.contains(document.activeElement) ?? false, []);

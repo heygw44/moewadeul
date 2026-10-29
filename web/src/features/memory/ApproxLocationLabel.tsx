@@ -1,8 +1,8 @@
 import type { LatLng } from '../../map/types';
-import { useRegionName } from './useRegionName';
+import { useRegionNameAt } from './useRegionNameAt';
 
 export function ApproxLocationLabel({ position }: { position: LatLng }) {
-  const lookup = useRegionName(position);
+  const lookup = useRegionNameAt(position);
 
   if (lookup.status === 'loading') {
     return <p className="text-sm text-ink-muted">위치를 찾고 있어요</p>;
