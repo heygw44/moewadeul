@@ -53,7 +53,7 @@ describe('푸터의 법정 고지', () => {
   });
 
   it('문의 메일 링크가 있다', () => {
-    expect(link('문의')?.getAttribute('href')).toBe('mailto:moewadeul@gmail.com');
+    expect(link('moewadeul@gmail.com')?.getAttribute('href')).toBe('mailto:moewadeul@gmail.com');
   });
 
   it('운영자 정보와 기존 고지를 유지한다', () => {

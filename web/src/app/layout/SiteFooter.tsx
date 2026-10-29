@@ -73,13 +73,13 @@ export function SiteFooter() {
           <Link to="/terms" className={LINK_CLASS}>
             이용약관
           </Link>
-          <a href={`mailto:${CONTACT_EMAIL}`} className={LINK_CLASS}>
-            문의
-          </a>
         </div>
         <p className="mx-auto max-w-screen-xl px-4 pt-2 text-[0.9375rem] leading-relaxed text-ink-muted">
           <span className="block max-w-[72ch]">
-            뫼와들은 개인이 운영하는 비영리 포트폴리오 서비스예요. 문의 {CONTACT_EMAIL}
+            뫼와들은 개인이 운영하는 비영리 포트폴리오 서비스예요. 문의{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-2 hover:text-ink">
+              {CONTACT_EMAIL}
+            </a>
           </span>
         </p>
         <p className="mx-auto max-w-screen-xl px-4 pt-2 text-[0.9375rem] leading-relaxed text-ink-muted">
