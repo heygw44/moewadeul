@@ -11,6 +11,7 @@ import { Icon } from '../../components/icons';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { roundCoordinate } from '../../lib/geo';
 import type { LatLng } from '../../map/types';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -19,7 +20,6 @@ import {
   GROUND_OPTIONS_WITH_KEEP,
   PRIMARY_LINK_CLASS,
   requiredFieldErrors,
-  roundCoordinate,
   submitErrorState,
   useLocationErrorReset,
 } from './bakjiFormModel';

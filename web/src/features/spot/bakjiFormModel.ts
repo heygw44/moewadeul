@@ -38,10 +38,6 @@ export const GROUND_OPTIONS_WITH_KEEP: ChoiceOption<GroundChoice>[] = [
 export const PRIMARY_LINK_CLASS =
   'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
 
-export function roundCoordinate(value: number): number {
-  return Math.round(value * 1e6) / 1e6;
-}
-
 export function requiredFieldErrors(draft: LatLng | null, values: BakjiFormValues): FieldErrors {
   const errors: FieldErrors = {};
   if (draft === null) errors.location = '지도를 눌러 박지 위치를 찍어 주세요.';
