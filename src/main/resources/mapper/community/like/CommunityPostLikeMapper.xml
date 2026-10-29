@@ -17,7 +17,7 @@
           AND member_id = #{memberId}
     </delete>
 
-    <select id="lockPostStatus" resultType="string">
+    <select id="lockPostStatus" resultType="com.moewadeul.community.domain.post.CommunityPostStatus">
         SELECT status
         FROM community_post
         WHERE id = #{postId}

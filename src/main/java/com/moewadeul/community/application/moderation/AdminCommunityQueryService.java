@@ -4,6 +4,7 @@ import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.moderation.ReportReasonCount;
 import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.community.domain.comment.CommunityCommentStatus;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.domain.report.CommunityReportTargetType;
 import com.moewadeul.community.infra.moderation.AdminCommunityCommentRow;
@@ -24,17 +25,20 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AdminCommunityQueryService {
 
-    private static final Set<CommunityPostStatus> REVIEWABLE_STATUSES =
+    private static final Set<CommunityPostStatus> POST_REVIEWABLE_STATUSES =
             EnumSet.of(CommunityPostStatus.PENDING_REVIEW, CommunityPostStatus.HIDDEN);
+    private static final Set<CommunityCommentStatus> COMMENT_REVIEWABLE_STATUSES =
+            EnumSet.of(CommunityCommentStatus.PENDING_REVIEW, CommunityCommentStatus.HIDDEN);
     private static final String STATUS_MESSAGE = "status는 PENDING_REVIEW 또는 HIDDEN이어야 해요.";
 
     private final AdminCommunityMapper adminCommunityMapper;
 
     @Transactional(readOnly = true)
     public PageSlice<AdminCommunityPostSummary> listPosts(String status, int page, int size) {
-        CommunityPostStatus postStatus = parseStatus(status);
-        List<AdminCommunityPostRow> rows = adminCommunityMapper.selectPosts(
-                postStatus.name(), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+        CommunityPostStatus postStatus =
+                parseStatus(status, CommunityPostStatus.PENDING_REVIEW, POST_REVIEWABLE_STATUSES);
+        List<AdminCommunityPostRow> rows =
+                adminCommunityMapper.selectPosts(postStatus, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
         PageSlice<AdminCommunityPostRow> slice = PageSlice.of(rows, page, size);
         List<Long> postIds =
                 slice.content().stream().map(AdminCommunityPostRow::postId).toList();
@@ -45,7 +49,7 @@ public class AdminCommunityQueryService {
                 row.title(),
                 row.content(),
                 new AdminCommunityAuthor(row.authorId(), row.authorNickname()),
-                row.status(),
+                row.status().name(),
                 row.reportCount(),
                 reasonCounts.get(row.postId()),
                 recent.getOrDefault(row.postId(), List.of()),
@@ -54,9 +58,10 @@ public class AdminCommunityQueryService {
 
     @Transactional(readOnly = true)
     public PageSlice<AdminCommunityCommentSummary> listComments(String status, int page, int size) {
-        CommunityPostStatus commentStatus = parseStatus(status);
+        CommunityCommentStatus commentStatus =
+                parseStatus(status, CommunityCommentStatus.PENDING_REVIEW, COMMENT_REVIEWABLE_STATUSES);
         List<AdminCommunityCommentRow> rows = adminCommunityMapper.selectComments(
-                commentStatus.name(), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+                commentStatus, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
         PageSlice<AdminCommunityCommentRow> slice = PageSlice.of(rows, page, size);
         List<Long> commentIds = slice.content().stream()
                 .map(AdminCommunityCommentRow::commentId)
@@ -69,7 +74,7 @@ public class AdminCommunityQueryService {
                 row.postId(),
                 row.content(),
                 new AdminCommunityAuthor(row.authorId(), row.authorNickname()),
-                row.status(),
+                row.status().name(),
                 row.reportCount(),
                 reasonCounts.get(row.commentId()),
                 recent.getOrDefault(row.commentId(), List.of()),
@@ -78,7 +83,7 @@ public class AdminCommunityQueryService {
 
     private Map<Long, Map<String, Long>> readReasonCounts(CommunityReportTargetType targetType, List<Long> targetIds) {
         List<ReportReasonCount> counts =
-                targetIds.isEmpty() ? List.of() : adminCommunityMapper.selectReasonCounts(targetType.name(), targetIds);
+                targetIds.isEmpty() ? List.of() : adminCommunityMapper.selectReasonCounts(targetType, targetIds);
         return ReportReasonCount.byTarget(ContentReportReason.class, targetIds, counts);
     }
 
@@ -87,7 +92,7 @@ public class AdminCommunityQueryService {
         if (targetIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        return adminCommunityMapper.selectRecentReports(targetType.name(), targetIds).stream()
+        return adminCommunityMapper.selectRecentReports(targetType, targetIds).stream()
                 .collect(Collectors.groupingBy(
                         AdminCommunityRecentReportRow::targetId,
                         Collectors.mapping(
@@ -95,10 +100,10 @@ public class AdminCommunityQueryService {
                                 Collectors.toList())));
     }
 
-    private static CommunityPostStatus parseStatus(String status) {
+    private static <E extends Enum<E>> E parseStatus(String status, E defaultStatus, Set<E> reviewable) {
         if (status == null) {
-            return CommunityPostStatus.PENDING_REVIEW;
+            return defaultStatus;
         }
-        return EnumParser.parseAmong(REVIEWABLE_STATUSES, status, STATUS_MESSAGE);
+        return EnumParser.parseAmong(reviewable, status, STATUS_MESSAGE);
     }
 }

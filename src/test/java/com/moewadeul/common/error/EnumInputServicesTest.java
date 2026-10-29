@@ -12,6 +12,7 @@ import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.web.PatchField;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
+import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.infra.moderation.AdminCommunityMapper;
 import com.moewadeul.member.application.profile.MyInfoService;
 import com.moewadeul.member.application.profile.MyInfoUpdateCommand;
@@ -130,7 +131,7 @@ class EnumInputServicesTest {
 
         new AdminCommunityQueryService(mapper).listPosts(null, 0, 20);
 
-        verify(mapper).selectPosts("PENDING_REVIEW", 0L, 21);
+        verify(mapper).selectPosts(CommunityPostStatus.PENDING_REVIEW, 0L, 21);
     }
 
     @ParameterizedTest
