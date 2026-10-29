@@ -5,6 +5,7 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.infra.post.CommunityPostListCondition;
 import com.moewadeul.community.infra.post.CommunityPostMapper;
+import com.moewadeul.community.infra.post.CommunityPostRow;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,15 +21,14 @@ public class CommunityPostQueryService {
 
     @Transactional(readOnly = true)
     public CommunityPostPage list(CommunityPostListQuery query, int page, int size) {
-        CommunityPostListCondition condition = toCondition(query);
-        long totalElements = communityPostMapper.countActive(condition);
         long offset = (long) page * size;
-        List<CommunityPostItem> content = offset >= totalElements
-                ? List.of()
-                : communityPostMapper.selectActive(condition, offset, size).stream()
-                        .map(communityPostItemReader::toListItem)
-                        .toList();
-        return CommunityPostPage.of(content, page, size, totalElements);
+        List<CommunityPostRow> rows = communityPostMapper.selectActive(toCondition(query), offset, size + 1);
+        boolean hasNext = rows.size() > size;
+        List<CommunityPostItem> content = rows.stream()
+                .limit(size)
+                .map(communityPostItemReader::toListItem)
+                .toList();
+        return new CommunityPostPage(content, page, size, hasNext);
     }
 
     @Transactional(readOnly = true)
