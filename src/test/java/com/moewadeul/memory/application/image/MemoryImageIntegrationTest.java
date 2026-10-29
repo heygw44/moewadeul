@@ -96,7 +96,7 @@ class MemoryImageIntegrationTest {
         String key = keyOf(upload.imageId());
         String thumbnailKey = thumbnailKeyOf(upload.imageId());
         assertThat(thumbnailKey).isEqualTo(key.substring(0, key.length() - ".png".length()) + "_thumb.jpg");
-        assertThat(upload.thumbnailUpload().url()).contains(thumbnailKey);
+        assertThat(upload.thumbnailUpload().uploadUrl()).contains(thumbnailKey);
         assertThat(upload.thumbnailUpload().headers())
                 .containsEntry("Content-Type", "image/jpeg")
                 .containsEntry("Content-Length", String.valueOf(THUMBNAIL_SIZE));
