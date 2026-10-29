@@ -32,7 +32,8 @@ class PasswordResetRequestedHandler implements OutboxEventHandler {
 
     @Override
     public void handle(OutboxMessage message) {
-        Optional<IssuedPasswordReset> issued = passwordResetRequestService.issueFor(message.aggregateId());
+        Optional<IssuedPasswordReset> issued =
+                passwordResetRequestService.issueFor(message.aggregateId(), message.eventId());
         issued.ifPresent(this::sendMail);
     }
 

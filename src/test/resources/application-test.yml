@@ -15,6 +15,8 @@ moewadeul:
     cleanup:
       enabled: false
   member:
+    mail-secret:
+      hmac-key: "test-only-mail-secret-hmac-key-not-a-real-secret-0123456789"
     unverified-cleanup:
       enabled: false
     reset-throttle-cleanup:

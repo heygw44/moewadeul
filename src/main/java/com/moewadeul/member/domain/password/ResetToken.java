@@ -26,6 +26,13 @@ public final class ResetToken {
         return new ResetToken(ENCODER.encodeToString(bytes));
     }
 
+    public static ResetToken fromSeed(byte[] seed) {
+        if (seed.length != PasswordResetPolicy.TOKEN_BYTES) {
+            throw new IllegalArgumentException("재설정 토큰 원천값은 " + PasswordResetPolicy.TOKEN_BYTES + "바이트여야 합니다.");
+        }
+        return new ResetToken(ENCODER.encodeToString(seed));
+    }
+
     public static String hash(String raw) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));

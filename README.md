@@ -31,7 +31,7 @@
 ## 🚀 로컬 실행
 
 ```bash
-cp .env.example .env      # DB_PASSWORD, DB_ROOT_PASSWORD, CI_HMAC_KEY 등을 채웁니다
+cp .env.example .env      # DB_PASSWORD, DB_ROOT_PASSWORD, CI_HMAC_KEY, MAIL_SECRET_HMAC_KEY 등을 채웁니다
 docker compose up -d      # mysql이 healthy가 될 때까지 기다립니다
 ./gradlew bootRun         # http://localhost:8080/swagger-ui/index.html
 

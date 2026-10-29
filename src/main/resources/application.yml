@@ -85,6 +85,9 @@ logging:
 moewadeul:
   identity:
     ci-hmac-key: ${CI_HMAC_KEY:}
+  member:
+    mail-secret:
+      hmac-key: ${MAIL_SECRET_HMAC_KEY:}
   mail:
     # Gmail은 발신 주소가 로그인한 계정과 다르면 계정 주소로 바꿔 보낸다.
     from: ${spring.mail.username:}

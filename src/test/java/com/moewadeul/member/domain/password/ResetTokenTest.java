@@ -1,8 +1,10 @@
 package com.moewadeul.member.domain.password;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.security.SecureRandom;
+import java.util.Base64;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,6 +33,28 @@ class ResetTokenTest {
 
         // then
         assertThat(first).isNotEqualTo(second);
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-02] 32바이트 원천값으로 만든 토큰은 그 바이트의 base64url이고 형식이 맞다")
+    void tokenFromSeedIsUrlSafeEncodingOfSeed() {
+        // given
+        byte[] seed = new byte[PasswordResetPolicy.TOKEN_BYTES];
+        random.nextBytes(seed);
+
+        // when
+        String value = ResetToken.fromSeed(seed).value();
+
+        // then
+        assertThat(Base64.getUrlDecoder().decode(value)).isEqualTo(seed);
+        assertThat(ResetToken.isWellFormed(value)).isTrue();
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-02] 원천값이 32바이트가 아니면 토큰을 만들지 않는다")
+    void rejectsSeedOfWrongLength() {
+        assertThatThrownBy(() -> ResetToken.fromSeed(new byte[PasswordResetPolicy.TOKEN_BYTES - 1]))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

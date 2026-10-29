@@ -288,6 +288,27 @@ class PasswordResetRequestFlowIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-02][PW-02] 메일 서버 장애가 길어 유효 시간이 지난 뒤 같은 이벤트를 다시 보내면 같은 링크가 다시 보낸 시각부터 30분 유효하다")
+    void lateResendRenewsSameToken() {
+        // given
+        Member member = newMember("late@example.com");
+        requestService.request(member.getEmail(), CLIENT_IP);
+        OutboxMessage message = toMessage(findOnlyEvent());
+        handler.handle(message);
+        clock.advance(PasswordResetPolicy.TOKEN_VALIDITY.plusMinutes(1));
+
+        // when
+        handler.handle(message);
+
+        // then
+        String token = PasswordResetMails.extractToken(mailSender.sent().get(1));
+        assertThat(toInstant(jdbc.queryForMap("SELECT expires_at FROM password_reset_token")
+                        .get("expires_at")))
+                .isEqualTo(clock.instant().plus(PasswordResetPolicy.TOKEN_VALIDITY));
+        assertThatCode(() -> confirmService.confirm(token, NEW_PASSWORD)).doesNotThrowAnyException();
+    }
+
+    @Test
     @DisplayName("[F-02][PW-02] 재설정을 다시 요청해 새 메일이 나가면 이전 메일의 링크는 쓸 수 없고 살아 있는 토큰은 새 것 하나다")
     void newRequestInvalidatesEarlierUnusedToken() {
         // given
