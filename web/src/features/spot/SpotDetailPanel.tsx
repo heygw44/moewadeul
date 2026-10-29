@@ -31,6 +31,7 @@ import { ParkWarningNotice } from './ParkWarningNotice';
 import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META, sourceLabel } from './spotLabels';
 import { useSpotWeather } from './useSpotWeather';
 import type { SpotWeatherState } from './useSpotWeather';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type SpotDetailPanelProps = {
   spotId: number;
@@ -81,13 +82,7 @@ export function SpotDetailPanel({ spotId, onBack, onLoaded, onBakjiDeleted }: Sp
     if (loadedDetail !== null) reportLoaded(loadedDetail);
   }, [loadedDetail]);
 
-  useEffect(() => {
-    if (loadedName === null) return;
-    document.title = `${loadedName} · 뫼와들`;
-    return () => {
-      document.title = '뫼와들';
-    };
-  }, [loadedName]);
+  useDocumentTitle(loadedName === null ? null : `${loadedName} · 뫼와들`, { resetOnLeave: true });
 
   let body: ReactNode;
   if (current === null) {

@@ -22,14 +22,13 @@ import { safeInternalPath } from '../member/nextPath';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { NOTIFICATION_LABELS, NOTIFICATION_TYPES } from './notificationLabels';
 import { refreshUnreadCount } from './unreadCount';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 export function NotificationsPage() {
   const session = useRequireAuth();
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
-  useEffect(() => {
-    document.title = '알림 · 뫼와들';
-  }, []);
+  useDocumentTitle('알림 · 뫼와들');
 
   if (session.status !== 'authenticated' || !session.me) {
     return <PageLayout title="알림">{showSkeleton ? <Skeleton className="h-40 w-full" /> : null}</PageLayout>;

@@ -35,6 +35,7 @@ import { formatKstDateTime, todayKst } from '../../lib/datetime';
 import { trustLevelBadge } from '../member/memberLabels';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText, profileSummary } from './basecampLabels';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const CONTACT_MAX = 255;
 const MIN_CONFIRM_HEADCOUNT = 2;
@@ -69,9 +70,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const [error, setError] = useState<{ title: string; cause: unknown } | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
-  useEffect(() => {
-    document.title = '베이스캠프 관리 · 뫼와들';
-  }, []);
+  useDocumentTitle('베이스캠프 관리 · 뫼와들');
 
   const authenticated = session.status === 'authenticated';
 

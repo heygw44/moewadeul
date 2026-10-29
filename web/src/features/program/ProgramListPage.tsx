@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import { listPrograms } from '../../api/programs';
 import type { ProgramListStatus } from '../../api/programs';
@@ -17,6 +17,7 @@ import { useSession } from '../member/session';
 import { feeText, PROGRAM_FILTERS, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { ProgramAside } from './ProgramAside';
 import { usePagedList } from '../../components/usePagedList';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type ProgramFilter = ProgramListStatus | 'ALL';
 
@@ -33,9 +34,7 @@ export function ProgramListPage() {
   const session = useSession();
   const signedIn = session.status === 'authenticated' && session.me !== null;
 
-  useEffect(() => {
-    document.title = '공식 행사 · 뫼와들';
-  }, []);
+  useDocumentTitle('공식 행사 · 뫼와들');
 
   return (
     <HubLayout

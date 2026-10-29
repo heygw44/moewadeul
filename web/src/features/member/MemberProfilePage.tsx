@@ -16,6 +16,7 @@ import { AGE_GROUP_LABELS, companionTagLabel, GENDER_LABELS } from './memberLabe
 import { withNext } from './nextPath';
 import { useSession } from './session';
 import { useViewerEpoch } from './useViewerEpoch';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type ProfileResult =
   { memberId: number; attempt: number; profile: MemberProfile } | { memberId: number; attempt: number; error: unknown };
@@ -42,9 +43,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   const showSkeleton = useDelayedFlag(current === null);
   const nickname = current && 'profile' in current ? current.profile.nickname : null;
 
-  useEffect(() => {
-    document.title = nickname ? `${nickname} · 뫼와들` : '회원 프로필 · 뫼와들';
-  }, [nickname]);
+  useDocumentTitle(nickname ? `${nickname} · 뫼와들` : '회원 프로필 · 뫼와들');
 
   let body: ReactNode;
   if (current === null) {

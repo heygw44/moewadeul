@@ -23,6 +23,7 @@ import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
 import { useSession } from '../member/session';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { parseSpotId, SECONDARY_LINK_CLASS } from './communityLabels';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const TITLE_MAX = 100;
 const CONTENT_MAX = 10000;
@@ -37,9 +38,7 @@ export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
   const showSkeleton = useDelayedFlag(session.status === 'loading');
   const editPostId = props.mode === 'edit' ? props.postId : null;
 
-  useEffect(() => {
-    document.title = props.mode === 'create' ? '글쓰기 · 뫼와들' : '글 수정 · 뫼와들';
-  }, [props.mode]);
+  useDocumentTitle(props.mode === 'create' ? '글쓰기 · 뫼와들' : '글 수정 · 뫼와들');
 
   const title = props.mode === 'create' ? '글쓰기' : '글 수정';
   const layout = (children: ReactNode) => (

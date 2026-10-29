@@ -30,6 +30,7 @@ import { useViewerEpoch } from '../member/useViewerEpoch';
 import { countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { useApplyPhaseRefresh } from './useApplyPhaseRefresh';
 import { useNow } from './useNow';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult = { programId: number; detail: ProgramDetail } | { programId: number; error: unknown };
 
@@ -60,9 +61,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
   const showSkeleton = useDelayedFlag(current === null);
   const loadedTitle = current !== null && 'detail' in current ? current.detail.title : null;
 
-  useEffect(() => {
-    document.title = loadedTitle ? `${loadedTitle} · 뫼와들` : '공식 행사 · 뫼와들';
-  }, [loadedTitle]);
+  useDocumentTitle(loadedTitle ? `${loadedTitle} · 뫼와들` : '공식 행사 · 뫼와들');
 
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
 

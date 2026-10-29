@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
@@ -6,6 +5,7 @@ import { PasswordChangeForm } from './PasswordChangeForm';
 import { SelfReportForm } from './SelfReportForm';
 import { useRequireAuth } from './useRequireAuth';
 import { WithdrawalSection } from './WithdrawalSection';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const TITLE = '계정 설정';
 const DESCRIPTION = '프로필과 비밀번호를 바꾸거나 회원 탈퇴를 할 수 있어요.';
@@ -14,9 +14,7 @@ export function AccountSettingsPage() {
   const session = useRequireAuth('/me/settings');
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
-  useEffect(() => {
-    document.title = `${TITLE} · 뫼와들`;
-  }, []);
+  useDocumentTitle(`${TITLE} · 뫼와들`);
 
   if (session.status !== 'authenticated' || !session.me) {
     return (

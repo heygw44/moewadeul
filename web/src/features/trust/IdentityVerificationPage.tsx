@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ApiError, serverNow } from '../../api/client';
 import { verifyIdentity } from '../../api/trust';
@@ -17,6 +17,7 @@ import { AuthLayout } from '../member/AuthLayout';
 import { safeNextPath, withNext } from '../member/nextPath';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { buttonClassName } from '../../components/buttonClass';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const MIN_BIRTH_YEAR = 1900;
 const DEMO_KEY_MAX_LENGTH = 100;
@@ -49,9 +50,7 @@ export function IdentityVerificationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<IdentityVerificationResponse | null>(null);
 
-  useEffect(() => {
-    document.title = '본인확인 · 뫼와들';
-  }, []);
+  useDocumentTitle('본인확인 · 뫼와들');
 
   function validate(): {
     request: {

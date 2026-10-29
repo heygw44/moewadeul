@@ -17,6 +17,7 @@ import { formatRelativeKst } from '../../lib/datetime';
 import { useSession } from '../member/session';
 import { usePagedList } from '../../components/usePagedList';
 import { LINK_BUTTON_CLASS, parseSpotId, UNVERIFIED_WRITE_REASON } from './communityLabels';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type ListTab = 'all' | 'popular';
 type ListQuery = {
@@ -86,9 +87,7 @@ export function CommunityListPage() {
   const showSkeleton = useDelayedFlag(current === null);
   const firstPageFailed = current !== null && current.error !== null && current.items.length === 0;
 
-  useEffect(() => {
-    document.title = '커뮤니티 · 뫼와들';
-  }, []);
+  useDocumentTitle('커뮤니티 · 뫼와들');
 
   const goTo = (next: Partial<ListQuery>) => navigate(listPath({ ...query, ...next }));
 

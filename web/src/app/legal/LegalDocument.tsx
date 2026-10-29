@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { HubLayout } from '../../components/HubLayout';
 import { CONTACT_EMAIL } from './siteInfo';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 export type LegalSection = { id: string; title: string; body: ReactNode };
 
@@ -12,9 +12,7 @@ type LegalDocumentProps = {
 };
 
 export function LegalDocument({ title, effectiveDate, sections }: LegalDocumentProps) {
-  useEffect(() => {
-    document.title = `${title} · 뫼와들`;
-  }, [title]);
+  useDocumentTitle(`${title} · 뫼와들`);
 
   return (
     <HubLayout title={title} width="narrow" meta={<p className="text-sm text-ink-muted">시행일 {effectiveDate}</p>}>

@@ -19,6 +19,7 @@ import {
 } from './requiredMessages';
 import { useSession } from './session';
 import { useRetryCountdown } from './useRetryCountdown';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
@@ -38,9 +39,7 @@ export function PasswordResetPage() {
     if (fromHash !== null) setToken(fromHash);
   }
 
-  useEffect(() => {
-    document.title = '비밀번호 재설정 · 뫼와들';
-  }, []);
+  useDocumentTitle('비밀번호 재설정 · 뫼와들');
 
   useEffect(() => {
     if (hash !== '') navigate(pathname, { replace: true });

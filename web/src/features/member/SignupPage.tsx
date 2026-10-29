@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { login, signUp } from '../../api/auth';
 import { ApiError } from '../../api/client';
@@ -24,6 +24,7 @@ import {
   PASSWORD_REQUIRED,
 } from './requiredMessages';
 import { useSession } from './session';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type SignupField = 'email' | 'password' | 'passwordConfirm' | 'nickname' | 'ageConfirmed';
 
@@ -63,9 +64,7 @@ export function SignupPage() {
   const [formError, setFormError] = useState<{ message: string; traceId?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    document.title = '회원가입 · 뫼와들';
-  }, []);
+  useDocumentTitle('회원가입 · 뫼와들');
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

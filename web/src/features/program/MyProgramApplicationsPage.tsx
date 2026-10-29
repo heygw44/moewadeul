@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import { listMyProgramApplications } from '../../api/programs';
 import type { MyProgramApplicationItem, ProgramApplicationStatus } from '../../api/types';
@@ -18,6 +18,7 @@ import { useRequireAuth } from '../member/useRequireAuth';
 import { APPLICATION_FILTERS, APPLICATION_STATUS_META, CANCEL_REASON_LABELS, countdownText } from './programLabels';
 import { useNow } from './useNow';
 import { usePagedList } from '../../components/usePagedList';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type ApplicationFilter = ProgramApplicationStatus | 'ALL';
 
@@ -34,9 +35,7 @@ export function MyProgramApplicationsPage() {
   const hasPending = current?.items.some((item) => item.status === 'PENDING_PAYMENT') ?? false;
   const now = useNow(hasPending);
 
-  useEffect(() => {
-    document.title = '내 행사 신청 · 뫼와들';
-  }, []);
+  useDocumentTitle('내 행사 신청 · 뫼와들');
 
   return (
     <PageLayout

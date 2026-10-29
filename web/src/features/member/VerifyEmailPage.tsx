@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { resendVerification, verifyEmail } from '../../api/auth';
 import { ApiError } from '../../api/client';
@@ -15,6 +15,7 @@ import { safeNextPath, withNext } from './nextPath';
 import { useRequireAuth } from './useRequireAuth';
 import { useRetryCountdown } from './useRetryCountdown';
 import { buttonClassName } from '../../components/buttonClass';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -40,9 +41,7 @@ export function VerifyEmailPage() {
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState<ResendNotice | null>(null);
 
-  useEffect(() => {
-    document.title = '이메일 인증 · 뫼와들';
-  }, []);
+  useDocumentTitle('이메일 인증 · 뫼와들');
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

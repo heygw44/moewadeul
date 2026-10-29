@@ -27,6 +27,7 @@ import { companionTagLabel, NEGATIVE_COMPANION_TAGS, POSITIVE_COMPANION_TAGS } f
 import { useRequireAuth } from '../member/useRequireAuth';
 import { MemberReportDialog } from '../report/MemberReportDialog';
 import { buttonClassName } from '../../components/buttonClass';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const COMMENT_MAX = 300;
 
@@ -54,9 +55,7 @@ export function CompanionReviewsPage() {
   const tab = tabFromSearch(search);
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
-  useEffect(() => {
-    document.title = '동행 후기 · 뫼와들';
-  }, []);
+  useDocumentTitle('동행 후기 · 뫼와들');
 
   if (session.status !== 'authenticated' || !session.me) {
     return <PageLayout title="동행 후기">{showSkeleton ? <Skeleton className="h-40 w-full" /> : null}</PageLayout>;

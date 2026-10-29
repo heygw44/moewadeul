@@ -23,6 +23,7 @@ import { MEMORY_STATUS_LABEL, nightsLabel, VISIBILITY_LABEL } from './memoryLabe
 import { MemoryLikeButton } from './MemoryLikeButton';
 import { MemoryPhotoCarousel } from './MemoryPhotoCarousel';
 import { MemoryReportDialog } from './MemoryReportDialog';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult = { memoryId: number; memory: MemoryDetail } | { memoryId: number; error: unknown };
 
@@ -52,9 +53,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   const showSkeleton = useDelayedFlag(current === null);
   const title = current !== null && 'memory' in current ? titleOf(current.memory) : '기록';
 
-  useEffect(() => {
-    document.title = `${title} · 뫼와들`;
-  }, [title]);
+  useDocumentTitle(`${title} · 뫼와들`);
 
   const reload = () => setAttempt((value) => value + 1);
   const authorId = current !== null && 'memory' in current ? current.memory.author.memberId : null;

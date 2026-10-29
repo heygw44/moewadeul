@@ -19,6 +19,7 @@ import { useViewerEpoch } from '../member/useViewerEpoch';
 import { CommunityComments } from './CommunityComments';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import { SECONDARY_LINK_CLASS } from './communityLabels';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult = { postId: number; post: CommunityPostDetail } | { postId: number; error: unknown };
 
@@ -45,9 +46,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   const showSkeleton = useDelayedFlag(current === null);
   const loadedTitle = current !== null && 'post' in current ? current.post.title : null;
 
-  useEffect(() => {
-    document.title = loadedTitle ? `${loadedTitle} · 뫼와들` : '커뮤니티 · 뫼와들';
-  }, [loadedTitle]);
+  useDocumentTitle(loadedTitle ? `${loadedTitle} · 뫼와들` : '커뮤니티 · 뫼와들');
 
   const reload = () => setAttempt((value) => value + 1);
 

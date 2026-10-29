@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { EmptyState } from '../../components/EmptyState';
 import { PageLayout } from '../../components/PageLayout';
@@ -6,6 +5,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { UnderlineNav, UnderlineNavLink } from '../../components/UnderlineNav';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useRequireAuth } from '../member/useRequireAuth';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 const NAV_ITEMS = [
   { to: '/admin/reports', label: '신고 처리' },
@@ -18,9 +18,7 @@ export function AdminPage({ title, current, children }: { title: string; current
   const session = useRequireAuth();
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
-  useEffect(() => {
-    document.title = `${title} · 관리자 · 뫼와들`;
-  }, [title]);
+  useDocumentTitle(`${title} · 관리자 · 뫼와들`);
 
   if (session.status !== 'authenticated' || !session.me) {
     return (

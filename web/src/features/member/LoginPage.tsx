@@ -18,6 +18,7 @@ import { safeNextPath, withNext } from './nextPath';
 import { emailRequiredMessage, PASSWORD_REQUIRED } from './requiredMessages';
 import { useSession } from './session';
 import { useRetryCountdown } from './useRetryCountdown';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoginField = 'email' | 'password';
 
@@ -43,9 +44,7 @@ export function LoginPage() {
   const [formError, setFormError] = useState<FormError | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    document.title = '로그인 · 뫼와들';
-  }, []);
+  useDocumentTitle('로그인 · 뫼와들');
 
   useEffect(() => {
     if (session.status === 'authenticated' && session.me && !submitting) {

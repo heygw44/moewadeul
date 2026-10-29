@@ -13,6 +13,7 @@ import { useRequireAuth } from '../member/useRequireAuth';
 import type { MemoryCellItem } from './memoryItems';
 import { MEMORY_STATUS_LABEL } from './memoryLabels';
 import { MemoryMapGrid } from './MemoryMapGrid';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type LoadResult = { attempt: number; memories: MemorySummary[] } | { attempt: number; error: unknown };
 
@@ -22,9 +23,7 @@ export function MyMemoriesPage() {
   const [result, setResult] = useState<LoadResult | null>(null);
   const authenticated = session.status === 'authenticated';
 
-  useEffect(() => {
-    document.title = '내 기록 지도 · 뫼와들';
-  }, []);
+  useDocumentTitle('내 기록 지도 · 뫼와들');
 
   useEffect(() => {
     if (!authenticated) return;

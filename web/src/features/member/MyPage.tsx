@@ -12,14 +12,13 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { MySoloTripsCard } from '../trip/MySoloTripsCard';
 import { MemberBoard, MemberBoardTag, MEMBER_BOARD_LINK_CLASS } from './MemberBoard';
 import { useRequireAuth } from './useRequireAuth';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 export function MyPage() {
   const session = useRequireAuth('/me');
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
-  useEffect(() => {
-    document.title = '내 정보 · 뫼와들';
-  }, []);
+  useDocumentTitle('내 정보 · 뫼와들');
 
   if (session.status !== 'authenticated' || !session.me) {
     return <PageLayout title="내 정보">{showSkeleton ? <Skeleton className="h-40 w-full" /> : null}</PageLayout>;

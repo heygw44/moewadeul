@@ -30,6 +30,7 @@ import {
   profileSummary,
   unmetReasonText,
 } from './basecampLabels';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type BasecampDetailPanelProps = {
   basecampId: number;
@@ -81,13 +82,7 @@ export function BasecampDetailPanel({ basecampId, onBack, onLoaded }: BasecampDe
     if (loadedDetail !== null) reportLoaded(loadedDetail);
   }, [loadedDetail]);
 
-  useEffect(() => {
-    if (loadedTitle === null) return;
-    document.title = `${loadedTitle} · 뫼와들`;
-    return () => {
-      document.title = '뫼와들';
-    };
-  }, [loadedTitle]);
+  useDocumentTitle(loadedTitle === null ? null : `${loadedTitle} · 뫼와들`, { resetOnLeave: true });
 
   const reload = () => setAttempt((value) => value + 1);
 

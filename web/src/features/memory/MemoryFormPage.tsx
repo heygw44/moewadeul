@@ -36,6 +36,7 @@ import {
   parsePositiveId,
   VISIBILITY_OPTIONS,
 } from './memoryLabels';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type MemoryFormPageProps = { mode: 'create' } | { mode: 'edit'; memoryId: number };
 
@@ -46,9 +47,7 @@ export function MemoryFormPage(props: MemoryFormPageProps) {
   const showSkeleton = useDelayedFlag(session.status === 'loading');
   const editMemoryId = props.mode === 'edit' ? props.memoryId : null;
 
-  useEffect(() => {
-    document.title = props.mode === 'create' ? '기록 남기기 · 뫼와들' : '기록 수정 · 뫼와들';
-  }, [props.mode]);
+  useDocumentTitle(props.mode === 'create' ? '기록 남기기 · 뫼와들' : '기록 수정 · 뫼와들');
 
   const layout = (children: ReactNode) => (
     <HubLayout

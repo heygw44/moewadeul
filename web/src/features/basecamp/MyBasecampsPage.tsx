@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import { fetchMyBasecamps } from '../../api/basecamps';
 import type { MyBasecampItem, MyBasecampRelation } from '../../api/types';
@@ -17,6 +17,7 @@ import { usePagedList } from '../../components/usePagedList';
 import { formatLocalDate } from '../../lib/datetime';
 import { useRequireAuth } from '../member/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText } from './basecampLabels';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 
 type RelationFilter = MyBasecampRelation | 'ALL';
 
@@ -43,9 +44,7 @@ export function MyBasecampsPage() {
   const authenticated = session.status === 'authenticated';
   const { current, loadingMore, loadMore, retry } = usePagedList(authenticated, filter, fetchPage);
 
-  useEffect(() => {
-    document.title = '내 베이스캠프 · 뫼와들';
-  }, []);
+  useDocumentTitle('내 베이스캠프 · 뫼와들');
 
   const showSkeleton = useDelayedFlag(session.status === 'loading' || (authenticated && current === null));
 
