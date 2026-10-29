@@ -19,19 +19,22 @@ public class MemoryLikeService {
 
     @Transactional
     public MemoryLikeResult like(long memberId, long memoryId) {
-        requireVisibleMemory(memoryId);
+        lockVisibleMemory(memoryId);
         memoryLikeMapper.insertIgnoringDuplicate(memoryId, memberId, clock.instant());
         return new MemoryLikeResult(true, memoryLikeMapper.countByMemory(memoryId));
     }
 
     @Transactional
     public MemoryLikeResult unlike(long memberId, long memoryId) {
-        requireVisibleMemory(memoryId);
+        lockVisibleMemory(memoryId);
         memoryLikeMapper.delete(memoryId, memberId);
         return new MemoryLikeResult(false, memoryLikeMapper.countByMemory(memoryId));
     }
 
-    private void requireVisibleMemory(long memoryId) {
-        memoryRepository.findById(memoryId).filter(Memory::isVisibleToOthers).orElseThrow(BusinessException::notFound);
+    private void lockVisibleMemory(long memoryId) {
+        memoryRepository
+                .findByIdForUpdate(memoryId)
+                .filter(Memory::isVisibleToOthers)
+                .orElseThrow(BusinessException::notFound);
     }
 }
