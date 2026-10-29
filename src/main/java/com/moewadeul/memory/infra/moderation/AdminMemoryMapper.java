@@ -1,6 +1,7 @@
 package com.moewadeul.memory.infra.moderation;
 
 import com.moewadeul.common.moderation.ReportReasonCount;
+import com.moewadeul.memory.domain.MemoryStatus;
 import java.util.Collection;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -10,7 +11,7 @@ import org.apache.ibatis.annotations.Param;
 public interface AdminMemoryMapper {
 
     List<AdminMemoryRow> selectMemories(
-            @Param("status") String status, @Param("offset") long offset, @Param("limit") int limit);
+            @Param("status") MemoryStatus status, @Param("offset") long offset, @Param("limit") int limit);
 
     default List<ReportReasonCount> selectReasonCounts(Collection<Long> memoryIds) {
         return memoryIds.isEmpty() ? List.of() : selectReasonCountsOfNonEmpty(memoryIds);

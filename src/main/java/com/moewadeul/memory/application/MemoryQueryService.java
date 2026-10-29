@@ -27,8 +27,7 @@ public class MemoryQueryService {
         return memoryViewReader
                 .read(memoryId, viewerId)
                 .filter(view -> view.viewedByAuthor()
-                        || (MemoryVisibility.PUBLIC.name().equals(view.visibility())
-                                && MemoryStatus.ACTIVE.name().equals(view.status())))
+                        || (view.visibility() == MemoryVisibility.PUBLIC && view.status() == MemoryStatus.ACTIVE))
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
     }
 
@@ -51,7 +50,7 @@ public class MemoryQueryService {
         if (!memoryMapper.existsActiveMember(memberId)) {
             throw new BusinessException(CommonErrorCode.NOT_FOUND);
         }
-        return memoryMapper.selectByMember(memberId, MemoryVisibility.PUBLIC.name()).stream()
+        return memoryMapper.selectByMember(memberId, MemoryVisibility.PUBLIC).stream()
                 .map(this::toPublicSummary)
                 .toList();
     }

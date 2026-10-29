@@ -27,6 +27,7 @@ import com.moewadeul.memory.application.report.MemoryReportCommand;
 import com.moewadeul.memory.application.report.MemoryReportService;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryRepository;
+import com.moewadeul.memory.domain.MemoryStatus;
 import com.moewadeul.memory.domain.report.MemoryReportRepository;
 import com.moewadeul.memory.infra.moderation.AdminMemoryMapper;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
@@ -107,7 +108,7 @@ class EnumInputServicesTest {
 
         service.list(null, 0, 20);
 
-        verify(mapper).selectMemories("PENDING_REVIEW", 0L, 21);
+        verify(mapper).selectMemories(MemoryStatus.PENDING_REVIEW, 0L, 21);
     }
 
     @ParameterizedTest

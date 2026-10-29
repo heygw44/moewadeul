@@ -35,7 +35,7 @@ public class AdminMemoryQueryService {
     public PageSlice<AdminMemorySummary> list(String status, int page, int size) {
         MemoryStatus memoryStatus = parseStatus(status);
         List<AdminMemoryRow> rows = adminMemoryMapper.selectMemories(
-                memoryStatus.name(), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+                memoryStatus, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
         PageSlice<AdminMemoryRow> slice = PageSlice.of(rows, page, size);
         List<Long> memoryIds =
                 slice.content().stream().map(AdminMemoryRow::memoryId).toList();
@@ -62,7 +62,7 @@ public class AdminMemoryQueryService {
                 row.nights(),
                 row.content(),
                 images.getOrDefault(row.memoryId(), List.of()),
-                row.status(),
+                row.status().name(),
                 row.reportCount(),
                 reasonCounts,
                 recent.getOrDefault(row.memoryId(), List.of()),
