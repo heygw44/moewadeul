@@ -1,5 +1,6 @@
 package com.moewadeul.notification.application.inbox;
 
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.notification.domain.Notification;
 import com.moewadeul.notification.domain.NotificationRepository;
 import com.moewadeul.notification.domain.NotificationSlice;
@@ -15,11 +16,11 @@ public class NotificationQueryService {
     private final NotificationRepository notificationRepository;
 
     @Transactional(readOnly = true)
-    public NotificationPage list(long memberId, int page, int size) {
+    public PageSlice<NotificationItem> list(long memberId, int page, int size) {
         NotificationSlice slice = notificationRepository.findPage(memberId, page, size);
         List<NotificationItem> content =
                 slice.content().stream().map(NotificationQueryService::toItem).toList();
-        return new NotificationPage(content, page, size, slice.hasNext());
+        return new PageSlice<>(content, page, size, slice.hasNext());
     }
 
     @Transactional(readOnly = true)

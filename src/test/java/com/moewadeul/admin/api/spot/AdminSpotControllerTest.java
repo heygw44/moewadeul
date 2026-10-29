@@ -13,10 +13,10 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
-import com.moewadeul.spot.application.moderation.AdminSpotPage;
 import com.moewadeul.spot.application.moderation.AdminSpotQueryService;
 import com.moewadeul.spot.application.moderation.AdminSpotSummary;
 import com.moewadeul.spot.application.moderation.SpotModerationService;
@@ -104,7 +104,7 @@ class AdminSpotControllerTest {
                 List.of(),
                 AT);
         when(spotQueryService.list(eq(null), anyInt(), anyInt()))
-                .thenReturn(new AdminSpotPage(List.of(summary, publicSpot), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(summary, publicSpot), 0, 20, false));
 
         MvcTestResult result = mvc.get().uri(SPOTS).with(admin()).exchange();
 

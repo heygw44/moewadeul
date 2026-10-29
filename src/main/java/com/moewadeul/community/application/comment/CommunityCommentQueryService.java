@@ -2,6 +2,7 @@ package com.moewadeul.community.application.comment;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.domain.post.CommunityPostRepository;
 import com.moewadeul.community.infra.comment.CommunityCommentMapper;
@@ -21,13 +22,12 @@ public class CommunityCommentQueryService {
     private final CommunityCommentMapper communityCommentMapper;
 
     @Transactional(readOnly = true)
-    public CommunityCommentPage list(long postId, int page, int size) {
+    public PageSlice<CommunityCommentItem> list(long postId, int page, int size) {
         requireActivePost(postId);
-        long offset = (long) page * size;
-        List<CommunityCommentRow> rows = communityCommentMapper.selectTopLevel(postId, offset, size + 1);
-        boolean hasNext = rows.size() > size;
-        List<CommunityCommentRow> parents = rows.stream().limit(size).toList();
-        return new CommunityCommentPage(toItems(parents), page, size, hasNext);
+        List<CommunityCommentRow> rows = communityCommentMapper.selectTopLevel(
+                postId, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+        PageSlice<CommunityCommentRow> parents = PageSlice.of(rows, page, size);
+        return new PageSlice<>(toItems(parents.content()), page, size, parents.hasNext());
     }
 
     private void requireActivePost(long postId) {

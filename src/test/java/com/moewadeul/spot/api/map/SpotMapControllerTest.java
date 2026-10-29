@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.spot.application.PublicSpotSetting;
@@ -16,7 +17,6 @@ import com.moewadeul.spot.application.map.SpotCluster;
 import com.moewadeul.spot.application.map.SpotMapQueryService;
 import com.moewadeul.spot.application.map.SpotMarker;
 import com.moewadeul.spot.application.map.SpotNearbyItem;
-import com.moewadeul.spot.application.map.SpotNearbyPage;
 import com.moewadeul.spot.application.map.SpotNearbyQuery;
 import com.moewadeul.spot.application.map.SpotNearbyQueryService;
 import com.moewadeul.spot.domain.SpotType;
@@ -375,7 +375,7 @@ class SpotMapControllerTest {
                 new SpotNearbyItem(102L, SpotType.CAMPSITE, "숲속 야영장", 37.52, 127.01, false, true, 2.23);
         SpotNearbyItem bakji = new SpotNearbyItem(101L, SpotType.BAKJI, "능선 끝 평지", 37.61, 127.05, true, false, 12.5);
         when(spotNearbyQueryService.findNearby(any()))
-                .thenReturn(new SpotNearbyPage(List.of(campsite, bakji), 0, 20, true));
+                .thenReturn(new PageSlice<>(List.of(campsite, bakji), 0, 20, true));
 
         // when
         MvcTestResult result = getNearby(validNearbyParams());
@@ -613,7 +613,7 @@ class SpotMapControllerTest {
     }
 
     private void whenNearbyServiceReturnsEmpty() {
-        when(spotNearbyQueryService.findNearby(any())).thenReturn(new SpotNearbyPage(List.of(), 0, 20, false));
+        when(spotNearbyQueryService.findNearby(any())).thenReturn(new PageSlice<>(List.of(), 0, 20, false));
     }
 
     private SpotNearbyQuery capturedNearbyQuery() {

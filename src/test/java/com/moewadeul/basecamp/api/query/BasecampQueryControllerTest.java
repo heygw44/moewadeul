@@ -14,19 +14,18 @@ import com.moewadeul.basecamp.application.JoinEligibility;
 import com.moewadeul.basecamp.application.query.BasecampDetail;
 import com.moewadeul.basecamp.application.query.BasecampDetailQueryService;
 import com.moewadeul.basecamp.application.query.BasecampSearchItem;
-import com.moewadeul.basecamp.application.query.BasecampSearchPage;
 import com.moewadeul.basecamp.application.query.BasecampSearchQuery;
 import com.moewadeul.basecamp.application.query.BasecampSearchService;
 import com.moewadeul.basecamp.application.query.BasecampSpotType;
 import com.moewadeul.basecamp.application.query.MyBasecampListQuery;
 import com.moewadeul.basecamp.application.query.MyBasecampListService;
-import com.moewadeul.basecamp.application.query.MyBasecampPage;
 import com.moewadeul.basecamp.domain.BasecampRelation;
 import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.domain.JoinUnmetReason;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
@@ -115,7 +114,7 @@ class BasecampQueryControllerTest {
     @DisplayName("[F-12] 반경 50km와 출발일 범위를 보내면 받아서 기본값(page 0, size 20)과 함께 서비스에 넘긴다")
     void searchPassesRadiusQueryWithDefaults() {
         // given
-        when(basecampSearchService.search(any(), any())).thenReturn(new BasecampSearchPage(List.of(), 0, 20, false));
+        when(basecampSearchService.search(any(), any())).thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get()
@@ -146,7 +145,7 @@ class BasecampQueryControllerTest {
     @DisplayName("[F-12] 지도 영역을 보내면 영역 조건으로 서비스에 넘기고, 로그인한 회원의 ID를 함께 넘긴다")
     void searchPassesAreaQueryWithViewerId() {
         // given
-        when(basecampSearchService.search(any(), any())).thenReturn(new BasecampSearchPage(List.of(), 1, 50, false));
+        when(basecampSearchService.search(any(), any())).thenReturn(new PageSlice<>(List.of(), 1, 50, false));
 
         // when
         MvcTestResult result = mvc.get()
@@ -177,7 +176,7 @@ class BasecampQueryControllerTest {
     @DisplayName("[F-31] 상세 조건(장소 유형, 박 수, 최소 신뢰 단계 상한, 연령 제한 없음, 동성만 아님)을 받아서 서비스에 넘긴다")
     void searchPassesDetailConditions() {
         // given
-        when(basecampSearchService.search(any(), any())).thenReturn(new BasecampSearchPage(List.of(), 0, 20, false));
+        when(basecampSearchService.search(any(), any())).thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get()
@@ -210,7 +209,7 @@ class BasecampQueryControllerTest {
     void anonymousSearchOmitsEligibilityFields() {
         // given
         when(basecampSearchService.search(any(), any()))
-                .thenReturn(new BasecampSearchPage(List.of(searchItem(null)), 0, 20, true));
+                .thenReturn(new PageSlice<>(List.of(searchItem(null)), 0, 20, true));
 
         // when
         MvcTestResult result =
@@ -237,7 +236,7 @@ class BasecampQueryControllerTest {
                 new JoinEligibility(false, List.of(JoinUnmetReason.TRUST_LEVEL, JoinUnmetReason.GENDER));
         JoinEligibility ok = new JoinEligibility(true, List.of());
         when(basecampSearchService.search(any(), any()))
-                .thenReturn(new BasecampSearchPage(List.of(searchItem(unmet), searchItem(ok)), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(searchItem(unmet), searchItem(ok)), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get()
@@ -391,7 +390,7 @@ class BasecampQueryControllerTest {
     @DisplayName("[F-13] 내 베이스캠프의 relation과 status를 생략하면 거르지 않고, page는 0, size는 20으로 서비스를 부른다")
     void listMineUsesDefaults() {
         // given
-        when(myBasecampListService.list(eq(MEMBER_ID), any())).thenReturn(new MyBasecampPage(List.of(), 0, 20, false));
+        when(myBasecampListService.list(eq(MEMBER_ID), any())).thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(MY_BASECAMPS).with(unverified()).exchange();
@@ -408,7 +407,7 @@ class BasecampQueryControllerTest {
     @DisplayName("[F-13] 내 베이스캠프의 relation과 status를 보내면 그대로 서비스에 넘긴다")
     void listMinePassesFilters() {
         // given
-        when(myBasecampListService.list(eq(MEMBER_ID), any())).thenReturn(new MyBasecampPage(List.of(), 2, 5, false));
+        when(myBasecampListService.list(eq(MEMBER_ID), any())).thenReturn(new PageSlice<>(List.of(), 2, 5, false));
 
         // when
         MvcTestResult result = mvc.get()

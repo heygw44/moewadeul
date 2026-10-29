@@ -2,6 +2,7 @@ package com.moewadeul.community.application.post;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.infra.post.CommunityPostListCondition;
 import com.moewadeul.community.infra.post.CommunityPostMapper;
@@ -20,15 +21,10 @@ public class CommunityPostQueryService {
     private final CommunityViewCountBuffer viewCountBuffer;
 
     @Transactional(readOnly = true)
-    public CommunityPostPage list(CommunityPostListQuery query, int page, int size) {
-        long offset = (long) page * size;
-        List<CommunityPostRow> rows = communityPostMapper.selectActive(toCondition(query), offset, size + 1);
-        boolean hasNext = rows.size() > size;
-        List<CommunityPostItem> content = rows.stream()
-                .limit(size)
-                .map(communityPostItemReader::toListItem)
-                .toList();
-        return new CommunityPostPage(content, page, size, hasNext);
+    public PageSlice<CommunityPostItem> list(CommunityPostListQuery query, int page, int size) {
+        List<CommunityPostRow> rows = communityPostMapper.selectActive(
+                toCondition(query), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+        return PageSlice.of(rows, page, size).map(communityPostItemReader::toListItem);
     }
 
     @Transactional(readOnly = true)

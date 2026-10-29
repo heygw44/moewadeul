@@ -12,11 +12,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.publicdata.application.SyncJobLauncher;
-import com.moewadeul.publicdata.application.SyncJobRunPage;
 import com.moewadeul.publicdata.application.SyncJobRunQueryService;
 import com.moewadeul.publicdata.application.SyncJobRunView;
 import com.moewadeul.publicdata.domain.PublicDataErrorCode;
@@ -192,7 +192,7 @@ class SyncJobAdminControllerTest {
         SyncJobRunView running =
                 new SyncJobRunView(8L, SyncJobType.FOREST, SyncJobStatus.RUNNING, 0, 0, null, STARTED_AT, null);
         when(syncJobRunQueryService.findRuns(SyncJobType.FOREST, 1, 2))
-                .thenReturn(new SyncJobRunPage(List.of(failed, running), 1, 2, true));
+                .thenReturn(new PageSlice<>(List.of(failed, running), 1, 2, true));
 
         // when
         MvcTestResult result = mvc.get()
@@ -233,7 +233,7 @@ class SyncJobAdminControllerTest {
     @DisplayName("[F-06] 조회 조건을 주지 않으면 모든 종류를 첫 페이지부터 20개씩 조회한다")
     void listUsesDefaultsWithoutParameters() {
         // given
-        when(syncJobRunQueryService.findRuns(null, 0, 20)).thenReturn(new SyncJobRunPage(List.of(), 0, 20, false));
+        when(syncJobRunQueryService.findRuns(null, 0, 20)).thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH).with(admin()).exchange();
@@ -250,7 +250,7 @@ class SyncJobAdminControllerTest {
     void listAcceptsMaximumPageSize() {
         // given
         when(syncJobRunQueryService.findRuns(any(), anyInt(), anyInt()))
-                .thenReturn(new SyncJobRunPage(List.of(), 0, 50, false));
+                .thenReturn(new PageSlice<>(List.of(), 0, 50, false));
 
         // when
         MvcTestResult result =

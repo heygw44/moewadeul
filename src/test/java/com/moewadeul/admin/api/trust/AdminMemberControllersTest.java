@@ -15,11 +15,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.admin.application.audit.AuditLogQueryService;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.trust.application.report.AdminMemberReportDetail;
-import com.moewadeul.trust.application.report.AdminMemberReportPage;
 import com.moewadeul.trust.application.report.AdminMemberReportQueryService;
 import com.moewadeul.trust.application.report.AdminMemberReportSummary;
 import com.moewadeul.trust.application.report.MemberReportActionCommand;
@@ -127,7 +127,7 @@ class AdminMemberControllersTest {
     @DisplayName("[F-21] 신고 목록은 신고자와 대상을 묶어 응답하고 신고 내용은 담지 않는다")
     void listReturnsSummaries() {
         when(queryService.list(eq("IN_REVIEW"), eq(true), anyInt(), anyInt()))
-                .thenReturn(new AdminMemberReportPage(List.of(summary()), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(summary()), 0, 20, false));
 
         MvcTestResult result = mvc.get()
                 .uri(REPORTS)

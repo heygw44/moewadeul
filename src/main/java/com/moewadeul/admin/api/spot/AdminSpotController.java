@@ -1,6 +1,8 @@
 package com.moewadeul.admin.api.spot;
 
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.spot.application.moderation.AdminSpotQueryService;
 import com.moewadeul.spot.application.moderation.SpotModerationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,8 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin/spots")
 class AdminSpotController {
 
-    private static final int MAX_PAGE_SIZE = 50;
-
     private final AdminSpotQueryService queryService;
     private final SpotModerationService moderationService;
 
@@ -34,11 +34,11 @@ class AdminSpotController {
                     + "각 항목에는 제보자, 검토 전 신고의 수, 사유별 수, 최근 신고 5건의 내용을 담는다. 다른 status는 400 INVALID_INPUT이다. "
                     + "page는 0부터 세고, size는 기본 20, 1~50이다.")
     @GetMapping
-    AdminSpotPageResponse list(
+    PageResponse<AdminSpotSummaryResponse> list(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size) {
-        return AdminSpotPageResponse.from(queryService.list(status, page, size));
+            @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
+        return PageResponse.from(queryService.list(status, page, size), AdminSpotSummaryResponse::from);
     }
 
     @Operation(

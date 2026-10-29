@@ -1,6 +1,6 @@
 package com.moewadeul.program.application.catalog;
 
+import com.moewadeul.common.paging.PageSlice;
 import java.time.Instant;
-import java.util.List;
 
-public record ProgramPage(List<ProgramSummary> content, int page, int size, boolean hasNext, Instant nextApplyOpenAt) {}
+public record ProgramPage(PageSlice<ProgramSummary> slice, Instant nextApplyOpenAt) {}

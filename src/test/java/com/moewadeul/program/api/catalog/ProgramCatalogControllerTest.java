@@ -13,11 +13,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.program.application.catalog.MyProgramApplicationItem;
-import com.moewadeul.program.application.catalog.MyProgramApplicationPage;
 import com.moewadeul.program.application.catalog.MyProgramApplicationQuery;
 import com.moewadeul.program.application.catalog.ProgramDetail;
 import com.moewadeul.program.application.catalog.ProgramListQuery;
@@ -63,7 +63,7 @@ class ProgramCatalogControllerTest {
         ProgramSummary summary =
                 new ProgramSummary(9L, "가을 백패킹", "설악산 입구", null, AT, AT, AT, AT, 200, 150, 30000, true, "OPEN");
         when(programQueryService.list(any(ProgramListQuery.class)))
-                .thenReturn(new ProgramPage(List.of(summary), 1, 5, true, AT));
+                .thenReturn(new ProgramPage(new PageSlice<>(List.of(summary), 1, 5, true), AT));
 
         MvcTestResult result = mvc.get()
                 .uri("/api/programs")
@@ -89,7 +89,7 @@ class ProgramCatalogControllerTest {
     @DisplayName("[F-17] 신청이 열릴 행사가 없으면 목록 응답에 nextApplyOpenAt 키가 없다")
     void listOmitsNextApplyOpenAtWhenNoUpcomingProgram() {
         when(programQueryService.list(any(ProgramListQuery.class)))
-                .thenReturn(new ProgramPage(List.of(), 0, 20, false, null));
+                .thenReturn(new ProgramPage(new PageSlice<>(List.of(), 0, 20, false), null));
 
         MvcTestResult result = mvc.get().uri("/api/programs").exchange();
 
@@ -198,7 +198,7 @@ class ProgramCatalogControllerTest {
                 AT,
                 new MyProgramApplicationItem.Program(4L, "가을 능선 백패킹", "지리산 성삼재", AT, AT, 30000, "OPEN"));
         when(programQueryService.listMine(4L, new MyProgramApplicationQuery(ProgramApplicationStatus.CONFIRMED, 1, 5)))
-                .thenReturn(new MyProgramApplicationPage(List.of(item), 1, 5, true));
+                .thenReturn(new PageSlice<>(List.of(item), 1, 5, true));
 
         MvcTestResult result = mvc.get()
                 .uri("/api/me/program-applications")

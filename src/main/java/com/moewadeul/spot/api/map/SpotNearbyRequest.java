@@ -1,5 +1,6 @@
 package com.moewadeul.spot.api.map;
 
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.spot.application.PublicSpotSetting;
 import com.moewadeul.spot.application.map.SpotNearbyQuery;
 import com.moewadeul.spot.domain.SpotType;
@@ -33,11 +34,9 @@ public record SpotNearbyRequest(
 
         @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.") Integer page,
 
-        @Min(value = 1, message = "페이지 크기는 1 이상이어야 해요.") @Max(value = 50, message = "페이지 크기는 50 이하여야 해요.")
+        @Min(value = 1, message = "페이지 크기는 1 이상이어야 해요.")
+        @Max(value = PageSlice.MAX_SIZE, message = "페이지 크기는 " + PageSlice.MAX_SIZE + " 이하여야 해요.")
         Integer size) {
-
-    private static final int DEFAULT_PAGE = 0;
-    private static final int DEFAULT_SIZE = 20;
 
     SpotNearbyQuery toQuery() {
         return new SpotNearbyQuery(
@@ -50,7 +49,7 @@ public record SpotNearbyRequest(
                 Boolean.TRUE.equals(hasToilet),
                 Boolean.TRUE.equals(excludeWarning),
                 Boolean.TRUE.equals(hideClosed),
-                page == null ? DEFAULT_PAGE : page,
-                size == null ? DEFAULT_SIZE : size);
+                page == null ? PageSlice.DEFAULT_PAGE : page,
+                size == null ? PageSlice.DEFAULT_SIZE : size);
     }
 }

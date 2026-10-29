@@ -14,7 +14,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.basecamp.application.membership.BasecampApplicationCancelService;
 import com.moewadeul.basecamp.application.membership.BasecampApplicationListQuery;
 import com.moewadeul.basecamp.application.membership.BasecampApplicationListService;
-import com.moewadeul.basecamp.application.membership.BasecampApplicationPage;
 import com.moewadeul.basecamp.application.membership.BasecampApplyCommand;
 import com.moewadeul.basecamp.application.membership.BasecampApplyResult;
 import com.moewadeul.basecamp.application.membership.BasecampApplyService;
@@ -28,6 +27,7 @@ import com.moewadeul.basecamp.domain.KickReason;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
@@ -338,7 +338,7 @@ class BasecampMembershipControllerTest {
     void listApplicationsUsesDefaults() {
         // given
         when(basecampApplicationListService.list(eq(77L), eq(MEMBER_ID), any()))
-                .thenReturn(new BasecampApplicationPage(List.of(), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(APPLICATIONS).with(verified()).exchange();
