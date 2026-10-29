@@ -82,8 +82,18 @@ class MapperTableAccessTest {
             entry("notification", Set.of("member")),
             entry("program", Set.of("member", "spot")),
             entry("review", Set.of("member")),
-            entry("spot", Set.of("basecamp", "basecamp_member", "program", "program_application",
-                    "review_image", "solo_trip", "spot_review", "sync_job_run", "member")),
+            entry(
+                    "spot",
+                    Set.of(
+                            "basecamp",
+                            "basecamp_member",
+                            "program",
+                            "program_application",
+                            "review_image",
+                            "solo_trip",
+                            "spot_review",
+                            "sync_job_run",
+                            "member")),
             entry("trip", Set.of("member", "spot")),
             entry("trust", Set.of("basecamp", "basecamp_application", "basecamp_member", "member")));
 
@@ -91,13 +101,13 @@ class MapperTableAccessTest {
     private static final Pattern XML_COMMENT = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
     private static final String TABLE = "\\s+`?([a-z_][a-z0-9_]*)`?";
     private static final Pattern READ = Pattern.compile("\\b(?:FROM|JOIN)" + TABLE, Pattern.CASE_INSENSITIVE);
-    private static final Pattern DELETE_FROM = Pattern.compile(
-            "\\bDELETE(?:\\s+[a-z_][a-z0-9_]*)?\\s+FROM" + TABLE, Pattern.CASE_INSENSITIVE);
+    private static final Pattern DELETE_FROM =
+            Pattern.compile("\\bDELETE(?:\\s+[a-z_][a-z0-9_]*)?\\s+FROM" + TABLE, Pattern.CASE_INSENSITIVE);
     private static final Pattern INSERT = Pattern.compile("\\bINSERT\\s+INTO" + TABLE, Pattern.CASE_INSENSITIVE);
-    private static final Pattern UPDATE = Pattern.compile(
-            "(?<![</\\w])((?:FOR|KEY)\\s+)?UPDATE" + TABLE, Pattern.CASE_INSENSITIVE);
-    private static final Pattern TABLE_PROPERTY = Pattern.compile(
-            "<property\\s+name=\"\\w*Table\"\\s+value=\"([a-z_][a-z0-9_]*)\"");
+    private static final Pattern UPDATE =
+            Pattern.compile("(?<![</\\w])((?:FOR|KEY)\\s+)?UPDATE" + TABLE, Pattern.CASE_INSENSITIVE);
+    private static final Pattern TABLE_PROPERTY =
+            Pattern.compile("<property\\s+name=\"\\w*Table\"\\s+value=\"([a-z_][a-z0-9_]*)\"");
 
     @Test
     @DisplayName("[ADR-005] 매퍼 SQL은 자기 모듈이 소유했거나 허용된 교차 읽기 테이블만 건드린다")
@@ -107,13 +117,17 @@ class MapperTableAccessTest {
 
         List<Path> mapperFiles;
         try (Stream<Path> walk = Files.walk(MAIN_MAPPER_ROOT)) {
-            mapperFiles = walk.filter(path -> path.toString().endsWith(".xml")).sorted().toList();
+            mapperFiles = walk.filter(path -> path.toString().endsWith(".xml"))
+                    .sorted()
+                    .toList();
         }
         assertThat(mapperFiles).as("매퍼 XML").isNotEmpty();
 
         for (Path path : mapperFiles) {
             String file = MAIN_MAPPER_ROOT.relativize(path).toString();
-            String xml = XML_COMMENT.matcher(Files.readString(path, StandardCharsets.UTF_8)).replaceAll("");
+            String xml = XML_COMMENT
+                    .matcher(Files.readString(path, StandardCharsets.UTF_8))
+                    .replaceAll("");
             Matcher namespace = NAMESPACE.matcher(xml);
             if (!namespace.find()) {
                 violations.add(file + ": namespace가 com.moewadeul.<module> 형식이 아니다");
