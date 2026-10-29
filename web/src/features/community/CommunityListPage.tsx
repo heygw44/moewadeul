@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { listPosts } from '../../api/community';
 import { fetchSpotDetail } from '../../api/spots';
-import type { CommunityPostSummary, CommunitySearchType, NumberedPage } from '../../api/types';
+import type { CommunityPostSummary, CommunitySearchType } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { AsideSection, HubLayout, ListPanel } from '../../components/HubLayout';
 import { Icon } from '../../components/icons';
 import { ErrorNotice } from '../../components/ErrorNotice';
-import { Pagination } from '../../components/Pagination';
 import { SelectField } from '../../components/SelectField';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
@@ -16,6 +15,7 @@ import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatRelativeKst } from '../../lib/datetime';
 import { useSession } from '../member/session';
+import { usePagedList } from '../program/usePagedList';
 import { LINK_BUTTON_CLASS, parseSpotId, UNVERIFIED_WRITE_REASON } from './communityLabels';
 
 type ListTab = 'all' | 'popular';
@@ -24,7 +24,6 @@ type ListQuery = {
   tab: ListTab;
   searchType: CommunitySearchType;
   keyword: string | null;
-  page: number;
 };
 
 const KEYWORD_MIN = 2;
@@ -51,12 +50,6 @@ const TABS: ReadonlyArray<{ value: ListTab; label: string }> = [
   { value: 'popular', label: '인기글' },
 ];
 
-function parsePage(raw: string | null): number {
-  if (raw === null || !/^\d+$/.test(raw)) return 1;
-  const value = Number(raw);
-  return Number.isSafeInteger(value) && value >= 1 ? value : 1;
-}
-
 function parseListQuery(search: string): ListQuery {
   const params = new URLSearchParams(search);
   return {
@@ -64,11 +57,10 @@ function parseListQuery(search: string): ListQuery {
     tab: params.get('tab') === 'popular' ? 'popular' : 'all',
     searchType: parseSearchType(params.get('searchType')),
     keyword: parseKeyword(params.get('keyword')),
-    page: parsePage(params.get('page')),
   };
 }
 
-function listPath({ spotId, tab, searchType, keyword, page }: ListQuery): string {
+function listPath({ spotId, tab, searchType, keyword }: ListQuery): string {
   const params = new URLSearchParams();
   if (tab === 'popular') params.set('tab', 'popular');
   if (spotId !== null) params.set('spotId', String(spotId));
@@ -76,48 +68,23 @@ function listPath({ spotId, tab, searchType, keyword, page }: ListQuery): string
     params.set('searchType', searchType);
     params.set('keyword', keyword);
   }
-  if (page > 1) params.set('page', String(page));
   const query = params.toString();
   return query ? `/community?${query}` : '/community';
-}
-
-type PageResult = { key: string; data: NumberedPage<CommunityPostSummary> | null; error: { cause: unknown } | null };
-
-function usePostPage(query: ListQuery) {
-  const [result, setResult] = useState<PageResult | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  const { spotId, tab, searchType, keyword, page } = query;
-  const key = `${spotId ?? ''}|${tab}|${searchType}|${keyword ?? ''}|${page}|${attempt}`;
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const filter = {
-      spotId: spotId ?? undefined,
-      popular: tab === 'popular',
-      searchType,
-      keyword: keyword ?? undefined,
-    };
-    listPosts(filter, page - 1, controller.signal).then(
-      (data) => {
-        if (!controller.signal.aborted) setResult({ key, data, error: null });
-      },
-      (caught: unknown) => {
-        if (!controller.signal.aborted) setResult({ key, data: null, error: { cause: caught } });
-      },
-    );
-    return () => controller.abort();
-  }, [key, spotId, tab, searchType, keyword, page]);
-
-  const current = result !== null && result.key === key ? result : null;
-  return { current, retry: () => setAttempt((value) => value + 1) };
 }
 
 export function CommunityListPage() {
   const { search } = useLocation();
   const query = parseListQuery(search);
-  const { current, retry } = usePostPage(query);
+  const filter = {
+    spotId: query.spotId ?? undefined,
+    popular: query.tab === 'popular',
+    searchType: query.searchType,
+    keyword: query.keyword ?? undefined,
+  };
+  const posts = usePagedList(true, filter, listPosts);
+  const { current } = posts;
   const showSkeleton = useDelayedFlag(current === null);
-  const data = current?.data ?? null;
+  const firstPageFailed = current !== null && current.error !== null && current.items.length === 0;
 
   useEffect(() => {
     document.title = '커뮤니티 · 뫼와들';
@@ -129,28 +96,21 @@ export function CommunityListPage() {
     <HubLayout
       title="커뮤니티"
       actions={<WriteAction spotId={query.spotId} />}
-      tabs={
-        <UnderlineTabs
-          label="글 모아 보기"
-          options={TABS}
-          value={query.tab}
-          onChange={(tab) => goTo({ tab, page: 1 })}
-        />
-      }
+      tabs={<UnderlineTabs label="글 모아 보기" options={TABS} value={query.tab} onChange={(tab) => goTo({ tab })} />}
       aside={<CommunityAside />}
     >
       {query.spotId !== null && (
         <SpotFilterLine
           key={query.spotId}
           spotId={query.spotId}
-          onRemove={() => navigate(listPath({ ...query, spotId: null, page: 1 }), { replace: true })}
+          onRemove={() => navigate(listPath({ ...query, spotId: null }), { replace: true })}
         />
       )}
-      {current?.error && (
+      {firstPageFailed && (
         <div role="alert" className="flex flex-col gap-3">
-          <ErrorNotice title="글을 불러오지 못했어요" error={current.error.cause} />
+          <ErrorNotice title="글을 불러오지 못했어요" error={current.error} traceId={current.traceId ?? undefined} />
           <div>
-            <Button variant="secondary" onClick={retry}>
+            <Button variant="secondary" onClick={posts.retry}>
               다시 불러오기
             </Button>
           </div>
@@ -160,7 +120,7 @@ export function CommunityListPage() {
         key={`${query.searchType}|${query.keyword ?? ''}`}
         searchType={query.searchType}
         keyword={query.keyword}
-        onSearch={(searchType, keyword) => goTo({ searchType, keyword, page: 1 })}
+        onSearch={(searchType, keyword) => goTo({ searchType, keyword })}
       />
       <div aria-busy={current === null} className="flex flex-col gap-4">
         <ListPanel>
@@ -174,12 +134,10 @@ export function CommunityListPage() {
                 </li>
               ))
             ) : null
-          ) : data === null ? null : data.content.length === 0 ? (
+          ) : firstPageFailed ? null : current.items.length === 0 ? (
             <li>
-              {data.totalElements > 0 ? (
-                <PageOutOfRange onFirst={() => goTo({ page: 1 })} />
-              ) : query.keyword !== null ? (
-                <SearchEmpty onClear={() => goTo({ keyword: null, page: 1 })} />
+              {query.keyword !== null ? (
+                <SearchEmpty onClear={() => goTo({ keyword: null })} />
               ) : query.tab === 'popular' ? (
                 <PopularEmpty />
               ) : (
@@ -187,30 +145,23 @@ export function CommunityListPage() {
               )}
             </li>
           ) : (
-            data.content.map((item) => <PostRow key={item.postId} item={item} />)
+            current.items.map((item) => <PostRow key={item.postId} item={item} />)
           )}
         </ListPanel>
-        {data !== null && (
-          <Pagination
-            label="글 목록 페이지"
-            page={query.page}
-            totalPages={data.totalPages}
-            onChange={(page) => goTo({ page })}
-          />
+        {!firstPageFailed && current?.error && (
+          <p role="alert" className="text-sm text-danger">
+            {current.error}
+          </p>
+        )}
+        {current?.hasNext && (
+          <div>
+            <Button variant="secondary" loading={posts.loadingMore} onClick={() => void posts.loadMore()}>
+              더 보기
+            </Button>
+          </div>
         )}
       </div>
     </HubLayout>
-  );
-}
-
-function PageOutOfRange({ onFirst }: { onFirst: () => void }) {
-  return (
-    <div className="flex flex-col items-start gap-3 p-6">
-      <p className="text-base text-ink">이 페이지에는 글이 없어요.</p>
-      <Button variant="secondary" onClick={onFirst}>
-        첫 페이지로
-      </Button>
-    </div>
   );
 }
 
