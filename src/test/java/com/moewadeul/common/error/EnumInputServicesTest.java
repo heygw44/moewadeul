@@ -39,6 +39,7 @@ import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramRepository;
 import com.moewadeul.program.infra.catalog.ProgramQueryMapper;
+import com.moewadeul.spot.application.ActiveSpotChecker;
 import com.moewadeul.spot.application.bakji.BakjiFeedbackService;
 import com.moewadeul.spot.application.bakji.BakjiProblemReportCommand;
 import com.moewadeul.spot.application.moderation.AdminSpotQueryService;
@@ -284,6 +285,7 @@ class EnumInputServicesTest {
                 mock(PaymentRepository.class),
                 mapper,
                 mock(ProgramQueryService.class),
+                mock(ActiveSpotChecker.class),
                 mock(AdminAuditRecorder.class),
                 mock(OutboxEventRecorder.class),
                 CLOCK);

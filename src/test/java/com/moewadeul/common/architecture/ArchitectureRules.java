@@ -47,7 +47,7 @@ public final class ArchitectureRules {
             "admin", Set.of("trust", "program", "spot", "community", "memory"),
             "community", Set.of("spot", "idempotency"),
             "basecamp", Set.of("trust", "spot", "idempotency"),
-            "program", Set.of("trust", "idempotency"),
+            "program", Set.of("trust", "spot", "idempotency"),
             "review", Set.of("spot"),
             "trip", Set.of("spot", "idempotency"),
             "memory", Set.of("spot", "idempotency"),

@@ -131,8 +131,4 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="existsActiveSpot" resultType="boolean">
-        SELECT EXISTS (SELECT 1 FROM spot s WHERE s.id = #{spotId} AND s.status = 'ACTIVE')
-    </select>
-
 </mapper>

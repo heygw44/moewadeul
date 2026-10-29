@@ -33,6 +33,4 @@ public interface ProgramQueryMapper {
             @Param("status") ProgramApplicationStatus status,
             @Param("offset") long offset,
             @Param("limit") int limit);
-
-    boolean existsActiveSpot(@Param("spotId") long spotId);
 }

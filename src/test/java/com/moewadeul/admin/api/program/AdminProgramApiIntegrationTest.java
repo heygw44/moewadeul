@@ -132,25 +132,28 @@ class AdminProgramApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-17] 지도에 보이는 장소만 연결할 수 있고, 숨김이거나 없는 장소는 400 INVALID_INPUT이다")
+    @DisplayName("[F-17] 지도에 보이는 장소만 연결할 수 있고, 숨김·삭제됐거나 없는 장소는 400 INVALID_INPUT이다")
     void createLinksOnlyActiveSpot() {
         // given
         Instant open = clock.instant().plus(Duration.ofDays(1));
         long active = insertSpot("ACTIVE");
         long hidden = insertSpot("HIDDEN");
+        long deleted = insertSpot("DELETED");
 
         // when
         MvcTestResult linked = createProgram(body(open, 200, active));
         MvcTestResult hiddenResult = createProgram(body(open, 200, hidden));
+        MvcTestResult deletedResult = createProgram(body(open, 200, deleted));
         MvcTestResult missing = createProgram(body(open, 200, 999_999L));
 
         // then
         assertThat(linked).hasStatus(HttpStatus.CREATED);
         MvcTestResult detail = mvc.get().uri(PROGRAMS + "/" + programId(linked)).exchange();
         assertThat(detail).bodyJson().extractingPath("$.spotId").isEqualTo((int) active);
-        for (MvcTestResult result : List.of(hiddenResult, missing)) {
+        for (MvcTestResult result : List.of(hiddenResult, deletedResult, missing)) {
             assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
             assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+            assertThat(result).bodyJson().extractingPath("$.message").isEqualTo("spotId: 지도에 보이는 장소만 연결할 수 있어요.");
         }
         assertThat(count("program")).isEqualTo(1);
     }
