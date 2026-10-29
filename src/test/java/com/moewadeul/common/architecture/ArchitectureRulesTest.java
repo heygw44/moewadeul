@@ -24,7 +24,8 @@ class ArchitectureRulesTest {
         DOMAIN_INDEPENDENCE(ArchitectureRules::domainIndependenceRule),
         API_PERSISTENCE(ArchitectureRules::apiPersistenceRule),
         TRANSACTIONAL_PLACEMENT(ArchitectureRules::transactionalPlacementRule),
-        APPLIER_VISIBILITY(ArchitectureRules::applierVisibilityRule);
+        APPLIER_VISIBILITY(ArchitectureRules::applierVisibilityRule),
+        SCHEDULED_JOB_RUNNER(ArchitectureRules::scheduledJobsRunThroughRunnerRule);
 
         private final Function<String, ArchRule> factory;
 
@@ -138,6 +139,17 @@ class ArchitectureRulesTest {
     @DisplayName("[ADR-005] public *Applier 는 R6 위반이다")
     void applierVisibilityRuleRejectsPublicApplier() {
         assertOnlyRuleFails(Rule.APPLIER_VISIBILITY, "violation.r6.exposed", "member.application.MemberApplier");
+    }
+
+    @Test
+    @DisplayName("[ADR-012] run·runCountingFailures 를 부르지 않는 @Scheduled·@Schedules 메서드는 R7 위반이다")
+    void scheduledJobRuleRejectsSchedulerBypassingRunner() {
+        assertOnlyRuleFails(
+                Rule.SCHEDULED_JOB_RUNNER,
+                "violation.r7.bypass",
+                "member.application.MemberCleanupScheduler.cleanUp",
+                "member.application.MemberRegisterOnlyScheduler.cleanUp",
+                "member.application.MemberMultiScheduleScheduler.cleanUp");
     }
 
     private static void assertOnlyRuleFails(Rule failing, String subRoot, String... expectedFixtures) {

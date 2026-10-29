@@ -55,4 +55,10 @@ class ArchitectureTest {
     void appliersArePackagePrivate() {
         ArchitectureRules.applierVisibilityRule(ROOT_PACKAGE).check(productionClasses);
     }
+
+    @Test
+    @DisplayName("[ADR-012] @Scheduled 메서드는 모두 ScheduledJobRunner를 거친다")
+    void scheduledMethodsRunThroughJobRunner() {
+        ArchitectureRules.scheduledJobsRunThroughRunnerRule(ROOT_PACKAGE).check(productionClasses);
+    }
 }

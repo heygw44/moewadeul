@@ -356,7 +356,7 @@
         "service": "moewadeul"
       },
       "annotations": {
-        "summary": "스케줄 작업 {{ $labels.job }}이 최근 1시간 안에 실패했다. 앱 ERROR 로그를 본다."
+        "summary": "스케줄 작업 {{ $labels.exported_job }}이 최근 1시간 안에 실패했다. 앱 ERROR 로그를 본다."
       },
       "data": [
         {
@@ -368,7 +368,7 @@
           "datasourceUid": "__PROM_UID__",
           "model": {
             "refId": "A",
-            "expr": "sum by (job) (increase(moewadeul_scheduled_job_failures_total{job=\"moewadeul-app\"}[1h]))",
+            "expr": "sum by (exported_job) (increase(moewadeul_scheduled_job_failures_total{job=\"moewadeul-app\"}[1h]))",
             "instant": true,
             "range": false
           }
