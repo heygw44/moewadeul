@@ -142,10 +142,14 @@ class ArchitectureRulesTest {
     }
 
     @Test
-    @DisplayName("[ADR-012] ScheduledJobRunner 를 거치지 않는 @Scheduled 메서드는 R7 위반이다")
+    @DisplayName("[ADR-012] run·runCountingFailures 를 부르지 않는 @Scheduled·@Schedules 메서드는 R7 위반이다")
     void scheduledJobRuleRejectsSchedulerBypassingRunner() {
         assertOnlyRuleFails(
-                Rule.SCHEDULED_JOB_RUNNER, "violation.r7.bypass", "member.application.MemberCleanupScheduler.cleanUp");
+                Rule.SCHEDULED_JOB_RUNNER,
+                "violation.r7.bypass",
+                "member.application.MemberCleanupScheduler.cleanUp",
+                "member.application.MemberRegisterOnlyScheduler.cleanUp",
+                "member.application.MemberMultiScheduleScheduler.cleanUp");
     }
 
     private static void assertOnlyRuleFails(Rule failing, String subRoot, String... expectedFixtures) {

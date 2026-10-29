@@ -63,7 +63,9 @@ public final class ArchitectureRules {
     private static final String INFRA = "infra";
 
     private static final String SCHEDULED = "org.springframework.scheduling.annotation.Scheduled";
+    private static final String SCHEDULES = "org.springframework.scheduling.annotation.Schedules";
     private static final String SCHEDULED_JOB_RUNNER = "com.moewadeul.common.scheduling.ScheduledJobRunner";
+    private static final Set<String> JOB_RUNNER_ENTRY_METHODS = Set.of("run", "runCountingFailures");
 
     private static final String SPRING_DATA_REPOSITORY = "org.springframework.data.repository.Repository";
     private static final List<String> PERSISTENCE_NAME_SUFFIXES = List.of("Repository", "Mapper");
@@ -217,9 +219,11 @@ public final class ArchitectureRules {
             @Override
             public void check(JavaClass item, ConditionEvents events) {
                 for (JavaMethod method : item.getMethods()) {
+                    boolean scheduled = method.isAnnotatedWith(SCHEDULED) || method.isAnnotatedWith(SCHEDULES);
                     boolean viaRunner = method.getMethodCallsFromSelf().stream()
-                            .anyMatch(call -> call.getTargetOwner().getName().equals(SCHEDULED_JOB_RUNNER));
-                    if (method.isAnnotatedWith(SCHEDULED) && !viaRunner) {
+                            .anyMatch(call -> call.getTargetOwner().getName().equals(SCHEDULED_JOB_RUNNER)
+                                    && JOB_RUNNER_ENTRY_METHODS.contains(call.getName()));
+                    if (scheduled && !viaRunner) {
                         events.add(SimpleConditionEvent.violated(
                                 method,
                                 "@Scheduled 메서드가 ScheduledJobRunner 를 거치지 않아 실패가 moewadeul.scheduled.job.failures 에 잡히지 않는다: "
