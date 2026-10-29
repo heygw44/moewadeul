@@ -1,26 +1,24 @@
 package com.moewadeul.community.application.moderation;
 
 import com.moewadeul.common.audit.AdminAuditAction;
-import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.moderation.AdminModeration;
+import com.moewadeul.common.moderation.Moderatable;
+import com.moewadeul.common.moderation.ModerationResult;
+import com.moewadeul.common.moderation.ModerationTarget;
 import com.moewadeul.community.domain.comment.CommunityComment;
 import com.moewadeul.community.domain.comment.CommunityCommentRepository;
-import com.moewadeul.community.domain.comment.CommunityCommentStatus;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.domain.post.CommunityPostRepository;
-import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.domain.report.CommunityReportRepository;
 import com.moewadeul.community.domain.report.CommunityReportTargetType;
-import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CommunityModerationService {
@@ -28,109 +26,80 @@ public class CommunityModerationService {
     private final CommunityPostRepository communityPostRepository;
     private final CommunityCommentRepository communityCommentRepository;
     private final CommunityReportRepository communityReportRepository;
-    private final AdminAuditRecorder adminAuditRecorder;
-    private final Clock clock;
+    private final AdminModeration adminModeration;
+
+    private final ModerationTarget<CommunityPost> postTarget =
+            new CommunityTarget<>(AdminAuditTargetType.COMMUNITY_POST, CommunityReportTargetType.POST) {
+
+                @Override
+                public CommunityPost lock(long postId) {
+                    return communityPostRepository
+                            .findByIdForUpdate(postId)
+                            .filter(post -> !post.isDeleted())
+                            .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                }
+            };
+
+    private final ModerationTarget<CommunityComment> commentTarget =
+            new CommunityTarget<>(AdminAuditTargetType.COMMUNITY_COMMENT, CommunityReportTargetType.COMMENT) {
+
+                @Override
+                public CommunityComment lock(long commentId) {
+                    return communityCommentRepository
+                            .findByIdForUpdate(commentId)
+                            .filter(comment -> !comment.isDeleted())
+                            .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                }
+            };
 
     @Transactional
-    public CommunityModerationResult hidePost(long postId, long adminId) {
-        CommunityPost post = lockPost(postId);
-        CommunityPostStatus before = post.getStatus();
-        post.hide(clock.instant());
-        recordHide(
-                adminId,
-                AdminAuditTargetType.COMMUNITY_POST,
-                postId,
-                before.name(),
-                post.getStatus().name());
-        log.info("community post hidden postId={} adminId={}", postId, adminId);
-        return new CommunityModerationResult(postId, post.getStatus().name());
-    }
-
-    @Transactional
-    public CommunityModerationResult restorePost(long postId, long adminId) {
-        CommunityPost post = lockPost(postId);
-        CommunityPostStatus before = post.getStatus();
-        Instant now = clock.instant();
-        post.restore(now);
-        int reviewed = communityReportRepository.markReviewed(CommunityReportTargetType.POST, postId, now);
-        recordRestore(
-                adminId,
-                AdminAuditTargetType.COMMUNITY_POST,
-                postId,
-                before.name(),
-                post.getStatus().name(),
-                reviewed);
-        log.info("community post restored postId={} adminId={} reviewedReportCount={}", postId, adminId, reviewed);
-        return new CommunityModerationResult(postId, post.getStatus().name());
+    public ModerationResult hidePost(long postId, long adminId) {
+        return adminModeration.hide(postTarget, postId, adminId);
     }
 
     @Transactional
-    public CommunityModerationResult hideComment(long commentId, long adminId) {
-        CommunityComment comment = lockComment(commentId);
-        CommunityCommentStatus before = comment.getStatus();
-        comment.hide(clock.instant());
-        recordHide(
-                adminId,
-                AdminAuditTargetType.COMMUNITY_COMMENT,
-                commentId,
-                before.name(),
-                comment.getStatus().name());
-        log.info("community comment hidden commentId={} adminId={}", commentId, adminId);
-        return new CommunityModerationResult(commentId, comment.getStatus().name());
+    public ModerationResult restorePost(long postId, long adminId) {
+        return adminModeration.restore(postTarget, postId, adminId);
     }
 
     @Transactional
-    public CommunityModerationResult restoreComment(long commentId, long adminId) {
-        CommunityComment comment = lockComment(commentId);
-        CommunityCommentStatus before = comment.getStatus();
-        Instant now = clock.instant();
-        comment.restore(now);
-        int reviewed = communityReportRepository.markReviewed(CommunityReportTargetType.COMMENT, commentId, now);
-        recordRestore(
-                adminId,
-                AdminAuditTargetType.COMMUNITY_COMMENT,
-                commentId,
-                before.name(),
-                comment.getStatus().name(),
-                reviewed);
-        log.info(
-                "community comment restored commentId={} adminId={} reviewedReportCount={}",
-                commentId,
-                adminId,
-                reviewed);
-        return new CommunityModerationResult(commentId, comment.getStatus().name());
+    public ModerationResult hideComment(long commentId, long adminId) {
+        return adminModeration.hide(commentTarget, commentId, adminId);
     }
 
-    private CommunityPost lockPost(long postId) {
-        return communityPostRepository
-                .findByIdForUpdate(postId)
-                .filter(post -> post.getStatus() != CommunityPostStatus.DELETED)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+    @Transactional
+    public ModerationResult restoreComment(long commentId, long adminId) {
+        return adminModeration.restore(commentTarget, commentId, adminId);
     }
 
-    private CommunityComment lockComment(long commentId) {
-        return communityCommentRepository
-                .findByIdForUpdate(commentId)
-                .filter(comment -> comment.getStatus() != CommunityCommentStatus.DELETED)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-    }
+    private abstract class CommunityTarget<T extends Moderatable> implements ModerationTarget<T> {
 
-    private void recordHide(long adminId, String targetType, long targetId, String from, String to) {
-        adminAuditRecorder.record(
-                adminId,
-                AdminAuditAction.COMMUNITY_HIDE,
-                targetType,
-                targetId,
-                new CommunityAuditDetails.Hide(from, to));
-    }
+        private final String auditTargetType;
+        private final CommunityReportTargetType reportTargetType;
 
-    private void recordRestore(
-            long adminId, String targetType, long targetId, String from, String to, int reviewedReportCount) {
-        adminAuditRecorder.record(
-                adminId,
-                AdminAuditAction.COMMUNITY_RESTORE,
-                targetType,
-                targetId,
-                new CommunityAuditDetails.Restore(from, to, reviewedReportCount));
+        CommunityTarget(String auditTargetType, CommunityReportTargetType reportTargetType) {
+            this.auditTargetType = auditTargetType;
+            this.reportTargetType = reportTargetType;
+        }
+
+        @Override
+        public AdminAuditAction hideAction() {
+            return AdminAuditAction.COMMUNITY_HIDE;
+        }
+
+        @Override
+        public AdminAuditAction restoreAction() {
+            return AdminAuditAction.COMMUNITY_RESTORE;
+        }
+
+        @Override
+        public String auditTargetType() {
+            return auditTargetType;
+        }
+
+        @Override
+        public int markReviewed(long targetId, Instant now) {
+            return communityReportRepository.markReviewed(reportTargetType, targetId, now);
+        }
     }
 }

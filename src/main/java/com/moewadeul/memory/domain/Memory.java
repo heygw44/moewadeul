@@ -3,7 +3,8 @@ package com.moewadeul.memory.domain;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.InvalidFieldException;
-import com.moewadeul.common.moderation.PendingReview;
+import com.moewadeul.common.moderation.Moderatable;
+import com.moewadeul.common.moderation.ModerationTransition;
 import com.moewadeul.common.time.KoreaTime;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,7 +26,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "memory")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Memory {
+public class Memory implements Moderatable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -110,28 +111,23 @@ public class Memory {
     }
 
     public void receiveReport(long unreviewedReportCount, Instant now) {
-        if (unreviewedReportCount < PendingReview.REPORT_THRESHOLD) {
+        if (!ModerationTransition.reachesPendingReview(status, unreviewedReportCount)) {
             return;
-        }
-        if (status != MemoryStatus.ACTIVE) {
-            throw new IllegalStateException("정상 기록만 검토 대기로 바꿀 수 있습니다. 현재 상태: " + status);
         }
         this.status = MemoryStatus.PENDING_REVIEW;
         this.updatedAt = now;
     }
 
+    @Override
     public void hide(Instant now) {
-        if (status != MemoryStatus.ACTIVE && status != MemoryStatus.PENDING_REVIEW) {
-            throw new BusinessException(MemoryErrorCode.MEMORY_INVALID_STATE);
-        }
+        ModerationTransition.requireHideable(status, MemoryErrorCode.MEMORY_INVALID_STATE);
         this.status = MemoryStatus.HIDDEN;
         this.updatedAt = now;
     }
 
+    @Override
     public void restore(Instant now) {
-        if (status != MemoryStatus.PENDING_REVIEW && status != MemoryStatus.HIDDEN) {
-            throw new BusinessException(MemoryErrorCode.MEMORY_INVALID_STATE);
-        }
+        ModerationTransition.requireRestorable(status, MemoryErrorCode.MEMORY_INVALID_STATE);
         this.status = MemoryStatus.ACTIVE;
         this.updatedAt = now;
     }

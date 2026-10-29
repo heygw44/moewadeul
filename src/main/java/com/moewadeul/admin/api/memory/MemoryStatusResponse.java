@@ -1,10 +1,10 @@
 package com.moewadeul.admin.api.memory;
 
-import com.moewadeul.memory.application.moderation.MemoryModerationResult;
+import com.moewadeul.common.moderation.ModerationResult;
 
 public record MemoryStatusResponse(long memoryId, String status) {
 
-    static MemoryStatusResponse from(MemoryModerationResult result) {
-        return new MemoryStatusResponse(result.memoryId(), result.status());
+    static MemoryStatusResponse from(ModerationResult result) {
+        return new MemoryStatusResponse(result.targetId(), result.status());
     }
 }

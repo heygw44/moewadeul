@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.moderation.PendingReview;
+import com.moewadeul.common.moderation.ModerationTransition;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Duration;
 import java.time.Instant;
@@ -163,7 +163,7 @@ class SpotTest {
         Spot hidden = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
         hidden.hide(NOW);
         Spot pending = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
-        pending.receiveReport(PendingReview.REPORT_THRESHOLD, NOW);
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW);
         GeoPoint busan = new GeoPoint(35.1796, 129.0756);
         Instant later = NOW.plusSeconds(60);
 
@@ -239,7 +239,7 @@ class SpotTest {
         // given
         Spot active = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
         Spot pending = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
-        pending.receiveReport(PendingReview.REPORT_THRESHOLD, NOW.plusSeconds(1));
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW.plusSeconds(1));
         Instant hiddenAt = NOW.plusSeconds(10);
 
         // when
@@ -279,7 +279,7 @@ class SpotTest {
     void restoreChangesPendingReviewAndHiddenToActive() {
         // given
         Spot pending = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
-        pending.receiveReport(PendingReview.REPORT_THRESHOLD, NOW.plusSeconds(1));
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW.plusSeconds(1));
         Spot hidden = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
         hidden.hide(NOW.plusSeconds(1));
         Instant restoredAt = NOW.plusSeconds(10);
