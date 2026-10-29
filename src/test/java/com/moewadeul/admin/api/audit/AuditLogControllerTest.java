@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.audit;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -71,7 +72,7 @@ class AuditLogControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].detail.hideReview")
                 .isEqualTo(true);
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertEnvelope(result, 0, 20, true);
         verify(auditLogQueryService)
                 .findLogs(
                         1L,

@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.community;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -146,7 +147,7 @@ class AdminCommunityControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].author.nickname")
                 .isEqualTo("작성자");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(result, 0, 20, false);
     }
 
     @Test

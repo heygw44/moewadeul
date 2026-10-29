@@ -1,5 +1,6 @@
 package com.moewadeul.publicdata.api;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -204,9 +205,7 @@ class SyncJobAdminControllerTest {
 
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
-        assertThat(result).bodyJson().extractingPath("$.page").isEqualTo(1);
-        assertThat(result).bodyJson().extractingPath("$.size").isEqualTo(2);
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertEnvelope(result, 1, 2, true);
         assertThat(result).bodyJson().extractingPath("$.content").asList().hasSize(2);
         assertThat(result).bodyJson().extractingPath("$.content[0].jobRunId").isEqualTo(9);
         assertThat(result).bodyJson().extractingPath("$.content[0].jobType").isEqualTo("FOREST");

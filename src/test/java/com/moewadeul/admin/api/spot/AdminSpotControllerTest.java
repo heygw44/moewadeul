@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.spot;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -137,7 +138,7 @@ class AdminSpotControllerTest {
                 .extractingPath("$.content[0].statusChangedAt")
                 .isEqualTo("2026-10-05T03:00:00Z");
         assertThat(result).bodyJson().extractingPath("$.content[1].reporter").isNull();
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(result, 0, 20, false);
     }
 
     @Test

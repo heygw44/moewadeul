@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.trust;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -146,7 +147,7 @@ class AdminMemberControllersTest {
                 .extractingPath("$.content[0].target.nickname")
                 .isEqualTo("대상");
         assertThat(result).bodyJson().doesNotHavePath("$.content[0].content");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(result, 0, 20, false);
         verify(queryService).list("IN_REVIEW", true, 0, 20);
     }
 

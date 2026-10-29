@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.memory;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -120,7 +121,7 @@ class AdminMemoryControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].recentReports[0].content")
                 .isEqualTo("송금 요구");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(result, 0, 20, false);
     }
 
     @Test

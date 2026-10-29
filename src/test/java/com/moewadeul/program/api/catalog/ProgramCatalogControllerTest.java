@@ -1,5 +1,6 @@
 package com.moewadeul.program.api.catalog;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -218,7 +219,7 @@ class ProgramCatalogControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].program.status")
                 .isEqualTo("OPEN");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertEnvelope(result, 1, 5, true);
         assertThat(result).bodyJson().extractingPath("$.content[0]").asMap().containsKey("cancelReason");
     }
 

@@ -1,5 +1,6 @@
 package com.moewadeul.basecamp.api.query;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -217,7 +218,7 @@ class BasecampQueryControllerTest {
 
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertEnvelope(result, 0, 20, true);
         assertThat(result).bodyJson().extractingPath("$.content[0].basecampId").isEqualTo(77);
         assertThat(result).bodyJson().extractingPath("$.content[0].spot.type").isEqualTo("BAKJI");
         assertThat(result)

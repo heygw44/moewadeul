@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.program;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -279,7 +280,7 @@ class AdminProgramControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].cancelReason")
                 .isEqualTo("PROGRAM_CANCELED");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertEnvelope(result, 0, 20, true);
         verify(programAdminService).applications(9L, new ProgramApplicantQuery("CANCELED", 0, 20));
     }
 
