@@ -407,8 +407,9 @@ class EmailVerificationServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01][EV-03] 같은 발송 요청 이벤트로 코드를 다시 발급하면 행은 하나이고, 새 코드만 유효하며 시도 횟수와 만료는 새 코드 기준이다")
-    void reissueForSameEventReplacesCodeInSameRow() {
+    @DisplayName(
+            "[F-01][EV-02][EV-03] 같은 발송 요청 이벤트로 코드를 다시 발급하면 행은 하나이고 같은 코드를 다시 주며, 틀린 횟수는 이어서 세고 만료는 다시 발급한 시각부터 센다")
+    void reissueForSameEventKeepsSameCodeInSameRow() {
         // given
         Member member = newMember();
         long eventId = TestSequence.next();
@@ -429,12 +430,13 @@ class EmailVerificationServiceIntegrationTest {
 
         // then
         assertThat(countVerificationRows()).isEqualTo(1);
-        assertThat(latestAttemptCount(member)).isZero();
+        assertThat(latestAttemptCount(member)).isEqualTo(1);
         assertThat(queryInstant("SELECT expires_at FROM email_verification WHERE member_id = ?", member.getId()))
                 .isEqualTo(clock.instant().plus(Duration.ofMinutes(10)));
         assertThat(queryInstant("SELECT created_at FROM email_verification WHERE member_id = ?", member.getId()))
                 .isEqualTo(firstIssuedAt);
-        assertThat(emailVerificationService.verify(member.getId(), secondCode).status())
+        assertThat(secondCode).isEqualTo(firstCode);
+        assertThat(emailVerificationService.verify(member.getId(), firstCode).status())
                 .isEqualTo(MemberStatus.ACTIVE);
     }
 

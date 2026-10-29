@@ -6,6 +6,7 @@ import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.outbox.OutboxEventStatus;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.application.EmailVerificationEvents;
+import com.moewadeul.member.application.MailSecretDeriver;
 import com.moewadeul.member.application.MemberMetrics;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
@@ -21,7 +22,6 @@ import com.moewadeul.member.domain.verification.VerificationCode;
 import com.moewadeul.member.infra.verification.EmailVerificationIpLockMapper;
 import com.moewadeul.member.infra.verification.EmailVerificationMapper;
 import com.moewadeul.member.infra.verification.SignupDuplicateAttemptMapper;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -46,9 +46,8 @@ public class EmailVerificationService {
     private final OutboxEventRecorder outboxEventRecorder;
     private final OutboxEventJpaRepository outboxEventRepository;
     private final MemberMetrics memberMetrics;
+    private final MailSecretDeriver mailSecretDeriver;
     private final Clock clock;
-
-    private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
     public Optional<IssuedVerification> issueFor(long memberId, String requestIp, long outboxEventId) {
@@ -60,7 +59,8 @@ public class EmailVerificationService {
     }
 
     private IssuedVerification issue(Member member, String requestIp, long outboxEventId) {
-        VerificationCode code = VerificationCode.generate(secureRandom);
+        VerificationCode code = VerificationCode.fromSeed(
+                mailSecretDeriver.derive(MailSecretDeriver.Purpose.EMAIL_VERIFICATION, outboxEventId, member.getId()));
         String codeHash = VerificationCode.hash(member.getId(), code.value());
         Instant now = Instant.now(clock);
         emailVerificationRepository

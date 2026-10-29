@@ -35,6 +35,7 @@ declare -rA SECRET_PARAMS=(
     [publicdata/service-key]=PUBLICDATA_SERVICE_KEY
     [mail/app-password]=MAIL_APP_PASSWORD
     [identity/ci-hmac-key]=CI_HMAC_KEY
+    [member/mail-secret-hmac-key]=MAIL_SECRET_HMAC_KEY
     [openai/api-key]=OPENAI_API_KEY
     [db/exporter-password]=MYSQL_EXPORTER_PASSWORD
     [grafana/token]=GRAFANA_CLOUD_TOKEN

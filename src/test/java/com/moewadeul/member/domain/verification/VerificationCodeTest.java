@@ -3,7 +3,9 @@ package com.moewadeul.member.domain.verification;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,29 +21,42 @@ class VerificationCodeTest {
             "0a5538553f1a5746c15e0ad5df86655c5663ef805941dcdab1d17b3ecbfe7718";
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 7, 42, 999, 12_345, 999_999})
-    @DisplayName("[F-01][EV-01] 코드는 항상 숫자 6자리이고 앞자리는 0으로 채운다")
-    void generatedCodeIsAlwaysSixDigitsPaddedWithZeros(int randomValue) {
+    @ValueSource(longs = {0, 7, 42, 999, 12_345, 999_999, 1_000_007})
+    @DisplayName("[F-01][EV-01] 코드는 원천값 앞 8바이트를 백만으로 나눈 나머지이고, 숫자 6자리에 앞자리는 0으로 채운다")
+    void codeFromSeedIsSixDigitsPaddedWithZeros(long leadingValue) {
         // given
-        SecureRandom random = fixedRandom(randomValue);
+        byte[] seed = ByteBuffer.allocate(32).putLong(0, leadingValue).array();
 
         // when
-        VerificationCode code = VerificationCode.generate(random);
+        VerificationCode code = VerificationCode.fromSeed(seed);
 
         // then
-        assertThat(code.value()).hasSize(6).isEqualTo("%06d".formatted(randomValue));
+        assertThat(code.value()).isEqualTo("%06d".formatted(leadingValue % 1_000_000));
     }
 
     @Test
-    @DisplayName("[F-01][EV-01] 실제 난수로 만든 코드는 모두 숫자 6자리 형식이다")
-    void codesFromSecureRandomAreWellFormed() {
+    @DisplayName("[F-01][EV-01] 원천값 앞 8바이트를 부호 없는 수로 읽어서 모든 바이트가 0xFF여도 숫자 6자리다")
+    void codeFromSeedReadsLeadingBytesAsUnsigned() {
+        // given
+        byte[] seed = new byte[32];
+        Arrays.fill(seed, (byte) 0xFF);
+
+        // when & then
+        assertThat(VerificationCode.fromSeed(seed).value()).isEqualTo("551615");
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-01] 실제 난수 원천값으로 만든 코드는 모두 숫자 6자리 형식이다")
+    void codesFromRandomSeedsAreWellFormed() {
         // given
         SecureRandom random = new SecureRandom();
+        byte[] seed = new byte[32];
 
         // when & then
         for (int i = 0; i < 1_000; i++) {
+            random.nextBytes(seed);
             assertThat(VerificationCode.isWellFormed(
-                            VerificationCode.generate(random).value()))
+                            VerificationCode.fromSeed(seed).value()))
                     .isTrue();
         }
     }
@@ -114,15 +129,5 @@ class VerificationCodeTest {
 
         // then
         assertThat(text).doesNotContain(CODE);
-    }
-
-    private static SecureRandom fixedRandom(int value) {
-        return new SecureRandom() {
-            @Override
-            public int nextInt(int bound) {
-                assertThat(bound).isEqualTo(1_000_000);
-                return value;
-            }
-        };
     }
 }

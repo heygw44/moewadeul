@@ -1,9 +1,9 @@
 package com.moewadeul.member.domain.verification;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.HexFormat;
 
 public record VerificationCode(String value) {
@@ -19,8 +19,9 @@ public record VerificationCode(String value) {
         }
     }
 
-    public static VerificationCode generate(SecureRandom random) {
-        String digits = Integer.toString(random.nextInt(BOUND));
+    public static VerificationCode fromSeed(byte[] seed) {
+        String digits =
+                Long.toString(Long.remainderUnsigned(ByteBuffer.wrap(seed).getLong(), BOUND));
         return new VerificationCode("0".repeat(LENGTH - digits.length()) + digits);
     }
 

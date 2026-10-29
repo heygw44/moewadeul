@@ -2,6 +2,7 @@ package com.moewadeul.member.application.password;
 
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.member.application.MailSecretDeriver;
 import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
@@ -14,7 +15,7 @@ import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
 import com.moewadeul.member.domain.password.ResetToken;
 import com.moewadeul.member.infra.password.PasswordResetThrottleMapper;
-import java.security.SecureRandom;
+import com.moewadeul.member.infra.password.PasswordResetTokenMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -32,9 +33,9 @@ public class PasswordResetRequestService {
     private final OutboxEventRecorder outboxEventRecorder;
     private final PasswordResetThrottleRepository throttleRepository;
     private final PasswordResetThrottleMapper throttleMapper;
+    private final PasswordResetTokenMapper passwordResetTokenMapper;
+    private final MailSecretDeriver mailSecretDeriver;
     private final Clock clock;
-
-    private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
     public void request(String email, String requestIp) {
@@ -87,17 +88,25 @@ public class PasswordResetRequestService {
     }
 
     @Transactional
-    public Optional<IssuedPasswordReset> issueFor(long memberId) {
+    public Optional<IssuedPasswordReset> issueFor(long memberId, long outboxEventId) {
         return memberRepository
                 .findById(memberId)
                 .filter(PasswordResetRequestService::isTarget)
-                .map(this::issue);
+                .map(member -> issue(member, outboxEventId));
     }
 
-    private IssuedPasswordReset issue(Member member) {
-        ResetToken token = ResetToken.generate(secureRandom);
-        passwordResetTokenRepository.save(
-                PasswordResetToken.issue(member.getId(), ResetToken.hash(token.value()), Instant.now(clock)));
+    // 살아 있는 링크는 마지막으로 보낸 요청의 것 하나만 둔다.
+    private IssuedPasswordReset issue(Member member, long outboxEventId) {
+        ResetToken token = ResetToken.fromSeed(
+                mailSecretDeriver.derive(MailSecretDeriver.Purpose.PASSWORD_RESET, outboxEventId, member.getId()));
+        String tokenHash = ResetToken.hash(token.value());
+        Instant now = Instant.now(clock);
+        passwordResetTokenRepository
+                .findByTokenHash(tokenHash)
+                .ifPresentOrElse(resent -> resent.renewIfUnused(now), () -> {
+                    passwordResetTokenMapper.invalidateUnusedTokens(member.getId(), now);
+                    passwordResetTokenRepository.save(PasswordResetToken.issue(member.getId(), tokenHash, now));
+                });
         return new IssuedPasswordReset(member.getEmail(), token.value());
     }
 

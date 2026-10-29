@@ -11,7 +11,9 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberBuilder;
+import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.password.PasswordResetPolicy;
+import com.moewadeul.member.domain.password.PasswordResetRequestPolicy;
 import com.moewadeul.member.domain.password.ResetToken;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxProperties;
@@ -34,12 +36,16 @@ class PasswordResetRequestFlowIntegrationTest {
     private static final String MAIL_SUBJECT = "[뫼와들] 비밀번호 재설정 안내";
     private static final String LINK_PREFIX = "/password-reset#token=";
     private static final String CLIENT_IP = "203.0.113.7";
+    private static final String NEW_PASSWORD = "Newer-pass2";
 
     @Autowired
     private PasswordResetRequestService requestService;
 
     @Autowired
     private PasswordResetRequestedHandler handler;
+
+    @Autowired
+    private PasswordResetConfirmService confirmService;
 
     @Autowired
     private OutboxPublisher publisher;
@@ -255,15 +261,14 @@ class PasswordResetRequestFlowIntegrationTest {
         // then
         assertThat(findOnlyEvent().get("status")).isEqualTo("PUBLISHED");
         assertThat(mailSender.sent()).hasSize(1);
-        assertThat(countRows("password_reset_token")).isEqualTo(2);
         String sentToken = PasswordResetMails.extractToken(mailSender.sent().get(0));
-        List<String> hashes = jdbc.queryForList("SELECT token_hash FROM password_reset_token", String.class);
-        assertThat(hashes).contains(ResetToken.hash(sentToken));
+        assertThat(jdbc.queryForList("SELECT token_hash FROM password_reset_token", String.class))
+                .containsExactly(ResetToken.hash(sentToken));
     }
 
     @Test
-    @DisplayName("[F-02][PW-02] 같은 이벤트를 처리기가 두 번 처리하면 서로 다른 토큰 행이 둘이고 각 메일의 토큰이 각 행과 맞는다")
-    void duplicateDeliveryIssuesTwoIndependentTokens() {
+    @DisplayName("[F-02][PW-02] 같은 이벤트를 처리기가 두 번 처리하면 두 메일의 링크가 같고 토큰 행은 하나이며, 먼저 받은 링크로 재설정된다")
+    void duplicateDeliveryResendsSameToken() {
         // given
         Member member = newMember("twice@example.com");
         requestService.request(member.getEmail(), CLIENT_IP);
@@ -277,12 +282,55 @@ class PasswordResetRequestFlowIntegrationTest {
         List<MailMessage> mails = mailSender.sent();
         assertThat(mails).hasSize(2);
         String first = PasswordResetMails.extractToken(mails.get(0));
-        String second = PasswordResetMails.extractToken(mails.get(1));
-        assertThat(first).isNotEqualTo(second);
-        List<String> hashes = jdbc.queryForList("SELECT token_hash FROM password_reset_token", String.class);
-        assertThat(hashes).containsExactlyInAnyOrder(ResetToken.hash(first), ResetToken.hash(second));
-        assertThat(jdbc.queryForList("SELECT used_at FROM password_reset_token WHERE used_at IS NOT NULL"))
-                .isEmpty();
+        assertThat(PasswordResetMails.extractToken(mails.get(1))).isEqualTo(first);
+        assertThat(countRows("password_reset_token")).isEqualTo(1);
+        assertThatCode(() -> confirmService.confirm(first, NEW_PASSWORD)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-02] 메일 서버 장애가 길어 유효 시간이 지난 뒤 같은 이벤트를 다시 보내면 같은 링크가 다시 보낸 시각부터 30분 유효하다")
+    void lateResendRenewsSameToken() {
+        // given
+        Member member = newMember("late@example.com");
+        requestService.request(member.getEmail(), CLIENT_IP);
+        OutboxMessage message = toMessage(findOnlyEvent());
+        handler.handle(message);
+        clock.advance(PasswordResetPolicy.TOKEN_VALIDITY.plusMinutes(1));
+
+        // when
+        handler.handle(message);
+
+        // then
+        String token = PasswordResetMails.extractToken(mailSender.sent().get(1));
+        assertThat(toInstant(jdbc.queryForMap("SELECT expires_at FROM password_reset_token")
+                        .get("expires_at")))
+                .isEqualTo(clock.instant().plus(PasswordResetPolicy.TOKEN_VALIDITY));
+        assertThatCode(() -> confirmService.confirm(token, NEW_PASSWORD)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-02] 재설정을 다시 요청해 새 메일이 나가면 이전 메일의 링크는 쓸 수 없고 살아 있는 토큰은 새 것 하나다")
+    void newRequestInvalidatesEarlierUnusedToken() {
+        // given
+        Member member = newMember("again@example.com");
+        requestService.request(member.getEmail(), CLIENT_IP);
+        publisher.publishPending();
+        clock.advance(PasswordResetRequestPolicy.EMAIL.minInterval());
+        requestService.request(member.getEmail(), CLIENT_IP);
+
+        // when
+        publisher.publishPending();
+
+        // then
+        List<MailMessage> mails = mailSender.sent();
+        assertThat(mails).hasSize(2);
+        String earlier = PasswordResetMails.extractToken(mails.get(0));
+        String later = PasswordResetMails.extractToken(mails.get(1));
+        assertThat(jdbc.queryForList("SELECT token_hash FROM password_reset_token WHERE used_at IS NULL", String.class))
+                .containsExactly(ResetToken.hash(later));
+        assertThatThrownBy(() -> confirmService.confirm(earlier, NEW_PASSWORD))
+                .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.PASSWORD_RESET_TOKEN_INVALID);
+        assertThatCode(() -> confirmService.confirm(later, NEW_PASSWORD)).doesNotThrowAnyException();
     }
 
     private Member newMember(String email) {
