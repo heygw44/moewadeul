@@ -3,7 +3,6 @@ package com.moewadeul.spot.application.moderation;
 import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.moderation.AdminModeration;
 import com.moewadeul.common.moderation.ModerationResult;
 import com.moewadeul.common.moderation.ModerationTarget;
@@ -48,7 +47,7 @@ public class SpotModerationService {
             return spotRepository
                     .findByIdForUpdate(spotId)
                     .filter(spot -> !spot.isDeleted())
-                    .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                    .orElseThrow(BusinessException::notFound);
         }
 
         @Override

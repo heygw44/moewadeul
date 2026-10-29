@@ -1,7 +1,6 @@
 package com.moewadeul.spot.application;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.SpotRepository;
 import com.moewadeul.spot.domain.SpotStatus;
@@ -19,7 +18,7 @@ public class ActiveSpotChecker {
     @Transactional(readOnly = true)
     public void requireActive(long spotId) {
         if (!isActive(spotId)) {
-            throw new BusinessException(CommonErrorCode.NOT_FOUND);
+            throw BusinessException.notFound();
         }
     }
 
@@ -36,7 +35,7 @@ public class ActiveSpotChecker {
         Spot spot = spotRepository
                 .findById(spotId)
                 .filter(ActiveSpotChecker::isActiveSpot)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
         return spot.getType() == SpotType.BAKJI && spot.isParkWarning();
     }
 

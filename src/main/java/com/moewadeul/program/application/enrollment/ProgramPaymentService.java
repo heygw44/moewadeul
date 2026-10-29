@@ -1,7 +1,6 @@
 package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.domain.Payment;
@@ -66,17 +65,14 @@ public class ProgramPaymentService {
     }
 
     private ProgramApplication lockOwnApplication(long memberId, long applicationId) {
-        ProgramApplication application = programApplicationRepository
-                .findByIdForUpdate(applicationId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        ProgramApplication application =
+                programApplicationRepository.findByIdForUpdate(applicationId).orElseThrow(BusinessException::notFound);
         application.requireAppliedBy(memberId);
         return application;
     }
 
     private Program findProgram(long programId) {
-        return programRepository
-                .findById(programId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return programRepository.findById(programId).orElseThrow(BusinessException::notFound);
     }
 
     private void savePayment(Payment payment) {

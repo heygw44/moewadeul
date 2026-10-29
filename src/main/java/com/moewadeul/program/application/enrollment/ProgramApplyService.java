@@ -1,7 +1,6 @@
 package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
@@ -36,9 +35,7 @@ public class ProgramApplyService {
 
     @Transactional
     public ProgramApplyResult apply(long memberId, long programId) {
-        Program program = programRepository
-                .findByIdForUpdate(programId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        Program program = programRepository.findByIdForUpdate(programId).orElseThrow(BusinessException::notFound);
         Instant now = clock.instant();
         program.requireApplicableAt(now);
         requireTrustLevel(program, memberId);

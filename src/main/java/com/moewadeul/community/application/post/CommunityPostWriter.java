@@ -51,9 +51,7 @@ public class CommunityPostWriter {
         }
         // 고친 내용을 MyBatis로 읽기 전에 DB에 반영한다.
         communityPostRepository.flush();
-        return communityPostItemReader
-                .findDetail(postId, memberId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return communityPostItemReader.findDetail(postId, memberId).orElseThrow(BusinessException::notFound);
     }
 
     @Transactional
@@ -75,8 +73,7 @@ public class CommunityPostWriter {
     }
 
     private static CommunityPost requireOwnActive(Optional<CommunityPost> found, long memberId) {
-        CommunityPost post = found.filter(CommunityPost::isActive)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        CommunityPost post = found.filter(CommunityPost::isActive).orElseThrow(BusinessException::notFound);
         post.requireWrittenBy(memberId);
         return post;
     }

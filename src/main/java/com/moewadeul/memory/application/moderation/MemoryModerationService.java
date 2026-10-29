@@ -3,7 +3,6 @@ package com.moewadeul.memory.application.moderation;
 import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.moderation.AdminModeration;
 import com.moewadeul.common.moderation.ModerationResult;
 import com.moewadeul.common.moderation.ModerationTarget;
@@ -42,9 +41,7 @@ public class MemoryModerationService {
 
         @Override
         public Memory lock(long memoryId) {
-            return memoryRepository
-                    .findByIdForUpdate(memoryId)
-                    .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+            return memoryRepository.findByIdForUpdate(memoryId).orElseThrow(BusinessException::notFound);
         }
 
         @Override

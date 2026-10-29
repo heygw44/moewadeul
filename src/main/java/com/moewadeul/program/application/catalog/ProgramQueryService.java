@@ -1,7 +1,6 @@
 package com.moewadeul.program.application.catalog;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.program.domain.ProgramPhase;
 import com.moewadeul.program.infra.catalog.MyApplicationRow;
@@ -38,7 +37,7 @@ public class ProgramQueryService {
         Instant now = clock.instant();
         ProgramDetailRow row = programQueryMapper.selectDetail(programId, now);
         if (row == null) {
-            throw new BusinessException(CommonErrorCode.NOT_FOUND);
+            throw BusinessException.notFound();
         }
         return toDetail(row, now, findMyApplication(programId, viewerId));
     }

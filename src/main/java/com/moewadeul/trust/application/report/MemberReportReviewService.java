@@ -4,7 +4,6 @@ import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.trust.application.TrustAuditDetails;
 import com.moewadeul.trust.domain.report.MemberReport;
 import com.moewadeul.trust.domain.report.MemberReportRepository;
@@ -26,9 +25,8 @@ public class MemberReportReviewService {
 
     @Transactional
     public MemberReportStatusResult startReview(long reportId, long adminId) {
-        MemberReport report = memberReportRepository
-                .findByIdForUpdate(reportId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        MemberReport report =
+                memberReportRepository.findByIdForUpdate(reportId).orElseThrow(BusinessException::notFound);
         ReportStatus before = report.getStatus();
         report.startReview(adminId, clock.instant());
         adminAuditRecorder.record(

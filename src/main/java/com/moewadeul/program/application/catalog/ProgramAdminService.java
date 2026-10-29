@@ -127,7 +127,7 @@ public class ProgramAdminService {
 
     @Transactional(readOnly = true)
     public PageSlice<ProgramApplicantItem> applications(long programId, ProgramApplicantQuery query) {
-        programRepository.findById(programId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        programRepository.findById(programId).orElseThrow(BusinessException::notFound);
         ProgramApplicationStatus status =
                 EnumParser.parseNullable(ProgramApplicationStatus.class, query.status(), "status: 신청 상태가 맞지 않아요.");
         List<ProgramApplicantRow> rows = programQueryMapper.selectApplicants(
@@ -136,9 +136,7 @@ public class ProgramAdminService {
     }
 
     private Program lockProgram(long programId) {
-        return programRepository
-                .findByIdForUpdate(programId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return programRepository.findByIdForUpdate(programId).orElseThrow(BusinessException::notFound);
     }
 
     private void requireVisibleSpot(Long spotId) {

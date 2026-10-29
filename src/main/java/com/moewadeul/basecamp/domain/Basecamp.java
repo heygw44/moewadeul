@@ -1,7 +1,6 @@
 package com.moewadeul.basecamp.domain;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.common.schedule.CampingSchedule;
@@ -269,7 +268,7 @@ public class Basecamp {
 
     public void cancelApplication(long applicantId, Instant now) {
         requireStatus(BEFORE_CONFIRM);
-        BasecampApplication application = findApplicationOf(applicantId).orElseThrow(Basecamp::notFound);
+        BasecampApplication application = findApplicationOf(applicantId).orElseThrow(BusinessException::notFound);
         requirePending(application);
         application.cancel(now);
     }
@@ -506,7 +505,7 @@ public class Basecamp {
     }
 
     private BasecampMember requireActiveMember(long memberId) {
-        return findMember(memberId).filter(BasecampMember::isActive).orElseThrow(Basecamp::notFound);
+        return findMember(memberId).filter(BasecampMember::isActive).orElseThrow(BusinessException::notFound);
     }
 
     private Optional<BasecampApplication> findApplicationOf(long applicantId) {
@@ -519,7 +518,7 @@ public class Basecamp {
         return applications.stream()
                 .filter(application -> Objects.equals(application.getId(), applicationId))
                 .findFirst()
-                .orElseThrow(Basecamp::notFound);
+                .orElseThrow(BusinessException::notFound);
     }
 
     private static void requirePending(BasecampApplication application) {
@@ -532,10 +531,6 @@ public class Basecamp {
         if (!allowed.contains(status)) {
             throw new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE);
         }
-    }
-
-    private static BusinessException notFound() {
-        return new BusinessException(CommonErrorCode.NOT_FOUND);
     }
 
     private void touch(Instant now) {

@@ -17,6 +17,10 @@ public class BusinessException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    public static BusinessException notFound() {
+        return BusinessException.notFound();
+    }
+
     public Map<String, Object> extraFields() {
         return Map.of();
     }

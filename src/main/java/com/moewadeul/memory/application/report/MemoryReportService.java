@@ -1,7 +1,6 @@
 package com.moewadeul.memory.application.report;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.moderation.ReportIntake;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryErrorCode;
@@ -30,7 +29,7 @@ public class MemoryReportService {
         Memory memory = memoryRepository
                 .findByIdForUpdate(memoryId)
                 .filter(Memory::isVisibleToOthers)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
         Instant now = clock.instant();
         long unreviewedReportCount = REPORT_INTAKE.accept(
                 () -> memoryReportRepository.existsByMemoryIdAndReporterId(memoryId, memberId),

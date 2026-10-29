@@ -1,7 +1,6 @@
 package com.moewadeul.trip.application;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.schedule.CampingSchedule;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.ActiveSpotChecker;
@@ -43,9 +42,7 @@ public class SoloTripCommandService {
 
     @Transactional
     public void delete(long memberId, long soloTripId) {
-        SoloTrip trip = soloTripRepository
-                .findById(soloTripId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        SoloTrip trip = soloTripRepository.findById(soloTripId).orElseThrow(BusinessException::notFound);
         trip.requireRegisteredBy(memberId);
         soloTripRepository.delete(trip);
     }

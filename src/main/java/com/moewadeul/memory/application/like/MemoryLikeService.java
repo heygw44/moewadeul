@@ -1,7 +1,6 @@
 package com.moewadeul.memory.application.like;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryRepository;
 import com.moewadeul.memory.infra.like.MemoryLikeMapper;
@@ -33,9 +32,6 @@ public class MemoryLikeService {
     }
 
     private void requireVisibleMemory(long memoryId) {
-        memoryRepository
-                .findById(memoryId)
-                .filter(Memory::isVisibleToOthers)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        memoryRepository.findById(memoryId).filter(Memory::isVisibleToOthers).orElseThrow(BusinessException::notFound);
     }
 }
