@@ -5,6 +5,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ class CiRetentionCleanupSchedulerTest {
         CiRetentionCleanupService service = mock(CiRetentionCleanupService.class);
         doThrow(new IllegalStateException("DB 연결 실패")).when(service).deleteRetentionExpired();
 
-        new CiRetentionCleanupScheduler(service, metrics).cleanUp();
+        new CiRetentionCleanupScheduler(service, new ScheduledJobRunner(metrics)).cleanUp();
 
         assertThat(meterRegistry
                         .get("moewadeul.scheduled.job.failures")

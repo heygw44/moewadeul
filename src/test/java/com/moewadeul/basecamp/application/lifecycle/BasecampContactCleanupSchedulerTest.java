@@ -5,6 +5,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,8 @@ class BasecampContactCleanupSchedulerTest {
         BasecampContactCleanupService service = mock(BasecampContactCleanupService.class);
         doThrow(new IllegalStateException("DB 연결 실패")).when(service).clearExpiredContacts();
 
-        new BasecampContactCleanupScheduler(service, new ScheduledJobMetrics(meterRegistry)).cleanUp();
+        new BasecampContactCleanupScheduler(service, new ScheduledJobRunner(new ScheduledJobMetrics(meterRegistry)))
+                .cleanUp();
 
         assertThat(meterRegistry
                         .get("moewadeul.scheduled.job.failures")

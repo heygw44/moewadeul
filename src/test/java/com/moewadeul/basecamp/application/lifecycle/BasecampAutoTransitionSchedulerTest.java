@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ class BasecampAutoTransitionSchedulerTest {
         BasecampAutoTransitionService service = mock(BasecampAutoTransitionService.class);
         doThrow(new IllegalStateException("DB 연결 실패")).when(service).run();
 
-        new BasecampAutoTransitionScheduler(service, metrics).transition();
+        new BasecampAutoTransitionScheduler(service, new ScheduledJobRunner(metrics)).transition();
 
         assertThat(meterRegistry
                         .get("moewadeul.scheduled.job.failures")
@@ -37,7 +38,7 @@ class BasecampAutoTransitionSchedulerTest {
         BasecampAutoTransitionService service = mock(BasecampAutoTransitionService.class);
         when(service.run()).thenReturn(new BasecampAutoTransitionService.Result(3, 5, 2));
 
-        new BasecampAutoTransitionScheduler(service, metrics).transition();
+        new BasecampAutoTransitionScheduler(service, new ScheduledJobRunner(metrics)).transition();
 
         assertThat(failureCount()).isEqualTo(1);
     }
@@ -48,7 +49,7 @@ class BasecampAutoTransitionSchedulerTest {
         BasecampAutoTransitionService service = mock(BasecampAutoTransitionService.class);
         when(service.run()).thenReturn(new BasecampAutoTransitionService.Result(3, 5, 0));
 
-        new BasecampAutoTransitionScheduler(service, metrics).transition();
+        new BasecampAutoTransitionScheduler(service, new ScheduledJobRunner(metrics)).transition();
 
         assertThat(failureCount()).isZero();
     }

@@ -5,6 +5,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
@@ -15,7 +16,7 @@ class GoCampingSyncSchedulerTest {
     private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private final GoCampingSyncService syncService = mock(GoCampingSyncService.class);
     private final GoCampingSyncScheduler scheduler =
-            new GoCampingSyncScheduler(syncService, new ScheduledJobMetrics(meterRegistry));
+            new GoCampingSyncScheduler(syncService, new ScheduledJobRunner(new ScheduledJobMetrics(meterRegistry)));
 
     @Test
     @DisplayName("[NFR-09] 동기화가 예외로 끝나면 스케줄러는 예외를 삼키고 작업 실패 수를 1 올린다")
