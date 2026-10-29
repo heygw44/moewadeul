@@ -1,6 +1,6 @@
 let loading: Promise<unknown> | null = null;
 
-export function loadFonts(): Promise<unknown> {
+function loadFonts(): Promise<unknown> {
   loading ??= import('../styles/fonts/pretendard/pretendardvariable-dynamic-subset.css').catch(() => {
     loading = null;
   });

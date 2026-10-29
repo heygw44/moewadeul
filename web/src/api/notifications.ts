@@ -1,7 +1,7 @@
 import { apiFetch } from './client';
 import type { NotificationItem, NotificationSetting, Page } from './types';
 
-export const NOTIFICATION_PAGE_SIZE = 20;
+const NOTIFICATION_PAGE_SIZE = 20;
 
 export function fetchNotifications(page: number, signal?: AbortSignal): Promise<Page<NotificationItem>> {
   return apiFetch<Page<NotificationItem>>('/api/me/notifications', {

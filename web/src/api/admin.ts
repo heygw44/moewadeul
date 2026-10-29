@@ -14,7 +14,7 @@ import type {
   SyncJobType,
 } from './types';
 
-export const ADMIN_PAGE_SIZE = 20;
+const ADMIN_PAGE_SIZE = 20;
 
 export function fetchAdminMemberReports(
   params: { status?: ReportStatus; urgent?: boolean; page: number },

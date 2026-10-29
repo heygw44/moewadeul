@@ -66,7 +66,7 @@ export function cancelMyApplication(basecampId: number, signal?: AbortSignal): P
   return apiFetch<void>(`/api/basecamps/${basecampId}/applications/me`, { method: 'DELETE', signal });
 }
 
-export const APPLICATION_PAGE_SIZE = 20;
+const APPLICATION_PAGE_SIZE = 20;
 
 export function fetchBasecampApplications(
   basecampId: number,
@@ -118,7 +118,7 @@ export function updateBasecampContact(basecampId: number, contactInfo: string): 
   });
 }
 
-export const MY_BASECAMP_PAGE_SIZE = 20;
+const MY_BASECAMP_PAGE_SIZE = 20;
 
 export function fetchMyBasecamps(query: MyBasecampsQuery, signal?: AbortSignal): Promise<Page<MyBasecampItem>> {
   return apiFetch<Page<MyBasecampItem>>('/api/me/basecamps', {
