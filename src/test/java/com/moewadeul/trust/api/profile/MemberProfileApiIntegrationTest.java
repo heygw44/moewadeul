@@ -1,10 +1,10 @@
 package com.moewadeul.trust.api.profile;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
@@ -20,7 +20,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -33,13 +32,13 @@ class MemberProfileApiIntegrationTest {
     private static final String LOCAL_IP = "127.0.0.1";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
     private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailVerificationIssuer emailVerificationIssuer;
@@ -50,11 +49,11 @@ class MemberProfileApiIntegrationTest {
     @Test
     @DisplayName("[NFR-11] 같은 회원의 프로필을 비회원은 닉네임만, 다른 회원·본인·관리자는 연령대·성별·신뢰 정보까지 본다")
     void viewsDifferByRequester() {
-        Member target = saveMember();
+        Member target = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie targetSession = verifiedSession(target);
         verifyIdentity(targetSession, 1990, "demo-target");
-        Cookie other = login(saveMember());
-        Member admin = saveMember();
+        Cookie other = login(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Member admin = memberFixture.saveWithPassword(VALID_PASSWORD);
         jdbc.update("UPDATE member SET status = 'ACTIVE', role = 'ADMIN' WHERE id = ?", admin.getId());
         Cookie adminSession = login(admin);
         String path = pathOf(target);
@@ -90,14 +89,14 @@ class MemberProfileApiIntegrationTest {
     @Test
     @DisplayName("[TR-01][F-15] 공개된 후기가 있으면 프로필에 단계 2, 완료 동행, 다시 동행 비율, 대표 태그를 채운다")
     void profileShowsCompanionRecord() {
-        Member target = saveMember();
+        Member target = memberFixture.saveWithPassword(VALID_PASSWORD);
         verifyIdentity(verifiedSession(target), 1990, "demo-target");
         CompanionReviewFixture fixture = new CompanionReviewFixture(jdbc, memberRepository);
         fixture.insertQualifiedRecord(target.getId(), MutableClock.DEFAULT_INSTANT.minus(Duration.ofDays(20)));
         jdbc.update("INSERT INTO companion_review_tag (review_id, tag) SELECT id, 'ON_TIME' FROM companion_review");
         jdbc.update(
                 "INSERT INTO companion_review_tag (review_id, tag) SELECT id, 'LATE' FROM companion_review LIMIT 1");
-        Cookie viewer = login(saveMember());
+        Cookie viewer = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult result = mvc.get().uri(pathOf(target)).cookie(viewer).exchange();
 
@@ -117,10 +116,10 @@ class MemberProfileApiIntegrationTest {
     @Test
     @DisplayName("[NFR-11] 어느 요청자의 응답에도 이메일, 출생연도, CI 해시 필드가 없다")
     void neverExposesSensitiveFields() {
-        Member target = saveMember();
+        Member target = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie targetSession = verifiedSession(target);
         verifyIdentity(targetSession, 1990, "demo-target");
-        Cookie other = login(saveMember());
+        Cookie other = login(memberFixture.saveWithPassword(VALID_PASSWORD));
         String path = pathOf(target);
 
         for (MvcTestResult result : new MvcTestResult[] {
@@ -138,9 +137,9 @@ class MemberProfileApiIntegrationTest {
     @Test
     @DisplayName("[NFR-11] 본인확인이 없으면 자기 신고 값을 verified false로 응답하고, 신고하지 않은 값은 null이다")
     void withoutVerificationUsesSelfReportedValues() {
-        Member target = saveMember();
+        Member target = memberFixture.saveWithPassword(VALID_PASSWORD);
         jdbc.update("UPDATE member SET self_age_group = 'FORTIES' WHERE id = ?", target.getId());
-        Cookie viewer = login(saveMember());
+        Cookie viewer = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult result = mvc.get().uri(pathOf(target)).cookie(viewer).exchange();
 
@@ -163,10 +162,10 @@ class MemberProfileApiIntegrationTest {
     @Test
     @DisplayName("[NFR-11] 본인확인한 성인은 자기 신고 값이 달라도 본인확인한 값(verified true)을 응답한다")
     void verifiedValuesWinOverSelfReported() {
-        Member target = saveMember();
+        Member target = memberFixture.saveWithPassword(VALID_PASSWORD);
         jdbc.update("UPDATE member SET self_age_group = 'TWENTIES', self_gender = 'MALE' WHERE id = ?", target.getId());
         verifyIdentity(verifiedSession(target), 1990, "demo-target");
-        Cookie viewer = login(saveMember());
+        Cookie viewer = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult result = mvc.get().uri(pathOf(target)).cookie(viewer).exchange();
 
@@ -179,10 +178,10 @@ class MemberProfileApiIntegrationTest {
     @Test
     @DisplayName("[NFR-11][ID-03] 본인확인한 미성년은 연령대로 자기 신고 값(verified false)을, 성별로 본인확인 값을 응답한다")
     void verifiedMinorUsesSelfReportedAgeGroup() {
-        Member target = saveMember();
+        Member target = memberFixture.saveWithPassword(VALID_PASSWORD);
         jdbc.update("UPDATE member SET self_age_group = 'TWENTIES' WHERE id = ?", target.getId());
         verifyIdentity(verifiedSession(target), 2008, "demo-minor");
-        Cookie viewer = login(saveMember());
+        Cookie viewer = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult result = mvc.get().uri(pathOf(target)).cookie(viewer).exchange();
 
@@ -196,7 +195,7 @@ class MemberProfileApiIntegrationTest {
     @Test
     @DisplayName("없는 회원의 프로필은 비회원·회원 모두 404 NOT_FOUND다")
     void missingMemberIsNotFound() {
-        Cookie viewer = login(saveMember());
+        Cookie viewer = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult anonymous =
                 mvc.get().uri("/api/members/999999999/profile").exchange();
@@ -212,9 +211,9 @@ class MemberProfileApiIntegrationTest {
     @Test
     @DisplayName("탈퇴한 회원의 프로필은 404 NOT_FOUND다")
     void withdrawnMemberIsNotFound() {
-        Member target = saveMember();
+        Member target = memberFixture.saveWithPassword(VALID_PASSWORD);
         jdbc.update("UPDATE member SET status = 'WITHDRAWN' WHERE id = ?", target.getId());
-        Cookie viewer = login(saveMember());
+        Cookie viewer = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult anonymous = mvc.get().uri(pathOf(target)).exchange();
         MvcTestResult loggedIn = mvc.get().uri(pathOf(target)).cookie(viewer).exchange();
@@ -233,13 +232,6 @@ class MemberProfileApiIntegrationTest {
         } catch (java.io.UnsupportedEncodingException e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(VALID_PASSWORD))
-                .build());
     }
 
     private Cookie login(Member member) {

@@ -1,15 +1,14 @@
 package com.moewadeul.trip.api;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -24,7 +23,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -37,16 +35,13 @@ class SoloTripApiIntegrationTest {
     private static final String LOCAL_IP = "127.0.0.1";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private SpotJpaRepository spotRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailVerificationIssuer emailVerificationIssuer;
@@ -59,7 +54,7 @@ class SoloTripApiIntegrationTest {
     void registerListAndDelete() {
         // given
         long spotId = saveSpot();
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult created =
@@ -93,7 +88,7 @@ class SoloTripApiIntegrationTest {
     void sameKeyRegistersOneTrip() {
         // given
         long spotId = saveSpot();
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         String key = UUID.randomUUID().toString();
         String body = body(spotId, "2026-11-07", "2026-11-09");
 
@@ -115,7 +110,7 @@ class SoloTripApiIntegrationTest {
         // given
         long spotId = saveSpot();
         String body = body(spotId, "2026-11-07", "2026-11-09");
-        Cookie unverified = login(saveMember());
+        Cookie unverified = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult anonymous = mvc.post()
@@ -144,7 +139,7 @@ class SoloTripApiIntegrationTest {
     void rejectsInvalidRequest() {
         // given
         long spotId = saveSpot();
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult today =
@@ -171,7 +166,7 @@ class SoloTripApiIntegrationTest {
     void overlapIsConflict() {
         // given
         long spotId = saveSpot();
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         send(mvc.post().uri("/api/solo-trips"), session, body(spotId, "2026-11-07", "2026-11-09"));
 
         // when
@@ -188,8 +183,8 @@ class SoloTripApiIntegrationTest {
     void otherMembersTripIsForbidden() {
         // given
         long spotId = saveSpot();
-        Cookie owner = verifiedSession(saveMember());
-        Cookie other = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie other = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int tripId = tripIdOf(send(mvc.post().uri("/api/solo-trips"), owner, body(spotId, "2026-11-07", "2026-11-09")));
 
         // when
@@ -247,11 +242,6 @@ class SoloTripApiIntegrationTest {
                 ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT),
                 MutableClock.DEFAULT_INSTANT);
         return spotRepository.save(spot).getId();
-    }
-
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(
-                aMember().passwordHash(passwordEncoder.encode(VALID_PASSWORD)).build());
     }
 
     private Cookie login(Member member) {

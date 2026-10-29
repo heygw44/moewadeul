@@ -1,9 +1,13 @@
 package com.moewadeul.spot.application.park;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
@@ -30,6 +34,12 @@ class ParkAreaJudgeServiceIntegrationTest {
     private static final Instant JUDGED_AT = Instant.parse("2026-10-06T01:00:00Z");
 
     @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
+
+    @Autowired
+    private SpotFixture spotFixture;
+
+    @Autowired
     private ParkAreaJudgeService parkAreaJudgeService;
 
     @Autowired
@@ -42,7 +52,7 @@ class ParkAreaJudgeServiceIntegrationTest {
     @DisplayName("[F-07] 좌표가 공원 경계 안이면 경고 대상으로 판정하고 그 경계의 ID를 돌려준다")
     void judgesPointInsideBoundaryAsWarned() {
         // given
-        long areaId = insertProtectedArea(PARK_SQUARE);
+        long areaId = protectedAreaFixture.insert(aProtectedArea().longLatBoundary(PARK_SQUARE));
         clock.setInstant(JUDGED_AT);
 
         // when
@@ -58,7 +68,7 @@ class ParkAreaJudgeServiceIntegrationTest {
     @DisplayName("[F-07] 좌표를 포함하는 공원 경계가 없으면 경고 없이 판정하고 경계 ID는 비운다")
     void judgesPointOutsideEveryBoundaryAsNotWarned() {
         // given
-        insertProtectedArea(PARK_SQUARE);
+        protectedAreaFixture.insert(aProtectedArea().longLatBoundary(PARK_SQUARE));
         clock.setInstant(JUDGED_AT);
 
         // when
@@ -74,8 +84,9 @@ class ParkAreaJudgeServiceIntegrationTest {
     @DisplayName("[F-07] 여러 조각으로 된 경계에서 두 번째 조각 안의 좌표도 경고 대상으로 판정한다")
     void judgesPointInsideSecondPolygonOfMultiPolygonAsWarned() {
         // given
-        long areaId = insertProtectedArea("MULTIPOLYGON(((126 35, 126.2 35, 126.2 35.2, 126 35.2, 126 35)),"
-                + " ((128 36, 128.2 36, 128.2 36.2, 128 36.2, 128 36)))");
+        long areaId = protectedAreaFixture.insert(aProtectedArea()
+                .longLatBoundary("MULTIPOLYGON(((126 35, 126.2 35, 126.2 35.2, 126 35.2, 126 35)),"
+                        + " ((128 36, 128.2 36, 128.2 36.2, 128 36.2, 128 36)))"));
 
         // when
         ParkAreaJudgement judgement = parkAreaJudgeService.judge(new GeoPoint(36.1, 128.1));
@@ -89,7 +100,8 @@ class ParkAreaJudgeServiceIntegrationTest {
     @DisplayName("[F-07] 위도와 경도를 뒤바꾼 좌표는 경계 밖으로 판정한다")
     void judgesSwappedCoordinateAsOutside() {
         // given
-        long areaId = insertProtectedArea("MULTIPOLYGON(((10 20, 11 20, 11 21, 10 21, 10 20)))");
+        long areaId = protectedAreaFixture.insert(
+                aProtectedArea().longLatBoundary("MULTIPOLYGON(((10 20, 11 20, 11 21, 10 21, 10 20)))"));
 
         // when
         ParkAreaJudgement inside = parkAreaJudgeService.judge(new GeoPoint(20.5, 10.5));
@@ -105,8 +117,9 @@ class ParkAreaJudgeServiceIntegrationTest {
     @DisplayName("[F-07] 겹친 경계 두 곳에 들어가는 좌표는 ID가 작은 경계로 판정한다")
     void choosesSmallestIdWhenBoundariesOverlap() {
         // given
-        long smallerId = insertProtectedArea(PARK_SQUARE);
-        long largerId = insertProtectedArea("MULTIPOLYGON(((126.5 36.5, 128 36.5, 128 38, 126.5 38, 126.5 36.5)))");
+        long smallerId = protectedAreaFixture.insert(aProtectedArea().longLatBoundary(PARK_SQUARE));
+        long largerId = protectedAreaFixture.insert(aProtectedArea()
+                .longLatBoundary("MULTIPOLYGON(((126.5 36.5, 128 36.5, 128 38, 126.5 38, 126.5 36.5)))"));
 
         // when
         ParkAreaJudgement judgement = parkAreaJudgeService.judge(INSIDE_PARK);
@@ -122,7 +135,8 @@ class ParkAreaJudgeServiceIntegrationTest {
         // given
         long areaId = 0;
         for (int i = 0; i < 10; i++) {
-            long id = insertProtectedArea(circleWkt(126.0 + i * 0.5, 36.0, 0.05, 30_000));
+            long id = protectedAreaFixture.insert(
+                    aProtectedArea().longLatBoundary(circleWkt(126.0 + i * 0.5, 36.0, 0.05, 30_000)));
             if (i == 6) {
                 areaId = id;
             }
@@ -149,8 +163,9 @@ class ParkAreaJudgeServiceIntegrationTest {
     @DisplayName("[F-06][F-07] 재판정은 상태와 상관없이 모든 박지를 새 경계로 다시 판정하고, 박지가 아닌 장소와 updated_at은 건드리지 않는다")
     void rejudgesEveryBakjiWithCurrentBoundaries() {
         // given
-        long areaId = insertProtectedArea(PARK_SQUARE);
-        long staleAreaId = insertProtectedArea("MULTIPOLYGON(((129 35, 129.5 35, 129.5 35.5, 129 35.5, 129 35)))");
+        long areaId = protectedAreaFixture.insert(aProtectedArea().longLatBoundary(PARK_SQUARE));
+        long staleAreaId = protectedAreaFixture.insert(
+                aProtectedArea().longLatBoundary("MULTIPOLYGON(((129 35, 129.5 35, 129.5 35.5, 129 35.5, 129 35)))"));
         long insideId = insertSpot("BAKJI", "ACTIVE", INSIDE_PARK);
         long outsideId = insertSpot("BAKJI", "ACTIVE", OUTSIDE_EVERY_AREA);
         long staleWarnedId = insertSpot("BAKJI", "ACTIVE", OUTSIDE_EVERY_AREA);
@@ -183,8 +198,9 @@ class ParkAreaJudgeServiceIntegrationTest {
     @DisplayName("[F-06][F-07] 경고를 유지하면서 근거 경계만 바뀐 박지는 새 경고와 해제에 세지 않고 새 경계로 기록한다")
     void doesNotCountBakjiWhoseWarningStaysWithChangedArea() {
         // given
-        long oldAreaId = insertProtectedArea("MULTIPOLYGON(((129 35, 129.5 35, 129.5 35.5, 129 35.5, 129 35)))");
-        long newAreaId = insertProtectedArea(PARK_SQUARE);
+        long oldAreaId = protectedAreaFixture.insert(
+                aProtectedArea().longLatBoundary("MULTIPOLYGON(((129 35, 129.5 35, 129.5 35.5, 129 35.5, 129 35)))"));
+        long newAreaId = protectedAreaFixture.insert(aProtectedArea().longLatBoundary(PARK_SQUARE));
         long bakjiId = insertSpot("BAKJI", "ACTIVE", INSIDE_PARK);
         jdbcTemplate.update(
                 "UPDATE spot SET park_warning = TRUE, protected_area_id = ?, area_checked_at = ? WHERE id = ?",
@@ -205,7 +221,7 @@ class ParkAreaJudgeServiceIntegrationTest {
     @DisplayName("[F-06][F-07] 재판정은 한 번에 기록하는 묶음(1,000건)보다 박지가 많아도 모든 박지를 판정한다")
     void rejudgesEveryBakjiAcrossUpdateChunks() {
         // given
-        long areaId = insertProtectedArea(PARK_SQUARE);
+        long areaId = protectedAreaFixture.insert(aProtectedArea().longLatBoundary(PARK_SQUARE));
         String prefix = TestSequence.unique("대량박지");
         int insideCount = 600;
         int outsideCount = 401;
@@ -226,7 +242,7 @@ class ParkAreaJudgeServiceIntegrationTest {
     @DisplayName("[F-06][F-07] 재판정 묶음은 afterId보다 큰 박지만 ID 순서로 limit건 판정하고, 남은 박지가 없으면 빈 마지막 ID를 돌려준다")
     void rejudgesOnlyOneChunkAfterGivenId() {
         // given
-        long areaId = insertProtectedArea(PARK_SQUARE);
+        long areaId = protectedAreaFixture.insert(aProtectedArea().longLatBoundary(PARK_SQUARE));
         long firstId = insertSpot("BAKJI", "ACTIVE", INSIDE_PARK);
         long secondId = insertSpot("BAKJI", "ACTIVE", INSIDE_PARK);
         long thirdId = insertSpot("BAKJI", "ACTIVE", INSIDE_PARK);
@@ -304,30 +320,11 @@ class ParkAreaJudgeServiceIntegrationTest {
         return wkt.toString();
     }
 
-    private long insertProtectedArea(String longLatWkt) {
-        String name = TestSequence.unique("경계");
-        jdbcTemplate.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES (?, 'NATIONAL_PARK', 'KDPA', '2026-01-01',"
-                        + " ST_GeomFromText(?, 4326, 'axis-order=long-lat'), NOW(6), NOW(6))",
-                name,
-                longLatWkt);
-        return jdbcTemplate.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
-    }
-
-    // 장소 좌표는 SRID 4326 WKT 기본 순서인 (위도 경도)로 넣는다.
     private long insertSpot(String type, String status, GeoPoint at) {
-        String name = TestSequence.unique(type);
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, ?, ?, ?)",
-                type,
-                name,
-                String.format(Locale.ROOT, "POINT(%s %s)", at.latitude(), at.longitude()),
-                status,
-                Timestamp.from(SAVED_AT),
-                Timestamp.from(SAVED_AT));
-        return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
+        return spotFixture.insert(aSpot().type(type)
+                .status(status)
+                .at(at.latitude(), at.longitude())
+                .createdAt(SAVED_AT));
     }
 
     private SpotJudgementRow judgementOf(long spotId) {

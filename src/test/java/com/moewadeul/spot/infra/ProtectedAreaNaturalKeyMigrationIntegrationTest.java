@@ -1,9 +1,13 @@
 package com.moewadeul.spot.infra;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
+import com.moewadeul.common.testsupport.SpotFixture;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +31,8 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
     JdbcTemplate root;
     DriverManagerDataSource dataSource;
     JdbcTemplate jdbcTemplate;
+    SpotFixture spotFixture;
+    ProtectedAreaFixture protectedAreaFixture;
 
     @BeforeEach
     void createSchema() {
@@ -35,6 +41,8 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
         root.execute("CREATE DATABASE " + SCHEMA);
         dataSource = dataSourceFor(SCHEMA);
         jdbcTemplate = new JdbcTemplate(dataSource);
+        spotFixture = new SpotFixture(jdbcTemplate);
+        protectedAreaFixture = new ProtectedAreaFixture(jdbcTemplate);
         migrateTo("54");
     }
 
@@ -47,13 +55,14 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
     @DisplayName("자연 키가 같은 경계가 여러 행이면 가장 작은 id만 남기고, 지운 행을 가리키던 장소는 남은 행을 가리킨다")
     void duplicatesCollapseToSmallestIdAndSpotsFollow() {
         // given
-        long kept = insertProtectedArea("KDPA", "NATIONAL_PARK", "지리산");
-        long duplicate = insertProtectedArea("KDPA", "NATIONAL_PARK", "지리산");
-        long otherType = insertProtectedArea("KDPA", "PROVINCIAL_PARK", "지리산");
-        long unrelated = insertProtectedArea("KDPA", "NATIONAL_PARK", "설악산");
-        long spotOnDuplicate = insertSpot(duplicate);
-        long spotOnKept = insertSpot(kept);
-        long spotOnUnrelated = insertSpot(unrelated);
+        long kept = protectedAreaFixture.insert(aProtectedArea().name("지리산"));
+        long duplicate = protectedAreaFixture.insert(aProtectedArea().name("지리산"));
+        long otherType = protectedAreaFixture.insert(
+                aProtectedArea().areaType("PROVINCIAL_PARK").name("지리산"));
+        long unrelated = protectedAreaFixture.insert(aProtectedArea().name("설악산"));
+        long spotOnDuplicate = spotFixture.insert(aSpot().parkWarning(true).protectedAreaId(duplicate));
+        long spotOnKept = spotFixture.insert(aSpot().parkWarning(true).protectedAreaId(kept));
+        long spotOnUnrelated = spotFixture.insert(aSpot().parkWarning(true).protectedAreaId(unrelated));
 
         // when
         migrateTo("55");
@@ -73,10 +82,10 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
     void secondRowWithSameNaturalKeyIsRejected() {
         // given
         migrateTo("55");
-        insertProtectedArea("KDPA", "NATIONAL_PARK", "지리산");
+        protectedAreaFixture.insert(aProtectedArea().name("지리산"));
 
         // when & then
-        assertThatThrownBy(() -> insertProtectedArea("KDPA", "NATIONAL_PARK", "지리산"))
+        assertThatThrownBy(() -> protectedAreaFixture.insert(aProtectedArea().name("지리산")))
                 .isInstanceOf(DuplicateKeyException.class);
     }
 
@@ -90,28 +99,6 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
 
     private void migrateTo(String version) {
         Flyway.configure().dataSource(dataSource).target(version).load().migrate();
-    }
-
-    private long insertProtectedArea(String source, String areaType, String name) {
-        jdbcTemplate.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES (?, ?, ?, '2026-01-01',"
-                        + " ST_GeomFromText('MULTIPOLYGON(((127 37, 127.1 37, 127.1 37.1, 127 37.1, 127 37)))', 4326,"
-                        + " 'axis-order=long-lat'), NOW(6), NOW(6))",
-                name,
-                areaType,
-                source);
-        return jdbcTemplate.queryForObject("SELECT MAX(id) FROM protected_area", Long.class);
-    }
-
-    private long insertSpot(long protectedAreaId) {
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, park_warning, protected_area_id, status,"
-                        + " created_at, updated_at)"
-                        + " VALUES ('BAKJI', '야영장', ST_GeomFromText('POINT(37.05 127.05)', 4326), 60, 127, TRUE, ?,"
-                        + " 'ACTIVE', NOW(6), NOW(6))",
-                protectedAreaId);
-        return jdbcTemplate.queryForObject("SELECT MAX(id) FROM spot", Long.class);
     }
 
     private long versionOf(long spotId) {

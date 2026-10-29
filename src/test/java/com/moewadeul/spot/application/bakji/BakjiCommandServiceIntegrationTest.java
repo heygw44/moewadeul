@@ -1,6 +1,7 @@
 package com.moewadeul.spot.application.bakji;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
@@ -10,9 +11,11 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.ErrorCode;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.SpotParkWarning;
 import com.moewadeul.spot.application.detail.SpotDetailQueryService;
@@ -22,7 +25,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,13 +51,19 @@ class BakjiCommandServiceIntegrationTest {
                     + " 뫼와들은 제보된 정보를 보여 줄 뿐이고, 야영 중에 생긴 일에는 책임지지 않아요.";
 
     @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
+
+    @Autowired
+    private SpotFixture spotFixture;
+
+    @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private BakjiCommandService bakjiCommandService;
 
     @Autowired
     private SpotDetailQueryService spotDetailQueryService;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -67,7 +75,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07][SF-06] 박지를 제보하면 ACTIVE 박지와 제보자, 입력한 내용이 저장되고 경고 없는 안내 문구와 관할 기관 확인 안내를 돌려준다")
     void reportSavesBakjiWithReporter() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
 
         // when
         BakjiSubmission submission = bakjiCommandService.report(
@@ -99,8 +107,12 @@ class BakjiCommandServiceIntegrationTest {
     void reportInsideBoundaryWarnsWithAreaName() {
         // given
         String areaName = TestSequence.unique("설악산");
-        long areaId = insertProtectedArea(areaName, PARK_SQUARE);
-        long reporterId = saveMember();
+        long areaId = protectedAreaFixture.insert(aProtectedArea()
+                .name(areaName)
+                .source(AREA_SOURCE.name())
+                .sourceDate(AREA_SOURCE_DATE)
+                .longLatBoundary(PARK_SQUARE));
+        long reporterId = memberFixture.save().getId();
 
         // when
         BakjiSubmission submission =
@@ -124,7 +136,7 @@ class BakjiCommandServiceIntegrationTest {
         // given
         double baseLat = 37.6;
         double baseLng = 128.7;
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long at49 = bakjiCommandService
                 .report(reporterId, namedReport("49m 박지", baseLat + 49 * DEGREES_PER_METER, baseLng))
                 .spotId();
@@ -132,8 +144,12 @@ class BakjiCommandServiceIntegrationTest {
                 .report(reporterId, namedReport("20m 박지", baseLat + 20 * DEGREES_PER_METER, baseLng))
                 .spotId();
         bakjiCommandService.report(reporterId, namedReport("51m 박지", baseLat + 51 * DEGREES_PER_METER, baseLng));
-        insertSpot("BAKJI", "PENDING_REVIEW", baseLat + 10 * DEGREES_PER_METER, baseLng);
-        insertSpot("CAMPSITE", "ACTIVE", baseLat + 5 * DEGREES_PER_METER, baseLng);
+        spotFixture.insert(aSpot().status("PENDING_REVIEW")
+                .at(baseLat + 10 * DEGREES_PER_METER, baseLng)
+                .createdAt(MutableClock.DEFAULT_INSTANT));
+        spotFixture.insert(aSpot().type("CAMPSITE")
+                .at(baseLat + 5 * DEGREES_PER_METER, baseLng)
+                .createdAt(MutableClock.DEFAULT_INSTANT));
 
         // when
         BakjiSubmission submission = bakjiCommandService.report(reporterId, namedReport("새 박지", baseLat, baseLng));
@@ -151,7 +167,7 @@ class BakjiCommandServiceIntegrationTest {
         // given
         double baseLat = 37.6;
         double baseLng = 128.7;
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < 12; i++) {
             ids.add(bakjiCommandService
@@ -172,7 +188,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 기상청 격자 밖 좌표나 허용하지 않는 값으로 제보하면 INVALID_INPUT으로 거부하고 아무것도 저장하지 않는다")
     void reportRejectsInvalidInput() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         BakjiReportCommand outsideGrid = minimalReport(35.6762, 139.6503);
         BakjiReportCommand badGroundType = new BakjiReportCommand("이름", 37.6, 128.7, null, true, true, null, "MUD");
         BakjiReportCommand badSignalLevel = new BakjiReportCommand("이름", 37.6, 128.7, null, true, true, "STRONG", null);
@@ -196,7 +212,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 허용하지 않는 바닥 유형과 통신 상태의 오류 메시지는 올바른 조사로 허용 값을 알려 준다")
     void invalidEnumMessagesUseCorrectParticles() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
 
         // when & then
         assertThatThrownBy(() -> bakjiCommandService.report(
@@ -211,7 +227,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 제보자가 수정하면 보낸 필드만 바뀌고, null로 보낸 설명·통신 상태·바닥 유형은 지워지며, 안 보낸 필드는 그대로다")
     void reporterUpdatesOnlySentFields() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long spotId = bakjiCommandService
                 .report(
                         reporterId,
@@ -246,8 +262,8 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 다른 회원이 수정하거나 삭제하면 ACCESS_DENIED로 거부하고 박지는 그대로다")
     void otherMemberCannotUpdateOrDelete() {
         // given
-        long reporterId = saveMember();
-        long strangerId = saveMember();
+        long reporterId = memberFixture.save().getId();
+        long strangerId = memberFixture.save().getId();
         long spotId = bakjiCommandService
                 .report(reporterId, minimalReport(37.6, 128.7))
                 .spotId();
@@ -271,8 +287,8 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 좌표를 경계 안에서 밖으로 옮기면 경고가 꺼지고 경계 ID가 비며, 같은 좌표를 다시 보내면 판정 시각이 그대로다")
     void movingCoordinateRejudgesBoundaryOnlyWhenChanged() {
         // given
-        insertProtectedArea(TestSequence.unique("경계"), PARK_SQUARE);
-        long reporterId = saveMember();
+        protectedAreaFixture.insert(aProtectedArea().longLatBoundary(PARK_SQUARE));
+        long reporterId = memberFixture.save().getId();
         BakjiSubmission created =
                 bakjiCommandService.report(reporterId, minimalReport(INSIDE_PARK_LAT, INSIDE_PARK_LNG));
         long spotId = created.spotId();
@@ -318,7 +334,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 수정하면 중복 후보를 수정한 뒤의 좌표로 계산한다")
     void updateComputesDuplicatesAtNewLocation() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long neighbor = bakjiCommandService
                 .report(reporterId, namedReport("이웃", 36.5, 128.0))
                 .spotId();
@@ -343,7 +359,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 값이 규칙을 어기는 수정 요청은 INVALID_INPUT으로 거부하고 박지는 그대로다")
     void updateRejectsInvalidInput() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long spotId = bakjiCommandService
                 .report(reporterId, minimalReport(37.6, 128.7))
                 .spotId();
@@ -386,7 +402,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 제보자가 삭제하면 상태가 DELETED가 되어 장소 상세가 404가 되고, 다시 수정하거나 삭제해도 NOT_FOUND다")
     void deleteHidesBakji() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long spotId = bakjiCommandService
                 .report(reporterId, minimalReport(37.6, 128.7))
                 .spotId();
@@ -409,9 +425,10 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 없는 장소, 공공데이터 장소, ACTIVE가 아닌 박지는 NOT_FOUND이고, 다른 회원의 비ACTIVE 박지도 403이 아니라 404다")
     void updateAndDeleteOfNonActiveBakjiAreNotFound() {
         // given
-        long reporterId = saveMember();
-        long strangerId = saveMember();
-        long campsiteId = insertSpot("CAMPSITE", "ACTIVE", 37.6, 128.7);
+        long reporterId = memberFixture.save().getId();
+        long strangerId = memberFixture.save().getId();
+        long campsiteId =
+                spotFixture.insert(aSpot().type("CAMPSITE").at(37.6, 128.7).createdAt(MutableClock.DEFAULT_INSTANT));
         long hiddenId = bakjiCommandService
                 .report(reporterId, minimalReport(37.5, 128.6))
                 .spotId();
@@ -436,10 +453,6 @@ class BakjiCommandServiceIntegrationTest {
             ErrorCode code = e.getErrorCode();
             assertThat(code).isEqualTo(CommonErrorCode.NOT_FOUND);
         });
-    }
-
-    private long saveMember() {
-        return memberRepository.save(aMember().build()).getId();
     }
 
     private static BakjiReportCommand minimalReport(double lat, double lng) {
@@ -507,34 +520,6 @@ class BakjiCommandServiceIntegrationTest {
         BakjiUpdateCommand build() {
             return new BakjiUpdateCommand(name, lat, lng, description, hasWater, hasToilet, signalLevel, groundType);
         }
-    }
-
-    private long insertProtectedArea(String name, String longLatWkt) {
-        jdbc.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES (?, 'NATIONAL_PARK', ?, ?,"
-                        + " ST_GeomFromText(?, 4326, 'axis-order=long-lat'), NOW(6), NOW(6))",
-                name,
-                AREA_SOURCE.name(),
-                AREA_SOURCE_DATE,
-                longLatWkt);
-        return jdbc.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
-    }
-
-    // 좌표는 SRID 4326 WKT 기본 순서인 (위도 경도)로 넣는다.
-    private long insertSpot(String type, String status, double lat, double lng) {
-        String name = TestSequence.unique(type);
-        Timestamp now = Timestamp.from(MutableClock.DEFAULT_INSTANT);
-        jdbc.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, ?, ?, ?)",
-                type,
-                name,
-                String.format(Locale.ROOT, "POINT(%s %s)", lat, lng),
-                status,
-                now,
-                now);
-        return jdbc.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
     }
 
     private SpotRow spotRow(long spotId) {

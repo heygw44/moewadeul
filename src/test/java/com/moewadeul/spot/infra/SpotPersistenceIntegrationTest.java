@@ -1,9 +1,11 @@
 package com.moewadeul.spot.infra;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -25,6 +27,9 @@ class SpotPersistenceIntegrationTest {
             "MULTIPOLYGON(((126.9 37.6, 127.1 37.6, 127.1 37.7, 126.9 37.7, 126.9 37.6)))";
 
     @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
+
+    @Autowired
     private SpotRepository spotRepository;
 
     @Autowired
@@ -34,7 +39,8 @@ class SpotPersistenceIntegrationTest {
     @DisplayName("[F-07] 공원 경계 안으로 판정한 박지를 저장하면 경고, 경계 ID, 판정 시각이 spot 행에 남는다")
     void savesBakjiJudgedInsideParkBoundary() {
         // given
-        long protectedAreaId = insertProtectedArea("북한산국립공원", BUKHANSAN_BOUNDARY_WKT);
+        long protectedAreaId =
+                protectedAreaFixture.insert(aProtectedArea().name("북한산국립공원").longLatBoundary(BUKHANSAN_BOUNDARY_WKT));
         Instant now = MutableClock.DEFAULT_INSTANT;
         Instant checkedAt = now.minusSeconds(1);
         Spot bakji = Spot.bakji("능선 아래 평지", BUKHANSAN, ParkAreaJudgement.inside(protectedAreaId, checkedAt), now);
@@ -69,16 +75,6 @@ class SpotPersistenceIntegrationTest {
         assertThat(stored.parkWarning()).isFalse();
         assertThat(stored.protectedAreaId()).isNull();
         assertThat(stored.areaCheckedAt()).isEqualTo(now);
-    }
-
-    private long insertProtectedArea(String name, String boundaryWkt) {
-        jdbcTemplate.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES (?, 'NATIONAL_PARK', 'KDPA', '2026-01-01',"
-                        + " ST_GeomFromText(?, 4326, 'axis-order=long-lat'), NOW(6), NOW(6))",
-                name,
-                boundaryWkt);
-        return jdbcTemplate.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
     }
 
     private StoredSpot findStoredSpot(long id) {

@@ -1,11 +1,13 @@
 package com.moewadeul.admin.api.program;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
@@ -36,6 +38,9 @@ class AdminProgramApiIntegrationTest {
     private static final String PROGRAMS = "/api/programs";
     private static final String PASSWORD = "Valid-pass1";
     private static final String SESSION_COOKIE = "SESSION";
+
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     private MockMvcTester mvc;
@@ -588,15 +593,7 @@ class AdminProgramApiIntegrationTest {
     }
 
     private long insertSpot(String status) {
-        String name = TestSequence.unique("장소");
-        jdbc.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES ('CAMPSITE', ?, ST_SRID(POINT(127.3, 37.3), 4326), 60, 127, ?, ?, ?)",
-                name,
-                status,
-                clock.instant(),
-                clock.instant());
-        return jdbc.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
+        return spotFixture.insert(aSpot().type("CAMPSITE").status(status).createdAt(clock.instant()));
     }
 
     private long insertApplication(long programId, String status, Instant now) {

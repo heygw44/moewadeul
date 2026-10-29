@@ -1,15 +1,14 @@
 package com.moewadeul.memory.api.like;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +18,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -33,13 +31,10 @@ class MemoryLikeApiIntegrationTest {
     private static final String YESTERDAY = "2026-10-04";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailVerificationIssuer emailVerificationIssuer;
@@ -51,8 +46,8 @@ class MemoryLikeApiIntegrationTest {
     @DisplayName("[F-33][MM-09] 공개 기록에 좋아요를 두 번 눌러도 liked true에 1개이고, 취소를 두 번 해도 liked false에 0개다")
     void likeAndUnlikeAreRepeatable() {
         // given
-        Cookie owner = verifiedSession(saveMember());
-        Cookie viewer = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie viewer = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = writePublic(owner);
 
         // when
@@ -79,12 +74,12 @@ class MemoryLikeApiIntegrationTest {
     @DisplayName("[F-33][MM-09] 여러 회원의 좋아요는 각자 한 번씩 세고, 작성자도 자기 공개 기록에 누를 수 있다")
     void countsEachMemberOnceIncludingAuthor() {
         // given
-        Cookie owner = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = writePublic(owner);
 
         // when
-        send(mvc.put().uri(likeUri(memoryId)), verifiedSession(saveMember()));
-        send(mvc.put().uri(likeUri(memoryId)), verifiedSession(saveMember()));
+        send(mvc.put().uri(likeUri(memoryId)), verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)));
+        send(mvc.put().uri(likeUri(memoryId)), verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)));
         MvcTestResult byAuthor = send(mvc.put().uri(likeUri(memoryId)), owner);
 
         // then
@@ -97,9 +92,9 @@ class MemoryLikeApiIntegrationTest {
     @DisplayName("[F-33][TR-03] 이메일 인증 전 회원은 좋아요가 403 MEMBER_NOT_VERIFIED이고, 로그인하지 않으면 401이다")
     void requiresVerifiedMember() {
         // given
-        Cookie owner = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = writePublic(owner);
-        Cookie unverified = login(saveMember());
+        Cookie unverified = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult unverifiedLike = send(mvc.put().uri(likeUri(memoryId)), unverified);
@@ -118,8 +113,8 @@ class MemoryLikeApiIntegrationTest {
     @DisplayName("[F-33][MM-09] 비공개 기록과 없는 기록의 좋아요는 작성자에게도 404이고, 다시 공개하면 남아 있던 좋아요 수가 돌아온다")
     void privateAndMissingMemoryAreNotFound() {
         // given
-        Cookie owner = verifiedSession(saveMember());
-        Cookie viewer = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie viewer = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = writePublic(owner);
         send(mvc.put().uri(likeUri(memoryId)), viewer);
         send(
@@ -156,10 +151,10 @@ class MemoryLikeApiIntegrationTest {
     @DisplayName("[F-33][MM-09] 기록을 지우면 그 기록의 좋아요 행도 함께 지워진다")
     void deletingMemoryRemovesLikes() {
         // given
-        Cookie owner = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = writePublic(owner);
-        send(mvc.put().uri(likeUri(memoryId)), verifiedSession(saveMember()));
-        send(mvc.put().uri(likeUri(memoryId)), verifiedSession(saveMember()));
+        send(mvc.put().uri(likeUri(memoryId)), verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)));
+        send(mvc.put().uri(likeUri(memoryId)), verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)));
         assertThat(likeRows(memoryId)).isEqualTo(2);
 
         // when
@@ -200,11 +195,6 @@ class MemoryLikeApiIntegrationTest {
                 .cookie(session)
                 .header("Idempotency-Key", UUID.randomUUID().toString())
                 .exchange();
-    }
-
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(
-                aMember().passwordHash(passwordEncoder.encode(VALID_PASSWORD)).build());
     }
 
     private Cookie login(Member member) {

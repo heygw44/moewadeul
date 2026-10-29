@@ -1,9 +1,10 @@
 package com.moewadeul.spot.infra.map;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.SpotClosedNow;
 import com.moewadeul.spot.domain.SpotType;
@@ -27,6 +28,9 @@ class SpotClosureSqlParityIntegrationTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 6, 15);
     private static final double LAT = 37.5665;
     private static final double LNG = 126.978;
+
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     private SpotAreaMapper spotAreaMapper;
@@ -125,14 +129,7 @@ class SpotClosureSqlParityIntegrationTest {
     }
 
     private long insertSpot(ClosureCase closureCase) {
-        String name = TestSequence.unique("휴장");
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, 'ACTIVE', NOW(6), NOW(6))",
-                closureCase.type().name(),
-                name,
-                "POINT(" + LAT + " " + LNG + ")");
-        long spotId = jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
+        long spotId = spotFixture.insert(aSpot().type(closureCase.type().name()).at(LAT, LNG));
         if (closureCase.hasDetail()) {
             jdbcTemplate.update(
                     "INSERT INTO public_spot_detail"

@@ -1,11 +1,13 @@
 package com.moewadeul.spot.application.map;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.spot.application.PublicSpotSetting;
 import com.moewadeul.spot.domain.SpotType;
@@ -35,6 +37,9 @@ class SpotMapQueryServiceIntegrationTest {
 
     private static final Function<Area, SpotAreaQuery> BULK_FILTER_QUERY = area -> new SpotAreaQuery(
             area.swLat(), area.swLng(), area.neLat(), area.neLng(), Set.of(), Set.of(), true, false, false, true);
+
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     private SpotMapQueryService spotMapQueryService;
@@ -604,27 +609,12 @@ class SpotMapQueryServiceIntegrationTest {
     }
 
     private long insertSpot(String type, String name, Coordinate at) {
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, 'ACTIVE', NOW(6), NOW(6))",
-                type,
-                name,
-                at.wkt());
-        return findSpotId(name);
+        return spotFixture.insert(aSpot().type(type).name(name).at(at.lat(), at.lng()));
     }
 
     private long insertSpot(String type, String status, boolean parkWarning, Coordinate at) {
-        String name = TestSequence.unique(status);
-        jdbcTemplate.update(
-                "INSERT INTO spot"
-                        + " (type, name, location, weather_nx, weather_ny, park_warning, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, ?, ?, NOW(6), NOW(6))",
-                type,
-                name,
-                at.wkt(),
-                parkWarning,
-                status);
-        return findSpotId(name);
+        return spotFixture.insert(
+                aSpot().type(type).status(status).parkWarning(parkWarning).at(at.lat(), at.lng()));
     }
 
     private long clusterCount(SpotAreaQuery query) {
@@ -708,10 +698,6 @@ class SpotMapQueryServiceIntegrationTest {
                 TestSequence.email(),
                 nickname);
         return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
-    }
-
-    private long findSpotId(String name) {
-        return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
     }
 
     private record Coordinate(double lat, double lng) {

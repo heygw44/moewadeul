@@ -4,7 +4,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
@@ -12,8 +11,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -47,10 +46,10 @@ class AiInterpretServiceIntegrationTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 5);
 
     @Autowired
-    private AiInterpretService service;
+    private MemberFixture memberFixture;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
+    private AiInterpretService service;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -71,7 +70,7 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-01] 성공하면 읽어 낸 조건을 돌려주고, 사용 행에 요청 1건과 토큰 수를 남기며, 문장은 앞뒤 공백을 뺀 채 OpenAI에 보낸다")
     void successRecordsRequestAndTokens() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         Map<String, Object> content = content();
         content.put("region", "강원도");
         content.put("hasWater", true);
@@ -94,7 +93,7 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-05] OpenAI가 500을 응답하면 503 AI_SEARCH_UNAVAILABLE이고, 요청은 1건 세고 토큰은 더하지 않는다")
     void openAiFailureCountsRequestButNoTokens() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         wireMock.stubFor(post(urlPathEqualTo(PATH)).willReturn(aResponse().withStatus(500)));
 
         // when
@@ -110,7 +109,7 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-05] 응답은 왔지만 내용이 스키마에 맞지 않으면 503이고, 쓴 토큰은 더한다")
     void schemaMismatchAddsTokens() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         Map<String, Object> content = content();
         content.put("types", List.of("HOTEL"));
         stubOk(content, 200, 20);
@@ -129,7 +128,7 @@ class AiInterpretServiceIntegrationTest {
             "[F-27][AI-03] 21번째 요청은 429 AI_SEARCH_LIMITED이고 OpenAI를 부르지 않으며, Retry-After는 다음 날 0시(한국 시간)까지 남은 시간이다")
     void twentyFirstRequestIsLimited() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         stubOk(content(), 10, 5);
         for (int i = 0; i < 20; i++) {
             service.interpret(memberId, SENTENCE);
@@ -150,7 +149,7 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-03] 한국 날짜가 바뀌면 횟수를 다시 센다")
     void limitResetsOnNextKoreanDay() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         stubOk(content(), 10, 5);
         for (int i = 0; i < 20; i++) {
             service.interpret(memberId, SENTENCE);
@@ -170,8 +169,8 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-03] 한도는 회원마다 따로 센다")
     void limitIsPerMember() {
         // given
-        long first = saveMember();
-        long second = saveMember();
+        long first = memberFixture.save().getId();
+        long second = memberFixture.save().getId();
         stubOk(content(), 10, 5);
         for (int i = 0; i < 20; i++) {
             service.interpret(first, SENTENCE);
@@ -189,8 +188,8 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-04] 오늘 서비스 전체 비용이 1달러에 닿았으면 503이고 OpenAI를 부르지 않으며, 그 요청은 회원의 하루 횟수에서 빼지 않는다")
     void budgetExceededBlocksOpenAiCall() {
         // given
-        long other = saveMember();
-        long caller = saveMember();
+        long other = memberFixture.save().getId();
+        long caller = memberFixture.save().getId();
         insertUsage(other, TODAY, 1, 2_500_000, 0);
         insertUsage(caller, TODAY, 3, 0, 0);
         stubOk(content(), 10, 5);
@@ -210,8 +209,8 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-04] 어제 쓴 토큰은 오늘 비용 한도에 들어가지 않는다")
     void yesterdayTokensDoNotCountTowardToday() {
         // given
-        long other = saveMember();
-        long caller = saveMember();
+        long other = memberFixture.save().getId();
+        long caller = memberFixture.save().getId();
         insertUsage(other, TODAY.minusDays(1), 1, 5_000_000, 5_000_000);
         stubOk(content(), 10, 5);
 
@@ -227,7 +226,7 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-03] 같은 회원이 30개 스레드로 동시에 요청해도 20건만 성공하고 10건은 AI_SEARCH_LIMITED다")
     void concurrentRequestsRespectDailyLimit() throws Exception {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         stubOk(content(), 10, 5);
         int threads = 30;
         ExecutorService executor = Executors.newFixedThreadPool(threads);
@@ -264,7 +263,7 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-06] 성공하든 실패하든 문장은 로그와 DB에 남지 않는다")
     void sentenceIsNeverLoggedOrStored(CapturedOutput output) {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         stubOk(content(), 10, 5);
         service.interpret(memberId, SENTENCE);
         wireMock.resetAll();
@@ -292,7 +291,7 @@ class AiInterpretServiceIntegrationTest {
     @DisplayName("[F-27][AI-08] 결과를 지표에 나눠 세고, 반영하지 못한 조건이 있으면 unparsed 지표를 올린다")
     void recordsOutcomeAndUnparsedMetrics() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         Map<String, Object> content = content();
         content.put("unparsed", List.of("조용한"));
         stubOk(content, 10, 5);
@@ -322,10 +321,6 @@ class AiInterpretServiceIntegrationTest {
         return (long) meterRegistry
                 .counter("moewadeul.aisearch.requests", "outcome", outcome)
                 .count();
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private void insertUsage(long memberId, LocalDate date, int requests, int inputTokens, int outputTokens) {

@@ -25,6 +25,9 @@ import org.springframework.test.context.ActiveProfiles;
 @Import({
     MySqlTestContainerConfig.class,
     TestClockConfig.class,
+    MemberFixture.class,
+    SpotFixture.class,
+    ProtectedAreaFixture.class,
     TestMailSenderConfig.class,
     TestImageStorageConfig.class,
     RecordingOutboxEventHandler.Config.class,

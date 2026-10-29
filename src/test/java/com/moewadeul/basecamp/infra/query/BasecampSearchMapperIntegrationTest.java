@@ -1,6 +1,6 @@
 package com.moewadeul.basecamp.infra.query;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -12,12 +12,12 @@ import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.application.SpotSearchBox;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,10 +37,13 @@ class BasecampSearchMapperIntegrationTest {
     private static final Coordinate EAST_10_2_KM = new Coordinate(37.5665, 127.0936);
 
     @Autowired
-    private BasecampSearchMapper mapper;
+    private SpotFixture spotFixture;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
+    private MemberFixture memberFixture;
+
+    @Autowired
+    private BasecampSearchMapper mapper;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -49,14 +52,15 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12] 영역 조회는 경계선 위의 장소를 포함하고 영역 밖의 장소는 뺀다")
     void areaIncludesBoundaryAndExcludesOutside() {
         // given
-        Member leader = saveMember();
-        long southWest =
-                insertBasecamp(leader, insertSpot("남서 꼭짓점", new Coordinate(37.0, 127.0)), "RECRUITING", DAY, 4);
-        long northEast =
-                insertBasecamp(leader, insertSpot("북동 꼭짓점", new Coordinate(38.0, 128.0)), "RECRUITING", DAY, 4);
-        long inside = insertBasecamp(leader, insertSpot("안쪽", new Coordinate(37.5, 127.5)), "RECRUITING", DAY, 4);
-        insertBasecamp(leader, insertSpot("남쪽 바깥", new Coordinate(36.99, 127.5)), "RECRUITING", DAY, 4);
-        insertBasecamp(leader, insertSpot("동쪽 바깥", new Coordinate(37.5, 128.01)), "RECRUITING", DAY, 4);
+        Member leader = memberFixture.save();
+        long southWest = insertBasecamp(
+                leader, spotFixture.insert(aSpot().name("남서 꼭짓점").at(37.0, 127.0)), "RECRUITING", DAY, 4);
+        long northEast = insertBasecamp(
+                leader, spotFixture.insert(aSpot().name("북동 꼭짓점").at(38.0, 128.0)), "RECRUITING", DAY, 4);
+        long inside =
+                insertBasecamp(leader, spotFixture.insert(aSpot().name("안쪽").at(37.5, 127.5)), "RECRUITING", DAY, 4);
+        insertBasecamp(leader, spotFixture.insert(aSpot().name("남쪽 바깥").at(36.99, 127.5)), "RECRUITING", DAY, 4);
+        insertBasecamp(leader, spotFixture.insert(aSpot().name("동쪽 바깥").at(37.5, 128.01)), "RECRUITING", DAY, 4);
 
         // when
         List<BasecampSearchRow> rows = mapper.selectRecruiting(areaCondition(AREA), 0, 20);
@@ -71,9 +75,10 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12] 영역 조회는 위도와 경도를 서로 바꿔 읽지 않는다")
     void areaDoesNotSwapLatitudeAndLongitude() {
         // given
-        Member leader = saveMember();
-        long expected = insertBasecamp(leader, insertSpot("제자리", new Coordinate(37.5, 37.6)), "RECRUITING", DAY, 4);
-        insertBasecamp(leader, insertSpot("맞바꾼 자리", new Coordinate(37.6, 37.5)), "RECRUITING", DAY, 4);
+        Member leader = memberFixture.save();
+        long expected =
+                insertBasecamp(leader, spotFixture.insert(aSpot().name("제자리").at(37.5, 37.6)), "RECRUITING", DAY, 4);
+        insertBasecamp(leader, spotFixture.insert(aSpot().name("맞바꾼 자리").at(37.6, 37.5)), "RECRUITING", DAY, 4);
         BasecampSearchCondition.Area area = new BasecampSearchCondition.Area(37.4, 37.55, 37.55, 37.65);
 
         // when
@@ -89,10 +94,21 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12] 반경 검색은 반경 경계 안쪽 장소를 찾고 경계 바로 밖의 장소는 뺀다")
     void radiusIncludesInsideAndExcludesJustOutside() {
         // given
-        Member leader = saveMember();
-        long center = insertBasecamp(leader, insertSpot("중심", CENTER), "RECRUITING", DAY, 4);
-        long north = insertBasecamp(leader, insertSpot("북쪽 9.8km", NORTH_9_8_KM), "RECRUITING", DAY, 4);
-        insertBasecamp(leader, insertSpot("동쪽 10.2km", EAST_10_2_KM), "RECRUITING", DAY, 4);
+        Member leader = memberFixture.save();
+        long center = insertBasecamp(
+                leader, spotFixture.insert(aSpot().name("중심").at(CENTER.lat(), CENTER.lng())), "RECRUITING", DAY, 4);
+        long north = insertBasecamp(
+                leader,
+                spotFixture.insert(aSpot().name("북쪽 9.8km").at(NORTH_9_8_KM.lat(), NORTH_9_8_KM.lng())),
+                "RECRUITING",
+                DAY,
+                4);
+        insertBasecamp(
+                leader,
+                spotFixture.insert(aSpot().name("동쪽 10.2km").at(EAST_10_2_KM.lat(), EAST_10_2_KM.lng())),
+                "RECRUITING",
+                DAY,
+                4);
 
         // when
         List<BasecampSearchRow> rows = mapper.selectRecruiting(radiusCondition(CENTER, 10), 0, 20);
@@ -105,8 +121,8 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12] 출발일 범위는 양 끝을 포함하고, 한쪽만 보내면 그쪽만 제한한다")
     void startDateRange() {
         // given
-        Member leader = saveMember();
-        long spotId = insertSpot("장소", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        long spotId = spotFixture.insert(aSpot().name("장소").at(37.5, 127.5));
         long d20 = insertBasecamp(leader, spotId, "RECRUITING", DAY, 4);
         long d22 = insertBasecamp(leader, spotId, "RECRUITING", DAY.plusDays(2), 4);
         long d25 = insertBasecamp(leader, spotId, "RECRUITING", DAY.plusDays(5), 4);
@@ -129,10 +145,10 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12] 남은 자리 조건은 ACTIVE 멤버 수만 세서 정원이 찬 베이스캠프를 뺀다")
     void hasVacancyCountsOnlyActiveMembers() {
         // given
-        Member leader = saveMember();
-        Member other = saveMember();
-        Member leaver = saveMember();
-        long spotId = insertSpot("장소", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        Member other = memberFixture.save();
+        Member leaver = memberFixture.save();
+        long spotId = spotFixture.insert(aSpot().name("장소").at(37.5, 127.5));
         long full = insertBasecamp(leader, spotId, "RECRUITING", DAY, 2);
         insertMemberRow(full, other, "MEMBER", "ACTIVE");
         long vacant = insertBasecamp(leader, spotId, "RECRUITING", DAY, 2);
@@ -153,12 +169,13 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-31] 장소 유형 조건은 고른 유형의 장소에서 열린 베이스캠프만 남긴다")
     void filtersBySpotType() {
         // given
-        Member leader = saveMember();
-        long bakji =
-                insertBasecamp(leader, insertSpot("박지", "BAKJI", new Coordinate(37.5, 127.5)), "RECRUITING", DAY, 4);
-        long forest =
-                insertBasecamp(leader, insertSpot("휴양림", "FOREST", new Coordinate(37.5, 127.5)), "RECRUITING", DAY, 4);
-        insertBasecamp(leader, insertSpot("야영장", "CAMPSITE", new Coordinate(37.5, 127.5)), "RECRUITING", DAY, 4);
+        Member leader = memberFixture.save();
+        long bakji = insertBasecamp(
+                leader, spotFixture.insert(aSpot().name("박지").type("BAKJI").at(37.5, 127.5)), "RECRUITING", DAY, 4);
+        long forest = insertBasecamp(
+                leader, spotFixture.insert(aSpot().name("휴양림").type("FOREST").at(37.5, 127.5)), "RECRUITING", DAY, 4);
+        insertBasecamp(
+                leader, spotFixture.insert(aSpot().name("야영장").type("CAMPSITE").at(37.5, 127.5)), "RECRUITING", DAY, 4);
 
         // when
         List<BasecampSearchRow> rows = mapper.selectRecruiting(
@@ -174,8 +191,8 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-31] 박 수 조건은 종료일에서 출발일을 뺀 날 수가 고른 값인 베이스캠프만 남긴다")
     void filtersByNights() {
         // given
-        Member leader = saveMember();
-        long spot = insertSpot("장소", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        long spot = spotFixture.insert(aSpot().name("장소").at(37.5, 127.5));
         long oneNight = insertBasecamp(leader, spot, DAY, 1, null, null, null, false);
         insertBasecamp(leader, spot, DAY, 2, null, null, null, false);
         long threeNights = insertBasecamp(leader, spot, DAY, 3, null, null, null, false);
@@ -192,8 +209,8 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-31] 최소 신뢰 단계 상한은 조건이 없는 베이스캠프를 단계 1로 보고, 상한보다 높은 단계를 요구하는 베이스캠프를 뺀다")
     void filtersByMaxTrustLevel() {
         // given
-        Member leader = saveMember();
-        long spot = insertSpot("장소", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        long spot = spotFixture.insert(aSpot().name("장소").at(37.5, 127.5));
         long noCondition = insertBasecamp(leader, spot, DAY, 2, null, null, null, false);
         long levelOne = insertBasecamp(leader, spot, DAY, 2, 1, null, null, false);
         long levelTwo = insertBasecamp(leader, spot, DAY, 2, 2, null, null, false);
@@ -213,8 +230,8 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-31] 연령 제한 없음은 연령대 조건이 하나라도 있는 베이스캠프를 빼고, 동성만 아님은 동성만 받는 베이스캠프를 뺀다")
     void filtersByAgeLimitAndSameGender() {
         // given
-        Member leader = saveMember();
-        long spot = insertSpot("장소", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        long spot = spotFixture.insert(aSpot().name("장소").at(37.5, 127.5));
         long open = insertBasecamp(leader, spot, DAY, 2, null, null, null, false);
         long minAgeOnly = insertBasecamp(leader, spot, DAY, 2, null, 20, null, false);
         long maxAgeOnly = insertBasecamp(leader, spot, DAY, 2, null, null, 40, false);
@@ -240,9 +257,9 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-31] 상세 조건을 함께 걸면 모두 만족하는 베이스캠프만 출발일 순서로 남긴다")
     void combinesDetailConditions() {
         // given
-        Member leader = saveMember();
-        long bakji = insertSpot("박지", "BAKJI", new Coordinate(37.5, 127.5));
-        long campsite = insertSpot("야영장", "CAMPSITE", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        long bakji = spotFixture.insert(aSpot().name("박지").type("BAKJI").at(37.5, 127.5));
+        long campsite = spotFixture.insert(aSpot().name("야영장").type("CAMPSITE").at(37.5, 127.5));
         long later = insertBasecamp(leader, bakji, DAY.plusDays(3), 1, 1, null, null, false);
         long earlier = insertBasecamp(leader, bakji, DAY, 1, null, null, null, false);
         insertBasecamp(leader, bakji, DAY, 2, null, null, null, false);
@@ -262,14 +279,14 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12] 모집 중인 베이스캠프만 찾고, 마감·확정·완료·취소와 숨긴 장소의 베이스캠프는 뺀다")
     void onlyRecruitingBasecampsOnActiveSpots() {
         // given
-        Member leader = saveMember();
-        long spotId = insertSpot("장소", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        long spotId = spotFixture.insert(aSpot().name("장소").at(37.5, 127.5));
         long recruiting = insertBasecamp(leader, spotId, "RECRUITING", DAY, 4);
         for (BasecampStatus status : List.of(
                 BasecampStatus.CLOSED, BasecampStatus.CONFIRMED, BasecampStatus.COMPLETED, BasecampStatus.CANCELED)) {
             insertBasecamp(leader, spotId, status.name(), DAY, 4);
         }
-        long hiddenSpot = insertSpot("숨김 장소", new Coordinate(37.5, 127.5));
+        long hiddenSpot = spotFixture.insert(aSpot().name("숨김 장소").at(37.5, 127.5));
         jdbc.update("UPDATE spot SET status = 'HIDDEN' WHERE id = ?", hiddenSpot);
         insertBasecamp(leader, hiddenSpot, "RECRUITING", DAY, 4);
 
@@ -284,8 +301,8 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12] 출발일 순서로 정렬하고 출발일이 같으면 ID 순서이며, offset과 limit으로 페이지를 나눈다")
     void orderedByStartDateThenIdWithPaging() {
         // given
-        Member leader = saveMember();
-        long spotId = insertSpot("장소", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        long spotId = spotFixture.insert(aSpot().name("장소").at(37.5, 127.5));
         long late = insertBasecamp(leader, spotId, "RECRUITING", DAY.plusDays(3), 4);
         long earlyFirst = insertBasecamp(leader, spotId, "RECRUITING", DAY, 4);
         long earlySecond = insertBasecamp(leader, spotId, "RECRUITING", DAY, 4);
@@ -303,8 +320,8 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12] 결과에 장소 요약과 합류 조건, 정원, 현재 인원이 담긴다")
     void rowCarriesSpotAndJoinCondition() {
         // given
-        Member leader = saveMember();
-        long spotId = insertSpot("능선 끝 평지", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        long spotId = spotFixture.insert(aSpot().name("능선 끝 평지").at(37.5, 127.5));
         long id = insertBasecamp(leader, spotId, "RECRUITING", DAY, 5);
         jdbc.update(
                 "UPDATE basecamp SET min_trust_level = 2, age_group_min = 20, age_group_max = 30, same_gender_only = TRUE,"
@@ -339,9 +356,9 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12][BC-07] 회원의 멤버 행과 신청 행 상태를 베이스캠프별로 읽고, 둘 다 없는 베이스캠프는 읽지 않는다")
     void viewerHistoryReadsMemberAndApplicationStatus() {
         // given
-        Member leader = saveMember();
-        Member viewer = saveMember();
-        long spotId = insertSpot("장소", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        Member viewer = memberFixture.save();
+        long spotId = spotFixture.insert(aSpot().name("장소").at(37.5, 127.5));
         long asLeader = insertBasecamp(viewer, spotId, "RECRUITING", DAY, 4);
         long pending = insertBasecamp(leader, spotId, "RECRUITING", DAY, 4);
         insertApplicationRow(pending, viewer, "PENDING");
@@ -370,9 +387,9 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12][BC-06] 회원이 ACTIVE 멤버로 들어 있는 모집 중·마감·확정 베이스캠프의 일정만 읽는다")
     void inProgressSchedulesOfActiveMembership() {
         // given
-        Member leader = saveMember();
-        Member viewer = saveMember();
-        long spotId = insertSpot("장소", new Coordinate(37.5, 127.5));
+        Member leader = memberFixture.save();
+        Member viewer = memberFixture.save();
+        long spotId = spotFixture.insert(aSpot().name("장소").at(37.5, 127.5));
         long confirmedMember = insertBasecamp(leader, spotId, "CONFIRMED", DAY, 4);
         insertMemberRow(confirmedMember, viewer, "MEMBER", "ACTIVE");
         long confirmedLeft = insertBasecamp(leader, spotId, "CONFIRMED", DAY, 4);
@@ -402,10 +419,10 @@ class BasecampSearchMapperIntegrationTest {
     @DisplayName("[F-12][BC-09] 장소 요약은 ACTIVE 장소의 이름·유형·좌표를 읽고, 없거나 숨김·검토 대기·삭제인 장소는 null이다")
     void spotSummary() {
         // given
-        long spotId = insertSpot("능선 끝 평지", new Coordinate(37.5, 127.25));
-        long hiddenSpot = insertSpot("숨김 장소", new Coordinate(37.5, 127.5));
-        long pendingSpot = insertSpot("검토 대기 장소", new Coordinate(37.5, 127.5));
-        long deletedSpot = insertSpot("삭제 장소", new Coordinate(37.5, 127.5));
+        long spotId = spotFixture.insert(aSpot().name("능선 끝 평지").at(37.5, 127.25));
+        long hiddenSpot = spotFixture.insert(aSpot().name("숨김 장소").at(37.5, 127.5));
+        long pendingSpot = spotFixture.insert(aSpot().name("검토 대기 장소").at(37.5, 127.5));
+        long deletedSpot = spotFixture.insert(aSpot().name("삭제 장소").at(37.5, 127.5));
         jdbc.update("UPDATE spot SET status = 'HIDDEN' WHERE id = ?", hiddenSpot);
         jdbc.update("UPDATE spot SET status = 'PENDING_REVIEW' WHERE id = ?", pendingSpot);
         jdbc.update("UPDATE spot SET status = 'DELETED' WHERE id = ?", deletedSpot);
@@ -458,24 +475,6 @@ class BasecampSearchMapperIntegrationTest {
         BasecampSearchCondition.Nearby nearby = new BasecampSearchCondition.Nearby(
                 center.lat(), center.lng(), radiusKm * 1000, box.swLat(), box.swLng(), box.neLat(), box.neLng());
         return condition(null, nearby, null, null, false);
-    }
-
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(aMember().build());
-    }
-
-    private long insertSpot(String name, Coordinate at) {
-        return insertSpot(name, "BAKJI", at);
-    }
-
-    private long insertSpot(String name, String type, Coordinate at) {
-        jdbc.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, 'ACTIVE', NOW(6), NOW(6))",
-                type,
-                name,
-                at.wkt());
-        return jdbc.queryForObject("SELECT MAX(id) FROM spot", Long.class);
     }
 
     private long insertBasecamp(Member leader, long spotId, String status, LocalDate startDate, int capacity) {
@@ -542,11 +541,5 @@ class BasecampSearchMapperIntegrationTest {
                 status);
     }
 
-    private record Coordinate(double lat, double lng) {
-
-        // SRID 4326 좌표의 WKT는 위도, 경도 순서다.
-        String wkt() {
-            return String.format(Locale.ROOT, "POINT(%s %s)", lat, lng);
-        }
-    }
+    private record Coordinate(double lat, double lng) {}
 }

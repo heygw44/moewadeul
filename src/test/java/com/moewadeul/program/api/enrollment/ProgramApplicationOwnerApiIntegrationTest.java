@@ -1,10 +1,10 @@
 package com.moewadeul.program.api.enrollment;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
@@ -19,7 +19,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -31,13 +30,13 @@ class ProgramApplicationOwnerApiIntegrationTest {
     private static final String SESSION_COOKIE = "SESSION";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
     private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -52,10 +51,10 @@ class ProgramApplicationOwnerApiIntegrationTest {
     @BeforeEach
     void setUp() {
         fixture = new ProgramApplyFixture(jdbc, memberRepository);
-        Member applicant = saveMember();
+        Member applicant = memberFixture.saveWithPassword(PASSWORD);
         long programId = fixture.saveProgram(3, false);
         applicationId = fixture.saveApplication(programId, applicant.getId(), "PENDING_PAYMENT");
-        otherSession = login(saveMember());
+        otherSession = login(memberFixture.saveWithPassword(PASSWORD));
     }
 
     @Test
@@ -91,11 +90,6 @@ class ProgramApplicationOwnerApiIntegrationTest {
         assertThat(result).hasStatus(HttpStatus.FORBIDDEN);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("ACCESS_DENIED");
         assertThat(fixture.applicationStatus(applicationId)).isEqualTo("PENDING_PAYMENT");
-    }
-
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(
-                aMember().passwordHash(passwordEncoder.encode(PASSWORD)).build());
     }
 
     private Cookie login(Member member) {

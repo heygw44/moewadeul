@@ -1,15 +1,13 @@
 package com.moewadeul.member.application.login;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.member.application.PasswordMatchPause;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @IntegrationTest
 @Import(PasswordMatchPause.Config.class)
@@ -41,13 +38,10 @@ class LoginLockConcurrencyIntegrationTest {
     private static final long WAIT_SECONDS = 60;
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MemberLoginService memberLoginService;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -60,7 +54,7 @@ class LoginLockConcurrencyIntegrationTest {
     @RepeatedTest(3)
     @DisplayName("[PW-03] 같은 이메일에 서로 다른 틀린 비밀번호로 동시에 로그인해도 실패는 5번만 기록하고 나머지는 LOGIN_LOCKED로 거부한다")
     void burstOfWrongPasswordsRecordsOnlyFiveFailures() throws Exception {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(PASSWORD);
 
         List<Throwable> outcomes = loginTogether(Collections.nCopies(BURST_SIZE, member.getEmail()));
 
@@ -74,7 +68,7 @@ class LoginLockConcurrencyIntegrationTest {
     @RepeatedTest(3)
     @DisplayName("[PW-03] DB가 같은 이메일로 보는 표기 변형(보이지 않는 문자)으로 동시에 로그인해도 그 회원의 실패는 5번만 기록한다")
     void burstOfEmailVariantsRecordsOnlyFiveFailures() throws Exception {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(PASSWORD);
         List<String> variants = IntStream.range(0, BURST_SIZE)
                 .mapToObj(i -> withZeroWidthSpaces(member.getEmail(), i))
                 .toList();
@@ -91,7 +85,7 @@ class LoginLockConcurrencyIntegrationTest {
     @Test
     @DisplayName("[PW-03] 잠기기 전에 시작한 올바른 비밀번호 요청은 비교가 잠긴 뒤에 끝나도 LOGIN_LOCKED로 거부하고 성공을 기록하지 않는다")
     void correctPasswordFinishingAfterLockIsRejected() throws Exception {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(PASSWORD);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             PasswordMatchPause.arm(PASSWORD);
@@ -186,12 +180,5 @@ class LoginLockConcurrencyIntegrationTest {
     private int memberFailureCount(long memberId) {
         return jdbc.queryForObject(
                 "SELECT COUNT(*) FROM login_history WHERE member_id = ? AND success = FALSE", Integer.class, memberId);
-    }
-
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(PASSWORD))
-                .build());
     }
 }

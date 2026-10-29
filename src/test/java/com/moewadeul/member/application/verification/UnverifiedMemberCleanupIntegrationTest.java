@@ -5,12 +5,12 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.verification.UnverifiedMemberPolicy;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.member.infra.verification.UnverifiedMemberMapper;
 import java.time.Duration;
 import java.time.Instant;
@@ -42,13 +42,13 @@ class UnverifiedMemberCleanupIntegrationTest {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").withZone(ZoneOffset.UTC);
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private UnverifiedMemberCleanupService cleanupService;
 
     @Autowired
     private UnverifiedMemberMapper unverifiedMemberMapper;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private MockMvcTester mvc;
@@ -217,8 +217,8 @@ class UnverifiedMemberCleanupIntegrationTest {
     }
 
     private Member saveMember(String email, Instant createdAt) {
-        return memberRepository.save(
-                aMember().email(email).passwordHash(passwordHash).now(createdAt).build());
+        return memberFixture.save(
+                aMember().email(email).passwordHash(passwordHash).now(createdAt));
     }
 
     private void insertVerification(long memberId) {

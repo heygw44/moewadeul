@@ -1,18 +1,16 @@
 package com.moewadeul.member.api.login;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.PasswordMatchPause;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
 import com.moewadeul.member.domain.password.ResetToken;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import java.security.SecureRandom;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,7 +25,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -41,16 +38,13 @@ class LoginSessionRaceIntegrationTest {
     private static final long WAIT_SECONDS = 60;
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private PasswordResetTokenRepository tokenRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -66,7 +60,7 @@ class LoginSessionRaceIntegrationTest {
     @Test
     @DisplayName("[PW-02] 비밀번호를 비교하는 사이에 재설정이 끝나면, 그 로그인 요청은 401이고 세션을 남기지 않는다")
     void loginOverlappingPasswordResetLeavesNoSession() throws Exception {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             PasswordMatchPause.arm(OLD_PASSWORD);
@@ -87,7 +81,7 @@ class LoginSessionRaceIntegrationTest {
     @Test
     @DisplayName("[SN-12] 비밀번호를 비교하는 사이에 이용 정지가 확정되면, 그 로그인 요청은 403이고 세션을 남기지 않는다")
     void loginOverlappingSuspensionLeavesNoSession() throws Exception {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             PasswordMatchPause.arm(OLD_PASSWORD);
@@ -102,14 +96,6 @@ class LoginSessionRaceIntegrationTest {
         } finally {
             executor.shutdownNow();
         }
-    }
-
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(OLD_PASSWORD))
-                .now(clock.instant())
-                .build());
     }
 
     private String issueToken(Member member) {

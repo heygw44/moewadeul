@@ -2,16 +2,15 @@ package com.moewadeul.memory.api;
 
 import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -25,7 +24,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -39,16 +37,13 @@ class MemoryFeedApiIntegrationTest {
     private static final String YESTERDAY = "2026-10-04";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private SpotJpaRepository spotRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailVerificationIssuer emailVerificationIssuer;
@@ -60,7 +55,7 @@ class MemoryFeedApiIntegrationTest {
     @DisplayName("[F-33][MM-08] 공개 피드는 공개 기록만 새것부터 주고, 정확한 좌표 없이 대략 좌표만 준다")
     void feedHasOnlyPublicMemoriesNewestFirstWithApproximateCoordinates() {
         // given
-        Member author = saveMember();
+        Member author = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie owner = verifiedSession(author);
         long first = write(owner, "2026-09-01", "PUBLIC", 37.56789, 126.97412, null);
         write(owner, YESTERDAY, "PRIVATE", 37.1, 127.1, null);
@@ -93,7 +88,7 @@ class MemoryFeedApiIntegrationTest {
     @DisplayName("[F-33][MM-08] 피드는 작성자가 봐도 자기 기록에 정확한 좌표를 주지 않는다")
     void feedHidesExactCoordinatesFromAuthorToo() {
         // given
-        Cookie owner = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         write(owner, YESTERDAY, "PUBLIC", 37.56789, 126.97412, null);
 
         // when
@@ -109,7 +104,7 @@ class MemoryFeedApiIntegrationTest {
     @DisplayName("[F-33] 피드는 size만큼 끊어 주고 다음 쪽이 있으면 hasNext가 true이며, 마지막 쪽은 false다")
     void feedPagesWithHasNext() {
         // given
-        Cookie owner = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long oldest = write(owner, YESTERDAY, "PUBLIC", 37.1, 127.1, null);
         write(owner, YESTERDAY, "PUBLIC", 37.1, 127.1, null);
         long newest = write(owner, YESTERDAY, "PUBLIC", 37.1, 127.1, null);
@@ -157,8 +152,8 @@ class MemoryFeedApiIntegrationTest {
     @DisplayName("[F-33][MM-09] 피드의 likedByMe는 로그인한 사람에게만 있고, 비회원에게는 필드가 없다")
     void feedLikedByMeOnlyForLoggedInViewer() {
         // given
-        Cookie owner = verifiedSession(saveMember());
-        Cookie viewer = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie viewer = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = write(owner, YESTERDAY, "PUBLIC", 37.1, 127.1, "물가 옆 평지");
         send(mvc.put().uri("/api/memories/" + memoryId + "/like"), viewer);
 
@@ -182,12 +177,12 @@ class MemoryFeedApiIntegrationTest {
     @DisplayName("[F-33][MM-08] 회원의 추억지도는 공개 기록만 방문일이 늦은 순서로 대략 좌표와 함께 준다")
     void memberMemoriesHavePublicOnlyWithApproximateCoordinates() {
         // given
-        Member author = saveMember();
+        Member author = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie owner = verifiedSession(author);
         long older = write(owner, "2026-09-01", "PUBLIC", 37.56789, 126.97412, "예전 기록");
         write(owner, YESTERDAY, "PRIVATE", 37.1, 127.1, null);
         long newer = write(owner, YESTERDAY, "PUBLIC", 35.1, 129.1, null);
-        write(verifiedSession(saveMember()), YESTERDAY, "PUBLIC", 36.1, 128.1, null);
+        write(verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)), YESTERDAY, "PUBLIC", 36.1, 128.1, null);
 
         // when
         MvcTestResult anonymous =
@@ -219,9 +214,9 @@ class MemoryFeedApiIntegrationTest {
     @DisplayName("[F-33] 없는 회원이나 탈퇴한 회원의 추억지도는 404이고, 공개 기록이 없는 회원은 빈 배열이다")
     void memberMemoriesNotFoundForMissingOrWithdrawnMember() {
         // given
-        Member withdrawn = saveMember();
+        Member withdrawn = memberFixture.saveWithPassword(VALID_PASSWORD);
         jdbc.update("UPDATE member SET status = 'WITHDRAWN' WHERE id = ?", withdrawn.getId());
-        Member empty = saveMember();
+        Member empty = memberFixture.saveWithPassword(VALID_PASSWORD);
 
         // when
         MvcTestResult missing = mvc.get().uri("/api/members/999999/memories").exchange();
@@ -241,8 +236,8 @@ class MemoryFeedApiIntegrationTest {
     @DisplayName("[F-33][MM-07][MM-08] 상세는 작성자에게 정확한 좌표만, 작성자가 아닌 사람과 비회원에게 대략 좌표만 준다")
     void detailShowsExactToAuthorAndApproximateToOthers() {
         // given
-        Cookie owner = verifiedSession(saveMember());
-        Cookie other = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie other = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = write(owner, YESTERDAY, "PUBLIC", 37.56789, 126.97412, null);
 
         // when
@@ -270,8 +265,8 @@ class MemoryFeedApiIntegrationTest {
     @DisplayName("[F-33][MM-09] 상세의 likeCount는 모두에게, likedByMe는 로그인한 사람에게만 주고 수정 응답에도 같은 필드가 있다")
     void detailHasLikeCountAndLikedByMe() {
         // given
-        Cookie owner = verifiedSession(saveMember());
-        Cookie viewer = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie viewer = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = write(owner, YESTERDAY, "PUBLIC", 37.1, 127.1, null);
         send(mvc.put().uri("/api/memories/" + memoryId + "/like"), viewer);
 
@@ -302,7 +297,7 @@ class MemoryFeedApiIntegrationTest {
     @DisplayName("[F-33] 연결한 장소가 숨겨지면 피드와 회원의 추억지도에서 spot을 뺀다")
     void hiddenSpotIsOmitted() {
         // given
-        Member author = saveMember();
+        Member author = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie owner = verifiedSession(author);
         long visible = saveSpot();
         long hidden = saveSpot();
@@ -374,11 +369,6 @@ class MemoryFeedApiIntegrationTest {
                 ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT),
                 MutableClock.DEFAULT_INSTANT);
         return spotRepository.save(spot).getId();
-    }
-
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(
-                aMember().passwordHash(passwordEncoder.encode(VALID_PASSWORD)).build());
     }
 
     private Cookie verifiedSession(Member member) {

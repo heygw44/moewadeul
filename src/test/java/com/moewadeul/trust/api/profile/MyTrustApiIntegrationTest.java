@@ -1,10 +1,10 @@
 package com.moewadeul.trust.api.profile;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
@@ -21,7 +21,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -36,13 +35,13 @@ class MyTrustApiIntegrationTest {
     private static final String LOCAL_IP = "127.0.0.1";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
     private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailVerificationIssuer emailVerificationIssuer;
@@ -62,7 +61,7 @@ class MyTrustApiIntegrationTest {
     @Test
     @DisplayName("[TR-01] 본인확인 전인 회원은 단계 0이고, 단계 2 조건의 현재 값은 0회와 null이다")
     void beforeIdentityVerificationIsLevelZero() {
-        Cookie session = login(saveMember());
+        Cookie session = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult result = mvc.get().uri(PATH).cookie(session).exchange();
 
@@ -73,7 +72,7 @@ class MyTrustApiIntegrationTest {
     @Test
     @DisplayName("[TR-01] 본인확인을 마친 성인은 단계 1이고 nextLevel이 단계 2 조건을 알려 준다")
     void adultIsLevelOne() {
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         verifyIdentity(session, 2007, "demo-adult");
 
         MvcTestResult result = mvc.get().uri(PATH).cookie(session).exchange();
@@ -85,7 +84,7 @@ class MyTrustApiIntegrationTest {
     @Test
     @DisplayName("[TR-01][ID-03] 본인확인을 마친 미성년은 단계 0이다")
     void minorIsLevelZero() {
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         verifyIdentity(session, 2008, "demo-minor");
 
         MvcTestResult result = mvc.get().uri(PATH).cookie(session).exchange();
@@ -97,7 +96,7 @@ class MyTrustApiIntegrationTest {
     @Test
     @DisplayName("[TR-01] 완료 동행 3회와 다시 동행 80%를 채운 성인은 단계 2이고 nextLevel 필드가 없다")
     void trustedAdultIsLevelTwoWithoutNextLevel() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
         verifyIdentity(session, 2007, "demo-trusted");
         new CompanionReviewFixture(jdbc, memberRepository)
@@ -114,7 +113,7 @@ class MyTrustApiIntegrationTest {
     @Test
     @DisplayName("[BC-21] 임박 탈퇴 3회면 다른 조건을 채워도 단계 1이고 recentEarlyLeaves가 현재 3회와 한도 3을 알려 준다")
     void earlyLeavesKeepLevelOne() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
         verifyIdentity(session, 2007, "demo-early-leaver");
         CompanionReviewFixture fixture = new CompanionReviewFixture(jdbc, memberRepository);
@@ -157,13 +156,6 @@ class MyTrustApiIntegrationTest {
                   }
                 }
                 """.formatted(trustLevel, identityVerified);
-    }
-
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(VALID_PASSWORD))
-                .build());
     }
 
     private Cookie login(Member member) {

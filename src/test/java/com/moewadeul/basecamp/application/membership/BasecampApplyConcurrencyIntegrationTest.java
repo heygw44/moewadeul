@@ -1,12 +1,11 @@
 package com.moewadeul.basecamp.application.membership;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.common.testsupport.MemberFixture;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,10 +31,10 @@ class BasecampApplyConcurrencyIntegrationTest {
     private static final String AT_DEFAULT_INSTANT = "2026-10-05 03:00:00";
 
     @Autowired
-    private BasecampApplyService basecampApplyService;
+    private MemberFixture memberFixture;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
+    private BasecampApplyService basecampApplyService;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -114,14 +113,10 @@ class BasecampApplyConcurrencyIntegrationTest {
                         e -> assertThat(e.getErrorCode()).isEqualTo(expected));
     }
 
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
-    }
-
     private List<Long> saveVerifiedMembers(int count) {
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            long memberId = saveMember();
+            long memberId = memberFixture.save().getId();
             jdbc.update(
                     "INSERT INTO identity_verification (member_id, birth_year, gender, ci_hash, provider, verified_at,"
                             + " created_at, updated_at) VALUES (?, 2007, 'MALE', ?, 'FAKE', ?, ?, ?)",
@@ -136,7 +131,7 @@ class BasecampApplyConcurrencyIntegrationTest {
     }
 
     private long saveBasecamp() {
-        long leaderId = saveMember();
+        long leaderId = memberFixture.save().getId();
         long spotId = saveSpot();
         LocalDate startDate = LocalDate.of(2026, 10, 20);
         jdbc.update(
@@ -173,7 +168,7 @@ class BasecampApplyConcurrencyIntegrationTest {
                     "INSERT INTO basecamp_application (basecamp_id, applicant_id, status, applied_at, created_at,"
                             + " updated_at) VALUES (?, ?, 'PENDING', ?, ?, ?)",
                     basecampId,
-                    saveMember(),
+                    memberFixture.save().getId(),
                     AT_DEFAULT_INSTANT,
                     AT_DEFAULT_INSTANT,
                     AT_DEFAULT_INSTANT);

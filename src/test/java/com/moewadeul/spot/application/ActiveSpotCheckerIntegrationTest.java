@@ -1,5 +1,6 @@
 package com.moewadeul.spot.application;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -7,6 +8,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -18,6 +20,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class ActiveSpotCheckerIntegrationTest {
+
+    @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
 
     @Autowired
     private ActiveSpotChecker activeSpotChecker;
@@ -32,7 +37,7 @@ class ActiveSpotCheckerIntegrationTest {
     @DisplayName("[F-12][BC-04] 공원 경계 경고가 붙은 박지이면 true, 경고가 없는 박지이면 false다")
     void warningBakjiIsTrueAndCleanBakjiIsFalse() {
         // given
-        long areaId = insertProtectedArea();
+        long areaId = protectedAreaFixture.insert(aProtectedArea().name("북한산"));
         long warning = saveBakji(ParkAreaJudgement.inside(areaId, MutableClock.DEFAULT_INSTANT));
         long clean = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
 
@@ -45,7 +50,7 @@ class ActiveSpotCheckerIntegrationTest {
     @DisplayName("[F-12][BC-04] 야영장은 경고 값이 켜져 있어도 false다")
     void campsiteIsNeverWarningBakji() {
         // given
-        long areaId = insertProtectedArea();
+        long areaId = protectedAreaFixture.insert(aProtectedArea().name("북한산"));
         long campsite = saveBakji(ParkAreaJudgement.inside(areaId, MutableClock.DEFAULT_INSTANT));
         jdbc.update("UPDATE spot SET type = 'CAMPSITE' WHERE id = ?", campsite);
 
@@ -57,7 +62,7 @@ class ActiveSpotCheckerIntegrationTest {
     @DisplayName("[F-12] 없는 장소이거나 ACTIVE가 아닌 장소이면 NOT_FOUND로 거부한다")
     void missingOrHiddenSpotIsNotFound() {
         // given
-        long areaId = insertProtectedArea();
+        long areaId = protectedAreaFixture.insert(aProtectedArea().name("북한산"));
         long hidden = saveBakji(ParkAreaJudgement.inside(areaId, MutableClock.DEFAULT_INSTANT));
         jdbc.update("UPDATE spot SET status = 'HIDDEN' WHERE id = ?", hidden);
 
@@ -73,14 +78,5 @@ class ActiveSpotCheckerIntegrationTest {
     private long saveBakji(ParkAreaJudgement judgement) {
         Spot spot = Spot.bakji("능선 끝 평지", new GeoPoint(37.25, 127.25), judgement, MutableClock.DEFAULT_INSTANT);
         return spotRepository.save(spot).getId();
-    }
-
-    private long insertProtectedArea() {
-        jdbc.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES ('북한산', 'NATIONAL_PARK', 'KDPA', '2026-01-01',"
-                        + " ST_GeomFromText('MULTIPOLYGON(((127 37, 128 37, 128 38, 127 38, 127 37)))', 4326, 'axis-order=long-lat'),"
-                        + " NOW(6), NOW(6))");
-        return jdbc.queryForObject("SELECT id FROM protected_area WHERE name = '북한산'", Long.class);
     }
 }

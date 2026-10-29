@@ -1,15 +1,16 @@
 package com.moewadeul.basecamp.api.lifecycle;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -28,7 +29,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -43,16 +43,16 @@ class BasecampOpenApiIntegrationTest {
     private static final int ADULT_BIRTH_YEAR = 2007;
 
     @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
+
+    @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private SpotJpaRepository spotRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailVerificationIssuer emailVerificationIssuer;
@@ -67,7 +67,7 @@ class BasecampOpenApiIntegrationTest {
     void openSavesRecruitingBasecampWithLeaderMember() {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Member leader = saveMember();
+        Member leader = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = identityVerifiedSession(leader, "FEMALE");
 
         // when
@@ -102,7 +102,7 @@ class BasecampOpenApiIntegrationTest {
     void sameKeyOpensOneBasecamp() {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Cookie session = identityVerifiedSession(saveMember(), "FEMALE");
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE");
         String key = UUID.randomUUID().toString();
         String body = bodyWith(spotId, "2026-10-20", "2026-10-22", "\"capacity\":4");
 
@@ -122,7 +122,7 @@ class BasecampOpenApiIntegrationTest {
     void joinConditionIsSavedWithLeaderGender() {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Cookie session = identityVerifiedSession(saveMember(), "MALE");
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "MALE");
         String condition =
                 "\"joinCondition\":{\"minTrustLevel\":1,\"ageGroupMin\":20,\"ageGroupMax\":30,\"sameGenderOnly\":true}";
 
@@ -147,7 +147,7 @@ class BasecampOpenApiIntegrationTest {
     void notIdentityVerifiedMemberIsForbidden() {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult result = open(session, spotId, "\"capacity\":4");
@@ -162,12 +162,12 @@ class BasecampOpenApiIntegrationTest {
     @DisplayName("[F-12][BC-04] 공원 경계 경고가 붙은 박지에서는 400 BASECAMP_WARNING_SPOT이고, 경고가 없는 박지와 야영장에서는 열린다")
     void warningBakjiIsRejectedButOthersAreAccepted() {
         // given
-        long areaId = insertProtectedArea();
+        long areaId = protectedAreaFixture.insert(aProtectedArea().name("북한산"));
         long warningSpot = saveBakji(ParkAreaJudgement.inside(areaId, MutableClock.DEFAULT_INSTANT));
         long cleanSpot = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
         long campsite = saveBakji(ParkAreaJudgement.inside(areaId, MutableClock.DEFAULT_INSTANT));
         jdbc.update("UPDATE spot SET type = 'CAMPSITE' WHERE id = ?", campsite);
-        Cookie session = identityVerifiedSession(saveMember(), "FEMALE");
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE");
 
         // when
         MvcTestResult warning = open(session, warningSpot, "\"capacity\":4");
@@ -188,7 +188,7 @@ class BasecampOpenApiIntegrationTest {
         // given
         long hiddenSpot = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
         jdbc.update("UPDATE spot SET status = 'HIDDEN' WHERE id = ?", hiddenSpot);
-        Cookie session = identityVerifiedSession(saveMember(), "FEMALE");
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE");
 
         // when
         MvcTestResult hidden = open(session, hiddenSpot, "\"capacity\":4");
@@ -206,7 +206,7 @@ class BasecampOpenApiIntegrationTest {
     void recruitingAndClosedCountTowardOpenLimit() {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Member leader = saveMember();
+        Member leader = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = identityVerifiedSession(leader, "FEMALE");
         insertBasecamp(leader, spotId, "RECRUITING");
         insertBasecamp(leader, spotId, "RECRUITING");
@@ -226,8 +226,8 @@ class BasecampOpenApiIntegrationTest {
     void finishedAndOthersBasecampsDoNotCount() {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Member leader = saveMember();
-        Member other = saveMember();
+        Member leader = memberFixture.saveWithPassword(VALID_PASSWORD);
+        Member other = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = identityVerifiedSession(leader, "FEMALE");
         insertBasecamp(leader, spotId, "CONFIRMED");
         insertBasecamp(leader, spotId, "COMPLETED");
@@ -248,7 +248,7 @@ class BasecampOpenApiIntegrationTest {
     void capacityOutOfRangeIsRejected() {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Cookie session = identityVerifiedSession(saveMember(), "FEMALE");
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE");
 
         // when
         MvcTestResult result = open(session, spotId, "\"capacity\":7");
@@ -263,7 +263,7 @@ class BasecampOpenApiIntegrationTest {
     void scheduleOutOfRangeIsRejected() {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Cookie session = identityVerifiedSession(saveMember(), "FEMALE");
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE");
 
         // when
         MvcTestResult today = send(session, bodyWith(spotId, "2026-10-05", "2026-10-06", "\"capacity\":4"));
@@ -282,7 +282,7 @@ class BasecampOpenApiIntegrationTest {
     void invalidMinTrustLevelIsRejected(int minTrustLevel) {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Cookie session = identityVerifiedSession(saveMember(), "FEMALE");
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE");
 
         // when
         MvcTestResult result = open(
@@ -303,7 +303,7 @@ class BasecampOpenApiIntegrationTest {
     void invalidAgeGroupIsRejected() {
         // given
         long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
-        Cookie session = identityVerifiedSession(saveMember(), "FEMALE");
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE");
 
         // when
         MvcTestResult notTens = open(
@@ -376,11 +376,6 @@ class BasecampOpenApiIntegrationTest {
         return spotRepository.save(spot).getId();
     }
 
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(
-                aMember().passwordHash(passwordEncoder.encode(VALID_PASSWORD)).build());
-    }
-
     private Cookie login(Member member) {
         MvcTestResult result = mvc.post()
                 .uri("/api/auth/login")
@@ -424,14 +419,5 @@ class BasecampOpenApiIntegrationTest {
                 .exchange();
         assertThat(result).hasStatus(HttpStatus.OK);
         return session;
-    }
-
-    private long insertProtectedArea() {
-        jdbc.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES ('북한산', 'NATIONAL_PARK', 'KDPA', '2026-01-01',"
-                        + " ST_GeomFromText('MULTIPOLYGON(((127 37, 128 37, 128 38, 127 38, 127 37)))', 4326, 'axis-order=long-lat'),"
-                        + " NOW(6), NOW(6))");
-        return jdbc.queryForObject("SELECT id FROM protected_area WHERE name = '북한산'", Long.class);
     }
 }

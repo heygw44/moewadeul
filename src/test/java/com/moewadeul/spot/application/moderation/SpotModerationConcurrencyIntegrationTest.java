@@ -1,12 +1,11 @@
 package com.moewadeul.spot.application.moderation;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.application.bakji.BakjiFeedbackService;
 import com.moewadeul.spot.application.bakji.BakjiProblemReportCommand;
 import com.moewadeul.spot.application.publicspot.PublicSpotCommand;
@@ -43,6 +42,9 @@ class SpotModerationConcurrencyIntegrationTest {
     private static final BakjiProblemReportCommand REPORT = new BakjiProblemReportCommand("CLOSED", "길이 막혔다");
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private SpotModerationService spotModerationService;
 
     @Autowired
@@ -50,9 +52,6 @@ class SpotModerationConcurrencyIntegrationTest {
 
     @Autowired
     private SpotJpaRepository spotRepository;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private PublicSpotSyncService publicSpotSyncService;
@@ -65,8 +64,8 @@ class SpotModerationConcurrencyIntegrationTest {
     void concurrentHidesSucceedOnce() throws Exception {
         // given
         long spotId = saveBakji();
-        long firstAdmin = saveMember();
-        long secondAdmin = saveMember();
+        long firstAdmin = memberFixture.save().getId();
+        long secondAdmin = memberFixture.save().getId();
 
         // when
         List<Throwable> failures = runConcurrently(List.of(
@@ -88,7 +87,7 @@ class SpotModerationConcurrencyIntegrationTest {
     void concurrentRestoresSucceedOnce() throws Exception {
         // given
         long spotId = saveBakji();
-        long admin = saveMember();
+        long admin = memberFixture.save().getId();
         spotModerationService.hide(spotId, admin);
         jdbc.update("DELETE FROM admin_audit_log");
 
@@ -113,13 +112,13 @@ class SpotModerationConcurrencyIntegrationTest {
         // given
         long spotId = saveBakji();
         for (int i = 0; i < PENDING_REVIEW_REPORTS - 1; i++) {
-            bakjiFeedbackService.reportProblem(saveMember(), spotId, REPORT);
+            bakjiFeedbackService.reportProblem(memberFixture.save().getId(), spotId, REPORT);
         }
-        long fifthReporter = saveMember();
+        long fifthReporter = memberFixture.save().getId();
         bakjiFeedbackService.reportProblem(fifthReporter, spotId, REPORT);
         assertThat(statusOf(spotId)).isEqualTo("PENDING_REVIEW");
-        long admin = saveMember();
-        long lateReporter = saveMember();
+        long admin = memberFixture.save().getId();
+        long lateReporter = memberFixture.save().getId();
 
         // when
         List<Throwable> failures = runConcurrently(List.of(() -> spotModerationService.restore(spotId, admin), () -> {
@@ -151,7 +150,7 @@ class SpotModerationConcurrencyIntegrationTest {
     void hideRacingSourceRemovalStaysConsistent() throws Exception {
         // given
         long spotId = savePublicSpot();
-        long admin = saveMember();
+        long admin = memberFixture.save().getId();
         AtomicInteger hiddenBySync = new AtomicInteger();
 
         // when
@@ -183,7 +182,7 @@ class SpotModerationConcurrencyIntegrationTest {
     void restoreRacingSourceRemovalStaysConsistent() throws Exception {
         // given
         long spotId = savePublicSpot();
-        long admin = saveMember();
+        long admin = memberFixture.save().getId();
         spotModerationService.hide(spotId, admin);
         AtomicInteger hiddenBySync = new AtomicInteger();
 
@@ -205,7 +204,7 @@ class SpotModerationConcurrencyIntegrationTest {
     void restoreRacingResurfacingUpsertStaysConsistent() throws Exception {
         // given
         long spotId = savePublicSpot();
-        long admin = saveMember();
+        long admin = memberFixture.save().getId();
         publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, List.of(EXTERNAL_ID));
 
         // when
@@ -266,10 +265,6 @@ class SpotModerationConcurrencyIntegrationTest {
                 ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT),
                 MutableClock.DEFAULT_INSTANT);
         return spotRepository.save(spot).getId();
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private String statusOf(long spotId) {

@@ -4,14 +4,13 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.common.testsupport.MemberFixture;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -41,6 +40,9 @@ class AiBudgetBurstIntegrationTest {
     private static final int OUTPUT_PER_CALL = 200;
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private AiInterpretService service;
 
     @Autowired
@@ -48,9 +50,6 @@ class AiBudgetBurstIntegrationTest {
 
     @Autowired
     private AiSearchProperties properties;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -65,11 +64,11 @@ class AiBudgetBurstIntegrationTest {
     @DisplayName("[F-27][AI-04] 한도에 거의 닿았을 때 50건이 몰리면, 넘친 금액은 OpenAI까지 간 호출 수만큼이고 그 뒤 요청은 OpenAI를 부르지 않는다")
     void burstOverrunIsBoundedByInFlightCalls() throws Exception {
         // given
-        insertUsage(saveMember(), inputTokensLeavingHalfACallOfBudget());
+        insertUsage(memberFixture.save().getId(), inputTokensLeavingHalfACallOfBudget());
         assertThat(properties.isBudgetExhausted(usageRecorder.sumTokens(TODAY))).isFalse();
         List<Long> members = new ArrayList<>();
         for (int i = 0; i < THREADS; i++) {
-            members.add(saveMember());
+            members.add(memberFixture.save().getId());
         }
         stubOkAfterDelay();
         ExecutorService executor = Executors.newFixedThreadPool(THREADS);
@@ -102,8 +101,9 @@ class AiBudgetBurstIntegrationTest {
         assertThat(outcomes.stream().filter("OK"::equals).count()).isEqualTo(calls);
         assertThat(overrun).isPositive().isLessThanOrEqualTo(costPerCall.multiply(BigDecimal.valueOf(calls)));
 
-        BusinessException after =
-                catchThrowableOfType(BusinessException.class, () -> service.interpret(saveMember(), SENTENCE));
+        BusinessException after = catchThrowableOfType(
+                BusinessException.class,
+                () -> service.interpret(memberFixture.save().getId(), SENTENCE));
         assertThat(after.getErrorCode()).isEqualTo(AiSearchErrorCode.AI_SEARCH_UNAVAILABLE);
         assertThat(wireMock.findAll(postRequestedFor(urlPathEqualTo(PATH)))).hasSize(calls);
     }
@@ -115,10 +115,6 @@ class AiBudgetBurstIntegrationTest {
         } catch (BusinessException e) {
             return e.getErrorCode().name();
         }
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private int inputTokensLeavingHalfACallOfBudget() {

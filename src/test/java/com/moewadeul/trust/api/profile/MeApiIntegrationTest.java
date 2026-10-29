@@ -1,14 +1,13 @@
 package com.moewadeul.trust.api.profile;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +16,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -31,13 +29,10 @@ class MeApiIntegrationTest {
     private static final String LOCAL_IP = "127.0.0.1";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailVerificationIssuer emailVerificationIssuer;
@@ -48,7 +43,7 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("[TR-03] 이메일 인증 전인 회원이 내 정보를 조회하면 200과 함께 9개 필드를 모두 응답한다")
     void unverifiedMemberReadsAllFields() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
 
         MvcTestResult result = mvc.get().uri(ME_PATH).cookie(session).exchange();
@@ -82,7 +77,7 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("[TR-03] 이메일 인증 전인 회원이 내 정보를 수정하면 403 MEMBER_NOT_VERIFIED를 응답하고 값은 그대로다")
     void unverifiedMemberCannotUpdateMyInfo() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
 
         MvcTestResult result = patch(session, "{\"selfGender\":\"FEMALE\"}");
@@ -95,7 +90,7 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("인증 회원이 닉네임·연령대·성별을 바꾸면 200과 조회와 같은 형태로 응답하고, 다시 조회해도 바뀐 값이 나온다")
     void verifiedMemberUpdatesAllFields() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
         String newNickname = TestSequence.nickname();
         String expected = """
@@ -125,7 +120,7 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("요청에 없는 필드는 바꾸지 않고, 보낸 필드만 바꾼다")
     void absentFieldsKeepTheirValues() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
         patch(session, "{\"selfAgeGroup\":\"THIRTIES\",\"selfGender\":\"MALE\"}");
 
@@ -142,7 +137,7 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("자기 신고 성별을 null로 보내면 지우고, 함께 보내지 않은 연령대는 그대로 둔다")
     void explicitNullClearsSelfGender() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
         patch(session, "{\"selfAgeGroup\":\"TWENTIES\",\"selfGender\":\"FEMALE\"}");
 
@@ -158,7 +153,7 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("닉네임을 null로 보내면 지울 수 없어서 400 INVALID_INPUT을 응답하고 닉네임은 그대로다")
     void explicitNullNicknameIsRejected() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
 
         MvcTestResult result = patch(session, "{\"nickname\":null}");
@@ -171,7 +166,7 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("허용 값 밖의 연령대를 보내면 400 INVALID_INPUT을 응답하고 값은 그대로다")
     void unknownSelfAgeGroupIsRejected() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
 
         MvcTestResult result = patch(session, "{\"selfAgeGroup\":\"SEVENTIES\"}");
@@ -184,8 +179,8 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("다른 회원이 쓰는 닉네임으로 바꾸면 409 MEMBER_NICKNAME_DUPLICATED를 응답하고 닉네임은 그대로다")
     void nicknameOfAnotherMemberIsConflict() {
-        Member other = saveMember();
-        Member member = saveMember();
+        Member other = memberFixture.saveWithPassword(VALID_PASSWORD);
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
 
         MvcTestResult result = patch(session, "{\"nickname\":\"%s\"}".formatted(other.getNickname()));
@@ -198,7 +193,7 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("지금 쓰는 자기 닉네임을 그대로 보내면 중복으로 보지 않고 200을 응답한다")
     void ownCurrentNicknameIsAccepted() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
 
         MvcTestResult result = patch(session, "{\"nickname\":\"%s\"}".formatted(member.getNickname()));
@@ -210,8 +205,8 @@ class MeApiIntegrationTest {
     @Test
     @DisplayName("[F-11] 본인확인을 마친 성인의 내 정보는 identityVerified true, trustLevel 1이고, 미성년은 true, 0이다")
     void meReflectsIdentityVerification() {
-        Cookie adult = verifiedSession(saveMember());
-        Cookie minor = verifiedSession(saveMember());
+        Cookie adult = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie minor = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         verifyIdentity(adult, 2007, "demo-adult");
         verifyIdentity(minor, 2008, "demo-minor");
 
@@ -234,13 +229,6 @@ class MeApiIntegrationTest {
                         .formatted(birthYear, demoIdentityKey))
                 .exchange();
         assertThat(result).hasStatus(HttpStatus.OK);
-    }
-
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(VALID_PASSWORD))
-                .build());
     }
 
     private Cookie login(Member member) {
