@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -104,28 +105,8 @@ class AdminCommunityReviewApiIntegrationTest {
         assertThat(result).bodyJson().extractingPath("$.content[0].reportCount").isEqualTo(6);
         assertThat(result)
                 .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.SPAM")
-                .isEqualTo(3);
-        assertThat(result)
-                .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.ABUSE")
-                .isEqualTo(1);
-        assertThat(result)
-                .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.PRIVACY")
-                .isEqualTo(1);
-        assertThat(result)
-                .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.OTHER")
-                .isEqualTo(1);
-        assertThat(result)
-                .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.ILLEGAL_CAMPING")
-                .isEqualTo(0);
-        assertThat(result)
-                .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.MONEY_SCAM")
-                .isEqualTo(0);
+                .extractingPath("$.content[0].reasonCounts")
+                .isEqualTo(reasonCounts(3, 1, 0, 1, 0, 1));
         List<String> recent = json(result, "$.content[0].recentReports[*].content");
         assertThat(recent)
                 .containsExactly(
@@ -170,7 +151,7 @@ class AdminCommunityReviewApiIntegrationTest {
 
     @Test
     @DisplayName(
-            "[F-29][CM-08] status=HIDDEN이면 숨긴 글만 나오고 신고가 없는 글도 보이며, 허용하지 않는 status와 범위를 벗어난 size는 400 INVALID_INPUT이다")
+            "[F-29][CM-08] status=HIDDEN이면 숨긴 글만 나오고 신고가 없는 글도 사유별 수가 모두 0으로 보이며, 허용하지 않는 status와 범위를 벗어난 size는 400 INVALID_INPUT이다")
     void listFiltersByStatusAndValidatesInput() {
         // given
         long hidden = insertPost("HIDDEN", BASE);
@@ -182,6 +163,10 @@ class AdminCommunityReviewApiIntegrationTest {
                 .bodyJson()
                 .extractingPath("$.content[0].reportCount")
                 .isEqualTo(0);
+        assertThat(get(POSTS + "?status=HIDDEN"))
+                .bodyJson()
+                .extractingPath("$.content[0].reasonCounts")
+                .isEqualTo(reasonCounts(0, 0, 0, 0, 0, 0));
         for (String query : List.of("?status=ACTIVE", "?status=DELETED", "?status=hidden", "?size=51", "?size=0")) {
             MvcTestResult result = get(POSTS + query);
             assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
@@ -364,12 +349,8 @@ class AdminCommunityReviewApiIntegrationTest {
                 .isEqualTo(5);
         assertThat(pendingList)
                 .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.MONEY_SCAM")
-                .isEqualTo(1);
-        assertThat(pendingList)
-                .bodyJson()
-                .extractingPath("$.content[0].reasonCounts.ABUSE")
-                .isEqualTo(4);
+                .extractingPath("$.content[0].reasonCounts")
+                .isEqualTo(reasonCounts(0, 4, 0, 0, 1, 0));
         assertThat(pendingList)
                 .bodyJson()
                 .extractingPath("$.content[0].recentReports")
@@ -382,6 +363,10 @@ class AdminCommunityReviewApiIntegrationTest {
                 .bodyJson()
                 .extractingPath("$.content[0].reportCount")
                 .isEqualTo(0);
+        assertThat(hiddenList)
+                .bodyJson()
+                .extractingPath("$.content[0].reasonCounts")
+                .isEqualTo(reasonCounts(0, 0, 0, 0, 0, 0));
     }
 
     @Test
@@ -548,6 +533,17 @@ class AdminCommunityReviewApiIntegrationTest {
     private static List<Long> ids(MvcTestResult result, String path) {
         List<Number> numbers = json(result, path);
         return numbers.stream().map(Number::longValue).toList();
+    }
+
+    private static Map<String, Integer> reasonCounts(
+            int spam, int abuse, int illegalCamping, int privacy, int moneyScam, int other) {
+        return Map.of(
+                "SPAM", spam,
+                "ABUSE", abuse,
+                "ILLEGAL_CAMPING", illegalCamping,
+                "PRIVACY", privacy,
+                "MONEY_SCAM", moneyScam,
+                "OTHER", other);
     }
 
     private String postStatus(long postId) {
