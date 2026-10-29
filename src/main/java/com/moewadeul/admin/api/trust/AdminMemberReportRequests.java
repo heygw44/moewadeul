@@ -1,4 +1,4 @@
-package com.moewadeul.admin.api.member;
+package com.moewadeul.admin.api.trust;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

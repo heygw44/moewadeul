@@ -1,6 +1,6 @@
-package com.moewadeul.admin.api.member;
+package com.moewadeul.admin.api.trust;
 
-import com.moewadeul.admin.api.member.AdminMemberReportSummaryResponse.MemberRef;
+import com.moewadeul.admin.api.trust.AdminMemberReportSummaryResponse.MemberRef;
 import com.moewadeul.trust.application.report.AdminMemberReportDetail;
 import java.time.Instant;
 import java.time.LocalDate;

@@ -1,4 +1,4 @@
-package com.moewadeul.admin.api.member;
+package com.moewadeul.admin.api.trust;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
