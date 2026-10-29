@@ -11,17 +11,24 @@ import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @IntegrationTest
 @AutoConfigureMockMvc
@@ -43,6 +50,9 @@ class NotificationSettingApiIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     private Member owner;
     private Cookie ownerSession;
@@ -125,12 +135,60 @@ class NotificationSettingApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-20] 다른 트랜잭션이 회원 행을 잠근 채 놓지 않으면 설정 변경은 503 RESOURCE_BUSY와 Retry-After로 끝나고, 잠금이 풀린 뒤 다시 보내면 200이다")
+    void putReturnsResourceBusyWhileMemberRowIsLocked() throws Exception {
+        // given
+        String request = "[{\"type\":\"BASECAMP_APPLIED\",\"emailEnabled\":false}]";
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        ExecutorService holder = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> holding = holder.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                jdbc.queryForObject("SELECT id FROM member WHERE id = ? FOR UPDATE", Long.class, owner.getId());
+                locked.countDown();
+                awaitQuietly(release);
+            }));
+            assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // when
+            MvcTestResult busy = put(ownerSession, request);
+
+            // then
+            assertThat(busy).hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
+            assertThat(busy).bodyJson().extractingPath("$.code").isEqualTo("RESOURCE_BUSY");
+            assertThat(busy.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isEqualTo("5");
+            release.countDown();
+            holding.get(10, TimeUnit.SECONDS);
+
+            // when
+            MvcTestResult retried = put(ownerSession, request);
+
+            // then
+            assertThat(retried).hasStatus(HttpStatus.OK);
+            assertThat(disabledTypes(retried)).containsExactly("BASECAMP_APPLIED");
+        } finally {
+            release.countDown();
+            holder.shutdown();
+            assertThat(holder.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    @Test
     @DisplayName("[F-20] 로그인하지 않으면 401 AUTHENTICATION_REQUIRED다")
     void anonymousIsUnauthorized() {
         MvcTestResult result = mvc.get().uri(PATH).exchange();
 
         assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("AUTHENTICATION_REQUIRED");
+    }
+
+    private static void awaitQuietly(CountDownLatch latch) {
+        try {
+            assertThat(latch.await(60, TimeUnit.SECONDS)).isTrue();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
     }
 
     private MvcTestResult get(Cookie session) {

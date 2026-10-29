@@ -12,17 +12,24 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @IntegrationTest
 @AutoConfigureMockMvc
@@ -51,6 +58,9 @@ class BakjiFeedbackApiIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     @Test
     @DisplayName("[F-08] 회원이 박지를 확인하면 201과 확인 수 1을 응답하고, 같은 회원의 두 번째 확인은 409 BAKJI_ALREADY_CONFIRMED이며, 상세의 확인 수에 반영된다")
@@ -231,6 +241,50 @@ class BakjiFeedbackApiIntegrationTest {
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
         assertThat(count("SELECT COUNT(*) FROM bakji_report")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-08] 다른 트랜잭션이 박지 행을 잠근 채 놓지 않으면 신고는 503 RESOURCE_BUSY와 Retry-After로 끝나고 신고를 저장하지 않는다")
+    void reportReturnsResourceBusyWhileBakjiRowIsLocked() throws Exception {
+        // given
+        int spotId = createBakji(verifiedSession(saveMember()));
+        Cookie reporter = verifiedSession(saveMember());
+        CountDownLatch locked = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        ExecutorService holder = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> holding = holder.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                jdbc.queryForObject("SELECT id FROM spot WHERE id = ? FOR UPDATE", Long.class, spotId);
+                locked.countDown();
+                awaitQuietly(release);
+            }));
+            assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // when
+            MvcTestResult result = post(reporter, PATH + "/" + spotId + "/reports", REPORT_BODY);
+
+            // then
+            assertThat(result).hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
+            assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("RESOURCE_BUSY");
+            assertThat(result.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isEqualTo("5");
+            release.countDown();
+            holding.get(10, TimeUnit.SECONDS);
+            assertThat(count("SELECT COUNT(*) FROM bakji_report WHERE spot_id = ?", spotId))
+                    .isZero();
+        } finally {
+            release.countDown();
+            holder.shutdown();
+            assertThat(holder.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    private static void awaitQuietly(CountDownLatch latch) {
+        try {
+            assertThat(latch.await(60, TimeUnit.SECONDS)).isTrue();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
     }
 
     private int createBakji(Cookie session) {

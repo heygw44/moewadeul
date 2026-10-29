@@ -6,6 +6,7 @@ import com.moewadeul.common.trace.TraceIdFilter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -22,6 +23,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -204,6 +206,25 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("행 잠금을 얻지 못하면 503 RESOURCE_BUSY와 Retry-After 5초로 응답하고, 스택 트레이스 없이 WARN 한 줄만 남긴다")
+    void lockAcquisitionFailureReturnsResourceBusy(CapturedOutput output) {
+        // when
+        MvcTestResult result = mvc.get().uri("/test/lock-wait-timeout").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(result.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isEqualTo("5");
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("RESOURCE_BUSY");
+        assertThat(result).bodyJson().extractingPath("$.traceId").asString().isNotBlank();
+        assertThat(result).bodyJson().doesNotHavePath("$.fieldErrors");
+        assertThat(output.getOut())
+                .contains("WARN")
+                .contains("cause=CannotAcquireLockException: Lock wait timeout exceeded")
+                .doesNotContain("ERROR")
+                .doesNotContain("\tat ");
+    }
+
+    @Test
     @DisplayName("503이 아닌 5xx BusinessException은 지금처럼 ERROR와 스택 트레이스를 남긴다")
     void otherServerErrorBusinessExceptionLogsError(CapturedOutput output) {
         // when
@@ -375,6 +396,13 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/server-error")
         String serverError() {
             throw new BusinessException(SampleErrorCode.SAMPLE_SERVER_ERROR);
+        }
+
+        @GetMapping("/lock-wait-timeout")
+        String lockWaitTimeout() {
+            throw new CannotAcquireLockException(
+                    "could not execute statement",
+                    new SQLException("Lock wait timeout exceeded; try restarting transaction", "40001", 1205));
         }
 
         @GetMapping("/unexpected")
