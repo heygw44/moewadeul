@@ -41,7 +41,7 @@ class NotificationReliabilityIntegrationTest {
     private OutboxEventRecorder recorder;
 
     @Autowired
-    private BasecampApprovedNotificationHandler approvedHandler;
+    private NotificationEventHandler handler;
 
     @Autowired
     private NotificationWriter writer;
@@ -67,8 +67,8 @@ class NotificationReliabilityIntegrationTest {
                 9001L, APPROVED, AGGREGATE_TYPE, 3L, approvedPayload(applicantId, 3L), clock.instant());
 
         // when
-        approvedHandler.handle(message);
-        approvedHandler.handle(message);
+        handler.handle(message);
+        handler.handle(message);
 
         // then
         assertThat(countNotifications()).isEqualTo(1);

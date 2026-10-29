@@ -4,6 +4,7 @@ import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.program.domain.ProgramCancelReason;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,8 +17,8 @@ class WithdrawalProgramCleanupHandler implements OutboxEventHandler {
     }
 
     @Override
-    public String eventType() {
-        return TrustEvents.WITHDRAWAL_PROGRAM_CLEANUP;
+    public Set<String> eventTypes() {
+        return Set.of(TrustEvents.WITHDRAWAL_PROGRAM_CLEANUP);
     }
 
     @Override
