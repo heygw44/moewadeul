@@ -20,6 +20,7 @@ import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.program.application.enrollment.ProgramApplyResult;
 import com.moewadeul.program.application.enrollment.ProgramApplyService;
 import com.moewadeul.program.application.enrollment.ProgramVacancyAlertService;
+import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
 import java.time.Clock;
 import java.time.Instant;
@@ -67,7 +68,8 @@ class ProgramEnrollmentControllerTest {
     @DisplayName("[F-18] 인증 회원이 신청하면 201과 신청 ID, 상태, 결제 기한, 금액을 응답한다")
     void applyReturnsCreated() {
         when(idempotencyRecordRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(programApplyService.apply(4L, 9L)).thenReturn(new ProgramApplyResult(70L, "PENDING_PAYMENT", AT, 30000));
+        when(programApplyService.apply(4L, 9L))
+                .thenReturn(new ProgramApplyResult(70L, ProgramApplicationStatus.PENDING_PAYMENT, AT, 30000));
 
         MvcTestResult result = applyRequest(9L, "key-1").with(member(4L)).exchange();
 

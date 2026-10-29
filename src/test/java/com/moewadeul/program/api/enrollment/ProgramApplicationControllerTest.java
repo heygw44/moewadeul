@@ -20,6 +20,7 @@ import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.program.application.enrollment.ProgramApplicationCancelResult;
 import com.moewadeul.program.application.enrollment.ProgramPayResult;
 import com.moewadeul.program.application.enrollment.ProgramPaymentService;
+import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
 import java.time.Clock;
 import java.time.Instant;
@@ -66,7 +67,8 @@ class ProgramApplicationControllerTest {
     @DisplayName("[F-19] 인증 회원이 결제하면 200과 신청 ID, 상태, 결제 시각을 응답하고 로그인한 회원 ID로 서비스를 부른다")
     void payReturnsOk() {
         when(idempotencyRecordRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(programPaymentService.pay(4L, 70L)).thenReturn(new ProgramPayResult(70L, "CONFIRMED", AT));
+        when(programPaymentService.pay(4L, 70L))
+                .thenReturn(new ProgramPayResult(70L, ProgramApplicationStatus.CONFIRMED, AT));
 
         MvcTestResult result =
                 payRequest(70L, "key-1", VALID_BODY).with(member(4L)).exchange();
@@ -169,7 +171,8 @@ class ProgramApplicationControllerTest {
     @Test
     @DisplayName("[F-19][PG-06] 인증 회원이 취소하면 200과 상태, 환불 여부를 응답하고 멱등성 키 없이도 된다")
     void cancelReturnsOk() {
-        when(programPaymentService.cancel(4L, 70L)).thenReturn(new ProgramApplicationCancelResult("CANCELED", true));
+        when(programPaymentService.cancel(4L, 70L))
+                .thenReturn(new ProgramApplicationCancelResult(ProgramApplicationStatus.CANCELED, true));
 
         MvcTestResult result = mvc.post()
                 .uri("/api/program-applications/70/cancel")

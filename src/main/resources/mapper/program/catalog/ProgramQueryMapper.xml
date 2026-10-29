@@ -28,14 +28,14 @@
                p.status AS status
         FROM program p
         WHERE p.status = 'SCHEDULED'
-        <if test="phase == 'UPCOMING'">
+        <if test="phase == @com.moewadeul.program.domain.ProgramPhase@UPCOMING">
             AND #{now} &lt; p.apply_open_at
         </if>
-        <if test="phase == 'OPEN'">
+        <if test="phase == @com.moewadeul.program.domain.ProgramPhase@OPEN">
             AND p.apply_open_at &lt;= #{now}
             AND #{now} &lt; p.apply_close_at
         </if>
-        <if test="phase == 'CLOSED'">
+        <if test="phase == @com.moewadeul.program.domain.ProgramPhase@CLOSED">
             AND p.apply_close_at &lt;= #{now}
         </if>
         ORDER BY p.start_at, p.id

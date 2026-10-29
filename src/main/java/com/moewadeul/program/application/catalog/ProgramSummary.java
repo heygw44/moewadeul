@@ -1,5 +1,6 @@
 package com.moewadeul.program.application.catalog;
 
+import com.moewadeul.program.domain.ProgramPhase;
 import java.time.Instant;
 
 public record ProgramSummary(
@@ -15,4 +16,4 @@ public record ProgramSummary(
         int remainingSeats,
         int fee,
         boolean overnight,
-        String status) {}
+        ProgramPhase status) {}

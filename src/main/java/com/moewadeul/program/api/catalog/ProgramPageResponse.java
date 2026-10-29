@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.program.application.catalog.ProgramPage;
 import com.moewadeul.program.application.catalog.ProgramSummary;
+import com.moewadeul.program.domain.ProgramPhase;
 import java.time.Instant;
 import java.util.List;
 
@@ -33,7 +34,7 @@ public record ProgramPageResponse(
             int remainingSeats,
             int fee,
             boolean overnight,
-            String status) {
+            ProgramPhase status) {
 
         static ProgramSummaryResponse from(ProgramSummary summary) {
             return new ProgramSummaryResponse(
