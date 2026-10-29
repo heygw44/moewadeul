@@ -100,6 +100,17 @@ describe('usePagedList', () => {
     expect(latest.current?.hasNext).toBe(true);
   });
 
+  it('updateItems는 받아 둔 목록의 항목만 바꾸고 쪽 정보는 그대로 둔다', async () => {
+    await mount('A');
+    await settle('A:0', page([1, 2], 0, true));
+
+    await act(async () => latest.updateItems((items) => items.map((item) => item * 10)));
+
+    expect(latest.current?.items).toEqual([10, 20]);
+    expect(latest.current?.page).toBe(0);
+    expect(latest.current?.hasNext).toBe(true);
+  });
+
   it('렌더마다 새로 만든 필터 객체라도 값이 같으면 다시 받지 않고 목록을 그대로 둔다', async () => {
     let objectLatest: PagedList<number, { q: string }> | undefined;
     const objectFetcher = vi.fn((filter: { q: string }, pageNumber: number) => fetcher(filter.q, pageNumber));

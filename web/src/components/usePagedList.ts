@@ -17,6 +17,7 @@ export interface PagedList<T, F> {
   current: ListState<T, F> | null;
   loadingMore: boolean;
   loadMore: () => Promise<void>;
+  updateItems: (update: (items: T[]) => T[]) => void;
   retry: () => void;
   reload: () => void;
 }
@@ -108,6 +109,14 @@ export function usePagedList<T, F extends FilterValue>(
     }
   }, [current, filter, loadingMore]);
 
+  const updateItems = useCallback(
+    (update: (items: T[]) => T[]) =>
+      setState((previous) =>
+        previous !== null && previous.filter === filter ? { ...previous, items: update(previous.items) } : previous,
+      ),
+    [filter],
+  );
+
   const retry = useCallback(() => {
     setState(null);
     setAttempt((value) => value + 1);
@@ -115,5 +124,5 @@ export function usePagedList<T, F extends FilterValue>(
 
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
 
-  return { current, loadingMore, loadMore, retry, reload };
+  return { current, loadingMore, loadMore, updateItems, retry, reload };
 }
