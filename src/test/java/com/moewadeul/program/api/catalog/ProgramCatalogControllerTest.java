@@ -110,6 +110,37 @@ class ProgramCatalogControllerTest {
     }
 
     @Test
+    @DisplayName("[F-17] 목록의 status가 허용 값이 아니면 statusValid 필드에 허용 값 안내를 담아 400으로 응답한다")
+    void listReportsAllowedStatusesInFieldError() {
+        MvcTestResult result =
+                mvc.get().uri("/api/programs").param("status", "CANCELED").exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("statusValid");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("status는 UPCOMING, OPEN, CLOSED 중 하나여야 해요.");
+    }
+
+    @Test
+    @DisplayName("[F-18] 내 행사 신청 목록의 status가 허용 값이 아니면 statusValid 필드에 허용 값 안내를 담아 400으로 응답한다")
+    void listMineReportsAllowedStatusesInFieldError() {
+        MvcTestResult result = mvc.get()
+                .uri("/api/me/program-applications")
+                .param("status", "OPEN")
+                .with(member(4L))
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("statusValid");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("status는 PENDING_PAYMENT, CONFIRMED, CANCELED, EXPIRED 중 하나여야 해요.");
+    }
+
+    @Test
     @DisplayName("[F-17] 비로그인 요청자의 상세 응답에는 myApplication 필드가 없다")
     void anonymousDetailOmitsMyApplication() {
         when(programQueryService.detail(9L, null)).thenReturn(detail(null));
