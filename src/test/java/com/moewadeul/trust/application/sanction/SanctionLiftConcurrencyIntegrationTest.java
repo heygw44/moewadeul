@@ -6,6 +6,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.domain.sanction.SanctionLiftReason;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +56,7 @@ class SanctionLiftConcurrencyIntegrationTest {
                     .sanctionId();
 
             runConcurrently(List.of(
-                    () -> sanctionLiftService.lift(suspensionId, adminId),
+                    () -> sanctionLiftService.lift(suspensionId, SanctionLiftReason.END_EARLY.name(), adminId),
                     () -> sanctionConfirmService.confirm(
                             new SanctionConfirmCommand(targetId, null, SanctionType.PERMANENT, "심각한 위반", adminId))));
 

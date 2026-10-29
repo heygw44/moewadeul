@@ -12,7 +12,7 @@ public interface SanctionRepository {
 
     boolean existsActiveSuspension(long memberId, Instant now);
 
-    boolean existsByMemberIdAndStatusNot(long memberId, SanctionStatus status);
+    boolean existsHistory(long memberId);
 
     Optional<Sanction> findById(Long id);
 
@@ -22,5 +22,5 @@ public interface SanctionRepository {
 
     List<Sanction> findActiveSuspensions(long memberId);
 
-    List<Sanction> findUnliftedTemporaryByReportId(long reportId);
+    List<Sanction> findUnrevokedTemporaryByReportId(long reportId);
 }

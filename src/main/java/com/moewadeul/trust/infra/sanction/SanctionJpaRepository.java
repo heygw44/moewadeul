@@ -2,7 +2,6 @@ package com.moewadeul.trust.infra.sanction;
 
 import com.moewadeul.trust.domain.sanction.Sanction;
 import com.moewadeul.trust.domain.sanction.SanctionRepository;
-import com.moewadeul.trust.domain.sanction.SanctionStatus;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
@@ -22,7 +21,7 @@ public interface SanctionJpaRepository extends JpaRepository<Sanction, Long>, Sa
             select max(s.level) from Sanction s
             where s.memberId = :memberId
               and s.type <> com.moewadeul.trust.domain.sanction.SanctionType.TEMPORARY_72H
-              and s.status <> com.moewadeul.trust.domain.sanction.SanctionStatus.LIFTED
+              and s.status <> com.moewadeul.trust.domain.sanction.SanctionStatus.REVOKED
             """)
     Optional<Byte> findHighestConfirmedLevel(@Param("memberId") long memberId);
 
@@ -37,7 +36,13 @@ public interface SanctionJpaRepository extends JpaRepository<Sanction, Long>, Sa
     boolean existsActiveSuspension(@Param("memberId") long memberId, @Param("now") Instant now);
 
     @Override
-    boolean existsByMemberIdAndStatusNot(long memberId, SanctionStatus status);
+    @Query("""
+            select count(s) > 0 from Sanction s
+            where s.memberId = :memberId
+              and s.type <> com.moewadeul.trust.domain.sanction.SanctionType.TEMPORARY_72H
+              and s.status <> com.moewadeul.trust.domain.sanction.SanctionStatus.REVOKED
+            """)
+    boolean existsHistory(@Param("memberId") long memberId);
 
     @Override
     Optional<Sanction> findById(Long id);
@@ -65,7 +70,7 @@ public interface SanctionJpaRepository extends JpaRepository<Sanction, Long>, Sa
             select s from Sanction s
             where s.reportId = :reportId
               and s.type = com.moewadeul.trust.domain.sanction.SanctionType.TEMPORARY_72H
-              and s.status <> com.moewadeul.trust.domain.sanction.SanctionStatus.LIFTED
+              and s.status <> com.moewadeul.trust.domain.sanction.SanctionStatus.REVOKED
             """)
-    List<Sanction> findUnliftedTemporaryByReportId(@Param("reportId") long reportId);
+    List<Sanction> findUnrevokedTemporaryByReportId(@Param("reportId") long reportId);
 }

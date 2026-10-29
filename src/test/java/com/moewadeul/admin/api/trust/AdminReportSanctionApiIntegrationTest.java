@@ -238,7 +238,7 @@ class AdminReportSanctionApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-21][SN-05] 기각된 임시 정지는 LIFTED가 되고 제재 이력의 임시 정지 항목이 없다")
+    @DisplayName("[F-21][SN-05] 기각된 임시 정지는 REVOKED가 되고 제재 이력의 임시 정지 항목이 없다")
     void dismissedTemporarySuspensionIsNotInHistory() {
         long dismissedTarget = fixture.saveVerifiedMember(TestSequence.nickname());
         long reportId = urgentReport(dismissedTarget);
@@ -247,13 +247,13 @@ class AdminReportSanctionApiIntegrationTest {
 
         MvcTestResult detail = get(REPORTS + "/" + reportId);
 
-        assertThat(sanctionStatuses(dismissedTarget)).containsExactly("LIFTED");
+        assertThat(sanctionStatuses(dismissedTarget)).containsExactly("REVOKED");
         assertThat(detail).hasStatus(HttpStatus.OK);
         assertThat((List<?>) json(detail, "$.sanctionHistory")).isEmpty();
     }
 
     @Test
-    @DisplayName("[F-21][SN-05][PV-05] 72시간이 지나 만료된 임시 정지의 신고를 기각해도 LIFTED가 되어, 탈퇴할 때 제재 이력으로 세지 않고 CI 해시를 30일만 남긴다")
+    @DisplayName("[F-21][SN-05][PV-05] 72시간이 지나 만료된 임시 정지의 신고를 기각해도 REVOKED가 되어, 탈퇴할 때 제재 이력으로 세지 않고 CI 해시를 30일만 남긴다")
     void dismissingAfterTemporarySuspensionExpiredLiftsItAndKeepsCiForThirtyDays() {
         long dismissedTarget = fixture.saveVerifiedMember(TestSequence.nickname());
         long reportId = urgentReport(dismissedTarget);
@@ -266,7 +266,7 @@ class AdminReportSanctionApiIntegrationTest {
         withdraw(dismissedTarget);
 
         assertThat(dismissed).hasStatus(HttpStatus.OK);
-        assertThat(sanctionStatuses(dismissedTarget)).containsExactly("LIFTED");
+        assertThat(sanctionStatuses(dismissedTarget)).containsExactly("REVOKED");
         assertThat(jdbc.queryForObject(
                         "SELECT ci_retained_until FROM identity_verification WHERE member_id = ?",
                         LocalDateTime.class,
@@ -356,7 +356,7 @@ class AdminReportSanctionApiIntegrationTest {
                 post(REPORTS + "/999999/start-review", null),
                 post(REPORTS + "/999999/action", "{\"hideReview\":true}"),
                 post(REPORTS + "/999999/dismiss", null),
-                post(SANCTIONS + "/999999/lift", null))) {
+                lift(999999, "REVOKE"))) {
             assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
             assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("NOT_FOUND");
         }
@@ -557,7 +557,7 @@ class AdminReportSanctionApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[SN-05] 긴급 신고를 기각하면 임시 정지가 LIFTED가 되고 미인증 회원은 UNVERIFIED로 돌아가며 다음 제재 단계는 1단계다")
+    @DisplayName("[SN-05] 긴급 신고를 기각하면 임시 정지가 REVOKED가 되고 미인증 회원은 UNVERIFIED로 돌아가며 다음 제재 단계는 1단계다")
     void dismissUrgentReportReleasesUnverifiedMember() {
         long reportId = urgentReport(targetId);
         assertThat(memberStatus(targetId)).isEqualTo("SUSPENDED");
@@ -567,7 +567,7 @@ class AdminReportSanctionApiIntegrationTest {
 
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(result).bodyJson().extractingPath("$.status").isEqualTo("DISMISSED");
-        assertThat(sanctionStatuses(targetId)).containsExactly("LIFTED");
+        assertThat(sanctionStatuses(targetId)).containsExactly("REVOKED");
         assertThat(jdbc.queryForObject("SELECT lifted_by FROM sanction WHERE member_id = ?", Long.class, targetId))
                 .isEqualTo(adminId);
         assertThat(memberStatus(targetId)).isEqualTo("UNVERIFIED");
@@ -610,7 +610,7 @@ class AdminReportSanctionApiIntegrationTest {
         assertThat(memberStatus(targetId)).isEqualTo("SUSPENDED");
         assertThat(suspendedUntil(targetId)).isEqualTo(firstEnd);
         assertThat(sanctionStatus(sanctionOfReport(first))).isEqualTo("ACTIVE");
-        assertThat(sanctionStatus(sanctionOfReport(second))).isEqualTo("LIFTED");
+        assertThat(sanctionStatus(sanctionOfReport(second))).isEqualTo("REVOKED");
     }
 
     @Test
@@ -625,7 +625,7 @@ class AdminReportSanctionApiIntegrationTest {
 
         assertThat(memberStatus(targetId)).isEqualTo("SUSPENDED");
         assertThat(suspendedUntil(targetId)).isNull();
-        assertThat(sanctionStatus(sanctionOfReport(reportId))).isEqualTo("LIFTED");
+        assertThat(sanctionStatus(sanctionOfReport(reportId))).isEqualTo("REVOKED");
     }
 
     @Test
@@ -687,30 +687,94 @@ class AdminReportSanctionApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[SN-15] 7일 정지를 해제하면 로그인할 수 있고 다음 제재 단계는 해제 전 단계로 돌아간다")
-    void liftSuspensionAllowsLoginAndRestoresNextLevel() {
+    @DisplayName("[SN-15] 7일 정지를 처분 취소하면 로그인할 수 있고 다음 제재 단계는 해제 전 단계로 돌아간다")
+    void revokeSuspensionAllowsLoginAndRestoresNextLevel() {
         sanctionConfirmService.confirm(new SanctionConfirmCommand(targetId, null, SanctionType.WARNING, "경고", adminId));
         long sanctionId = confirm(SanctionType.SUSPEND_7D);
         assertThat(loginRequest(targetId)).hasStatus(HttpStatus.FORBIDDEN);
 
-        MvcTestResult result = post(SANCTIONS + "/" + sanctionId + "/lift", null);
+        MvcTestResult result = lift(sanctionId, "REVOKE");
 
         assertThat(result).hasStatus(HttpStatus.OK);
-        assertThat(result).bodyJson().extractingPath("$.status").isEqualTo("LIFTED");
+        assertThat(result).bodyJson().extractingPath("$.status").isEqualTo("REVOKED");
         assertThat(result).bodyJson().extractingPath("$.sanctionId").isEqualTo((int) sanctionId);
         assertThat(memberStatus(targetId)).isEqualTo("UNVERIFIED");
         assertThat(loginRequest(targetId)).hasStatus(HttpStatus.OK);
         assertThat(jdbc.queryForObject(
                         "SELECT CONCAT(status, ':', lifted_by) FROM sanction WHERE id = ?", String.class, sanctionId))
-                .isEqualTo("LIFTED:" + adminId);
+                .isEqualTo("REVOKED:" + adminId);
         assertThat(confirm(SanctionType.SUSPEND_7D)).isNotEqualTo(sanctionId);
         assertThat(jdbc.queryForObject(
                         "SELECT detail FROM admin_audit_log WHERE action = 'SANCTION_LIFT'", String.class))
                 .contains("\"sanctionType\": \"SUSPEND_7D\"")
-                .contains("\"toStatus\": \"LIFTED\"");
+                .contains("\"toStatus\": \"REVOKED\"");
         assertThat(jdbc.queryForObject(
                         "SELECT target_id FROM admin_audit_log WHERE action = 'SANCTION_LIFT'", Long.class))
                 .isEqualTo(sanctionId);
+    }
+
+    @Test
+    @DisplayName("[SN-15] 7일 정지를 조기 종료하면 로그인할 수 있고 제재는 ENDED_EARLY로 이력에 남는다")
+    void endEarlySuspensionAllowsLogin() {
+        confirm(SanctionType.WARNING);
+        long sanctionId = confirm(SanctionType.SUSPEND_7D);
+
+        MvcTestResult result = lift(sanctionId, "END_EARLY");
+
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(result).bodyJson().extractingPath("$.status").isEqualTo("ENDED_EARLY");
+        assertThat(memberStatus(targetId)).isEqualTo("UNVERIFIED");
+        assertThat(loginRequest(targetId)).hasStatus(HttpStatus.OK);
+        assertThat(jdbc.queryForObject(
+                        "SELECT CONCAT(status, ':', lifted_by) FROM sanction WHERE id = ?", String.class, sanctionId))
+                .isEqualTo("ENDED_EARLY:" + adminId);
+        assertThat(jdbc.queryForObject(
+                        "SELECT detail FROM admin_audit_log WHERE action = 'SANCTION_LIFT'", String.class))
+                .contains("\"toStatus\": \"ENDED_EARLY\"");
+    }
+
+    @Test
+    @DisplayName("[SN-10][SN-15] 30일 정지를 조기 종료하면 다음 위반은 영구 정지로 한 단계 높게 확정된다")
+    void nextLevelRisesAfterEndedEarly() {
+        confirm(SanctionType.WARNING);
+        confirm(SanctionType.SUSPEND_7D);
+        long thirtyDays = confirm(SanctionType.SUSPEND_30D);
+
+        assertThat(lift(thirtyDays, "END_EARLY")).hasStatus(HttpStatus.OK);
+
+        assertThat(confirm(SanctionType.PERMANENT)).isNotEqualTo(thirtyDays);
+        assertThat(jdbc.queryForObject("SELECT MAX(level) FROM sanction", Integer.class))
+                .isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("[SN-10][SN-15] 30일 정지를 처분 취소하면 다음 위반은 같은 30일 정지로 다시 확정된다")
+    void nextLevelRepeatsAfterRevoked() {
+        confirm(SanctionType.WARNING);
+        confirm(SanctionType.SUSPEND_7D);
+        long thirtyDays = confirm(SanctionType.SUSPEND_30D);
+
+        assertThat(lift(thirtyDays, "REVOKE")).hasStatus(HttpStatus.OK);
+
+        assertThat(confirm(SanctionType.SUSPEND_30D)).isNotEqualTo(thirtyDays);
+        assertThat(count("sanction WHERE type = 'SUSPEND_30D'")).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[SN-15] 해제 사유가 없거나 올바르지 않으면 400 INVALID_INPUT이고 제재는 그대로 적용 중이다")
+    void liftRequiresValidReason() {
+        long sanctionId = confirm(SanctionType.WARNING);
+
+        MvcTestResult missingBody = post(SANCTIONS + "/" + sanctionId + "/lift", null);
+        MvcTestResult missingReason = post(SANCTIONS + "/" + sanctionId + "/lift", "{}");
+        MvcTestResult unknownReason = lift(sanctionId, "LIFTED");
+
+        for (MvcTestResult result : List.of(missingBody, missingReason, unknownReason)) {
+            assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+            assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        }
+        assertThat(sanctionStatus(sanctionId)).isEqualTo("ACTIVE");
+        assertThat(count("admin_audit_log WHERE action = 'SANCTION_LIFT'")).isZero();
     }
 
     @Test
@@ -718,18 +782,18 @@ class AdminReportSanctionApiIntegrationTest {
     void liftPermanentSuspension() {
         long sanctionId = confirm(SanctionType.PERMANENT);
 
-        assertThat(post(SANCTIONS + "/" + sanctionId + "/lift", null)).hasStatus(HttpStatus.OK);
+        assertThat(lift(sanctionId, "REVOKE")).hasStatus(HttpStatus.OK);
 
         assertThat(memberStatus(targetId)).isEqualTo("UNVERIFIED");
         assertThat(loginRequest(targetId)).hasStatus(HttpStatus.OK);
     }
 
     @Test
-    @DisplayName("[SN-15] 경고를 해제해도 회원 상태는 그대로이고 다음 제재는 다시 경고부터다")
-    void liftWarning() {
+    @DisplayName("[SN-15] 경고를 처분 취소해도 회원 상태는 그대로이고 다음 제재는 다시 경고부터다")
+    void revokeWarning() {
         long sanctionId = confirm(SanctionType.WARNING);
 
-        assertThat(post(SANCTIONS + "/" + sanctionId + "/lift", null)).hasStatus(HttpStatus.OK);
+        assertThat(lift(sanctionId, "REVOKE")).hasStatus(HttpStatus.OK);
 
         assertThat(memberStatus(targetId)).isEqualTo("UNVERIFIED");
         assertThat(confirm(SanctionType.WARNING)).isNotEqualTo(sanctionId);
@@ -744,7 +808,7 @@ class AdminReportSanctionApiIntegrationTest {
         long thirtyDays = confirm(SanctionType.SUSPEND_30D);
         assertThat(suspendedUntil(targetId)).isAfter(sevenDaysEnd);
 
-        post(SANCTIONS + "/" + thirtyDays + "/lift", null);
+        lift(thirtyDays, "END_EARLY");
 
         assertThat(memberStatus(targetId)).isEqualTo("SUSPENDED");
         assertThat(suspendedUntil(targetId)).isEqualTo(sevenDaysEnd);
@@ -754,16 +818,17 @@ class AdminReportSanctionApiIntegrationTest {
     @DisplayName("[SN-15] 이미 해제됐거나 기간이 끝난 제재를 해제하면 409 SANCTION_INVALID_STATE이다")
     void liftInactiveSanctionIsConflict() {
         long lifted = confirm(SanctionType.WARNING);
-        post(SANCTIONS + "/" + lifted + "/lift", null);
+        lift(lifted, "REVOKE");
         long expired = confirm(SanctionType.WARNING);
         jdbc.update("UPDATE sanction SET status = 'EXPIRED' WHERE id = ?", expired);
 
-        MvcTestResult liftedAgain = post(SANCTIONS + "/" + lifted + "/lift", null);
-        MvcTestResult liftExpired = post(SANCTIONS + "/" + expired + "/lift", null);
+        MvcTestResult liftedAgain = lift(lifted, "REVOKE");
+        MvcTestResult liftExpired = lift(expired, "REVOKE");
 
         assertThat(liftedAgain).hasStatus(HttpStatus.CONFLICT);
         assertThat(liftedAgain).bodyJson().extractingPath("$.code").isEqualTo("SANCTION_INVALID_STATE");
         assertThat(liftExpired).hasStatus(HttpStatus.CONFLICT);
+        assertThat(sanctionStatus(lifted)).isEqualTo("REVOKED");
         assertThat(count("admin_audit_log WHERE action = 'SANCTION_LIFT'")).isEqualTo(1);
     }
 
@@ -776,7 +841,7 @@ class AdminReportSanctionApiIntegrationTest {
                 REPORTS + "/" + reportId + "/action",
                 "{\"sanction\":{\"type\":\"WARNING\",\"reason\":\"" + SECRET_REASON + "\"}}");
         long sanctionId = sanctionOfReport(reportId);
-        post(SANCTIONS + "/" + sanctionId + "/lift", null);
+        lift(sanctionId, "REVOKE");
 
         MvcTestResult all = get(AUDIT_LOGS);
 
@@ -867,6 +932,10 @@ class AdminReportSanctionApiIntegrationTest {
 
     private MvcTestResult get(String uri) {
         return mvc.get().uri(uri).cookie(adminSession).exchange();
+    }
+
+    private MvcTestResult lift(long sanctionId, String reason) {
+        return post(SANCTIONS + "/" + sanctionId + "/lift", "{\"reason\":\"" + reason + "\"}");
     }
 
     private MvcTestResult post(String uri, String body) {

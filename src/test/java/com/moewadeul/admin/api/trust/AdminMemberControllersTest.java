@@ -343,19 +343,38 @@ class AdminMemberControllersTest {
     }
 
     @Test
-    @DisplayName("[SN-15] 제재 해제는 제재 ID와 상태를 응답하고, 적용 중이 아니면 409 SANCTION_INVALID_STATE이다")
+    @DisplayName("[SN-15] 제재 해제는 사유를 서비스에 넘기고 제재 ID와 상태를 응답하며, 적용 중이 아니면 409 SANCTION_INVALID_STATE이다")
     void liftReturnsStatusOrConflict() {
-        when(sanctionLiftService.lift(3L, ADMIN_ID)).thenReturn(new SanctionLiftResult(3L, "LIFTED"));
-        when(sanctionLiftService.lift(4L, ADMIN_ID))
+        when(sanctionLiftService.lift(3L, "END_EARLY", ADMIN_ID)).thenReturn(new SanctionLiftResult(3L, "ENDED_EARLY"));
+        when(sanctionLiftService.lift(5L, "REVOKE", ADMIN_ID)).thenReturn(new SanctionLiftResult(5L, "REVOKED"));
+        when(sanctionLiftService.lift(4L, "END_EARLY", ADMIN_ID))
                 .thenThrow(new BusinessException(TrustErrorCode.SANCTION_INVALID_STATE));
 
-        MvcTestResult lifted = post(admin(), SANCTIONS + "/3/lift", null);
-        MvcTestResult conflict = post(admin(), SANCTIONS + "/4/lift", null);
+        MvcTestResult endedEarly = post(admin(), SANCTIONS + "/3/lift", "{\"reason\":\"END_EARLY\"}");
+        MvcTestResult revoked = post(admin(), SANCTIONS + "/5/lift", "{\"reason\":\"REVOKE\"}");
+        MvcTestResult conflict = post(admin(), SANCTIONS + "/4/lift", "{\"reason\":\"END_EARLY\"}");
 
-        assertThat(lifted).hasStatus(HttpStatus.OK);
-        assertThat(lifted).bodyJson().extractingPath("$.status").isEqualTo("LIFTED");
+        assertThat(endedEarly).hasStatus(HttpStatus.OK);
+        assertThat(endedEarly).bodyJson().extractingPath("$.status").isEqualTo("ENDED_EARLY");
+        assertThat(revoked).hasStatus(HttpStatus.OK);
+        assertThat(revoked).bodyJson().extractingPath("$.status").isEqualTo("REVOKED");
         assertThat(conflict).hasStatus(HttpStatus.CONFLICT);
         assertThat(conflict).bodyJson().extractingPath("$.code").isEqualTo("SANCTION_INVALID_STATE");
+    }
+
+    @Test
+    @DisplayName("[SN-15] 제재 해제 사유가 없거나 비어 있으면 400 INVALID_INPUT이다")
+    void liftRejectsMissingReason() {
+        MvcTestResult noBody = post(admin(), SANCTIONS + "/3/lift", null);
+        MvcTestResult emptyBody = post(admin(), SANCTIONS + "/3/lift", "{}");
+        MvcTestResult nullReason = post(admin(), SANCTIONS + "/3/lift", "{\"reason\":null}");
+        MvcTestResult blankReason = post(admin(), SANCTIONS + "/3/lift", "{\"reason\":\" \"}");
+
+        for (MvcTestResult result : List.of(noBody, emptyBody, nullReason, blankReason)) {
+            assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+            assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        }
+        verifyNoInteractions(sanctionLiftService);
     }
 
     private static AdminMemberReportSummary summary() {

@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { actionReport, dismissReport, fetchAdminMemberReport, liftSanction, startReportReview } from '../../api/admin';
 import { ApiError } from '../../api/client';
-import type { AdminReportDetail, AdminSanctionHistoryItem, ConfirmableSanctionType } from '../../api/types';
+import type {
+  AdminReportDetail,
+  AdminSanctionHistoryItem,
+  ConfirmableSanctionType,
+  SanctionLiftReason,
+} from '../../api/types';
 import { Link } from '../../app/router';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
+import { ChoiceGroup } from '../../components/ChoiceGroup';
+import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { Dialog } from '../../components/Dialog';
 import { Evidence } from '../../components/Evidence';
 import { ErrorNotice } from '../../components/ErrorNotice';
@@ -37,6 +44,15 @@ const SANCTION_OPTIONS = [
   { value: 'SUSPEND_7D', label: '7일 정지' },
   { value: 'SUSPEND_30D', label: '30일 정지' },
   { value: 'PERMANENT', label: '영구 정지' },
+];
+
+const LIFT_REASONS: ReadonlyArray<ChoiceOption<SanctionLiftReason> & { description: string }> = [
+  {
+    value: 'END_EARLY',
+    label: '조기 종료',
+    description: '기간만 일찍 끝내요. 제재 이력에는 남아 다음 제재 단계와 신뢰 회원 판정에 반영돼요.',
+  },
+  { value: 'REVOKE', label: '처분 취소', description: '제재가 잘못 내려졌어요. 제재 이력에서 빠져요.' },
 ];
 
 type Failure = { message: string; error: unknown };
@@ -516,15 +532,16 @@ function LiftDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const [reason, setReason] = useState<SanctionLiftReason | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Failure | null>(null);
 
   async function lift() {
-    if (busy) return;
+    if (busy || reason === null) return;
     setBusy(true);
     setError(null);
     try {
-      await liftSanction(sanction.sanctionId);
+      await liftSanction(sanction.sanctionId, reason);
       onDone();
     } catch (caught) {
       setError(toFailure(caught));
@@ -539,6 +556,15 @@ function LiftDialog({
           {SANCTION_TYPE_LABELS[sanction.type]}를 해제해요. 이미 빠진 베이스캠프와 취소된 결제 대기 신청은 되돌아가지
           않아요.
         </p>
+        <ChoiceGroup
+          legend="해제 사유"
+          name="lift-reason"
+          options={LIFT_REASONS}
+          value={reason}
+          disabled={busy}
+          hint={LIFT_REASONS.find((option) => option.value === reason)?.description ?? '해제 사유를 골라 주세요.'}
+          onChange={setReason}
+        />
         {error && (
           <div role="alert">
             <ErrorNotice title="해제하지 못했어요" error={error.error} message={error.message} />
@@ -548,7 +574,7 @@ function LiftDialog({
           <Button variant="secondary" disabled={busy} onClick={onClose}>
             취소
           </Button>
-          <Button variant="danger" loading={busy} onClick={() => void lift()}>
+          <Button variant="danger" loading={busy} disabled={reason === null} onClick={() => void lift()}>
             해제
           </Button>
         </div>
