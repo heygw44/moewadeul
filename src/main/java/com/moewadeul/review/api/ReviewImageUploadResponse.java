@@ -1,6 +1,6 @@
 package com.moewadeul.review.api;
 
-import com.moewadeul.common.image.ImageUpload;
+import com.moewadeul.common.image.application.ImageUpload;
 import java.time.Instant;
 import java.util.Map;
 

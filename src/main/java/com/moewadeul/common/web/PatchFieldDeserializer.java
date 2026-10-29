@@ -1,5 +1,6 @@
 package com.moewadeul.common.web;
 
+import com.moewadeul.common.patch.PatchField;
 import tools.jackson.core.JsonParser;
 import tools.jackson.databind.BeanProperty;
 import tools.jackson.databind.DeserializationContext;

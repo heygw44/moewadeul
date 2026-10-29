@@ -1,6 +1,7 @@
 package com.moewadeul.common.moderation;
 
 import com.moewadeul.common.audit.AdminAuditAction;
+import com.moewadeul.common.audit.AdminAuditTargetType;
 import java.time.Instant;
 
 public interface ModerationTarget<T extends Moderatable> {
@@ -9,7 +10,7 @@ public interface ModerationTarget<T extends Moderatable> {
 
     AdminAuditAction restoreAction();
 
-    String auditTargetType();
+    AdminAuditTargetType auditTargetType();
 
     T lock(long targetId);
 

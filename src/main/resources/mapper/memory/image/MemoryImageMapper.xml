@@ -10,7 +10,7 @@
         ORDER BY memory_id, display_order
     </select>
 
-    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.UnattachedImageRow">
+    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
         SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM memory_image
         WHERE memory_id IS NULL
@@ -19,7 +19,7 @@
         LIMIT #{limit}
     </select>
 
-    <select id="selectUnattachedByMember" resultType="com.moewadeul.common.image.UnattachedImageRow">
+    <select id="selectUnattachedByMember" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
         SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM memory_image
         WHERE member_id = #{memberId}

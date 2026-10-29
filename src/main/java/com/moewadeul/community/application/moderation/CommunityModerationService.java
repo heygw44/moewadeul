@@ -66,12 +66,12 @@ public class CommunityModerationService {
 
     private final class CommunityTarget<T extends Moderatable> implements ModerationTarget<T> {
 
-        private final String auditTargetType;
+        private final AdminAuditTargetType auditTargetType;
         private final CommunityReportTargetType reportTargetType;
         private final LongFunction<Optional<T>> lockAlive;
 
         CommunityTarget(
-                String auditTargetType,
+                AdminAuditTargetType auditTargetType,
                 CommunityReportTargetType reportTargetType,
                 LongFunction<Optional<T>> lockAlive) {
             this.auditTargetType = auditTargetType;
@@ -95,7 +95,7 @@ public class CommunityModerationService {
         }
 
         @Override
-        public String auditTargetType() {
+        public AdminAuditTargetType auditTargetType() {
             return auditTargetType;
         }
 

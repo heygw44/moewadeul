@@ -1,6 +1,6 @@
 package com.moewadeul.program.domain;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import java.time.Instant;
 
 public record ProgramRevision(

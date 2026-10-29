@@ -1,7 +1,7 @@
 package com.moewadeul.community.api.image;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.moewadeul.common.image.ImageUpload;
+import com.moewadeul.common.image.application.ImageUpload;
 import java.time.Instant;
 import java.util.Map;
 

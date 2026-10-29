@@ -1,9 +1,9 @@
 package com.moewadeul.memory.api;
 
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotentRequest;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.web.PageResponse;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.application.IdempotentRequest;
 import com.moewadeul.memory.application.MemoryCommandService;
 import com.moewadeul.memory.application.MemoryQueryService;
 import io.swagger.v3.oas.annotations.Operation;

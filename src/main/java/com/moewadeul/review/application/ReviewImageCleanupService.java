@@ -1,6 +1,6 @@
 package com.moewadeul.review.application;
 
-import com.moewadeul.common.image.ImageCleanup;
+import com.moewadeul.common.image.application.ImageCleanup;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.review.domain.ReviewImage;
 import com.moewadeul.review.infra.ReviewImageMapper;
