@@ -3,13 +3,13 @@ package com.moewadeul.community.application.report;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
+import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import com.moewadeul.community.domain.comment.CommunityComment;
 import com.moewadeul.community.domain.comment.CommunityCommentRepository;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.domain.post.CommunityPostRepository;
 import com.moewadeul.community.domain.report.CommunityReport;
-import com.moewadeul.community.domain.report.CommunityReportReason;
 import com.moewadeul.community.domain.report.CommunityReportRepository;
 import com.moewadeul.community.domain.report.CommunityReportTargetType;
 import java.time.Clock;
@@ -64,7 +64,7 @@ public class CommunityReportService {
 
     private long saveReport(
             CommunityReportTargetType targetType, long targetId, long memberId, CommunityReportCommand command) {
-        CommunityReportReason reason = command.reason();
+        ContentReportReason reason = command.reason();
         String content = command.content();
         if (content != null && content.length() > CommunityReport.CONTENT_MAX_LENGTH) {
             throw new BusinessException(

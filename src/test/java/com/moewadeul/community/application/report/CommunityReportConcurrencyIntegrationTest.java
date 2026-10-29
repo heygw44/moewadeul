@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.community.application.comment.CommunityCommentCommandService;
 import com.moewadeul.community.application.comment.CommunityCommentWriteCommand;
@@ -12,7 +13,6 @@ import com.moewadeul.community.application.moderation.CommunityModerationService
 import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostWriteCommand;
 import com.moewadeul.community.domain.CommunityErrorCode;
-import com.moewadeul.community.domain.report.CommunityReportReason;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,8 +39,7 @@ class CommunityReportConcurrencyIntegrationTest {
 
     private static final int THREADS = 10;
     private static final int PENDING_REVIEW_REPORTS = 5;
-    private static final CommunityReportCommand REPORT =
-            new CommunityReportCommand(CommunityReportReason.SPAM, "광고입니다");
+    private static final CommunityReportCommand REPORT = new CommunityReportCommand(ContentReportReason.SPAM, "광고입니다");
 
     @Autowired
     private CommunityReportService communityReportService;
