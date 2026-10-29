@@ -18,6 +18,7 @@ import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.common.time.KoreaTime;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -324,6 +325,136 @@ class BasecampTransitionTest {
 
             assertThat(basecamp.headcount()).isEqualTo(1);
             assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.CONFIRMED);
+        }
+    }
+
+    @Nested
+    @DisplayName("[BC-10] 자동 전이")
+    class AutoTransition {
+
+        private final Instant dayBefore = BasecampBuilder.DEFAULT_START_DATE
+                .minusDays(1)
+                .atStartOfDay(KoreaTime.ZONE)
+                .toInstant();
+        private final Instant twoDaysBefore = dayBefore.minusSeconds(1);
+        private final LocalDate afterEnd = BasecampBuilder.DEFAULT_START_DATE.plusDays(3);
+
+        @ParameterizedTest
+        @EnumSource(
+                value = BasecampStatus.class,
+                names = {"RECRUITING", "CLOSED"})
+        @DisplayName("출발 전날이 되면 인원이 2명 이상인 베이스캠프를 확정하고 알릴 대상은 활동 중인 멤버 전원이다")
+        void departDayBeforeConfirms(BasecampStatus state) {
+            Basecamp basecamp = aBasecamp().inState(state);
+
+            boolean changed = basecamp.departDayBefore(dayBefore);
+
+            assertThat(changed).isTrue();
+            assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.CONFIRMED);
+            assertThat(basecamp.getConfirmedAt()).isEqualTo(dayBefore);
+            assertThat(applicationOf(basecamp, APPLICANT_ID).getStatus()).isEqualTo(BasecampApplicationStatus.EXPIRED);
+            assertThat(basecamp.pullEvents())
+                    .containsExactly(new OutboxEventDraft(
+                            BasecampEvents.CONFIRMED,
+                            BasecampEvents.AGGREGATE_TYPE,
+                            BASECAMP_ID,
+                            new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(LEADER_ID, MEMBER_ID))));
+        }
+
+        @Test
+        @DisplayName("출발 전날이 되었을 때 캠프 리더 1명뿐이면 인원 부족으로 취소하고 알릴 대상에 캠프 리더도 넣는다")
+        void departDayBeforeCancelsWhenLeaderOnly() {
+            Basecamp basecamp = aBasecamp().openOnly();
+            BasecampBuilder.apply(basecamp, APPLICANT_ID);
+            basecamp.pullEvents();
+
+            boolean changed = basecamp.departDayBefore(dayBefore);
+
+            assertThat(changed).isTrue();
+            assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.CANCELED);
+            assertThat(basecamp.getCancelReason()).isEqualTo(CancelReason.NOT_ENOUGH_MEMBERS);
+            assertThat(basecamp.getCanceledAt()).isEqualTo(dayBefore);
+            assertThat(applicationOf(basecamp, APPLICANT_ID).getStatus()).isEqualTo(BasecampApplicationStatus.EXPIRED);
+            assertThat(basecamp.pullEvents())
+                    .containsExactly(new OutboxEventDraft(
+                            BasecampEvents.CANCELED,
+                            BasecampEvents.AGGREGATE_TYPE,
+                            BASECAMP_ID,
+                            new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(LEADER_ID))));
+        }
+
+        @Test
+        @DisplayName("출발일이 이틀 이상 남았으면 아무것도 바꾸지 않고 false를 돌려준다")
+        void departDayBeforeNotDueYet() {
+            Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+            boolean changed = basecamp.departDayBefore(twoDaysBefore);
+
+            assertThat(changed).isFalse();
+            assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.RECRUITING);
+            assertThat(basecamp.pullEvents()).isEmpty();
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = BasecampStatus.class,
+                names = {"CONFIRMED", "COMPLETED", "CANCELED"})
+        @DisplayName("모집 중이나 마감이 아니면 출발 전날이 되어도 false를 돌려주고 상태와 이벤트는 그대로다")
+        void departDayBeforeIgnoresOtherStates(BasecampStatus state) {
+            Basecamp basecamp = aBasecamp().inState(state);
+
+            boolean changed = basecamp.departDayBefore(dayBefore);
+
+            assertThat(changed).isFalse();
+            assertThat(basecamp.getStatus()).isEqualTo(state);
+            assertThat(basecamp.pullEvents()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("종료일이 지난 확정 베이스캠프는 완료가 되고 완료 시각이 남으며 알릴 대상은 활동 중인 멤버 전원이다")
+        void completeAfterEndDate() {
+            Basecamp basecamp = aBasecamp().inState(BasecampStatus.CONFIRMED);
+
+            boolean changed = basecamp.complete(afterEnd, LATER);
+
+            assertThat(changed).isTrue();
+            assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.COMPLETED);
+            assertThat(basecamp.getCompletedAt()).isEqualTo(LATER);
+            assertThat(basecamp.getUpdatedAt()).isEqualTo(LATER);
+            assertThat(basecamp.pullEvents())
+                    .containsExactly(new OutboxEventDraft(
+                            BasecampEvents.COMPLETED,
+                            BasecampEvents.AGGREGATE_TYPE,
+                            BASECAMP_ID,
+                            new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(LEADER_ID, MEMBER_ID))));
+        }
+
+        @Test
+        @DisplayName("종료일이 오늘보다 앞서지 않으면 완료하지 않고 false를 돌려준다")
+        void completeNotBeforeEndDate() {
+            Basecamp basecamp = aBasecamp().inState(BasecampStatus.CONFIRMED);
+            LocalDate endDate = BasecampBuilder.DEFAULT_START_DATE.plusDays(2);
+
+            boolean changed = basecamp.complete(endDate, LATER);
+
+            assertThat(changed).isFalse();
+            assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.CONFIRMED);
+            assertThat(basecamp.pullEvents()).isEmpty();
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = BasecampStatus.class,
+                names = {"RECRUITING", "CLOSED", "COMPLETED", "CANCELED"})
+        @DisplayName("확정이 아니면 종료일이 지나도 완료하지 않고 false를 돌려준다")
+        void completeOnlyConfirmed(BasecampStatus state) {
+            Basecamp basecamp = aBasecamp().inState(state);
+
+            boolean changed = basecamp.complete(afterEnd, LATER);
+
+            assertThat(changed).isFalse();
+            assertThat(basecamp.getStatus()).isEqualTo(state);
+            assertThat(basecamp.pullEvents()).isEmpty();
         }
     }
 

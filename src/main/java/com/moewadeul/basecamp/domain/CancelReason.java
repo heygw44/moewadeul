@@ -1,8 +1,18 @@
 package com.moewadeul.basecamp.domain;
 
 public enum CancelReason {
-    LEADER,
-    NOT_ENOUGH_MEMBERS,
-    LEADER_SANCTIONED,
-    LEADER_WITHDRAWN
+    LEADER(false),
+    NOT_ENOUGH_MEMBERS(true),
+    LEADER_SANCTIONED(false),
+    LEADER_WITHDRAWN(false);
+
+    private final boolean notifiesLeader;
+
+    CancelReason(boolean notifiesLeader) {
+        this.notifiesLeader = notifiesLeader;
+    }
+
+    boolean notifiesLeader() {
+        return notifiesLeader;
+    }
 }
