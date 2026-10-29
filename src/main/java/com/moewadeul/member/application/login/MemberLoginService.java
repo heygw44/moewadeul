@@ -53,8 +53,10 @@ public class MemberLoginService {
 
     public LoginResult login(LoginCommand command) {
         String attemptedEmail = normalizeEmail(command.email());
-        rejectIfLocked(attemptedEmail);
-        Member authenticated = authenticate(attemptedEmail, command);
+        Member found = findLoginableMember(attemptedEmail);
+        Long memberId = found != null ? found.getId() : null;
+        rejectIfLocked(memberId, attemptedEmail);
+        Member authenticated = authenticate(found, memberId, attemptedEmail, command);
         Member member = releaseIfSuspensionEnded(authenticated);
         rejectIfSuspended(member);
         loginAttemptService.recordSuccess(member.getId(), attemptedEmail, command.ip());
@@ -92,21 +94,23 @@ public class MemberLoginService {
         }
     }
 
-    private void rejectIfLocked(String attemptedEmail) {
-        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(attemptedEmail);
+    private Member findLoginableMember(String attemptedEmail) {
+        return memberRepository
+                .findByEmail(attemptedEmail)
+                .filter(found -> !found.isWithdrawn())
+                .orElse(null);
+    }
+
+    private void rejectIfLocked(Long memberId, String attemptedEmail) {
+        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(memberId, attemptedEmail);
         if (retryAfter.isPresent()) {
             throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, retryAfter.get());
         }
     }
 
-    private Member authenticate(String attemptedEmail, LoginCommand command) {
-        Member member = memberRepository
-                .findByEmail(attemptedEmail)
-                .filter(found -> !found.isWithdrawn())
-                .orElse(null);
+    private Member authenticate(Member member, Long memberId, String attemptedEmail, LoginCommand command) {
         String passwordHash = member != null ? member.getPasswordHash() : timingDecoyPasswordHash;
         boolean authenticated = passwordEncoder.matches(command.password(), passwordHash) && member != null;
-        Long memberId = member != null ? member.getId() : null;
         loginAttemptService.recordAttemptUnderEmailLock(memberId, attemptedEmail, command.ip(), authenticated);
         if (!authenticated) {
             throw new BusinessException(MemberErrorCode.LOGIN_FAILED);

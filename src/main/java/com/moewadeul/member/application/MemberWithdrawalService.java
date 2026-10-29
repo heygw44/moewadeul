@@ -30,7 +30,7 @@ public class MemberWithdrawalService {
     public void verifyPassword(long memberId, String password, String ip) {
         OutsideTransaction.require("트랜잭션 안이면 틀린 비밀번호 기록이 예외와 함께 롤백되어 로그인 잠금이 걸리지 않는다.");
         Member member = findWithdrawableMember(memberId);
-        rejectIfLocked(member.getEmail());
+        rejectIfLocked(member);
         boolean matched = passwordEncoder.matches(password, member.getPasswordHash());
         loginAttemptService.recordAttemptUnderEmailLock(member.getId(), member.getEmail(), ip, matched);
         if (!matched) {
@@ -45,8 +45,8 @@ public class MemberWithdrawalService {
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
     }
 
-    private void rejectIfLocked(String email) {
-        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(email);
+    private void rejectIfLocked(Member member) {
+        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(member.getId(), member.getEmail());
         if (retryAfter.isPresent()) {
             throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, retryAfter.get());
         }

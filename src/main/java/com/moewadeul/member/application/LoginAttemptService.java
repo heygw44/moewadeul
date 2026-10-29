@@ -24,15 +24,15 @@ public class LoginAttemptService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public Optional<Duration> findRetryAfter(String attemptedEmail) {
-        return retryAfter(attemptedEmail, Instant.now(clock));
+    public Optional<Duration> findRetryAfter(Long memberId, String attemptedEmail) {
+        return retryAfter(memberId, attemptedEmail, Instant.now(clock));
     }
 
     @Transactional
     public void recordAttemptUnderEmailLock(Long memberId, String attemptedEmail, String ip, boolean passwordMatched) {
         Instant now = Instant.now(clock);
         attemptLockMapper.lock(LoginLockout.attemptKey(memberId, attemptedEmail), now);
-        Optional<Duration> retryAfter = retryAfter(attemptedEmail, now);
+        Optional<Duration> retryAfter = retryAfter(memberId, attemptedEmail, now);
         if (retryAfter.isPresent()) {
             throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, retryAfter.get());
         }
@@ -46,9 +46,11 @@ public class LoginAttemptService {
         loginHistoryRepository.save(LoginHistory.success(memberId, attemptedEmail, ip, Instant.now(clock)));
     }
 
-    private Optional<Duration> retryAfter(String attemptedEmail, Instant now) {
-        List<Instant> failureTimes =
-                loginHistoryRepository.findFailureTimesSinceLastSuccess(attemptedEmail, LoginLockout.windowStart(now));
+    private Optional<Duration> retryAfter(Long memberId, String attemptedEmail, Instant now) {
+        Instant windowStart = LoginLockout.windowStart(now);
+        List<Instant> failureTimes = memberId != null
+                ? loginHistoryRepository.findMemberFailureTimesSinceLastSuccess(memberId, windowStart)
+                : loginHistoryRepository.findFailureTimesSinceLastSuccess(attemptedEmail, windowStart);
         return LoginLockout.lockedUntil(failureTimes, now).map(lockedUntil -> Duration.between(now, lockedUntil));
     }
 }
