@@ -1,6 +1,8 @@
 package com.moewadeul.admin.api.program;
 
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
 import com.moewadeul.program.application.catalog.ProgramApplicantQuery;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,8 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/programs")
 class AdminProgramController {
-
-    private static final int MAX_PAGE_SIZE = 50;
 
     private final ProgramAdminService programAdminService;
 
@@ -78,7 +78,7 @@ class AdminProgramController {
                             + "page는 0부터 세고 기본값은 0이다. size는 1~50이고 기본값은 20이다. "
                             + "행사가 없으면 404 NOT_FOUND, status가 허용 값이 아니거나 page·size가 범위를 벗어나면 400 INVALID_INPUT이다.")
     @GetMapping("/{programId}/applications")
-    AdminProgramApplicantPageResponse applications(
+    PageResponse<AdminProgramApplicantResponse> applications(
             @PathVariable long programId,
             @RequestParam(required = false)
                     @Pattern(
@@ -86,8 +86,9 @@ class AdminProgramController {
                             message = "status는 PENDING_PAYMENT, CONFIRMED, CANCELED, EXPIRED 중 하나여야 해요.")
                     String status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size) {
-        return AdminProgramApplicantPageResponse.from(
-                programAdminService.applications(programId, new ProgramApplicantQuery(status, page, size)));
+            @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
+        return PageResponse.from(
+                programAdminService.applications(programId, new ProgramApplicantQuery(status, page, size)),
+                AdminProgramApplicantResponse::from);
     }
 }

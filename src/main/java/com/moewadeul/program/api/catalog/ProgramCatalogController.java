@@ -1,6 +1,7 @@
 package com.moewadeul.program.api.catalog;
 
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.program.application.catalog.ProgramQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -56,10 +57,11 @@ class ProgramCatalogController {
                             + "page는 0부터 시작하고 기본값은 0이다. size는 1~50이고 기본값은 20이다. 응답에는 전체 개수가 없고 다음 페이지가 있는지만 hasNext로 알려 준다. "
                             + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, status가 허용 값이 아니거나 page·size가 범위를 벗어나면 400 INVALID_INPUT이다.")
     @GetMapping("/api/me/program-applications")
-    MyProgramApplicationPageResponse listMine(
+    PageResponse<MyProgramApplicationResponse> listMine(
             @AuthenticationPrincipal LoginMember loginMember,
             @Valid @ParameterObject @ModelAttribute MyProgramApplicationListRequest request) {
-        return MyProgramApplicationPageResponse.from(
-                programQueryService.listMine(loginMember.memberId(), request.toQuery()));
+        return PageResponse.from(
+                programQueryService.listMine(loginMember.memberId(), request.toQuery()),
+                MyProgramApplicationResponse::from);
     }
 }

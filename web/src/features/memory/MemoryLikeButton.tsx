@@ -5,9 +5,9 @@ import type { MemoryLikeResponse } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/icons';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+import { withNext } from '../../app/session/nextPath';
+import { useSession } from '../../app/session/session';
 
 export function MemoryLikeButton({
   memoryId,

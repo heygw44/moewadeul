@@ -1,5 +1,6 @@
 package com.moewadeul.publicdata.application;
 
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.publicdata.domain.SyncJobType;
 import com.moewadeul.publicdata.infra.SyncJobRunMapper;
 import com.moewadeul.publicdata.infra.SyncJobRunRow;
@@ -15,13 +16,10 @@ public class SyncJobRunQueryService {
     private final SyncJobRunMapper syncJobRunMapper;
 
     @Transactional(readOnly = true)
-    public SyncJobRunPage findRuns(SyncJobType jobType, int page, int size) {
-        long offset = (long) page * size;
-        List<SyncJobRunRow> rows = syncJobRunMapper.selectRuns(jobType, offset, size + 1);
-        boolean hasNext = rows.size() > size;
-        List<SyncJobRunView> content =
-                rows.stream().limit(size).map(SyncJobRunQueryService::toView).toList();
-        return new SyncJobRunPage(content, page, size, hasNext);
+    public PageSlice<SyncJobRunView> findRuns(SyncJobType jobType, int page, int size) {
+        List<SyncJobRunRow> rows =
+                syncJobRunMapper.selectRuns(jobType, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+        return PageSlice.of(rows, page, size).map(SyncJobRunQueryService::toView);
     }
 
     private static SyncJobRunView toView(SyncJobRunRow row) {

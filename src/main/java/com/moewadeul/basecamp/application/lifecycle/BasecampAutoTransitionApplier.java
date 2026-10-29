@@ -13,13 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-public class BasecampAutoTransitionApplier {
+class BasecampAutoTransitionApplier {
 
     private final BasecampAutoTransitionMapper autoTransitionMapper;
     private final OutboxEventRecorder outboxEventRecorder;
 
     @Transactional
-    public boolean processDayBeforeDeparture(long basecampId, Instant now) {
+    boolean processDayBeforeDeparture(long basecampId, Instant now) {
         // 베이스캠프 행을 쓰기 잠금으로 읽는 조회가 이 트랜잭션의 첫 조회여야 한다. MySQL의 반복 가능한 읽기에서는
         // 잠그지 않는 조회가 먼저 일어나면 그 시점에 읽기 스냅숏이 정해져서, 잠금을 얻은 뒤에도 먼저 끝난 탈퇴 같은
         // 다른 트랜잭션의 커밋이 보이지 않는다. 그러면 이미 빠진 멤버를 세어 인원을 잘못 판단한다.
@@ -42,7 +42,7 @@ public class BasecampAutoTransitionApplier {
     }
 
     @Transactional
-    public boolean complete(long basecampId, LocalDate today, Instant now) {
+    boolean complete(long basecampId, LocalDate today, Instant now) {
         if (autoTransitionMapper.completeIfConfirmed(basecampId, today, now) == 0) {
             return false;
         }

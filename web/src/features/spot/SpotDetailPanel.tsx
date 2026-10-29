@@ -20,17 +20,20 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstMonthDay, formatKstTime, formatLocalDate } from '../../lib/datetime';
+import { parseHttpsUrl } from '../../lib/url';
 import { newMemoryPath } from '../memory/memoryLabels';
-import { UnverifiedNote } from '../member/GatedButton';
+import { UnverifiedNote } from '../../app/session/GatedButton';
 import { SpotReviews } from '../review/SpotReviews';
 import { SoloTripSection } from '../trip/SoloTripSection';
 import { BakjiFeedback } from './BakjiFeedback';
 import { BakjiOwnerActions } from './BakjiOwnerActions';
-import { ParkWarningNotice } from './ParkWarningNotice';
-import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META, sourceLabel } from './spotLabels';
+import { ParkWarningNotice } from '../../components/ParkWarningNotice';
+import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META, sourceLabel } from '../../lib/spotLabels';
 import { useSpotWeather } from './useSpotWeather';
 import type { SpotWeatherState } from './useSpotWeather';
+import { PanelBackBar } from '../../components/PanelBackBar';
 
 type SpotDetailPanelProps = {
   spotId: number;
@@ -81,13 +84,7 @@ export function SpotDetailPanel({ spotId, onBack, onLoaded, onBakjiDeleted }: Sp
     if (loadedDetail !== null) reportLoaded(loadedDetail);
   }, [loadedDetail]);
 
-  useEffect(() => {
-    if (loadedName === null) return;
-    document.title = `${loadedName} · 뫼와들`;
-    return () => {
-      document.title = '뫼와들';
-    };
-  }, [loadedName]);
+  useDocumentTitle(loadedName === null ? null : `${loadedName} · 뫼와들`, { resetOnLeave: true });
 
   let body: ReactNode;
   if (current === null) {
@@ -111,16 +108,7 @@ export function SpotDetailPanel({ spotId, onBack, onLoaded, onBakjiDeleted }: Sp
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex min-h-11 items-center gap-1 rounded-control pr-3 pl-1 text-sm font-semibold text-ink hover:bg-fill"
-        >
-          <Icon name="chevronLeft" size={22} />
-          목록
-        </button>
-      </div>
+      <PanelBackBar label="목록" onBack={onBack} />
       <div aria-busy={current === null} className="px-4 pt-2 pb-8 lg:px-6">
         {body}
       </div>
@@ -332,15 +320,6 @@ function BakjiSection({
   );
 }
 
-function parseHomepage(homepage: string): URL | null {
-  try {
-    const url = new URL(homepage);
-    return url.protocol === 'https:' ? url : null;
-  } catch {
-    return null;
-  }
-}
-
 function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
   const { category, facilities, phone, homepage, source, sourceDate, checkedAt } = publicDetail;
   const facilityRows = facilities
@@ -349,7 +328,7 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
         return value === null ? [] : [{ key, label, value }];
       })
     : [];
-  const homepageUrl = homepage ? parseHomepage(homepage) : null;
+  const homepageUrl = homepage ? parseHttpsUrl(homepage) : null;
 
   return (
     <section className={SECTION_CLASS} aria-labelledby="spot-public-title">

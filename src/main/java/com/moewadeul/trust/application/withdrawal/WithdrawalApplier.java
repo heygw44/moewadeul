@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class WithdrawalApplier {
+class WithdrawalApplier {
 
     private final MemberWithdrawalService memberWithdrawalService;
     private final IdentityVerificationRepository identityVerificationRepository;
@@ -23,7 +23,7 @@ public class WithdrawalApplier {
     private final Clock clock;
 
     @Transactional
-    public void apply(long memberId) {
+    void apply(long memberId) {
         memberWithdrawalService.lockAndWithdraw(memberId);
         Instant now = clock.instant();
         identityVerificationRepository.findByMemberId(memberId).ifPresent(identity -> {

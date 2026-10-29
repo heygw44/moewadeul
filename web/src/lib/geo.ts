@@ -16,3 +16,7 @@ export function distanceKm(a: LatLng, b: LatLng): number {
 export function formatDistanceKm(km: number): string {
   return km < 10 ? km.toFixed(1) : String(Math.round(km));
 }
+
+export function roundCoordinate(value: number): number {
+  return Math.round(value * 1e6) / 1e6;
+}

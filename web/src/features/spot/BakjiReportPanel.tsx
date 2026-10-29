@@ -5,20 +5,20 @@ import type { BakjiCreateRequest, BakjiSubmissionResponse } from '../../api/type
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
-import { Icon } from '../../components/icons';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { PanelBackBar } from '../../components/PanelBackBar';
+import { roundCoordinate } from '../../lib/geo';
 import type { LatLng } from '../../map/types';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { withNext } from '../../app/session/nextPath';
+import { useSession } from '../../app/session/session';
 import { BakjiFields, BakjiResultView } from './BakjiFormParts';
 import {
   GROUND_OPTIONS,
   PRIMARY_LINK_CLASS,
   requiredFieldErrors,
-  roundCoordinate,
   submitErrorState,
   useLocationErrorReset,
 } from './bakjiFormModel';
@@ -102,16 +102,7 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = 
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
-        <button
-          type="button"
-          aria-label="지도로 돌아가기"
-          onClick={onCancel}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
-        >
-          <Icon name="chevronLeft" size={24} />
-        </button>
-      </div>
+      <PanelBackBar ariaLabel="지도로 돌아가기" onBack={onCancel} />
       <div className="px-4 py-4">{body}</div>
     </div>
   );

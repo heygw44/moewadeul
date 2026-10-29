@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LatLng } from '../../map/types';
-import { SessionProvider } from '../member/session';
+import { SessionProvider } from '../../app/session/session';
 import { BakjiEditPanel } from './BakjiEditPanel';
 
 vi.mock('../../map/addressName', () => ({ addressAt: async () => null }));

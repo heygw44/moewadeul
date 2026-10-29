@@ -1,5 +1,6 @@
 package com.moewadeul.spot.application.map;
 
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.SpotClosedNow;
 import com.moewadeul.spot.application.SpotSearchBox;
@@ -23,16 +24,14 @@ public class SpotNearbyQueryService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public SpotNearbyPage findNearby(SpotNearbyQuery query) {
-        long offset = (long) query.page() * query.size();
+    public PageSlice<SpotNearbyItem> findNearby(SpotNearbyQuery query) {
+        long offset = PageSlice.offsetOf(query.page(), query.size());
+        int fetchSize = PageSlice.fetchSize(query.size());
         LocalDate today = KoreaTime.today(clock);
-        double radiusKm = searchRadiusKm(query, today, offset + query.size() + 1);
+        double radiusKm = searchRadiusKm(query, today, offset + fetchSize);
         List<SpotNearbyRow> rows =
-                spotNearbyMapper.selectNearby(toCondition(query, radiusKm, today), offset, query.size() + 1);
-        boolean hasNext = rows.size() > query.size();
-        List<SpotNearbyItem> content =
-                rows.stream().limit(query.size()).map(row -> toItem(row, today)).toList();
-        return new SpotNearbyPage(content, query.page(), query.size(), hasNext);
+                spotNearbyMapper.selectNearby(toCondition(query, radiusKm, today), offset, fetchSize);
+        return PageSlice.of(rows, query.page(), query.size()).map(row -> toItem(row, today));
     }
 
     private double searchRadiusKm(SpotNearbyQuery query, LocalDate today, long needed) {

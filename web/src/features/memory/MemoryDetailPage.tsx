@@ -13,11 +13,12 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatLocalDate } from '../../lib/datetime';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
-import { useSession } from '../member/session';
-import { useViewerEpoch } from '../member/useViewerEpoch';
-import { LocationLabel } from '../spot/LocationLabel';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+import { useSession } from '../../app/session/session';
+import { useViewerEpoch } from '../../app/session/useViewerEpoch';
+import { LocationLabel } from '../../components/LocationLabel';
 import { ApproxLocationLabel } from './ApproxLocationLabel';
 import { MEMORY_STATUS_LABEL, nightsLabel, VISIBILITY_LABEL } from './memoryLabels';
 import { MemoryLikeButton } from './MemoryLikeButton';
@@ -52,9 +53,7 @@ export function MemoryDetailPage({ memoryId }: { memoryId: number }) {
   const showSkeleton = useDelayedFlag(current === null);
   const title = current !== null && 'memory' in current ? titleOf(current.memory) : '기록';
 
-  useEffect(() => {
-    document.title = `${title} · 뫼와들`;
-  }, [title]);
+  useDocumentTitle(`${title} · 뫼와들`);
 
   const reload = () => setAttempt((value) => value + 1);
   const authorId = current !== null && 'memory' in current ? current.memory.author.memberId : null;

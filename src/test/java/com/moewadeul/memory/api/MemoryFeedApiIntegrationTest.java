@@ -1,5 +1,6 @@
 package com.moewadeul.memory.api;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -85,9 +86,7 @@ class MemoryFeedApiIntegrationTest {
         assertThat(feed).bodyJson().doesNotHavePath("$.content[0].images");
         assertThat(feed).bodyJson().doesNotHavePath("$.content[0].thumbnailUrl");
         assertThat(feed).bodyJson().extractingPath("$.content[0].imageCount").isEqualTo(0);
-        assertThat(feed).bodyJson().extractingPath("$.page").isEqualTo(0);
-        assertThat(feed).bodyJson().extractingPath("$.size").isEqualTo(20);
-        assertThat(feed).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(feed, 0, 20, false);
     }
 
     @Test

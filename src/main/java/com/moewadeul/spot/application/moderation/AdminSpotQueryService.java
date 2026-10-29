@@ -1,6 +1,7 @@
 package com.moewadeul.spot.application.moderation;
 
 import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.spot.domain.SpotStatus;
 import com.moewadeul.spot.infra.moderation.AdminSpotMapper;
 import com.moewadeul.spot.infra.moderation.AdminSpotRecentReportRow;
@@ -25,17 +26,13 @@ public class AdminSpotQueryService {
     private final AdminSpotMapper adminSpotMapper;
 
     @Transactional(readOnly = true)
-    public AdminSpotPage list(String status, int page, int size) {
+    public PageSlice<AdminSpotSummary> list(String status, int page, int size) {
         SpotStatus spotStatus = parseStatus(status);
-        long offset = (long) page * size;
-        List<AdminSpotRow> rows = adminSpotMapper.selectPage(spotStatus.name(), offset, size + 1);
-        boolean hasNext = rows.size() > size;
-        List<AdminSpotRow> pageRows = rows.stream().limit(size).toList();
-        Map<Long, List<AdminSpotSummary.RecentReport>> recentBySpot = readRecentReports(pageRows);
-        List<AdminSpotSummary> content = pageRows.stream()
-                .map(row -> toSummary(row, recentBySpot.getOrDefault(row.spotId(), List.of())))
-                .toList();
-        return new AdminSpotPage(content, page, size, hasNext);
+        List<AdminSpotRow> rows = adminSpotMapper.selectPage(
+                spotStatus.name(), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+        PageSlice<AdminSpotRow> slice = PageSlice.of(rows, page, size);
+        Map<Long, List<AdminSpotSummary.RecentReport>> recentBySpot = readRecentReports(slice.content());
+        return slice.map(row -> toSummary(row, recentBySpot.getOrDefault(row.spotId(), List.of())));
     }
 
     private Map<Long, List<AdminSpotSummary.RecentReport>> readRecentReports(List<AdminSpotRow> pageRows) {

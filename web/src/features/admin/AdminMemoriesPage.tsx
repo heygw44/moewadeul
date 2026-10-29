@@ -9,7 +9,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime, formatLocalDate } from '../../lib/datetime';
-import { usePagedList } from '../program/usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 import { REPORT_REASON_OPTIONS } from '../community/communityLabels';
 import { ApproxLocationLabel } from '../memory/ApproxLocationLabel';
 import { nightsLabel } from '../memory/memoryLabels';
@@ -61,7 +61,7 @@ function MemoryReview() {
       {current?.error && (
         <div role="alert" className="flex flex-col gap-3">
           <ErrorNotice title="기록을 불러오지 못했어요" error={current.error} traceId={current.traceId ?? undefined} />
-          {current.items.length === 0 && (
+          {current.failedOn === 'first' && (
             <div>
               <Button variant="secondary" onClick={retry}>
                 다시 불러오기

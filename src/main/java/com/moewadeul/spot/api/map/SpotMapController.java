@@ -1,5 +1,6 @@
 package com.moewadeul.spot.api.map;
 
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.spot.application.map.SpotMapQueryService;
 import com.moewadeul.spot.application.map.SpotNearbyQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -58,7 +59,7 @@ class SpotMapController {
                     + "응답에는 전체 개수가 없고, 다음 페이지가 있는지만 hasNext로 알려 준다. "
                     + "그 밖에 파라미터가 빠졌거나 범위를 벗어났거나 모르는 유형이면 400 INVALID_INPUT으로 응답한다.")
     @GetMapping("/nearby")
-    SpotNearbyPageResponse findNearby(@Valid @ParameterObject @ModelAttribute SpotNearbyRequest request) {
-        return SpotNearbyPageResponse.from(spotNearbyQueryService.findNearby(request.toQuery()));
+    PageResponse<SpotNearbyItemResponse> findNearby(@Valid @ParameterObject @ModelAttribute SpotNearbyRequest request) {
+        return PageResponse.from(spotNearbyQueryService.findNearby(request.toQuery()), SpotNearbyItemResponse::from);
     }
 }

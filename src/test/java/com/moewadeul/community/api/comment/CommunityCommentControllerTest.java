@@ -12,13 +12,13 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.idempotency.IdempotencyExecutor;
 import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.community.application.comment.CommunityCommentCommandService;
 import com.moewadeul.community.application.comment.CommunityCommentItem;
-import com.moewadeul.community.application.comment.CommunityCommentPage;
 import com.moewadeul.community.application.comment.CommunityCommentQueryService;
 import com.moewadeul.community.application.comment.CommunityCommentWriteCommand;
 import java.time.Clock;
@@ -83,7 +83,7 @@ class CommunityCommentControllerTest {
     void anonymousReadsCommentList() {
         // given
         when(communityCommentQueryService.list(9L, 0, 20))
-                .thenReturn(new CommunityCommentPage(List.of(WITH_REPLY), 0, 20, true));
+                .thenReturn(new PageSlice<>(List.of(WITH_REPLY), 0, 20, true));
 
         // when
         MvcTestResult result = mvc.get().uri(COMMENTS).exchange();
@@ -128,7 +128,7 @@ class CommunityCommentControllerTest {
     void deletedPlaceholderOmitsAuthorContentAndTimes() {
         // given
         when(communityCommentQueryService.list(9L, 0, 20))
-                .thenReturn(new CommunityCommentPage(List.of(PLACEHOLDER), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(PLACEHOLDER), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(COMMENTS).exchange();
@@ -160,7 +160,7 @@ class CommunityCommentControllerTest {
     void listPassesPagingAndDefaults() {
         // given
         when(communityCommentQueryService.list(any(Long.class), any(Integer.class), any(Integer.class)))
-                .thenReturn(new CommunityCommentPage(List.of(), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult paged = mvc.get().uri(COMMENTS + "?page=2&size=50").exchange();

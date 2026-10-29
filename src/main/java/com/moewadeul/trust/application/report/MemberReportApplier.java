@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class MemberReportApplier {
+class MemberReportApplier {
 
     private static final String UNIQUE_CONSTRAINT = "uk_member_report_reporter_target_basecamp_kind";
 
@@ -34,7 +34,7 @@ public class MemberReportApplier {
     private final Clock clock;
 
     @Transactional
-    public MemberReportResult apply(long reporterId, MemberReportCommand command) {
+    MemberReportResult apply(long reporterId, MemberReportCommand command) {
         requireConsistentKind(command);
         if (reporterId == command.targetMemberId()) {
             throw new BusinessException(TrustErrorCode.REPORT_NOT_ELIGIBLE);

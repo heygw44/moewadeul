@@ -1,5 +1,6 @@
 package com.moewadeul.memory.application;
 
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.common.web.PatchField;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -9,15 +10,19 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class MemoryCommandService {
 
+    private static final String STORAGE_CHECK = "이미지가 저장소에 있는지 묻는 동안 DB 커넥션을 쥐면 안 된다.";
+
     private final MemoryWriter memoryWriter;
     private final MemoryImageAttachmentPrecheck memoryImageAttachmentPrecheck;
 
     public long write(long memberId, MemoryWriteCommand command) {
+        OutsideTransaction.require(STORAGE_CHECK);
         memoryImageAttachmentPrecheck.verify(memberId, null, command.imageIds());
         return memoryWriter.write(memberId, command);
     }
 
     public MemoryView revise(long memberId, long memoryId, MemoryReviseCommand command) {
+        OutsideTransaction.require(STORAGE_CHECK);
         PatchField<List<Long>> imageIds = command.imageIds();
         if (imageIds.present()) {
             memoryWriter.requireOwnMemory(memberId, memoryId);

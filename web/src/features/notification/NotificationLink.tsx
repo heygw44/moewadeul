@@ -1,6 +1,6 @@
 import { Link } from '../../app/router';
 import { Icon } from '../../components/icons';
-import { useSession } from '../member/session';
+import { useSession } from '../../app/session/session';
 import { notificationLabel, useUnreadCount } from './unreadCount';
 
 export function UnreadBadge({ count }: { count: number }) {

@@ -18,6 +18,7 @@ import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.idempotency.IdempotencyExecutor;
 import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -27,7 +28,6 @@ import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostImage;
 import com.moewadeul.community.application.post.CommunityPostItem;
 import com.moewadeul.community.application.post.CommunityPostListQuery;
-import com.moewadeul.community.application.post.CommunityPostPage;
 import com.moewadeul.community.application.post.CommunityPostQueryService;
 import com.moewadeul.community.application.post.CommunityPostReviseCommand;
 import com.moewadeul.community.application.post.CommunityPostWriteCommand;
@@ -107,7 +107,7 @@ class CommunityPostControllerTest {
     void anonymousReadsPostList() {
         // given
         when(communityPostQueryService.list(CommunityPostListQuery.all(), 0, 20))
-                .thenReturn(new CommunityPostPage(List.of(ITEM), 0, 20, true));
+                .thenReturn(new PageSlice<>(List.of(ITEM), 0, 20, true));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();
@@ -138,7 +138,7 @@ class CommunityPostControllerTest {
     void listOmitsSpotFieldWhenNoVisibleSpot() {
         // given
         when(communityPostQueryService.list(CommunityPostListQuery.all(), 0, 20))
-                .thenReturn(new CommunityPostPage(List.of(ITEM_WITHOUT_SPOT), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(ITEM_WITHOUT_SPOT), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();
@@ -168,7 +168,7 @@ class CommunityPostControllerTest {
     void listPassesFiltersAndPaging() {
         // given
         when(communityPostQueryService.list(new CommunityPostListQuery(101L, true), 2, 50))
-                .thenReturn(new CommunityPostPage(List.of(), 2, 50, false));
+                .thenReturn(new PageSlice<>(List.of(), 2, 50, false));
 
         // when
         MvcTestResult result =
@@ -184,7 +184,7 @@ class CommunityPostControllerTest {
     void listPassesTrimmedKeywordAndSearchType() {
         // given
         when(communityPostQueryService.list(any(), anyInt(), anyInt()))
-                .thenReturn(new CommunityPostPage(List.of(), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult byAuthor = mvc.get()
@@ -544,7 +544,7 @@ class CommunityPostControllerTest {
     void listWithoutParametersUsesDefaults() {
         // given
         when(communityPostQueryService.list(any(), anyInt(), anyInt()))
-                .thenReturn(new CommunityPostPage(List.of(), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();
@@ -576,7 +576,7 @@ class CommunityPostControllerTest {
                 UPDATED_AT,
                 null);
         when(communityPostQueryService.list(CommunityPostListQuery.all(), 0, 20))
-                .thenReturn(new CommunityPostPage(List.of(withImages), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(withImages), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();

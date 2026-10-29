@@ -15,12 +15,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.review.application.SpotReviewCommandService;
 import com.moewadeul.review.application.SpotReviewItem;
-import com.moewadeul.review.application.SpotReviewPage;
 import com.moewadeul.review.application.SpotReviewQueryService;
 import com.moewadeul.review.application.SpotReviewReviseCommand;
 import com.moewadeul.review.application.SpotReviewWriteCommand;
@@ -70,7 +70,7 @@ class SpotReviewControllerTest {
     @DisplayName("[F-10] 로그인하지 않은 사용자도 후기 목록을 조회하면 항목의 모든 필드와 페이지 정보를 받는다")
     void anonymousReadsReviewList() {
         // given
-        when(spotReviewQueryService.list(SPOT_ID, 0, 20)).thenReturn(new SpotReviewPage(List.of(ITEM), 0, 20, true));
+        when(spotReviewQueryService.list(SPOT_ID, 0, 20)).thenReturn(new PageSlice<>(List.of(ITEM), 0, 20, true));
 
         // when
         MvcTestResult result = mvc.get().uri(SPOT_REVIEWS).exchange();
@@ -97,7 +97,7 @@ class SpotReviewControllerTest {
     @DisplayName("[F-10] 목록의 page와 size를 서비스에 그대로 넘긴다")
     void listPassesPageAndSize() {
         // given
-        when(spotReviewQueryService.list(SPOT_ID, 2, 50)).thenReturn(new SpotReviewPage(List.of(), 2, 50, false));
+        when(spotReviewQueryService.list(SPOT_ID, 2, 50)).thenReturn(new PageSlice<>(List.of(), 2, 50, false));
 
         // when
         MvcTestResult result = mvc.get().uri(SPOT_REVIEWS + "?page=2&size=50").exchange();

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import { fetchMyBasecamps } from '../../api/basecamps';
 import type { MyBasecampItem, MyBasecampRelation } from '../../api/types';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -13,9 +13,10 @@ import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
+import { usePagedList } from '../../components/usePagedList';
 import { formatLocalDate } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText } from './basecampLabels';
 
 type RelationFilter = MyBasecampRelation | 'ALL';
@@ -33,74 +34,19 @@ const RELATION_LABELS: Record<MyBasecampRelation, string> = {
   APPLICANT: '승인 대기',
 };
 
-type ListState = {
-  filter: RelationFilter;
-  items: MyBasecampItem[];
-  page: number;
-  hasNext: boolean;
-  error: { cause: unknown } | null;
-};
+function fetchPage(filter: RelationFilter, page: number, signal?: AbortSignal) {
+  return fetchMyBasecamps({ relation: filter === 'ALL' ? undefined : filter, page }, signal);
+}
 
 export function MyBasecampsPage() {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const [filter, setFilter] = useState<RelationFilter>('ALL');
-  const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<ListState | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
   const authenticated = session.status === 'authenticated';
+  const { current, loadingMore, loadMore, retry } = usePagedList(authenticated, filter, fetchPage);
 
-  useEffect(() => {
-    document.title = '내 베이스캠프 · 뫼와들';
-  }, []);
+  useDocumentTitle('내 베이스캠프 · 뫼와들');
 
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
-
-  useEffect(() => {
-    if (!authenticated) return;
-    const controller = new AbortController();
-    fetchMyBasecamps({ relation: filter === 'ALL' ? undefined : filter, page: 0 }, controller.signal).then(
-      (page) => {
-        if (!controller.signal.aborted) {
-          setState({ filter, items: page.content, page: page.page, hasNext: page.hasNext, error: null });
-        }
-      },
-      (caught: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({ filter, items: [], page: 0, hasNext: false, error: { cause: caught } });
-        }
-      },
-    );
-    return () => controller.abort();
-  }, [authenticated, filter, attempt]);
-
-  const current = state?.filter === filter ? state : null;
   const showSkeleton = useDelayedFlag(session.status === 'loading' || (authenticated && current === null));
-
-  async function loadMore() {
-    if (!current || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const next = await fetchMyBasecamps({ relation: filter === 'ALL' ? undefined : filter, page: current.page + 1 });
-      setState((previous) =>
-        previous?.filter === filter
-          ? {
-              ...previous,
-              items: [...previous.items, ...next.content],
-              page: next.page,
-              hasNext: next.hasNext,
-              error: null,
-            }
-          : previous,
-      );
-    } catch (caught) {
-      setState((previous) => (previous?.filter === filter ? { ...previous, error: { cause: caught } } : previous));
-    } finally {
-      setLoadingMore(false);
-    }
-  }
 
   return (
     <PageLayout
@@ -117,10 +63,14 @@ export function MyBasecampsPage() {
           <>
             {current.error && (
               <div className="flex flex-col gap-3">
-                <ErrorNotice title="내 베이스캠프를 불러오지 못했어요" error={current.error.cause} />
+                <ErrorNotice
+                  title="내 베이스캠프를 불러오지 못했어요"
+                  error={current.error}
+                  traceId={current.traceId ?? undefined}
+                />
                 {current.items.length === 0 && (
                   <div>
-                    <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
+                    <Button variant="secondary" onClick={retry}>
                       다시 불러오기
                     </Button>
                   </div>

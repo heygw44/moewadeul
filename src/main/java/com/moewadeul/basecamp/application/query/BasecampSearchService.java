@@ -12,6 +12,7 @@ import com.moewadeul.basecamp.infra.query.BasecampSearchMapper;
 import com.moewadeul.basecamp.infra.query.BasecampSearchRow;
 import com.moewadeul.basecamp.infra.query.InProgressScheduleRow;
 import com.moewadeul.basecamp.infra.query.ViewerHistoryRow;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.spot.application.SpotSearchBox;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.HashMap;
@@ -33,16 +34,12 @@ public class BasecampSearchService {
     private final TrustSummaryService trustSummaryService;
 
     @Transactional(readOnly = true)
-    public BasecampSearchPage search(Long viewerId, BasecampSearchQuery query) {
-        long offset = (long) query.page() * query.size();
-        List<BasecampSearchRow> rows =
-                basecampSearchMapper.selectRecruiting(toCondition(query), offset, query.size() + 1);
-        boolean hasNext = rows.size() > query.size();
-        List<BasecampSearchRow> pageRows = rows.stream().limit(query.size()).toList();
-        EligibilityJudge judge = viewerId == null ? null : judgeFor(viewerId, pageRows);
-        List<BasecampSearchItem> content =
-                pageRows.stream().map(row -> toItem(row, judge)).toList();
-        return new BasecampSearchPage(content, query.page(), query.size(), hasNext);
+    public PageSlice<BasecampSearchItem> search(Long viewerId, BasecampSearchQuery query) {
+        List<BasecampSearchRow> rows = basecampSearchMapper.selectRecruiting(
+                toCondition(query), PageSlice.offsetOf(query.page(), query.size()), PageSlice.fetchSize(query.size()));
+        PageSlice<BasecampSearchRow> slice = PageSlice.of(rows, query.page(), query.size());
+        EligibilityJudge judge = viewerId == null ? null : judgeFor(viewerId, slice.content());
+        return slice.map(row -> toItem(row, judge));
     }
 
     private static BasecampSearchCondition toCondition(BasecampSearchQuery query) {

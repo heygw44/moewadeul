@@ -6,6 +6,7 @@ import com.moewadeul.basecamp.application.membership.BasecampApplyService;
 import com.moewadeul.basecamp.application.membership.BasecampApprovalService;
 import com.moewadeul.basecamp.application.membership.BasecampMembershipService;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -77,12 +78,13 @@ class BasecampMembershipController {
                             + "genderVerified, trustLevel, completedCompanions)이 있다. 이메일과 출생연도는 응답하지 않는다. "
                             + "베이스캠프가 없으면 404 NOT_FOUND, 캠프 리더가 아니면 403 ACCESS_DENIED, status가 허용 값이 아니거나 page·size가 범위를 벗어나면 400 INVALID_INPUT이다.")
     @GetMapping("/api/basecamps/{basecampId}/applications")
-    BasecampApplicationPageResponse listApplications(
+    PageResponse<BasecampApplicationResponse> listApplications(
             @AuthenticationPrincipal LoginMember loginMember,
             @PathVariable long basecampId,
             @Valid @ParameterObject @ModelAttribute BasecampApplicationListRequest request) {
-        return BasecampApplicationPageResponse.from(
-                basecampApplicationListService.list(basecampId, loginMember.memberId(), request.toQuery()));
+        return PageResponse.from(
+                basecampApplicationListService.list(basecampId, loginMember.memberId(), request.toQuery()),
+                BasecampApplicationResponse::from);
     }
 
     @Operation(

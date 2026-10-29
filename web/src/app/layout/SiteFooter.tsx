@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BrandMark } from '../../components/BrandMark';
-import { useSession } from '../../features/member/session';
+import { useSession } from '../session/session';
 import { Link } from '../router';
 import { CONTACT_EMAIL } from '../legal/siteInfo';
 import { DATA_SOURCES } from './dataSources';

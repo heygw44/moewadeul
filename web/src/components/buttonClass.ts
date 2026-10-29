@@ -26,3 +26,5 @@ export const BASE_CLASSES =
 export function buttonClassName(variant: ButtonVariant = 'primary'): string {
   return [BASE_CLASSES, VARIANT_CLASSES[variant], HOVER_CLASSES[variant]].filter(Boolean).join(' ');
 }
+
+export const SECONDARY_LINK_CLASS = buttonClassName('secondary');

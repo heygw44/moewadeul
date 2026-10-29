@@ -23,7 +23,8 @@ class ArchitectureRulesTest {
         CROSS_MODULE_ACCESS(ArchitectureRules::crossModuleAccessRule),
         DOMAIN_INDEPENDENCE(ArchitectureRules::domainIndependenceRule),
         API_PERSISTENCE(ArchitectureRules::apiPersistenceRule),
-        TRANSACTIONAL_PLACEMENT(ArchitectureRules::transactionalPlacementRule);
+        TRANSACTIONAL_PLACEMENT(ArchitectureRules::transactionalPlacementRule),
+        APPLIER_VISIBILITY(ArchitectureRules::applierVisibilityRule);
 
         private final Function<String, ArchRule> factory;
 
@@ -42,7 +43,8 @@ class ArchitectureRulesTest {
     }
 
     @Test
-    @DisplayName("[ADR-005] 허용된 모듈 방향, application 경유, 계층 분리, application의 @Transactional은 모든 규칙을 통과한다")
+    @DisplayName(
+            "[ADR-005] 허용된 모듈 방향, application 경유, 계층 분리, application의 @Transactional, package-private Applier는 모든 규칙을 통과한다")
     void compliantStructurePassesAllRules() {
         for (Rule rule : Rule.values()) {
             assertThatCode(() -> rule.check(COMPLIANT)).as(rule.name()).doesNotThrowAnyException();
@@ -130,6 +132,12 @@ class ArchitectureRulesTest {
                 "member.domain.Member",
                 "member.infra.MemberPersistence.save",
                 "member.api.MemberController");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] public *Applier 는 R6 위반이다")
+    void applierVisibilityRuleRejectsPublicApplier() {
+        assertOnlyRuleFails(Rule.APPLIER_VISIBILITY, "violation.r6.exposed", "member.application.MemberApplier");
     }
 
     private static void assertOnlyRuleFails(Rule failing, String subRoot, String... expectedFixtures) {
