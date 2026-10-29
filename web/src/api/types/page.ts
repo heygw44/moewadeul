@@ -4,8 +4,3 @@ export interface Page<T> {
   size: number;
   hasNext: boolean;
 }
-
-export interface NumberedPage<T> extends Page<T> {
-  totalElements: number;
-  totalPages: number;
-}

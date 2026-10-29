@@ -13,8 +13,6 @@ public interface CommunityPostMapper {
             @Param("offset") long offset,
             @Param("limit") int limit);
 
-    long countActive(@Param("condition") CommunityPostListCondition condition);
-
     Long selectActiveIdAfter(@Param("offset") int offset);
 
     Optional<CommunityPostRow> selectActiveById(@Param("postId") long postId, @Param("viewerId") Long viewerId);
