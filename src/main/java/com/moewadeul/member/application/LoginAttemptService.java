@@ -31,7 +31,7 @@ public class LoginAttemptService {
     @Transactional
     public void recordAttemptUnderEmailLock(Long memberId, String attemptedEmail, String ip, boolean passwordMatched) {
         Instant now = Instant.now(clock);
-        attemptLockMapper.lock(LoginLockout.attemptKey(attemptedEmail), now);
+        attemptLockMapper.lock(LoginLockout.attemptKey(memberId, attemptedEmail), now);
         Optional<Duration> retryAfter = retryAfter(attemptedEmail, now);
         if (retryAfter.isPresent()) {
             throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, retryAfter.get());
