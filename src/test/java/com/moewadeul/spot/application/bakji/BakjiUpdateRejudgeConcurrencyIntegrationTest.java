@@ -1,5 +1,6 @@
 package com.moewadeul.spot.application.bakji;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -7,6 +8,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.application.moderation.SpotModerationService;
 import com.moewadeul.spot.application.park.ParkAreaJudgeService;
@@ -44,6 +46,9 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
     private static final double INSIDE_LNG = 128.7;
     private static final double OUTSIDE_LNG = 127.7;
     private static final long MIDDLE_WAIT_SECONDS = 2;
+
+    @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
 
     @Autowired
     private BakjiCommandService bakjiCommandService;
@@ -97,7 +102,7 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
 
         Future<?> update = executor.submit(() -> bakjiEditService.update(reporterId, spotId, rename("새 이름")));
         awaitPaused();
-        long areaId = insertProtectedArea();
+        long areaId = protectedAreaFixture.insert(aProtectedArea().name("오대산").longLatBoundary(AREA_LONG_LAT_WKT));
         assertThat(runInMiddle(this::rejudgeAll, update)).isNull();
 
         assertThat(warningOf(spotId)).isTrue();
@@ -108,7 +113,7 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
     @RepeatedTest(REPETITIONS)
     @DisplayName("[F-06][F-07][BC-04] 재판정이 좌표를 읽은 뒤 박지를 공원 경계 안으로 옮기면, 옮긴 좌표의 경고가 남는다")
     void moveIntoAreaDuringRejudgeKeepsWarning() throws Exception {
-        long areaId = insertProtectedArea();
+        long areaId = protectedAreaFixture.insert(aProtectedArea().name("오대산").longLatBoundary(AREA_LONG_LAT_WKT));
         long spotId = report(OUTSIDE_LNG);
         pauseRejudgeAfterReadingPoints();
 
@@ -287,15 +292,6 @@ class BakjiUpdateRejudgeConcurrencyIntegrationTest {
                 PatchField.absent(),
                 PatchField.absent(),
                 PatchField.absent());
-    }
-
-    private long insertProtectedArea() {
-        jdbc.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES ('오대산', 'NATIONAL_PARK', 'KDPA', '2026-01-01',"
-                        + " ST_GeomFromText(?, 4326, 'axis-order=long-lat'), NOW(6), NOW(6))",
-                AREA_LONG_LAT_WKT);
-        return jdbc.queryForObject("SELECT MAX(id) FROM protected_area", Long.class);
     }
 
     private boolean warningOf(long spotId) {

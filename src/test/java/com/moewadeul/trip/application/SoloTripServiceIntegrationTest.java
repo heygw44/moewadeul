@@ -1,5 +1,6 @@
 package com.moewadeul.trip.application;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -9,6 +10,7 @@ import com.moewadeul.common.error.ErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -27,6 +29,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class SoloTripServiceIntegrationTest {
+
+    @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
 
     @Autowired
     private MemberFixture memberFixture;
@@ -187,19 +192,11 @@ class SoloTripServiceIntegrationTest {
 
     private long saveSpot(String name, boolean warning) {
         ParkAreaJudgement judgement = warning
-                ? ParkAreaJudgement.inside(insertProtectedArea(), MutableClock.DEFAULT_INSTANT)
+                ? ParkAreaJudgement.inside(
+                        protectedAreaFixture.insert(aProtectedArea().name("설악산")), MutableClock.DEFAULT_INSTANT)
                 : ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT);
         Spot spot = Spot.bakji(name, new GeoPoint(37.25, 127.25), judgement, MutableClock.DEFAULT_INSTANT);
         return spotRepository.save(spot).getId();
-    }
-
-    private long insertProtectedArea() {
-        jdbc.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES ('설악산', 'NATIONAL_PARK', 'KDPA', '2026-01-01',"
-                        + " ST_GeomFromText('MULTIPOLYGON(((128 37, 129 37, 129 38, 128 38, 128 37)))', 4326,"
-                        + " 'axis-order=long-lat'), NOW(6), NOW(6))");
-        return jdbc.queryForObject("SELECT MAX(id) FROM protected_area", Long.class);
     }
 
     private int tripCount(long memberId) {

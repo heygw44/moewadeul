@@ -1,5 +1,6 @@
 package com.moewadeul.publicdata.application;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.publicdata.domain.PublicDataErrorCode;
 import com.moewadeul.publicdata.domain.SyncJobType;
@@ -25,6 +27,9 @@ class SyncJobLauncherIntegrationTest {
     private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration POLL_INTERVAL = Duration.ofMillis(50);
     private static final int FIXTURE_FOREST_COUNT = 3;
+
+    @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
 
     @Autowired
     private SyncJobLauncher syncJobLauncher;
@@ -137,8 +142,9 @@ class SyncJobLauncherIntegrationTest {
     @DisplayName("[F-06] 박지 재판정을 시작하면 작업이 끝난 뒤 실행 기록이 COMPLETED가 되고, 경계 안 박지에 공원 경고가 붙는다")
     void launchedBakjiRejudgeCompletes() throws InterruptedException {
         // given
-        insertProtectedArea("북한산", "MULTIPOLYGON(((126.9 37.6, 127.0 37.6, 127.0 37.7, 126.9 37.7, 126.9 37.6)))");
-        long areaId = protectedAreaIdOf("북한산");
+        long areaId = protectedAreaFixture.insert(aProtectedArea()
+                .name("북한산")
+                .longLatBoundary("MULTIPOLYGON(((126.9 37.6, 127.0 37.6, 127.0 37.7, 126.9 37.7, 126.9 37.6)))"));
         long spotId = insertBakji("경계 안 박지", 37.65, 126.95);
 
         // when
@@ -189,15 +195,6 @@ class SyncJobLauncherIntegrationTest {
                 jdbcTemplate.queryForMap("SELECT park_warning, protected_area_id FROM spot WHERE id = ?", spotId);
         assertThat(row.get("park_warning")).isEqualTo(true);
         assertThat(((Number) row.get("protected_area_id")).longValue()).isEqualTo(protectedAreaId);
-    }
-
-    private void insertProtectedArea(String name, String multiPolygonWkt) {
-        jdbcTemplate.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES (?, 'NATIONAL_PARK', 'KDPA', '2025-12-31',"
-                        + " ST_GeomFromText(?, 4326, 'axis-order=long-lat'), NOW(6), NOW(6))",
-                name,
-                multiPolygonWkt);
     }
 
     private long protectedAreaIdOf(String name) {

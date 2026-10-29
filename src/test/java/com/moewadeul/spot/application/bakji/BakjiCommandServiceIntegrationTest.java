@@ -1,5 +1,6 @@
 package com.moewadeul.spot.application.bakji;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -12,6 +13,7 @@ import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.spot.application.ParkWarningTexts;
@@ -47,6 +49,9 @@ class BakjiCommandServiceIntegrationTest {
     private static final String CHECK_NOTICE =
             "뫼와들은 이곳에서 야영해도 되는지 확인하지 않았어요. 가기 전에 관할 시군청 산림과나 국유림관리소, 공원 사무소에 야영할 수 있는지 물어봐 주세요."
                     + " 뫼와들은 제보된 정보를 보여 줄 뿐이고, 야영 중에 생긴 일에는 책임지지 않아요.";
+
+    @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
 
     @Autowired
     private SpotFixture spotFixture;
@@ -102,7 +107,11 @@ class BakjiCommandServiceIntegrationTest {
     void reportInsideBoundaryWarnsWithAreaName() {
         // given
         String areaName = TestSequence.unique("설악산");
-        long areaId = insertProtectedArea(areaName, PARK_SQUARE);
+        long areaId = protectedAreaFixture.insert(aProtectedArea()
+                .name(areaName)
+                .source(AREA_SOURCE.name())
+                .sourceDate(AREA_SOURCE_DATE)
+                .longLatBoundary(PARK_SQUARE));
         long reporterId = memberFixture.save().getId();
 
         // when
@@ -278,7 +287,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 좌표를 경계 안에서 밖으로 옮기면 경고가 꺼지고 경계 ID가 비며, 같은 좌표를 다시 보내면 판정 시각이 그대로다")
     void movingCoordinateRejudgesBoundaryOnlyWhenChanged() {
         // given
-        insertProtectedArea(TestSequence.unique("경계"), PARK_SQUARE);
+        protectedAreaFixture.insert(aProtectedArea().longLatBoundary(PARK_SQUARE));
         long reporterId = memberFixture.save().getId();
         BakjiSubmission created =
                 bakjiCommandService.report(reporterId, minimalReport(INSIDE_PARK_LAT, INSIDE_PARK_LNG));
@@ -511,18 +520,6 @@ class BakjiCommandServiceIntegrationTest {
         BakjiUpdateCommand build() {
             return new BakjiUpdateCommand(name, lat, lng, description, hasWater, hasToilet, signalLevel, groundType);
         }
-    }
-
-    private long insertProtectedArea(String name, String longLatWkt) {
-        jdbc.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES (?, 'NATIONAL_PARK', ?, ?,"
-                        + " ST_GeomFromText(?, 4326, 'axis-order=long-lat'), NOW(6), NOW(6))",
-                name,
-                AREA_SOURCE.name(),
-                AREA_SOURCE_DATE,
-                longLatWkt);
-        return jdbc.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
     }
 
     private SpotRow spotRow(long spotId) {

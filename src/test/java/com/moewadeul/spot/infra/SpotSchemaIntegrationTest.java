@@ -1,10 +1,12 @@
 package com.moewadeul.spot.infra;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +20,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class SpotSchemaIntegrationTest {
+
+    @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
 
     @Autowired
     private SpotFixture spotFixture;
@@ -109,7 +114,9 @@ class SpotSchemaIntegrationTest {
     @DisplayName("[ADR-001] 공원 경계를 SRID 4326 멀티폴리곤으로 저장하고 장소가 경계를 참조할 수 있다")
     void spotCanReferenceProtectedArea() {
         // given
-        long protectedAreaId = insertProtectedArea("북한산국립공원");
+        long protectedAreaId = protectedAreaFixture.insert(aProtectedArea()
+                .name("북한산국립공원")
+                .longLatBoundary("MULTIPOLYGON(((126 37, 127 37, 127 38, 126 38, 126 37)))"));
 
         // when
         long spotId = spotFixture.insert(aSpot().name("경계 안 박지"));
@@ -194,16 +201,6 @@ class SpotSchemaIntegrationTest {
                 nickname + "@example.com",
                 nickname);
         return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
-    }
-
-    private long insertProtectedArea(String name) {
-        jdbcTemplate.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES (?, 'NATIONAL_PARK', 'KDPA', '2026-01-01',"
-                        + " ST_GeomFromText('MULTIPOLYGON(((37 126, 37 127, 38 127, 38 126, 37 126)))', 4326),"
-                        + " NOW(6), NOW(6))",
-                name);
-        return jdbcTemplate.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
     }
 
     private void insertPublicSpotDetail(long spotId, String source, String externalId) {

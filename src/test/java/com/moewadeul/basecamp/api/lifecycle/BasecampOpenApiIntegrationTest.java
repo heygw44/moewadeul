@@ -1,11 +1,13 @@
 package com.moewadeul.basecamp.api.lifecycle;
 
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
@@ -39,6 +41,9 @@ class BasecampOpenApiIntegrationTest {
     private static final String SESSION_COOKIE = "SESSION";
     private static final String LOCAL_IP = "127.0.0.1";
     private static final int ADULT_BIRTH_YEAR = 2007;
+
+    @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
 
     @Autowired
     private MemberFixture memberFixture;
@@ -157,7 +162,7 @@ class BasecampOpenApiIntegrationTest {
     @DisplayName("[F-12][BC-04] 공원 경계 경고가 붙은 박지에서는 400 BASECAMP_WARNING_SPOT이고, 경고가 없는 박지와 야영장에서는 열린다")
     void warningBakjiIsRejectedButOthersAreAccepted() {
         // given
-        long areaId = insertProtectedArea();
+        long areaId = protectedAreaFixture.insert(aProtectedArea().name("북한산"));
         long warningSpot = saveBakji(ParkAreaJudgement.inside(areaId, MutableClock.DEFAULT_INSTANT));
         long cleanSpot = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
         long campsite = saveBakji(ParkAreaJudgement.inside(areaId, MutableClock.DEFAULT_INSTANT));
@@ -414,14 +419,5 @@ class BasecampOpenApiIntegrationTest {
                 .exchange();
         assertThat(result).hasStatus(HttpStatus.OK);
         return session;
-    }
-
-    private long insertProtectedArea() {
-        jdbc.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES ('북한산', 'NATIONAL_PARK', 'KDPA', '2026-01-01',"
-                        + " ST_GeomFromText('MULTIPOLYGON(((127 37, 128 37, 128 38, 127 38, 127 37)))', 4326, 'axis-order=long-lat'),"
-                        + " NOW(6), NOW(6))");
-        return jdbc.queryForObject("SELECT id FROM protected_area WHERE name = '북한산'", Long.class);
     }
 }

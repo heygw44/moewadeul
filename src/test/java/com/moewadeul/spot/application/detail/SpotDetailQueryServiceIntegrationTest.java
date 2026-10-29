@@ -4,6 +4,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -15,6 +16,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.spot.application.ParkWarningTexts;
@@ -48,6 +50,9 @@ class SpotDetailQueryServiceIntegrationTest {
     private static final double RIDGE_LNG = 128.75;
 
     private static final int EXTERNAL_DELAY_MILLIS = 3_000;
+
+    @Autowired
+    private ProtectedAreaFixture protectedAreaFixture;
 
     @Autowired
     private SpotFixture spotFixture;
@@ -360,7 +365,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 경계 행이 있는 경고 박지는 공원 이름, 출처, 기준일, 참고용 고지, 안내를 채운다")
     void fillsParkWarningWithAreaForWarnedBakji() {
         // given
-        long areaId = insertProtectedArea("설악산 국립공원");
+        long areaId = protectedAreaFixture.insert(aProtectedArea().name("설악산 국립공원"));
         long spotId = insertWarnedBakji(areaId);
 
         // when
@@ -717,16 +722,6 @@ class SpotDetailQueryServiceIntegrationTest {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private long insertProtectedArea(String name) {
-        jdbcTemplate.update(
-                "INSERT INTO protected_area (name, area_type, source, source_date, boundary, created_at, updated_at)"
-                        + " VALUES (?, 'NATIONAL_PARK', 'KDPA', '2026-01-01',"
-                        + " ST_GeomFromText('MULTIPOLYGON(((128 37, 129 37, 129 38, 128 38, 128 37)))', 4326,"
-                        + " 'axis-order=long-lat'), NOW(6), NOW(6))",
-                name);
-        return jdbcTemplate.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
     }
 
     private long insertWarnedBakji(Long areaId) {
