@@ -5,6 +5,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.properties.CanBeAnnotated;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -60,6 +61,9 @@ public final class ArchitectureRules {
     private static final String API = "api";
     private static final String DOMAIN = "domain";
     private static final String INFRA = "infra";
+
+    private static final String SCHEDULED = "org.springframework.scheduling.annotation.Scheduled";
+    private static final String SCHEDULED_JOB_RUNNER = "com.moewadeul.common.scheduling.ScheduledJobRunner";
 
     private static final String SPRING_DATA_REPOSITORY = "org.springframework.data.repository.Repository";
     private static final List<String> PERSISTENCE_NAME_SUFFIXES = List.of("Repository", "Mapper");
@@ -143,6 +147,14 @@ public final class ArchitectureRules {
                 .allowEmptyShould(true);
     }
 
+    public static ArchRule scheduledJobsRunThroughRunnerRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(scheduledMethodsUseJobRunner())
+                .as("@Scheduled 메서드는 ScheduledJobRunner 를 거쳐 실패 수를 센다")
+                .allowEmptyShould(true);
+    }
+
     private static boolean isAllowedDirection(String source, String target) {
         if (source.equals(target) || COMMON.equals(target)) {
             return true;
@@ -195,6 +207,24 @@ public final class ArchitectureRules {
                     judge.violation(source.get(), dependency)
                             .ifPresent(reason -> events.add(SimpleConditionEvent.violated(
                                     dependency, reason + ": " + dependency.getDescription())));
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> scheduledMethodsUseJobRunner() {
+        return new ArchCondition<>("call ScheduledJobRunner from every @Scheduled method") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                for (JavaMethod method : item.getMethods()) {
+                    boolean viaRunner = method.getMethodCallsFromSelf().stream()
+                            .anyMatch(call -> call.getTargetOwner().getName().equals(SCHEDULED_JOB_RUNNER));
+                    if (method.isAnnotatedWith(SCHEDULED) && !viaRunner) {
+                        events.add(SimpleConditionEvent.violated(
+                                method,
+                                "@Scheduled 메서드가 ScheduledJobRunner 를 거치지 않아 실패가 moewadeul.scheduled.job.failures 에 잡히지 않는다: "
+                                        + method.getFullName()));
+                    }
                 }
             }
         };
