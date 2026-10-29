@@ -75,7 +75,7 @@ public class AdminMemoryQueryService {
                         AdminMemoryRecentReportRow::memoryId,
                         Collectors.mapping(
                                 row -> new AdminMemorySummary.RecentReport(
-                                        row.reason(), row.content(), row.createdAt()),
+                                        row.reason().name(), row.content(), row.createdAt()),
                                 Collectors.toList())));
     }
 

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.trust.domain.companion.CompanionReviewTag;
 import com.moewadeul.trust.domain.identity.CiHash;
 import com.moewadeul.trust.domain.identity.Gender;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
@@ -161,7 +162,9 @@ class TrustSummaryServiceTest {
         stubRecord(new TrustRecordRow(4, 5, 4, 1, false));
         when(recordMapper.selectRevealedTagCounts(eq(MEMBER_ID), any()))
                 .thenReturn(List.of(
-                        new TagCountRow("LATE", 2), new TagCountRow("ON_TIME", 2), new TagCountRow("NO_SHOW", 1)));
+                        new TagCountRow(CompanionReviewTag.LATE, 2),
+                        new TagCountRow(CompanionReviewTag.ON_TIME, 2),
+                        new TagCountRow(CompanionReviewTag.NO_SHOW, 1)));
 
         TrustDetail detail = serviceAt("2026-10-05T03:00:00Z").detail(MEMBER_ID);
 

@@ -96,7 +96,8 @@ public class AdminCommunityQueryService {
                 .collect(Collectors.groupingBy(
                         AdminCommunityRecentReportRow::targetId,
                         Collectors.mapping(
-                                row -> new AdminCommunityRecentReport(row.reason(), row.content(), row.createdAt()),
+                                row -> new AdminCommunityRecentReport(
+                                        row.reason().name(), row.content(), row.createdAt()),
                                 Collectors.toList())));
     }
 

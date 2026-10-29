@@ -53,7 +53,8 @@ public class AdminSpotQueryService {
                 .collect(Collectors.groupingBy(
                         AdminSpotRecentReportRow::spotId,
                         Collectors.mapping(
-                                row -> new AdminSpotSummary.RecentReport(row.reason(), row.content(), row.createdAt()),
+                                row -> new AdminSpotSummary.RecentReport(
+                                        row.reason().name(), row.content(), row.createdAt()),
                                 Collectors.toList())));
     }
 

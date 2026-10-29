@@ -11,6 +11,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 
 import com.moewadeul.admin.application.audit.AuditLogQueryService;
 import com.moewadeul.admin.application.audit.AuditLogView;
+import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
@@ -53,7 +54,13 @@ class AuditLogControllerTest {
     @DisplayName("[F-21] 감사 로그 조회는 필터를 서비스에 넘기고 detail을 JSON 객체로 응답한다")
     void auditLogsReturnDetailAsObject() {
         AuditLogView view = new AuditLogView(
-                1L, ADMIN_ID, "REPORT_ACTION", "MEMBER_REPORT", 5L, jsonMapper.readTree("{\"hideReview\":true}"), AT);
+                1L,
+                ADMIN_ID,
+                AdminAuditAction.REPORT_ACTION,
+                "MEMBER_REPORT",
+                5L,
+                jsonMapper.readTree("{\"hideReview\":true}"),
+                AT);
         when(auditLogQueryService.findLogs(any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new PageSlice<>(List.of(view), 0, 20, true));
 

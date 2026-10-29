@@ -92,7 +92,7 @@ public class TrustSummaryService {
         Map<CompanionReviewTag, Long> counts = new EnumMap<>(CompanionReviewTag.class);
         for (TagCountRow row :
                 trustRecordMapper.selectRevealedTagCounts(memberId, CompanionReviewPolicy.revealCutoff(now))) {
-            counts.put(CompanionReviewTag.valueOf(row.tag()), row.count());
+            counts.put(row.tag(), row.count());
         }
         return CompanionReviewTag.top(counts).stream().map(Enum::name).toList();
     }
