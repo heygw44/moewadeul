@@ -52,6 +52,7 @@ import { useIsDesktop, DESKTOP_QUERY } from './useIsDesktop';
 import { useMapContextMenu } from './useMapContextMenu';
 import { useMapMoving } from './useMapMoving';
 import { useMapView } from './useMapView';
+import { useSearchPin } from './useSearchPin';
 import { useRegionLabelInView } from './useRegionLabelInView';
 import { useSpotsInView } from '../spot/useSpotsInView';
 import type { SpotsInView } from '../spot/useSpotsInView';
@@ -156,8 +157,7 @@ export function MapPage({
   const [snap, setSnap] = useState<SheetSnap>(contentOpen ? 'half' : 'peek');
   const [snapOpen, setSnapOpen] = useState(contentOpen);
   const [draft, setDraft] = useState<LatLng | null>(null);
-  const [searchPin, setSearchPin] = useState<LatLng | null>(null);
-  const searchMoveLevelRef = useRef<number | null>(null);
+  const { moveToRegion: pinRegion, clearSearchPin } = useSearchPin(map);
   const [submitted, setSubmitted] = useState(false);
   const [pickSpots, setPickSpots] = useState<NearbySpot[] | null>(null);
   const [appliedDraftKey, setAppliedDraftKey] = useState<string | null>(null);
@@ -315,24 +315,6 @@ export function MapPage({
     return map.onMapClick(() => setPreviewId(null));
   }, [map, previewEnabled]);
 
-  useEffect(() => {
-    map?.showSearchPin(searchPin);
-  }, [map, searchPin]);
-
-  useEffect(() => {
-    if (!map) return;
-    const offIdle = map.onIdle(() => {
-      if (searchMoveLevelRef.current === map.getLevel()) searchMoveLevelRef.current = null;
-    });
-    const offMoveStart = map.onMoveStart(() => {
-      if (searchMoveLevelRef.current === null) setSearchPin(null);
-    });
-    return () => {
-      offIdle();
-      offMoveStart();
-    };
-  }, [map]);
-
   const basecampSelectedId = basecampId !== undefined ? (focusedSpot?.id ?? null) : spotFilterId;
   useEffect(() => {
     map?.setSelected(basecampMode ? basecampSelectedId : opening ? (openSpotId ?? null) : (spotId ?? previewId));
@@ -362,10 +344,7 @@ export function MapPage({
 
   function moveToRegion(candidate: RegionCandidate) {
     if (!map) return;
-    searchMoveLevelRef.current = candidate.level;
-    map.setCenter(candidate.position, candidate.level);
-    if (map.getLevel() === candidate.level) searchMoveLevelRef.current = null;
-    setSearchPin(candidate.pinned ? candidate.position : null);
+    pinRegion(candidate);
     if (basecampId !== undefined) navigate('/basecamps');
     else if (mode === 'browse' && spotId !== undefined) navigate('/map');
   }
@@ -397,7 +376,7 @@ export function MapPage({
     if (!map) return;
     const { filters: nextFilters, droppedSettings } = filtersFromInterpretation(result);
     setSpotFilters(nextFilters);
-    setSearchPin(null);
+    clearSearchPin();
     if (result.radiusKm !== undefined) {
       const center = candidate?.position ?? map.getCenter();
       setRadiusSearch({ center, radiusKm: result.radiusKm, label: candidate?.name ?? '지도 가운데' });
@@ -424,7 +403,7 @@ export function MapPage({
       <>
         <div className={`flex w-full items-start gap-2 ${inPanel ? '' : 'pointer-events-none'}`}>
           <MapSearchBar
-            onSearch={() => setSearchPin(null)}
+            onSearch={clearSearchPin}
             onSelect={selectRegion}
             mapMoving={mapMoving.moving}
             inPanel={inPanel}
