@@ -1,5 +1,6 @@
 package com.moewadeul.memory.application;
 
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.memory.domain.ApproximateLocation;
 import com.moewadeul.memory.domain.MemoryStatus;
 import com.moewadeul.memory.domain.MemoryVisibility;
@@ -21,7 +22,7 @@ public record MemoryView(
         String content,
         MemoryVisibility visibility,
         MemoryStatus status,
-        List<MemoryPhoto> images,
+        List<ImageView> images,
         Instant createdAt,
         Instant updatedAt,
         long likeCount,

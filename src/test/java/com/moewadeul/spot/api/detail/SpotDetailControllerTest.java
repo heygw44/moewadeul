@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
@@ -159,7 +160,7 @@ class SpotDetailControllerTest {
                 LocalDate.of(2026, 10, 4),
                 5,
                 "별이 좋았다",
-                List.of(new SpotRecentReview.Image(5L, "https://view.test.invalid/review/31/a.jpg")),
+                List.of(new ImageView(5L, "https://view.test.invalid/review/31/a.jpg")),
                 Instant.parse("2026-10-05T03:00:00Z"));
         when(spotDetailQueryService.findDetail(106L))
                 .thenReturn(new SpotDetail(

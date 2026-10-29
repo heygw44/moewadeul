@@ -3,6 +3,7 @@ package com.moewadeul.review.application;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.review.domain.ReviewErrorCode;
 import com.moewadeul.review.domain.SpotReview;
 import com.moewadeul.review.domain.SpotReviewRepository;
@@ -53,7 +54,7 @@ class SpotReviewWriter {
         }
         // 고친 내용을 MyBatis로 읽기 전에 DB에 반영한다.
         spotReviewRepository.flush();
-        List<SpotReviewImage> images =
+        List<ImageView> images =
                 reviewImageReader.readByReviewIds(List.of(reviewId)).getOrDefault(reviewId, List.of());
         return spotReviewMapper
                 .selectById(reviewId)
