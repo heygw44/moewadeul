@@ -414,7 +414,7 @@ class CommunityImageApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-06] 수정에서 imageIds에 빈 ID를 섞어 보내면 400 imageIds 오류이고 이미지는 그대로다")
+    @DisplayName("[F-29][CM-06] 수정에서 imageIds에 빈 ID를 섞어 보내면 빈 ID가 여러 개여도 붙일 수 없는 이미지로 400이고 이미지는 그대로다")
     void reviseRejectsNullImageId() {
         // given
         long image = uploadedImage(session, SIZE);
@@ -422,9 +422,11 @@ class CommunityImageApiIntegrationTest {
 
         // when
         MvcTestResult withNull = patch(session, postId, "{\"imageIds\":[" + image + ",null]}");
+        MvcTestResult onlyNulls = patch(session, postId, "{\"imageIds\":[null,null]}");
 
         // then
         assertImageIdsRejected(withNull, UNUSABLE);
+        assertImageIdsRejected(onlyNulls, UNUSABLE);
         assertThat(postIdOfImage(image)).isEqualTo(postId);
     }
 
