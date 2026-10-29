@@ -2,6 +2,7 @@ package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.trust.domain.CompanionReviewPolicy;
@@ -23,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class MemberReportApplier {
+
+    private static final String UNIQUE_CONSTRAINT = "uk_member_report_reporter_target_basecamp_kind";
 
     private final MemberReportRepository memberReportRepository;
     private final SanctionRepository sanctionRepository;
@@ -98,7 +101,7 @@ public class MemberReportApplier {
         try {
             return memberReportRepository.saveAndFlush(report);
         } catch (DataIntegrityViolationException e) {
-            throw MemberReportUniqueConstraintTranslator.translate(e);
+            throw UniqueViolations.translate(e, UNIQUE_CONSTRAINT, TrustErrorCode.REPORT_DUPLICATED);
         }
     }
 
