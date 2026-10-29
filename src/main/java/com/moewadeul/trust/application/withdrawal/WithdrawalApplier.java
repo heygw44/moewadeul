@@ -27,8 +27,8 @@ class WithdrawalApplier {
         memberWithdrawalService.lockAndWithdraw(memberId);
         Instant now = clock.instant();
         identityVerificationRepository.findByMemberId(memberId).ifPresent(identity -> {
-            boolean hasSanctionHistory = sanctionRepository.existsHistory(memberId);
-            identity.withdraw(IdentityVerification.ciRetainedUntil(now, hasSanctionHistory), now);
+            boolean retainsCi = sanctionRepository.existsCiRetentionSanction(memberId);
+            identity.withdraw(IdentityVerification.ciRetainedUntil(now, retainsCi), now);
         });
         recordCleanup(TrustEvents.WITHDRAWAL_BASECAMP_CLEANUP, memberId);
         recordCleanup(TrustEvents.WITHDRAWAL_PROGRAM_CLEANUP, memberId);

@@ -300,7 +300,7 @@ BEGIN
     ) r
     JOIN lt_admin a ON a.n = r.basecamp_id % admin_count;
 
-    -- 조치한 신고마다 제재 하나. 경고 50%, 정지 7일 30%, 30일 15%, 영구 5%이고, 5%는 해제됐다. 기간이 지난 정지는 만료 상태로 둔다.
+    -- 조치한 신고마다 제재 하나. 경고 50%, 정지 7일 30%, 30일 15%, 영구 5%이고, 5%는 해제됐고 그 절반은 조기 종료, 절반은 처분 취소다. 기간이 지난 정지는 만료 상태로 둔다.
     -- 성희롱·위협 신고에는 접수 때 72시간 임시 정지가 먼저 붙는다(처리자 없음).
     DROP TEMPORARY TABLE IF EXISTS lt_sanction;
     CREATE TEMPORARY TABLE lt_sanction AS
@@ -313,7 +313,7 @@ BEGIN
                           created_at, updated_at)
     SELECT x.member_id, x.type, ELT(FIELD(x.type, 'WARNING', 'SUSPEND_7D', 'SUSPEND_30D', 'PERMANENT'), 1, 2, 3, 4), x.report_id,
            '검증용 제재 사유입니다.', x.starts_at, x.ends_at,
-           CASE WHEN x.lifted THEN 'LIFTED' WHEN x.ends_at IS NOT NULL AND x.ends_at <= now_utc THEN 'EXPIRED' ELSE 'ACTIVE' END,
+           CASE WHEN x.lifted THEN IF(CRC32(CONCAT('sr', x.report_id)) % 2 = 0, 'ENDED_EARLY', 'REVOKED') WHEN x.ends_at IS NOT NULL AND x.ends_at <= now_utc THEN 'EXPIRED' ELSE 'ACTIVE' END,
            x.handled_by, IF(x.lifted, x.handled_by, NULL),
            IF(x.lifted, LEAST(x.starts_at + INTERVAL 1 HOUR, now_utc - INTERVAL 1 MINUTE), NULL),
            x.starts_at, x.starts_at

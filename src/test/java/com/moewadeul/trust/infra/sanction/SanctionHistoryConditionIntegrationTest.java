@@ -50,22 +50,23 @@ class SanctionHistoryConditionIntegrationTest {
 
     @Test
     @DisplayName(
-            "[SN-10][TR-01][PV-05] 제재 종류와 상태의 모든 조합에서 다음 단계, 탈퇴 CI 보관, 신뢰 회원 판정 쿼리가 Sanction.countsAsHistory()와 같다")
-    void queriesFollowCountsAsHistory() {
+            "[SN-10][TR-01][PV-05] 제재 종류와 상태의 모든 조합에서 다음 단계와 신뢰 회원 판정 쿼리는 countsAsHistory(), 탈퇴 CI 보관 쿼리는 countsForCiRetention()과 같다")
+    void queriesFollowSanctionConditions() {
         for (SanctionType type : SanctionType.values()) {
             for (SanctionStatus status : SanctionStatus.values()) {
                 long memberId = fixture.saveVerifiedMember(TestSequence.nickname());
                 insertSanction(memberId, type, status);
-                boolean expected = historyOf(type, status).countsAsHistory();
+                Sanction sanction = sanctionOf(type, status);
+                boolean expected = sanction.countsAsHistory();
 
                 assertThat(sanctionRepository
                                 .findHighestConfirmedLevel(memberId)
                                 .isPresent())
                         .as("findHighestConfirmedLevel %s %s", type, status)
                         .isEqualTo(expected);
-                assertThat(sanctionRepository.existsHistory(memberId))
-                        .as("existsHistory %s %s", type, status)
-                        .isEqualTo(expected);
+                assertThat(sanctionRepository.existsCiRetentionSanction(memberId))
+                        .as("existsCiRetentionSanction %s %s", type, status)
+                        .isEqualTo(sanction.countsForCiRetention());
                 assertThat(trustRecordMapper
                                 .selectCompanionRecord(memberId, NOW, NOW.minus(RECENT_PERIOD))
                                 .recentSanction())
@@ -75,7 +76,7 @@ class SanctionHistoryConditionIntegrationTest {
         }
     }
 
-    private static Sanction historyOf(SanctionType type, SanctionStatus status) {
+    private static Sanction sanctionOf(SanctionType type, SanctionStatus status) {
         Sanction sanction = Sanction.temporary(1L, 1L, NOW);
         ReflectionTestUtils.setField(sanction, "type", type);
         ReflectionTestUtils.setField(sanction, "status", status);

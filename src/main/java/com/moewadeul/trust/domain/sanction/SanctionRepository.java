@@ -12,7 +12,7 @@ public interface SanctionRepository {
 
     boolean existsActiveSuspension(long memberId, Instant now);
 
-    boolean existsHistory(long memberId);
+    boolean existsCiRetentionSanction(long memberId);
 
     Optional<Sanction> findById(Long id);
 

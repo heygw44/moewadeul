@@ -209,6 +209,33 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
+    @DisplayName(
+            "[F-16][PV-05][SN-05] 검토 전에 72시간이 지나 만료된 임시 정지만 있어도 CI 해시를 365일 남겨, 31일째 정리 작업이 지우지 않고 같은 사람의 재가입을 막는다")
+    void expiredUnreviewedTemporarySuspensionRetainsCi() {
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        String demoKey = "key-" + TestSequence.next();
+        verifyIdentity(session, demoKey);
+        Instant startedAt = clock.instant().minus(Duration.ofDays(4));
+        jdbc.update(
+                "INSERT INTO sanction (member_id, type, reason, starts_at, ends_at, status, created_at, updated_at)"
+                        + " VALUES (?, 'TEMPORARY_72H', '임시 정지', ?, ?, 'EXPIRED', NOW(6), NOW(6))",
+                member.getId(),
+                LocalDateTime.ofInstant(startedAt, ZoneOffset.UTC),
+                LocalDateTime.ofInstant(startedAt.plus(Duration.ofHours(72)), ZoneOffset.UTC));
+
+        withdraw(session, PASSWORD);
+
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
+        assertThat(retainedUntil(member)).isEqualTo(now.plusDays(365));
+        clock.advance(Duration.ofDays(31));
+        ciRetentionCleanupService.deleteRetentionExpired();
+        assertThat(count("identity_verification WHERE member_id = ?", member.getId()))
+                .isEqualTo(1);
+        assertThat(identityRequest(login(saveActiveMember()), demoKey)).hasStatus(HttpStatus.CONFLICT);
+    }
+
+    @Test
     @DisplayName("[F-16][PV-05] 탈퇴한 뒤에 제재가 확정되면 CI 해시를 탈퇴 시각부터 365일 뒤까지 남겨, 31일째 정리 작업이 지우지 않고 재가입도 막는다")
     void sanctionAfterWithdrawalExtendsCiRetention() {
         long adminId = fixture.saveVerifiedMember(TestSequence.nickname());

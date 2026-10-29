@@ -219,6 +219,18 @@ class SanctionTest {
         }
     }
 
+    @Test
+    @DisplayName("[PV-05] 탈퇴 CI 보관은 임시 정지를 포함한 모든 제재를 세고, 처분 취소된 제재만 세지 않는다")
+    void everySanctionCountsForCiRetentionUnlessRevoked() {
+        for (SanctionType type : SanctionType.values()) {
+            for (SanctionStatus status : SanctionStatus.values()) {
+                assertThat(sanctionOf(type, status).countsForCiRetention())
+                        .as("%s %s", type, status)
+                        .isEqualTo(status != SanctionStatus.REVOKED);
+            }
+        }
+    }
+
     private static Sanction sanctionOf(SanctionType type, SanctionStatus status) {
         Sanction sanction = Sanction.temporary(11L, 5L, NOW);
         ReflectionTestUtils.setField(sanction, "type", type);

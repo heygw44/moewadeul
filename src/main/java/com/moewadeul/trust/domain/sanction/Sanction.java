@@ -155,6 +155,10 @@ public class Sanction {
         return type != SanctionType.TEMPORARY_72H && status != SanctionStatus.REVOKED;
     }
 
+    public boolean countsForCiRetention() {
+        return status != SanctionStatus.REVOKED;
+    }
+
     private static void requireNow(Instant now) {
         if (now == null) {
             throw new IllegalArgumentException("제재를 해제하는 시각이 null입니다.");
