@@ -6,6 +6,7 @@ import static com.moewadeul.spot.application.detail.SpotDetailFixture.RIDGE_LNG;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -19,6 +20,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class SpotDetailExpectedPeopleIntegrationTest {
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private SpotFixture spotFixture;
@@ -36,7 +40,7 @@ class SpotDetailExpectedPeopleIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        fixture = new SpotDetailFixture(jdbcTemplate);
+        fixture = new SpotDetailFixture(jdbcTemplate, memberFixture);
     }
 
     @Test
@@ -126,7 +130,7 @@ class SpotDetailExpectedPeopleIntegrationTest {
         // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
         long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
-        insertSoloTrip(fixture.insertMember(TestSequence.nickname()), spotId, "2026-11-07", "2026-11-09");
+        insertSoloTrip(memberFixture.save().getId(), spotId, "2026-11-07", "2026-11-09");
         fixture.insertBasecampMembers(
                 fixture.insertBasecamp(spotId, "CONFIRMED", "2026-11-08", "2026-11-09"), "ACTIVE", 2);
 
@@ -147,12 +151,12 @@ class SpotDetailExpectedPeopleIntegrationTest {
         clock.setInstant(Instant.parse("2026-11-08T03:00:00Z"));
         long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         long otherSpotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
-        long withdrawnId = fixture.insertMember(TestSequence.nickname());
+        long withdrawnId = memberFixture.save().getId();
         jdbcTemplate.update("UPDATE member SET status = 'WITHDRAWN' WHERE id = ?", withdrawnId);
         insertSoloTrip(withdrawnId, spotId, "2026-11-09", "2026-11-10");
-        insertSoloTrip(fixture.insertMember(TestSequence.nickname()), otherSpotId, "2026-11-09", "2026-11-10");
-        insertSoloTrip(fixture.insertMember(TestSequence.nickname()), spotId, "2026-11-06", "2026-11-08");
-        insertSoloTrip(fixture.insertMember(TestSequence.nickname()), spotId, "2026-11-07", "2026-11-09");
+        insertSoloTrip(memberFixture.save().getId(), otherSpotId, "2026-11-09", "2026-11-10");
+        insertSoloTrip(memberFixture.save().getId(), spotId, "2026-11-06", "2026-11-08");
+        insertSoloTrip(memberFixture.save().getId(), spotId, "2026-11-07", "2026-11-09");
 
         // when
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
@@ -264,7 +268,7 @@ class SpotDetailExpectedPeopleIntegrationTest {
                 toUtcDateTime(endAt),
                 overnight,
                 status,
-                fixture.insertMember(TestSequence.nickname()));
+                memberFixture.save().getId());
         return jdbcTemplate.queryForObject("SELECT id FROM program WHERE title = ?", Long.class, title);
     }
 
@@ -274,7 +278,7 @@ class SpotDetailExpectedPeopleIntegrationTest {
                     "INSERT INTO program_application (program_id, member_id, status, payment_due_at, created_at,"
                             + " updated_at) VALUES (?, ?, ?, '2026-10-31 00:00:00', NOW(6), NOW(6))",
                     programId,
-                    fixture.insertMember(TestSequence.nickname()),
+                    memberFixture.save().getId(),
                     status);
         }
     }

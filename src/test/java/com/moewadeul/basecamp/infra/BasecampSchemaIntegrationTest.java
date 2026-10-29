@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +20,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class BasecampSchemaIntegrationTest {
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private SpotFixture spotFixture;
@@ -46,7 +50,7 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[BC-02] 정원이 2명이나 6명인 베이스캠프는 저장된다")
     void basecampWithBoundaryCapacityIsSaved(int capacity) {
         // given
-        long leaderId = insertMember("leader");
+        long leaderId = memberFixture.save().getId();
         long spotId = spotFixture.insert(aSpot().name("정원 경계 장소"));
 
         // when
@@ -61,7 +65,7 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[BC-02] 정원이 2~6명 밖인 베이스캠프는 저장할 수 없다")
     void basecampWithCapacityOutOfRangeIsRejected(int capacity) {
         // given
-        long leaderId = insertMember("leader");
+        long leaderId = memberFixture.save().getId();
         long spotId = spotFixture.insert(aSpot().name("정원 범위 밖 장소"));
 
         // when & then
@@ -76,7 +80,7 @@ class BasecampSchemaIntegrationTest {
     void memberCannotApplyToSameBasecampTwice() {
         // given
         long basecampId = insertBasecampWithLeader("leader");
-        long applicantId = insertMember("applicant");
+        long applicantId = memberFixture.save().getId();
         insertApplication(basecampId, applicantId);
 
         // when & then
@@ -89,7 +93,7 @@ class BasecampSchemaIntegrationTest {
         // given
         long firstBasecampId = insertBasecampWithLeader("first-leader");
         long secondBasecampId = insertBasecampWithLeader("second-leader");
-        long applicantId = insertMember("applicant");
+        long applicantId = memberFixture.save().getId();
         insertApplication(firstBasecampId, applicantId);
 
         // when
@@ -104,7 +108,7 @@ class BasecampSchemaIntegrationTest {
     void memberCannotJoinSameBasecampTwice() {
         // given
         long basecampId = insertBasecampWithLeader("leader");
-        long memberId = insertMember("member");
+        long memberId = memberFixture.save().getId();
         insertBasecampMember(basecampId, memberId);
 
         // when & then
@@ -116,7 +120,7 @@ class BasecampSchemaIntegrationTest {
     void sameGenderOnlyAndEarlyLeaveDefaultToFalse() {
         // given
         long basecampId = insertBasecampWithLeader("leader");
-        long memberId = insertMember("member");
+        long memberId = memberFixture.save().getId();
 
         // when
         insertBasecampMember(basecampId, memberId);
@@ -134,7 +138,7 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[ADR-001] 없는 장소를 가리키는 베이스캠프는 저장할 수 없다")
     void basecampMustReferenceExistingSpot() {
         // given
-        long leaderId = insertMember("leader");
+        long leaderId = memberFixture.save().getId();
         long missingSpotId = 999_999L;
 
         // when & then
@@ -144,18 +148,9 @@ class BasecampSchemaIntegrationTest {
     }
 
     private long insertBasecampWithLeader(String leaderNickname) {
-        long leaderId = insertMember(leaderNickname);
+        long leaderId = memberFixture.save().getId();
         long spotId = spotFixture.insert(aSpot().name(leaderNickname + "의 장소"));
         return insertBasecamp(leaderId, spotId, 4);
-    }
-
-    private long insertMember(String nickname) {
-        jdbcTemplate.update(
-                "INSERT INTO member (email, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, 'ACTIVE', 'USER', NOW(6), NOW(6))",
-                nickname + "@example.com",
-                nickname);
-        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
     }
 
     private long insertBasecamp(long leaderId, long spotId, int capacity) {

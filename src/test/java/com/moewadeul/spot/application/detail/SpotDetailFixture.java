@@ -1,5 +1,6 @@
 package com.moewadeul.spot.application.detail;
 
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import java.time.LocalDate;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -10,9 +11,11 @@ final class SpotDetailFixture {
     static final double RIDGE_LNG = 128.75;
 
     private final JdbcTemplate jdbcTemplate;
+    private final MemberFixture memberFixture;
 
-    SpotDetailFixture(JdbcTemplate jdbcTemplate) {
+    SpotDetailFixture(JdbcTemplate jdbcTemplate, MemberFixture memberFixture) {
         this.jdbcTemplate = jdbcTemplate;
+        this.memberFixture = memberFixture;
     }
 
     void insertPublicDetail(
@@ -43,7 +46,7 @@ final class SpotDetailFixture {
     }
 
     long insertBasecamp(long spotId, String status, String startDate, String endDate, int capacity, String title) {
-        long leaderId = insertMember(TestSequence.nickname());
+        long leaderId = memberFixture.save().getId();
         jdbcTemplate.update(
                 "INSERT INTO basecamp (leader_id, spot_id, title, description, start_date, end_date, capacity, status,"
                         + " created_at, updated_at) VALUES (?, ?, ?, '설명', ?, ?, ?, ?, NOW(6), NOW(6))",
@@ -63,17 +66,8 @@ final class SpotDetailFixture {
                     "INSERT INTO basecamp_member (basecamp_id, member_id, role, status, joined_at, created_at,"
                             + " updated_at) VALUES (?, ?, 'MEMBER', ?, NOW(6), NOW(6), NOW(6))",
                     basecampId,
-                    insertMember(TestSequence.nickname()),
+                    memberFixture.save().getId(),
                     status);
         }
-    }
-
-    long insertMember(String nickname) {
-        jdbcTemplate.update(
-                "INSERT INTO member (email, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, 'ACTIVE', 'USER', NOW(6), NOW(6))",
-                TestSequence.email(),
-                nickname);
-        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
     }
 }

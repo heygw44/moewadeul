@@ -6,9 +6,9 @@ import static com.moewadeul.spot.application.detail.SpotDetailFixture.RIDGE_LNG;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.SpotFixture;
-import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,6 +20,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class SpotDetailClosureAndSyncIntegrationTest {
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private SpotFixture spotFixture;
@@ -37,7 +40,7 @@ class SpotDetailClosureAndSyncIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        fixture = new SpotDetailFixture(jdbcTemplate);
+        fixture = new SpotDetailFixture(jdbcTemplate, memberFixture);
     }
 
     @Test
@@ -146,7 +149,7 @@ class SpotDetailClosureAndSyncIntegrationTest {
                 "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
                         + " VALUES (?, ?, FALSE, FALSE, NOW(6), NOW(6))",
                 spotId,
-                fixture.insertMember(TestSequence.nickname()));
+                memberFixture.save().getId());
         insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-07 03:00:00.000000", "2026-10-07 03:30:00.000000");
 
         // when

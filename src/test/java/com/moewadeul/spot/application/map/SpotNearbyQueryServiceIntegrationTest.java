@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.within;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -41,6 +42,9 @@ class SpotNearbyQueryServiceIntegrationTest {
     private static final Coordinate EAST_9_8_KM = new Coordinate(37.5665, 127.0891);
     private static final Coordinate WEST_9_8_KM = new Coordinate(37.5665, 126.8669);
     private static final Coordinate EAST_10_2_KM = new Coordinate(37.5665, 127.0936);
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private SpotFixture spotFixture;
@@ -206,7 +210,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     @DisplayName("[F-04] 물·화장실 필터는 해당 시설이 있는 박지만 남기고, 야영장과 휴양림은 시설과 상관없이 남긴다")
     void facilityFiltersApplyOnlyToBakji() {
         // given
-        long reporterId = insertMember();
+        long reporterId = memberFixture.save().getId();
         long campsiteId = insertSpot("CAMPSITE", "야영장", NORTH_2_KM);
         long forestId = insertSpot("FOREST", "휴양림", NORTH_2_KM);
         long waterOnlyId = insertBakji(reporterId, true, false);
@@ -241,7 +245,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     void keepsClosedSpotsAndMarksThemClosed() {
         // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
-        long reporterId = insertMember();
+        long reporterId = memberFixture.save().getId();
         long closedId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", NORTH_2_KM);
         insertPublicDetail(
                 closedId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));
@@ -263,7 +267,7 @@ class SpotNearbyQueryServiceIntegrationTest {
     void hideClosedExcludesClosedSpotsFromNearby() {
         // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
-        long reporterId = insertMember();
+        long reporterId = memberFixture.save().getId();
         long closedId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", NORTH_2_KM);
         insertPublicDetail(
                 closedId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));
@@ -495,16 +499,6 @@ class SpotNearbyQueryServiceIntegrationTest {
             jdbcTemplate.update("INSERT INTO public_spot_setting (spot_id, setting) VALUES (?, ?)", spotId, setting);
         }
         return spotId;
-    }
-
-    private long insertMember() {
-        String nickname = TestSequence.nickname();
-        jdbcTemplate.update(
-                "INSERT INTO member (email, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, 'ACTIVE', 'USER', NOW(6), NOW(6))",
-                TestSequence.email(),
-                nickname);
-        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
     }
 
     private record Coordinate(double lat, double lng) {}
