@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ApiError, newIdempotencyKey } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
+import { isUnanswered } from '../../api/idempotency';
 import {
   applyProgram,
   cancelApplication,
@@ -276,7 +277,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
       if (keyRef) keyRef.current = null;
     } catch (caught) {
       const apiError = caught instanceof ApiError ? caught : new ApiError(0, 'INTERNAL_ERROR', null);
-      if (keyRef && apiError.code !== 'NETWORK_ERROR') keyRef.current = null;
+      if (keyRef && !isUnanswered(apiError)) keyRef.current = null;
       if (apiError.code === 'PROGRAM_SOLD_OUT') setSoldOut(true);
       setError({ kind, apiError });
       if (STALE_CODES.has(apiError.code)) onChanged();
