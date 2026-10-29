@@ -4,6 +4,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.Dependency;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaModifier;
@@ -54,8 +55,6 @@ public final class ArchitectureRules {
             "trust", Set.of("member"));
 
     private static final String APPLIER_SUFFIX = "Applier";
-    // MemberReportActionApplier 가 같은 트랜잭션에 합류하려고 다른 패키지에서 직접 부른다.
-    private static final Set<String> PUBLIC_APPLIERS = Set.of("SanctionConfirmApplier");
 
     private static final String APPLICATION = "application";
     private static final String API = "api";
@@ -66,6 +65,10 @@ public final class ArchitectureRules {
     private static final String SCHEDULES = "org.springframework.scheduling.annotation.Schedules";
     private static final String SCHEDULED_JOB_RUNNER = "com.moewadeul.common.scheduling.ScheduledJobRunner";
     private static final Set<String> JOB_RUNNER_ENTRY_METHODS = Set.of("run", "runCountingFailures");
+
+    private static final String SERVICE_SUFFIX = "Service";
+    private static final String OUTSIDE_TRANSACTION = "com.moewadeul.common.transaction.OutsideTransaction";
+    private static final String OUTSIDE_TRANSACTION_GUARD = "require";
 
     private static final String SPRING_DATA_REPOSITORY = "org.springframework.data.repository.Repository";
     private static final List<String> PERSISTENCE_NAME_SUFFIXES = List.of("Repository", "Mapper");
@@ -145,7 +148,15 @@ public final class ArchitectureRules {
         Scope scope = new Scope(rootPackage);
         return scope.moduleClasses()
                 .should(applierNotPublic())
-                .as("*Applier 는 package-private 이다(짝 서비스의 OutsideTransaction 가드를 거치게 한다)")
+                .as("*Applier 는 package-private 이다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule applierCallerRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(appliersCalledOnlyFromGuardedServices())
+                .as("*Applier 는 OutsideTransaction 가드를 둔 같은 패키지의 *Service 만 부른다")
                 .allowEmptyShould(true);
     }
 
@@ -239,14 +250,43 @@ public final class ArchitectureRules {
             @Override
             public void check(JavaClass item, ConditionEvents events) {
                 boolean applier = item.getSimpleName().endsWith(APPLIER_SUFFIX);
-                if (applier
-                        && item.getModifiers().contains(JavaModifier.PUBLIC)
-                        && !PUBLIC_APPLIERS.contains(item.getSimpleName())) {
+                if (applier && item.getModifiers().contains(JavaModifier.PUBLIC)) {
                     events.add(SimpleConditionEvent.violated(
                             item, "public Applier 는 서비스의 트랜잭션 밖 가드를 우회하게 한다: " + item.getName()));
                 }
             }
         };
+    }
+
+    private static ArchCondition<JavaClass> appliersCalledOnlyFromGuardedServices() {
+        return new ArchCondition<>("be called only from a guarded *Service when named *Applier") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                if (!item.getSimpleName().endsWith(APPLIER_SUFFIX)) {
+                    return;
+                }
+                for (JavaAccess<?> access : item.getAccessesToSelf()) {
+                    JavaClass owner = access.getOriginOwner();
+                    if (owner.equals(item) || isGuardedPairService(item, owner)) {
+                        continue;
+                    }
+                    events.add(SimpleConditionEvent.violated(
+                            access, "*Applier 는 트랜잭션 밖을 확인하는 같은 패키지의 *Service 에서만 부른다: " + access.getDescription()));
+                }
+            }
+        };
+    }
+
+    private static boolean isGuardedPairService(JavaClass applier, JavaClass owner) {
+        return owner.getPackageName().equals(applier.getPackageName())
+                && owner.getSimpleName().endsWith(SERVICE_SUFFIX)
+                && callsOutsideTransactionGuard(owner);
+    }
+
+    private static boolean callsOutsideTransactionGuard(JavaClass owner) {
+        return owner.getMethodCallsFromSelf().stream()
+                .anyMatch(call -> call.getTargetOwner().getName().equals(OUTSIDE_TRANSACTION)
+                        && call.getName().equals(OUTSIDE_TRANSACTION_GUARD));
     }
 
     private static ArchCondition<JavaClass> transactionalOnlyInApplication(Scope scope) {

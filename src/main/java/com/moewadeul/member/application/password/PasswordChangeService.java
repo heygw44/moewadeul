@@ -2,6 +2,7 @@ package com.moewadeul.member.application.password;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.application.LoginAttemptService;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.domain.Member;
@@ -27,6 +28,7 @@ public class PasswordChangeService {
     private final MemberSessions memberSessions;
 
     public void change(PasswordChangeCommand command) {
+        OutsideTransaction.require("트랜잭션 안이면 틀린 비밀번호 기록이 예외와 함께 롤백되고, 세션은 변경이 커밋된 뒤에 지워야 한다.");
         Member member = findChangeableMember(command.memberId());
         rejectIfLocked(member);
         verifyCurrentPassword(member, command);

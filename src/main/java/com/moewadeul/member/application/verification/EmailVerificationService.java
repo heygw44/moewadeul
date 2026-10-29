@@ -41,7 +41,7 @@ public class EmailVerificationService {
     private final EmailVerificationMapper emailVerificationMapper;
     private final EmailVerificationIpLockMapper ipLockMapper;
     private final SignupDuplicateAttemptMapper signupDuplicateAttemptMapper;
-    private final EmailVerificationActivator emailVerificationActivator;
+    private final EmailVerificationApplier emailVerificationApplier;
     private final OutboxEventRecorder outboxEventRecorder;
     private final MemberMetrics memberMetrics;
     private final MailSecretDeriver mailSecretDeriver;
@@ -118,7 +118,7 @@ public class EmailVerificationService {
         if (!verification.matches(code)) {
             rejectWrongCode(verification, now);
         }
-        emailVerificationActivator.activate(verification.getId(), memberId, now);
+        emailVerificationApplier.activate(verification.getId(), memberId, now);
         log.info("email verified memberId={}", memberId);
         memberMetrics.recordEmailVerified();
         return new VerificationResult(MemberStatus.ACTIVE);
