@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 public enum TrustErrorCode implements ErrorCode {
     IDENTITY_ALREADY_VERIFIED(HttpStatus.CONFLICT, "이미 본인확인을 마친 계정이에요."),
     IDENTITY_CI_DUPLICATED(HttpStatus.CONFLICT, "이미 본인확인된 계정이 있어요."),
+    IDENTITY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "지금은 본인확인을 할 수 없어요."),
     COMPANION_REVIEW_NOT_ELIGIBLE(HttpStatus.FORBIDDEN, "이 회원에게 동행 후기를 쓸 자격이 없어요."),
     COMPANION_REVIEW_DEADLINE_PASSED(HttpStatus.BAD_REQUEST, "동행 후기를 쓸 수 있는 기한이 지났어요."),
     COMPANION_REVIEW_DUPLICATED(HttpStatus.CONFLICT, "같은 베이스캠프에서 이 회원에게 쓴 후기가 이미 있어요."),

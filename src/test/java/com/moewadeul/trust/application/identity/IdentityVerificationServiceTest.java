@@ -26,8 +26,10 @@ import com.moewadeul.trust.domain.identity.VerifiedIdentity;
 import com.moewadeul.trust.infra.profile.TrustRecordMapper;
 import com.moewadeul.trust.infra.profile.TrustRecordRow;
 import java.time.Instant;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.dao.CannotAcquireLockException;
 
 class IdentityVerificationServiceTest {
@@ -156,7 +158,11 @@ class IdentityVerificationServiceTest {
     private IdentityVerificationService serviceAt(String instant) {
         MutableClock clock = MutableClock.at(Instant.parse(instant));
         return new IdentityVerificationService(new IdentityVerificationApplier(
-                repository, provider, hasher, new TrustSummaryService(repository, recordMapper, clock), clock));
+                repository,
+                new StaticListableBeanFactory(Map.of("provider", provider)).getBeanProvider(IdentityProvider.class),
+                hasher,
+                new TrustSummaryService(repository, recordMapper, clock),
+                clock));
     }
 
     private static IdentityVerifyCommand command(int birthYear) {
