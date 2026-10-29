@@ -1,28 +1,35 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.retry.RetryPolicy;
 import com.moewadeul.notification.application.NotificationEventTypes;
 import com.moewadeul.notification.infra.event.NotificationMailMapper;
 import com.moewadeul.notification.infra.event.NotificationMailRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 class NotificationMailStore {
 
     private final NotificationMailMapper mailMapper;
     private final NotificationMailProperties properties;
+    private final RetryPolicy retryPolicy;
     private final Clock clock;
+
+    NotificationMailStore(NotificationMailMapper mailMapper, NotificationMailProperties properties, Clock clock) {
+        this.mailMapper = mailMapper;
+        this.properties = properties;
+        this.retryPolicy = properties.retryPolicy();
+        this.clock = clock;
+    }
 
     @Transactional
     Claim claim(Instant now) {
-        Instant leaseUntil = properties.retryPolicy().leaseUntil(now);
+        Instant leaseUntil = retryPolicy.leaseUntil(now);
         int remaining = remainingQuota(now);
         if (remaining == 0) {
             return new Claim(leaseUntil, List.of());
@@ -64,8 +71,7 @@ class NotificationMailStore {
 
     @Transactional
     void markFailedAttempt(long notificationId, boolean transientFailure) {
-        int updated = mailMapper.markFailedAttempt(
-                notificationId, transientFailure, properties.retryPolicy(), clock.instant());
+        int updated = mailMapper.markFailedAttempt(notificationId, transientFailure, retryPolicy, clock.instant());
         if (updated == 0) {
             log.warn("notification mail was not pending when marking failed notificationId={}", notificationId);
         }

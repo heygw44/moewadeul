@@ -108,7 +108,6 @@ public final class PublicDataHttp {
     }
 
     // 공공데이터포털은 결과가 없으면 items를 빈 문자열("")로 주고, 결과가 한 건이면 item을 배열이 아닌 객체 하나로 줄 수 있다.
-    // 그래서 세 모양(빈 값, 객체 하나, 배열)을 모두 목록으로 바꾼다. malformed는 해석하지 못한 사유를 받아 클라이언트 고유의 예외로 바꾼다.
     public static List<JsonNode> itemsOf(JsonNode items, Function<String, ? extends RuntimeException> malformed) {
         if (items.isMissingNode()
                 || items.isNull()

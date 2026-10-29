@@ -20,8 +20,6 @@ public record OutboxProperties(
     public OutboxProperties {
         requirePositive(batchSize, "batchSize");
         requirePositive(pollDelay, "pollDelay");
-        // 잘못된 재시도 설정은 처음 쓸 때가 아니라 설정 바인딩 때 막는다.
-        new RetryPolicy(lease, retryDelay, retryMaxDelay, maxAttempts);
     }
 
     public RetryPolicy retryPolicy() {
