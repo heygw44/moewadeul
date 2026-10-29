@@ -12,19 +12,13 @@
                 JOIN basecamp b ON b.id = r.basecamp_id
                 WHERE r.reviewee_id = #{memberId}
                   AND r.hidden_at IS NULL
-                  AND (b.completed_at &lt; #{revealCutoff}
-                       OR EXISTS (SELECT 1 FROM companion_review rv
-                                  WHERE rv.basecamp_id = r.basecamp_id AND rv.reviewer_id = r.reviewee_id
-                                    AND rv.reviewee_id = r.reviewer_id))) AS received_reviews,
+                  AND <include refid="com.moewadeul.trust.infra.companion.CompanionReviewSql.revealed"/>) AS received_reviews,
                (SELECT COUNT(CASE WHEN r.rejoin_wanted THEN 1 END)
                 FROM companion_review r
                 JOIN basecamp b ON b.id = r.basecamp_id
                 WHERE r.reviewee_id = #{memberId}
                   AND r.hidden_at IS NULL
-                  AND (b.completed_at &lt; #{revealCutoff}
-                       OR EXISTS (SELECT 1 FROM companion_review rv
-                                  WHERE rv.basecamp_id = r.basecamp_id AND rv.reviewer_id = r.reviewee_id
-                                    AND rv.reviewee_id = r.reviewer_id))) AS rejoin_wanted,
+                  AND <include refid="com.moewadeul.trust.infra.companion.CompanionReviewSql.revealed"/>) AS rejoin_wanted,
                (SELECT COUNT(*)
                 FROM basecamp_member bm
                 WHERE bm.member_id = #{memberId} AND bm.early_leave = TRUE
@@ -45,10 +39,7 @@
         JOIN companion_review_tag t ON t.review_id = r.id
         WHERE r.reviewee_id = #{memberId}
           AND r.hidden_at IS NULL
-          AND (b.completed_at &lt; #{revealCutoff}
-               OR EXISTS (SELECT 1 FROM companion_review rv
-                          WHERE rv.basecamp_id = r.basecamp_id AND rv.reviewer_id = r.reviewee_id
-                            AND rv.reviewee_id = r.reviewer_id))
+          AND <include refid="com.moewadeul.trust.infra.companion.CompanionReviewSql.revealed"/>
         GROUP BY t.tag
     </select>
 

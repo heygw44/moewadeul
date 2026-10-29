@@ -66,6 +66,11 @@ public class ProgramApplication {
     @Getter(AccessLevel.NONE)
     private final List<Supplier<OutboxEventDraft>> deferredEvents = new ArrayList<>();
 
+    public boolean isSeatHolderAt(Instant now) {
+        return status == ProgramApplicationStatus.CONFIRMED
+                || (status == ProgramApplicationStatus.PENDING_PAYMENT && now.isBefore(paymentDueAt));
+    }
+
     public void confirmPayment(Instant now) {
         boolean dueReached = status == ProgramApplicationStatus.PENDING_PAYMENT && !now.isBefore(paymentDueAt);
         if (status == ProgramApplicationStatus.EXPIRED || dueReached) {
