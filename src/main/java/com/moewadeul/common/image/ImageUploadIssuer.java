@@ -60,8 +60,9 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
         T image = imageRepository.saveAndFlush(
                 newImage(memberId, key, command.contentType(), command.sizeBytes(), now, thumbnail));
         PresignedUpload upload = imageStorage.presignUpload(key, command.contentType(), command.sizeBytes());
-        return new ImageUpload(
-                image.getId(), upload.url(), upload.headers(), upload.expiresAt(), presignThumbnail(thumbnail));
+        PresignedUpload thumbnailUpload =
+                image.thumbnail().map(this::presignThumbnail).orElse(null);
+        return new ImageUpload(image.getId(), upload.url(), upload.headers(), upload.expiresAt(), thumbnailUpload);
     }
 
     private void requireUploadRoom(long memberId, Instant now) {
@@ -77,9 +78,6 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
     }
 
     private PresignedUpload presignThumbnail(Thumbnail thumbnail) {
-        if (thumbnail == null) {
-            return null;
-        }
         return imageStorage.presignUpload(
                 thumbnail.objectKey(), ThumbnailedImage.THUMBNAIL_CONTENT_TYPE, thumbnail.sizeBytes());
     }
