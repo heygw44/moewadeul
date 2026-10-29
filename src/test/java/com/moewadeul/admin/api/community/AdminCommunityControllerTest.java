@@ -13,6 +13,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.moderation.ModerationResult;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
@@ -22,7 +23,6 @@ import com.moewadeul.community.application.moderation.AdminCommunityCommentSumma
 import com.moewadeul.community.application.moderation.AdminCommunityPostSummary;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
 import com.moewadeul.community.application.moderation.AdminCommunityRecentReport;
-import com.moewadeul.community.application.moderation.CommunityModerationResult;
 import com.moewadeul.community.application.moderation.CommunityModerationService;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
@@ -183,10 +183,10 @@ class AdminCommunityControllerTest {
     @DisplayName("[F-29][CM-08] 글과 댓글 숨김·복구는 로그인한 관리자 ID로 서비스를 부르고 대상 ID와 상태를 응답한다")
     void hideAndRestoreReturnStatus() {
         // given
-        when(moderationService.hidePost(9L, ADMIN_ID)).thenReturn(new CommunityModerationResult(9L, "HIDDEN"));
-        when(moderationService.restorePost(9L, ADMIN_ID)).thenReturn(new CommunityModerationResult(9L, "ACTIVE"));
-        when(moderationService.hideComment(5L, ADMIN_ID)).thenReturn(new CommunityModerationResult(5L, "HIDDEN"));
-        when(moderationService.restoreComment(5L, ADMIN_ID)).thenReturn(new CommunityModerationResult(5L, "ACTIVE"));
+        when(moderationService.hidePost(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "HIDDEN"));
+        when(moderationService.restorePost(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "ACTIVE"));
+        when(moderationService.hideComment(5L, ADMIN_ID)).thenReturn(new ModerationResult(5L, "HIDDEN"));
+        when(moderationService.restoreComment(5L, ADMIN_ID)).thenReturn(new ModerationResult(5L, "ACTIVE"));
 
         // when
         MvcTestResult hidePost = post(admin(), BASE + "/posts/9/hide");
