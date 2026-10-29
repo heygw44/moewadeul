@@ -22,8 +22,7 @@ class MapperTableAccessTest {
 
     private static final String COMMON = "common";
 
-    // 테스트 전용 픽스처 매퍼(src/test/resources)가 classpath에 섞이지 않도록 main 소스만 읽는다
-    private static final Path MAPPER_ROOT = Path.of("src/main/resources/mapper");
+    private static final Path MAIN_MAPPER_ROOT = Path.of("src/main/resources/mapper");
 
     private static final Map<String, String> TABLE_OWNERS = Map.ofEntries(
             entry("member", "member"),
@@ -81,7 +80,6 @@ class MapperTableAccessTest {
             entry("community", Set.of("member", "spot")),
             entry("memory", Set.of("member", "spot")),
             entry("notification", Set.of("member")),
-            // spot은 Java 의존 방향 없이 읽는 자리라 #820에서 공개 서비스로 바꾸고 지운다
             entry("program", Set.of("member", "spot")),
             entry("review", Set.of("member")),
             entry("spot", Set.of("basecamp", "basecamp_member", "program", "program_application",
@@ -108,13 +106,13 @@ class MapperTableAccessTest {
         Set<String> usedCrossReads = new HashSet<>();
 
         List<Path> mapperFiles;
-        try (Stream<Path> walk = Files.walk(MAPPER_ROOT)) {
+        try (Stream<Path> walk = Files.walk(MAIN_MAPPER_ROOT)) {
             mapperFiles = walk.filter(path -> path.toString().endsWith(".xml")).sorted().toList();
         }
         assertThat(mapperFiles).as("매퍼 XML").isNotEmpty();
 
         for (Path path : mapperFiles) {
-            String file = MAPPER_ROOT.relativize(path).toString();
+            String file = MAIN_MAPPER_ROOT.relativize(path).toString();
             String xml = XML_COMMENT.matcher(Files.readString(path, StandardCharsets.UTF_8)).replaceAll("");
             Matcher namespace = NAMESPACE.matcher(xml);
             if (!namespace.find()) {
