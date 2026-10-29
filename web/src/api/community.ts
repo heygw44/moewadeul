@@ -11,7 +11,6 @@ import type {
   CommunityPostUpdateRequest,
   CommunityReportRequest,
   CommunitySearchType,
-  NumberedPage,
   Page,
 } from './types';
 
@@ -29,8 +28,8 @@ export function listPosts(
   filter: CommunityPostQuery,
   page: number,
   signal?: AbortSignal,
-): Promise<NumberedPage<CommunityPostSummary>> {
-  return apiFetch<NumberedPage<CommunityPostSummary>>('/api/community/posts', {
+): Promise<Page<CommunityPostSummary>> {
+  return apiFetch<Page<CommunityPostSummary>>('/api/community/posts', {
     query: {
       spotId: filter.spotId,
       popular: filter.popular || undefined,

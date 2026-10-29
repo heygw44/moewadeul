@@ -107,7 +107,7 @@ class CommunityPostControllerTest {
     void anonymousReadsPostList() {
         // given
         when(communityPostQueryService.list(CommunityPostListQuery.all(), 0, 20))
-                .thenReturn(new CommunityPostPage(List.of(ITEM), 0, 20, true, 21L, 2));
+                .thenReturn(new CommunityPostPage(List.of(ITEM), 0, 20, true));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();
@@ -128,7 +128,7 @@ class CommunityPostControllerTest {
                     "viewCount": 12,
                     "createdAt": "2026-10-05T03:00:00Z"
                   }],
-                  "page": 0, "size": 20, "hasNext": true, "totalElements": 21, "totalPages": 2
+                  "page": 0, "size": 20, "hasNext": true
                 }
                 """);
     }
@@ -138,7 +138,7 @@ class CommunityPostControllerTest {
     void listOmitsSpotFieldWhenNoVisibleSpot() {
         // given
         when(communityPostQueryService.list(CommunityPostListQuery.all(), 0, 20))
-                .thenReturn(new CommunityPostPage(List.of(ITEM_WITHOUT_SPOT), 0, 20, false, 1L, 1));
+                .thenReturn(new CommunityPostPage(List.of(ITEM_WITHOUT_SPOT), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();
@@ -158,7 +158,7 @@ class CommunityPostControllerTest {
                     "viewCount": 0,
                     "createdAt": "2026-10-05T03:00:00Z"
                   }],
-                  "page": 0, "size": 20, "hasNext": false, "totalElements": 1, "totalPages": 1
+                  "page": 0, "size": 20, "hasNext": false
                 }
                 """);
     }
@@ -168,7 +168,7 @@ class CommunityPostControllerTest {
     void listPassesFiltersAndPaging() {
         // given
         when(communityPostQueryService.list(new CommunityPostListQuery(101L, true), 2, 50))
-                .thenReturn(new CommunityPostPage(List.of(), 2, 50, false, 1L, 1));
+                .thenReturn(new CommunityPostPage(List.of(), 2, 50, false));
 
         // when
         MvcTestResult result =
@@ -184,7 +184,7 @@ class CommunityPostControllerTest {
     void listPassesTrimmedKeywordAndSearchType() {
         // given
         when(communityPostQueryService.list(any(), anyInt(), anyInt()))
-                .thenReturn(new CommunityPostPage(List.of(), 0, 20, false, 0L, 0));
+                .thenReturn(new CommunityPostPage(List.of(), 0, 20, false));
 
         // when
         MvcTestResult byAuthor = mvc.get()
@@ -544,7 +544,7 @@ class CommunityPostControllerTest {
     void listWithoutParametersUsesDefaults() {
         // given
         when(communityPostQueryService.list(any(), anyInt(), anyInt()))
-                .thenReturn(new CommunityPostPage(List.of(), 0, 20, false, 1L, 1));
+                .thenReturn(new CommunityPostPage(List.of(), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();
@@ -576,7 +576,7 @@ class CommunityPostControllerTest {
                 UPDATED_AT,
                 null);
         when(communityPostQueryService.list(CommunityPostListQuery.all(), 0, 20))
-                .thenReturn(new CommunityPostPage(List.of(withImages), 0, 20, false, 1L, 1));
+                .thenReturn(new CommunityPostPage(List.of(withImages), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();

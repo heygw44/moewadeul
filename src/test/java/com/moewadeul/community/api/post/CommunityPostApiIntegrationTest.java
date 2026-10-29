@@ -154,7 +154,7 @@ class CommunityPostApiIntegrationTest {
                     "viewCount": 0,
                     "createdAt": "2026-10-05T03:00:00Z"
                   }],
-                  "page": 0, "size": 20, "hasNext": false, "totalElements": 1, "totalPages": 1
+                  "page": 0, "size": 20, "hasNext": false
                 }
                 """.formatted(postId, author.getId(), spotId));
         assertThat(list.getResponse().getContentAsString()).doesNotContain(author.getEmail());
@@ -242,8 +242,8 @@ class CommunityPostApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-01] 목록은 조건에 맞는 전체 글 수와 페이지 수를 주고, 마지막 페이지 너머를 요청하면 빈 목록과 같은 페이지 수를 준다")
-    void listReportsTotalsAndHandlesPageBeyondLast() {
+    @DisplayName("[F-29][CM-01] 목록은 전체 글 수와 페이지 수 없이 hasNext만 주고, 마지막 페이지 너머를 요청하면 빈 목록과 hasNext=false를 준다")
+    void listGivesOnlyHasNextAndHandlesPageBeyondLast() {
         // given
         long spotId = fixture.insertSpot("능선 끝 평지", "ACTIVE");
         Cookie session = fixture.verifiedSession(fixture.saveMember(null));
@@ -255,6 +255,7 @@ class CommunityPostApiIntegrationTest {
 
         // when
         MvcTestResult first = mvc.get().uri(POSTS + "?page=0&size=2").exchange();
+        MvcTestResult exact = mvc.get().uri(POSTS + "?page=0&size=5").exchange();
         MvcTestResult last = mvc.get().uri(POSTS + "?page=2&size=2").exchange();
         MvcTestResult beyond = mvc.get().uri(POSTS + "?page=7&size=2").exchange();
         MvcTestResult bySpot =
@@ -263,21 +264,21 @@ class CommunityPostApiIntegrationTest {
                 mvc.get().uri(POSTS + "?spotId=" + (spotId + 1000)).exchange();
 
         // then
-        assertThat(first).bodyJson().extractingPath("$.totalElements").isEqualTo(5);
-        assertThat(first).bodyJson().extractingPath("$.totalPages").isEqualTo(3);
         assertThat(first).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertThat(first).bodyJson().doesNotHavePath("$.totalElements");
+        assertThat(first).bodyJson().doesNotHavePath("$.totalPages");
+        assertThat(exact).bodyJson().extractingPath("$.content").asList().hasSize(5);
+        assertThat(exact).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
         assertThat(last).bodyJson().extractingPath("$.content").asList().hasSize(1);
         assertThat(last).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
         assertThat(beyond).hasStatus(HttpStatus.OK);
         assertThat(beyond).bodyJson().extractingPath("$.content").asList().isEmpty();
         assertThat(beyond).bodyJson().extractingPath("$.page").isEqualTo(7);
-        assertThat(beyond).bodyJson().extractingPath("$.totalElements").isEqualTo(5);
-        assertThat(beyond).bodyJson().extractingPath("$.totalPages").isEqualTo(3);
         assertThat(beyond).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
-        assertThat(bySpot).bodyJson().extractingPath("$.totalElements").isEqualTo(3);
-        assertThat(bySpot).bodyJson().extractingPath("$.totalPages").isEqualTo(2);
-        assertThat(emptySpot).bodyJson().extractingPath("$.totalElements").isEqualTo(0);
-        assertThat(emptySpot).bodyJson().extractingPath("$.totalPages").isEqualTo(0);
+        assertThat(bySpot).bodyJson().extractingPath("$.content").asList().hasSize(2);
+        assertThat(bySpot).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertThat(emptySpot).bodyJson().extractingPath("$.content").asList().isEmpty();
+        assertThat(emptySpot).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
     }
 
     @Test
@@ -644,21 +645,18 @@ class CommunityPostApiIntegrationTest {
                 .extractingPath("$.content[*].postId")
                 .asList()
                 .containsExactly((int) six, (int) five);
-        assertThat(popular).bodyJson().extractingPath("$.totalElements").isEqualTo(2);
-        assertThat(paged).bodyJson().extractingPath("$.totalPages").isEqualTo(2);
         assertThat(paged).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
         assertThat(afterUnlike)
                 .bodyJson()
                 .extractingPath("$.content[*].postId")
                 .asList()
                 .containsExactly((int) six);
-        assertThat(afterUnlike).bodyJson().extractingPath("$.totalElements").isEqualTo(1);
-        assertThat(all).bodyJson().extractingPath("$.totalElements").isEqualTo(4);
+        postIds(all).hasSize(4);
     }
 
     @Test
-    @DisplayName("[F-29][CM-01][CM-12] 활성이 아닌 글과 숨긴 장소의 글이 섞여도 조건마다 페이지를 끝까지 넘긴 글이 전체 글 수와 같고 최신순이다")
-    void pagingThroughEveryConditionMatchesTotalCount() throws Exception {
+    @DisplayName("[F-29][CM-01][CM-12] 활성이 아닌 글과 숨긴 장소의 글이 섞여도 조건마다 hasNext를 따라 페이지를 끝까지 넘기면 맞는 글이 빠짐없이 최신순으로 나온다")
+    void pagingThroughEveryConditionReturnsEveryMatchNewestFirst() throws Exception {
         // given
         long spotId = fixture.insertSpot("능선 끝 평지", "ACTIVE");
         Cookie ridge = fixture.verifiedSession(fixture.saveMember("능선러"));
@@ -721,7 +719,6 @@ class CommunityPostApiIntegrationTest {
 
         // then
         postIds(defaultType).containsExactly((int) inContent, (int) inTitle);
-        assertThat(defaultType).bodyJson().extractingPath("$.totalElements").isEqualTo(2);
         postIds(titleContent).containsExactly((int) inContent, (int) inTitle);
         postIds(title).containsExactly((int) inTitle);
         postIds(content).containsExactly((int) inContent);
@@ -731,7 +728,7 @@ class CommunityPostApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-13] 검색은 최근 ACTIVE 글 10,000개 안에서만 찾고 글 수도 그 안에서 세며, 활성이 아닌 글은 10,000개에 넣지 않는다")
+    @DisplayName("[F-29][CM-13] 검색은 최근 ACTIVE 글 10,000개 안에서만 찾고, 활성이 아닌 글은 10,000개에 넣지 않으며, 검색하지 않는 목록은 그보다 오래된 글도 준다")
     void searchLooksOnlyAtRecentActivePosts() {
         // given
         Member author = fixture.saveMember(null);
@@ -745,17 +742,15 @@ class CommunityPostApiIntegrationTest {
         MvcTestResult atBoundary = mvc.get().uri(POSTS + "?keyword=능선").exchange();
         insertPosts(author.getId(), "ACTIVE", 1);
         MvcTestResult pushedOut = mvc.get().uri(POSTS + "?keyword=능선").exchange();
-        MvcTestResult unsearched = mvc.get().uri(POSTS + "?size=1").exchange();
+        MvcTestResult unsearched = mvc.get()
+                .uri(POSTS + "?size=1&page=" + CommunityPost.SEARCH_RECENT_POST_LIMIT)
+                .exchange();
 
         // then
         postIds(atBoundary).containsExactly((int) latest, (int) old);
-        assertThat(atBoundary).bodyJson().extractingPath("$.totalElements").isEqualTo(2);
         postIds(pushedOut).containsExactly((int) latest);
-        assertThat(pushedOut).bodyJson().extractingPath("$.totalElements").isEqualTo(1);
-        assertThat(unsearched)
-                .bodyJson()
-                .extractingPath("$.totalElements")
-                .isEqualTo(CommunityPost.SEARCH_RECENT_POST_LIMIT + 1);
+        postIds(unsearched).containsExactly((int) old);
+        assertThat(unsearched).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
     }
 
     @Test
@@ -811,7 +806,7 @@ class CommunityPostApiIntegrationTest {
         assertThat(one).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("keyword");
         assertThat(fifty).hasStatus(HttpStatus.OK);
         assertThat(blank).hasStatus(HttpStatus.OK);
-        assertThat(blank).bodyJson().extractingPath("$.totalElements").isEqualTo(2);
+        postIds(blank).hasSize(2);
     }
 
     @Test
@@ -846,7 +841,7 @@ class CommunityPostApiIntegrationTest {
         postIds(popularOnly).containsExactly((int) popularElsewhere, (int) popularOnSpot);
         postIds(all).containsExactly((int) popularOnSpot);
         postIds(paged).containsExactly((int) popularOnSpot);
-        assertThat(paged).bodyJson().extractingPath("$.totalPages").isEqualTo(2);
+        assertThat(paged).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
         postIds(byWithdrawn).containsExactly((int) popularElsewhere, (int) plainOnSpot, (int) popularOnSpot);
     }
 
@@ -859,22 +854,19 @@ class CommunityPostApiIntegrationTest {
     }
 
     private List<Integer> idsOverAllPages(String condition) throws Exception {
-        MvcTestResult first =
-                mvc.get().uri(POSTS + "?size=1&page=0" + condition).exchange();
-        assertThat(first).hasStatus(HttpStatus.OK);
-        int totalElements =
-                JsonPath.read(first.getResponse().getContentAsString(StandardCharsets.UTF_8), "$.totalElements");
         List<Integer> ids = new ArrayList<>();
-        for (int page = 0; page < totalElements + 1; page++) {
+        for (int page = 0; ; page++) {
             MvcTestResult result =
                     mvc.get().uri(POSTS + "?size=1&page=" + page + condition).exchange();
-            assertThat(result).bodyJson().extractingPath("$.totalElements").isEqualTo(totalElements);
-            List<Integer> content = JsonPath.read(
-                    result.getResponse().getContentAsString(StandardCharsets.UTF_8), "$.content[*].postId");
+            assertThat(result).hasStatus(HttpStatus.OK);
+            String body = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+            List<Integer> content = JsonPath.read(body, "$.content[*].postId");
+            assertThat(content).hasSize(1);
             ids.addAll(content);
+            if (!JsonPath.<Boolean>read(body, "$.hasNext")) {
+                return ids;
+            }
         }
-        assertThat(ids).hasSize(totalElements);
-        return ids;
     }
 
     private void insertPosts(long memberId, String status, int count) {
