@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,6 +21,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.DefaultUriBuilderFactory.EncodingMode;
+import tools.jackson.databind.JsonNode;
 
 public final class PublicDataHttp {
 
@@ -101,6 +105,36 @@ public final class PublicDataHttp {
             return "XML 응답을 해석하지 못했다";
         }
         return "인증 오류 returnAuthMsg=" + authMessage + ", errMsg=" + errorMessage;
+    }
+
+    // 공공데이터포털은 결과가 없으면 items를 빈 문자열("")로 주고, 결과가 한 건이면 item을 배열이 아닌 객체 하나로 줄 수 있다.
+    // 그래서 세 모양(빈 값, 객체 하나, 배열)을 모두 목록으로 바꾼다. malformed는 해석하지 못한 사유를 받아 클라이언트 고유의 예외로 바꾼다.
+    public static List<JsonNode> itemsOf(JsonNode items, Function<String, ? extends RuntimeException> malformed) {
+        if (items.isMissingNode()
+                || items.isNull()
+                || (items.isString() && items.asString().isBlank())) {
+            return List.of();
+        }
+        if (!items.isObject()) {
+            throw malformed.apply("items 형식을 해석하지 못했다");
+        }
+        JsonNode item = items.path("item");
+        if (item.isMissingNode() || item.isNull()) {
+            return List.of();
+        }
+        if (item.isObject()) {
+            return List.of(item);
+        }
+        if (!item.isArray()) {
+            throw malformed.apply("item 형식을 해석하지 못했다");
+        }
+        List<JsonNode> result = new ArrayList<>(item.size());
+        item.values().forEach(result::add);
+        return result;
+    }
+
+    public static String textOf(JsonNode node, String field) {
+        return node.path(field).asString(null);
     }
 
     private static String firstGroup(Pattern pattern, String text) {

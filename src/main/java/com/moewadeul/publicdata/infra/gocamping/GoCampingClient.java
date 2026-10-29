@@ -1,10 +1,10 @@
 package com.moewadeul.publicdata.infra.gocamping;
 
+import static com.moewadeul.common.external.PublicDataHttp.textOf;
+
 import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.PublicDataHttp;
 import com.moewadeul.common.external.PublicDataHttp.RawResponse;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -101,7 +101,12 @@ public class GoCampingClient {
                 totalCount,
                 responseBody.path("pageNo").asInt(pageNo),
                 responseBody.path("numOfRows").asInt(numOfRows),
-                itemsOf(responseBody.path("items"), pageNo));
+                PublicDataHttp.itemsOf(
+                                responseBody.path("items"),
+                                reason -> new GoCampingApiException(describe(pageNo, reason)))
+                        .stream()
+                        .map(GoCampingClient::toItem)
+                        .toList());
     }
 
     private JsonNode readTree(String body, int pageNo) {
@@ -110,34 +115,6 @@ public class GoCampingClient {
         } catch (JacksonException e) {
             throw new GoCampingApiException(describe(pageNo, "응답 JSON을 해석하지 못했다"), e);
         }
-    }
-
-    // 공공데이터포털은 결과가 없으면 items를 빈 문자열("")로 주고, 결과가 한 건이면 item을 배열이 아닌 객체 하나로 준다.
-    // 그래서 클라이언트는 세 모양(빈 값, 객체 하나, 배열)을 모두 목록으로 바꾼다.
-    private List<GoCampingItem> itemsOf(JsonNode items, int pageNo) {
-        if (items.isMissingNode()
-                || items.isNull()
-                || (items.isString() && items.asString().isBlank())) {
-            return List.of();
-        }
-        if (!items.isObject()) {
-            throw new GoCampingApiException(describe(pageNo, "items 형식을 해석하지 못했다"));
-        }
-        JsonNode item = items.path("item");
-        if (item.isMissingNode() || item.isNull()) {
-            return List.of();
-        }
-        if (item.isObject()) {
-            return List.of(toItem(item));
-        }
-        if (!item.isArray()) {
-            throw new GoCampingApiException(describe(pageNo, "item 형식을 해석하지 못했다"));
-        }
-        List<GoCampingItem> result = new ArrayList<>(item.size());
-        for (JsonNode element : item.values()) {
-            result.add(toItem(element));
-        }
-        return result;
     }
 
     private static GoCampingItem toItem(JsonNode node) {
@@ -166,10 +143,6 @@ public class GoCampingClient {
                 textOf(node, "hvofEnddle"),
                 textOf(node, "modifiedtime"),
                 textOf(node, "lctCl"));
-    }
-
-    private static String textOf(JsonNode node, String field) {
-        return node.path(field).asString(null);
     }
 
     private static String describe(int pageNo, String reason) {
