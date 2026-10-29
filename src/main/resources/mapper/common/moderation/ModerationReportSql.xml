@@ -2,6 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.common.moderation.ModerationReportSql">
 
+    <!-- 빈 조각을 include하면 MyBatis가 바로 뒤 텍스트의 ${targetColumn} 치환을 건너뛴다. -->
     <sql id="anyTarget">AND TRUE</sql>
 
     <sql id="reasonCounts">
