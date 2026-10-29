@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-// 감사 로그 기록이 활성 트랜잭션을 요구하므로 @Transactional은 호출하는 서비스가 건다.
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -20,7 +19,7 @@ public class AdminModeration {
 
     public <T extends Moderatable> ModerationResult hide(ModerationTarget<T> target, long targetId, long adminId) {
         T entity = target.lock(targetId);
-        if (!target.isHideTarget(entity)) {
+        if (!target.canBeHidden(entity)) {
             throw new BusinessException(CommonErrorCode.NOT_FOUND);
         }
         ModerationStatus before = entity.getStatus();

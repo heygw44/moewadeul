@@ -48,7 +48,7 @@ public class MemoryModerationService {
         }
 
         @Override
-        public boolean isHideTarget(Memory memory) {
+        public boolean canBeHidden(Memory memory) {
             return memory.isPublic();
         }
 

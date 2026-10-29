@@ -13,8 +13,7 @@ public interface ModerationTarget<T extends Moderatable> {
 
     T lock(long targetId);
 
-    // 숨김만 막는 대상은 여기서 거른다. 이미 숨겨진 비공개 기록의 복구는 막지 않는다.
-    default boolean isHideTarget(T target) {
+    default boolean canBeHidden(T target) {
         return true;
     }
 
