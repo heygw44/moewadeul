@@ -137,6 +137,32 @@ class EmailVerificationCleanupIntegrationTest {
                 .containsExactly(ipLockKey("exact"), ipLockKey("recent"));
     }
 
+    @Test
+    @DisplayName("[F-01][EV-03] 한 시간보다 1마이크로초 더 지난 중복 가입 시도 기록은 지우고, 정확히 한 시간 된 기록과 그보다 새 기록은 남긴다")
+    void deletesOnlyDuplicateSignupAttemptsOlderThanIpWindow() {
+        Instant attemptCutoff = clock.instant().minus(EmailVerificationPolicy.IP_WINDOW);
+        insertDuplicateSignupAttempt(attemptCutoff.minus(Duration.ofNanos(1_000)));
+        insertDuplicateSignupAttempt(attemptCutoff);
+        insertDuplicateSignupAttempt(clock.instant());
+
+        cleanupService.deleteExpired();
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM signup_duplicate_attempt", Integer.class))
+                .isEqualTo(2);
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM signup_duplicate_attempt WHERE attempted_at < ?",
+                        Integer.class,
+                        DATETIME_UTC.format(attemptCutoff)))
+                .isZero();
+    }
+
+    private void insertDuplicateSignupAttempt(Instant attemptedAt) {
+        jdbc.update(
+                "INSERT INTO signup_duplicate_attempt (ip_key, attempted_at) VALUES (SHA2(?, 256), ?)",
+                IP,
+                DATETIME_UTC.format(attemptedAt));
+    }
+
     private Instant cutoff() {
         return clock.instant().minus(EmailVerificationPolicy.RECORD_RETENTION);
     }

@@ -20,6 +20,7 @@ import com.moewadeul.member.domain.verification.SendWindow;
 import com.moewadeul.member.domain.verification.VerificationCode;
 import com.moewadeul.member.infra.verification.EmailVerificationIpLockMapper;
 import com.moewadeul.member.infra.verification.EmailVerificationMapper;
+import com.moewadeul.member.infra.verification.SignupDuplicateAttemptMapper;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
@@ -40,6 +41,7 @@ public class EmailVerificationService {
     private final EmailVerificationRepository emailVerificationRepository;
     private final EmailVerificationMapper emailVerificationMapper;
     private final EmailVerificationIpLockMapper ipLockMapper;
+    private final SignupDuplicateAttemptMapper signupDuplicateAttemptMapper;
     private final EmailVerificationActivator emailVerificationActivator;
     private final OutboxEventRecorder outboxEventRecorder;
     private final OutboxEventJpaRepository outboxEventRepository;
@@ -80,6 +82,11 @@ public class EmailVerificationService {
         requireRequestIp(requestIp);
         ipLockMapper.lock(requestIp, Instant.now(clock));
         return summarizeSentByIp(requestIp, Instant.now(clock));
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void recordDuplicateSignup(String requestIp) {
+        signupDuplicateAttemptMapper.insert(requestIp, Instant.now(clock));
     }
 
     @Transactional
@@ -171,7 +178,8 @@ public class EmailVerificationService {
                 OutboxEventStatus.PENDING,
                 requestIp,
                 since);
-        return issued.plus(queued);
+        SendWindow duplicateSignups = signupDuplicateAttemptMapper.summarizeByIpSince(requestIp, since);
+        return issued.plus(queued).plus(duplicateSignups);
     }
 
     private boolean hasPendingSendRequest(long memberId) {
