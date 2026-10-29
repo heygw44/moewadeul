@@ -31,7 +31,6 @@ public abstract class AttachableImage {
     @Column(name = "member_id")
     private long memberId;
 
-    // 붙는 대상(기록·글·후기)의 컬럼은 엔티티마다 @AttributeOverride로 정한다.
     private Long parentId;
 
     @Column(name = "object_key")

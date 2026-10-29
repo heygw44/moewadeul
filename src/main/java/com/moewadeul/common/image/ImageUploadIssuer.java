@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-// common에는 @Transactional을 둘 수 없어서, 모듈의 하위 클래스가 트랜잭션 안에서 issueUpload를 부른다.
 public abstract class ImageUploadIssuer<T extends AttachableImage> {
 
     private static final String THUMBNAIL_KEY_SUFFIX = "_thumb.jpg";
@@ -64,7 +63,6 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
     }
 
     private void requireUploadRoom(long memberId, Instant now) {
-        // 같은 회원의 발급을 한 줄로 세운다. 그래야 상한에 한 장 모자랄 때 동시에 온 요청이 같은 수를 읽고 함께 통과하지 못한다.
         imageMapper.lockMember(memberId);
         int limit = kind.maxUnattachedPerMember();
         List<Instant> createdAts =

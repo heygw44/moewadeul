@@ -2,6 +2,7 @@ package com.moewadeul.common.image;
 
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.storage.ImageStorage;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -28,8 +29,8 @@ public abstract class ImageAttachments<T extends AttachableImage> {
         this.imageStorage = imageStorage;
     }
 
-    // 저장소에 객체가 있는지 묻는 동안 DB 커넥션을 쥐지 않도록, 트랜잭션 밖에서 붙이기 전에 미리 확인한다.
     public void precheck(long memberId, Long parentId, List<Long> imageIds) {
+        OutsideTransaction.require("이미지가 저장소에 있는지 묻는 동안 DB 커넥션을 쥐면 안 된다.");
         if (imageIds.isEmpty()) {
             return;
         }
@@ -44,7 +45,6 @@ public abstract class ImageAttachments<T extends AttachableImage> {
         }
     }
 
-    // 대상의 이미지 목록을 imageIds 순서로 통째로 바꾸고, 목록이 달라졌으면 true를 돌려준다.
     public boolean replace(long memberId, long parentId, List<Long> imageIds) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("이미지는 대상을 저장하는 트랜잭션 안에서 붙여야 합니다.");
