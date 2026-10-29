@@ -85,7 +85,7 @@ class MapperTableAccessTest {
             entry("community", Set.of("member", "spot")),
             entry("memory", Set.of("member", "spot")),
             entry("notification", Set.of("member")),
-            entry("program", Set.of("member", "spot")),
+            entry("program", Set.of("member")),
             entry("review", Set.of("member")),
             entry(
                     "spot",

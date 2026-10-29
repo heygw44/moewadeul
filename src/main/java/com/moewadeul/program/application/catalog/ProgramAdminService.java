@@ -21,6 +21,7 @@ import com.moewadeul.program.domain.ProgramRepository;
 import com.moewadeul.program.domain.ProgramRevision;
 import com.moewadeul.program.infra.catalog.ProgramApplicantRow;
 import com.moewadeul.program.infra.catalog.ProgramQueryMapper;
+import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashSet;
@@ -41,6 +42,7 @@ public class ProgramAdminService {
     private final PaymentRepository paymentRepository;
     private final ProgramQueryMapper programQueryMapper;
     private final ProgramQueryService programQueryService;
+    private final ActiveSpotChecker activeSpotChecker;
     private final AdminAuditRecorder adminAuditRecorder;
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
@@ -140,7 +142,7 @@ public class ProgramAdminService {
     }
 
     private void requireVisibleSpot(Long spotId) {
-        if (spotId != null && !programQueryMapper.existsActiveSpot(spotId)) {
+        if (spotId != null && !activeSpotChecker.isActive(spotId)) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "spotId: 지도에 보이는 장소만 연결할 수 있어요.");
         }
     }
