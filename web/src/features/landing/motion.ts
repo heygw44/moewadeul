@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 
-export function useMediaQuery(media: string): boolean {
+function useMediaQuery(media: string): boolean {
   const [matches, setMatches] = useState(() => matchMedia(media).matches);
   useEffect(() => {
     const query = matchMedia(media);
@@ -15,7 +15,7 @@ export function usePrefersReducedMotion(): boolean {
   return useMediaQuery('(prefers-reduced-motion: reduce)');
 }
 
-export function useInView<T extends Element>() {
+function useInView<T extends Element>() {
   const ref = useRef<T>(null);
   const [inView, setInView] = useState(() => typeof IntersectionObserver === 'undefined');
 
@@ -37,7 +37,7 @@ export function useInView<T extends Element>() {
   return { ref, inView };
 }
 
-export function riseClass(inView: boolean): string {
+function riseClass(inView: boolean): string {
   return inView ? 'motion-safe:animate-rise' : 'motion-safe:opacity-0';
 }
 

@@ -3,13 +3,13 @@ import type { IconName } from '../components/iconPaths';
 import type { Offset } from './stackPins';
 import type { ClusterData, MarkerKind, SpotMarkerData } from './types';
 
-export const KIND_STYLE: Record<MarkerKind, { label: string; icon: IconName; fill: string }> = {
+const KIND_STYLE: Record<MarkerKind, { label: string; icon: IconName; fill: string }> = {
   CAMPSITE: { label: '공공 야영장', icon: 'tent', fill: 'fill-brand' },
   FOREST: { label: '자연휴양림', icon: 'tree', fill: 'fill-brand' },
   BAKJI: { label: '박지', icon: 'backpack', fill: 'fill-bakji' },
 };
 
-export const PIN_PATH = 'M18 2a14 14 0 0 1 4.6 27.2L18 42l-4.6-12.8A14 14 0 0 1 18 2z';
+const PIN_PATH = 'M18 2a14 14 0 0 1 4.6 27.2L18 42l-4.6-12.8A14 14 0 0 1 18 2z';
 
 const OUTLINE_WIDTH = 6;
 const WARNING_OUTLINE_WIDTH = 9;

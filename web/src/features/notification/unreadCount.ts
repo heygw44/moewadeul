@@ -37,12 +37,12 @@ export async function refreshUnreadCount(): Promise<void> {
   if (result && seq === requestSeq) emit(result.count);
 }
 
-export function resetUnreadCount(): void {
+function resetUnreadCount(): void {
   requestSeq++;
   emit(0);
 }
 
-export function useUnreadCountSync(enabled: boolean): void {
+function useUnreadCountSync(enabled: boolean): void {
   const { pathname } = useLocation();
 
   useEffect(() => {

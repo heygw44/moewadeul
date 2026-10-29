@@ -96,26 +96,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   REQUEST_TIMEOUT: '응답이 오지 않아요. 연결 상태를 본 뒤 다시 시도해 주세요.',
 };
 
-const FIELD_LABELS: Record<string, string> = {
-  email: '이메일',
-  password: '비밀번호',
-  nickname: '닉네임',
-  code: '인증 코드',
-  title: '제목',
-  content: '내용',
-  imageIds: '사진',
-  parentId: '답글 대상',
-  reason: '신고 사유',
-};
-
 const UNEXPECTED_ERROR_MESSAGE = '예상하지 못한 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.';
 
 export function errorMessage(code: string): string | undefined {
   return ERROR_MESSAGES[code];
-}
-
-export function fieldLabel(field: string): string {
-  return FIELD_LABELS[field] ?? field;
 }
 
 export function toUserMessage(error: unknown): string {

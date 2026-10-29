@@ -59,7 +59,7 @@ function splitPath(path: string): string[] {
   return path.split('/').filter((segment) => segment !== '');
 }
 
-export function matchPath(pattern: string, pathname: string): RouteParams | null {
+function matchPath(pattern: string, pathname: string): RouteParams | null {
   const patternSegments = splitPath(pattern);
   const pathSegments = splitPath(pathname);
   if (patternSegments.length !== pathSegments.length) return null;
