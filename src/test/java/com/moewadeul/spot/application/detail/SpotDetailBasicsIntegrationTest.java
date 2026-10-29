@@ -5,6 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static com.moewadeul.spot.application.detail.SpotDetailFixture.RIDGE_LAT;
 import static com.moewadeul.spot.application.detail.SpotDetailFixture.RIDGE_LNG;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,9 +17,10 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.SpotFixture;
-import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
@@ -48,6 +50,9 @@ class SpotDetailBasicsIntegrationTest {
     private static final int EXTERNAL_DELAY_MILLIS = 3_000;
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private SpotFixture spotFixture;
 
     @Autowired
@@ -66,14 +71,16 @@ class SpotDetailBasicsIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        fixture = new SpotDetailFixture(jdbcTemplate);
+        fixture = new SpotDetailFixture(jdbcTemplate, memberFixture);
     }
 
     @Test
     @DisplayName("[F-05][SF-06] 박지 상세는 박지 정보, 제보자 닉네임, 확인 수를 채우고 공공데이터 상세는 비우며, 경고 박지라 확인 안내는 없다")
     void findsBakjiDetail() {
         // given
-        long reporterId = fixture.insertMember("새벽능선");
+        long reporterId = memberFixture
+                .save(aMember().nickname("새벽능선").status(MemberStatus.ACTIVE))
+                .getId();
         long spotId = spotFixture.insert(
                 aSpot().name("능선 끝 평지").address("강원특별자치도 어딘가").parkWarning(true).at(RIDGE_LAT, RIDGE_LNG));
         jdbcTemplate.update(
@@ -82,8 +89,12 @@ class SpotDetailBasicsIntegrationTest {
                         + " VALUES (?, ?, '바람이 덜한 안쪽 평지', TRUE, FALSE, 'WEAK', NOW(6), NOW(6))",
                 spotId,
                 reporterId);
-        insertConfirmation(spotId, fixture.insertMember(TestSequence.nickname()));
-        insertConfirmation(spotId, fixture.insertMember(TestSequence.nickname()));
+        insertConfirmation(
+                spotId,
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId());
+        insertConfirmation(
+                spotId,
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId());
 
         // when
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
@@ -106,7 +117,8 @@ class SpotDetailBasicsIntegrationTest {
     @DisplayName("[F-05][SF-06] 확인이 없는 박지는 확인 수가 0이고, 경고가 아니라 관할 기관 확인 안내를 담는다")
     void reportsZeroConfirmationsForUnconfirmedBakji() {
         // given
-        long reporterId = fixture.insertMember(TestSequence.nickname());
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         jdbcTemplate.update(
                 "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
@@ -224,7 +236,7 @@ class SpotDetailBasicsIntegrationTest {
                     "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
                             + " VALUES (?, ?, FALSE, FALSE, NOW(6), NOW(6))",
                     spotId,
-                    fixture.insertMember(TestSequence.nickname()));
+                    memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId());
         } else {
             fixture.insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
         }

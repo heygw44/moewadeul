@@ -6,6 +6,7 @@ import static com.moewadeul.spot.application.detail.SpotDetailFixture.RIDGE_LNG;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.SpotFixture;
 import java.time.Instant;
@@ -18,6 +19,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class SpotDetailRecruitingBasecampsIntegrationTest {
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private SpotFixture spotFixture;
@@ -35,7 +39,7 @@ class SpotDetailRecruitingBasecampsIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        fixture = new SpotDetailFixture(jdbcTemplate);
+        fixture = new SpotDetailFixture(jdbcTemplate, memberFixture);
     }
 
     @Test

@@ -3,8 +3,8 @@ package com.moewadeul.idempotency.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.common.testsupport.TestSequence;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -22,6 +22,9 @@ class IdempotencyRecordCleanupIntegrationTest {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").withZone(ZoneOffset.UTC);
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private IdempotencyRecordCleaner cleaner;
 
     @Autowired
@@ -33,7 +36,7 @@ class IdempotencyRecordCleanupIntegrationTest {
     @Test
     @DisplayName("[NFR-03] 만든 지 하루보다 1초 더 지난 기록은 지우고, 정확히 하루 된 기록과 그보다 새 기록은 남긴다")
     void deletesOnlyRecordsOlderThanRetention() {
-        long memberId = insertMember();
+        long memberId = memberFixture.save().getId();
         Instant cutoff = clock.instant().minus(IdempotencyRecordCleaner.RETENTION);
         insertRecord(memberId, "older", cutoff.minus(ONE_SECOND));
         insertRecord(memberId, "exact", cutoff);
@@ -50,7 +53,7 @@ class IdempotencyRecordCleanupIntegrationTest {
     @Test
     @DisplayName("[NFR-03] 시계가 움직여 하루를 넘기면 그때부터 삭제 대상이 된다")
     void recordBecomesDeletableWhenClockPassesRetention() {
-        long memberId = insertMember();
+        long memberId = memberFixture.save().getId();
         insertRecord(memberId, "key-1", clock.instant());
 
         assertThat(cleaner.deleteExpired()).isZero();
@@ -60,19 +63,6 @@ class IdempotencyRecordCleanupIntegrationTest {
 
         assertThat(cleaner.deleteExpired()).isEqualTo(1);
         assertThat(exists(memberId, "key-1")).isFalse();
-    }
-
-    private long insertMember() {
-        String now = DATETIME_UTC.format(clock.instant());
-        jdbc.update(
-                "INSERT INTO member (email, password_hash, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, ?, 'UNVERIFIED', 'USER', ?, ?)",
-                TestSequence.email(),
-                "x".repeat(60),
-                TestSequence.nickname(),
-                now,
-                now);
-        return jdbc.queryForObject("SELECT MAX(id) FROM member", Long.class);
     }
 
     private void insertRecord(long memberId, String key, Instant createdAt) {

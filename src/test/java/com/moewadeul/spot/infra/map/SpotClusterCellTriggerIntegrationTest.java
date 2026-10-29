@@ -1,12 +1,14 @@
 package com.moewadeul.spot.infra.map;
 
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
-import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.domain.MemberStatus;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +29,9 @@ class SpotClusterCellTriggerIntegrationTest {
             "SELECT grid_level, cell_row, cell_col, spot_count, lat_sum, lng_sum FROM spot_cluster_total";
     private static final String ACTUAL_CELL = "SELECT grid_level, cell_row, cell_col, type, has_water, has_toilet,"
             + " park_warning, spot_count, lat_sum, lng_sum FROM spot_cluster_cell";
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private SpotFixture spotFixture;
@@ -58,7 +63,8 @@ class SpotClusterCellTriggerIntegrationTest {
     @DisplayName("[F-03] 숨김·복구, 좌표 이동, 경고·시설 변경, 삭제를 거쳐도 두 집계 표가 장소 테이블과 같다")
     void aggregatesFollowEveryKindOfSpotChange() {
         // given
-        long memberId = insertMember();
+        long memberId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long campsiteId =
                 spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.5665, 126.978));
         long forestId = spotFixture.insert(
@@ -202,15 +208,5 @@ class SpotClusterCellTriggerIntegrationTest {
                 reporterId,
                 hasWater,
                 hasToilet);
-    }
-
-    private long insertMember() {
-        String nickname = TestSequence.nickname();
-        jdbcTemplate.update(
-                "INSERT INTO member (email, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, 'ACTIVE', 'USER', NOW(6), NOW(6))",
-                TestSequence.email(),
-                nickname);
-        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
     }
 }

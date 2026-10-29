@@ -2,12 +2,15 @@ package com.moewadeul.spot.infra;
 
 import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
+import com.moewadeul.member.domain.MemberStatus;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +23,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class SpotSchemaIntegrationTest {
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private ProtectedAreaFixture protectedAreaFixture;
@@ -161,7 +167,8 @@ class SpotSchemaIntegrationTest {
     @DisplayName("[F-08] 한 회원은 같은 박지를 한 번만 신고할 수 있다")
     void memberCanReportSameBakjiOnlyOnce() {
         // given
-        long memberId = insertMember("reporter");
+        long memberId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long spotId = spotFixture.insert(aSpot().name("신고할 박지"));
         insertBakjiReport(spotId, memberId);
 
@@ -173,7 +180,8 @@ class SpotSchemaIntegrationTest {
     @DisplayName("[F-08] 한 회원은 같은 박지를 한 번만 확인할 수 있다")
     void memberCanConfirmSameBakjiOnlyOnce() {
         // given
-        long memberId = insertMember("confirmer");
+        long memberId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long spotId = spotFixture.insert(aSpot().name("확인할 박지"));
         insertBakjiConfirmation(spotId, memberId);
 
@@ -192,15 +200,6 @@ class SpotSchemaIntegrationTest {
                 String.class,
                 table,
                 column);
-    }
-
-    private long insertMember(String nickname) {
-        jdbcTemplate.update(
-                "INSERT INTO member (email, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, 'ACTIVE', 'USER', NOW(6), NOW(6))",
-                nickname + "@example.com",
-                nickname);
-        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
     }
 
     private void insertPublicSpotDetail(long spotId, String source, String externalId) {

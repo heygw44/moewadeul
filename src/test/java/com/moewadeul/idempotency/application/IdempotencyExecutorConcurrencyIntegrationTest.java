@@ -5,9 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.common.testsupport.TestSequence;
-import java.sql.Timestamp;
-import java.time.Instant;
+import com.moewadeul.common.testsupport.MemberFixture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -32,6 +30,9 @@ class IdempotencyExecutorConcurrencyIntegrationTest {
     private static final String OPERATION = "POST /api/programs/1/applications";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private IdempotencyExecutor executor;
 
     @Autowired
@@ -42,7 +43,7 @@ class IdempotencyExecutorConcurrencyIntegrationTest {
     @RepeatedTest(5)
     @DisplayName("[NFR-03] 같은 회원이 같은 키로 동시에 보내면 action은 한 번만 실행하고 나머지는 IDEMPOTENCY_IN_PROGRESS")
     void actionRunsOnceForSameKey() throws Exception {
-        long memberId = insertMember();
+        long memberId = memberFixture.save().getId();
         AtomicInteger calls = new AtomicInteger();
         CountDownLatch allRequestsFinishedOrBlocked = new CountDownLatch(THREADS - 1);
 
@@ -136,18 +137,5 @@ class IdempotencyExecutorConcurrencyIntegrationTest {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(e);
         }
-    }
-
-    private long insertMember() {
-        Instant now = Instant.now();
-        jdbc.update(
-                "INSERT INTO member (email, password_hash, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, ?, 'UNVERIFIED', 'USER', ?, ?)",
-                TestSequence.email(),
-                "x".repeat(60),
-                TestSequence.nickname(),
-                Timestamp.from(now),
-                Timestamp.from(now));
-        return jdbc.queryForObject("SELECT MAX(id) FROM member", Long.class);
     }
 }
