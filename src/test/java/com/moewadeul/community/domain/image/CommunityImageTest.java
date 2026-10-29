@@ -79,7 +79,7 @@ class CommunityImageTest {
 
         // then
         assertThat(image.isAttached()).isFalse();
-        assertThat(image.getPostId()).isNull();
+        assertThat(image.getParentId()).isNull();
         assertThat(image.getDisplayOrder()).isNull();
     }
 

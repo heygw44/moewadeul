@@ -10,12 +10,12 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.image.ImageUpload;
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
 import com.moewadeul.common.trace.TraceIdFilter;
-import com.moewadeul.community.application.image.CommunityImageUpload;
-import com.moewadeul.community.application.image.CommunityImageUploadCommand;
 import com.moewadeul.community.application.image.CommunityImageUploadService;
 import java.time.Instant;
 import java.util.List;
@@ -54,9 +54,8 @@ class CommunityImageControllerTest {
     @DisplayName("[F-29][CM-06] 이미지 업로드 URL을 발급하면 201과 imageId, uploadUrl, PUT, 서명한 헤더, 만료 시각을 응답한다")
     void issuesUploadUrl() {
         // given
-        when(communityImageUploadService.issue(
-                        MEMBER_ID, new CommunityImageUploadCommand("image/jpeg", 2483011L, null)))
-                .thenReturn(new CommunityImageUpload(
+        when(communityImageUploadService.issue(MEMBER_ID, new ImageUploadCommand("image/jpeg", 2483011L, null)))
+                .thenReturn(new ImageUpload(
                         31L,
                         "https://upload.example.test/community/7/key?sig=1",
                         Map.of("Content-Type", "image/jpeg", "Content-Length", "2483011"),
@@ -83,9 +82,8 @@ class CommunityImageControllerTest {
     @DisplayName("[F-29][CM-06] 썸네일 크기를 보내면 서비스에 넘기고, 응답에 썸네일 업로드 URL과 서명한 헤더를 더 담는다")
     void issuesThumbnailUploadUrl() {
         // given
-        when(communityImageUploadService.issue(
-                        MEMBER_ID, new CommunityImageUploadCommand("image/png", 2483011L, 48000L)))
-                .thenReturn(new CommunityImageUpload(
+        when(communityImageUploadService.issue(MEMBER_ID, new ImageUploadCommand("image/png", 2483011L, 48000L)))
+                .thenReturn(new ImageUpload(
                         31L,
                         "https://upload.example.test/community/7/key.png?sig=1",
                         Map.of("Content-Type", "image/png", "Content-Length", "2483011"),
@@ -126,7 +124,7 @@ class CommunityImageControllerTest {
     void acceptsThumbnailSizeBoundaries(long thumbnailSizeBytes) {
         // given
         when(communityImageUploadService.issue(anyLong(), any()))
-                .thenReturn(new CommunityImageUpload(1L, "https://u.example.test/x", Map.of(), Instant.EPOCH, null));
+                .thenReturn(new ImageUpload(1L, "https://u.example.test/x", Map.of(), Instant.EPOCH, null));
 
         // when
         MvcTestResult result = send(
@@ -138,7 +136,7 @@ class CommunityImageControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.CREATED);
         verify(communityImageUploadService)
-                .issue(MEMBER_ID, new CommunityImageUploadCommand("image/png", 1000L, thumbnailSizeBytes));
+                .issue(MEMBER_ID, new ImageUploadCommand("image/png", 1000L, thumbnailSizeBytes));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -187,7 +185,7 @@ class CommunityImageControllerTest {
     void acceptsAllowedTypesAndMaximumSize(String contentType) {
         // given
         when(communityImageUploadService.issue(anyLong(), any()))
-                .thenReturn(new CommunityImageUpload(1L, "https://u.example.test/x", Map.of(), Instant.EPOCH, null));
+                .thenReturn(new ImageUpload(1L, "https://u.example.test/x", Map.of(), Instant.EPOCH, null));
 
         // when
         MvcTestResult result =
@@ -195,8 +193,7 @@ class CommunityImageControllerTest {
 
         // then
         assertThat(result).hasStatus(HttpStatus.CREATED);
-        verify(communityImageUploadService)
-                .issue(MEMBER_ID, new CommunityImageUploadCommand(contentType, 5242880L, null));
+        verify(communityImageUploadService).issue(MEMBER_ID, new ImageUploadCommand(contentType, 5242880L, null));
     }
 
     @Test

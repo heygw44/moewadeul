@@ -3,11 +3,11 @@ package com.moewadeul.memory.application;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.common.web.PatchField;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.memory.application.image.MemoryImageUploadCommand;
 import com.moewadeul.memory.application.image.MemoryImageUploadService;
 import com.moewadeul.memory.application.moderation.MemoryModerationService;
 import com.moewadeul.memory.application.report.MemoryReportCommand;
@@ -48,7 +48,7 @@ class MemoryAuthorEditConcurrencyIntegrationTest {
     private static final MemoryReportCommand REPORT = new MemoryReportCommand("SPAM", "광고 사진입니다");
     private static final Set<String> MEMORY_READ =
             Set.of("MemoryRepository.findById", "MemoryRepository.findByIdForUpdate");
-    private static final Set<String> CURRENT_IMAGES_READ = Set.of("MemoryImageRepository.findIdsByMemoryId");
+    private static final Set<String> CURRENT_IMAGES_READ = Set.of("MemoryImageRepository.findIdsByParentId");
 
     @Autowired
     private MemoryCommandService commandService;
@@ -202,7 +202,7 @@ class MemoryAuthorEditConcurrencyIntegrationTest {
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             long imageId = uploadService
-                    .issue(authorId, new MemoryImageUploadCommand("image/jpeg", IMAGE_SIZE, null))
+                    .issue(authorId, new ImageUploadCommand("image/jpeg", IMAGE_SIZE, null))
                     .imageId();
             storage.markUploaded(
                     jdbc.queryForObject("SELECT object_key FROM memory_image WHERE id = ?", String.class, imageId),

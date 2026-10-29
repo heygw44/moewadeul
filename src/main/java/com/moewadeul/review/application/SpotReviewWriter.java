@@ -27,7 +27,7 @@ class SpotReviewWriter {
     private final ActiveSpotChecker activeSpotChecker;
     private final SpotReviewRepository spotReviewRepository;
     private final SpotReviewMapper spotReviewMapper;
-    private final ReviewImageAttacher reviewImageAttacher;
+    private final ReviewImageAttachments reviewImageAttachments;
     private final ReviewImageReader reviewImageReader;
     private final Clock clock;
 
@@ -40,7 +40,7 @@ class SpotReviewWriter {
         SpotReview review =
                 SpotReview.write(spotId, memberId, command.visitedDate(), command.rating(), command.content(), now);
         long reviewId = save(review).getId();
-        reviewImageAttacher.replace(memberId, reviewId, command.imageIds());
+        reviewImageAttachments.replace(memberId, reviewId, command.imageIds());
         return reviewId;
     }
 
@@ -50,7 +50,7 @@ class SpotReviewWriter {
         requireValidBody(command.rating(), command.content());
         review.revise(command.rating(), command.content(), clock.instant());
         if (command.imageIds() != null) {
-            reviewImageAttacher.replace(memberId, reviewId, command.imageIds());
+            reviewImageAttachments.replace(memberId, reviewId, command.imageIds());
         }
         // 고친 내용을 MyBatis로 읽기 전에 DB에 반영한다.
         spotReviewRepository.flush();
@@ -65,7 +65,7 @@ class SpotReviewWriter {
     @Transactional
     public void delete(long memberId, long reviewId) {
         SpotReview review = loadOwnReview(memberId, reviewId);
-        reviewImageAttacher.replace(memberId, reviewId, List.of());
+        reviewImageAttachments.replace(memberId, reviewId, List.of());
         spotReviewRepository.delete(review);
     }
 

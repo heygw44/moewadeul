@@ -1,8 +1,8 @@
 package com.moewadeul.memory.api.image;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.moewadeul.common.image.ImageUpload;
 import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
-import com.moewadeul.memory.application.image.MemoryImageUpload;
 import java.time.Instant;
 import java.util.Map;
 
@@ -16,7 +16,7 @@ public record MemoryImageUploadResponse(
 
     private static final String UPLOAD_METHOD = "PUT";
 
-    static MemoryImageUploadResponse from(MemoryImageUpload upload) {
+    static MemoryImageUploadResponse from(ImageUpload upload) {
         return new MemoryImageUploadResponse(
                 upload.imageId(),
                 upload.uploadUrl(),

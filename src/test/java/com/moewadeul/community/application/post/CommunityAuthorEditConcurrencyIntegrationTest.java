@@ -3,13 +3,13 @@ package com.moewadeul.community.application.post;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.common.web.PatchField;
 import com.moewadeul.community.application.comment.CommunityCommentCommandService;
 import com.moewadeul.community.application.comment.CommunityCommentWriteCommand;
-import com.moewadeul.community.application.image.CommunityImageUploadCommand;
 import com.moewadeul.community.application.image.CommunityImageUploadService;
 import com.moewadeul.community.application.moderation.CommunityModerationService;
 import com.moewadeul.community.application.report.CommunityReportCommand;
@@ -53,7 +53,7 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
             Set.of("CommunityPostRepository.findById", "CommunityPostRepository.findByIdForUpdate");
     private static final Set<String> COMMENT_READ =
             Set.of("CommunityCommentRepository.findById", "CommunityCommentRepository.findByIdForUpdate");
-    private static final Set<String> CURRENT_IMAGES_READ = Set.of("CommunityImageRepository.findIdsByPostId");
+    private static final Set<String> CURRENT_IMAGES_READ = Set.of("CommunityImageRepository.findIdsByParentId");
 
     @Autowired
     private CommunityPostCommandService postCommandService;
@@ -250,7 +250,7 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             long imageId = uploadService
-                    .issue(authorId, new CommunityImageUploadCommand("image/jpeg", IMAGE_SIZE, null))
+                    .issue(authorId, new ImageUploadCommand("image/jpeg", IMAGE_SIZE, null))
                     .imageId();
             storage.markUploaded(
                     jdbc.queryForObject("SELECT object_key FROM community_image WHERE id = ?", String.class, imageId),

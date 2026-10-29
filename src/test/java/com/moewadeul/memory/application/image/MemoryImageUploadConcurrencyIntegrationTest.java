@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.memory.domain.image.MemoryImage;
@@ -27,7 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class MemoryImageUploadConcurrencyIntegrationTest {
 
     private static final int THREADS = 4;
-    private static final MemoryImageUploadCommand COMMAND = new MemoryImageUploadCommand("image/jpeg", 1000L, null);
+    private static final ImageUploadCommand COMMAND = new ImageUploadCommand("image/jpeg", 1000L, null);
 
     @Autowired
     private MemoryImageUploadService uploadService;
@@ -43,7 +44,7 @@ class MemoryImageUploadConcurrencyIntegrationTest {
     void concurrentIssuesAtLimitSucceedOnce() throws Exception {
         // given
         long memberId = memberRepository.saveAndFlush(aMember().build()).getId();
-        for (int i = 1; i < MemoryImage.MAX_UNATTACHED_PER_MEMBER; i++) {
+        for (int i = 1; i < MemoryImage.KIND.maxUnattachedPerMember(); i++) {
             uploadService.issue(memberId, COMMAND);
         }
         List<Callable<Object>> tasks = new ArrayList<>();
@@ -63,7 +64,7 @@ class MemoryImageUploadConcurrencyIntegrationTest {
                                 e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_UPLOAD_LIMITED)));
         assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM memory_image WHERE member_id = ?", Integer.class, memberId))
-                .isEqualTo(MemoryImage.MAX_UNATTACHED_PER_MEMBER);
+                .isEqualTo(MemoryImage.KIND.maxUnattachedPerMember());
     }
 
     private List<Throwable> runConcurrently(List<Callable<Object>> tasks) throws Exception {

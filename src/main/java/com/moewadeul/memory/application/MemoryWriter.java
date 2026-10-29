@@ -22,7 +22,7 @@ class MemoryWriter {
     private final ActiveSpotChecker activeSpotChecker;
     private final MemoryRepository memoryRepository;
     private final MemoryMapper memoryMapper;
-    private final MemoryImageAttacher memoryImageAttacher;
+    private final MemoryImageAttachments memoryImageAttachments;
     private final MemoryViewReader memoryViewReader;
     private final Clock clock;
 
@@ -36,7 +36,7 @@ class MemoryWriter {
         long memoryId = memoryRepository
                 .saveAndFlush(Memory.write(memberId, details, now))
                 .getId();
-        memoryImageAttacher.replace(memberId, memoryId, command.imageIds());
+        memoryImageAttachments.replace(memberId, memoryId, command.imageIds());
         return memoryId;
     }
 
@@ -50,7 +50,8 @@ class MemoryWriter {
         }
         memory.revise(details, now);
         if (command.imageIds().present()) {
-            memoryImageAttacher.replace(memberId, memoryId, command.imageIds().value());
+            memoryImageAttachments.replace(
+                    memberId, memoryId, command.imageIds().value());
         }
         memoryRepository.flush();
         return memoryViewReader

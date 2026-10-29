@@ -1,15 +1,5 @@
 package com.moewadeul.community.domain.image;
 
-import java.util.Collection;
-import java.util.List;
+import com.moewadeul.common.image.AttachableImageRepository;
 
-public interface CommunityImageRepository {
-
-    CommunityImage saveAndFlush(CommunityImage image);
-
-    List<CommunityImage> findAllById(Iterable<Long> ids);
-
-    List<CommunityImage> findAllByIdForUpdate(Collection<Long> ids);
-
-    List<Long> findIdsByPostId(long postId);
-}
+public interface CommunityImageRepository extends AttachableImageRepository<CommunityImage> {}

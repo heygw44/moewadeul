@@ -1,8 +1,8 @@
 package com.moewadeul.community.api.image;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.moewadeul.common.image.ImageUpload;
 import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
-import com.moewadeul.community.application.image.CommunityImageUpload;
 import java.time.Instant;
 import java.util.Map;
 
@@ -16,7 +16,7 @@ public record CommunityImageUploadResponse(
 
     private static final String UPLOAD_METHOD = "PUT";
 
-    static CommunityImageUploadResponse from(CommunityImageUpload upload) {
+    static CommunityImageUploadResponse from(ImageUpload upload) {
         return new CommunityImageUploadResponse(
                 upload.imageId(),
                 upload.uploadUrl(),
