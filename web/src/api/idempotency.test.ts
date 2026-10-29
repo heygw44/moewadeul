@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { ApiError } from './client';
 import { createIdempotentRunner } from './idempotency';
 
-function sender(...outcomes: Array<'ok' | 'network' | 'business'>) {
+function sender(...outcomes: Array<'ok' | 'network' | 'timeout' | 'business'>) {
   const keys: string[] = [];
   const send = async (key: string) => {
     keys.push(key);
     const outcome = outcomes[keys.length - 1];
     if (outcome === 'network') throw new ApiError(0, 'NETWORK_ERROR', null);
+    if (outcome === 'timeout') throw new ApiError(0, 'REQUEST_TIMEOUT', null);
     if (outcome === 'business') throw new ApiError(409, 'SOLO_TRIP_OVERLAP', null);
     return { id: keys.length };
   };
@@ -23,6 +24,16 @@ describe('createIdempotentRunner', () => {
     await runner.run({ title: '가' }, send);
 
     expect(keys).toHaveLength(2);
+    expect(keys[1]).toBe(keys[0]);
+  });
+
+  it('제한 시간이 지나 끊긴 뒤 같은 내용으로 다시 보내면 같은 키를 쓴다', async () => {
+    const runner = createIdempotentRunner();
+    const { keys, send } = sender('timeout', 'ok');
+
+    await expect(runner.run({ title: '가' }, send)).rejects.toMatchObject({ code: 'REQUEST_TIMEOUT' });
+    await runner.run({ title: '가' }, send);
+
     expect(keys[1]).toBe(keys[0]);
   });
 

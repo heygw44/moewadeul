@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchSyncJobRuns, startSyncJob } from '../../api/admin';
+import { serverNow } from '../../api/client';
 import type { SyncJobRun, SyncJobStatus, SyncJobType } from '../../api/types';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
@@ -296,7 +297,7 @@ function SyncJobs() {
 function staleMessage(lastSuccess: SyncJobRun | null): string | null {
   if (lastSuccess === null) return `최근 ${GOCAMPING_LOOKBACK}번 실행 중에 성공한 기록이 없어요.`;
   if (lastSuccess.finishedAt === null) return null;
-  const elapsed = Date.now() - new Date(lastSuccess.finishedAt).getTime();
+  const elapsed = serverNow() - new Date(lastSuccess.finishedAt).getTime();
   if (elapsed <= GOCAMPING_STALE_HOURS * 60 * 60 * 1000) return null;
   return `마지막 성공은 ${formatKstDateTime(lastSuccess.finishedAt)}이에요.`;
 }

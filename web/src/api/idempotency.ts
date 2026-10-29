@@ -4,6 +4,11 @@ export interface IdempotentRunner {
   run<T>(request: unknown, send: (idempotencyKey: string) => Promise<T>): Promise<T>;
 }
 
+// 응답을 받지 못한 요청은 서버가 처리했을 수 있다. 다시 보낼 때 같은 키를 써야 두 번 처리되지 않는다.
+export function isUnanswered(error: unknown): boolean {
+  return error instanceof ApiError && (error.code === 'NETWORK_ERROR' || error.code === 'REQUEST_TIMEOUT');
+}
+
 export function createIdempotentRunner(): IdempotentRunner {
   const unanswered = new Map<string, string>();
 
@@ -16,7 +21,7 @@ export function createIdempotentRunner(): IdempotentRunner {
         unanswered.clear();
         return result;
       } catch (error) {
-        if (error instanceof ApiError && error.code === 'NETWORK_ERROR') unanswered.set(content, key);
+        if (isUnanswered(error)) unanswered.set(content, key);
         else unanswered.delete(content);
         throw error;
       }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { safeNextPath } from './nextPath';
+import { safeInternalPath, safeNextPath } from './nextPath';
 
 const query = (next: string) => `?next=${encodeURIComponent(next)}`;
 
@@ -35,4 +35,17 @@ describe('safeNextPath', () => {
   ])('다른 사이트로 갈 수 있는 값 %s는 null을 돌려준다', (next) => {
     expect(safeNextPath(query(next))).toBeNull();
   });
+});
+
+describe('safeInternalPath', () => {
+  it('같은 사이트 경로는 그대로 돌려준다', () => {
+    expect(safeInternalPath('/basecamps/3?tab=applications')).toBe('/basecamps/3?tab=applications');
+  });
+
+  it.each(['/\t/evil.com', '/\n/evil.com', '//evil.com', '/\\evil.com', '/..//evil.com', 'https://evil.com'])(
+    '다른 사이트로 갈 수 있는 값 %j는 null을 돌려준다',
+    (link) => {
+      expect(safeInternalPath(link)).toBeNull();
+    },
+  );
 });

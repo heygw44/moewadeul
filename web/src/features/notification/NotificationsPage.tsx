@@ -17,14 +17,10 @@ import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatRelativeKst } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
+import { safeInternalPath, withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { NOTIFICATION_LABELS, NOTIFICATION_TYPES } from './notificationLabels';
 import { refreshUnreadCount } from './unreadCount';
-
-function isInternalPath(link: string): boolean {
-  return link.startsWith('/') && !link.startsWith('//') && !link.includes('\\');
-}
 
 export function NotificationsPage() {
   const session = useSession();
@@ -109,6 +105,7 @@ function NotificationList() {
 
   async function open(item: NotificationItem) {
     setActionError(null);
+    const target = item.link ? safeInternalPath(item.link) : null;
     try {
       if (item.readAt === null) {
         await markNotificationRead(item.notificationId);
@@ -116,12 +113,12 @@ function NotificationList() {
         void refreshUnreadCount();
       }
     } catch (caught) {
-      if (!item.link || !isInternalPath(item.link)) {
+      if (target === null) {
         setActionError({ cause: caught });
         return;
       }
     }
-    if (item.link && isInternalPath(item.link)) navigate(item.link);
+    if (target !== null) navigate(target);
   }
 
   async function readAll() {

@@ -175,7 +175,7 @@ function ConfirmStep({ token, onTokenInvalid }: { token: string; onTokenInvalid:
       setNewPassword('');
       setNewPasswordConfirm('');
       setDone(true);
-      void session.refresh();
+      void session.refresh().catch(() => null);
     } catch (error) {
       handleError(error);
     } finally {

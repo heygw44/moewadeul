@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.member.infra.verification.SignupDuplicateAttemptMapper">
+
+    <insert id="insert">
+        INSERT INTO signup_duplicate_attempt (ip_key, attempted_at)
+        VALUES (SHA2(#{requestIp}, 256), #{now})
+    </insert>
+
+    <select id="summarizeByIpSince" resultType="com.moewadeul.member.domain.verification.SendWindow">
+        SELECT COUNT(*) AS count,
+               MIN(attempted_at) AS oldestSentAt
+        FROM signup_duplicate_attempt
+        WHERE ip_key = SHA2(#{requestIp}, 256)
+          AND attempted_at &gt; #{since}
+    </select>
+
+    <delete id="deleteBefore">
+        DELETE FROM signup_duplicate_attempt
+        WHERE attempted_at &lt; #{cutoff}
+        LIMIT #{limit}
+    </delete>
+</mapper>

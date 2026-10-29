@@ -48,8 +48,6 @@ export interface MapView {
   fitBounds(bounds: Bounds): void;
   showRadius(area: { center: LatLng; radiusKm: number } | null): void;
   setTerrain(on: boolean): void;
-  // 끌어서 옮기기를 켜고 끈다. zoomGestures는 손가락 벌리기·마우스 휠 확대·축소를 함께 켜고 끈다(카카오맵이 둘을 나눠 끄지 못한다).
-  setInteractive(drag: boolean, zoomGestures?: boolean): void;
   relayout(): void;
   destroy(): void;
 }

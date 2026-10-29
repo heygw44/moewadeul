@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { ApiError } from '../../api/client';
+import { ApiError, serverNow } from '../../api/client';
 import { verifyIdentity } from '../../api/trust';
 import type { IdentityVerificationResponse, SelfGender } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
@@ -12,6 +12,7 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { todayKst } from '../../lib/datetime';
 import { AuthLayout } from '../member/AuthLayout';
 import { safeNextPath, withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -70,7 +71,7 @@ export function IdentityVerificationPage() {
   } {
     const errors: FieldErrors = {};
     const year = Number(birthYear.trim());
-    const currentYear = new Date().getFullYear();
+    const currentYear = Number(todayKst(new Date(serverNow())).slice(0, 4));
     if (!/^\d{4}$/.test(birthYear.trim()) || year < MIN_BIRTH_YEAR || year > currentYear) {
       errors.birthYear = `출생연도는 ${MIN_BIRTH_YEAR}~${currentYear}년 사이 4자리 숫자로 입력해 주세요.`;
     }

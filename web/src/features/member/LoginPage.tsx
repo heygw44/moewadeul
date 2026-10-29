@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { login } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { serverTraceId, toUserMessage } from '../../api/errors';
-import type { Me } from '../../api/types';
+import type { LoginResponse, Me } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmailField } from '../../components/EmailField';
@@ -13,6 +13,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { TextField } from '../../components/TextField';
 import { formatKstDateTime } from '../../lib/datetime';
 import { AuthLayout } from './AuthLayout';
+import { enterAfterAuth } from './enterAfterAuth';
 import { safeNextPath, withNext } from './nextPath';
 import { emailRequiredMessage, PASSWORD_REQUIRED } from './requiredMessages';
 import { useSession } from './session';
@@ -65,14 +66,15 @@ export function LoginPage() {
     if (Object.keys(emptyErrors).length > 0) return;
 
     setSubmitting(true);
+    let result: LoginResponse;
     try {
-      const result = await login({ email: composeEmail(email), password });
-      const me = await session.refresh();
-      navigate(destinationAfterLogin(me ?? result, next), { replace: true });
+      result = await login({ email: composeEmail(email), password });
     } catch (error) {
       setSubmitting(false);
       handleError(error);
+      return;
     }
+    await enterAfterAuth(session, (me) => destinationAfterLogin(me ?? result, next));
   }
 
   function handleError(error: unknown) {

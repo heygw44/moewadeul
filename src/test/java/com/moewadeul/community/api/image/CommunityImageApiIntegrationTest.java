@@ -8,10 +8,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.community.api.CommunityApiFixture;
+import com.moewadeul.community.domain.image.CommunityImage;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -188,6 +191,27 @@ class CommunityImageApiIntegrationTest {
         assertThat(notVerified).hasStatus(HttpStatus.FORBIDDEN);
         assertThat(gif).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(imageRowCount()).isZero();
+    }
+
+    @Test
+    @DisplayName(
+            "[F-29][CM-06] 24시간 안에 발급해 글에 붙지 않은 이미지가 15장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED와 Retry-After이고 이미지 행이 생기지 않는다")
+    void issueUploadUrlOverUnattachedLimitIsRejected() {
+        // given
+        for (int i = 0; i < CommunityImage.MAX_UNATTACHED_PER_MEMBER; i++) {
+            issueImage(session, SIZE);
+        }
+
+        // when
+        MvcTestResult limited = fixture.send(
+                mvc.post().uri(IMAGES), session, "{\"contentType\":\"image/jpeg\",\"sizeBytes\":" + SIZE + "}");
+
+        // then
+        assertThat(limited).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(limited).bodyJson().extractingPath("$.code").isEqualTo("IMAGE_UPLOAD_LIMITED");
+        assertThat(limited.getResponse().getHeader(HttpHeaders.RETRY_AFTER))
+                .isEqualTo(String.valueOf(Duration.ofHours(24).toSeconds()));
+        assertThat(imageRowCount()).isEqualTo(CommunityImage.MAX_UNATTACHED_PER_MEMBER);
     }
 
     @Test

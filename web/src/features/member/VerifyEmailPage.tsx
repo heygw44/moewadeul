@@ -10,6 +10,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { AuthLayout } from './AuthLayout';
+import { enterAfterAuth } from './enterAfterAuth';
 import { safeNextPath, withNext } from './nextPath';
 import { useSession } from './session';
 import { useRetryCountdown } from './useRetryCountdown';
@@ -64,8 +65,6 @@ export function VerifyEmailPage() {
     setSubmitting(true);
     try {
       await verifyEmail(trimmed);
-      await session.refresh();
-      navigate(next ?? '/map', { replace: true });
     } catch (error) {
       setSubmitting(false);
       if (error instanceof ApiError && CODE_ERROR_CODES[error.code]) {
@@ -77,7 +76,9 @@ export function VerifyEmailPage() {
       } else {
         setFormError({ cause: error });
       }
+      return;
     }
+    await enterAfterAuth(session, () => next ?? '/map');
   }
 
   async function handleResend() {

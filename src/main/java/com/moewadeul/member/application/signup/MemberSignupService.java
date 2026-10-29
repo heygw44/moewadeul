@@ -38,7 +38,9 @@ public class MemberSignupService {
     private final MemberMetrics memberMetrics;
     private final EmailVerificationService emailVerificationService;
 
-    @Transactional
+    // 중복으로 거절한 가입 시도도 IP 한도에 세려면 그 기록을 커밋해야 한다.
+    // 중복 예외는 회원을 저장하기 전에만 던지므로 롤백하지 않아도 회원이나 발송 요청이 남지 않는다.
+    @Transactional(noRollbackFor = DuplicateSignupException.class)
     public SignupResult signUp(SignupCommand command) {
         Password password = Password.of(command.password());
         Email email = Email.of(command.email());
@@ -48,8 +50,8 @@ public class MemberSignupService {
         SendWindow sentByIp = emailVerificationService.lockSendsByIp(command.requestIp());
         Instant now = Instant.now(clock);
         rejectDisposableDomain(email);
-        rejectDuplicates(email, nickname);
         rejectIfIpLimited(sentByIp, now);
+        rejectDuplicates(email, nickname, command.requestIp());
 
         String passwordHash = passwordEncoder.encode(password.value());
         Member member = Member.register(email, passwordHash, nickname.value(), now);
@@ -77,13 +79,18 @@ public class MemberSignupService {
         }
     }
 
-    private void rejectDuplicates(Email email, Nickname nickname) {
+    private void rejectDuplicates(Email email, Nickname nickname, String requestIp) {
         if (memberRepository.existsByEmail(email.value())) {
-            throw new MemberException(MemberErrorCode.MEMBER_EMAIL_DUPLICATED);
+            throw duplicateRecorded(MemberErrorCode.MEMBER_EMAIL_DUPLICATED, requestIp);
         }
         if (memberRepository.existsByNickname(nickname)) {
-            throw new MemberException(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED);
+            throw duplicateRecorded(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED, requestIp);
         }
+    }
+
+    private DuplicateSignupException duplicateRecorded(MemberErrorCode errorCode, String requestIp) {
+        emailVerificationService.recordDuplicateSignup(requestIp);
+        return new DuplicateSignupException(errorCode);
     }
 
     private Member saveOrTranslate(Member member) {
@@ -91,6 +98,13 @@ public class MemberSignupService {
             return memberRepository.save(member);
         } catch (DataIntegrityViolationException e) {
             throw MemberUniqueConstraintTranslator.translate(e);
+        }
+    }
+
+    private static final class DuplicateSignupException extends MemberException {
+
+        private DuplicateSignupException(MemberErrorCode errorCode) {
+            super(errorCode);
         }
     }
 }

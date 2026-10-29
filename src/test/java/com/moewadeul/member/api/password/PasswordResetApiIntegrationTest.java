@@ -349,6 +349,34 @@ class PasswordResetApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[PW-02][PW-07] 재설정 토큰을 받은 회원이 비밀번호를 바꾸면 그 토큰은 사용 처리되고, 확인하면 400 PASSWORD_RESET_TOKEN_INVALID이다")
+    void passwordChangeInvalidatesIssuedToken() {
+        // given
+        Member member = saveMember();
+        String token = issueToken(member);
+        Cookie session = login(member);
+        MvcTestResult change = mvc.put()
+                .uri("/api/me/password")
+                .with(csrf())
+                .cookie(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"%s\",\"newPassword\":\"%s\",\"newPasswordConfirm\":\"%s\"}"
+                        .formatted(OLD_PASSWORD, NEW_PASSWORD, NEW_PASSWORD))
+                .exchange();
+        assertThat(change).hasStatus(HttpStatus.NO_CONTENT);
+
+        // when
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(token, "Third-pass3"), null);
+
+        // then
+        assertThat(count("password_reset_token WHERE member_id = ? AND used_at IS NULL", member.getId()))
+                .isZero();
+        assertThat(confirm).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(confirm).bodyJson().extractingPath("$.code").isEqualTo(INVALID_TOKEN);
+        assertThat(loginRequest(member.getEmail(), NEW_PASSWORD)).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
     @DisplayName(
             "[F-01][PV-01] 재설정 토큰을 받은 회원이 탈퇴하면 그 토큰은 사용 처리되고, 확인하면 400 PASSWORD_RESET_TOKEN_INVALID이며 비밀번호 해시는 NULL로 남는다")
     void withdrawalInvalidatesIssuedToken() {
