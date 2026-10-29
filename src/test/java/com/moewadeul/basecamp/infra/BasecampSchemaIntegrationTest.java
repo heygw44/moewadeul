@@ -1,9 +1,11 @@
 package com.moewadeul.basecamp.infra;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.SpotFixture;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,8 +20,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class BasecampSchemaIntegrationTest {
 
-    // SRID 4326 WKT는 위도, 경도 순서다.
-    private static final String SEOUL_CITY_HALL_WKT = "POINT(37.5665 126.978)";
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     JdbcTemplate jdbcTemplate;
@@ -45,7 +47,7 @@ class BasecampSchemaIntegrationTest {
     void basecampWithBoundaryCapacityIsSaved(int capacity) {
         // given
         long leaderId = insertMember("leader");
-        long spotId = insertSpot("정원 경계 장소");
+        long spotId = spotFixture.insert(aSpot().name("정원 경계 장소"));
 
         // when
         insertBasecamp(leaderId, spotId, capacity);
@@ -60,7 +62,7 @@ class BasecampSchemaIntegrationTest {
     void basecampWithCapacityOutOfRangeIsRejected(int capacity) {
         // given
         long leaderId = insertMember("leader");
-        long spotId = insertSpot("정원 범위 밖 장소");
+        long spotId = spotFixture.insert(aSpot().name("정원 범위 밖 장소"));
 
         // when & then
         assertThatThrownBy(() -> insertBasecamp(leaderId, spotId, capacity))
@@ -143,7 +145,7 @@ class BasecampSchemaIntegrationTest {
 
     private long insertBasecampWithLeader(String leaderNickname) {
         long leaderId = insertMember(leaderNickname);
-        long spotId = insertSpot(leaderNickname + "의 장소");
+        long spotId = spotFixture.insert(aSpot().name(leaderNickname + "의 장소"));
         return insertBasecamp(leaderId, spotId, 4);
     }
 
@@ -154,15 +156,6 @@ class BasecampSchemaIntegrationTest {
                 nickname + "@example.com",
                 nickname);
         return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
-    }
-
-    private long insertSpot(String name) {
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES ('BAKJI', ?, ST_GeomFromText(?, 4326), 60, 127, 'ACTIVE', NOW(6), NOW(6))",
-                name,
-                SEOUL_CITY_HALL_WKT);
-        return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
     }
 
     private long insertBasecamp(long leaderId, long spotId, int capacity) {

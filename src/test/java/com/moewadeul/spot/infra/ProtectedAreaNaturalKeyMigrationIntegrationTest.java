@@ -1,9 +1,11 @@
 package com.moewadeul.spot.infra;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.SpotFixture;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,7 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
     JdbcTemplate root;
     DriverManagerDataSource dataSource;
     JdbcTemplate jdbcTemplate;
+    SpotFixture spotFixture;
 
     @BeforeEach
     void createSchema() {
@@ -35,6 +38,7 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
         root.execute("CREATE DATABASE " + SCHEMA);
         dataSource = dataSourceFor(SCHEMA);
         jdbcTemplate = new JdbcTemplate(dataSource);
+        spotFixture = new SpotFixture(jdbcTemplate);
         migrateTo("54");
     }
 
@@ -51,9 +55,9 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
         long duplicate = insertProtectedArea("KDPA", "NATIONAL_PARK", "지리산");
         long otherType = insertProtectedArea("KDPA", "PROVINCIAL_PARK", "지리산");
         long unrelated = insertProtectedArea("KDPA", "NATIONAL_PARK", "설악산");
-        long spotOnDuplicate = insertSpot(duplicate);
-        long spotOnKept = insertSpot(kept);
-        long spotOnUnrelated = insertSpot(unrelated);
+        long spotOnDuplicate = spotFixture.insert(aSpot().parkWarning(true).protectedAreaId(duplicate));
+        long spotOnKept = spotFixture.insert(aSpot().parkWarning(true).protectedAreaId(kept));
+        long spotOnUnrelated = spotFixture.insert(aSpot().parkWarning(true).protectedAreaId(unrelated));
 
         // when
         migrateTo("55");
@@ -102,16 +106,6 @@ class ProtectedAreaNaturalKeyMigrationIntegrationTest {
                 areaType,
                 source);
         return jdbcTemplate.queryForObject("SELECT MAX(id) FROM protected_area", Long.class);
-    }
-
-    private long insertSpot(long protectedAreaId) {
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, park_warning, protected_area_id, status,"
-                        + " created_at, updated_at)"
-                        + " VALUES ('BAKJI', '야영장', ST_GeomFromText('POINT(37.05 127.05)', 4326), 60, 127, TRUE, ?,"
-                        + " 'ACTIVE', NOW(6), NOW(6))",
-                protectedAreaId);
-        return jdbcTemplate.queryForObject("SELECT MAX(id) FROM spot", Long.class);
     }
 
     private long versionOf(long spotId) {

@@ -4,6 +4,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
@@ -14,6 +15,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
@@ -28,7 +30,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,9 +44,13 @@ class SpotDetailQueryServiceIntegrationTest {
     private static final String VILAGE_FCST_PATH = "/1360000/VilageFcstInfoService_2.0/getVilageFcst";
     private static final String RISE_SET_PATH = "/B090041/openapi/service/RiseSetInfoService/getLCRiseSetInfo";
 
-    private static final Coordinate RIDGE = new Coordinate(37.71, 128.75);
+    private static final double RIDGE_LAT = 37.71;
+    private static final double RIDGE_LNG = 128.75;
 
     private static final int EXTERNAL_DELAY_MILLIS = 3_000;
+
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     private SpotDetailQueryService spotDetailQueryService;
@@ -64,7 +69,8 @@ class SpotDetailQueryServiceIntegrationTest {
     void findsBakjiDetail() {
         // given
         long reporterId = insertMember("새벽능선");
-        long spotId = insertSpot("BAKJI", "ACTIVE", "능선 끝 평지", "강원특별자치도 어딘가", true, RIDGE);
+        long spotId = spotFixture.insert(
+                aSpot().name("능선 끝 평지").address("강원특별자치도 어딘가").parkWarning(true).at(RIDGE_LAT, RIDGE_LNG));
         jdbcTemplate.update(
                 "INSERT INTO bakji_detail"
                         + " (spot_id, reporter_id, description, has_water, has_toilet, signal_level, created_at, updated_at)"
@@ -81,8 +87,8 @@ class SpotDetailQueryServiceIntegrationTest {
         assertThat(detail.spotId()).isEqualTo(spotId);
         assertThat(detail.type()).isEqualTo(SpotType.BAKJI);
         assertThat(detail.name()).isEqualTo("능선 끝 평지");
-        assertThat(detail.lat()).isCloseTo(RIDGE.lat(), within(1e-9));
-        assertThat(detail.lng()).isCloseTo(RIDGE.lng(), within(1e-9));
+        assertThat(detail.lat()).isCloseTo(RIDGE_LAT, within(1e-9));
+        assertThat(detail.lng()).isCloseTo(RIDGE_LNG, within(1e-9));
         assertThat(detail.address()).isEqualTo("강원특별자치도 어딘가");
         assertThat(detail.parkWarning().warned()).isTrue();
         assertThat(detail.publicDetail()).isNull();
@@ -96,7 +102,7 @@ class SpotDetailQueryServiceIntegrationTest {
     void reportsZeroConfirmationsForUnconfirmedBakji() {
         // given
         long reporterId = insertMember(TestSequence.nickname());
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         jdbcTemplate.update(
                 "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
                         + " VALUES (?, ?, FALSE, TRUE, NOW(6), NOW(6))",
@@ -122,7 +128,8 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 야영장 상세는 원천 시설 항목을 응답 필드 이름으로 옮기고, 원천에 없는 항목은 null로 둔다")
     void findsCampsiteDetailWithMappedFacilities() {
         // given
-        long spotId = insertSpot("CAMPSITE", "ACTIVE", "솔숲 야영장", "강원특별자치도 평창군", false, RIDGE);
+        long spotId = spotFixture.insert(
+                aSpot().type("CAMPSITE").name("솔숲 야영장").address("강원특별자치도 평창군").at(RIDGE_LAT, RIDGE_LNG));
         jdbcTemplate.update(
                 "INSERT INTO public_spot_detail"
                         + " (spot_id, source, external_id, category, facilities, phone, homepage, operating_status,"
@@ -139,8 +146,8 @@ class SpotDetailQueryServiceIntegrationTest {
 
         // then
         assertThat(detail.type()).isEqualTo(SpotType.CAMPSITE);
-        assertThat(detail.lat()).isCloseTo(RIDGE.lat(), within(1e-9));
-        assertThat(detail.lng()).isCloseTo(RIDGE.lng(), within(1e-9));
+        assertThat(detail.lat()).isCloseTo(RIDGE_LAT, within(1e-9));
+        assertThat(detail.lng()).isCloseTo(RIDGE_LNG, within(1e-9));
         assertThat(detail.bakji()).isNull();
         assertThat(detail.publicDetail())
                 .isEqualTo(new SpotPublicDetail(
@@ -161,7 +168,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 시설 JSON이 빈 객체이면 시설 정보를 null로 준다")
     void returnsNullFacilitiesForEmptyJsonObject() {
         // given
-        long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().type("CAMPSITE").at(RIDGE_LAT, RIDGE_LNG));
         insertPublicDetail(spotId, "GOCAMPING", "{}", null, null, null, null);
 
         // when
@@ -176,7 +183,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 휴장 기간이 한국 날짜로 시작되면 휴장으로, 시작 전날이면 휴장이 아닌 것으로 판정한다")
     void judgesClosedNowByKoreanDate() {
         // given
-        long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().type("CAMPSITE").at(RIDGE_LAT, RIDGE_LNG));
         insertPublicDetail(
                 spotId,
                 "GOCAMPING",
@@ -205,7 +212,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 휴장 기간이 없고 운영 상태가 휴장이면 휴장으로 판정한다")
     void judgesClosedNowByOperatingStatusWithoutPeriod() {
         // given
-        long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().type("CAMPSITE").at(RIDGE_LAT, RIDGE_LNG));
         insertPublicDetail(spotId, "GOCAMPING", null, null, "TEMPORARILY_CLOSED", null, null);
 
         // when
@@ -220,7 +227,8 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 자연휴양림 상세는 시설 정보가 없으면 null로 주고, 원천 기준일을 함께 준다")
     void findsForestDetailWithoutFacilities() {
         // given
-        long spotId = insertSpot("FOREST", "ACTIVE", "숲속 휴양림", "충청북도 어딘가", false, RIDGE);
+        long spotId = spotFixture.insert(
+                aSpot().type("FOREST").name("숲속 휴양림").address("충청북도 어딘가").at(RIDGE_LAT, RIDGE_LNG));
         insertPublicDetail(spotId, "FOREST", null, LocalDate.parse("2025-12-31"), null, null, null);
 
         // when
@@ -248,7 +256,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 점검 시각은 장소 원천과 같은 종류에서 마지막으로 성공한 동기화의 종료 시각이고, 실패와 실행 중인 기록은 무시한다")
     void reportsLatestCompletedSyncFinishTimeOfSameSource() {
         // given
-        long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().type("CAMPSITE").at(RIDGE_LAT, RIDGE_LNG));
         insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
         insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-01 03:00:00.000000", "2026-10-01 03:10:00.000000");
         insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-02 03:00:00.000000", "2026-10-02 03:12:30.500000");
@@ -267,7 +275,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 성공한 동기화 기록이 없거나 다른 종류뿐이면 점검 시각은 null이다")
     void returnsNullCheckedAtWithoutCompletedRunOfSameSource() {
         // given
-        long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().type("CAMPSITE").at(RIDGE_LAT, RIDGE_LNG));
         insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
 
         // when, then
@@ -285,7 +293,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 자연휴양림 상세의 점검 시각은 자연휴양림 동기화 기록을 따른다")
     void forestDetailUsesForestSyncRuns() {
         // given
-        long spotId = insertSpot("FOREST", "ACTIVE", TestSequence.unique("휴양림"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().type("FOREST").at(RIDGE_LAT, RIDGE_LNG));
         insertPublicDetail(spotId, "FOREST", null, LocalDate.parse("2025-12-31"), null, null, null);
         insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-07 03:00:00.000000", "2026-10-07 03:30:00.000000");
         insertSyncRun("FOREST", "COMPLETED", "2026-10-05 03:00:00.000000", "2026-10-05 03:01:00.000000");
@@ -301,7 +309,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 박지 상세에는 공공데이터 상세가 없으므로 동기화 기록이 있어도 점검 시각을 주지 않는다")
     void bakjiHasNoCheckedAt() {
         // given
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         jdbcTemplate.update(
                 "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
                         + " VALUES (?, ?, FALSE, FALSE, NOW(6), NOW(6))",
@@ -321,7 +329,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 숨김, 삭제, 검토 대기 상태의 장소는 NOT_FOUND로 거부한다")
     void rejectsSpotsThatAreNotActive(String type, String status) {
         // given
-        long spotId = insertSpot(type, status, TestSequence.unique(status), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().type(type).status(status).at(RIDGE_LAT, RIDGE_LNG));
         if (type.equals("BAKJI")) {
             jdbcTemplate.update(
                     "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
@@ -393,7 +401,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 경고가 아닌 장소는 warned만 false이고 나머지 경고 필드는 null이다")
     void leavesOtherParkWarningFieldsNullWhenNotWarned() {
         // given
-        long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().type("CAMPSITE").at(RIDGE_LAT, RIDGE_LNG));
         insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
 
         // when
@@ -428,7 +436,7 @@ class SpotDetailQueryServiceIntegrationTest {
     void sumsConfirmedMembersPerNightAndExcludesEndDate() {
         // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         long first = insertBasecamp(spotId, "CONFIRMED", "2026-11-07", "2026-11-09");
         insertBasecampMembers(first, "ACTIVE", 3);
         long second = insertBasecamp(spotId, "CONFIRMED", "2026-11-08", "2026-11-09");
@@ -449,7 +457,7 @@ class SpotDetailQueryServiceIntegrationTest {
     void doesNotCountLeftOrKickedMembers() {
         // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         long basecampId = insertBasecamp(spotId, "CONFIRMED", "2026-11-07", "2026-11-08");
         insertBasecampMembers(basecampId, "ACTIVE", 2);
         insertBasecampMembers(basecampId, "LEFT", 1);
@@ -467,8 +475,8 @@ class SpotDetailQueryServiceIntegrationTest {
     void countsOnlyConfirmedBasecampsOfThisSpot() {
         // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
-        long otherSpotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
+        long otherSpotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         for (String status : new String[] {"RECRUITING", "CLOSED", "CANCELED", "COMPLETED"}) {
             insertBasecampMembers(insertBasecamp(spotId, status, "2026-11-07", "2026-11-08"), "ACTIVE", 2);
         }
@@ -486,7 +494,7 @@ class SpotDetailQueryServiceIntegrationTest {
     void excludesPastNights() {
         // given
         clock.setInstant(Instant.parse("2026-11-08T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         insertBasecampMembers(insertBasecamp(spotId, "CONFIRMED", "2026-11-07", "2026-11-10"), "ACTIVE", 2);
         insertBasecampMembers(insertBasecamp(spotId, "CONFIRMED", "2026-11-06", "2026-11-08"), "ACTIVE", 4);
 
@@ -505,7 +513,7 @@ class SpotDetailQueryServiceIntegrationTest {
     void addsSoloTripsToExpectedPeople() {
         // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         insertSoloTrip(insertMember(TestSequence.nickname()), spotId, "2026-11-07", "2026-11-09");
         insertBasecampMembers(insertBasecamp(spotId, "CONFIRMED", "2026-11-08", "2026-11-09"), "ACTIVE", 2);
 
@@ -524,8 +532,8 @@ class SpotDetailQueryServiceIntegrationTest {
     void excludesWithdrawnOtherSpotAndFinishedSoloTrips() {
         // given
         clock.setInstant(Instant.parse("2026-11-08T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
-        long otherSpotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
+        long otherSpotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         long withdrawnId = insertMember(TestSequence.nickname());
         jdbcTemplate.update("UPDATE member SET status = 'WITHDRAWN' WHERE id = ?", withdrawnId);
         insertSoloTrip(withdrawnId, spotId, "2026-11-09", "2026-11-10");
@@ -545,7 +553,7 @@ class SpotDetailQueryServiceIntegrationTest {
     void decidesTodayByKoreanDate() {
         // given
         clock.setInstant(Instant.parse("2026-11-07T15:30:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         insertBasecampMembers(insertBasecamp(spotId, "CONFIRMED", "2026-11-07", "2026-11-09"), "ACTIVE", 2);
 
         // when
@@ -560,7 +568,7 @@ class SpotDetailQueryServiceIntegrationTest {
     void addsConfirmedProgramParticipantsToExpectedPeople() {
         // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         long programId = insertProgram(spotId, "2026-11-07T01:00:00Z", "2026-11-08T03:00:00Z", true, "SCHEDULED");
         insertProgramApplications(programId, "CONFIRMED", 2);
         insertProgramApplications(programId, "PENDING_PAYMENT", 1);
@@ -583,7 +591,7 @@ class SpotDetailQueryServiceIntegrationTest {
     void countsProgramNightsByKoreanDate() {
         // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         long programId = insertProgram(spotId, "2026-11-06T16:00:00Z", "2026-11-07T16:00:00Z", true, "SCHEDULED");
         insertProgramApplications(programId, "CONFIRMED", 4);
 
@@ -599,8 +607,8 @@ class SpotDetailQueryServiceIntegrationTest {
     void excludesDayCanceledOtherSpotAndPastPrograms() {
         // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
-        long otherSpotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
+        long otherSpotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         String start = "2026-11-07T01:00:00Z";
         String end = "2026-11-08T03:00:00Z";
         insertProgramApplications(insertProgram(spotId, start, end, false, "SCHEDULED"), "CONFIRMED", 2);
@@ -623,8 +631,8 @@ class SpotDetailQueryServiceIntegrationTest {
     void listsOnlyRecruitingBasecampsInOrder() {
         // given
         clock.setInstant(Instant.parse("2026-11-01T03:00:00Z"));
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
-        long otherSpotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
+        long otherSpotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
         long later = insertBasecamp(spotId, "RECRUITING", "2026-11-14", "2026-11-16", 4, "늦은 출발");
         long sameDayFirst = insertBasecamp(spotId, "RECRUITING", "2026-11-07", "2026-11-08", 6, "같은 날 먼저");
         long sameDaySecond = insertBasecamp(spotId, "RECRUITING", "2026-11-07", "2026-11-09", 3, "같은 날 나중");
@@ -675,7 +683,7 @@ class SpotDetailQueryServiceIntegrationTest {
     @DisplayName("[F-05] 모집 중인 베이스캠프와 확정 베이스캠프가 없으면 두 목록은 빈 목록이다")
     void returnsEmptyListsWithoutBasecamps() {
         // given
-        long spotId = insertSpot("BAKJI", "ACTIVE", TestSequence.unique("박지"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().at(RIDGE_LAT, RIDGE_LNG));
 
         // when
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
@@ -687,7 +695,7 @@ class SpotDetailQueryServiceIntegrationTest {
 
     private long insertSeoulCampsite() {
         clock.setInstant(Instant.parse("2026-10-04T03:58:00Z"));
-        long spotId = insertSpot("CAMPSITE", "ACTIVE", TestSequence.unique("야영장"), null, false, RIDGE);
+        long spotId = spotFixture.insert(aSpot().type("CAMPSITE").at(RIDGE_LAT, RIDGE_LNG));
         insertPublicDetail(spotId, "GOCAMPING", null, null, "OPERATING", null, null);
         return spotId;
     }
@@ -723,7 +731,7 @@ class SpotDetailQueryServiceIntegrationTest {
 
     private long insertWarnedBakji(Long areaId) {
         String name = TestSequence.unique("경고박지");
-        long spotId = insertSpot("BAKJI", "ACTIVE", name, null, true, RIDGE);
+        long spotId = spotFixture.insert(aSpot().name(name).parkWarning(true).at(RIDGE_LAT, RIDGE_LNG));
         jdbcTemplate.update("UPDATE spot SET protected_area_id = ? WHERE id = ?", areaId, spotId);
         jdbcTemplate.update(
                 "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
@@ -731,22 +739,6 @@ class SpotDetailQueryServiceIntegrationTest {
                 spotId,
                 insertMember(TestSequence.nickname()));
         return spotId;
-    }
-
-    private long insertSpot(
-            String type, String status, String name, String address, boolean parkWarning, Coordinate at) {
-        jdbcTemplate.update(
-                "INSERT INTO spot"
-                        + " (type, name, location, address, weather_nx, weather_ny, park_warning, status,"
-                        + " created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), ?, 60, 127, ?, ?, NOW(6), NOW(6))",
-                type,
-                name,
-                at.wkt(),
-                address,
-                parkWarning,
-                status);
-        return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
     }
 
     private void insertPublicDetail(
@@ -870,13 +862,5 @@ class SpotDetailQueryServiceIntegrationTest {
                 TestSequence.email(),
                 nickname);
         return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
-    }
-
-    private record Coordinate(double lat, double lng) {
-
-        // SRID 4326 좌표의 WKT는 위도, 경도 순서다.
-        String wkt() {
-            return String.format(Locale.ROOT, "POINT(%s %s)", lat, lng);
-        }
     }
 }

@@ -1,9 +1,11 @@
 package com.moewadeul.spot.infra;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.SpotFixture;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -17,8 +19,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class SpotSchemaIntegrationTest {
 
-    // SRID 4326 WKT는 위도, 경도 순서다.
-    private static final String SEOUL_CITY_HALL_WKT = "POINT(37.5665 126.978)";
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     JdbcTemplate jdbcTemplate;
@@ -64,7 +66,8 @@ class SpotSchemaIntegrationTest {
     @DisplayName("[F-03] 장소를 저장하거나 좌표를 바꾸면 MySQL이 위도·경도 컬럼을 좌표와 같은 값으로 채운다")
     void latitudeAndLongitudeColumnsFollowLocation() {
         // given
-        long spotId = insertSpot("CAMPSITE", "좌표 확인 야영장");
+        long spotId =
+                spotFixture.insert(aSpot().type("CAMPSITE").name("좌표 확인 야영장").at(37.5665, 126.978));
 
         // when
         Map<String, Object> saved = latitudeAndLongitudeOf(spotId);
@@ -109,7 +112,7 @@ class SpotSchemaIntegrationTest {
         long protectedAreaId = insertProtectedArea("북한산국립공원");
 
         // when
-        long spotId = insertSpot("BAKJI", "경계 안 박지");
+        long spotId = spotFixture.insert(aSpot().name("경계 안 박지"));
         jdbcTemplate.update(
                 "UPDATE spot SET park_warning = TRUE, protected_area_id = ? WHERE id = ?", protectedAreaId, spotId);
 
@@ -123,8 +126,8 @@ class SpotSchemaIntegrationTest {
     @DisplayName("[F-06] 같은 출처의 같은 외부 ID로 공공 장소 상세를 두 번 저장할 수 없다")
     void publicSpotDetailSourceAndExternalIdMustBeUnique() {
         // given
-        long firstSpotId = insertSpot("CAMPSITE", "첫 번째 야영장");
-        long secondSpotId = insertSpot("CAMPSITE", "두 번째 야영장");
+        long firstSpotId = spotFixture.insert(aSpot().type("CAMPSITE").name("첫 번째 야영장"));
+        long secondSpotId = spotFixture.insert(aSpot().type("CAMPSITE").name("두 번째 야영장"));
         insertPublicSpotDetail(firstSpotId, "GOCAMPING", "100");
 
         // when & then
@@ -136,8 +139,8 @@ class SpotSchemaIntegrationTest {
     @DisplayName("[F-06] 출처가 다르면 같은 외부 ID로 공공 장소 상세를 저장할 수 있다")
     void publicSpotDetailAllowsSameExternalIdFromDifferentSource() {
         // given
-        long campsiteId = insertSpot("CAMPSITE", "야영장");
-        long forestId = insertSpot("FOREST", "자연휴양림");
+        long campsiteId = spotFixture.insert(aSpot().type("CAMPSITE").name("야영장"));
+        long forestId = spotFixture.insert(aSpot().type("FOREST").name("자연휴양림"));
         insertPublicSpotDetail(campsiteId, "GOCAMPING", "100");
 
         // when
@@ -152,7 +155,7 @@ class SpotSchemaIntegrationTest {
     void memberCanReportSameBakjiOnlyOnce() {
         // given
         long memberId = insertMember("reporter");
-        long spotId = insertSpot("BAKJI", "신고할 박지");
+        long spotId = spotFixture.insert(aSpot().name("신고할 박지"));
         insertBakjiReport(spotId, memberId);
 
         // when & then
@@ -164,7 +167,7 @@ class SpotSchemaIntegrationTest {
     void memberCanConfirmSameBakjiOnlyOnce() {
         // given
         long memberId = insertMember("confirmer");
-        long spotId = insertSpot("BAKJI", "확인할 박지");
+        long spotId = spotFixture.insert(aSpot().name("확인할 박지"));
         insertBakjiConfirmation(spotId, memberId);
 
         // when & then
@@ -191,16 +194,6 @@ class SpotSchemaIntegrationTest {
                 nickname + "@example.com",
                 nickname);
         return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
-    }
-
-    private long insertSpot(String type, String name) {
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, 'ACTIVE', NOW(6), NOW(6))",
-                type,
-                name,
-                SEOUL_CITY_HALL_WKT);
-        return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
     }
 
     private long insertProtectedArea(String name) {

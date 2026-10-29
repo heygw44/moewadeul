@@ -1,5 +1,6 @@
 package com.moewadeul.spot.application.bakji;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
@@ -11,6 +12,7 @@ import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.SpotParkWarning;
@@ -21,7 +23,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,9 @@ class BakjiCommandServiceIntegrationTest {
     private static final String CHECK_NOTICE =
             "뫼와들은 이곳에서 야영해도 되는지 확인하지 않았어요. 가기 전에 관할 시군청 산림과나 국유림관리소, 공원 사무소에 야영할 수 있는지 물어봐 주세요."
                     + " 뫼와들은 제보된 정보를 보여 줄 뿐이고, 야영 중에 생긴 일에는 책임지지 않아요.";
+
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     private MemberFixture memberFixture;
@@ -131,8 +135,12 @@ class BakjiCommandServiceIntegrationTest {
                 .report(reporterId, namedReport("20m 박지", baseLat + 20 * DEGREES_PER_METER, baseLng))
                 .spotId();
         bakjiCommandService.report(reporterId, namedReport("51m 박지", baseLat + 51 * DEGREES_PER_METER, baseLng));
-        insertSpot("BAKJI", "PENDING_REVIEW", baseLat + 10 * DEGREES_PER_METER, baseLng);
-        insertSpot("CAMPSITE", "ACTIVE", baseLat + 5 * DEGREES_PER_METER, baseLng);
+        spotFixture.insert(aSpot().status("PENDING_REVIEW")
+                .at(baseLat + 10 * DEGREES_PER_METER, baseLng)
+                .createdAt(MutableClock.DEFAULT_INSTANT));
+        spotFixture.insert(aSpot().type("CAMPSITE")
+                .at(baseLat + 5 * DEGREES_PER_METER, baseLng)
+                .createdAt(MutableClock.DEFAULT_INSTANT));
 
         // when
         BakjiSubmission submission = bakjiCommandService.report(reporterId, namedReport("새 박지", baseLat, baseLng));
@@ -410,7 +418,8 @@ class BakjiCommandServiceIntegrationTest {
         // given
         long reporterId = memberFixture.save().getId();
         long strangerId = memberFixture.save().getId();
-        long campsiteId = insertSpot("CAMPSITE", "ACTIVE", 37.6, 128.7);
+        long campsiteId =
+                spotFixture.insert(aSpot().type("CAMPSITE").at(37.6, 128.7).createdAt(MutableClock.DEFAULT_INSTANT));
         long hiddenId = bakjiCommandService
                 .report(reporterId, minimalReport(37.5, 128.6))
                 .spotId();
@@ -514,22 +523,6 @@ class BakjiCommandServiceIntegrationTest {
                 AREA_SOURCE_DATE,
                 longLatWkt);
         return jdbc.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
-    }
-
-    // 좌표는 SRID 4326 WKT 기본 순서인 (위도 경도)로 넣는다.
-    private long insertSpot(String type, String status, double lat, double lng) {
-        String name = TestSequence.unique(type);
-        Timestamp now = Timestamp.from(MutableClock.DEFAULT_INSTANT);
-        jdbc.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, ?, ?, ?)",
-                type,
-                name,
-                String.format(Locale.ROOT, "POINT(%s %s)", lat, lng),
-                status,
-                now,
-                now);
-        return jdbc.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
     }
 
     private SpotRow spotRow(long spotId) {

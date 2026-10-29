@@ -1,9 +1,11 @@
 package com.moewadeul.spot.application.park;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
@@ -28,6 +30,9 @@ class ParkAreaJudgeServiceIntegrationTest {
 
     private static final Instant SAVED_AT = Instant.parse("2026-09-01T00:00:00Z");
     private static final Instant JUDGED_AT = Instant.parse("2026-10-06T01:00:00Z");
+
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     private ParkAreaJudgeService parkAreaJudgeService;
@@ -315,19 +320,11 @@ class ParkAreaJudgeServiceIntegrationTest {
         return jdbcTemplate.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);
     }
 
-    // 장소 좌표는 SRID 4326 WKT 기본 순서인 (위도 경도)로 넣는다.
     private long insertSpot(String type, String status, GeoPoint at) {
-        String name = TestSequence.unique(type);
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, ?, ?, ?)",
-                type,
-                name,
-                String.format(Locale.ROOT, "POINT(%s %s)", at.latitude(), at.longitude()),
-                status,
-                Timestamp.from(SAVED_AT),
-                Timestamp.from(SAVED_AT));
-        return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
+        return spotFixture.insert(aSpot().type(type)
+                .status(status)
+                .at(at.latitude(), at.longitude())
+                .createdAt(SAVED_AT));
     }
 
     private SpotJudgementRow judgementOf(long spotId) {
