@@ -1,7 +1,6 @@
 package com.moewadeul.member.application.verification;
 
 import com.moewadeul.common.error.RateLimitedException;
-import com.moewadeul.common.outbox.OutboxEventJpaRepository;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.outbox.OutboxEventStatus;
 import com.moewadeul.common.transaction.OutsideTransaction;
@@ -44,7 +43,6 @@ public class EmailVerificationService {
     private final SignupDuplicateAttemptMapper signupDuplicateAttemptMapper;
     private final EmailVerificationActivator emailVerificationActivator;
     private final OutboxEventRecorder outboxEventRecorder;
-    private final OutboxEventJpaRepository outboxEventRepository;
     private final MemberMetrics memberMetrics;
     private final MailSecretDeriver mailSecretDeriver;
     private final Clock clock;
@@ -183,11 +181,8 @@ public class EmailVerificationService {
     }
 
     private boolean hasPendingSendRequest(long memberId) {
-        return outboxEventRepository.existsByEventTypeAndAggregateTypeAndAggregateIdAndStatus(
-                EmailVerificationEvents.EVENT_TYPE,
-                EmailVerificationEvents.AGGREGATE_TYPE,
-                memberId,
-                OutboxEventStatus.PENDING);
+        return outboxEventRecorder.hasPending(
+                EmailVerificationEvents.EVENT_TYPE, EmailVerificationEvents.AGGREGATE_TYPE, memberId);
     }
 
     private void rejectIfAlreadyVerified(Member member) {

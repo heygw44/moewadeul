@@ -23,6 +23,11 @@ public class OutboxEventRecorder {
                 OutboxEvent.pending(eventType, aggregateType, aggregateId, payloadJson, Instant.now(clock)));
     }
 
+    public boolean hasPending(String eventType, String aggregateType, long aggregateId) {
+        return outboxEventRepository.existsByEventTypeAndAggregateTypeAndAggregateIdAndStatus(
+                eventType, aggregateType, aggregateId, OutboxEventStatus.PENDING);
+    }
+
     private void requireActiveTransaction() {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("outbox 이벤트는 원래 작업과 같은 트랜잭션 안에서 기록해야 합니다.");
