@@ -14,7 +14,6 @@ import com.moewadeul.common.image.ImageUpload;
 import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
-import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.community.application.image.CommunityImageUploadService;
 import java.time.Instant;
@@ -88,7 +87,7 @@ class CommunityImageControllerTest {
                         "https://upload.example.test/community/7/key.png?sig=1",
                         Map.of("Content-Type", "image/png", "Content-Length", "2483011"),
                         Instant.parse("2026-11-20T10:10:00Z"),
-                        new PresignedUpload(
+                        new ImageUpload.ThumbnailUpload(
                                 "https://upload.example.test/community/7/key_thumb.jpg?sig=1",
                                 Map.of("Content-Type", "image/jpeg", "Content-Length", "48000"),
                                 Instant.parse("2026-11-20T10:10:00Z"))));

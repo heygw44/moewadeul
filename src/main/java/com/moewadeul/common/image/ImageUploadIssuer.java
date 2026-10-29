@@ -60,7 +60,7 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
         T image = imageRepository.saveAndFlush(
                 newImage(memberId, key, command.contentType(), command.sizeBytes(), now, thumbnail));
         PresignedUpload upload = imageStorage.presignUpload(key, command.contentType(), command.sizeBytes());
-        PresignedUpload thumbnailUpload =
+        ImageUpload.ThumbnailUpload thumbnailUpload =
                 image.thumbnail().map(this::presignThumbnail).orElse(null);
         return new ImageUpload(image.getId(), upload.url(), upload.headers(), upload.expiresAt(), thumbnailUpload);
     }
@@ -77,8 +77,9 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
         }
     }
 
-    private PresignedUpload presignThumbnail(Thumbnail thumbnail) {
-        return imageStorage.presignUpload(
+    private ImageUpload.ThumbnailUpload presignThumbnail(Thumbnail thumbnail) {
+        PresignedUpload upload = imageStorage.presignUpload(
                 thumbnail.objectKey(), ThumbnailedImage.THUMBNAIL_CONTENT_TYPE, thumbnail.sizeBytes());
+        return new ImageUpload.ThumbnailUpload(upload.url(), upload.headers(), upload.expiresAt());
     }
 }

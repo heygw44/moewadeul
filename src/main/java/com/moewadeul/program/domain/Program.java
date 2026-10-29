@@ -172,6 +172,22 @@ public class Program {
         }
     }
 
+    public boolean takesVacancyAlertsAt(Instant now) {
+        return switch (phaseAt(now)) {
+            case CANCELED, CLOSED -> false;
+            case UPCOMING, OPEN -> true;
+        };
+    }
+
+    public void requireVacancyAlertAcceptableAt(Instant now, long seatHolders) {
+        if (!takesVacancyAlertsAt(now)) {
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+        }
+        if (seatHolders < capacity) {
+            throw new BusinessException(ProgramErrorCode.PROGRAM_SEATS_AVAILABLE);
+        }
+    }
+
     public Instant paymentDueAt(Instant now) {
         return now.plus(Duration.ofMinutes(paymentDeadlineMinutes));
     }

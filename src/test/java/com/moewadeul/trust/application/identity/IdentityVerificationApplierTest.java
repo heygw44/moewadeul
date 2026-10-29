@@ -12,7 +12,6 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.profile.Gender;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.TrustErrorCode;
-import com.moewadeul.trust.domain.identity.CiHasher;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
 import com.moewadeul.trust.domain.identity.VerifiedIdentity;

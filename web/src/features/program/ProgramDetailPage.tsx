@@ -244,7 +244,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<{ kind: Exclude<Busy, null>; apiError: ApiError } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [soldOut, setSoldOut] = useState(false);
+  const [soldOutDetail, setSoldOutDetail] = useState<ProgramDetail | null>(null);
   const [alertOn, setAlertOn] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [applyRunner] = useState(createIdempotentRunner);
@@ -272,7 +272,8 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
       await call();
     } catch (caught) {
       const apiError = caught instanceof ApiError ? caught : new ApiError(0, 'INTERNAL_ERROR', null);
-      if (apiError.code === 'PROGRAM_SOLD_OUT') setSoldOut(true);
+      if (apiError.code === 'PROGRAM_SOLD_OUT') setSoldOutDetail(detail);
+      if (apiError.code === 'PROGRAM_SEATS_AVAILABLE') setSoldOutDetail(null);
       setError({ kind, apiError });
       if (STALE_CODES.has(apiError.code)) onChanged();
     } finally {
@@ -324,7 +325,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
   const authenticated = session.status === 'authenticated';
   const active = pending || confirmed;
-  const noSeats = detail.remainingSeats === 0 || soldOut;
+  const noSeats = detail.remainingSeats === 0 || soldOutDetail === detail;
   const canAlert = authenticated && !active && detail.status === 'OPEN' && (noSeats || alertOn);
   const refundDeadlineMs = Date.parse(detail.startAt) - REFUND_BEFORE_START_HOURS * HOUR_MS;
   const refundClosed = now > refundDeadlineMs;
@@ -469,6 +470,7 @@ const STALE_CODES = new Set([
   'PROGRAM_INVALID_STATE',
   'PROGRAM_NOT_IN_APPLY_PERIOD',
   'PROGRAM_PAYMENT_EXPIRED',
+  'PROGRAM_SEATS_AVAILABLE',
 ]);
 
 function ClosedApplyButton({ detail }: { detail: ProgramDetail }) {

@@ -2,6 +2,8 @@ package com.moewadeul.basecamp.domain;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.BasecampEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.common.schedule.CampingSchedule;
 import com.moewadeul.common.time.KoreaTime;
 import jakarta.persistence.CascadeType;
@@ -15,6 +17,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -24,6 +27,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -118,6 +122,10 @@ public class Basecamp {
             cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<BasecampApplication> applications = new ArrayList<>();
 
+    @Transient
+    @Getter(AccessLevel.NONE)
+    private final List<Supplier<OutboxEventDraft>> deferredEvents = new ArrayList<>();
+
     private Basecamp(long leaderId, long spotId, BasecampDetails details, Instant now) {
         this.leaderId = leaderId;
         this.spotId = spotId;
@@ -155,6 +163,13 @@ public class Basecamp {
                 .filter(BasecampMember::isActive)
                 .map(BasecampMember::getMemberId)
                 .toList();
+    }
+
+    public List<OutboxEventDraft> pullEvents() {
+        List<OutboxEventDraft> events =
+                deferredEvents.stream().map(Supplier::get).toList();
+        deferredEvents.clear();
+        return events;
     }
 
     public boolean isFull() {
@@ -243,10 +258,12 @@ public class Basecamp {
         Optional<BasecampApplication> existing = findApplicationOf(applicantId);
         if (existing.isPresent()) {
             existing.get().resubmit(message, now);
+            raiseApplied(existing.get(), applicantId);
             return existing.get();
         }
         BasecampApplication application = BasecampApplication.submit(this, applicantId, message, now);
         applications.add(application);
+        raiseApplied(application, applicantId);
         return application;
     }
 
@@ -272,6 +289,7 @@ public class Basecamp {
         application.approve(now);
         members.add(BasecampMember.member(this, application.getApplicantId(), now));
         closeIfFull(now);
+        raiseDecision(BasecampEvents.APPROVED, application);
         return application;
     }
 
@@ -280,6 +298,7 @@ public class Basecamp {
         requireStatus(RECRUITING_ONLY);
         requirePending(application);
         application.reject(now);
+        raiseDecision(BasecampEvents.REJECTED, application);
         return application;
     }
 
@@ -310,6 +329,7 @@ public class Basecamp {
         if (activeMember.isPresent()) {
             activeMember.get().removeByCleanup(now);
             reopenIfAutoClosed(now);
+            raiseMembers(BasecampEvents.MEMBER_CHANGED, activeMemberIds());
             return MemberRemoval.MEMBER_LEFT;
         }
         Optional<BasecampApplication> pending = findApplicationOf(memberId).filter(BasecampApplication::isPending);
@@ -332,6 +352,7 @@ public class Basecamp {
         }
         member.kick(reason, now);
         reopenIfAutoClosed(now);
+        raise(BasecampEvents.KICKED, () -> new BasecampEvents.KickedPayload(id, memberId, reason.name()));
     }
 
     public void revise(BasecampRevision revision, Instant now) {
@@ -378,6 +399,7 @@ public class Basecamp {
         this.confirmedAt = now;
         expirePendingApplications(now);
         touch(now);
+        raiseMembers(BasecampEvents.CONFIRMED, activeMemberIds());
     }
 
     private void markCanceled(CancelReason reason, Instant now) {
@@ -387,6 +409,33 @@ public class Basecamp {
         this.cancelReason = reason;
         expirePendingApplications(now);
         touch(now);
+        raiseMembers(BasecampEvents.CANCELED, activeMembersExceptLeader());
+    }
+
+    private void raise(String eventType, Supplier<Object> payload) {
+        deferredEvents.add(() -> new OutboxEventDraft(eventType, BasecampEvents.AGGREGATE_TYPE, id, payload.get()));
+    }
+
+    private void raiseApplied(BasecampApplication application, long applicantId) {
+        raise(
+                BasecampEvents.APPLIED,
+                () -> new BasecampEvents.AppliedPayload(application.getId(), applicantId, leaderId));
+    }
+
+    private void raiseMembers(String eventType, List<Long> memberIds) {
+        List<Long> snapshot = List.copyOf(memberIds);
+        raise(eventType, () -> new BasecampEvents.MembersPayload(id, snapshot));
+    }
+
+    private void raiseDecision(String eventType, BasecampApplication application) {
+        long applicantId = application.getApplicantId();
+        raise(eventType, () -> new BasecampEvents.DecisionPayload(application.getId(), applicantId, id));
+    }
+
+    private List<Long> activeMembersExceptLeader() {
+        return activeMemberIds().stream()
+                .filter(memberId -> !isLeader(memberId))
+                .toList();
     }
 
     private void closeIfFull(Instant now) {

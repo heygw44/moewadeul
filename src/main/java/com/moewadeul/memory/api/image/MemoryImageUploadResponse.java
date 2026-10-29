@@ -2,7 +2,6 @@ package com.moewadeul.memory.api.image;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.moewadeul.common.image.ImageUpload;
-import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
 import java.time.Instant;
 import java.util.Map;
 
@@ -28,11 +27,11 @@ public record MemoryImageUploadResponse(
 
     public record ThumbnailUpload(String uploadUrl, String method, Map<String, String> headers, Instant expiresAt) {
 
-        static ThumbnailUpload from(PresignedUpload upload) {
+        static ThumbnailUpload from(ImageUpload.ThumbnailUpload upload) {
             if (upload == null) {
                 return null;
             }
-            return new ThumbnailUpload(upload.url(), UPLOAD_METHOD, upload.headers(), upload.expiresAt());
+            return new ThumbnailUpload(upload.uploadUrl(), UPLOAD_METHOD, upload.headers(), upload.expiresAt());
         }
     }
 }

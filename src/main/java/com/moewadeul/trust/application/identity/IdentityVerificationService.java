@@ -6,7 +6,6 @@ import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.identity.IdentityClaim;
-import com.moewadeul.trust.domain.identity.IdentityProvider;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
 import com.moewadeul.trust.domain.identity.VerifiedIdentity;
 import java.time.Clock;

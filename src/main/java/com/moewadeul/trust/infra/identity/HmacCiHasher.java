@@ -1,7 +1,7 @@
 package com.moewadeul.trust.infra.identity;
 
+import com.moewadeul.trust.application.identity.CiHasher;
 import com.moewadeul.trust.domain.identity.CiHash;
-import com.moewadeul.trust.domain.identity.CiHasher;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.HexFormat;

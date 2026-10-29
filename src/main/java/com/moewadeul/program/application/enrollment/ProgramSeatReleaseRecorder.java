@@ -4,7 +4,6 @@ import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
-import com.moewadeul.program.domain.ProgramPhase;
 import com.moewadeul.program.domain.ProgramVacancyAlertRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,8 +25,7 @@ public class ProgramSeatReleaseRecorder {
     private final OutboxEventRecorder outboxEventRecorder;
 
     public void record(Program program, Instant now) {
-        ProgramPhase phase = program.phaseAt(now);
-        if (phase == ProgramPhase.CANCELED || phase == ProgramPhase.CLOSED) {
+        if (!program.takesVacancyAlertsAt(now)) {
             return;
         }
         long programId = program.getId();
