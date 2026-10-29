@@ -3,20 +3,25 @@ package com.moewadeul.common.architecture;
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 class MapperTableAccessTest {
 
@@ -97,87 +102,215 @@ class MapperTableAccessTest {
             entry("trip", Set.of("member", "spot")),
             entry("trust", Set.of("basecamp", "basecamp_application", "basecamp_member", "member")));
 
-    private static final Pattern NAMESPACE = Pattern.compile("<mapper\\s+namespace=\"com\\.moewadeul\\.(\\w+)");
-    private static final Pattern XML_COMMENT = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
+    private static final Path FIXTURE_ROOT = Path.of("src/test/resources/fixtures/mapper-table-access");
+
+    private static final Set<String> STATEMENTS = Set.of("select", "insert", "update", "delete");
+    private static final Pattern NAMESPACE_MODULE = Pattern.compile("^com\\.moewadeul\\.(\\w+)\\.");
+    private static final Pattern PROPERTY_REF = Pattern.compile("\\$\\{(\\w+)}");
     private static final String TABLE = "\\s+`?([a-z_][a-z0-9_]*)`?";
     private static final Pattern READ = Pattern.compile("\\b(?:FROM|JOIN)" + TABLE, Pattern.CASE_INSENSITIVE);
     private static final Pattern DELETE_FROM =
             Pattern.compile("\\bDELETE(?:\\s+[a-z_][a-z0-9_]*)?\\s+FROM" + TABLE, Pattern.CASE_INSENSITIVE);
-    private static final Pattern INSERT = Pattern.compile("\\bINSERT\\s+INTO" + TABLE, Pattern.CASE_INSENSITIVE);
+    private static final Pattern INSERT =
+            Pattern.compile("\\b(?:INSERT(?:\\s+IGNORE)?|REPLACE)\\s+INTO" + TABLE, Pattern.CASE_INSENSITIVE);
     private static final Pattern UPDATE =
-            Pattern.compile("(?<![</\\w])((?:FOR|KEY)\\s+)?UPDATE" + TABLE, Pattern.CASE_INSENSITIVE);
-    private static final Pattern TABLE_PROPERTY =
-            Pattern.compile("<property\\s+name=\"\\w*Table\"\\s+value=\"([a-z_][a-z0-9_]*)\"");
+            Pattern.compile("\\b((?:FOR|KEY)\\s+)?UPDATE" + TABLE, Pattern.CASE_INSENSITIVE);
+    private static final Pattern UNRESOLVED_TABLE =
+            Pattern.compile("\\b(?:FROM|JOIN|INTO|UPDATE)\\s+(\\$\\{\\w+})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern COMMA_JOIN = Pattern.compile(
+            "\\bFROM\\s+`?[a-z_][a-z0-9_]*`?(?:\\s+(?:AS\\s+)?[a-z_][a-z0-9_]*)?\\s*,", Pattern.CASE_INSENSITIVE);
 
     @Test
     @DisplayName("[ADR-005] 매퍼 SQL은 자기 모듈이 소유했거나 허용된 교차 읽기 테이블만 건드린다")
-    void mapperSqlTouchesOnlyAllowedTables() throws IOException {
-        List<String> violations = new ArrayList<>();
-        Set<String> usedCrossReads = new HashSet<>();
+    void mapperSqlTouchesOnlyAllowedTables() throws Exception {
+        Scan scan = scan(MAIN_MAPPER_ROOT);
 
-        List<Path> mapperFiles;
-        try (Stream<Path> walk = Files.walk(MAIN_MAPPER_ROOT)) {
-            mapperFiles = walk.filter(path -> path.toString().endsWith(".xml"))
+        assertThat(scan.statementCount()).as("검사한 매퍼 문장").isPositive();
+        assertThat(scan.violations()).as("매퍼 테이블 접근 위반").isEmpty();
+        assertThat(scan.crossReads()).as("교차 읽기 허용 표와 실제 교차 읽기").isEqualTo(CROSS_MODULE_READS);
+    }
+
+    @Test
+    @DisplayName("include한 조각의 테이블은 include한 문장의 모듈로 세고, 조각만 있는 파일은 판정하지 않는다")
+    void fragmentTablesCountForIncludingModule() throws Exception {
+        assertThat(scan(FIXTURE_ROOT.resolve("fragment-module")).violations())
+                .containsExactly("aisearch/AiSearchProbeMapper.xml#lockMember: aisearch -> member (소유: member)");
+    }
+
+    @Test
+    @DisplayName("include의 property로 넘긴 테이블 이름을 치환해 판정하고, 값이 없으면 실패한다")
+    void tablePropertiesAreSubstituted() throws Exception {
+        assertThat(scan(FIXTURE_ROOT.resolve("table-property")).violations())
+                .containsExactlyInAnyOrder(
+                        "notification/NotificationProbeMapper.xml#readOther: notification -> sanction (소유: trust)",
+                        "notification/NotificationProbeMapper.xml#deleteOther: notification -> sanction"
+                                + " (쓰기는 소유 모듈만 가능, 소유: trust)",
+                        "notification/NotificationProbeMapper.xml#missingTable: 테이블 자리의 ${table} 값을 찾지 못했다");
+    }
+
+    @Test
+    @DisplayName("INSERT IGNORE INTO와 REPLACE INTO도 쓰기로 판정한다")
+    void insertVariantsAreWrites() throws Exception {
+        assertThat(scan(FIXTURE_ROOT.resolve("insert-variants")).violations())
+                .containsExactlyInAnyOrder(
+                        "trip/TripProbeMapper.xml#insertIgnore: trip -> basecamp (쓰기는 소유 모듈만 가능, 소유: basecamp)",
+                        "trip/TripProbeMapper.xml#replace: trip -> program (쓰기는 소유 모듈만 가능, 소유: program)");
+    }
+
+    @Test
+    @DisplayName("FROM a, b 쉼표 조인은 뒤 테이블을 놓치므로 실패한다")
+    void commaJoinIsRejected() throws Exception {
+        assertThat(scan(FIXTURE_ROOT.resolve("comma-join")).violations())
+                .containsExactly("trip/TripProbeMapper.xml#commaJoin: 쉼표 조인 대신 JOIN을 쓴다");
+    }
+
+    private record Scan(int statementCount, List<String> violations, Map<String, Set<String>> crossReads) {}
+
+    private record MapperFile(String file, String namespace, Element root) {}
+
+    private static Scan scan(Path root) throws Exception {
+        List<MapperFile> mappers = load(root);
+        Map<String, Element> fragments = new HashMap<>();
+        for (MapperFile mapper : mappers) {
+            for (Element sql : children(mapper.root(), "sql")) {
+                fragments.put(mapper.namespace() + "." + sql.getAttribute("id"), sql);
+            }
+        }
+
+        int statementCount = 0;
+        Set<String> violations = new LinkedHashSet<>();
+        Map<String, Set<String>> crossReads = new HashMap<>();
+        for (MapperFile mapper : mappers) {
+            Matcher moduleMatcher = NAMESPACE_MODULE.matcher(mapper.namespace());
+            if (!moduleMatcher.find()) {
+                violations.add(mapper.file() + ": namespace가 com.moewadeul.<module> 형식이 아니다");
+                continue;
+            }
+            String module = moduleMatcher.group(1);
+            for (Element statement : children(mapper.root(), STATEMENTS)) {
+                statementCount++;
+                StringBuilder sql = new StringBuilder();
+                expand(statement, Map.of(), mapper.namespace(), fragments, sql);
+                String where = mapper.file() + "#" + statement.getAttribute("id");
+                check(sql.toString(), where, module, violations, crossReads);
+            }
+        }
+        return new Scan(statementCount, List.copyOf(violations), crossReads);
+    }
+
+    private static void check(
+            String sql, String where, String module, Set<String> violations, Map<String, Set<String>> crossReads) {
+        Matcher unresolved = UNRESOLVED_TABLE.matcher(sql);
+        while (unresolved.find()) {
+            violations.add(where + ": 테이블 자리의 " + unresolved.group(1) + " 값을 찾지 못했다");
+        }
+        if (COMMA_JOIN.matcher(sql).find()) {
+            violations.add(where + ": 쉼표 조인 대신 JOIN을 쓴다");
+        }
+
+        Set<String> writes = new HashSet<>();
+        collect(INSERT.matcher(sql), writes);
+        collect(DELETE_FROM.matcher(sql), writes);
+        Matcher update = UPDATE.matcher(sql);
+        while (update.find()) {
+            if (update.group(1) == null) {
+                writes.add(update.group(2).toLowerCase());
+            }
+        }
+        Set<String> reads = new HashSet<>();
+        collect(READ.matcher(sql), reads);
+        reads.removeAll(writes);
+
+        for (String table : writes) {
+            String owner = TABLE_OWNERS.get(table);
+            if (owner == null) {
+                violations.add(where + ": 알 수 없는 테이블 -> " + table);
+            } else if (!owner.equals(module) && !owner.equals(COMMON)) {
+                violations.add(where + ": " + module + " -> " + table + " (쓰기는 소유 모듈만 가능, 소유: " + owner + ")");
+            }
+        }
+        for (String table : reads) {
+            String owner = TABLE_OWNERS.get(table);
+            if (owner == null) {
+                violations.add(where + ": 알 수 없는 테이블 -> " + table);
+            } else if (!owner.equals(module) && !owner.equals(COMMON)) {
+                if (CROSS_MODULE_READS.getOrDefault(module, Set.of()).contains(table)) {
+                    crossReads.computeIfAbsent(module, key -> new HashSet<>()).add(table);
+                } else {
+                    violations.add(where + ": " + module + " -> " + table + " (소유: " + owner + ")");
+                }
+            }
+        }
+    }
+
+    // MyBatis처럼 include를 펼쳐 조각의 테이블이 include한 문장의 모듈로 잡히게 한다
+    private static void expand(
+            Node node,
+            Map<String, String> properties,
+            String namespace,
+            Map<String, Element> fragments,
+            StringBuilder out) {
+        NodeList nodes = node.getChildNodes();
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Node child = nodes.item(i);
+            if (child.getNodeType() == Node.TEXT_NODE || child.getNodeType() == Node.CDATA_SECTION_NODE) {
+                out.append(substitute(child.getNodeValue(), properties));
+            } else if (child instanceof Element element && element.getTagName().equals("include")) {
+                String refid = substitute(element.getAttribute("refid"), properties);
+                String qualified = refid.contains(".") ? refid : namespace + "." + refid;
+                Element fragment = fragments.get(qualified);
+                if (fragment == null) {
+                    throw new IllegalStateException("include할 조각을 찾지 못했다: " + qualified);
+                }
+                Map<String, String> inner = new HashMap<>(properties);
+                for (Element property : children(element, "property")) {
+                    inner.put(property.getAttribute("name"), substitute(property.getAttribute("value"), properties));
+                }
+                expand(fragment, inner, namespace, fragments, out);
+            } else if (child instanceof Element) {
+                expand(child, properties, namespace, fragments, out);
+            }
+            out.append(' ');
+        }
+    }
+
+    private static String substitute(String text, Map<String, String> properties) {
+        return PROPERTY_REF
+                .matcher(text)
+                .replaceAll(ref -> Matcher.quoteReplacement(properties.getOrDefault(ref.group(1), ref.group())));
+    }
+
+    private static List<MapperFile> load(Path root) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        List<Path> paths;
+        try (Stream<Path> walk = Files.walk(root)) {
+            paths = walk.filter(path -> path.toString().endsWith(".xml"))
                     .sorted()
                     .toList();
         }
-        assertThat(mapperFiles).as("매퍼 XML").isNotEmpty();
+        List<MapperFile> mappers = new ArrayList<>();
+        for (Path path : paths) {
+            Element mapper = builder.parse(path.toFile()).getDocumentElement();
+            mappers.add(new MapperFile(root.relativize(path).toString(), mapper.getAttribute("namespace"), mapper));
+        }
+        return mappers;
+    }
 
-        for (Path path : mapperFiles) {
-            String file = MAIN_MAPPER_ROOT.relativize(path).toString();
-            String xml = XML_COMMENT
-                    .matcher(Files.readString(path, StandardCharsets.UTF_8))
-                    .replaceAll("");
-            Matcher namespace = NAMESPACE.matcher(xml);
-            if (!namespace.find()) {
-                violations.add(file + ": namespace가 com.moewadeul.<module> 형식이 아니다");
-                continue;
-            }
-            String module = namespace.group(1);
+    private static List<Element> children(Element parent, String tag) {
+        return children(parent, Set.of(tag));
+    }
 
-            Set<String> writes = new HashSet<>();
-            collect(INSERT.matcher(xml), writes);
-            collect(DELETE_FROM.matcher(xml), writes);
-            Matcher update = UPDATE.matcher(xml);
-            while (update.find()) {
-                if (update.group(1) == null) {
-                    writes.add(update.group(2).toLowerCase());
-                }
-            }
-
-            Set<String> reads = new HashSet<>();
-            collect(READ.matcher(xml), reads);
-            collect(TABLE_PROPERTY.matcher(xml), reads);
-
-            for (String table : writes) {
-                String owner = TABLE_OWNERS.get(table);
-                if (owner == null) {
-                    violations.add(file + ": 알 수 없는 테이블 -> " + table);
-                } else if (!owner.equals(module) && !owner.equals(COMMON)) {
-                    violations.add(file + ": " + module + " -> " + table + " (쓰기는 소유 모듈만 가능, 소유: " + owner + ")");
-                }
-            }
-            for (String table : reads) {
-                String owner = TABLE_OWNERS.get(table);
-                if (owner == null) {
-                    violations.add(file + ": 알 수 없는 테이블 -> " + table);
-                } else if (!owner.equals(module) && !owner.equals(COMMON)) {
-                    if (CROSS_MODULE_READS.getOrDefault(module, Set.of()).contains(table)) {
-                        usedCrossReads.add(module + " -> " + table);
-                    } else {
-                        violations.add(file + ": " + module + " -> " + table + " (소유: " + owner + ")");
-                    }
-                }
+    private static List<Element> children(Element parent, Set<String> tags) {
+        List<Element> elements = new ArrayList<>();
+        NodeList nodes = parent.getChildNodes();
+        for (int i = 0; i < nodes.getLength(); i++) {
+            if (nodes.item(i) instanceof Element element && tags.contains(element.getTagName())) {
+                elements.add(element);
             }
         }
-
-        CROSS_MODULE_READS.forEach((module, tables) -> tables.forEach(table -> {
-            if (!usedCrossReads.contains(module + " -> " + table)) {
-                violations.add("CROSS_MODULE_READS: " + module + " -> " + table + " 을 읽는 매퍼가 없다, 항목을 지운다");
-            }
-        }));
-
-        assertThat(violations).as("매퍼 테이블 접근 위반").isEmpty();
+        return elements;
     }
 
     private static void collect(Matcher matcher, Set<String> into) {

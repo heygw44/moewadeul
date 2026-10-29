@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.trip.infra.TripProbeMapper">
+    <insert id="insertIgnore">
+        INSERT IGNORE INTO basecamp (id) VALUES (#{id})
+    </insert>
+    <insert id="replace">
+        REPLACE INTO program (id) VALUES (#{id})
+    </insert>
+    <insert id="insertOwn">
+        INSERT INTO solo_trip (id) VALUES (#{id})
+        ON DUPLICATE KEY UPDATE id = id
+    </insert>
+</mapper>
