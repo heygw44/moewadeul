@@ -1,7 +1,7 @@
 package com.moewadeul.memory.application.moderation;
 
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.moderation.RecentReport;
-import com.moewadeul.memory.application.MemoryPhoto;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -16,7 +16,7 @@ public record AdminMemorySummary(
         LocalDate visitedDate,
         int nights,
         String content,
-        List<MemoryPhoto> images,
+        List<ImageView> images,
         String status,
         long reportCount,
         Map<String, Long> reasonCounts,

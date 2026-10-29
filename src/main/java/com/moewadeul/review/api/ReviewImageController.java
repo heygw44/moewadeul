@@ -35,6 +35,6 @@ class ReviewImageController {
     ReviewImageUploadResponse issueUpload(
             @AuthenticationPrincipal LoginMember loginMember, @Valid @RequestBody ReviewImageUploadRequest request) {
         return ReviewImageUploadResponse.from(
-                reviewImageUploadService.issue(loginMember.memberId(), request.contentType(), request.sizeBytes()));
+                reviewImageUploadService.issue(loginMember.memberId(), request.toCommand()));
     }
 }

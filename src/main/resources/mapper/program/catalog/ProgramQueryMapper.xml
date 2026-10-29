@@ -7,9 +7,12 @@
             p.capacity - (SELECT COUNT(*)
                           FROM program_application a
                           WHERE a.program_id = p.id
-                            AND a.status IN ('PENDING_PAYMENT', 'CONFIRMED')
-                            AND (a.status = 'CONFIRMED' OR a.payment_due_at &gt; #{now})),
+                            AND <include refid="com.moewadeul.program.infra.ProgramSeatSql.seatHolder"/>),
             0)
+    </sql>
+
+    <sql id="upcoming">
+        #{now} &lt; p.apply_open_at
     </sql>
 
     <select id="selectList" resultType="com.moewadeul.program.infra.catalog.ProgramListRow">
@@ -29,7 +32,7 @@
         FROM program p
         WHERE p.status = 'SCHEDULED'
         <if test="phase == @com.moewadeul.program.domain.ProgramPhase@UPCOMING">
-            AND #{now} &lt; p.apply_open_at
+            AND <include refid="upcoming"/>
         </if>
         <if test="phase == @com.moewadeul.program.domain.ProgramPhase@OPEN">
             AND p.apply_open_at &lt;= #{now}
@@ -46,7 +49,7 @@
         SELECT MIN(p.apply_open_at)
         FROM program p
         WHERE p.status = 'SCHEDULED'
-          AND #{now} &lt; p.apply_open_at
+          AND <include refid="upcoming"/>
     </select>
 
     <select id="selectDetail" resultType="com.moewadeul.program.infra.catalog.ProgramDetailRow">

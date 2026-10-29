@@ -45,9 +45,7 @@
                (SELECT GROUP_CONCAT(t.tag) FROM companion_review_tag t WHERE t.review_id = r.id) AS tags,
                r.comment AS comment,
                r.created_at AS created_at,
-               EXISTS (SELECT 1 FROM companion_review rv
-                       WHERE rv.basecamp_id = r.basecamp_id AND rv.reviewer_id = r.reviewee_id
-                         AND rv.reviewee_id = r.reviewer_id) AS reverse_written
+               <include refid="com.moewadeul.trust.infra.companion.CompanionReviewSql.reverseWritten"/> AS reverse_written
         FROM companion_review r
         JOIN basecamp b ON b.id = r.basecamp_id
         JOIN member m ON m.id = r.reviewer_id
@@ -65,10 +63,7 @@
         JOIN basecamp b ON b.id = r.basecamp_id
         WHERE r.reviewee_id = #{memberId}
           AND r.hidden_at IS NULL
-          AND (b.completed_at &lt; #{revealCutoff}
-               OR EXISTS (SELECT 1 FROM companion_review rv
-                          WHERE rv.basecamp_id = r.basecamp_id AND rv.reviewer_id = r.reviewee_id
-                            AND rv.reviewee_id = r.reviewer_id))
+          AND <include refid="com.moewadeul.trust.infra.companion.CompanionReviewSql.revealed"/>
         ORDER BY r.created_at DESC, r.id DESC
         LIMIT #{limit} OFFSET #{offset}
     </select>

@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 public abstract class ImageUploadIssuer<T extends AttachableImage> {
 
@@ -45,7 +46,8 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
     protected abstract T newImage(
             long memberId, String objectKey, String contentType, long sizeBytes, Instant now, Thumbnail thumbnail);
 
-    protected ImageUpload issueUpload(long memberId, ImageUploadCommand command) {
+    @Transactional
+    public ImageUpload issue(long memberId, ImageUploadCommand command) {
         InsideTransaction.require("회원 행을 잠근 채 세고 저장해야 발급 상한을 지킨다.");
         ImageMessages messages = kind.messages();
         String extension = AttachableImage.extensionOf(command.contentType())

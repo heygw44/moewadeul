@@ -1,5 +1,6 @@
 package com.moewadeul.outbox.infra;
 
+import com.moewadeul.common.retry.RetryPolicy;
 import java.time.Instant;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -23,9 +24,7 @@ public interface OutboxEventMapper {
             @Param("id") long id,
             @Param("error") String error,
             @Param("transientFailure") boolean transientFailure,
-            @Param("maxAttempts") int maxAttempts,
-            @Param("retryDelayMillis") long retryDelayMillis,
-            @Param("retryMaxDelayMillis") long retryMaxDelayMillis,
+            @Param("retry") RetryPolicy retry,
             @Param("now") Instant now);
 
     OutboxBacklogRow selectBacklog();

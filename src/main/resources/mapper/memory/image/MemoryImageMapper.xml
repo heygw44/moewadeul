@@ -11,12 +11,11 @@
     </select>
 
     <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
-        SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
-        FROM memory_image
-        WHERE memory_id IS NULL
-          AND created_at &lt; #{createdBefore}
-        ORDER BY id
-        LIMIT #{limit}
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedBefore">
+            <property name="table" value="memory_image"/>
+            <property name="parentColumn" value="memory_id"/>
+            <property name="thumbnailColumn" value="thumbnail_object_key"/>
+        </include>
     </select>
 
     <select id="selectUnattachedByMember" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
@@ -30,25 +29,20 @@
     </select>
 
     <delete id="deleteIfUnattached">
-        DELETE FROM memory_image
-        WHERE id = #{imageId}
-          AND memory_id IS NULL
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.deleteIfUnattached">
+            <property name="table" value="memory_image"/>
+            <property name="parentColumn" value="memory_id"/>
+        </include>
     </delete>
 
     <select id="lockMember" resultType="long">
-        SELECT id
-        FROM member
-        WHERE id = #{memberId}
-        FOR UPDATE
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.lockMember"/>
     </select>
 
     <select id="selectUnattachedCreatedAtsAfter" resultType="java.time.Instant">
-        SELECT created_at
-        FROM memory_image
-        WHERE member_id = #{memberId}
-          AND memory_id IS NULL
-          AND created_at &gt; #{createdAfter}
-        ORDER BY created_at
-        LIMIT #{limit}
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedAtsAfter">
+            <property name="table" value="memory_image"/>
+            <property name="parentColumn" value="memory_id"/>
+        </include>
     </select>
 </mapper>

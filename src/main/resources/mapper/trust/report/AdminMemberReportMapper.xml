@@ -2,6 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.trust.infra.report.AdminMemberReportMapper">
 
+    <sql id="typePriority">
+        CASE r.type
+        <foreach collection="@com.moewadeul.trust.domain.report.ReportType@values()" item="type">
+            WHEN '${type.name()}' THEN ${type.priority()}
+        </foreach>
+        END
+    </sql>
+
     <select id="selectList" resultType="com.moewadeul.trust.infra.report.AdminMemberReportRow">
         SELECT r.id AS report_id,
                r.kind AS kind,
@@ -25,7 +33,7 @@
                 AND r.urgent = #{urgent}
             </if>
         </where>
-        ORDER BY r.urgent DESC, (r.type = 'MONEY_REQUEST') DESC, r.created_at ASC, r.id ASC
+        ORDER BY <include refid="typePriority"/> DESC, r.created_at ASC, r.id ASC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 

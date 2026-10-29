@@ -1,5 +1,6 @@
 package com.moewadeul.review.application;
 
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.review.infra.SpotReviewMapper;
 import com.moewadeul.review.infra.SpotReviewRow;
@@ -24,7 +25,7 @@ public class SpotReviewQueryService {
         List<SpotReviewRow> rows =
                 spotReviewMapper.selectBySpot(spotId, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
         PageSlice<SpotReviewRow> slice = PageSlice.of(rows, page, size);
-        Map<Long, List<SpotReviewImage>> images = reviewImageReader.readByReviewIds(
+        Map<Long, List<ImageView>> images = reviewImageReader.readByReviewIds(
                 slice.content().stream().map(SpotReviewRow::reviewId).toList());
         return slice.map(row -> SpotReviewItem.from(row, images.getOrDefault(row.reviewId(), List.of())));
     }
