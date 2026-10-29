@@ -13,7 +13,6 @@ import { Checkbox } from '../../components/Checkbox';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { EmptyState } from '../../components/EmptyState';
-import { Icon } from '../../components/icons';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { SelectField } from '../../components/SelectField';
@@ -21,6 +20,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { PanelBackBar } from '../../components/PanelBackBar';
 import { addDaysToLocalDate, todayKst } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -162,16 +162,7 @@ export function BasecampOpenPanel({ spotId, onBack }: BasecampOpenPanelProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
-        <button
-          type="button"
-          aria-label="장소로 돌아가기"
-          onClick={onBack}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
-        >
-          <Icon name="chevronLeft" size={24} />
-        </button>
-      </div>
+      <PanelBackBar ariaLabel="장소로 돌아가기" onBack={onBack} />
       <div aria-busy={body === null} className="px-4 py-4">
         {body}
       </div>

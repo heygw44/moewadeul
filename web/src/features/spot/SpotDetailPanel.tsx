@@ -33,6 +33,7 @@ import { FACILITY_LABELS, SIGNAL_LEVEL_LABELS, SPOT_TYPE_META, sourceLabel } fro
 import { useSpotWeather } from './useSpotWeather';
 import type { SpotWeatherState } from './useSpotWeather';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
+import { PanelBackBar } from '../../components/PanelBackBar';
 
 type SpotDetailPanelProps = {
   spotId: number;
@@ -107,16 +108,7 @@ export function SpotDetailPanel({ spotId, onBack, onLoaded, onBakjiDeleted }: Sp
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex min-h-11 items-center gap-1 rounded-control pr-3 pl-1 text-sm font-semibold text-ink hover:bg-fill"
-        >
-          <Icon name="chevronLeft" size={22} />
-          목록
-        </button>
-      </div>
+      <PanelBackBar label="목록" onBack={onBack} />
       <div aria-busy={current === null} className="px-4 pt-2 pb-8 lg:px-6">
         {body}
       </div>

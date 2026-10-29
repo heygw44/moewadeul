@@ -7,10 +7,10 @@ import type { BakjiDetail, BakjiSubmissionResponse, BakjiUpdateRequest, SpotDeta
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
-import { Icon } from '../../components/icons';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { PanelBackBar } from '../../components/PanelBackBar';
 import { roundCoordinate } from '../../lib/geo';
 import type { LatLng } from '../../map/types';
 import { withNext } from '../member/nextPath';
@@ -70,16 +70,7 @@ export function BakjiEditPanel({ spotId, draft, onLoaded, onCancel, onSubmitted 
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
-        <button
-          type="button"
-          aria-label="장소 상세로 돌아가기"
-          onClick={onCancel}
-          className="flex size-11 items-center justify-center rounded-control text-ink hover:bg-fill"
-        >
-          <Icon name="chevronLeft" size={24} />
-        </button>
-      </div>
+      <PanelBackBar ariaLabel="장소 상세로 돌아가기" onBack={onCancel} />
       <div className="px-4 py-4">{body}</div>
     </div>
   );
