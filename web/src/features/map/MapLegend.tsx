@@ -1,9 +1,9 @@
 import { useId, useState } from 'react';
 import { Icon } from '../../components/icons';
 import { readStored, writeStored } from '../../lib/storage';
+import { DESKTOP_QUERY } from './useIsDesktop';
 
 const OPEN_KEY = 'moewadeul.mapLegendOpen';
-const DESKTOP_QUERY = '(min-width: 64rem)';
 const LEGEND_ITEMS: ReadonlyArray<{ key: string; label: string; swatch: string }> = [
   { key: 'public', label: '야영장·휴양림', swatch: 'bg-brand' },
   { key: 'bakji', label: '박지', swatch: 'bg-bakji' },

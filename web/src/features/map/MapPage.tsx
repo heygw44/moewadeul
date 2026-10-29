@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import type { AiInterpretResponse, BasecampDetail, NearbySpot, SpotDetail } from '../../api/types';
@@ -13,19 +13,15 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Sheet } from '../../components/Sheet';
-import { SHEET_SNAP_DVH, sheetTopFromBottom } from '../../components/sheetSnap';
+import { sheetTopFromBottom } from '../../components/sheetSnap';
 import type { SheetSnap } from '../../components/sheetSnap';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
-import { createMapView } from '../../map/KakaoMap';
-import { MapLoadError } from '../../map/kakaoLoader';
-import type { MapLoadErrorReason } from '../../map/kakaoLoader';
-import { searchRegions } from '../../map/regionSearch';
 import type { RegionCandidate } from '../../map/regionSearch';
 import type { RegionLabel } from '../../map/regionLabel';
 import { radiusBounds } from '../../map/radiusBounds';
-import type { LatLng, MapView, SpotMarkerData } from '../../map/types';
+import type { LatLng, SpotMarkerData } from '../../map/types';
 import { BasecampDetailPanel } from '../basecamp/BasecampDetailPanel';
 import { BasecampFilterDialog } from '../basecamp/BasecampFilterDialog';
 import { BasecampListPanel } from '../basecamp/BasecampListPanel';
@@ -51,7 +47,14 @@ import { NO_SPOT_FILTERS, filtersFromInterpretation, spotFilterChips } from '../
 import type { SpotFilters } from '../spot/spotFilters';
 import { SpotListRow } from '../spot/SpotListRow';
 import { SpotPreviewBoard } from '../spot/SpotPreviewBoard';
+import { useIsDesktop } from './useIsDesktop';
+import { useMapContextMenu } from './useMapContextMenu';
 import { useMapMoving } from './useMapMoving';
+import { useMapView } from './useMapView';
+import { usePlacementDraft } from './usePlacementDraft';
+import { useRegionQueryLink } from './useRegionQueryLink';
+import { useSearchPin } from './useSearchPin';
+import { useSpotFocus } from './useSpotFocus';
 import { useRegionLabelInView } from './useRegionLabelInView';
 import { useSpotsInView } from '../spot/useSpotsInView';
 import type { SpotsInView } from '../spot/useSpotsInView';
@@ -59,36 +62,6 @@ import { useSpotsNearby } from '../spot/useSpotsNearby';
 import { readMapScreen, rememberMapScreen } from './mapScreenMemory';
 import type { RadiusSearch } from './mapScreenMemory';
 import type { SpotsNearby } from '../spot/useSpotsNearby';
-
-function visibleMapHeight(host: HTMLElement | null): number | undefined {
-  if (!host || window.matchMedia(DESKTOP_QUERY).matches) return undefined;
-  const sheet = host.closest('[data-map-root]')?.querySelector('[data-sheet]');
-  if (!sheet) return undefined;
-  return sheet.getBoundingClientRect().top - host.getBoundingClientRect().top;
-}
-
-const MIN_OPEN_SPAN_PX = 48;
-
-function openMapSpan(
-  host: HTMLElement,
-  controls: HTMLElement | null,
-  snap: SheetSnap,
-): { top: number; bottom: number } {
-  const rect = host.getBoundingClientRect();
-  if (window.matchMedia(DESKTOP_QUERY).matches) return { top: 0, bottom: rect.height };
-  const sheetTop = window.innerHeight * (1 - SHEET_SNAP_DVH[snap] / 100);
-  const bottom = Math.min(rect.height, sheetTop - rect.top);
-  const top = controls ? Math.max(0, controls.getBoundingClientRect().bottom - rect.top) : 0;
-  if (bottom - top >= MIN_OPEN_SPAN_PX) return { top, bottom };
-  return bottom >= MIN_OPEN_SPAN_PX ? { top: 0, bottom } : { top: 0, bottom: rect.height };
-}
-
-function centerPlacing(map: MapView, position: LatLng, level: number, mapHeight: number, targetY: number): LatLng {
-  if (mapHeight <= 0) return position;
-  const { sw, ne } = map.getBounds();
-  const latPerPx = ((ne.lat - sw.lat) / mapHeight) * 2 ** (level - map.getLevel());
-  return { lat: position.lat - (mapHeight / 2 - targetY) * latPerPx, lng: position.lng };
-}
 
 function selectedSpotMarker(detail: SpotDetail): SpotMarkerData {
   return {
@@ -114,19 +87,7 @@ function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData | null {
   };
 }
 
-type MapFailure = { reason: MapLoadErrorReason; message: string };
-
-type ContextMenu = { position: LatLng; host: HTMLElement };
-
-const INITIAL_VIEW = { center: { lat: 36.35, lng: 127.85 }, level: 12 };
-
-const SPOT_FOCUS_LEVEL = 7;
-
-const DRAFT_FOCUS_LEVEL = 5;
-
 const CLUSTER_ZOOM_STEP = 2;
-
-const DESKTOP_QUERY = '(min-width: 64rem)';
 
 const MAP_BUTTON_CLASS =
   'pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-[0.875rem] bg-surface px-3.5 text-[0.9375rem] font-semibold text-ink shadow-raise hover:bg-fill';
@@ -139,17 +100,6 @@ const TYPE_SEGMENTS: ReadonlyArray<{ value: SpotType | null; label: string }> = 
   { value: 'FOREST', label: '휴양림' },
   { value: 'BAKJI', label: '박지' },
 ];
-
-function useIsDesktop(): boolean {
-  const [desktop, setDesktop] = useState(() => window.matchMedia(DESKTOP_QUERY).matches);
-  useEffect(() => {
-    const query = window.matchMedia(DESKTOP_QUERY);
-    const onChange = () => setDesktop(query.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
-  return desktop;
-}
 
 type MapPageProps = {
   spotId?: number;
@@ -177,20 +127,12 @@ export function MapPage({
   const opening = mode === 'basecampOpen';
   const contentOpen = spotId !== undefined || placing || basecampId !== undefined || opening;
   const session = useSession();
-  const hostRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<MapView | null>(null);
-  const [mapFailure, setMapFailure] = useState<MapFailure | null>(null);
-  const [mapAttempt, setMapAttempt] = useState(0);
+  const { hostRef, map, failure: mapFailure, retry: retryMap } = useMapView();
   const [terrainOn, setTerrainOn] = useState(false);
   const [snap, setSnap] = useState<SheetSnap>(contentOpen ? 'half' : 'peek');
   const [snapOpen, setSnapOpen] = useState(contentOpen);
-  const [draft, setDraft] = useState<LatLng | null>(null);
-  const [searchPin, setSearchPin] = useState<LatLng | null>(null);
-  const searchMoveLevelRef = useRef<number | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const { moveToRegion: pinRegion, clearSearchPin } = useSearchPin(map);
   const [pickSpots, setPickSpots] = useState<NearbySpot[] | null>(null);
-  const [appliedDraftKey, setAppliedDraftKey] = useState<string | null>(null);
   const [filters, setFilters] = useState<BasecampFilters>(() => readMapScreen().basecampFilters);
   const [spotFilters, setSpotFilters] = useState<SpotFilters>(() => readMapScreen().spotFilters);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -204,18 +146,12 @@ export function MapPage({
         : editing
           ? `edit:${editSpotId}`
           : null;
-  const [spotFocus, setSpotFocus] = useState<{ key: string; marker: SpotMarkerData } | null>(null);
-  if (spotFocus !== null && spotFocus.key !== focusKey) setSpotFocus(null);
-  const focusedSpot = spotFocus?.marker ?? null;
-  const focusOn = (key: string | null, marker: SpotMarkerData | null) => {
-    if (key !== null && marker !== null) {
-      setSpotFocus((previous) => (previous?.key === key ? previous : { key, marker }));
-    }
-  };
+  const { draft, setDraft, finishPlacing } = usePlacementDraft(map, placing, reporting ? initialDraft : undefined);
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
   const [previewId, setPreviewId] = useState<number | null>(null);
   const desktop = useIsDesktop();
   const browsing = mode === 'browse';
+  const { contextMenu, closeContextMenu } = useMapContextMenu(map, browsing || basecampMode, hostRef, focusKey);
   const previewEnabled = browsing && desktop && spotId === undefined;
   if (!previewEnabled && previewId !== null) setPreviewId(null);
   if (!browsing && (radiusSearch !== null || aiSummary !== null)) {
@@ -258,14 +194,11 @@ export function MapPage({
   const mapButtonsRef = useRef<HTMLDivElement>(null);
   const keepOverlay = useCallback(() => overlayRef.current?.contains(document.activeElement) ?? false, []);
   const mapMoving = useMapMoving(map, keepOverlay);
-
-  if (!placing && submitted) setSubmitted(false);
-
-  const initialDraftKey = reporting && initialDraft ? `${initialDraft.lat},${initialDraft.lng}` : null;
-  if (initialDraftKey !== appliedDraftKey) {
-    setAppliedDraftKey(initialDraftKey);
-    if (initialDraft && initialDraftKey !== null) setDraft(initialDraft);
-  }
+  const { focusedSpot, focusSpot } = useSpotFocus(map, focusKey, editing, {
+    hostRef,
+    controlsRef: mapButtonsRef,
+    snap,
+  });
 
   if (snapOpen !== contentOpen) {
     setSnapOpen(contentOpen);
@@ -273,70 +206,8 @@ export function MapPage({
   }
 
   useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    const element = document.createElement('div');
-    element.className = 'absolute inset-0';
-    host.appendChild(element);
-
-    let cancelled = false;
-    let created: MapView | null = null;
-    createMapView(element, readMapScreen().view ?? INITIAL_VIEW).then(
-      (view) => {
-        if (cancelled) {
-          view.destroy();
-          return;
-        }
-        created = view;
-        setMap(view);
-      },
-      (error: unknown) => {
-        if (cancelled) return;
-        const failure = error instanceof MapLoadError ? error : new MapLoadError('LOAD_FAILED');
-        setMapFailure({ reason: failure.reason, message: failure.message });
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      created?.destroy();
-      element.remove();
-      setMap(null);
-    };
-  }, [mapAttempt]);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!map || !host) return;
-    const observer = new ResizeObserver(() => map.relayout());
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, [map]);
-
-  useEffect(() => {
     rememberMapScreen({ spotFilters, basecampFilters: filters, radiusSearch, aiSummary });
   }, [spotFilters, filters, radiusSearch, aiSummary]);
-
-  useEffect(() => {
-    if (!map) return;
-    return map.onIdle(() => rememberMapScreen({ view: { center: map.getCenter(), level: map.getLevel() } }));
-  }, [map]);
-
-  const moveToSpot = useEffectEvent((position: LatLng) => {
-    const host = hostRef.current;
-    if (!map || !host) return;
-    map.relayout();
-    const level = Math.min(map.getLevel(), SPOT_FOCUS_LEVEL);
-    const { top, bottom } = openMapSpan(host, mapButtonsRef.current, snap);
-    map.panTo(centerPlacing(map, position, level, host.getBoundingClientRect().height, (top + bottom) / 2), level);
-  });
-  useEffect(() => {
-    if (map && focusedSpot) moveToSpot(focusedSpot.position);
-  }, [map, focusedSpot]);
-
-  useEffect(() => {
-    map?.showSelectedSpot(editing ? null : focusedSpot);
-  }, [map, focusedSpot, editing]);
 
   useEffect(() => {
     if (!map) return;
@@ -363,72 +234,9 @@ export function MapPage({
   }, [map, placing, basecampMode, basecampId, previewEnabled]);
 
   useEffect(() => {
-    if (!map || !placing || submitted) return;
-    const offClick = map.onMapClick(setDraft);
-    return () => {
-      offClick();
-      map.showDraft(null);
-      setDraft(null);
-    };
-  }, [map, placing, submitted]);
-
-  useEffect(() => {
-    map?.showDraft(draft);
-  }, [map, draft]);
-
-  const initialLat = reporting ? initialDraft?.lat : undefined;
-  const initialLng = reporting ? initialDraft?.lng : undefined;
-  useEffect(() => {
-    if (!map || initialLat === undefined || initialLng === undefined) return;
-    const { sw, ne } = map.getBounds();
-    const inside = initialLat >= sw.lat && initialLat <= ne.lat && initialLng >= sw.lng && initialLng <= ne.lng;
-    if (!inside) map.setCenter({ lat: initialLat, lng: initialLng }, Math.min(map.getLevel(), DRAFT_FOCUS_LEVEL));
-  }, [map, initialLat, initialLng]);
-
-  const contextMenuEnabled = browsing || basecampMode;
-  const closeContextMenu = useCallback(() => {
-    map?.showMenu(null);
-    setContextMenu(null);
-  }, [map]);
-
-  useEffect(() => {
-    if (!map || !contextMenuEnabled) return;
-    const offContextMenu = map.onContextMenu((position) => {
-      const host = map.showMenu(position, visibleMapHeight(hostRef.current));
-      setContextMenu(host ? { position, host } : null);
-    });
-    const offMoveStart = map.onMoveStart(closeContextMenu);
-    const offClick = map.onMapClick(closeContextMenu);
-    return () => {
-      offContextMenu();
-      offMoveStart();
-      offClick();
-      closeContextMenu();
-    };
-  }, [map, contextMenuEnabled, closeContextMenu, spotId, basecampId]);
-
-  useEffect(() => {
     if (!map || !previewEnabled) return;
     return map.onMapClick(() => setPreviewId(null));
   }, [map, previewEnabled]);
-
-  useEffect(() => {
-    map?.showSearchPin(searchPin);
-  }, [map, searchPin]);
-
-  useEffect(() => {
-    if (!map) return;
-    const offIdle = map.onIdle(() => {
-      if (searchMoveLevelRef.current === map.getLevel()) searchMoveLevelRef.current = null;
-    });
-    const offMoveStart = map.onMoveStart(() => {
-      if (searchMoveLevelRef.current === null) setSearchPin(null);
-    });
-    return () => {
-      offIdle();
-      offMoveStart();
-    };
-  }, [map]);
 
   const basecampSelectedId = basecampId !== undefined ? (focusedSpot?.id ?? null) : spotFilterId;
   useEffect(() => {
@@ -459,10 +267,7 @@ export function MapPage({
 
   function moveToRegion(candidate: RegionCandidate) {
     if (!map) return;
-    searchMoveLevelRef.current = candidate.level;
-    map.setCenter(candidate.position, candidate.level);
-    if (map.getLevel() === candidate.level) searchMoveLevelRef.current = null;
-    setSearchPin(candidate.pinned ? candidate.position : null);
+    pinRegion(candidate);
     if (basecampId !== undefined) navigate('/basecamps');
     else if (mode === 'browse' && spotId !== undefined) navigate('/map');
   }
@@ -473,28 +278,13 @@ export function MapPage({
     moveToRegion(candidate);
   }
 
-  const selectSearchedRegion = useEffectEvent((candidate: RegionCandidate) => selectRegion(candidate));
-  useEffect(() => {
-    if (!map || mode !== 'browse') return;
-    const query = new URLSearchParams(window.location.search).get('q')?.trim();
-    if (!query) return;
-    navigate('/map', { replace: true });
-    let cancelled = false;
-    searchRegions(query)
-      .then(([first]) => {
-        if (!cancelled && first) selectSearchedRegion(first);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [map, mode]);
+  useRegionQueryLink(map, mode === 'browse', selectRegion);
 
   function applyAiResult(result: AiInterpretResponse, candidate: RegionCandidate | null) {
     if (!map) return;
     const { filters: nextFilters, droppedSettings } = filtersFromInterpretation(result);
     setSpotFilters(nextFilters);
-    setSearchPin(null);
+    clearSearchPin();
     if (result.radiusKm !== undefined) {
       const center = candidate?.position ?? map.getCenter();
       setRadiusSearch({ center, radiusKm: result.radiusKm, label: candidate?.name ?? '지도 가운데' });
@@ -521,7 +311,7 @@ export function MapPage({
       <>
         <div className={`flex w-full items-start gap-2 ${inPanel ? '' : 'pointer-events-none'}`}>
           <MapSearchBar
-            onSearch={() => setSearchPin(null)}
+            onSearch={clearSearchPin}
             onSelect={selectRegion}
             mapMoving={mapMoving.moving}
             inPanel={inPanel}
@@ -550,11 +340,6 @@ export function MapPage({
         {aiSummary && <AiInterpretSummary summary={aiSummary} className={inPanel ? 'w-full' : 'w-fit max-w-full'} />}
       </>
     );
-  }
-
-  function retryMap() {
-    setMapFailure(null);
-    setMapAttempt((value) => value + 1);
   }
 
   const hideMapOverlays = snap === 'full' || contextMenu !== null;
@@ -586,7 +371,7 @@ export function MapPage({
               key={basecampId}
               basecampId={basecampId}
               onBack={() => navigate('/basecamps')}
-              onLoaded={(detail) => focusOn(focusKey, basecampSpotMarker(detail))}
+              onLoaded={(detail) => focusSpot(basecampSpotMarker(detail))}
             />
           ) : basecampMode ? (
             <BasecampListPanel
@@ -602,8 +387,7 @@ export function MapPage({
               nextBasecamp={nextAfterReport === 'basecamp'}
               onCancel={() => navigate('/map')}
               onSubmitted={() => {
-                setSubmitted(true);
-                setDraft(null);
+                finishPlacing();
                 area.retry();
               }}
             />
@@ -615,11 +399,10 @@ export function MapPage({
               onCancel={() => navigate(`/spots/${editSpotId}`)}
               onLoaded={(detail) => {
                 setDraft({ lat: detail.lat, lng: detail.lng });
-                focusOn(focusKey, selectedSpotMarker(detail));
+                focusSpot(selectedSpotMarker(detail));
               }}
               onSubmitted={() => {
-                setSubmitted(true);
-                setDraft(null);
+                finishPlacing();
                 area.retry();
               }}
             />
@@ -638,7 +421,7 @@ export function MapPage({
               key={spotId}
               spotId={spotId}
               onBack={() => navigate('/map')}
-              onLoaded={(detail) => focusOn(focusKey, selectedSpotMarker(detail))}
+              onLoaded={(detail) => focusSpot(selectedSpotMarker(detail))}
               onBakjiDeleted={area.retry}
             />
           )}
