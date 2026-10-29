@@ -1,17 +1,19 @@
 package com.moewadeul.spot.application.publicspot;
 
+import com.moewadeul.spot.domain.SpotType;
+
 public enum PublicSpotSource {
-    GOCAMPING("CAMPSITE"),
-    FOREST("FOREST"),
-    FOREST_STANDARD("FOREST");
+    GOCAMPING(SpotType.CAMPSITE),
+    FOREST(SpotType.FOREST),
+    FOREST_STANDARD(SpotType.FOREST);
 
-    private final String spotType;
+    private final SpotType spotType;
 
-    PublicSpotSource(String spotType) {
+    PublicSpotSource(SpotType spotType) {
         this.spotType = spotType;
     }
 
-    String spotType() {
+    SpotType spotType() {
         return spotType;
     }
 }

@@ -45,6 +45,7 @@ import com.moewadeul.spot.application.bakji.BakjiProblemReportCommand;
 import com.moewadeul.spot.application.moderation.AdminSpotQueryService;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.SpotRepository;
+import com.moewadeul.spot.domain.SpotStatus;
 import com.moewadeul.spot.domain.bakji.BakjiConfirmationRepository;
 import com.moewadeul.spot.domain.bakji.BakjiReportRepository;
 import com.moewadeul.spot.infra.moderation.AdminSpotMapper;
@@ -86,8 +87,8 @@ class EnumInputServicesTest {
         service.list(null, 0, 20);
         service.list("HIDDEN", 0, 20);
 
-        verify(mapper).selectPage("PENDING_REVIEW", 0L, 21);
-        verify(mapper).selectPage("HIDDEN", 0L, 21);
+        verify(mapper).selectPage(SpotStatus.PENDING_REVIEW, 0L, 21);
+        verify(mapper).selectPage(SpotStatus.HIDDEN, 0L, 21);
     }
 
     @ParameterizedTest

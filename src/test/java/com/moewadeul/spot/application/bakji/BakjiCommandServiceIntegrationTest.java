@@ -16,6 +16,7 @@ import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.SpotParkWarning;
 import com.moewadeul.spot.application.detail.SpotDetailQueryService;
+import com.moewadeul.spot.application.park.ProtectedAreaSource;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -40,7 +41,7 @@ class BakjiCommandServiceIntegrationTest {
 
     private static final String WARNED_GUIDE =
             "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요.";
-    private static final String AREA_SOURCE = "KDPA";
+    private static final ProtectedAreaSource AREA_SOURCE = ProtectedAreaSource.KDPA;
     private static final LocalDate AREA_SOURCE_DATE = LocalDate.of(2026, 1, 1);
     private static final String NORMAL_GUIDE = "머문 자리에 흔적을 남기지 마세요. 쓰레기는 모두 가져가 주세요.";
     private static final String CHECK_NOTICE =
@@ -514,7 +515,7 @@ class BakjiCommandServiceIntegrationTest {
                         + " VALUES (?, 'NATIONAL_PARK', ?, ?,"
                         + " ST_GeomFromText(?, 4326, 'axis-order=long-lat'), NOW(6), NOW(6))",
                 name,
-                AREA_SOURCE,
+                AREA_SOURCE.name(),
                 AREA_SOURCE_DATE,
                 longLatWkt);
         return jdbc.queryForObject("SELECT id FROM protected_area WHERE name = ?", Long.class, name);

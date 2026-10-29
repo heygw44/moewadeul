@@ -104,15 +104,15 @@ class SpotClosureSqlParityIntegrationTest {
     }
 
     private Map<Long, ClosureCase> insertEveryCase() {
-        List<String> statuses = new ArrayList<>();
+        List<PublicSpotOperatingStatus> statuses = new ArrayList<>();
         statuses.add(null);
-        Arrays.stream(PublicSpotOperatingStatus.values()).map(Enum::name).forEach(statuses::add);
+        statuses.addAll(Arrays.asList(PublicSpotOperatingStatus.values()));
         List<LocalDate> dates = Arrays.asList(null, TODAY.minusDays(1), TODAY, TODAY.plusDays(1));
         Map<Long, ClosureCase> cases = new HashMap<>();
         for (SpotType type : SpotType.values()) {
             ClosureCase withoutDetail = new ClosureCase(type, false, null, null, null);
             cases.put(insertSpot(withoutDetail), withoutDetail);
-            for (String status : statuses) {
+            for (PublicSpotOperatingStatus status : statuses) {
                 for (LocalDate from : dates) {
                     for (LocalDate until : dates) {
                         ClosureCase closureCase = new ClosureCase(type, true, status, from, until);
@@ -141,7 +141,9 @@ class SpotClosureSqlParityIntegrationTest {
                             + " VALUES (?, 'GOCAMPING', ?, ?, ?, ?, NOW(6), NOW(6), NOW(6))",
                     spotId,
                     String.valueOf(spotId),
-                    closureCase.operatingStatus(),
+                    closureCase.operatingStatus() == null
+                            ? null
+                            : closureCase.operatingStatus().name(),
                     closureCase.closedFrom(),
                     closureCase.closedUntil());
         }
@@ -159,7 +161,11 @@ class SpotClosureSqlParityIntegrationTest {
     }
 
     private record ClosureCase(
-            SpotType type, boolean hasDetail, String operatingStatus, LocalDate closedFrom, LocalDate closedUntil) {
+            SpotType type,
+            boolean hasDetail,
+            PublicSpotOperatingStatus operatingStatus,
+            LocalDate closedFrom,
+            LocalDate closedUntil) {
 
         boolean closedOn(LocalDate date) {
             return SpotClosedNow.isClosedOn(type, operatingStatus, closedFrom, closedUntil, date);

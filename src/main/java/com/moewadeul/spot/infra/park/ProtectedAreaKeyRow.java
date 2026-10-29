@@ -1,3 +1,5 @@
 package com.moewadeul.spot.infra.park;
 
-public record ProtectedAreaKeyRow(long id, String areaType, String name) {}
+import com.moewadeul.spot.application.park.ProtectedAreaType;
+
+public record ProtectedAreaKeyRow(long id, ProtectedAreaType areaType, String name) {}

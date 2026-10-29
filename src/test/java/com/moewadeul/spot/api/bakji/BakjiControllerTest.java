@@ -25,6 +25,7 @@ import com.moewadeul.spot.application.bakji.BakjiProblemReportCommand;
 import com.moewadeul.spot.application.bakji.BakjiReportCommand;
 import com.moewadeul.spot.application.bakji.BakjiSubmission;
 import com.moewadeul.spot.application.bakji.BakjiUpdateCommand;
+import com.moewadeul.spot.application.park.ProtectedAreaSource;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import java.time.LocalDate;
 import java.util.List;
@@ -73,7 +74,8 @@ class BakjiControllerTest {
         when(bakjiCommandService.report(eq(MEMBER_ID), any()))
                 .thenReturn(new BakjiSubmission(
                         205L,
-                        new SpotParkWarning(true, "설악산국립공원", "KDPA", LocalDate.of(2026, 1, 1), "참고용 고지", "경고 문구"),
+                        new SpotParkWarning(
+                                true, "설악산국립공원", ProtectedAreaSource.KDPA, LocalDate.of(2026, 1, 1), "참고용 고지", "경고 문구"),
                         "경고 문구",
                         null,
                         List.of(new BakjiDuplicateCandidate(101L, "능선 끝 평지", 32))));

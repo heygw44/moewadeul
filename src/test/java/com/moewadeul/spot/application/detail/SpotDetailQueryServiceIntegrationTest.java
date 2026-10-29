@@ -18,8 +18,10 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.SpotParkWarning;
+import com.moewadeul.spot.application.park.ProtectedAreaSource;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
 import com.moewadeul.spot.domain.SpotType;
+import com.moewadeul.spot.domain.bakji.BakjiSignalLevel;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -85,7 +87,8 @@ class SpotDetailQueryServiceIntegrationTest {
         assertThat(detail.parkWarning().warned()).isTrue();
         assertThat(detail.publicDetail()).isNull();
         assertThat(detail.bakji())
-                .isEqualTo(new SpotBakjiDetail("바람이 덜한 안쪽 평지", true, false, "WEAK", 2, reporterId, "새벽능선", null));
+                .isEqualTo(new SpotBakjiDetail(
+                        "바람이 덜한 안쪽 평지", true, false, BakjiSignalLevel.WEAK, 2, reporterId, "새벽능선", null));
     }
 
     @Test
@@ -360,7 +363,7 @@ class SpotDetailQueryServiceIntegrationTest {
                 .isEqualTo(new SpotParkWarning(
                         true,
                         "설악산 국립공원",
-                        "KDPA",
+                        ProtectedAreaSource.KDPA,
                         LocalDate.parse("2026-01-01"),
                         "공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요.",
                         "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요."));

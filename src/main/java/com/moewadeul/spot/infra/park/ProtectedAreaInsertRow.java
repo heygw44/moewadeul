@@ -1,6 +1,12 @@
 package com.moewadeul.spot.infra.park;
 
+import com.moewadeul.spot.application.park.ProtectedAreaSource;
+import com.moewadeul.spot.application.park.ProtectedAreaType;
 import java.time.LocalDate;
 
 public record ProtectedAreaInsertRow(
-        String source, String areaType, String name, LocalDate sourceDate, String boundaryWkt) {}
+        ProtectedAreaSource source,
+        ProtectedAreaType areaType,
+        String name,
+        LocalDate sourceDate,
+        String boundaryWkt) {}
