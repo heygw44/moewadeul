@@ -6,13 +6,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.moewadeul.admin.application.audit.AuditLogQueryService;
+import com.moewadeul.admin.infra.audit.AdminAuditLogMapper;
 import com.moewadeul.common.audit.AdminAuditRecorder;
+import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.profile.AgeGroup;
 import com.moewadeul.common.profile.Gender;
-import com.moewadeul.common.web.PatchField;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.infra.moderation.AdminCommunityMapper;
@@ -54,6 +58,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import tools.jackson.databind.json.JsonMapper;
 
 class EnumInputServicesTest {
 
@@ -104,6 +109,32 @@ class EnumInputServicesTest {
         service.list(null, 0, 20);
 
         verify(mapper).selectMemories(MemoryStatus.PENDING_REVIEW, 0L, 21);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"UNKNOWN", "sanction", ""})
+    @DisplayName("[F-21] 감사 로그 조회는 모르는 targetType을 빈 페이지가 아니라 INVALID_INPUT으로 거절한다")
+    void auditLogsRejectUnknownTargetType(String targetType) {
+        AdminAuditLogMapper mapper = mock(AdminAuditLogMapper.class);
+        AuditLogQueryService service =
+                new AuditLogQueryService(mapper, JsonMapper.builder().build());
+
+        assertThatThrownBy(() -> service.findLogs(null, targetType, null, null, 0, 20))
+                .satisfies(e -> assertInvalidInput(
+                        e, "대상 종류는 " + EnumParser.names(AdminAuditTargetType.class) + " 중 하나여야 해요."));
+        verifyNoInteractions(mapper);
+    }
+
+    @Test
+    @DisplayName("[F-21] 감사 로그 조회는 targetType 이름을 enum으로 바꿔 매퍼에 넘긴다")
+    void auditLogsPassTargetTypeToMapper() {
+        AdminAuditLogMapper mapper = mock(AdminAuditLogMapper.class);
+        AuditLogQueryService service =
+                new AuditLogQueryService(mapper, JsonMapper.builder().build());
+
+        service.findLogs(null, "COMMUNITY_POST", null, null, 0, 20);
+
+        verify(mapper).selectLogs(null, AdminAuditTargetType.COMMUNITY_POST, null, null, 0L, 21);
     }
 
     @ParameterizedTest

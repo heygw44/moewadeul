@@ -3,7 +3,7 @@ package com.moewadeul.spot.application.bakji;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.EnumParser;
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.SpotParkWarning;
 import com.moewadeul.spot.application.SpotSearchBox;

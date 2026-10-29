@@ -1,6 +1,6 @@
 package com.moewadeul.program.application.catalog;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import java.time.Instant;
 import java.util.Objects;
 

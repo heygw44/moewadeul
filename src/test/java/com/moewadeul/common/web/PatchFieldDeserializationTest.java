@@ -3,6 +3,7 @@ package com.moewadeul.common.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.patch.PatchField;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import tools.jackson.core.JacksonException;
@@ -10,7 +11,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 class PatchFieldDeserializationTest {
 
-    private final JsonMapper mapper = JsonMapper.builder().build();
+    private final JsonMapper mapper =
+            JsonMapper.builder().addModule(new PatchFieldModule()).build();
 
     @Test
     @DisplayName("JSON에 필드가 없으면 요청에 없는 값(absent)으로 읽는다")

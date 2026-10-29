@@ -1,9 +1,9 @@
 package com.moewadeul.review.application;
 
-import com.moewadeul.common.image.AttachableImage.Thumbnail;
-import com.moewadeul.common.image.ImageUpload;
-import com.moewadeul.common.image.ImageUploadCommand;
-import com.moewadeul.common.image.ImageUploadIssuer;
+import com.moewadeul.common.image.application.ImageUpload;
+import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.image.application.ImageUploadIssuer;
+import com.moewadeul.common.image.domain.AttachableImage.Thumbnail;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.review.domain.ReviewImage;
 import com.moewadeul.review.domain.ReviewImageRepository;

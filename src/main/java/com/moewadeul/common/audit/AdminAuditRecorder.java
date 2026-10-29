@@ -16,7 +16,8 @@ public class AdminAuditRecorder {
     private final JsonMapper jsonMapper;
     private final Clock clock;
 
-    public void record(long adminId, AdminAuditAction action, String targetType, long targetId, Object detail) {
+    public void record(
+            long adminId, AdminAuditAction action, AdminAuditTargetType targetType, long targetId, Object detail) {
         InsideTransaction.require("감사 로그는 관리자 조치와 같은 트랜잭션에서 기록해야 한다.");
         String detailJson = detail == null ? null : toJson(detail);
         adminAuditLogRepository.save(

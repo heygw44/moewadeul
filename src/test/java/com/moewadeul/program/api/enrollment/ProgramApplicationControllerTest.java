@@ -11,12 +11,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import com.moewadeul.program.application.enrollment.ProgramApplicationCancelResult;
 import com.moewadeul.program.application.enrollment.ProgramPayResult;
 import com.moewadeul.program.application.enrollment.ProgramPaymentService;
@@ -61,7 +61,7 @@ class ProgramApplicationControllerTest {
     private ProgramPaymentService programPaymentService;
 
     @MockitoBean
-    private IdempotencyRecordJpaRepository idempotencyRecordRepository;
+    private IdempotencyRecordRepository idempotencyRecordRepository;
 
     @Test
     @DisplayName("[F-19] 인증 회원이 결제하면 200과 신청 ID, 상태, 결제 시각을 응답하고 로그인한 회원 ID로 서비스를 부른다")

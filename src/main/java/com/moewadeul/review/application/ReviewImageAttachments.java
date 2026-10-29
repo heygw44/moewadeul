@@ -1,6 +1,6 @@
 package com.moewadeul.review.application;
 
-import com.moewadeul.common.image.ImageAttachments;
+import com.moewadeul.common.image.application.ImageAttachments;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.review.domain.ReviewImage;
 import com.moewadeul.review.domain.ReviewImageRepository;

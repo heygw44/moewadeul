@@ -1,6 +1,6 @@
 package com.moewadeul.community.infra.image;
 
-import com.moewadeul.common.image.AttachableImageMapper;
+import com.moewadeul.common.image.infra.AttachableImageMapper;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;

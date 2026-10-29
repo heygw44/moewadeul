@@ -39,7 +39,7 @@ public class SpotModerationService {
         }
 
         @Override
-        public String auditTargetType() {
+        public AdminAuditTargetType auditTargetType() {
             return AdminAuditTargetType.SPOT;
         }
 

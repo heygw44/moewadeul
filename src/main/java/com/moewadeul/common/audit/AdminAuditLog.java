@@ -31,8 +31,9 @@ public class AdminAuditLog {
     @Enumerated(EnumType.STRING)
     private AdminAuditAction action;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "target_type")
-    private String targetType;
+    private AdminAuditTargetType targetType;
 
     @Column(name = "target_id")
     private long targetId;
@@ -45,7 +46,12 @@ public class AdminAuditLog {
     private Instant createdAt;
 
     private AdminAuditLog(
-            long adminId, AdminAuditAction action, String targetType, long targetId, String detail, Instant now) {
+            long adminId,
+            AdminAuditAction action,
+            AdminAuditTargetType targetType,
+            long targetId,
+            String detail,
+            Instant now) {
         this.adminId = adminId;
         this.action = action;
         this.targetType = targetType;
@@ -55,12 +61,14 @@ public class AdminAuditLog {
     }
 
     public static AdminAuditLog record(
-            long adminId, AdminAuditAction action, String targetType, long targetId, String detailJson, Instant now) {
-        if (action == null || now == null) {
-            throw new IllegalArgumentException("감사 로그의 조치 종류나 기록 시각이 null입니다.");
-        }
-        if (targetType == null || targetType.isBlank()) {
-            throw new IllegalArgumentException("감사 로그의 대상 종류가 비어 있습니다.");
+            long adminId,
+            AdminAuditAction action,
+            AdminAuditTargetType targetType,
+            long targetId,
+            String detailJson,
+            Instant now) {
+        if (action == null || targetType == null || now == null) {
+            throw new IllegalArgumentException("감사 로그의 조치 종류, 대상 종류, 기록 시각이 null입니다.");
         }
         return new AdminAuditLog(adminId, action, targetType, targetId, detailJson, now);
     }

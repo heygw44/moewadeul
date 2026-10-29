@@ -16,14 +16,12 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.error.InvalidFieldException;
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
 import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
-import com.moewadeul.common.web.PatchField;
 import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostImage;
 import com.moewadeul.community.application.post.CommunityPostItem;
@@ -32,6 +30,8 @@ import com.moewadeul.community.application.post.CommunityPostQueryService;
 import com.moewadeul.community.application.post.CommunityPostReviseCommand;
 import com.moewadeul.community.application.post.CommunityPostWriteCommand;
 import com.moewadeul.community.application.post.CommunitySearchType;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -99,7 +99,7 @@ class CommunityPostControllerTest {
     private CommunityPostQueryService communityPostQueryService;
 
     @MockitoBean
-    private IdempotencyRecordJpaRepository idempotencyRecordRepository;
+    private IdempotencyRecordRepository idempotencyRecordRepository;
 
     @Test
     @DisplayName(

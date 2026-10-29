@@ -1,6 +1,6 @@
 package com.moewadeul.memory.api.image;
 
-import com.moewadeul.common.image.ImageUploadCommand;
+import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.memory.domain.image.MemoryImage;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
