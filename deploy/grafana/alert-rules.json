@@ -493,6 +493,55 @@
       ]
     },
     {
+      "uid": "moewadeul-hikari-pending",
+      "title": "DB 커넥션 대기 2분 이상 지속",
+      "condition": "C",
+      "for": "2m",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "커넥션 풀을 기다리는 요청이 2분 넘게 이어졌다. 한 행의 잠금이 길어져 쓰기 요청이 커넥션을 쥐고 있을 수 있다(#662). 대시보드의 커넥션 풀과 InnoDB 행 잠금 대기를 본다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "sum(hikaricp_connections_pending{job=\"moewadeul-app\"})",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "uid": "moewadeul-backup-stale",
       "title": "DB 백업 26시간 넘게 없음",
       "condition": "C",
