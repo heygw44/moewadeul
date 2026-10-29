@@ -16,6 +16,7 @@ import { ListPanel } from '../../components/HubLayout';
 import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { usePagedList } from '../../components/usePagedList';
 import { formatRelativeKst } from '../../lib/datetime';
 import { safeInternalPath, withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -42,64 +43,22 @@ export function NotificationsPage() {
   return <NotificationList />;
 }
 
-type ListState = {
-  items: NotificationItem[];
-  page: number;
-  hasNext: boolean;
-  error: { cause: unknown } | null;
-};
+function fetchPage(_filter: string, page: number, signal?: AbortSignal) {
+  return fetchNotifications(page, signal);
+}
 
 function NotificationList() {
-  const [state, setState] = useState<ListState | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const { current: state, loadingMore, loadMore, updateItems, retry } = usePagedList(true, '', fetchPage);
   const [markingAll, setMarkingAll] = useState(false);
   const [actionError, setActionError] = useState<{ cause: unknown } | null>(null);
   const showSkeleton = useDelayedFlag(state === null);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchNotifications(0, controller.signal).then(
-      (page) => {
-        if (!controller.signal.aborted) {
-          setState({ items: page.content, page: page.page, hasNext: page.hasNext, error: null });
-        }
-      },
-      (caught: unknown) => {
-        if (!controller.signal.aborted) setState({ items: [], page: 0, hasNext: false, error: { cause: caught } });
-      },
-    );
-    return () => controller.abort();
-  }, [attempt]);
-
-  async function loadMore() {
-    if (!state || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const next = await fetchNotifications(state.page + 1);
-      setState((previous) =>
-        previous
-          ? { items: [...previous.items, ...next.content], page: next.page, hasNext: next.hasNext, error: null }
-          : previous,
-      );
-    } catch (caught) {
-      setState((previous) => (previous ? { ...previous, error: { cause: caught } } : previous));
-    } finally {
-      setLoadingMore(false);
-    }
-  }
-
   function markLocallyRead(notificationId: number) {
     const readAt = new Date().toISOString();
-    setState((previous) =>
-      previous
-        ? {
-            ...previous,
-            items: previous.items.map((item) =>
-              item.notificationId === notificationId && item.readAt === null ? { ...item, readAt } : item,
-            ),
-          }
-        : previous,
+    updateItems((items) =>
+      items.map((item) =>
+        item.notificationId === notificationId && item.readAt === null ? { ...item, readAt } : item,
+      ),
     );
   }
 
@@ -128,11 +87,7 @@ function NotificationList() {
     try {
       await markAllNotificationsRead();
       const readAt = new Date().toISOString();
-      setState((previous) =>
-        previous
-          ? { ...previous, items: previous.items.map((item) => (item.readAt === null ? { ...item, readAt } : item)) }
-          : previous,
-      );
+      updateItems((items) => items.map((item) => (item.readAt === null ? { ...item, readAt } : item)));
       void refreshUnreadCount();
     } catch (caught) {
       setActionError({ cause: caught });
@@ -151,7 +106,6 @@ function NotificationList() {
   }
 
   const hasUnread = state.items.some((item) => item.readAt === null);
-  const shownError = state.error ?? actionError;
 
   return (
     <PageLayout
@@ -165,15 +119,16 @@ function NotificationList() {
       }
     >
       <section className="flex flex-col gap-3" aria-label="알림 목록">
-        {shownError && (
+        {(state.error || actionError) && (
           <div role="alert" className="flex flex-col gap-3">
-            <ErrorNotice
-              title={state.error ? '알림을 불러오지 못했어요' : '읽음으로 바꾸지 못했어요'}
-              error={shownError.cause}
-            />
+            {state.error ? (
+              <ErrorNotice title="알림을 불러오지 못했어요" error={state.error} traceId={state.traceId ?? undefined} />
+            ) : (
+              <ErrorNotice title="읽음으로 바꾸지 못했어요" error={actionError?.cause} />
+            )}
             {state.error && state.items.length === 0 && (
               <div>
-                <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
+                <Button variant="secondary" onClick={retry}>
                   다시 불러오기
                 </Button>
               </div>
