@@ -1,8 +1,8 @@
 package com.moewadeul.publicdata.infra.gocamping;
 
-public class GoCampingApiException extends RuntimeException {
+import com.moewadeul.common.external.ExternalApiException;
 
-    private final boolean retryable;
+public class GoCampingApiException extends ExternalApiException {
 
     public GoCampingApiException(String message) {
         this(message, null, false);
@@ -13,8 +13,7 @@ public class GoCampingApiException extends RuntimeException {
     }
 
     private GoCampingApiException(String message, Throwable cause, boolean retryable) {
-        super(message, cause);
-        this.retryable = retryable;
+        super(message, cause, retryable);
     }
 
     static GoCampingApiException retryable(String message) {
@@ -23,9 +22,5 @@ public class GoCampingApiException extends RuntimeException {
 
     static GoCampingApiException retryable(String message, Throwable cause) {
         return new GoCampingApiException(message, cause, true);
-    }
-
-    boolean isRetryable() {
-        return retryable;
     }
 }
