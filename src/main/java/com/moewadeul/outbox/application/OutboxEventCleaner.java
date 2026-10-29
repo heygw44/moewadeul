@@ -1,5 +1,6 @@
 package com.moewadeul.outbox.application;
 
+import com.moewadeul.common.batch.BatchDeletion;
 import com.moewadeul.outbox.infra.OutboxEventCleanupMapper;
 import java.time.Clock;
 import java.time.Duration;
@@ -22,12 +23,8 @@ public class OutboxEventCleaner {
 
     public int deletePublished() {
         Instant cutoff = Instant.now(clock).minus(RETENTION);
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = cleanupMapper.deletePublishedBefore(cutoff, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        int deletedTotal =
+                BatchDeletion.untilDrained(BATCH_SIZE, size -> cleanupMapper.deletePublishedBefore(cutoff, size));
         log.info("outbox event deleted count={}", deletedTotal);
         return deletedTotal;
     }

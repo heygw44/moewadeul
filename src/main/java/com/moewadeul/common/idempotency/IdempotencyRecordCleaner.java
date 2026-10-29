@@ -1,5 +1,6 @@
 package com.moewadeul.common.idempotency;
 
+import com.moewadeul.common.batch.BatchDeletion;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -21,12 +22,7 @@ public class IdempotencyRecordCleaner {
 
     public int deleteExpired() {
         Instant cutoff = Instant.now(clock).minus(RETENTION);
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = recordMapper.deleteOlderThan(cutoff, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        int deletedTotal = BatchDeletion.untilDrained(BATCH_SIZE, size -> recordMapper.deleteOlderThan(cutoff, size));
         log.info("idempotency record deleted count={}", deletedTotal);
         return deletedTotal;
     }

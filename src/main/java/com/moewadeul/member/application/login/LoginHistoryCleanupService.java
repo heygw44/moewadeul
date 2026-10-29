@@ -1,5 +1,6 @@
 package com.moewadeul.member.application.login;
 
+import com.moewadeul.common.batch.BatchDeletion;
 import com.moewadeul.member.infra.login.LoginAttemptLockMapper;
 import com.moewadeul.member.infra.login.LoginHistoryCleanupMapper;
 import java.time.Clock;
@@ -29,24 +30,15 @@ public class LoginHistoryCleanupService {
     public int deleteExpired() {
         Instant now = Instant.now(clock);
         Instant cutoff = now.atZone(ZoneOffset.UTC).minus(RETENTION).toInstant();
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = cleanupMapper.deleteOlderThan(cutoff, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        int deletedTotal = BatchDeletion.untilDrained(BATCH_SIZE, size -> cleanupMapper.deleteOlderThan(cutoff, size));
         log.info("login history deleted count={}", deletedTotal);
         deleteIdleLockRows(now.minus(LOCK_ROW_IDLE_LIMIT));
         return deletedTotal;
     }
 
     private void deleteIdleLockRows(Instant cutoff) {
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = attemptLockMapper.deleteIdleBefore(cutoff, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        int deletedTotal =
+                BatchDeletion.untilDrained(BATCH_SIZE, size -> attemptLockMapper.deleteIdleBefore(cutoff, size));
         log.info("login attempt lock rows deleted count={}", deletedTotal);
     }
 }
