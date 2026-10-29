@@ -11,11 +11,11 @@ import { Icon } from '../../components/icons';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { roundCoordinate } from '../../lib/geo';
 import type { LatLng } from '../../map/types';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { withNext } from '../../app/session/nextPath';
+import { useSession } from '../../app/session/session';
 import { newMemoryPath } from '../memory/memoryLabels';
-import { LocationLabel } from '../spot/LocationLabel';
-import { SPOT_TYPE_META } from '../spot/spotLabels';
+import { LocationLabel } from '../../components/LocationLabel';
+import { SPOT_TYPE_META } from '../../lib/spotLabels';
 
 const SAME_PLACE_RADIUS_KM = 0.05;
 

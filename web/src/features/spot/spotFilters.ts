@@ -1,6 +1,6 @@
 import type { AiInterpretResponse, SpotSetting, SpotType } from '../../api/types';
 import type { ActiveFilterChip } from '../../components/ActiveFilterChips';
-import { SPOT_SETTING_LABELS, SPOT_TYPE_META } from './spotLabels';
+import { SPOT_SETTING_LABELS, SPOT_TYPE_META, SPOT_TYPE_ORDER } from '../../lib/spotLabels';
 
 export type SpotFilters = {
   types: SpotType[];
@@ -19,8 +19,6 @@ export const NO_SPOT_FILTERS: SpotFilters = {
   excludeWarning: false,
   hideClosed: false,
 };
-
-export const SPOT_TYPE_ORDER: ReadonlyArray<SpotType> = ['CAMPSITE', 'FOREST', 'BAKJI'];
 
 export const SPOT_SETTING_ORDER: ReadonlyArray<SpotSetting> = [
   'MOUNTAIN',

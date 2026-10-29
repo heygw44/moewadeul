@@ -1,5 +1,5 @@
 import type { SpotSetting } from '../../api/types';
-import { SPOT_SETTING_LABELS } from './spotLabels';
+import { SPOT_SETTING_LABELS } from '../../lib/spotLabels';
 
 export type AiSummary = {
   unparsed: string[];

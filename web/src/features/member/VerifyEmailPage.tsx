@@ -12,9 +12,9 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
 import { enterAfterAuth } from './enterAfterAuth';
-import { safeNextPath, withNext } from './nextPath';
-import { useRequireAuth } from './useRequireAuth';
-import { useRetryCountdown } from './useRetryCountdown';
+import { safeNextPath, withNext } from '../../app/session/nextPath';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
+import { useRetryCountdown } from '../../components/useRetryCountdown';
 import { buttonClassName } from '../../components/buttonClass';
 
 const RESEND_COOLDOWN_SECONDS = 60;

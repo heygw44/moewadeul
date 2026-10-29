@@ -10,7 +10,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { TextField } from '../../components/TextField';
 import { addDaysToLocalDate, todayKst } from '../../lib/datetime';
-import { GatedButton } from '../member/GatedButton';
+import { GatedButton } from '../../app/session/GatedButton';
 
 const MAX_DAYS_UNTIL_START = 60;
 const MAX_NIGHTS = 3;

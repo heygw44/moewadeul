@@ -10,7 +10,7 @@ import { MyPage } from '../features/member/MyPage';
 import { SignupPage } from '../features/member/SignupPage';
 import { VerifyEmailPage } from '../features/member/VerifyEmailPage';
 import { IdentityVerificationPage } from '../features/trust/IdentityVerificationPage';
-import { MapPage } from '../features/spot/MapPage';
+import { MapPage } from '../features/map/MapPage';
 import NotFoundPage from './NotFoundPage';
 import { lazyPage } from './lazyPage';
 import type { LatLng } from '../map/types';

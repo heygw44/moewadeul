@@ -1,4 +1,4 @@
-import type { LatLng } from '../../map/types';
+import type { LatLng } from '../map/types';
 import { useAddress } from './useAddress';
 
 export function LocationLabel({ position }: { position: LatLng }) {

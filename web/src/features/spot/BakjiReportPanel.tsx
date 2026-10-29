@@ -12,8 +12,8 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { PanelBackBar } from '../../components/PanelBackBar';
 import { roundCoordinate } from '../../lib/geo';
 import type { LatLng } from '../../map/types';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { withNext } from '../../app/session/nextPath';
+import { useSession } from '../../app/session/session';
 import { BakjiFields, BakjiResultView } from './BakjiFormParts';
 import {
   GROUND_OPTIONS,

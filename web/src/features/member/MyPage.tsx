@@ -12,7 +12,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { MySoloTripsCard } from '../trip/MySoloTripsCard';
 import { MemberBoard, MemberBoardTag, MEMBER_BOARD_LINK_CLASS } from './MemberBoard';
-import { useRequireAuth } from './useRequireAuth';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 
 export function MyPage() {
   const session = useRequireAuth('/me');

@@ -3,8 +3,9 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiFetch } from '../../api/client';
-import { readMapScreen, rememberMapScreen } from '../spot/mapScreenMemory';
+import { useDraftCapture, useRestoredDraft } from './formDraft';
 import { SessionProvider, useSession } from './session';
+import { onSignedOut } from './signedOut';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -27,15 +28,6 @@ function json(status: number, body: unknown) {
 function Probe() {
   const session = useSession();
   return <p data-testid="probe">{session.status}</p>;
-}
-
-function RefreshButton() {
-  const session = useSession();
-  return (
-    <button type="button" onClick={() => void session.refresh().catch(() => null)}>
-      세션 확인
-    </button>
-  );
 }
 
 describe('SessionProvider', () => {
@@ -139,53 +131,182 @@ describe('SessionProvider', () => {
     expect(probe()).toBe('anonymous');
   });
 
-  describe('앞 회원의 지도 화면 기억', () => {
-    async function mountWithRefreshButton() {
+  describe('세션이 끊길 때 구독자에게 알린다', () => {
+    function Controls() {
+      const session = useSession();
+      return (
+        <>
+          <button type="button" data-action="refresh" onClick={() => void session.refresh().catch(() => null)}>
+            세션 확인
+          </button>
+          <button type="button" data-action="logout" onClick={() => void session.logout()}>
+            로그아웃
+          </button>
+        </>
+      );
+    }
+
+    async function mountControls() {
       await act(async () => {
         root.render(
           <SessionProvider>
-            <RefreshButton />
+            <Controls />
           </SessionProvider>,
         );
       });
       await advance(0);
     }
 
-    const REMEMBERED = { radiusSearch: { center: { lat: 37.5, lng: 127 }, radiusKm: 5, label: '서울' } };
+    async function click(action: 'refresh' | 'logout') {
+      await act(async () => {
+        container.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.click();
+      });
+      await advance(0);
+    }
 
-    it('로그인한 채 요청이 401을 받으면 지운다', async () => {
+    it('로그인한 채 요청이 401을 받으면 알린다', async () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async (url: string) =>
           url === '/api/me' ? json(200, ME) : json(401, { code: 'AUTHENTICATION_REQUIRED', message: 'x' }),
         ),
       );
-      await mountWithRefreshButton();
-      rememberMapScreen(REMEMBERED);
+      const listener = vi.fn();
+      const unsubscribe = onSignedOut(listener);
+      await mountControls();
 
       await act(async () => {
         await apiFetch('/api/spots').catch(() => null);
       });
 
-      expect(readMapScreen().radiusSearch).toBeNull();
+      expect(listener).toHaveBeenCalledTimes(1);
+      unsubscribe();
     });
 
-    it('세션을 다시 확인해 로그인하지 않은 상태가 되면(탈퇴 뒤) 지운다', async () => {
+    it('세션을 다시 확인해 로그인하지 않은 상태가 되면(탈퇴 뒤) 알린다', async () => {
       let signedIn = true;
       vi.stubGlobal(
         'fetch',
         vi.fn(async () => (signedIn ? json(200, ME) : json(401, { code: 'AUTHENTICATION_REQUIRED', message: 'x' }))),
       );
-      await mountWithRefreshButton();
-      rememberMapScreen(REMEMBERED);
+      const listener = vi.fn();
+      const unsubscribe = onSignedOut(listener);
+      await mountControls();
+      await click('refresh');
+      expect(listener).not.toHaveBeenCalled();
       signedIn = false;
 
+      await click('refresh');
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      unsubscribe();
+    });
+
+    it('로그아웃하면 알리고, 구독을 풀면 더는 알리지 않는다', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => (url === '/api/me' ? json(200, ME) : json(204, null))),
+      );
+      const kept = vi.fn();
+      const dropped = vi.fn();
+      const unsubscribeKept = onSignedOut(kept);
+      onSignedOut(dropped)();
+      await mountControls();
+
+      await click('logout');
+
+      expect(kept).toHaveBeenCalledTimes(1);
+      expect(dropped).not.toHaveBeenCalled();
+      unsubscribeKept();
+    });
+  });
+
+  describe('임시 저장한 양식', () => {
+    const DRAFT_PATH = '/memories/new';
+
+    function Capture() {
+      useDraftCapture(DRAFT_PATH, ME.memberId, { title: '쓰던 글' });
+      return null;
+    }
+
+    function Restored() {
+      const draft = useRestoredDraft<{ title: string }>(DRAFT_PATH, ME.memberId);
+      return <p data-testid="draft">{draft?.title ?? '없음'}</p>;
+    }
+
+    const draftText = () => container.querySelector('[data-testid="draft"]')?.textContent;
+
+    function Logout() {
+      const session = useSession();
+      return (
+        <button type="button" onClick={() => void session.logout()}>
+          로그아웃
+        </button>
+      );
+    }
+
+    async function mountCapture() {
+      await act(async () => {
+        root.render(
+          <SessionProvider>
+            <Capture />
+            <Logout />
+          </SessionProvider>,
+        );
+      });
+      await advance(0);
+    }
+
+    async function remountRestored() {
+      await act(async () => {
+        root.render(
+          <SessionProvider>
+            <Restored />
+          </SessionProvider>,
+        );
+      });
+      await advance(0);
+    }
+
+    function stubSignedInWith401OnApi() {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) =>
+          url === '/api/me'
+            ? json(200, ME)
+            : url === '/api/auth/logout'
+              ? json(204, null)
+              : json(401, { code: 'AUTHENTICATION_REQUIRED', message: 'x' }),
+        ),
+      );
+    }
+
+    it('401로 로그인이 풀리면 쓰던 양식을 남겨 다시 로그인한 같은 회원에게 돌려준다', async () => {
+      stubSignedInWith401OnApi();
+      await mountCapture();
+      await act(async () => {
+        await apiFetch('/api/spots').catch(() => null);
+      });
+
+      await remountRestored();
+
+      expect(draftText()).toBe('쓰던 글');
+    });
+
+    it('401 뒤에 로그아웃하면 남겨 둔 양식을 지운다', async () => {
+      stubSignedInWith401OnApi();
+      await mountCapture();
+      await act(async () => {
+        await apiFetch('/api/spots').catch(() => null);
+      });
       await act(async () => {
         container.querySelector('button')?.click();
       });
       await advance(0);
 
-      expect(readMapScreen().radiusSearch).toBeNull();
+      await remountRestored();
+
+      expect(draftText()).toBe('없음');
     });
   });
 });

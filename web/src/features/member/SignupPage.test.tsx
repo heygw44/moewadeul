@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadPage } from '../../app/router';
-import { SessionProvider } from './session';
+import { SessionProvider } from '../../app/session/session';
 import { SignupPage } from './SignupPage';
 
 vi.mock('../../app/router', async (importOriginal) => ({

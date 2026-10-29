@@ -15,7 +15,7 @@ import { TextField } from '../../components/TextField';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
 import { enterAfterAuth } from './enterAfterAuth';
-import { safeNextPath, withNext } from './nextPath';
+import { safeNextPath, withNext } from '../../app/session/nextPath';
 import {
   AGE_CONFIRM_REQUIRED,
   emailRequiredMessage,
@@ -24,7 +24,7 @@ import {
   PASSWORD_CONFIRM_REQUIRED,
   PASSWORD_REQUIRED,
 } from './requiredMessages';
-import { useSession } from './session';
+import { useSession } from '../../app/session/session';
 
 type SignupField = 'email' | 'password' | 'passwordConfirm' | 'nickname' | 'ageConfirmed';
 

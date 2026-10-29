@@ -34,7 +34,7 @@ import { usePagedList } from '../../components/usePagedList';
 import type { PagedList } from '../../components/usePagedList';
 import { formatKstDateTime, todayKst } from '../../lib/datetime';
 import { trustLevelBadge } from '../member/memberLabels';
-import { useRequireAuth } from '../member/useRequireAuth';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText, profileSummary } from './basecampLabels';
 
 const CONTACT_MAX = 255;

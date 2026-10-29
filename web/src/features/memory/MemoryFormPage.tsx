@@ -25,10 +25,10 @@ import type { UploadImageItem } from '../../components/useImageUploads';
 import { todayKst } from '../../lib/datetime';
 import type { LatLng } from '../../map/types';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
-import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
-import { useSession } from '../member/session';
-import { useRequireAuth } from '../member/useRequireAuth';
-import { LocationLabel } from '../spot/LocationLabel';
+import { useDraftCapture, useRestoredDraft } from '../../app/session/formDraft';
+import { useSession } from '../../app/session/session';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
+import { LocationLabel } from '../../components/LocationLabel';
 import {
   MEMORY_CONTENT_MAX,
   MEMORY_MAX_IMAGES,

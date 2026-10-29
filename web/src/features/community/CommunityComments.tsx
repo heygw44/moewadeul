@@ -15,9 +15,9 @@ import { TextArea } from '../../components/TextArea';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { usePagedList } from '../../components/usePagedList';
 import { formatKstDateTime, formatRelativeKst } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
-import { UnverifiedNote } from '../member/GatedButton';
-import { useSession } from '../member/session';
+import { withNext } from '../../app/session/nextPath';
+import { UnverifiedNote } from '../../app/session/GatedButton';
+import { useSession } from '../../app/session/session';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import type { CommunityReportTarget } from './CommunityReportDialog';
 

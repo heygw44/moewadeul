@@ -22,9 +22,9 @@ import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { PanelBackBar } from '../../components/PanelBackBar';
 import { addDaysToLocalDate, todayKst } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
-import { ParkWarningNotice } from '../spot/ParkWarningNotice';
+import { withNext } from '../../app/session/nextPath';
+import { useSession } from '../../app/session/session';
+import { ParkWarningNotice } from '../../components/ParkWarningNotice';
 import { AGE_GROUP_STEPS, ageGroupStepLabel, OFF_PLATFORM_PAYMENT_REMINDER } from './basecampLabels';
 
 type BasecampOpenPanelProps = {

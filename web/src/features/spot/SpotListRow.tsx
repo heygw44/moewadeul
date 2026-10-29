@@ -3,7 +3,7 @@ import { Link } from '../../app/router';
 import type { SpotMarker } from '../../api/types';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { formatDistanceKm } from '../../lib/geo';
-import { SPOT_TYPE_META } from './spotLabels';
+import { SPOT_TYPE_META } from '../../lib/spotLabels';
 
 type SpotListRowProps = {
   marker: SpotMarker;

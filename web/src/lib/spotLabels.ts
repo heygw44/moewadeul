@@ -1,12 +1,5 @@
-import type {
-  BakjiReportReason,
-  GroundType,
-  PublicFacilities,
-  SignalLevel,
-  SpotSetting,
-  SpotType,
-} from '../../api/types';
-import type { IconName } from '../../components/iconPaths';
+import type { BakjiReportReason, GroundType, PublicFacilities, SignalLevel, SpotSetting, SpotType } from '../api/types';
+import type { IconName } from '../components/iconPaths';
 
 type SpotTypeTone = 'info' | 'accent' | 'bakji';
 
@@ -22,6 +15,8 @@ export const SPOT_TYPE_META: Record<SpotType, SpotTypeMeta> = {
   FOREST: { label: '자연휴양림', icon: 'tree', tone: 'accent', tileClass: 'bg-accent-soft text-accent-deep' },
   BAKJI: { label: '박지', icon: 'backpack', tone: 'bakji', tileClass: 'bg-bakji-soft text-bakji-strong' },
 };
+
+export const SPOT_TYPE_ORDER: ReadonlyArray<SpotType> = ['CAMPSITE', 'FOREST', 'BAKJI'];
 
 export const SIGNAL_LEVEL_LABELS: Record<SignalLevel, string> = {
   NONE: '없음',

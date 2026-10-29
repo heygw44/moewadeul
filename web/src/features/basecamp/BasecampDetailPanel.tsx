@@ -19,10 +19,10 @@ import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { departureInstant, formatLocalDate } from '../../lib/datetime';
 import { parseHttpsUrl } from '../../lib/url';
 import { trustLevelBadge } from '../member/memberLabels';
-import { withNext } from '../member/nextPath';
+import { withNext } from '../../app/session/nextPath';
 import { MemberReportDialog } from '../report/MemberReportDialog';
-import { useSession } from '../member/session';
-import { useViewerEpoch } from '../member/useViewerEpoch';
+import { useSession } from '../../app/session/session';
+import { useViewerEpoch } from '../../app/session/useViewerEpoch';
 import {
   BASECAMP_STATUS_GUIDE,
   BASECAMP_STATUS_META,

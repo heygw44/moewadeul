@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { navigate, useLocation } from '../../app/router';
+import { navigate, useLocation } from '../router';
 import { withNext } from './nextPath';
 import { useSession } from './session';
 import type { Session } from './session';

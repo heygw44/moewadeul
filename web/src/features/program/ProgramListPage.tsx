@@ -14,7 +14,7 @@ import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime, kstDateBlock } from '../../lib/datetime';
-import { useSession } from '../member/session';
+import { useSession } from '../../app/session/session';
 import { feeText, PROGRAM_FILTERS, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { ProgramAside } from './ProgramAside';
 import { usePagedList } from '../../components/usePagedList';

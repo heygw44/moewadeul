@@ -25,8 +25,8 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { usePagedList } from '../../components/usePagedList';
 import { useImageUploads } from '../../components/useImageUploads';
 import { formatKstDateTime, formatLocalDate, todayKst } from '../../lib/datetime';
-import { useSession } from '../member/session';
-import { GatedButton } from '../member/GatedButton';
+import { useSession } from '../../app/session/session';
+import { GatedButton } from '../../app/session/GatedButton';
 
 const CONTENT_MAX = 2000;
 const MAX_RATING = 5;

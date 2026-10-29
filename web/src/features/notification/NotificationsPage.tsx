@@ -19,8 +19,8 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { usePagedList } from '../../components/usePagedList';
 import { formatRelativeKst } from '../../lib/datetime';
-import { safeInternalPath } from '../member/nextPath';
-import { useRequireAuth } from '../member/useRequireAuth';
+import { safeInternalPath } from '../../app/session/nextPath';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { NOTIFICATION_LABELS, NOTIFICATION_TYPES } from './notificationLabels';
 import { refreshUnreadCount } from './unreadCount';
 

@@ -10,8 +10,8 @@ import { Notice } from '../../components/Notice';
 import { PageCard } from '../../components/PageLayout';
 import { PasswordField } from '../../components/PasswordField';
 import { PASSWORD_REQUIRED } from './requiredMessages';
-import { useSession } from './session';
-import { useRetryCountdown } from './useRetryCountdown';
+import { useSession } from '../../app/session/session';
+import { useRetryCountdown } from '../../components/useRetryCountdown';
 
 const WRONG_PASSWORD = '비밀번호가 맞지 않아요. 다시 입력해 주세요.';
 

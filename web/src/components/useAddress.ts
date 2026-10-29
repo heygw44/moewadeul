@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { addressAt } from '../../map/addressName';
-import type { LatLng } from '../../map/types';
+import { addressAt } from '../map/addressName';
+import type { LatLng } from '../map/types';
 
 export type AddressLookup = { status: 'loading' } | { status: 'ready'; address: string } | { status: 'none' };
 

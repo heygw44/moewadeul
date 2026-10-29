@@ -4,7 +4,7 @@ import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadPage } from '../../app/router';
 import { LoginPage } from './LoginPage';
-import { SessionProvider } from './session';
+import { SessionProvider } from '../../app/session/session';
 
 vi.mock('../../app/router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../app/router')>()),

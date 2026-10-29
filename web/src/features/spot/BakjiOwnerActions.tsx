@@ -5,7 +5,7 @@ import { Button } from '../../components/Button';
 import { buttonClassName } from '../../components/buttonClass';
 import { Dialog } from '../../components/Dialog';
 import { ErrorNotice } from '../../components/ErrorNotice';
-import { useSession } from '../member/session';
+import { useSession } from '../../app/session/session';
 
 type BakjiOwnerActionsProps = {
   spotId: number;

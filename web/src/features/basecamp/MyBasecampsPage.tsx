@@ -16,7 +16,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { usePagedList } from '../../components/usePagedList';
 import { formatLocalDate } from '../../lib/datetime';
-import { useRequireAuth } from '../member/useRequireAuth';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText } from './basecampLabels';
 
 type RelationFilter = MyBasecampRelation | 'ALL';
