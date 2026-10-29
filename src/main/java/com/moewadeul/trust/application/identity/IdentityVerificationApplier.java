@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class IdentityVerificationApplier {
+class IdentityVerificationApplier {
 
     private final IdentityVerificationRepository identityVerificationRepository;
     private final IdentityProvider identityProvider;
@@ -32,7 +32,7 @@ public class IdentityVerificationApplier {
     private final Clock clock;
 
     @Transactional
-    public IdentityVerificationResult apply(long memberId, IdentityVerifyCommand command) {
+    IdentityVerificationResult apply(long memberId, IdentityVerifyCommand command) {
         Instant now = clock.instant();
         Year currentYear = Year.from(now.atZone(KoreaTime.ZONE));
         requireBirthYearInRange(command.birthYear(), currentYear);

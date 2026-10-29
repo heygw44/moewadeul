@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SanctionLiftApplier {
+class SanctionLiftApplier {
 
     private final SanctionRepository sanctionRepository;
     private final MemberSuspensionService memberSuspensionService;
@@ -29,7 +29,7 @@ public class SanctionLiftApplier {
     private final Clock clock;
 
     @Transactional
-    public SanctionLiftResult apply(long memberId, long sanctionId, long adminId) {
+    SanctionLiftResult apply(long memberId, long sanctionId, long adminId) {
         LockedMember member = memberSuspensionService.lockForSanction(memberId);
         Sanction sanction = sanctionRepository
                 .findByIdForUpdate(sanctionId)

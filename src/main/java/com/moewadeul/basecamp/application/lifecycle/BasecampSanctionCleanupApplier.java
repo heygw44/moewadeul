@@ -14,14 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-public class BasecampSanctionCleanupApplier {
+class BasecampSanctionCleanupApplier {
 
     private final BasecampRepository basecampRepository;
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
 
     @Transactional
-    public MemberRemoval cleanUp(long basecampId, long memberId, RemovalCause cause) {
+    MemberRemoval cleanUp(long basecampId, long memberId, RemovalCause cause) {
         // 베이스캠프 행을 쓰기 잠금으로 읽는 조회가 이 트랜잭션의 첫 조회여야 한다. MySQL의 반복 가능한 읽기에서는
         // 잠그지 않는 조회가 먼저 일어나면 그 시점에 읽기 스냅숏이 정해져서, 잠금을 얻은 뒤에도 먼저 끝난 다른 트랜잭션의
         // 커밋이 보이지 않는다. 그러면 이미 빠진 멤버를 다시 처리하거나 남은 멤버를 잘못 알린다.

@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ProgramSanctionCleanupApplier {
+class ProgramSanctionCleanupApplier {
 
     private final ProgramApplicationRepository applicationRepository;
     private final ProgramRepository programRepository;
@@ -29,7 +29,7 @@ public class ProgramSanctionCleanupApplier {
     private final Clock clock;
 
     @Transactional
-    public boolean cancelPending(long applicationId, long memberId, ProgramCancelReason reason) {
+    boolean cancelPending(long applicationId, long memberId, ProgramCancelReason reason) {
         ProgramApplication application =
                 applicationRepository.findByIdForUpdate(applicationId).orElse(null);
         if (application == null || application.getStatus() != ProgramApplicationStatus.PENDING_PAYMENT) {
@@ -59,7 +59,7 @@ public class ProgramSanctionCleanupApplier {
     }
 
     @Transactional
-    public int requestReview(long memberId) {
+    int requestReview(long memberId) {
         return applicationRepository.requestReviewForConfirmed(memberId, clock.instant());
     }
 }

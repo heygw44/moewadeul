@@ -49,4 +49,10 @@ class ArchitectureTest {
     void transactionalIsOnlyInApplication() {
         ArchitectureRules.transactionalPlacementRule(ROOT_PACKAGE).check(productionClasses);
     }
+
+    @Test
+    @DisplayName("[ADR-005] *Applier 는 package-private 이라 짝 서비스를 거치지 않고 부를 수 없다")
+    void appliersArePackagePrivate() {
+        ArchitectureRules.applierVisibilityRule(ROOT_PACKAGE).check(productionClasses);
+    }
 }

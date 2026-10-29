@@ -5,6 +5,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.properties.CanBeAnnotated;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
@@ -50,6 +51,10 @@ public final class ArchitectureRules {
             "spot", Set.of("weather"),
             "publicdata", Set.of("spot"),
             "trust", Set.of("member"));
+
+    private static final String APPLIER_SUFFIX = "Applier";
+    // MemberReportActionApplier 가 같은 트랜잭션에 합류하려고 다른 패키지에서 직접 부른다.
+    private static final Set<String> PUBLIC_APPLIERS = Set.of("SanctionConfirmApplier");
 
     private static final String APPLICATION = "application";
     private static final String API = "api";
@@ -130,6 +135,14 @@ public final class ArchitectureRules {
                 .allowEmptyShould(true);
     }
 
+    public static ArchRule applierVisibilityRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(applierNotPublic())
+                .as("*Applier 는 package-private 이다(짝 서비스의 OutsideTransaction 가드를 거치게 한다)")
+                .allowEmptyShould(true);
+    }
+
     private static boolean isAllowedDirection(String source, String target) {
         if (source.equals(target) || COMMON.equals(target)) {
             return true;
@@ -182,6 +195,21 @@ public final class ArchitectureRules {
                     judge.violation(source.get(), dependency)
                             .ifPresent(reason -> events.add(SimpleConditionEvent.violated(
                                     dependency, reason + ": " + dependency.getDescription())));
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> applierNotPublic() {
+        return new ArchCondition<>("not be public when named *Applier") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                boolean applier = item.getSimpleName().endsWith(APPLIER_SUFFIX);
+                if (applier
+                        && item.getModifiers().contains(JavaModifier.PUBLIC)
+                        && !PUBLIC_APPLIERS.contains(item.getSimpleName())) {
+                    events.add(SimpleConditionEvent.violated(
+                            item, "public Applier 는 서비스의 트랜잭션 밖 가드를 우회하게 한다: " + item.getName()));
                 }
             }
         };

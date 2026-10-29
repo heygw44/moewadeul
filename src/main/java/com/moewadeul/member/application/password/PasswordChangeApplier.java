@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class PasswordChangeApplier {
+class PasswordChangeApplier {
 
     private final MemberRepository memberRepository;
     private final PasswordResetTokenMapper passwordResetTokenMapper;
@@ -21,7 +21,7 @@ public class PasswordChangeApplier {
     private final Clock clock;
 
     @Transactional
-    public void apply(long memberId, Password newPassword) {
+    void apply(long memberId, Password newPassword) {
         Instant now = Instant.now(clock);
         Member member = memberRepository.findById(memberId).orElseThrow(() -> memberNotFound(memberId));
         member.changePassword(passwordEncoder.encode(newPassword.value()), now);

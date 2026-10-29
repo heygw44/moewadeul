@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class PasswordResetApplier {
+class PasswordResetApplier {
 
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordResetTokenMapper passwordResetTokenMapper;
@@ -28,7 +28,7 @@ public class PasswordResetApplier {
     private final Clock clock;
 
     @Transactional
-    public long apply(String rawToken, String newPassword) {
+    long apply(String rawToken, String newPassword) {
         Password password = Password.of(newPassword);
         Instant now = Instant.now(clock);
         PasswordResetToken token = findUsableToken(rawToken, now);
