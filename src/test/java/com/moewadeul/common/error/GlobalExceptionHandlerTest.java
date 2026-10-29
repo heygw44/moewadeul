@@ -25,7 +25,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.CannotAcquireLockException;
-import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -228,7 +228,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("번역되지 않은 제약 위반은 409 DATA_CONFLICT로 응답하고, 로그에는 제약 이름만 남기고 중복 값과 스택 트레이스는 남기지 않는다")
+    @DisplayName("번역되지 않은 고유 제약 위반(MySQL 1062)은 409 DATA_CONFLICT로 응답하고, 로그에는 제약 이름만 남기고 중복 값과 스택 트레이스는 남기지 않는다")
     void untranslatedDataIntegrityViolationReturnsDataConflict(CapturedOutput output) {
         // when
         MvcTestResult result = mvc.get().uri("/test/untranslated-duplicate").exchange();
@@ -241,6 +241,18 @@ class GlobalExceptionHandlerTest {
                 .contains("uk_member_email")
                 .doesNotContain("secret@example.com")
                 .doesNotContain("\tat ");
+    }
+
+    @Test
+    @DisplayName("고유 제약이 아닌 무결성 위반(NOT NULL 등)은 서버 결함이므로 500 INTERNAL_ERROR로 응답하고 ERROR와 스택 트레이스를 남긴다")
+    void nonUniqueDataIntegrityViolationReturnsInternalError(CapturedOutput output) {
+        // when
+        MvcTestResult result = mvc.get().uri("/test/not-null-violation").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INTERNAL_ERROR");
+        assertThat(output.getOut()).contains("ERROR").contains("\tat ");
     }
 
     @Test
@@ -437,10 +449,17 @@ class GlobalExceptionHandlerTest {
 
         @GetMapping("/untranslated-duplicate")
         String untranslatedDuplicate() {
-            throw new DuplicateKeyException(
+            throw new DataIntegrityViolationException(
                     "could not execute statement",
                     new SQLIntegrityConstraintViolationException(
-                            "Duplicate entry 'secret@example.com' for key 'member.uk_member_email'"));
+                            "Duplicate entry 'secret@example.com' for key 'member.uk_member_email'", "23000", 1062));
+        }
+
+        @GetMapping("/not-null-violation")
+        String notNullViolation() {
+            throw new DataIntegrityViolationException(
+                    "could not execute statement",
+                    new SQLIntegrityConstraintViolationException("Column 'content' cannot be null", "23000", 1048));
         }
 
         @GetMapping("/optimistic-lock")

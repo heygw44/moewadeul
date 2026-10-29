@@ -88,11 +88,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ErrorResponse> handleUntranslatedDataIntegrityViolation(DataIntegrityViolationException e) {
-        log.warn(
-                "untranslated data integrity violation cause={}: {}",
-                e.getClass().getSimpleName(),
-                UniqueViolations.redactedMessage(e));
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        if (!UniqueViolations.isDuplicateEntry(e)) {
+            return handleUnexpectedException(e);
+        }
+        log.warn("untranslated unique violation cause={}", UniqueViolations.redactedMessage(e));
         return dataConflict();
     }
 

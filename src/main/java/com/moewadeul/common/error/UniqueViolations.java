@@ -1,11 +1,13 @@
 package com.moewadeul.common.error;
 
+import java.sql.SQLException;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 
 public final class UniqueViolations {
 
     private static final String KEY_MARKER = " for key '";
+    private static final int MYSQL_DUPLICATE_ENTRY = 1062;
 
     private UniqueViolations() {}
 
@@ -21,12 +23,16 @@ public final class UniqueViolations {
         return message != null && violatedKey(message).contains(constraintName);
     }
 
+    // JPA 경로에서는 고유 제약 위반도 DuplicateKeyException이 아니라 DataIntegrityViolationException으로 온다. 그래서 예외 타입 대신 MySQL 오류 코드를
+    // 본다.
+    public static boolean isDuplicateEntry(DataIntegrityViolationException e) {
+        return NestedExceptionUtils.getMostSpecificCause(e) instanceof SQLException sqlException
+                && sqlException.getErrorCode() == MYSQL_DUPLICATE_ENTRY;
+    }
+
     public static String redactedMessage(DataIntegrityViolationException e) {
         String message = mostSpecificMessage(e);
-        if (message == null) {
-            return "none";
-        }
-        return message.contains(KEY_MARKER) ? "Duplicate entry for key '" + violatedKey(message) : message;
+        return message == null ? "none" : "Duplicate entry for key '" + violatedKey(message);
     }
 
     private static String mostSpecificMessage(DataIntegrityViolationException e) {

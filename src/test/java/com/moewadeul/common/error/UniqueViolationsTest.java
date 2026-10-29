@@ -168,21 +168,43 @@ class UniqueViolationsTest {
     }
 
     @Test
-    @DisplayName("[redactedMessage] 외래 키 위반 메시지는 값이 없으므로 그대로 둔다")
-    void redactedMessageKeepsForeignKeyMessage() {
+    @DisplayName("[isDuplicateEntry] MySQL 오류 코드가 1062이면 고유 제약 위반으로 본다")
+    void isDuplicateEntryForErrorCode1062() {
         // given
-        String message = "Cannot add or update a child row: a foreign key constraint fails (`moewadeul`.`spot_review`, "
-                + "CONSTRAINT `fk_spot_review_member` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`))";
+        DataIntegrityViolationException e = withErrorCode("Duplicate entry 'x' for key 'member.uk_member_email'", 1062);
 
         // when
-        String described = UniqueViolations.redactedMessage(duplicate(message));
+        boolean duplicateEntry = UniqueViolations.isDuplicateEntry(e);
 
         // then
-        assertThat(described).isEqualTo(message);
+        assertThat(duplicateEntry).isTrue();
+    }
+
+    @Test
+    @DisplayName("[isDuplicateEntry] NOT NULL·외래 키 위반은 고유 제약 위반으로 보지 않는다")
+    void isNotDuplicateEntryForOtherErrorCodes() {
+        // given
+        DataIntegrityViolationException notNull = withErrorCode("Column 'content' cannot be null", 1048);
+        DataIntegrityViolationException foreignKey =
+                withErrorCode("Cannot add or update a child row: a foreign key constraint fails", 1452);
+
+        // when
+        boolean notNullDuplicate = UniqueViolations.isDuplicateEntry(notNull);
+        boolean foreignKeyDuplicate = UniqueViolations.isDuplicateEntry(foreignKey);
+
+        // then
+        assertThat(notNullDuplicate).isFalse();
+        assertThat(foreignKeyDuplicate).isFalse();
     }
 
     private static DataIntegrityViolationException duplicate(String message) {
         return new DataIntegrityViolationException(
                 "could not execute statement", new SQLIntegrityConstraintViolationException(message));
+    }
+
+    private static DataIntegrityViolationException withErrorCode(String message, int errorCode) {
+        return new DataIntegrityViolationException(
+                "could not execute statement",
+                new SQLIntegrityConstraintViolationException(message, "23000", errorCode));
     }
 }
