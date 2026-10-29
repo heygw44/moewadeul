@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.moderation.PendingReview;
+import com.moewadeul.common.moderation.ModerationTransition;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -123,7 +123,7 @@ class MemoryTest {
     void hideFromActiveOrPendingReview() {
         Memory active = Memory.write(1L, publicDetails(), NOW);
         Memory pending = Memory.write(1L, publicDetails(), NOW);
-        pending.receiveReport(PendingReview.REPORT_THRESHOLD, NOW);
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW);
 
         active.hide(NOW.plusSeconds(60));
         pending.hide(NOW.plusSeconds(60));
@@ -141,7 +141,7 @@ class MemoryTest {
     @DisplayName("[F-33][MM-11] 관리자는 검토 대기와 숨긴 기록을 ACTIVE로 복구하고, ACTIVE 기록을 복구하면 MEMORY_INVALID_STATE다")
     void restoreFromPendingReviewOrHidden() {
         Memory pending = Memory.write(1L, publicDetails(), NOW);
-        pending.receiveReport(PendingReview.REPORT_THRESHOLD, NOW);
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW);
         Memory hidden = Memory.write(1L, publicDetails(), NOW);
         hidden.hide(NOW);
         Memory active = Memory.write(1L, publicDetails(), NOW);

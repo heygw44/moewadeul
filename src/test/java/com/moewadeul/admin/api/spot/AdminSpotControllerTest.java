@@ -13,6 +13,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.moderation.ModerationResult;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
@@ -20,7 +21,6 @@ import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.spot.application.moderation.AdminSpotQueryService;
 import com.moewadeul.spot.application.moderation.AdminSpotSummary;
 import com.moewadeul.spot.application.moderation.SpotModerationService;
-import com.moewadeul.spot.application.moderation.SpotStatusResult;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import java.time.Instant;
 import java.util.List;
@@ -166,8 +166,8 @@ class AdminSpotControllerTest {
     @Test
     @DisplayName("[F-21] 장소 숨김과 복구는 로그인한 관리자 ID로 서비스를 부르고 장소 ID와 상태를 응답한다")
     void hideAndRestoreReturnStatus() {
-        when(spotModerationService.hide(9L, ADMIN_ID)).thenReturn(new SpotStatusResult(9L, "HIDDEN"));
-        when(spotModerationService.restore(9L, ADMIN_ID)).thenReturn(new SpotStatusResult(9L, "ACTIVE"));
+        when(spotModerationService.hide(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "HIDDEN"));
+        when(spotModerationService.restore(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "ACTIVE"));
 
         MvcTestResult hide = post(admin(), SPOTS + "/9/hide", null);
         MvcTestResult restore = post(admin(), SPOTS + "/9/restore", null);

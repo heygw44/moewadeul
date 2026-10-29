@@ -1,8 +1,8 @@
-package com.moewadeul.memory.application.moderation;
+package com.moewadeul.common.moderation;
 
-public final class MemoryAuditDetails {
+public final class ModerationAuditDetails {
 
-    private MemoryAuditDetails() {}
+    private ModerationAuditDetails() {}
 
     public record Hide(String fromStatus, String toStatus) {}
 
