@@ -31,6 +31,10 @@ public abstract class ImageCleanup {
         this.clock = clock;
     }
 
+    public String keyPrefix() {
+        return keyPrefix;
+    }
+
     public Result deleteExpiredRowsThenObjects() {
         OutsideTransaction.require("저장소 삭제를 기다리는 동안 DB 커넥션과 행 잠금을 쥐면 안 된다.");
         Instant createdBefore = clock.instant().minus(RETENTION);

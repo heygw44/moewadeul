@@ -1,5 +1,6 @@
 package com.moewadeul.community.application.post;
 
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.community.infra.post.CommunityPostRow;
 import java.time.Instant;
 import java.util.List;
@@ -14,7 +15,7 @@ public record CommunityPostItem(
         String spotName,
         String thumbnailUrl,
         long imageCount,
-        List<CommunityPostImage> images,
+        List<ImageView> images,
         long likeCount,
         long commentCount,
         long viewCount,
@@ -22,7 +23,7 @@ public record CommunityPostItem(
         Instant updatedAt,
         Boolean likedByMe) {
 
-    static CommunityPostItem from(CommunityPostRow row, String thumbnailUrl, List<CommunityPostImage> images) {
+    static CommunityPostItem from(CommunityPostRow row, String thumbnailUrl, List<ImageView> images) {
         return new CommunityPostItem(
                 row.postId(),
                 row.title(),

@@ -38,7 +38,7 @@ class ImageTransactionGuardTest {
             }
         };
 
-        assertThatThrownBy(() -> issuer.issueUpload(1L, new ImageUploadCommand("image/png", 10, null)))
+        assertThatThrownBy(() -> issuer.issue(1L, new ImageUploadCommand("image/png", 10, null)))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageStartingWith("트랜잭션 안에서 불러야 합니다.");
     }

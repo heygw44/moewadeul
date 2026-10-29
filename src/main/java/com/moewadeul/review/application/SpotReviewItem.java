@@ -1,5 +1,6 @@
 package com.moewadeul.review.application;
 
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.review.infra.SpotReviewRow;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -12,10 +13,10 @@ public record SpotReviewItem(
         LocalDate visitedDate,
         int rating,
         String content,
-        List<SpotReviewImage> images,
+        List<ImageView> images,
         Instant createdAt) {
 
-    static SpotReviewItem from(SpotReviewRow row, List<SpotReviewImage> images) {
+    static SpotReviewItem from(SpotReviewRow row, List<ImageView> images) {
         return new SpotReviewItem(
                 row.reviewId(),
                 row.authorId(),

@@ -8,6 +8,8 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.image.application.ImageUpload;
+import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
@@ -15,7 +17,6 @@ import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.review.domain.ReviewImage;
 import com.moewadeul.spot.application.detail.SpotDetail;
 import com.moewadeul.spot.application.detail.SpotDetailQueryService;
-import com.moewadeul.spot.application.detail.SpotRecentReview;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -82,7 +83,7 @@ class ReviewImageIntegrationTest {
     @DisplayName("[F-24][RI-01] 업로드 URL을 발급하면 후기에 붙지 않은 행을 만들고, 객체 키는 review/회원 ID/로 시작한다")
     void issueCreatesUnattachedRow() {
         // when
-        ImageUpload upload = uploadService.issue(memberId, "image/webp", SIZE);
+        ImageUpload upload = uploadService.issue(memberId, new ImageUploadCommand("image/webp", SIZE, null));
 
         // then
         assertThat(keyOf(upload.imageId()))
@@ -96,9 +97,12 @@ class ReviewImageIntegrationTest {
     @Test
     @DisplayName("[F-24][RI-01] 허용하지 않는 형식이나 5MB를 넘는 크기는 INVALID_INPUT으로 거부한다")
     void issueRejectsTypeAndSize() {
-        assertInvalid(() -> uploadService.issue(memberId, "image/gif", SIZE), "contentType", "허용하지 않는 이미지 형식이에요.");
         assertInvalid(
-                () -> uploadService.issue(memberId, "image/png", 5L * 1024 * 1024 + 1),
+                () -> uploadService.issue(memberId, new ImageUploadCommand("image/gif", SIZE, null)),
+                "contentType",
+                "허용하지 않는 이미지 형식이에요.");
+        assertInvalid(
+                () -> uploadService.issue(memberId, new ImageUploadCommand("image/png", 5L * 1024 * 1024 + 1, null)),
                 "sizeBytes",
                 "이미지 크기는 1바이트 이상 5MB 이하여야 해요.");
     }
@@ -108,14 +112,15 @@ class ReviewImageIntegrationTest {
             "[F-24][RI-01] 24시간 안에 발급해 후기에 붙지 않은 이미지가 9장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED이고 행을 만들지 않으며, 가장 오래된 이미지가 24시간을 넘기면 다시 발급한다")
     void issueLimitsUnattachedUploads() {
         // given
-        uploadService.issue(memberId, "image/jpeg", SIZE);
+        uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
         clock.advance(Duration.ofHours(1));
         for (int i = 1; i < ReviewImage.KIND.maxUnattachedPerMember(); i++) {
-            uploadService.issue(memberId, "image/jpeg", SIZE);
+            uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
         }
 
         // when
-        ThrowingCallable overLimit = () -> uploadService.issue(memberId, "image/jpeg", SIZE);
+        ThrowingCallable overLimit =
+                () -> uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
 
         // then
         assertThatThrownBy(overLimit).isInstanceOfSatisfying(RateLimitedException.class, e -> {
@@ -124,7 +129,7 @@ class ReviewImageIntegrationTest {
         });
         assertThat(imageRowCount()).isEqualTo(ReviewImage.KIND.maxUnattachedPerMember());
         clock.advance(Duration.ofHours(23));
-        uploadService.issue(memberId, "image/jpeg", SIZE);
+        uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
         assertThat(imageRowCount()).isEqualTo(ReviewImage.KIND.maxUnattachedPerMember() + 1);
     }
 
@@ -141,11 +146,11 @@ class ReviewImageIntegrationTest {
         // then
         SpotReviewItem item = queryService.list(spotId, 0, 20).content().get(0);
         assertThat(item.reviewId()).isEqualTo(reviewId);
-        assertThat(item.images()).extracting(SpotReviewImage::imageId).containsExactly(second, first);
+        assertThat(item.images()).extracting(ImageView::imageId).containsExactly(second, first);
         assertThat(item.images().get(0).url()).contains(keyOf(second));
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
         assertThat(detail.recentReviews().get(0).images())
-                .extracting(SpotRecentReview.Image::imageId)
+                .extracting(ImageView::imageId)
                 .containsExactly(second, first);
     }
 
@@ -155,7 +160,9 @@ class ReviewImageIntegrationTest {
         // given
         long otherMember = saveMember();
         long others = uploaded(otherMember);
-        long notUploaded = uploadService.issue(memberId, "image/png", SIZE).imageId();
+        long notUploaded = uploadService
+                .issue(memberId, new ImageUploadCommand("image/png", SIZE, null))
+                .imageId();
         List<Long> four = List.of(uploaded(memberId), uploaded(memberId), uploaded(memberId), uploaded(memberId));
         long mine = uploaded(memberId);
 
@@ -209,9 +216,9 @@ class ReviewImageIntegrationTest {
                 commandService.revise(memberId, reviewId, new SpotReviewReviseCommand(2, "비웠다", List.of()));
 
         // then
-        assertThat(replaced.images()).extracting(SpotReviewImage::imageId).containsExactly(added, kept);
+        assertThat(replaced.images()).extracting(ImageView::imageId).containsExactly(added, kept);
         assertThat(reviewIdOf(removed)).isNull();
-        assertThat(untouched.images()).extracting(SpotReviewImage::imageId).containsExactly(added, kept);
+        assertThat(untouched.images()).extracting(ImageView::imageId).containsExactly(added, kept);
         assertThat(cleared.images()).isEmpty();
         assertThat(reviewIdOf(kept)).isNull();
     }
@@ -266,7 +273,9 @@ class ReviewImageIntegrationTest {
     }
 
     private long uploaded(long ownerId) {
-        long imageId = uploadService.issue(ownerId, "image/jpeg", SIZE).imageId();
+        long imageId = uploadService
+                .issue(ownerId, new ImageUploadCommand("image/jpeg", SIZE, null))
+                .imageId();
         storage.markUploaded(keyOf(imageId), SIZE);
         return imageId;
     }

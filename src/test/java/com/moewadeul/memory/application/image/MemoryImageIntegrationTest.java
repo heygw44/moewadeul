@@ -9,13 +9,13 @@ import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.image.application.ImageUpload;
 import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.memory.application.MemoryCommandService;
-import com.moewadeul.memory.application.MemoryPhoto;
 import com.moewadeul.memory.application.MemoryReviseCommand;
 import com.moewadeul.memory.application.MemoryView;
 import com.moewadeul.memory.application.MemoryWriteCommand;
@@ -266,9 +266,9 @@ class MemoryImageIntegrationTest {
         MemoryView cleared = commandService.revise(memberId, memoryId, imagesOnly(List.of()));
 
         // then
-        assertThat(replaced.images()).extracting(MemoryPhoto::imageId).containsExactly(added, kept);
+        assertThat(replaced.images()).extracting(ImageView::imageId).containsExactly(added, kept);
         assertThat(memoryIdOf(removed)).isNull();
-        assertThat(untouched.images()).extracting(MemoryPhoto::imageId).containsExactly(added, kept);
+        assertThat(untouched.images()).extracting(ImageView::imageId).containsExactly(added, kept);
         assertThat(untouched.nights()).isEqualTo(2);
         assertThat(cleared.images()).isEmpty();
         assertThat(memoryIdOf(kept)).isNull();

@@ -24,4 +24,11 @@ public enum ReportType {
     public boolean isUrgent() {
         return urgent;
     }
+
+    public int priority() {
+        if (urgent) {
+            return 2;
+        }
+        return this == MONEY_REQUEST ? 1 : 0;
+    }
 }

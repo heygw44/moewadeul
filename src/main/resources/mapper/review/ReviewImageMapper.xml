@@ -11,34 +11,28 @@
     </select>
 
     <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
-        SELECT id AS image_id, object_key, NULL AS thumbnail_key
-        FROM review_image
-        WHERE review_id IS NULL
-          AND created_at &lt; #{createdBefore}
-        ORDER BY id
-        LIMIT #{limit}
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedBefore">
+            <property name="table" value="review_image"/>
+            <property name="parentColumn" value="review_id"/>
+            <property name="thumbnailColumn" value="NULL"/>
+        </include>
     </select>
 
     <delete id="deleteIfUnattached">
-        DELETE FROM review_image
-        WHERE id = #{imageId}
-          AND review_id IS NULL
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.deleteIfUnattached">
+            <property name="table" value="review_image"/>
+            <property name="parentColumn" value="review_id"/>
+        </include>
     </delete>
 
     <select id="lockMember" resultType="long">
-        SELECT id
-        FROM member
-        WHERE id = #{memberId}
-        FOR UPDATE
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.lockMember"/>
     </select>
 
     <select id="selectUnattachedCreatedAtsAfter" resultType="java.time.Instant">
-        SELECT created_at
-        FROM review_image
-        WHERE member_id = #{memberId}
-          AND review_id IS NULL
-          AND created_at &gt; #{createdAfter}
-        ORDER BY created_at
-        LIMIT #{limit}
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedAtsAfter">
+            <property name="table" value="review_image"/>
+            <property name="parentColumn" value="review_id"/>
+        </include>
     </select>
 </mapper>

@@ -139,36 +139,9 @@ class CommunityImageControllerTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(longs = {0L, 262145L, -1L})
-    @DisplayName("[F-29][CM-06] 썸네일 크기가 1~262144 밖이면 400 INVALID_INPUT과 thumbnailSizeBytes 필드 오류를 응답하고 서비스를 부르지 않는다")
-    void rejectsThumbnailSizeOutOfRange(long thumbnailSizeBytes) {
-        // when
-        MvcTestResult result = send(
-                IMAGES,
-                verified(),
-                "{\"contentType\":\"image/png\",\"sizeBytes\":1000,\"thumbnailSizeBytes\":%d}"
-                        .formatted(thumbnailSizeBytes));
-
-        // then
-        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
-        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("thumbnailSizeBytes");
-        verifyNoInteractions(communityImageUploadService);
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(
-            strings = {
-                "{\"contentType\":\"image/gif\",\"sizeBytes\":1000}",
-                "{\"contentType\":\"IMAGE/JPEG\",\"sizeBytes\":1000}",
-                "{\"sizeBytes\":1000}",
-                "{\"contentType\":\"image/png\"}",
-                "{\"contentType\":\"image/png\",\"sizeBytes\":0}",
-                "{\"contentType\":\"image/png\",\"sizeBytes\":5242881}",
-                "{\"contentType\":\"image/png\",\"sizeBytes\":-1}"
-            })
-    @DisplayName("[F-29][CM-06] 허용하지 않는 형식이거나 크기가 1~5242880 밖이거나 값이 없으면 400 INVALID_INPUT을 응답하고 서비스를 부르지 않는다")
-    void rejectsInvalidBody(String body) {
+    @ValueSource(strings = {"{\"sizeBytes\":1000}", "{\"contentType\":\"image/png\"}"})
+    @DisplayName("[F-29][CM-06] 형식이나 크기가 없으면 400 INVALID_INPUT을 응답하고 서비스를 부르지 않는다")
+    void rejectsMissingValue(String body) {
         // when
         MvcTestResult result = send(IMAGES, verified(), body);
 

@@ -10,9 +10,15 @@
           AND (SELECT COUNT(*)
                FROM program_application a
                WHERE a.program_id = p.id
-                 AND a.status IN ('PENDING_PAYMENT', 'CONFIRMED')
-                 AND (a.status = 'CONFIRMED' OR a.payment_due_at &gt; #{now})) &lt; p.capacity
+                 AND <include refid="com.moewadeul.program.infra.ProgramSeatSql.seatHolder"/>) &lt; p.capacity
     </insert>
+
+    <select id="countSeatHolders" resultType="long">
+        SELECT COUNT(*)
+        FROM program_application a
+        WHERE a.program_id = #{programId}
+          AND <include refid="com.moewadeul.program.infra.ProgramSeatSql.seatHolder"/>
+    </select>
 
     <select id="existsActive" resultType="boolean">
         SELECT EXISTS (SELECT 1
