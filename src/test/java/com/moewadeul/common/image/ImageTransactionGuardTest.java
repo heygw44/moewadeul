@@ -12,7 +12,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 class ImageTransactionGuardTest {
 
-    private static final ImageKind KIND = new ImageKind("test", ImageNoun.IMAGE, 3);
+    private static final ImageKind KIND = new ImageKind("test", ImageMessages.IMAGE, 3);
 
     @AfterEach
     void clearTransaction() {

@@ -110,7 +110,7 @@ class ReviewImageIntegrationTest {
         // given
         uploadService.issue(memberId, "image/jpeg", SIZE);
         clock.advance(Duration.ofHours(1));
-        for (int i = 1; i < ReviewImage.MAX_UNATTACHED_PER_MEMBER; i++) {
+        for (int i = 1; i < ReviewImage.KIND.maxUnattachedPerMember(); i++) {
             uploadService.issue(memberId, "image/jpeg", SIZE);
         }
 
@@ -122,10 +122,10 @@ class ReviewImageIntegrationTest {
             assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_UPLOAD_LIMITED);
             assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(23));
         });
-        assertThat(imageRowCount()).isEqualTo(ReviewImage.MAX_UNATTACHED_PER_MEMBER);
+        assertThat(imageRowCount()).isEqualTo(ReviewImage.KIND.maxUnattachedPerMember());
         clock.advance(Duration.ofHours(23));
         uploadService.issue(memberId, "image/jpeg", SIZE);
-        assertThat(imageRowCount()).isEqualTo(ReviewImage.MAX_UNATTACHED_PER_MEMBER + 1);
+        assertThat(imageRowCount()).isEqualTo(ReviewImage.KIND.maxUnattachedPerMember() + 1);
     }
 
     @Test

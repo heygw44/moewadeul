@@ -1,7 +1,7 @@
 package com.moewadeul.memory.domain.image;
 
 import com.moewadeul.common.image.ImageKind;
-import com.moewadeul.common.image.ImageNoun;
+import com.moewadeul.common.image.ImageMessages;
 import com.moewadeul.common.image.ThumbnailedImage;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
@@ -19,13 +19,11 @@ public class MemoryImage extends ThumbnailedImage {
 
     public static final int MAX_PER_MEMORY = 10;
 
-    public static final ImageKind KIND = new ImageKind("memory", ImageNoun.PHOTO, MAX_PER_MEMORY);
-
-    public static final int MAX_UNATTACHED_PER_MEMBER = KIND.maxUnattachedPerMember();
+    public static final ImageKind KIND = new ImageKind("memory", ImageMessages.PHOTO, MAX_PER_MEMORY);
 
     private MemoryImage(
             long memberId, String objectKey, String contentType, long sizeBytes, Instant now, Thumbnail thumbnail) {
-        super(KIND, memberId, objectKey, contentType, sizeBytes, now, thumbnail);
+        super(memberId, objectKey, contentType, sizeBytes, now, thumbnail);
     }
 
     public static MemoryImage issue(long memberId, String objectKey, String contentType, long sizeBytes, Instant now) {

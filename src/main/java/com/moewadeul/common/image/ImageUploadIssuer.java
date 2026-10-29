@@ -41,18 +41,18 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
 
     protected ImageUpload issueUpload(long memberId, ImageUploadCommand command) {
         InsideTransaction.require("회원 행을 잠근 채 세고 저장해야 발급 상한을 지킨다.");
-        String noun = kind.noun().word();
+        ImageMessages messages = kind.messages();
         String extension = AttachableImage.extensionOf(command.contentType())
-                .orElseThrow(() -> new InvalidFieldException("contentType", "허용하지 않는 " + noun + " 형식이에요."));
+                .orElseThrow(() -> new InvalidFieldException("contentType", messages.unsupportedType()));
         if (!AttachableImage.isAllowedSize(command.sizeBytes())) {
-            throw new InvalidFieldException("sizeBytes", noun + " 크기는 1바이트 이상 5MB 이하여야 해요.");
+            throw new InvalidFieldException("sizeBytes", messages.sizeOutOfRange());
         }
         if (command.hasThumbnail() && !ThumbnailedImage.isAllowedThumbnailSize(command.thumbnailSizeBytes())) {
             throw new InvalidFieldException("thumbnailSizeBytes", "썸네일 크기는 1바이트 이상 256KB 이하여야 해요.");
         }
         Instant now = clock.instant();
         requireUploadRoom(memberId, now);
-        String baseKey = kind.name() + "/" + memberId + "/" + UUID.randomUUID();
+        String baseKey = kind.keyPrefix() + "/" + memberId + "/" + UUID.randomUUID();
         String key = baseKey + "." + extension;
         Thumbnail thumbnail = command.hasThumbnail()
                 ? new Thumbnail(baseKey + THUMBNAIL_KEY_SUFFIX, command.thumbnailSizeBytes())

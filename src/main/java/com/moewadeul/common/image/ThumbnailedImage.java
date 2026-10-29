@@ -24,14 +24,8 @@ public abstract class ThumbnailedImage extends AttachableImage {
     private Integer thumbnailSizeBytes;
 
     protected ThumbnailedImage(
-            ImageKind kind,
-            long memberId,
-            String objectKey,
-            String contentType,
-            long sizeBytes,
-            Instant now,
-            Thumbnail thumbnail) {
-        super(kind, memberId, objectKey, contentType, sizeBytes, now);
+            long memberId, String objectKey, String contentType, long sizeBytes, Instant now, Thumbnail thumbnail) {
+        super(memberId, objectKey, contentType, sizeBytes, now);
         if (thumbnail != null) {
             addThumbnail(thumbnail);
         }

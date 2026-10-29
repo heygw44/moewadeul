@@ -16,13 +16,13 @@ public abstract class ImageCleanup {
     public static final int BATCH_SIZE = 100;
 
     private final Logger log = LoggerFactory.getLogger(getClass());
-    private final String name;
+    private final String keyPrefix;
     private final AttachableImageMapper imageMapper;
     private final ImageStorage imageStorage;
     private final Clock clock;
 
     protected ImageCleanup(ImageKind kind, AttachableImageMapper imageMapper, ImageStorage imageStorage, Clock clock) {
-        this.name = kind.name();
+        this.keyPrefix = kind.keyPrefix();
         this.imageMapper = imageMapper;
         this.imageStorage = imageStorage;
         this.clock = clock;
@@ -50,7 +50,7 @@ public abstract class ImageCleanup {
             }
             deletedRows += batchDeleted;
         } while (batchRead == BATCH_SIZE && batchDeleted > 0);
-        log.info("{} image cleanup deletedRows={} storageFailures={}", name, deletedRows, storageFailures);
+        log.info("{} image cleanup deletedRows={} storageFailures={}", keyPrefix, deletedRows, storageFailures);
         return new Result(deletedRows, storageFailures);
     }
 
@@ -69,7 +69,7 @@ public abstract class ImageCleanup {
         } catch (RuntimeException e) {
             log.warn(
                     "{} image object delete failed imageId={} cause={}",
-                    name,
+                    keyPrefix,
                     imageId,
                     e.getClass().getSimpleName());
             return false;

@@ -70,15 +70,15 @@ public abstract class ImageAttachments<T extends AttachableImage> {
     }
 
     private void requireValidShape(List<Long> imageIds) {
-        ImageNoun noun = kind.noun();
+        ImageMessages messages = kind.messages();
         if (imageIds.size() > kind.maxPerParent()) {
-            throw invalid(noun.topic() + " " + kind.maxPerParent() + "장까지 붙일 수 있어요.");
+            throw invalid(messages.tooMany(kind.maxPerParent()));
         }
         if (imageIds.stream().anyMatch(Objects::isNull)) {
-            throw unusable();
+            throw invalid(messages.unusable());
         }
         if (new HashSet<>(imageIds).size() != imageIds.size()) {
-            throw invalid("같은 " + noun.object() + " 두 번 붙일 수 없어요.");
+            throw invalid(messages.duplicated());
         }
     }
 
@@ -119,7 +119,7 @@ public abstract class ImageAttachments<T extends AttachableImage> {
     }
 
     private InvalidFieldException unusable() {
-        return invalid("붙일 수 없는 " + kind.noun().subject() + " 있어요.");
+        return invalid(kind.messages().unusable());
     }
 
     private static InvalidFieldException invalid(String reason) {

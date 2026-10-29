@@ -2,7 +2,7 @@ package com.moewadeul.review.domain;
 
 import com.moewadeul.common.image.AttachableImage;
 import com.moewadeul.common.image.ImageKind;
-import com.moewadeul.common.image.ImageNoun;
+import com.moewadeul.common.image.ImageMessages;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,12 +19,10 @@ public class ReviewImage extends AttachableImage {
 
     public static final int MAX_PER_REVIEW = 3;
 
-    public static final ImageKind KIND = new ImageKind("review", ImageNoun.IMAGE, MAX_PER_REVIEW);
-
-    public static final int MAX_UNATTACHED_PER_MEMBER = KIND.maxUnattachedPerMember();
+    public static final ImageKind KIND = new ImageKind("review", ImageMessages.IMAGE, MAX_PER_REVIEW);
 
     private ReviewImage(long memberId, String objectKey, String contentType, long sizeBytes, Instant now) {
-        super(KIND, memberId, objectKey, contentType, sizeBytes, now);
+        super(memberId, objectKey, contentType, sizeBytes, now);
     }
 
     public static ReviewImage issue(long memberId, String objectKey, String contentType, long sizeBytes, Instant now) {

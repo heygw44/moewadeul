@@ -50,17 +50,16 @@ public abstract class AttachableImage {
     @Column(name = "created_at")
     private Instant createdAt;
 
-    protected AttachableImage(
-            ImageKind kind, long memberId, String objectKey, String contentType, long sizeBytes, Instant now) {
-        ImageNoun noun = kind.noun();
+    protected AttachableImage(long memberId, String objectKey, String contentType, long sizeBytes, Instant now) {
+        ImageMessages messages = kind().messages();
         if (objectKey == null || objectKey.isBlank() || now == null) {
-            throw new IllegalArgumentException(noun.object() + " 만드는 데 필요한 값이 비었습니다.");
+            throw new IllegalArgumentException(messages.missingValue());
         }
         if (!isAllowedContentType(contentType)) {
-            throw new IllegalArgumentException("허용하지 않는 " + noun.word() + " 형식입니다.");
+            throw new IllegalArgumentException(messages.disallowedType());
         }
         if (!isAllowedSize(sizeBytes)) {
-            throw new IllegalArgumentException(noun.word() + " 크기는 1바이트 이상 " + MAX_SIZE_BYTES + "바이트 이하여야 합니다.");
+            throw new IllegalArgumentException(messages.disallowedSize(MAX_SIZE_BYTES));
         }
         this.memberId = memberId;
         this.objectKey = objectKey;
@@ -86,7 +85,7 @@ public abstract class AttachableImage {
     public void attachTo(long parentId, int order) {
         ImageKind kind = kind();
         if (order < 0 || order >= kind.maxPerParent()) {
-            throw new IllegalArgumentException(kind.noun().word() + " 순서는 0 이상 " + kind.maxPerParent() + " 미만이어야 합니다.");
+            throw new IllegalArgumentException(kind.messages().orderOutOfRange(kind.maxPerParent()));
         }
         this.parentId = parentId;
         this.displayOrder = order;

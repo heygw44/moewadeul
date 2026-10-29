@@ -158,7 +158,7 @@ class MemoryImageIntegrationTest {
         // given
         uploadService.issue(memberId, command("image/jpeg", SIZE));
         clock.advance(Duration.ofHours(1));
-        for (int i = 1; i < MemoryImage.MAX_UNATTACHED_PER_MEMBER; i++) {
+        for (int i = 1; i < MemoryImage.KIND.maxUnattachedPerMember(); i++) {
             uploadService.issue(memberId, command("image/jpeg", SIZE));
         }
 
@@ -171,10 +171,10 @@ class MemoryImageIntegrationTest {
             assertThat(e.getErrorCode().httpStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
             assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(23));
         });
-        assertThat(imageRowCount()).isEqualTo(MemoryImage.MAX_UNATTACHED_PER_MEMBER);
+        assertThat(imageRowCount()).isEqualTo(MemoryImage.KIND.maxUnattachedPerMember());
         clock.advance(Duration.ofHours(23));
         uploadService.issue(memberId, command("image/jpeg", SIZE));
-        assertThat(imageRowCount()).isEqualTo(MemoryImage.MAX_UNATTACHED_PER_MEMBER + 1);
+        assertThat(imageRowCount()).isEqualTo(MemoryImage.KIND.maxUnattachedPerMember() + 1);
     }
 
     @Test
@@ -182,10 +182,10 @@ class MemoryImageIntegrationTest {
     void issueLimitCountsOnlyOwnUnattachedUploads() {
         // given
         List<Long> attached = uploadedImages(MemoryImage.MAX_PER_MEMORY);
-        uploadedImages(MemoryImage.MAX_UNATTACHED_PER_MEMBER - MemoryImage.MAX_PER_MEMORY);
+        uploadedImages(MemoryImage.KIND.maxUnattachedPerMember() - MemoryImage.MAX_PER_MEMORY);
         commandService.write(memberId, write(attached));
         long otherMemberId = saveMember();
-        for (int i = 0; i < MemoryImage.MAX_UNATTACHED_PER_MEMBER; i++) {
+        for (int i = 0; i < MemoryImage.KIND.maxUnattachedPerMember(); i++) {
             uploadService.issue(otherMemberId, command("image/jpeg", SIZE));
         }
 

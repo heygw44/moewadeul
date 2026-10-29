@@ -44,7 +44,7 @@ class CommunityImageUploadConcurrencyIntegrationTest {
     void concurrentIssuesAtLimitSucceedOnce() throws Exception {
         // given
         long memberId = memberRepository.saveAndFlush(aMember().build()).getId();
-        for (int i = 1; i < CommunityImage.MAX_UNATTACHED_PER_MEMBER; i++) {
+        for (int i = 1; i < CommunityImage.KIND.maxUnattachedPerMember(); i++) {
             uploadService.issue(memberId, COMMAND);
         }
         List<Callable<Object>> tasks = new ArrayList<>();
@@ -64,7 +64,7 @@ class CommunityImageUploadConcurrencyIntegrationTest {
                                 e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_UPLOAD_LIMITED)));
         assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM community_image WHERE member_id = ?", Integer.class, memberId))
-                .isEqualTo(CommunityImage.MAX_UNATTACHED_PER_MEMBER);
+                .isEqualTo(CommunityImage.KIND.maxUnattachedPerMember());
     }
 
     private List<Throwable> runConcurrently(List<Callable<Object>> tasks) throws Exception {

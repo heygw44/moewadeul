@@ -1,6 +1,6 @@
 package com.moewadeul.common.image;
 
-public record ImageKind(String name, ImageNoun noun, int maxPerParent) {
+public record ImageKind(String keyPrefix, ImageMessages messages, int maxPerParent) {
 
     private static final int UNATTACHED_LIMIT_MULTIPLIER = 3;
 
