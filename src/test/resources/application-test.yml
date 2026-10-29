@@ -29,6 +29,8 @@ moewadeul:
   basecamp:
     auto-transition:
       enabled: false
+    contact-cleanup:
+      enabled: false
   program:
     payment-expiry:
       enabled: false
