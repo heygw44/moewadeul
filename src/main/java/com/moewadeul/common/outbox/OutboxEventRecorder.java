@@ -2,6 +2,7 @@ package com.moewadeul.common.outbox;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -21,6 +22,10 @@ public class OutboxEventRecorder {
         String payloadJson = toJson(payload);
         outboxEventRepository.save(
                 OutboxEvent.pending(eventType, aggregateType, aggregateId, payloadJson, Instant.now(clock)));
+    }
+
+    public void recordAll(List<OutboxEventDraft> events) {
+        events.forEach(event -> record(event.eventType(), event.aggregateType(), event.aggregateId(), event.payload()));
     }
 
     public boolean hasPending(String eventType, String aggregateType, long aggregateId) {

@@ -3,6 +3,7 @@ package com.moewadeul.basecamp.domain;
 import static com.moewadeul.basecamp.domain.BasecampAssertions.assertFailsWith;
 import static com.moewadeul.basecamp.domain.BasecampAssertions.assertFailsWithInvalidState;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.APPLICANT_ID;
+import static com.moewadeul.basecamp.domain.BasecampBuilder.BASECAMP_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.LEADER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.MEMBER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.NOW;
@@ -13,8 +14,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.BasecampEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.common.time.KoreaTime;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -110,6 +114,57 @@ class BasecampTransitionTest {
             assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.CONFIRMED);
             assertThat(basecamp.getConfirmedAt()).isEqualTo(LATER);
             assertThat(basecamp.getUpdatedAt()).isEqualTo(LATER);
+        }
+
+        @Test
+        @DisplayName("[BC-12] 확정하면 BASECAMP_CONFIRMED 이벤트를 남기고, 알릴 대상은 캠프 리더를 포함한 활동 중인 멤버다")
+        void confirmRaisesConfirmedEvent() {
+            Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+            basecamp.confirm(LATER);
+
+            assertThat(basecamp.pullEvents())
+                    .containsExactly(new OutboxEventDraft(
+                            BasecampEvents.CONFIRMED,
+                            BasecampEvents.AGGREGATE_TYPE,
+                            BASECAMP_ID,
+                            new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(LEADER_ID, MEMBER_ID))));
+        }
+
+        @Test
+        @DisplayName("캠프 리더가 취소하면 BASECAMP_CANCELED 이벤트를 남기고, 알릴 대상에서 캠프 리더는 뺀다")
+        void cancelRaisesCanceledEventWithoutLeader() {
+            Basecamp basecamp = aBasecamp().inState(BasecampStatus.CONFIRMED);
+
+            basecamp.cancel(CancelReason.LEADER, LATER);
+
+            assertThat(basecamp.pullEvents())
+                    .containsExactly(new OutboxEventDraft(
+                            BasecampEvents.CANCELED,
+                            BasecampEvents.AGGREGATE_TYPE,
+                            BASECAMP_ID,
+                            new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(MEMBER_ID))));
+        }
+
+        @Test
+        @DisplayName("마감과 재개는 이벤트를 남기지 않는다")
+        void closeAndReopenRaiseNothing() {
+            Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+            basecamp.close(LATER);
+            basecamp.reopen(LATER);
+
+            assertThat(basecamp.pullEvents()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("이벤트를 꺼내면 대기열이 비어서 두 번째로 꺼낼 때는 아무것도 나오지 않는다")
+        void pullEventsEmptiesQueue() {
+            Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+            basecamp.confirm(LATER);
+
+            assertThat(basecamp.pullEvents()).hasSize(1);
+            assertThat(basecamp.pullEvents()).isEmpty();
         }
 
         @Test

@@ -1,6 +1,7 @@
 package com.moewadeul.basecamp.domain;
 
 import static com.moewadeul.basecamp.domain.BasecampBuilder.APPLICANT_ID;
+import static com.moewadeul.basecamp.domain.BasecampBuilder.BASECAMP_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.DEFAULT_START_DATE;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.LEADER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.MEMBER_ID;
@@ -8,9 +9,12 @@ import static com.moewadeul.basecamp.domain.BasecampBuilder.OUTSIDER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.aBasecamp;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.event.BasecampEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.common.time.KoreaTime;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -159,6 +163,50 @@ class MemberRemovalTest {
         assertThat(canceled.removeMember(LEADER_ID, RemovalCause.WITHDRAWAL, LATER))
                 .isEqualTo(MemberRemoval.NOTHING);
         assertThat(canceled.getCancelReason()).isEqualTo(CancelReason.LEADER);
+    }
+
+    @Test
+    @DisplayName("[SN-13] 캠프 리더가 빠져 베이스캠프가 취소되면 BASECAMP_CANCELED 이벤트 하나만 남기고, 알릴 대상에서 캠프 리더는 뺀다")
+    void leaderRemovalRaisesOnlyCanceledEventWithoutLeader() {
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+        basecamp.removeMember(LEADER_ID, RemovalCause.SANCTION, LATER);
+
+        assertThat(basecamp.pullEvents())
+                .containsExactly(new OutboxEventDraft(
+                        BasecampEvents.CANCELED,
+                        BasecampEvents.AGGREGATE_TYPE,
+                        BASECAMP_ID,
+                        new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(MEMBER_ID))));
+    }
+
+    @Test
+    @DisplayName("[SN-13] 멤버가 빠지면 BASECAMP_MEMBER_CHANGED 이벤트 하나만 남기고, 남은 멤버에는 캠프 리더도 들어간다")
+    void memberRemovalRaisesOnlyMemberChangedEventWithLeader() {
+        Basecamp basecamp = aBasecamp().autoClosed();
+
+        basecamp.removeMember(MEMBER_ID, RemovalCause.WITHDRAWAL, LATER);
+
+        assertThat(basecamp.pullEvents())
+                .containsExactly(new OutboxEventDraft(
+                        BasecampEvents.MEMBER_CHANGED,
+                        BasecampEvents.AGGREGATE_TYPE,
+                        BASECAMP_ID,
+                        new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(LEADER_ID, APPLICANT_ID))));
+    }
+
+    @Test
+    @DisplayName("[SN-13] 대기 중인 신청자를 정리하거나 정리할 대상이 없으면 이벤트를 남기지 않는다")
+    void pendingApplicantAndNothingRaiseNoEvent() {
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+        Basecamp canceled = aBasecamp().inState(BasecampStatus.CANCELED);
+
+        basecamp.removeMember(APPLICANT_ID, RemovalCause.SANCTION, LATER);
+        basecamp.removeMember(OUTSIDER_ID, RemovalCause.SANCTION, LATER);
+        canceled.removeMember(LEADER_ID, RemovalCause.SANCTION, LATER);
+
+        assertThat(basecamp.pullEvents()).isEmpty();
+        assertThat(canceled.pullEvents()).isEmpty();
     }
 
     private static BasecampApplication applicationOf(Basecamp basecamp, long applicantId) {

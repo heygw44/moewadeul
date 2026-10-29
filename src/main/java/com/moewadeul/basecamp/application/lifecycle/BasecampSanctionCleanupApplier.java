@@ -4,10 +4,8 @@ import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.MemberRemoval;
 import com.moewadeul.basecamp.domain.RemovalCause;
-import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import java.time.Clock;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,30 +28,7 @@ class BasecampSanctionCleanupApplier {
             return MemberRemoval.NOTHING;
         }
         MemberRemoval removal = basecamp.removeMember(memberId, cause, clock.instant());
-        switch (removal) {
-            case LEADER_CANCELED -> recordCanceled(basecamp);
-            case MEMBER_LEFT -> recordMemberChanged(basecamp);
-            case APPLICATION_CANCELED, NOTHING -> {}
-        }
+        outboxEventRecorder.recordAll(basecamp.pullEvents());
         return removal;
-    }
-
-    private void recordCanceled(Basecamp basecamp) {
-        List<Long> memberIds = basecamp.activeMemberIds().stream()
-                .filter(memberId -> !basecamp.isLeader(memberId))
-                .toList();
-        outboxEventRecorder.record(
-                BasecampEvents.CANCELED,
-                BasecampEvents.AGGREGATE_TYPE,
-                basecamp.getId(),
-                new BasecampEvents.MembersPayload(basecamp.getId(), memberIds));
-    }
-
-    private void recordMemberChanged(Basecamp basecamp) {
-        outboxEventRecorder.record(
-                BasecampEvents.MEMBER_CHANGED,
-                BasecampEvents.AGGREGATE_TYPE,
-                basecamp.getId(),
-                new BasecampEvents.MembersPayload(basecamp.getId(), basecamp.activeMemberIds()));
     }
 }

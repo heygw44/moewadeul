@@ -5,10 +5,8 @@ import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.CancelReason;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import java.time.Clock;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +37,7 @@ public class BasecampTransitionService {
     public BasecampStatusResult confirm(long basecampId, long leaderId) {
         Basecamp basecamp = lockLedBy(basecampId, leaderId);
         basecamp.confirm(clock.instant());
-        recordTransition(BasecampEvents.CONFIRMED, basecamp, basecamp.activeMemberIds());
+        outboxEventRecorder.recordAll(basecamp.pullEvents());
         return resultOf(basecamp);
     }
 
@@ -47,10 +45,7 @@ public class BasecampTransitionService {
     public BasecampStatusResult cancel(long basecampId, long leaderId) {
         Basecamp basecamp = lockLedBy(basecampId, leaderId);
         basecamp.cancel(CancelReason.LEADER, clock.instant());
-        List<Long> memberIds = basecamp.activeMemberIds().stream()
-                .filter(memberId -> !basecamp.isLeader(memberId))
-                .toList();
-        recordTransition(BasecampEvents.CANCELED, basecamp, memberIds);
+        outboxEventRecorder.recordAll(basecamp.pullEvents());
         return resultOf(basecamp);
     }
 
@@ -64,14 +59,6 @@ public class BasecampTransitionService {
             throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
         }
         return basecamp;
-    }
-
-    private void recordTransition(String eventType, Basecamp basecamp, List<Long> memberIds) {
-        outboxEventRecorder.record(
-                eventType,
-                BasecampEvents.AGGREGATE_TYPE,
-                basecamp.getId(),
-                new BasecampEvents.MembersPayload(basecamp.getId(), memberIds));
     }
 
     private static BasecampStatusResult resultOf(Basecamp basecamp) {
