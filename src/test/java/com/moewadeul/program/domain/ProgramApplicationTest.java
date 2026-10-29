@@ -3,6 +3,7 @@ package com.moewadeul.program.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Duration;
 import java.time.Instant;
@@ -55,7 +56,7 @@ class ProgramApplicationTest {
 
             assertThatThrownBy(() -> application.cancelByMemberRemoval(ProgramCancelReason.SANCTIONED, NOW))
                     .isInstanceOfSatisfying(
-                            ProgramException.class,
+                            BusinessException.class,
                             e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
             assertThat(application.getStatus()).isEqualTo(status);
             assertThat(application.getCancelReason()).isNull();
@@ -82,7 +83,7 @@ class ProgramApplicationTest {
 
         assertThatThrownBy(() -> application.confirmPayment(DUE))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED));
         assertThat(application.getStatus()).isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
         assertThat(application.getConfirmedAt()).isNull();
@@ -129,7 +130,7 @@ class ProgramApplicationTest {
 
         assertThatThrownBy(() -> application.cancelByMember(REFUND_DEADLINE.plusSeconds(1), REFUND_DEADLINE))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CANCEL_NOT_ALLOWED));
         assertThat(application.getStatus()).isEqualTo(ProgramApplicationStatus.CONFIRMED);
         assertThat(application.getCancelReason()).isNull();
@@ -144,7 +145,7 @@ class ProgramApplicationTest {
 
             assertThatThrownBy(() -> application.cancelByMember(NOW, REFUND_DEADLINE))
                     .isInstanceOfSatisfying(
-                            ProgramException.class,
+                            BusinessException.class,
                             e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
             assertThat(application.getStatus()).isEqualTo(status);
         }
@@ -155,7 +156,7 @@ class ProgramApplicationTest {
 
         assertThatThrownBy(() -> application.confirmPayment(NOW))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(expected));
         assertThat(application.getStatus()).isEqualTo(status);
     }

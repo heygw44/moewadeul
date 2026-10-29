@@ -5,7 +5,6 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import com.moewadeul.program.domain.ProgramRepository;
 import com.moewadeul.program.infra.enrollment.ExpiryTarget;
 import com.moewadeul.program.infra.enrollment.ProgramApplicationMapper;
@@ -42,7 +41,7 @@ public class ProgramApplyService {
         requireTrustLevel(program, memberId);
         expireOwnOverdueApplication(programId, memberId, now);
         if (programApplicationMapper.existsActive(programId, memberId)) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
         }
         SeatClaim claim = new SeatClaim(programId, memberId, program.paymentDueAt(now), now);
         claimSeat(claim);
@@ -76,10 +75,10 @@ public class ProgramApplyService {
         try {
             inserted = programApplicationMapper.insertIfSeatAvailable(claim);
         } catch (DuplicateKeyException e) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
         }
         if (inserted == 0) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_SOLD_OUT);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_SOLD_OUT);
         }
     }
 }

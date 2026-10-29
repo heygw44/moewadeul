@@ -21,7 +21,6 @@ import com.moewadeul.program.application.enrollment.ProgramApplyResult;
 import com.moewadeul.program.application.enrollment.ProgramApplyService;
 import com.moewadeul.program.application.enrollment.ProgramVacancyAlertService;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -139,12 +138,12 @@ class ProgramEnrollmentControllerTest {
         when(idempotencyRecordRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(programApplyService.apply(4L, 1L)).thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
         when(programApplyService.apply(4L, 2L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD));
-        when(programApplyService.apply(4L, 3L)).thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_SOLD_OUT));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD));
+        when(programApplyService.apply(4L, 3L)).thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_SOLD_OUT));
         when(programApplyService.apply(4L, 4L))
                 .thenThrow(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT));
         when(programApplyService.apply(4L, 5L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED));
 
         assertError(1L, HttpStatus.NOT_FOUND, "NOT_FOUND");
         assertError(2L, HttpStatus.BAD_REQUEST, "PROGRAM_NOT_IN_APPLY_PERIOD");
@@ -157,7 +156,7 @@ class ProgramEnrollmentControllerTest {
     @DisplayName("[F-18][PG-07] 자리가 없어 409이면 응답 메시지로 빈자리 알림 신청을 안내한다")
     void soldOutMessageGuidesVacancyAlert() {
         when(idempotencyRecordRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(programApplyService.apply(4L, 3L)).thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_SOLD_OUT));
+        when(programApplyService.apply(4L, 3L)).thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_SOLD_OUT));
 
         MvcTestResult result = applyRequest(3L, "key-3").with(member(4L)).exchange();
 
@@ -211,7 +210,7 @@ class ProgramEnrollmentControllerTest {
     void subscribeVacancyAlertMapsServiceErrors() {
         when(programVacancyAlertService.subscribe(4L, 1L)).thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
         when(programVacancyAlertService.subscribe(4L, 2L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE));
 
         MvcTestResult notFound = vacancyAlertPost(1L).with(member(4L)).exchange();
         MvcTestResult invalidState = vacancyAlertPost(2L).with(member(4L)).exchange();

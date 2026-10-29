@@ -12,7 +12,6 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberBuilder;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRole;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.signup.DisposableEmailDomain;
@@ -124,7 +123,7 @@ class MemberSignupServiceIntegrationTest {
             SignupCommand duplicate = new SignupCommand(taken, VALID_PASSWORD, nickname(), REQUEST_IP);
             assertThatThrownBy(() -> memberSignupService.signUp(duplicate))
                     .isInstanceOfSatisfying(
-                            MemberException.class,
+                            BusinessException.class,
                             e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
         }
 
@@ -149,7 +148,7 @@ class MemberSignupServiceIntegrationTest {
             SignupCommand duplicate = new SignupCommand(TestSequence.email(), VALID_PASSWORD, taken, REQUEST_IP);
             assertThatThrownBy(() -> memberSignupService.signUp(duplicate))
                     .isInstanceOfSatisfying(
-                            MemberException.class,
+                            BusinessException.class,
                             e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED));
         }
 
@@ -197,7 +196,7 @@ class MemberSignupServiceIntegrationTest {
         SignupCommand duplicate = new SignupCommand("USER@EXAMPLE.COM", VALID_PASSWORD, nickname(), REQUEST_IP);
         assertThatThrownBy(() -> memberSignupService.signUp(duplicate))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
         assertThat(memberJpaRepository.count()).isEqualTo(1);
     }
@@ -231,7 +230,7 @@ class MemberSignupServiceIntegrationTest {
         SignupCommand duplicate = new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname, REQUEST_IP);
         assertThatThrownBy(() -> memberSignupService.signUp(duplicate))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED));
         assertThat(memberJpaRepository.count()).isEqualTo(1);
     }
@@ -261,7 +260,7 @@ class MemberSignupServiceIntegrationTest {
         // when & then
         assertThatThrownBy(() -> memberSignupService.signUp(command))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_PASSWORD_POLICY));
         assertThat(memberJpaRepository.count()).isZero();
     }
@@ -270,7 +269,7 @@ class MemberSignupServiceIntegrationTest {
         SignupCommand command = new SignupCommand(email, VALID_PASSWORD, nickname(), REQUEST_IP);
         assertThatThrownBy(() -> memberSignupService.signUp(command))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_DISPOSABLE_EMAIL));
     }
 

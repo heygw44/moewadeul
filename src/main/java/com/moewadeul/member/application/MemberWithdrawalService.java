@@ -1,10 +1,10 @@
 package com.moewadeul.member.application;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.infra.password.PasswordResetTokenMapper;
@@ -35,7 +35,7 @@ public class MemberWithdrawalService {
         boolean matched = passwordEncoder.matches(password, member.getPasswordHash());
         loginAttemptService.recordAttemptUnderEmailLock(member.getId(), member.getEmail(), ip, matched);
         if (!matched) {
-            throw new MemberException(MemberErrorCode.LOGIN_FAILED);
+            throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
         }
     }
 
@@ -43,7 +43,7 @@ public class MemberWithdrawalService {
         return memberRepository
                 .findById(memberId)
                 .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN && found.getPasswordHash() != null)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.LOGIN_FAILED));
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
     }
 
     private void rejectIfLocked(String email) {
@@ -57,7 +57,7 @@ public class MemberWithdrawalService {
     public void lockAndWithdraw(long memberId) {
         Member member = memberRepository.findByIdForUpdate(memberId).orElse(null);
         if (member == null || member.getStatus() == MemberStatus.WITHDRAWN) {
-            throw new MemberException(MemberErrorCode.LOGIN_FAILED);
+            throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
         }
         Instant now = clock.instant();
         member.withdraw(now);

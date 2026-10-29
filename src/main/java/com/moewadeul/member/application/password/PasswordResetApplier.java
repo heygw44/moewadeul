@@ -1,8 +1,8 @@
 package com.moewadeul.member.application.password;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.Password;
@@ -55,8 +55,8 @@ public class PasswordResetApplier {
                 .orElseThrow(PasswordResetApplier::invalidToken);
     }
 
-    private static MemberException invalidToken() {
-        return new MemberException(MemberErrorCode.PASSWORD_RESET_TOKEN_INVALID);
+    private static BusinessException invalidToken() {
+        return new BusinessException(MemberErrorCode.PASSWORD_RESET_TOKEN_INVALID);
     }
 
     private static IllegalStateException memberNotFound(long memberId) {

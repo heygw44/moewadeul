@@ -1,5 +1,6 @@
 package com.moewadeul.basecamp.domain;
 
+import com.moewadeul.common.error.BusinessException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import java.util.Objects;
@@ -27,7 +28,7 @@ public class Capacity {
 
     public static Capacity of(int value) {
         if (value < MIN || value > MAX) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_CAPACITY_INVALID);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_CAPACITY_INVALID);
         }
         return new Capacity(value);
     }

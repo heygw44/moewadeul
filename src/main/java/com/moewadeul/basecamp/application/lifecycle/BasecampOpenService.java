@@ -3,7 +3,6 @@ package com.moewadeul.basecamp.application.lifecycle;
 import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.domain.BasecampDetails;
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
-import com.moewadeul.basecamp.domain.BasecampException;
 import com.moewadeul.basecamp.domain.BasecampOpenPolicy;
 import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.Capacity;
@@ -77,7 +76,7 @@ public class BasecampOpenService {
 
     private void requireNotWarningSpot(long spotId) {
         if (activeSpotChecker.isWarningBakji(spotId)) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_WARNING_SPOT);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_WARNING_SPOT);
         }
     }
 

@@ -6,7 +6,6 @@ import com.moewadeul.common.web.PatchField;
 import com.moewadeul.member.application.MemberUniqueConstraintTranslator;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.Nickname;
 import com.moewadeul.member.domain.SelfAgeGroup;
@@ -62,7 +61,7 @@ public class MyInfoService {
         }
         Nickname validated = new Nickname(nickname);
         if (memberRepository.existsByNicknameAndIdNot(validated, member.getId())) {
-            throw new MemberException(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED);
+            throw new BusinessException(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED);
         }
         member.changeNickname(validated.value(), now);
     }

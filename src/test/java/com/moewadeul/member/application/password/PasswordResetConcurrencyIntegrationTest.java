@@ -2,12 +2,12 @@ package com.moewadeul.member.application.password;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberBuilder;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
 import com.moewadeul.member.domain.password.ResetToken;
@@ -76,7 +76,7 @@ class PasswordResetConcurrencyIntegrationTest {
                 .hasSize(THREADS - 1)
                 .allSatisfy(outcome -> assertThat(outcome.failure())
                         .isInstanceOfSatisfying(
-                                MemberException.class,
+                                BusinessException.class,
                                 e -> assertThat(e.getErrorCode())
                                         .isEqualTo(MemberErrorCode.PASSWORD_RESET_TOKEN_INVALID)));
         assertThat(jdbc.queryForObject(

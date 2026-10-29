@@ -1,5 +1,6 @@
 package com.moewadeul.program.domain;
 
+import com.moewadeul.common.error.BusinessException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -57,10 +58,10 @@ public class ProgramApplication {
     public void confirmPayment(Instant now) {
         boolean dueReached = status == ProgramApplicationStatus.PENDING_PAYMENT && !now.isBefore(paymentDueAt);
         if (status == ProgramApplicationStatus.EXPIRED || dueReached) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED);
         }
         if (status != ProgramApplicationStatus.PENDING_PAYMENT) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
         this.status = ProgramApplicationStatus.CONFIRMED;
         this.confirmedAt = now;
@@ -73,11 +74,11 @@ public class ProgramApplication {
             case PENDING_PAYMENT -> wasConfirmed = false;
             case CONFIRMED -> {
                 if (now.isAfter(refundDeadline)) {
-                    throw new ProgramException(ProgramErrorCode.PROGRAM_CANCEL_NOT_ALLOWED);
+                    throw new BusinessException(ProgramErrorCode.PROGRAM_CANCEL_NOT_ALLOWED);
                 }
                 wasConfirmed = true;
             }
-            case CANCELED, EXPIRED -> throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            case CANCELED, EXPIRED -> throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
             default -> throw new IllegalStateException("알 수 없는 신청 상태입니다: " + status);
         }
         this.status = ProgramApplicationStatus.CANCELED;
@@ -92,7 +93,7 @@ public class ProgramApplication {
             throw new IllegalArgumentException("제재나 탈퇴가 아닌 취소 이유입니다: " + reason);
         }
         if (status != ProgramApplicationStatus.PENDING_PAYMENT) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
         this.status = ProgramApplicationStatus.CANCELED;
         this.cancelReason = reason;

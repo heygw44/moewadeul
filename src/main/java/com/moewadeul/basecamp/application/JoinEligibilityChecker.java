@@ -2,13 +2,13 @@ package com.moewadeul.basecamp.application;
 
 import com.moewadeul.basecamp.domain.Basecamp;
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
-import com.moewadeul.basecamp.domain.BasecampException;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
 import com.moewadeul.basecamp.domain.JoinUnmetReason;
 import com.moewadeul.basecamp.domain.PriorRelation;
 import com.moewadeul.basecamp.infra.query.BasecampSearchMapper;
 import com.moewadeul.basecamp.infra.query.InProgressScheduleRow;
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -52,12 +52,12 @@ public class JoinEligibilityChecker {
                         basecamp.getStartDate(), basecamp.getEndDate(), schedule.startDate(), schedule.endDate()));
     }
 
-    private static BasecampException toException(JoinUnmetReason reason) {
+    private static BusinessException toException(JoinUnmetReason reason) {
         return switch (reason) {
-            case TRUST_LEVEL, AGE_GROUP, GENDER -> new BasecampException(BasecampErrorCode.BASECAMP_CONDITION_NOT_MET);
-            case DATE_CONFLICT -> new BasecampException(BasecampErrorCode.BASECAMP_DATE_CONFLICT);
-            case ALREADY_JOINED -> new BasecampException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED);
-            case REAPPLY_NOT_ALLOWED -> new BasecampException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED);
+            case TRUST_LEVEL, AGE_GROUP, GENDER -> new BusinessException(BasecampErrorCode.BASECAMP_CONDITION_NOT_MET);
+            case DATE_CONFLICT -> new BusinessException(BasecampErrorCode.BASECAMP_DATE_CONFLICT);
+            case ALREADY_JOINED -> new BusinessException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED);
+            case REAPPLY_NOT_ALLOWED -> new BusinessException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED);
         };
     }
 }

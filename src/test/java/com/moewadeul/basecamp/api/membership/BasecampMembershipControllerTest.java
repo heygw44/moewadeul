@@ -24,7 +24,6 @@ import com.moewadeul.basecamp.application.membership.BasecampMembershipService;
 import com.moewadeul.basecamp.application.membership.BasecampRejectResult;
 import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
-import com.moewadeul.basecamp.domain.BasecampException;
 import com.moewadeul.basecamp.domain.KickReason;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
@@ -196,13 +195,13 @@ class BasecampMembershipControllerTest {
         return Stream.of(
                 Arguments.of(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT), HttpStatus.FORBIDDEN),
                 Arguments.of(new BusinessException(CommonErrorCode.NOT_FOUND), HttpStatus.NOT_FOUND),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE), HttpStatus.CONFLICT),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED), HttpStatus.CONFLICT),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE), HttpStatus.CONFLICT),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED), HttpStatus.CONFLICT),
                 Arguments.of(
-                        new BasecampException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED), HttpStatus.CONFLICT),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_CONDITION_NOT_MET), HttpStatus.FORBIDDEN),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_DATE_CONFLICT), HttpStatus.CONFLICT),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_PENDING_LIMIT), HttpStatus.CONFLICT));
+                        new BusinessException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED), HttpStatus.CONFLICT),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_CONDITION_NOT_MET), HttpStatus.FORBIDDEN),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_DATE_CONFLICT), HttpStatus.CONFLICT),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_PENDING_LIMIT), HttpStatus.CONFLICT));
     }
 
     @Test
@@ -237,7 +236,7 @@ class BasecampMembershipControllerTest {
     void cancelErrorsAreMapped() {
         // given
         doThrow(new BusinessException(CommonErrorCode.NOT_FOUND))
-                .doThrow(new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE))
+                .doThrow(new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE))
                 .when(basecampApplicationCancelService)
                 .cancel(77L, MEMBER_ID);
 
@@ -313,7 +312,7 @@ class BasecampMembershipControllerTest {
         // given
         when(basecampApprovalService.approve(77L, 501L, MEMBER_ID))
                 .thenThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED))
-                .thenThrow(new BasecampException(BasecampErrorCode.BASECAMP_FULL));
+                .thenThrow(new BusinessException(BasecampErrorCode.BASECAMP_FULL));
         when(basecampApprovalService.reject(77L, 501L, MEMBER_ID))
                 .thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
 
@@ -433,11 +432,11 @@ class BasecampMembershipControllerTest {
     void membershipErrorsAreMapped() {
         // given
         doThrow(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT))
-                .doThrow(new BasecampException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE))
+                .doThrow(new BusinessException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE))
                 .when(basecampMembershipService)
                 .leave(77L, MEMBER_ID);
         doThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED))
-                .doThrow(new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE))
+                .doThrow(new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE))
                 .when(basecampMembershipService)
                 .kick(77L, 31L, MEMBER_ID, KickReason.OTHER);
 

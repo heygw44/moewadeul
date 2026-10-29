@@ -1,5 +1,6 @@
 package com.moewadeul.member.application.login;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.member.application.LoginAttemptService;
 import com.moewadeul.member.application.MemberSessions;
@@ -7,7 +8,6 @@ import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.MemberSuspendedException;
@@ -71,14 +71,14 @@ public class MemberLoginService {
                 .findById(loggedIn.memberId())
                 .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN)
                 .filter(found -> Objects.equals(found.getPasswordChangedAt(), loggedIn.passwordChangedAt()))
-                .orElseThrow(() -> new MemberException(MemberErrorCode.LOGIN_FAILED));
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
         rejectIfSuspended(current);
     }
 
     public void revokeSessionIfMemberChanged(LoginResult loggedIn, String sessionId) {
         try {
             ensureStillLoginable(loggedIn);
-        } catch (MemberException e) {
+        } catch (BusinessException e) {
             memberSessions.invalidate(sessionId);
         }
     }
@@ -109,7 +109,7 @@ public class MemberLoginService {
         Long memberId = member != null ? member.getId() : null;
         loginAttemptService.recordAttemptUnderEmailLock(memberId, attemptedEmail, command.ip(), authenticated);
         if (!authenticated) {
-            throw new MemberException(MemberErrorCode.LOGIN_FAILED);
+            throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
         }
         return member;
     }

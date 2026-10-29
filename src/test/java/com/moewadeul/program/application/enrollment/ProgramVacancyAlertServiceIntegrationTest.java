@@ -10,7 +10,6 @@ import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,8 +71,8 @@ class ProgramVacancyAlertServiceIntegrationTest {
         long memberId = fixture.saveMember();
 
         assertThatThrownBy(() -> vacancyAlertService.subscribe(memberId, programId))
-                .isInstanceOf(ProgramException.class)
-                .extracting(e -> ((ProgramException) e).getErrorCode())
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE);
         assertThat(fixture.vacancyAlertCount(programId, memberId)).isZero();
     }
@@ -85,8 +84,8 @@ class ProgramVacancyAlertServiceIntegrationTest {
         long memberId = fixture.saveMember();
 
         assertThatThrownBy(() -> vacancyAlertService.subscribe(memberId, programId))
-                .isInstanceOf(ProgramException.class)
-                .extracting(e -> ((ProgramException) e).getErrorCode())
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE);
     }
 

@@ -1,9 +1,10 @@
 package com.moewadeul.member.domain;
 
+import com.moewadeul.common.error.BusinessException;
 import java.time.Instant;
 import java.util.Map;
 
-public class MemberSuspendedException extends MemberException {
+public class MemberSuspendedException extends BusinessException {
 
     private static final String SUSPENDED_UNTIL_FIELD = "suspendedUntil";
 
