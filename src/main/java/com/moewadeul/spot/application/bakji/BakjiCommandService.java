@@ -147,8 +147,8 @@ public class BakjiCommandService {
         }
         if (command.hasWater().present() || command.hasToilet().present()) {
             detail.changeFacilities(
-                    facilityOrCurrent(command.hasWater(), detail.isHasWater(), "물 유무는"),
-                    facilityOrCurrent(command.hasToilet(), detail.isHasToilet(), "화장실 유무는"),
+                    facilityOrCurrent(command.hasWater(), detail.hasWater(), "물 유무는"),
+                    facilityOrCurrent(command.hasToilet(), detail.hasToilet(), "화장실 유무는"),
                     now);
         }
         if (command.signalLevel().present()) {
