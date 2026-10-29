@@ -30,7 +30,9 @@ class MemoryImageController {
                     + "목록 화면용 썸네일을 함께 올리려면 thumbnailSizeBytes(1~262144, 256KB)를 보낸다. 범위를 벗어나면 400 INVALID_INPUT이다. "
                     + "그러면 응답에 thumbnailUpload(uploadUrl, method, headers, expiresAt)가 더 들어 있고, 화면은 브라우저가 만든 JPEG 썸네일을 "
                     + "Content-Type image/jpeg로 그 URL에 PUT한다. 썸네일 크기를 보냈으면 기록에 붙일 때 서버가 원본과 썸네일이 모두 올라왔는지 확인한다. "
-                    + "24시간 안에 기록에 붙이지 않은 사진은 서버가 지운다.")
+                    + "24시간 안에 기록에 붙이지 않은 사진은 서버가 지운다. "
+                    + "최근 24시간 안에 받고 아직 기록에 붙이지 않은 사진이 30장이면 429 IMAGE_UPLOAD_LIMITED이고, "
+                    + "Retry-After는 그중 가장 오래된 사진이 24시간을 넘길 때까지 남은 초다.")
     @PostMapping("/api/memories/images")
     @ResponseStatus(HttpStatus.CREATED)
     MemoryImageUploadResponse issueUpload(
