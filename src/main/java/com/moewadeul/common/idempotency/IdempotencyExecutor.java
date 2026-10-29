@@ -2,6 +2,7 @@ package com.moewadeul.common.idempotency;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -25,6 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class IdempotencyExecutor {
 
+    private static final String PRIMARY_KEY = "PRIMARY";
     private static final Pattern KEY_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
 
     private final IdempotencyRecordJpaRepository recordRepository;
@@ -91,7 +93,10 @@ public class IdempotencyExecutor {
             recordRepository.saveAndFlush(record);
             return true;
         } catch (DataIntegrityViolationException e) {
-            return false;
+            if (UniqueViolations.violates(e, PRIMARY_KEY)) {
+                return false;
+            }
+            throw e;
         }
     }
 
