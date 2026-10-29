@@ -49,7 +49,6 @@ public class Basecamp {
     private static final Set<BasecampStatus> BEFORE_CONFIRM = Set.of(BasecampStatus.RECRUITING, BasecampStatus.CLOSED);
     private static final Set<BasecampStatus> NOT_FINISHED =
             Set.of(BasecampStatus.RECRUITING, BasecampStatus.CLOSED, BasecampStatus.CONFIRMED);
-    private static final Set<BasecampStatus> CONFIRMED_ONLY = Set.of(BasecampStatus.CONFIRMED);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -228,23 +227,6 @@ public class Basecamp {
             throw new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE);
         }
         markCanceled(reason, now);
-    }
-
-    public void processDayBeforeDeparture(Instant now) {
-        requireStatus(BEFORE_CONFIRM);
-        if (headcount() < MIN_CONFIRM_HEADCOUNT) {
-            markCanceled(CancelReason.NOT_ENOUGH_MEMBERS, now);
-            return;
-        }
-        markConfirmed(now);
-    }
-
-    public void complete(Instant now) {
-        requireStatus(CONFIRMED_ONLY);
-        this.status = BasecampStatus.COMPLETED;
-        this.completedAt = now;
-        expirePendingApplications(now);
-        touch(now);
     }
 
     public void checkApplicable(long applicantId) {

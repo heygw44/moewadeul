@@ -3,7 +3,6 @@ package com.moewadeul.basecamp.domain;
 import static com.moewadeul.basecamp.domain.BasecampAssertions.assertFailsWith;
 import static com.moewadeul.basecamp.domain.BasecampAssertions.assertFailsWithInvalidState;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.APPLICANT_ID;
-import static com.moewadeul.basecamp.domain.BasecampBuilder.COMPLETED_AT;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.LEADER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.MEMBER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.NOW;
@@ -207,28 +206,6 @@ class BasecampTransitionTest {
         }
 
         @Test
-        @DisplayName("확정에서 완료로 바뀌면 완료 시각이 남는다")
-        void completeConfirmed() {
-            Basecamp basecamp = aBasecamp().inState(BasecampStatus.CONFIRMED);
-
-            basecamp.complete(COMPLETED_AT);
-
-            assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.COMPLETED);
-            assertThat(basecamp.getCompletedAt()).isEqualTo(COMPLETED_AT);
-        }
-
-        @ParameterizedTest
-        @EnumSource(
-                value = BasecampStatus.class,
-                names = {"RECRUITING", "CLOSED", "COMPLETED", "CANCELED"})
-        @DisplayName("확정이 아니면 완료할 수 없다")
-        void completeOnlyConfirmed(BasecampStatus state) {
-            Basecamp basecamp = aBasecamp().inState(state);
-
-            assertFailsWithInvalidState(() -> basecamp.complete(COMPLETED_AT));
-        }
-
-        @Test
         @DisplayName("[BC-08] 승인해서 정원이 차면 마감이 되고 마감 이유는 AUTO_FULL이다")
         void approveToFullClosesAutomatically() {
             Basecamp basecamp = aBasecamp().capacity(3).openOnly();
@@ -277,66 +254,11 @@ class BasecampTransitionTest {
 
             assertThat(applicationOf(basecamp, MEMBER_ID).getStatus()).isEqualTo(BasecampApplicationStatus.APPROVED);
         }
-
-        @Test
-        @DisplayName("출발 전날 인원 부족으로 취소돼도 대기 신청이 만료된다")
-        void autoCancelExpiresPending() {
-            Basecamp basecamp = aBasecamp().openOnly();
-            BasecampBuilder.apply(basecamp, APPLICANT_ID);
-
-            basecamp.processDayBeforeDeparture(LATER);
-
-            assertThat(applicationOf(basecamp, APPLICANT_ID).getStatus()).isEqualTo(BasecampApplicationStatus.EXPIRED);
-        }
     }
 
     @Nested
     @DisplayName("[BC-10] 출발 전날 자동 처리")
     class DayBeforeDeparture {
-
-        @ParameterizedTest
-        @EnumSource(
-                value = BasecampStatus.class,
-                names = {"RECRUITING", "CLOSED"})
-        @DisplayName("인원이 2명이면 자동으로 확정한다")
-        void confirmsWithTwoMembers(BasecampStatus state) {
-            Basecamp basecamp = aBasecamp().inState(state);
-            assertThat(basecamp.headcount()).isEqualTo(Basecamp.MIN_CONFIRM_HEADCOUNT);
-
-            basecamp.processDayBeforeDeparture(LATER);
-
-            assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.CONFIRMED);
-            assertThat(basecamp.getConfirmedAt()).isEqualTo(LATER);
-        }
-
-        @ParameterizedTest
-        @EnumSource(
-                value = BasecampStatus.class,
-                names = {"RECRUITING", "CLOSED"})
-        @DisplayName("인원이 1명이면 인원 부족으로 자동 취소한다")
-        void cancelsWithOneMember(BasecampStatus state) {
-            Basecamp basecamp = aBasecamp().openOnly();
-            if (state == BasecampStatus.CLOSED) {
-                basecamp.close(NOW);
-            }
-
-            basecamp.processDayBeforeDeparture(LATER);
-
-            assertThat(basecamp.getStatus()).isEqualTo(BasecampStatus.CANCELED);
-            assertThat(basecamp.getCancelReason()).isEqualTo(CancelReason.NOT_ENOUGH_MEMBERS);
-            assertThat(basecamp.getCanceledAt()).isEqualTo(LATER);
-        }
-
-        @ParameterizedTest
-        @EnumSource(
-                value = BasecampStatus.class,
-                names = {"CONFIRMED", "COMPLETED", "CANCELED"})
-        @DisplayName("모집 중이나 마감이 아니면 자동 처리 대상이 아니다")
-        void ignoresOtherStates(BasecampStatus state) {
-            Basecamp basecamp = aBasecamp().inState(state);
-
-            assertFailsWithInvalidState(() -> basecamp.processDayBeforeDeparture(LATER));
-        }
 
         @Test
         @DisplayName("확정된 뒤 인원이 1명이 되어도 확정은 유지된다")

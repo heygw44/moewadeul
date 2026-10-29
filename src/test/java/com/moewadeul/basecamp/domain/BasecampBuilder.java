@@ -88,7 +88,9 @@ public class BasecampBuilder {
             case CONFIRMED -> basecamp.confirm(NOW);
             case COMPLETED -> {
                 basecamp.confirm(NOW);
-                basecamp.complete(COMPLETED_AT);
+                ReflectionTestUtils.setField(basecamp, "status", BasecampStatus.COMPLETED);
+                ReflectionTestUtils.setField(basecamp, "completedAt", COMPLETED_AT);
+                ReflectionTestUtils.setField(basecamp, "updatedAt", COMPLETED_AT);
             }
             case CANCELED -> basecamp.cancel(CancelReason.LEADER, NOW);
         }
