@@ -2,8 +2,14 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { loadPage } from '../../app/router';
 import { SessionProvider } from './session';
 import { SignupPage } from './SignupPage';
+
+vi.mock('../../app/router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../app/router')>()),
+  loadPage: vi.fn(),
+}));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -93,6 +99,24 @@ describe('회원가입 화면의 만 14세 확인과 약관 안내', () => {
     const [, init] = signupRequests()[0]!;
     const body = JSON.parse((init as RequestInit).body as string);
     expect(body).toMatchObject({ ageConfirmed: true });
+  });
+
+  it('가입과 로그인은 됐는데 회원 정보를 읽지 못하면 이메일 인증 페이지를 새로 연다', async () => {
+    let loggedIn = false;
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/members') return json(201, { memberId: 1, status: 'UNVERIFIED' });
+      if (url === '/api/auth/login') {
+        loggedIn = true;
+        return json(200, { memberId: 1, nickname: '새벽능선', status: 'UNVERIFIED', role: 'USER' });
+      }
+      return loggedIn ? json(500, { code: 'INTERNAL_ERROR', message: '서버 오류' }) : json(401, {});
+    });
+    await fillValidForm();
+    await act(async () => ageCheckbox().click());
+
+    await submit();
+
+    expect(loadPage).toHaveBeenCalledWith('/verify-email');
   });
 
   it('이용약관과 개인정보 처리방침 링크가 안내 문구 안에 있다', () => {
