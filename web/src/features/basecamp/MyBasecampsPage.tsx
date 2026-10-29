@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import { fetchMyBasecamps } from '../../api/basecamps';
 import type { MyBasecampItem, MyBasecampRelation } from '../../api/types';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -15,8 +15,7 @@ import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { usePagedList } from '../../components/usePagedList';
 import { formatLocalDate } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { useRequireAuth } from '../member/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText } from './basecampLabels';
 
 type RelationFilter = MyBasecampRelation | 'ALL';
@@ -39,8 +38,7 @@ function fetchPage(filter: RelationFilter, page: number, signal?: AbortSignal) {
 }
 
 export function MyBasecampsPage() {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const [filter, setFilter] = useState<RelationFilter>('ALL');
   const authenticated = session.status === 'authenticated';
   const { current, loadingMore, loadMore, retry } = usePagedList(authenticated, filter, fetchPage);
@@ -48,10 +46,6 @@ export function MyBasecampsPage() {
   useEffect(() => {
     document.title = '내 베이스캠프 · 뫼와들';
   }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
 
   const showSkeleton = useDelayedFlag(session.status === 'loading' || (authenticated && current === null));
 

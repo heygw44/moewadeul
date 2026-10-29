@@ -20,8 +20,8 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { restorableImages, useImageUploads } from '../../components/useImageUploads';
 import type { UploadImageItem } from '../../components/useImageUploads';
 import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
-import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
+import { useRequireAuth } from '../member/useRequireAuth';
 import { parseSpotId, SECONDARY_LINK_CLASS } from './communityLabels';
 
 const TITLE_MAX = 100;
@@ -33,18 +33,13 @@ type FormMode = 'create' | 'edit';
 type CommunityPostFormPageProps = { mode: 'create' } | { mode: 'edit'; postId: number };
 
 export function CommunityPostFormPage(props: CommunityPostFormPageProps) {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const showSkeleton = useDelayedFlag(session.status === 'loading');
   const editPostId = props.mode === 'edit' ? props.postId : null;
 
   useEffect(() => {
     document.title = props.mode === 'create' ? '글쓰기 · 뫼와들' : '글 수정 · 뫼와들';
   }, [props.mode]);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
 
   const title = props.mode === 'create' ? '글쓰기' : '글 수정';
   const layout = (children: ReactNode) => (

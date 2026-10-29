@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchMyTrust } from '../../api/trust';
 import type { Me, MyTrust } from '../../api/types';
-import { Link, navigate } from '../../app/router';
+import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/icons';
 import { ErrorNotice } from '../../components/ErrorNotice';
@@ -11,20 +11,15 @@ import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { MySoloTripsCard } from '../trip/MySoloTripsCard';
 import { MemberBoard, MemberBoardTag, MEMBER_BOARD_LINK_CLASS } from './MemberBoard';
-import { withNext } from './nextPath';
-import { useSession } from './session';
+import { useRequireAuth } from './useRequireAuth';
 
 export function MyPage() {
-  const session = useSession();
+  const session = useRequireAuth('/me');
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
   useEffect(() => {
     document.title = '내 정보 · 뫼와들';
   }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', '/me'), { replace: true });
-  }, [session.status]);
 
   if (session.status !== 'authenticated' || !session.me) {
     return <PageLayout title="내 정보">{showSkeleton ? <Skeleton className="h-40 w-full" /> : null}</PageLayout>;

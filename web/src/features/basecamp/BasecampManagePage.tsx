@@ -15,7 +15,7 @@ import {
 } from '../../api/basecamps';
 import { ApiError } from '../../api/client';
 import type { BasecampApplicationItem, BasecampDetail, BasecampMember, KickReason } from '../../api/types';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link } from '../../app/router';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
@@ -33,8 +33,7 @@ import { usePagedList } from '../../components/usePagedList';
 import type { PagedList } from '../../components/usePagedList';
 import { formatKstDateTime, todayKst } from '../../lib/datetime';
 import { trustLevelBadge } from '../member/memberLabels';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { useRequireAuth } from '../member/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText, profileSummary } from './basecampLabels';
 
 const CONTACT_MAX = 255;
@@ -61,8 +60,7 @@ type DialogState =
   | null;
 
 export function BasecampManagePage({ basecampId }: { basecampId: number }) {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
@@ -74,10 +72,6 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   useEffect(() => {
     document.title = '베이스캠프 관리 · 뫼와들';
   }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
 
   const authenticated = session.status === 'authenticated';
 

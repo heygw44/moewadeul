@@ -2,27 +2,21 @@ import { useEffect } from 'react';
 import { PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { navigate } from '../../app/router';
-import { withNext } from './nextPath';
 import { PasswordChangeForm } from './PasswordChangeForm';
 import { SelfReportForm } from './SelfReportForm';
-import { useSession } from './session';
+import { useRequireAuth } from './useRequireAuth';
 import { WithdrawalSection } from './WithdrawalSection';
 
 const TITLE = '계정 설정';
 const DESCRIPTION = '프로필과 비밀번호를 바꾸거나 회원 탈퇴를 할 수 있어요.';
 
 export function AccountSettingsPage() {
-  const session = useSession();
+  const session = useRequireAuth('/me/settings');
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
   useEffect(() => {
     document.title = `${TITLE} · 뫼와들`;
   }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', '/me/settings'), { replace: true });
-  }, [session.status]);
 
   if (session.status !== 'authenticated' || !session.me) {
     return (

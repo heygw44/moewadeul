@@ -1,13 +1,11 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { navigate, useLocation } from '../../app/router';
 import { EmptyState } from '../../components/EmptyState';
 import { PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { UnderlineNav, UnderlineNavLink } from '../../components/UnderlineNav';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { useRequireAuth } from '../member/useRequireAuth';
 
 const NAV_ITEMS = [
   { to: '/admin/reports', label: '신고 처리' },
@@ -17,17 +15,12 @@ const NAV_ITEMS = [
 ] as const;
 
 export function AdminPage({ title, current, children }: { title: string; current: string; children: ReactNode }) {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
   useEffect(() => {
     document.title = `${title} · 관리자 · 뫼와들`;
   }, [title]);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
 
   if (session.status !== 'authenticated' || !session.me) {
     return (

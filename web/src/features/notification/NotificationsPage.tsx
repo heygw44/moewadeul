@@ -7,7 +7,7 @@ import {
   updateNotificationSettings,
 } from '../../api/notifications';
 import type { NotificationItem, NotificationSetting, NotificationType } from '../../api/types';
-import { navigate, useLocation } from '../../app/router';
+import { navigate } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { EmptyState } from '../../components/EmptyState';
@@ -18,23 +18,18 @@ import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { usePagedList } from '../../components/usePagedList';
 import { formatRelativeKst } from '../../lib/datetime';
-import { safeInternalPath, withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { safeInternalPath } from '../member/nextPath';
+import { useRequireAuth } from '../member/useRequireAuth';
 import { NOTIFICATION_LABELS, NOTIFICATION_TYPES } from './notificationLabels';
 import { refreshUnreadCount } from './unreadCount';
 
 export function NotificationsPage() {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
   useEffect(() => {
     document.title = '알림 · 뫼와들';
   }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
 
   if (session.status !== 'authenticated' || !session.me) {
     return <PageLayout title="알림">{showSkeleton ? <Skeleton className="h-40 w-full" /> : null}</PageLayout>;

@@ -24,8 +24,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { usePagedList } from '../../components/usePagedList';
 import { daysUntilKst, formatKstDateTime } from '../../lib/datetime';
 import { companionTagLabel, NEGATIVE_COMPANION_TAGS, POSITIVE_COMPANION_TAGS } from '../member/memberLabels';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { useRequireAuth } from '../member/useRequireAuth';
 import { MemberReportDialog } from '../report/MemberReportDialog';
 import { buttonClassName } from '../../components/buttonClass';
 
@@ -50,7 +49,7 @@ function tabFromSearch(search: string): Tab {
 }
 
 export function CompanionReviewsPage() {
-  const session = useSession();
+  const session = useRequireAuth();
   const { pathname, search } = useLocation();
   const tab = tabFromSearch(search);
   const showSkeleton = useDelayedFlag(session.status === 'loading');
@@ -58,10 +57,6 @@ export function CompanionReviewsPage() {
   useEffect(() => {
     document.title = '동행 후기 · 뫼와들';
   }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
 
   if (session.status !== 'authenticated' || !session.me) {
     return <PageLayout title="동행 후기">{showSkeleton ? <Skeleton className="h-40 w-full" /> : null}</PageLayout>;

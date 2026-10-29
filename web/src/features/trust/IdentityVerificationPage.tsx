@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { ApiError, serverNow } from '../../api/client';
 import { verifyIdentity } from '../../api/trust';
 import type { IdentityVerificationResponse, SelfGender } from '../../api/types';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
@@ -15,7 +15,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { todayKst } from '../../lib/datetime';
 import { AuthLayout } from '../member/AuthLayout';
 import { safeNextPath, withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { useRequireAuth } from '../member/useRequireAuth';
 import { buttonClassName } from '../../components/buttonClass';
 
 const MIN_BIRTH_YEAR = 1900;
@@ -38,7 +38,7 @@ const linkButtonClass = `${buttonClassName('primary')} w-full`;
 export function IdentityVerificationPage() {
   const { search } = useLocation();
   const next = safeNextPath(search);
-  const session = useSession();
+  const session = useRequireAuth(withNext('/identity-verification', next));
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
   const [birthYear, setBirthYear] = useState('');
@@ -52,14 +52,6 @@ export function IdentityVerificationPage() {
   useEffect(() => {
     document.title = '본인확인 · 뫼와들';
   }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') {
-      navigate(withNext('/login', withNext('/identity-verification', next)), {
-        replace: true,
-      });
-    }
-  }, [session.status, next]);
 
   function validate(): {
     request: {
