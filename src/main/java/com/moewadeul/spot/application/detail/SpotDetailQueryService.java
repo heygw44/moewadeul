@@ -50,7 +50,7 @@ public class SpotDetailQueryService {
         SpotDetailRow row = spotDetailMapper
                 .selectActiveDetail(spotId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
+        LocalDate today = KoreaTime.today(clock);
         return new SpotDetail(
                 row.spotId(),
                 row.type(),
@@ -75,9 +75,7 @@ public class SpotDetailQueryService {
         Instant startOfToday = today.atStartOfDay(KoreaTime.ZONE).toInstant();
         for (SpotConfirmedProgramRow program : spotDetailMapper.selectConfirmedPrograms(spotId, startOfToday)) {
             stays.add(new SpotConfirmedStayRow(
-                    LocalDate.ofInstant(program.startAt(), KoreaTime.ZONE),
-                    LocalDate.ofInstant(program.endAt(), KoreaTime.ZONE),
-                    program.headcount()));
+                    KoreaTime.dateOf(program.startAt()), KoreaTime.dateOf(program.endAt()), program.headcount()));
         }
         return stays;
     }

@@ -18,7 +18,7 @@ public class SoloTripQueryService {
 
     @Transactional(readOnly = true)
     public List<SoloTripItem> listUpcoming(long memberId) {
-        LocalDate today = LocalDate.ofInstant(clock.instant(), KoreaTime.ZONE);
+        LocalDate today = KoreaTime.today(clock);
         return soloTripMapper.selectUpcomingByMember(memberId, today).stream()
                 .map(SoloTripItem::from)
                 .toList();

@@ -28,7 +28,7 @@ public class SoloTripCommandService {
         // 잠금이 트랜잭션의 첫 쿼리여야 한다. 그래야 아래 일정 조회가 잠금을 얻은 뒤의 스냅숏을 읽어서, 먼저 끝난 요청이 저장한 일정이 보인다.
         soloTripMemberLockMapper.lockMember(memberId);
         Instant now = clock.instant();
-        LocalDate today = LocalDate.ofInstant(now, KoreaTime.ZONE);
+        LocalDate today = KoreaTime.dateOf(now);
         activeSpotChecker.requireActive(command.spotId());
         SoloTrip trip = SoloTrip.register(
                 memberId,

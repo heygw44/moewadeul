@@ -33,7 +33,7 @@ public class SpotWeatherQueryService {
         if (forecast.isEmpty()) {
             return Optional.empty();
         }
-        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
+        LocalDate today = KoreaTime.today(clock);
         SunTimes sun =
                 sunQueryService.sunTimes(location.lat(), location.lng(), today).orElse(null);
         return Optional.of(new SpotWeather(forecast.get(), sun));

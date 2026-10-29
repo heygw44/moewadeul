@@ -91,7 +91,7 @@ class SpotReviewWriter {
         if (visitedDate == null) {
             throw invalidInput("방문일을 입력해 주세요.");
         }
-        if (visitedDate.isAfter(LocalDate.ofInstant(now, KoreaTime.ZONE))) {
+        if (visitedDate.isAfter(KoreaTime.dateOf(now))) {
             throw invalidInput("방문일은 오늘(한국 날짜)보다 뒤일 수 없어요.");
         }
     }

@@ -1,6 +1,7 @@
 package com.moewadeul.aisearch.application;
 
 import com.moewadeul.aisearch.infra.AiSearchUsageMapper;
+import com.moewadeul.common.time.KoreaTime;
 import java.time.Clock;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,7 @@ public class AiSearchUsageCleanupService {
     private final Clock clock;
 
     public int deleteExpiredUsage() {
-        LocalDate cutoff = AiSearchDay.today(clock).minusDays(RETENTION_DAYS);
+        LocalDate cutoff = KoreaTime.today(clock).minusDays(RETENTION_DAYS);
         int deletedTotal = 0;
         int deleted;
         do {

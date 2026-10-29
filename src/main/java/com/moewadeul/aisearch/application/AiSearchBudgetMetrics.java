@@ -1,5 +1,6 @@
 package com.moewadeul.aisearch.application;
 
+import com.moewadeul.common.time.KoreaTime;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
@@ -32,7 +33,7 @@ public class AiSearchBudgetMetrics {
 
     private double readUsedRatio() {
         try {
-            return properties.usedRatio(usageRecorder.sumTokens(AiSearchDay.today(clock)));
+            return properties.usedRatio(usageRecorder.sumTokens(KoreaTime.today(clock)));
         } catch (DataAccessException e) {
             log.warn("ai search budget ratio read failed", e);
             return Double.NaN;
