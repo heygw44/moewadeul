@@ -2,6 +2,7 @@ package com.moewadeul.spot.infra;
 
 import static com.moewadeul.common.testsupport.ProtectedAreaFixture.aProtectedArea;
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -9,6 +10,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.ProtectedAreaFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
+import com.moewadeul.member.domain.MemberStatus;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -165,7 +167,8 @@ class SpotSchemaIntegrationTest {
     @DisplayName("[F-08] 한 회원은 같은 박지를 한 번만 신고할 수 있다")
     void memberCanReportSameBakjiOnlyOnce() {
         // given
-        long memberId = memberFixture.save().getId();
+        long memberId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long spotId = spotFixture.insert(aSpot().name("신고할 박지"));
         insertBakjiReport(spotId, memberId);
 
@@ -177,7 +180,8 @@ class SpotSchemaIntegrationTest {
     @DisplayName("[F-08] 한 회원은 같은 박지를 한 번만 확인할 수 있다")
     void memberCanConfirmSameBakjiOnlyOnce() {
         // given
-        long memberId = memberFixture.save().getId();
+        long memberId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long spotId = spotFixture.insert(aSpot().name("확인할 박지"));
         insertBakjiConfirmation(spotId, memberId);
 

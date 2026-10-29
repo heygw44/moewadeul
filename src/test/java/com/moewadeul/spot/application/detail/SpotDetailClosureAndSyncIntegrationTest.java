@@ -1,6 +1,7 @@
 package com.moewadeul.spot.application.detail;
 
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static com.moewadeul.spot.application.detail.SpotDetailFixture.RIDGE_LAT;
 import static com.moewadeul.spot.application.detail.SpotDetailFixture.RIDGE_LNG;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,6 +10,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.SpotFixture;
+import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -149,7 +151,7 @@ class SpotDetailClosureAndSyncIntegrationTest {
                 "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
                         + " VALUES (?, ?, FALSE, FALSE, NOW(6), NOW(6))",
                 spotId,
-                memberFixture.save().getId());
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId());
         insertSyncRun("GOCAMPING", "COMPLETED", "2026-10-07 03:00:00.000000", "2026-10-07 03:30:00.000000");
 
         // when

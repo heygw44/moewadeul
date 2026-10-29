@@ -1,6 +1,7 @@
 package com.moewadeul.spot.application.map;
 
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
@@ -13,6 +14,7 @@ import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.spot.application.PublicSpotSetting;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import com.moewadeul.spot.domain.SpotType;
@@ -210,7 +212,8 @@ class SpotNearbyQueryServiceIntegrationTest {
     @DisplayName("[F-04] 물·화장실 필터는 해당 시설이 있는 박지만 남기고, 야영장과 휴양림은 시설과 상관없이 남긴다")
     void facilityFiltersApplyOnlyToBakji() {
         // given
-        long reporterId = memberFixture.save().getId();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long campsiteId = insertSpot("CAMPSITE", "야영장", NORTH_2_KM);
         long forestId = insertSpot("FOREST", "휴양림", NORTH_2_KM);
         long waterOnlyId = insertBakji(reporterId, true, false);
@@ -245,7 +248,8 @@ class SpotNearbyQueryServiceIntegrationTest {
     void keepsClosedSpotsAndMarksThemClosed() {
         // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
-        long reporterId = memberFixture.save().getId();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long closedId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", NORTH_2_KM);
         insertPublicDetail(
                 closedId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));
@@ -267,7 +271,8 @@ class SpotNearbyQueryServiceIntegrationTest {
     void hideClosedExcludesClosedSpotsFromNearby() {
         // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
-        long reporterId = memberFixture.save().getId();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long closedId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", NORTH_2_KM);
         insertPublicDetail(
                 closedId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));

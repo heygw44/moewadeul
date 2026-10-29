@@ -1,12 +1,14 @@
 package com.moewadeul.spot.infra.map;
 
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
+import com.moewadeul.member.domain.MemberStatus;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,7 +63,8 @@ class SpotClusterCellTriggerIntegrationTest {
     @DisplayName("[F-03] 숨김·복구, 좌표 이동, 경고·시설 변경, 삭제를 거쳐도 두 집계 표가 장소 테이블과 같다")
     void aggregatesFollowEveryKindOfSpotChange() {
         // given
-        long memberId = memberFixture.save().getId();
+        long memberId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long campsiteId =
                 spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.5665, 126.978));
         long forestId = spotFixture.insert(

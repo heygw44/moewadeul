@@ -1,6 +1,7 @@
 package com.moewadeul.spot.application.map;
 
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
@@ -10,6 +11,7 @@ import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.spot.application.PublicSpotSetting;
 import com.moewadeul.spot.domain.SpotType;
 import java.time.Instant;
@@ -153,7 +155,8 @@ class SpotMapQueryServiceIntegrationTest {
     @DisplayName("[F-03] 물·화장실 필터는 해당 시설이 있는 박지만 남기고, 야영장과 휴양림은 시설과 상관없이 남긴다")
     void facilityFiltersApplyOnlyToBakji() {
         // given
-        long reporterId = memberFixture.save().getId();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long campsiteId = insertSpot("CAMPSITE", "야영장", SEORAK);
         long forestId = insertSpot("FOREST", "휴양림", SEORAK);
         long waterOnlyId = insertBakji(reporterId, true, false);
@@ -185,7 +188,8 @@ class SpotMapQueryServiceIntegrationTest {
     void computesClosedNowWithKoreanDateAndKeepsClosedSpots() {
         // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
-        long reporterId = memberFixture.save().getId();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long closedPeriodId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", SEORAK);
         insertPublicDetail(
                 closedPeriodId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));
@@ -221,7 +225,8 @@ class SpotMapQueryServiceIntegrationTest {
     void hideClosedExcludesExactlySpotsMarkedClosed() {
         // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
-        long reporterId = memberFixture.save().getId();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long closedPeriodId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", SEORAK);
         insertPublicDetail(
                 closedPeriodId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));
@@ -346,7 +351,8 @@ class SpotMapQueryServiceIntegrationTest {
     @DisplayName("[F-03][F-31] 시설 필터와 휴장 제외를 함께 켜면 마커에는 두 조건을 모두 통과한 장소만 나온다")
     void facilityFilterAndHideClosedTogetherKeepOnlyMarkersPassingBoth() {
         // given
-        long reporterId = memberFixture.save().getId();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long openCampsiteId = insertSpot("CAMPSITE", "운영 중 야영장", SEORAK);
         long closedCampsiteId = insertSpot("CAMPSITE", "휴장 야영장", SEORAK);
         insertPublicDetail(closedCampsiteId, "GOCAMPING", "TEMPORARILY_CLOSED", null, null);
@@ -367,7 +373,8 @@ class SpotMapQueryServiceIntegrationTest {
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
         int openCount = SpotMapQueryService.MAX_ITEMS + 1;
         insertCampsites(spreadInBulkArea(openCount));
-        long reporterId = memberFixture.save().getId();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         Coordinate inBulkArea = new Coordinate(36.5, 127.5);
         for (int i = 0; i < 4; i++) {
             insertBakji(reporterId, true, false, inBulkArea);
