@@ -6,16 +6,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.ProgramEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class ProgramApplicationTest {
 
+    private static final long APPLICATION_ID = 31L;
+    private static final long MEMBER_ID = 7L;
+    private static final long PROGRAM_ID = 5L;
     private static final Instant NOW = MutableClock.DEFAULT_INSTANT;
     private static final Instant DUE = NOW.plus(Duration.ofMinutes(15));
     private static final Instant REFUND_DEADLINE = NOW.plus(Duration.ofDays(4));
@@ -167,7 +174,6 @@ class ProgramApplicationTest {
     @DisplayName("[F-16] 신청한 회원이 아니면 requireAppliedBy가 ACCESS_DENIED다")
     void requireAppliedByRejectsOthers() {
         ProgramApplication application = application(ProgramApplicationStatus.PENDING_PAYMENT);
-        ReflectionTestUtils.setField(application, "memberId", 7L);
 
         assertThatCode(() -> application.requireAppliedBy(7L)).doesNotThrowAnyException();
         assertThatThrownBy(() -> application.requireAppliedBy(8L))
@@ -176,8 +182,104 @@ class ProgramApplicationTest {
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
+    @ParameterizedTest
+    @EnumSource(ProgramApplicationStatus.class)
+    @DisplayName("[PG-03] 좌석은 확정 신청이 항상 차지하고, 결제 대기 신청은 결제 기한 전에만 차지하며, 취소·만료 신청은 차지하지 않는다")
+    void holdsSeatByStatusAndPaymentDue(ProgramApplicationStatus status) {
+        ProgramApplication application = application(status);
+        boolean pending = status == ProgramApplicationStatus.PENDING_PAYMENT;
+        boolean confirmed = status == ProgramApplicationStatus.CONFIRMED;
+
+        assertThat(application.isSeatHolderAt(DUE.minusSeconds(1))).isEqualTo(pending || confirmed);
+        assertThat(application.isSeatHolderAt(DUE)).isEqualTo(confirmed);
+        assertThat(application.isSeatHolderAt(DUE.plusSeconds(1))).isEqualTo(confirmed);
+    }
+
+    @Test
+    @DisplayName("[F-19] 결제를 확정하면 PROGRAM_APPLICATION_CONFIRMED 이벤트를 남긴다")
+    void confirmPaymentRaisesConfirmedEvent() {
+        ProgramApplication application = application(ProgramApplicationStatus.PENDING_PAYMENT);
+
+        application.confirmPayment(NOW);
+
+        assertThat(application.pullEvents()).containsExactly(draft(ProgramEvents.APPLICATION_CONFIRMED, confirmed()));
+    }
+
+    @Test
+    @DisplayName("[F-19][PG-06] 결제 대기 신청을 취소하면 환불 없음으로, 확정 신청을 취소하면 환불로 PROGRAM_APPLICATION_CANCELED 이벤트를 남긴다")
+    void cancelByMemberRaisesCanceledEventWithRefundFlag() {
+        ProgramApplication pending = application(ProgramApplicationStatus.PENDING_PAYMENT);
+        ProgramApplication confirmed = application(ProgramApplicationStatus.CONFIRMED);
+
+        pending.cancelByMember(NOW, REFUND_DEADLINE);
+        confirmed.cancelByMember(NOW, REFUND_DEADLINE);
+
+        assertThat(pending.pullEvents())
+                .containsExactly(draft(ProgramEvents.APPLICATION_CANCELED, canceled("USER", false)));
+        assertThat(confirmed.pullEvents())
+                .containsExactly(draft(ProgramEvents.APPLICATION_CANCELED, canceled("USER", true)));
+    }
+
+    @Test
+    @DisplayName("[SN-14] 제재로 취소하면 취소 이벤트를 남기고, 탈퇴로 취소하면 알리지 않으므로 아무것도 남기지 않는다")
+    void cancelByMemberRemovalNotifiesOnlySanctioned() {
+        ProgramApplication sanctioned = application(ProgramApplicationStatus.PENDING_PAYMENT);
+        ProgramApplication withdrawn = application(ProgramApplicationStatus.PENDING_PAYMENT);
+
+        sanctioned.cancelByMemberRemoval(ProgramCancelReason.SANCTIONED, NOW);
+        withdrawn.cancelByMemberRemoval(ProgramCancelReason.WITHDRAWN, NOW);
+
+        assertThat(sanctioned.pullEvents())
+                .containsExactly(draft(ProgramEvents.APPLICATION_CANCELED, canceled("SANCTIONED", false)));
+        assertThat(withdrawn.pullEvents()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("전이가 실패하면 이벤트를 남기지 않는다")
+    void failedTransitionsRaiseNothing() {
+        ProgramApplication expired = application(ProgramApplicationStatus.EXPIRED);
+        ProgramApplication canceled = application(ProgramApplicationStatus.CANCELED);
+        ProgramApplication lateConfirmed = application(ProgramApplicationStatus.CONFIRMED);
+
+        assertThatThrownBy(() -> expired.confirmPayment(NOW)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> canceled.cancelByMember(NOW, REFUND_DEADLINE)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> lateConfirmed.cancelByMember(REFUND_DEADLINE.plusSeconds(1), REFUND_DEADLINE))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> lateConfirmed.cancelByMemberRemoval(ProgramCancelReason.SANCTIONED, NOW))
+                .isInstanceOf(BusinessException.class);
+
+        assertThat(expired.pullEvents()).isEmpty();
+        assertThat(canceled.pullEvents()).isEmpty();
+        assertThat(lateConfirmed.pullEvents()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("이벤트를 꺼내면 대기열이 비어서 두 번째로 꺼낼 때는 아무것도 나오지 않는다")
+    void pullEventsEmptiesQueue() {
+        ProgramApplication application = application(ProgramApplicationStatus.PENDING_PAYMENT);
+        application.confirmPayment(NOW);
+
+        assertThat(application.pullEvents()).hasSize(1);
+        assertThat(application.pullEvents()).isEmpty();
+    }
+
+    private static ProgramEvents.ApplicationPayload confirmed() {
+        return new ProgramEvents.ApplicationPayload(APPLICATION_ID, MEMBER_ID, PROGRAM_ID);
+    }
+
+    private static ProgramEvents.CanceledPayload canceled(String reason, boolean refunded) {
+        return new ProgramEvents.CanceledPayload(APPLICATION_ID, MEMBER_ID, PROGRAM_ID, reason, refunded);
+    }
+
+    private static OutboxEventDraft draft(String eventType, Object payload) {
+        return new OutboxEventDraft(eventType, ProgramEvents.APPLICATION_AGGREGATE_TYPE, APPLICATION_ID, payload);
+    }
+
     private static ProgramApplication application(ProgramApplicationStatus status) {
         ProgramApplication application = BeanUtils.instantiateClass(ProgramApplication.class);
+        ReflectionTestUtils.setField(application, "id", APPLICATION_ID);
+        ReflectionTestUtils.setField(application, "memberId", MEMBER_ID);
+        ReflectionTestUtils.setField(application, "programId", PROGRAM_ID);
         ReflectionTestUtils.setField(application, "status", status);
         ReflectionTestUtils.setField(application, "paymentDueAt", DUE);
         return application;

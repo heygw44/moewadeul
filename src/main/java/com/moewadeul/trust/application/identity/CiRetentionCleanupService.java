@@ -1,5 +1,6 @@
 package com.moewadeul.trust.application.identity;
 
+import com.moewadeul.common.batch.BatchDeletion;
 import com.moewadeul.trust.infra.identity.CiRetentionCleanupMapper;
 import java.time.Clock;
 import java.time.Instant;
@@ -19,12 +20,8 @@ public class CiRetentionCleanupService {
 
     public int deleteRetentionExpired() {
         Instant now = Instant.now(clock);
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = cleanupMapper.deleteRetentionExpired(now, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        int deletedTotal =
+                BatchDeletion.untilDrained(BATCH_SIZE, size -> cleanupMapper.deleteRetentionExpired(now, size));
         log.info("identity verification deleted count={}", deletedTotal);
         return deletedTotal;
     }

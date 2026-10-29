@@ -26,4 +26,18 @@ class ReportTypeTest {
         assertThat(Arrays.stream(ReportType.values()).filter(ReportType::isUrgent))
                 .containsExactly(ReportType.HARASSMENT_OR_THREAT);
     }
+
+    @Test
+    @DisplayName("[SF-02][SN-05] 우선순위는 성희롱·위협이 금전 요구보다 높고, 금전 요구는 나머지 모든 유형보다 높다")
+    void priorityOrdersUrgentThenMoneyRequestThenRest() {
+        List<ReportType> rest = Arrays.stream(ReportType.values())
+                .filter(type -> type != ReportType.HARASSMENT_OR_THREAT && type != ReportType.MONEY_REQUEST)
+                .toList();
+
+        assertThat(ReportType.HARASSMENT_OR_THREAT.priority()).isGreaterThan(ReportType.MONEY_REQUEST.priority());
+        assertThat(rest)
+                .isNotEmpty()
+                .allSatisfy(
+                        type -> assertThat(ReportType.MONEY_REQUEST.priority()).isGreaterThan(type.priority()));
+    }
 }

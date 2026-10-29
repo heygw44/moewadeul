@@ -1,5 +1,7 @@
 package com.moewadeul.weather.infra;
 
+import static com.moewadeul.common.external.PublicDataHttp.textOf;
+
 import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.external.ExternalCallLimit;
@@ -165,7 +167,8 @@ public class KmaClient {
     }
 
     private List<KmaShortTermItem> toShortTermItems(JsonNode body) {
-        List<JsonNode> items = itemsOf(VILAGE_FCST, body);
+        List<JsonNode> items = PublicDataHttp.itemsOf(
+                body.path("items"), reason -> new KmaApiException(describe(VILAGE_FCST, reason)));
         int totalCount = body.path("totalCount").asInt(-1);
         if (totalCount < 0) {
             throw new KmaApiException(describe(VILAGE_FCST, "응답에 totalCount가 없다"));
@@ -186,7 +189,8 @@ public class KmaClient {
     }
 
     private Optional<KmaMidTermItem> toMidTermItem(String operation, JsonNode body) {
-        List<JsonNode> items = itemsOf(operation, body);
+        List<JsonNode> items =
+                PublicDataHttp.itemsOf(body.path("items"), reason -> new KmaApiException(describe(operation, reason)));
         if (items.isEmpty()) {
             return Optional.empty();
         }
@@ -198,37 +202,6 @@ public class KmaClient {
             }
         }
         return Optional.of(new KmaMidTermItem(fields));
-    }
-
-    // 공공데이터포털은 결과가 없으면 items를 빈 문자열("")로 주고, 결과가 한 건이면 item을 배열이 아닌 객체 하나로 줄 수 있다.
-    // 그래서 클라이언트는 세 모양(빈 값, 객체 하나, 배열)을 모두 목록으로 바꾼다.
-    private List<JsonNode> itemsOf(String operation, JsonNode body) {
-        JsonNode items = body.path("items");
-        if (items.isMissingNode()
-                || items.isNull()
-                || (items.isString() && items.asString().isBlank())) {
-            return List.of();
-        }
-        if (!items.isObject()) {
-            throw new KmaApiException(describe(operation, "items 형식을 해석하지 못했다"));
-        }
-        JsonNode item = items.path("item");
-        if (item.isMissingNode() || item.isNull()) {
-            return List.of();
-        }
-        if (item.isObject()) {
-            return List.of(item);
-        }
-        if (!item.isArray()) {
-            throw new KmaApiException(describe(operation, "item 형식을 해석하지 못했다"));
-        }
-        List<JsonNode> result = new ArrayList<>(item.size());
-        item.values().forEach(result::add);
-        return result;
-    }
-
-    private static String textOf(JsonNode node, String field) {
-        return node.path(field).asString(null);
     }
 
     private static String describe(String operation, String reason) {

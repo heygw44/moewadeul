@@ -6,13 +6,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.TrustEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class MemberReportTest {
 
+    private static final long REPORT_ID = 21L;
     private static final Instant NOW = Instant.parse("2026-10-05T03:00:00Z");
 
     @Test
@@ -175,8 +179,47 @@ class MemberReportTest {
         assertThat(report.getResultNote()).hasSize(1000);
     }
 
+    @Test
+    @DisplayName("[SN-04][SN-05] 조치하면 ACTIONED, 기각하면 DISMISSED 결과로 MEMBER_REPORT_RESOLVED 이벤트를 남긴다")
+    void resolveRaisesResolvedEvent() {
+        MemberReport actioned = inReviewReport();
+        MemberReport dismissed = inReviewReport();
+
+        actioned.action(98L, null, NOW);
+        dismissed.dismiss(98L, null, NOW);
+
+        assertThat(actioned.pullEvents()).containsExactly(resolved("ACTIONED"));
+        assertThat(dismissed.pullEvents()).containsExactly(resolved("DISMISSED"));
+    }
+
+    @Test
+    @DisplayName("처리가 실패하면 이벤트를 남기지 않고, 이벤트를 꺼내면 대기열이 비어 있다")
+    void failedResolveRaisesNothingAndPullEmptiesQueue() {
+        MemberReport received = receivedReport();
+        MemberReport inReview = inReviewReport();
+
+        assertThatThrownBy(() -> received.action(99L, null, NOW)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> inReview.dismiss(99L, "가".repeat(1001), NOW))
+                .isInstanceOf(IllegalArgumentException.class);
+        inReview.action(99L, null, NOW);
+
+        assertThat(received.pullEvents()).isEmpty();
+        assertThat(inReview.pullEvents()).hasSize(1);
+        assertThat(inReview.pullEvents()).isEmpty();
+    }
+
+    private static OutboxEventDraft resolved(String result) {
+        return new OutboxEventDraft(
+                TrustEvents.REPORT_RESOLVED,
+                TrustEvents.REPORT_AGGREGATE_TYPE,
+                REPORT_ID,
+                new TrustEvents.ReportResolvedPayload(REPORT_ID, 10L, result));
+    }
+
     private static MemberReport receivedReport() {
-        return MemberReport.receive(10L, 11L, 3L, null, ReportType.NO_SHOW, "약속 장소에 오지 않았다", NOW);
+        MemberReport report = MemberReport.receive(10L, 11L, 3L, null, ReportType.NO_SHOW, "약속 장소에 오지 않았다", NOW);
+        ReflectionTestUtils.setField(report, "id", REPORT_ID);
+        return report;
     }
 
     private static MemberReport inReviewReport() {

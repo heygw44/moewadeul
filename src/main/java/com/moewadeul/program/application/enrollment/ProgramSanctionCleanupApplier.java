@@ -2,7 +2,6 @@ package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplication;
@@ -37,9 +36,7 @@ class ProgramSanctionCleanupApplier {
         }
         Instant now = clock.instant();
         application.cancelByMemberRemoval(reason, now);
-        if (reason == ProgramCancelReason.SANCTIONED) {
-            recordApplicantCanceled(application, memberId, reason);
-        }
+        outboxEventRecorder.recordAll(application.pullEvents());
         Program program = programRepository
                 .findById(application.getProgramId())
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
@@ -47,15 +44,6 @@ class ProgramSanctionCleanupApplier {
         log.info(
                 "program application canceled reason={} applicationId={} memberId={}", reason, applicationId, memberId);
         return true;
-    }
-
-    private void recordApplicantCanceled(ProgramApplication application, long memberId, ProgramCancelReason reason) {
-        outboxEventRecorder.record(
-                ProgramEvents.APPLICATION_CANCELED,
-                ProgramEvents.APPLICATION_AGGREGATE_TYPE,
-                application.getId(),
-                new ProgramEvents.CanceledPayload(
-                        application.getId(), memberId, application.getProgramId(), reason.name(), false));
     }
 
     @Transactional

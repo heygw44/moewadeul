@@ -2,6 +2,8 @@ package com.moewadeul.trust.domain.report;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.TrustEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,7 +13,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -69,6 +75,10 @@ public class MemberReport {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Transient
+    @Getter(AccessLevel.NONE)
+    private final List<Supplier<OutboxEventDraft>> deferredEvents = new ArrayList<>();
 
     private MemberReport(
             long reporterId,
@@ -134,6 +144,13 @@ public class MemberReport {
         resolve(ReportStatus.DISMISSED, adminId, note, now);
     }
 
+    public List<OutboxEventDraft> pullEvents() {
+        List<OutboxEventDraft> events =
+                deferredEvents.stream().map(Supplier::get).toList();
+        deferredEvents.clear();
+        return events;
+    }
+
     public void requireInReview() {
         requireStatus(ReportStatus.IN_REVIEW);
     }
@@ -149,6 +166,13 @@ public class MemberReport {
         this.handledAt = now;
         this.resultNote = note == null || note.isBlank() ? null : note;
         this.updatedAt = now;
+        long reporterId = this.reporterId;
+        String resultName = result.name();
+        deferredEvents.add(() -> new OutboxEventDraft(
+                TrustEvents.REPORT_RESOLVED,
+                TrustEvents.REPORT_AGGREGATE_TYPE,
+                id,
+                new TrustEvents.ReportResolvedPayload(id, reporterId, resultName)));
     }
 
     private void requireStatus(ReportStatus expected) {

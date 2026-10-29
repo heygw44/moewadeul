@@ -1,11 +1,11 @@
 package com.moewadeul.trust.application.report;
 
+import com.moewadeul.common.batch.BatchDeletion;
 import com.moewadeul.trust.infra.report.ReportContentCleanupMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.Period;
 import java.time.ZoneOffset;
-import java.util.function.BiFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,20 +25,12 @@ public class ReportContentCleanupService {
     public Result clearExpiredContent() {
         Instant cutoff =
                 Instant.now(clock).atZone(ZoneOffset.UTC).minus(RETENTION).toInstant();
-        int reports = repeatUntilDone(cutoff, cleanupMapper::clearHandledReportContent);
-        int sanctions = repeatUntilDone(cutoff, cleanupMapper::clearFinishedSanctionReason);
+        int reports =
+                BatchDeletion.untilDrained(BATCH_SIZE, size -> cleanupMapper.clearHandledReportContent(cutoff, size));
+        int sanctions =
+                BatchDeletion.untilDrained(BATCH_SIZE, size -> cleanupMapper.clearFinishedSanctionReason(cutoff, size));
         log.info("report content cleared reportCount={} sanctionCount={}", reports, sanctions);
         return new Result(reports, sanctions);
-    }
-
-    private static int repeatUntilDone(Instant cutoff, BiFunction<Instant, Integer, Integer> clearBatch) {
-        int total = 0;
-        int cleared;
-        do {
-            cleared = clearBatch.apply(cutoff, BATCH_SIZE);
-            total += cleared;
-        } while (cleared >= BATCH_SIZE);
-        return total;
     }
 
     public record Result(int reports, int sanctions) {}

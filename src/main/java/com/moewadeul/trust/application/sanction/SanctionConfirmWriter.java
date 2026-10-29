@@ -1,6 +1,5 @@
 package com.moewadeul.trust.application.sanction;
 
-import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
@@ -44,23 +43,8 @@ public class SanctionConfirmWriter {
         boolean suspended = command.type().isSuspension();
         if (suspended) {
             suspend(member, sanction);
-            outboxEventRecorder.record(
-                    TrustEvents.SANCTION_BASECAMP_CLEANUP,
-                    TrustEvents.MEMBER_AGGREGATE_TYPE,
-                    memberId,
-                    new TrustEvents.SanctionPayload(memberId, sanction.getId()));
-            outboxEventRecorder.record(
-                    TrustEvents.SANCTION_PROGRAM_CLEANUP,
-                    TrustEvents.MEMBER_AGGREGATE_TYPE,
-                    memberId,
-                    new TrustEvents.SanctionPayload(memberId, sanction.getId()));
         }
-        outboxEventRecorder.record(
-                TrustEvents.SANCTION_CONFIRMED,
-                TrustEvents.MEMBER_AGGREGATE_TYPE,
-                memberId,
-                new TrustEvents.SanctionConfirmedPayload(
-                        memberId, sanction.getId(), sanction.getType().name(), sanction.getEndsAt()));
+        outboxEventRecorder.recordAll(sanction.pullEvents());
         return new SanctionConfirmResult(sanction.getId(), memberId, suspended);
     }
 

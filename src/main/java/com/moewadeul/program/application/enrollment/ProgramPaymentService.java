@@ -3,7 +3,6 @@ package com.moewadeul.program.application.enrollment;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
-import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.domain.Payment;
 import com.moewadeul.program.domain.PaymentRepository;
@@ -11,7 +10,6 @@ import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplication;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
-import com.moewadeul.program.domain.ProgramCancelReason;
 import com.moewadeul.program.domain.ProgramErrorCode;
 import com.moewadeul.program.domain.ProgramRepository;
 import java.time.Clock;
@@ -43,11 +41,7 @@ public class ProgramPaymentService {
         application.confirmPayment(now);
         Program program = findProgram(application.getProgramId());
         savePayment(Payment.paid(applicationId, program.getFee(), now));
-        outboxEventRecorder.record(
-                ProgramEvents.APPLICATION_CONFIRMED,
-                ProgramEvents.APPLICATION_AGGREGATE_TYPE,
-                applicationId,
-                new ProgramEvents.ApplicationPayload(applicationId, memberId, application.getProgramId()));
+        outboxEventRecorder.recordAll(application.pullEvents());
         log.info("program payment confirmed applicationId={} memberId={}", applicationId, memberId);
         return new ProgramPayResult(applicationId, ProgramApplicationStatus.CONFIRMED, now);
     }
@@ -61,16 +55,7 @@ public class ProgramPaymentService {
         if (refunded) {
             refundPayment(applicationId, now);
         }
-        outboxEventRecorder.record(
-                ProgramEvents.APPLICATION_CANCELED,
-                ProgramEvents.APPLICATION_AGGREGATE_TYPE,
-                applicationId,
-                new ProgramEvents.CanceledPayload(
-                        applicationId,
-                        memberId,
-                        application.getProgramId(),
-                        ProgramCancelReason.USER.name(),
-                        refunded));
+        outboxEventRecorder.recordAll(application.pullEvents());
         seatReleaseRecorder.record(program, now);
         log.info(
                 "program application canceled applicationId={} memberId={} refunded={}",
