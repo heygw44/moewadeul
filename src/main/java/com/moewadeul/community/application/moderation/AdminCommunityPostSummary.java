@@ -1,5 +1,6 @@
 package com.moewadeul.community.application.moderation;
 
+import com.moewadeul.common.moderation.RecentReport;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -12,5 +13,5 @@ public record AdminCommunityPostSummary(
         String status,
         long reportCount,
         Map<String, Long> reasonCounts,
-        List<AdminCommunityRecentReport> recentReports,
+        List<RecentReport> recentReports,
         Instant statusChangedAt) {}

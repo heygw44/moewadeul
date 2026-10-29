@@ -52,41 +52,22 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <sql id="ofTargetType">AND r.target_type = #{targetType}</sql>
+
     <select id="selectReasonCounts" resultType="com.moewadeul.common.moderation.ReportReasonCount">
-        SELECT r.target_id AS target_id,
-               r.reason AS reason,
-               COUNT(*) AS report_count
-        FROM community_report r
-        WHERE r.reviewed_at IS NULL
-          AND r.target_type = #{targetType}
-          AND r.target_id IN
-        <foreach collection="targetIds" item="targetId" open="(" separator="," close=")">
-            #{targetId}
-        </foreach>
-        GROUP BY r.target_id, r.reason
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.reasonCounts">
+            <property name="reportTable" value="community_report"/>
+            <property name="targetColumn" value="target_id"/>
+            <property name="targetScope" value="com.moewadeul.community.infra.moderation.AdminCommunityMapper.ofTargetType"/>
+        </include>
     </select>
 
-    <select id="selectRecentReports" resultType="com.moewadeul.community.infra.moderation.AdminCommunityRecentReportRow">
-        SELECT ranked.target_id AS target_id,
-               ranked.reason AS reason,
-               ranked.content AS content,
-               ranked.created_at AS created_at
-        FROM (
-            SELECT r.target_id AS target_id,
-                   r.reason AS reason,
-                   r.content AS content,
-                   r.created_at AS created_at,
-                   ROW_NUMBER() OVER (PARTITION BY r.target_id ORDER BY r.created_at DESC, r.id DESC) AS row_num
-            FROM community_report r
-            WHERE r.reviewed_at IS NULL
-              AND r.target_type = #{targetType}
-              AND r.target_id IN
-            <foreach collection="targetIds" item="targetId" open="(" separator="," close=")">
-                #{targetId}
-            </foreach>
-        ) ranked
-        WHERE ranked.row_num &lt;= 5
-        ORDER BY ranked.target_id ASC, ranked.row_num ASC
+    <select id="selectRecentReports" resultType="com.moewadeul.common.moderation.RecentReportRow">
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.recentReports">
+            <property name="reportTable" value="community_report"/>
+            <property name="targetColumn" value="target_id"/>
+            <property name="targetScope" value="com.moewadeul.community.infra.moderation.AdminCommunityMapper.ofTargetType"/>
+        </include>
     </select>
 
 </mapper>

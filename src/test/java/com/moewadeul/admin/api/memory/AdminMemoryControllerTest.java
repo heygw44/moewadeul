@@ -15,6 +15,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.moderation.ModerationResult;
+import com.moewadeul.common.moderation.RecentReport;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
@@ -93,7 +94,7 @@ class AdminMemoryControllerTest {
                 "PENDING_REVIEW",
                 5,
                 Map.of("SPAM", 2L, "ABUSE", 0L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 3L, "OTHER", 0L),
-                List.of(new AdminMemorySummary.RecentReport("MONEY_SCAM", "송금 요구", AT)),
+                List.of(new RecentReport("MONEY_SCAM", "송금 요구", AT)),
                 AT);
         when(queryService.list(null, 0, 20)).thenReturn(new PageSlice<>(List.of(summary), 0, 20, false));
 
