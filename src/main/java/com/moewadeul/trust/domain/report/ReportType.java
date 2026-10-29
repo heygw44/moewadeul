@@ -24,4 +24,12 @@ public enum ReportType {
     public boolean isUrgent() {
         return urgent;
     }
+
+    // SN-05, SF-02 목록 순서는 긴급 신고, 금전 요구 신고, 나머지다. 클수록 먼저 보인다.
+    public int priority() {
+        if (urgent) {
+            return 2;
+        }
+        return this == MONEY_REQUEST ? 1 : 0;
+    }
 }
