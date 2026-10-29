@@ -90,6 +90,25 @@ class MemberSignupApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-01] 만 14세 확인 없이 가입하면 400 ageConfirmed 오류를 응답하고 회원을 만들지 않는다")
+    void signUpWithoutAgeConfirmedIsRejected() {
+        String email = TestSequence.email();
+
+        MvcTestResult result = mvc.post()
+                .uri("/api/members")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"%s\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"%s\"}"
+                        .formatted(email, VALID_PASSWORD, VALID_PASSWORD, TestSequence.nickname()))
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("ageConfirmed");
+        assertThat(memberRepository.findAll()).noneMatch(m -> m.getEmail().equals(email));
+    }
+
+    @Test
     @DisplayName("[F-01] 닉네임이 중복이면 409를 응답한다")
     void duplicatedNicknameReturnsConflict() {
         String nickname = TestSequence.nickname();
@@ -162,8 +181,9 @@ class MemberSignupApiIntegrationTest {
     }
 
     private MvcTestResult post(String email, String password, String nickname) {
-        String body = "{\"email\":\"%s\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"%s\"}"
-                .formatted(email, password, password, nickname);
+        String body =
+                "{\"email\":\"%s\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"%s\",\"ageConfirmed\":true}"
+                        .formatted(email, password, password, nickname);
         return mvc.post()
                 .uri("/api/members")
                 .with(csrf())

@@ -24,7 +24,8 @@ class MemberController {
     @Operation(
             summary = "회원가입",
             description =
-                    "passwordConfirm이 password와 다르면 400 INVALID_INPUT을 응답하고 fieldErrors에 passwordConfirm 항목을 담는다.")
+                    "passwordConfirm이 password와 다르면 400 INVALID_INPUT을 응답하고 fieldErrors에 passwordConfirm 항목을 담는다. "
+                            + "ageConfirmed가 true가 아니어도 400 INVALID_INPUT이고 fieldErrors에 ageConfirmed 항목을 담는다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     SignupResponse signUp(@Valid @RequestBody SignupRequest request, HttpServletRequest httpRequest) {
