@@ -28,7 +28,7 @@ public class PasswordChangeService {
 
     public void change(PasswordChangeCommand command) {
         Member member = findChangeableMember(command.memberId());
-        rejectIfLocked(member.getEmail());
+        rejectIfLocked(member);
         verifyCurrentPassword(member, command);
         Password newPassword = Password.of(command.newPassword());
         if (passwordEncoder.matches(newPassword.value(), member.getPasswordHash())) {
@@ -46,8 +46,8 @@ public class PasswordChangeService {
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH));
     }
 
-    private void rejectIfLocked(String email) {
-        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(email);
+    private void rejectIfLocked(Member member) {
+        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(member.getId(), member.getEmail());
         if (retryAfter.isPresent()) {
             throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, retryAfter.get());
         }

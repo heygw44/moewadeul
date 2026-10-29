@@ -8,4 +8,6 @@ public interface LoginHistoryRepository {
     LoginHistory save(LoginHistory loginHistory);
 
     List<Instant> findFailureTimesSinceLastSuccess(String attemptedEmail, Instant after);
+
+    List<Instant> findMemberFailureTimesSinceLastSuccess(long memberId, Instant after);
 }
