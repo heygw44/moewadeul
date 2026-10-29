@@ -50,7 +50,11 @@ function page(ids: number[], pageNumber: number, hasNext: boolean): Page<Basecam
   return { content: ids.map(application), page: pageNumber, size: 20, hasNext } as Page<BasecampApplicationItem>;
 }
 
-type ApplicationsCall = { page: number; resolve: (value: Page<BasecampApplicationItem>) => void };
+type ApplicationsCall = {
+  page: number;
+  resolve: (value: Page<BasecampApplicationItem>) => void;
+  reject: (reason: unknown) => void;
+};
 
 describe('베이스캠프 관리 화면의 신청 목록', () => {
   let container: HTMLDivElement;
@@ -68,7 +72,7 @@ describe('베이스캠프 관리 화면의 신청 목록', () => {
     vi.mocked(fetchBasecampDetail).mockResolvedValue(DETAIL);
     vi.mocked(approveApplication).mockResolvedValue({ headcount: 3, status: 'RECRUITING' });
     vi.mocked(fetchBasecampApplications).mockImplementation(
-      (_id, pageNumber) => new Promise((resolve) => calls.push({ page: pageNumber, resolve })),
+      (_id, pageNumber) => new Promise((resolve, reject) => calls.push({ page: pageNumber, resolve, reject })),
     );
   });
 
@@ -91,5 +95,18 @@ describe('베이스캠프 관리 화면의 신청 목록', () => {
     const text = container.textContent ?? '';
     expect(text).toContain('신청자2');
     expect(text).not.toContain('신청자3');
+  });
+
+  it('승인 뒤 새로고침이 실패해도 받아 둔 신청 목록은 오류와 함께 남는다', async () => {
+    await act(async () => root.render(<BasecampManagePage basecampId={7} />));
+    await act(async () => calls[0]?.resolve(page([1, 2], 0, false)));
+
+    await act(async () => button('승인')?.click());
+    await act(async () => calls[1]?.reject(new Error('일시적인 오류')));
+
+    const text = container.textContent ?? '';
+    expect(text).toContain('신청 목록을 불러오지 못했어요');
+    expect(text).toContain('신청자1');
+    expect(text).toContain('신청자2');
   });
 });

@@ -9,6 +9,7 @@ type ListState<T, F> = {
   hasNext: boolean;
   error: string | null;
   traceId: string | null;
+  failedOn: 'first' | 'next' | null;
 };
 
 type Fetcher<T, F> = (filter: F, page: number, signal?: AbortSignal) => Promise<Page<T>>;
@@ -56,20 +57,30 @@ export function usePagedList<T, F extends FilterValue>(
       (page) => {
         if (!controller.signal.aborted) {
           generationRef.current += 1;
-          setState({ filter, items: page.content, page: page.page, hasNext: page.hasNext, error: null, traceId: null });
+          setState({
+            filter,
+            items: page.content,
+            page: page.page,
+            hasNext: page.hasNext,
+            error: null,
+            traceId: null,
+            failedOn: null,
+          });
         }
       },
       (caught: unknown) => {
         if (!controller.signal.aborted) {
           generationRef.current += 1;
-          setState({
-            filter,
-            items: [],
-            page: 0,
-            hasNext: false,
+          const failure = {
             error: toUserMessage(caught),
             traceId: serverTraceId(caught) ?? null,
-          });
+            failedOn: 'first' as const,
+          };
+          setState((previous) =>
+            previous !== null && previous.filter === filter
+              ? { ...previous, ...failure }
+              : { filter, items: [], page: 0, hasNext: false, ...failure },
+          );
         }
       },
     );
@@ -81,6 +92,11 @@ export function usePagedList<T, F extends FilterValue>(
   const loadMore = useCallback(async () => {
     if (!current || loadingMore) return;
     setLoadingMore(true);
+    setState((previous) =>
+      previous !== null && previous.filter === filter
+        ? { ...previous, error: null, traceId: null, failedOn: null }
+        : previous,
+    );
     const generation = generationRef.current;
     try {
       const next = await fetcherRef.current(filter, current.page + 1);
@@ -94,6 +110,7 @@ export function usePagedList<T, F extends FilterValue>(
               hasNext: next.hasNext,
               error: null,
               traceId: null,
+              failedOn: null,
             }
           : previous,
       );
@@ -101,7 +118,7 @@ export function usePagedList<T, F extends FilterValue>(
       if (generation !== generationRef.current) return;
       setState((previous) =>
         previous !== null && previous.filter === filter
-          ? { ...previous, error: toUserMessage(caught), traceId: serverTraceId(caught) ?? null }
+          ? { ...previous, error: toUserMessage(caught), traceId: serverTraceId(caught) ?? null, failedOn: 'next' }
           : previous,
       );
     } finally {
@@ -118,9 +135,17 @@ export function usePagedList<T, F extends FilterValue>(
   );
 
   const retry = useCallback(() => {
-    setState(null);
+    if (current?.failedOn === 'next') {
+      void loadMore();
+      return;
+    }
+    setState((previous) =>
+      previous === null || previous.items.length === 0
+        ? null
+        : { ...previous, error: null, traceId: null, failedOn: null },
+    );
     setAttempt((value) => value + 1);
-  }, []);
+  }, [current, loadMore]);
 
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
 

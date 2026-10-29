@@ -51,7 +51,7 @@ function SpotReview() {
       {current?.error && (
         <div role="alert" className="flex flex-col gap-3">
           <ErrorNotice title="박지를 불러오지 못했어요" error={current.error} traceId={current.traceId ?? undefined} />
-          {current.items.length === 0 && (
+          {current.failedOn === 'first' && (
             <div>
               <Button variant="secondary" onClick={retry}>
                 다시 불러오기
