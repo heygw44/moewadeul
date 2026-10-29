@@ -1,6 +1,8 @@
 package com.moewadeul.trust.domain.sanction;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.event.TrustEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,8 +12,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -68,6 +74,10 @@ public class Sanction {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Transient
+    @Getter(AccessLevel.NONE)
+    private final List<Supplier<OutboxEventDraft>> deferredEvents = new ArrayList<>();
 
     private Sanction(long memberId, long reportId, Instant startsAt) {
         this.memberId = memberId;
@@ -129,7 +139,33 @@ public class Sanction {
         if (reason == null || reason.isBlank() || reason.length() > REASON_MAX_LENGTH) {
             throw new IllegalArgumentException("제재 사유는 공백뿐이 아닌 " + REASON_MAX_LENGTH + "자 이하여야 합니다.");
         }
-        return new Sanction(memberId, reportId, type, level, reason, startsAt, createdBy);
+        Sanction sanction = new Sanction(memberId, reportId, type, level, reason, startsAt, createdBy);
+        sanction.raiseConfirmed();
+        return sanction;
+    }
+
+    public List<OutboxEventDraft> pullEvents() {
+        List<OutboxEventDraft> events =
+                deferredEvents.stream().map(Supplier::get).toList();
+        deferredEvents.clear();
+        return events;
+    }
+
+    private void raiseConfirmed() {
+        if (type.isSuspension()) {
+            raise(TrustEvents.SANCTION_BASECAMP_CLEANUP, () -> new TrustEvents.SanctionPayload(memberId, id));
+            raise(TrustEvents.SANCTION_PROGRAM_CLEANUP, () -> new TrustEvents.SanctionPayload(memberId, id));
+        }
+        String typeName = type.name();
+        Instant endsAt = this.endsAt;
+        raise(
+                TrustEvents.SANCTION_CONFIRMED,
+                () -> new TrustEvents.SanctionConfirmedPayload(memberId, id, typeName, endsAt));
+    }
+
+    private void raise(String eventType, Supplier<Object> payload) {
+        deferredEvents.add(
+                () -> new OutboxEventDraft(eventType, TrustEvents.MEMBER_AGGREGATE_TYPE, memberId, payload.get()));
     }
 
     public void lift(long adminId, SanctionLiftReason reason, Instant now) {

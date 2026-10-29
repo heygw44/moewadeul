@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.event.TrustEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Duration;
 import java.time.Instant;
@@ -229,6 +231,65 @@ class SanctionTest {
                         .isEqualTo(status != SanctionStatus.REVOKED);
             }
         }
+    }
+
+    @Test
+    @DisplayName("[SN-10] 정지를 확정하면 베이스캠프 정리, 프로그램 정리, 제재 확정 이벤트를 이 순서로 남기고 끝나는 시각을 싣는다")
+    void confirmingSuspensionRaisesCleanupThenConfirmed() {
+        Sanction sanction = Sanction.confirm(11L, 5L, SanctionType.SUSPEND_7D, 2, "반복 위반", NOW, 99L);
+        ReflectionTestUtils.setField(sanction, "id", 77L);
+
+        assertThat(sanction.pullEvents())
+                .containsExactly(
+                        memberEvent(TrustEvents.SANCTION_BASECAMP_CLEANUP, new TrustEvents.SanctionPayload(11L, 77L)),
+                        memberEvent(TrustEvents.SANCTION_PROGRAM_CLEANUP, new TrustEvents.SanctionPayload(11L, 77L)),
+                        memberEvent(
+                                TrustEvents.SANCTION_CONFIRMED,
+                                new TrustEvents.SanctionConfirmedPayload(
+                                        11L, 77L, "SUSPEND_7D", NOW.plus(Duration.ofDays(7)))));
+    }
+
+    @Test
+    @DisplayName("[SN-10] 경고를 확정하면 제재 확정 이벤트만 남긴다")
+    void confirmingWarningRaisesOnlyConfirmed() {
+        Sanction sanction = Sanction.confirm(11L, 5L, SanctionType.WARNING, 1, "욕설", NOW, 99L);
+        ReflectionTestUtils.setField(sanction, "id", 78L);
+
+        assertThat(sanction.pullEvents())
+                .containsExactly(memberEvent(
+                        TrustEvents.SANCTION_CONFIRMED,
+                        new TrustEvents.SanctionConfirmedPayload(11L, 78L, "WARNING", null)));
+    }
+
+    @Test
+    @DisplayName("제재 ID는 저장 뒤에 채워지므로 이벤트를 꺼내는 시점에 읽고, 집계 ID는 제재가 아닌 회원 ID다")
+    void sanctionIdIsReadWhenEventsArePulled() {
+        Sanction sanction = Sanction.confirm(11L, 5L, SanctionType.PERMANENT, 4, "심각한 위반", NOW, 99L);
+        ReflectionTestUtils.setField(sanction, "id", 79L);
+
+        assertThat(sanction.pullEvents())
+                .allSatisfy(event -> assertThat(event.aggregateId()).isEqualTo(11L))
+                .extracting(OutboxEventDraft::payload)
+                .contains(new TrustEvents.SanctionPayload(11L, 79L));
+        assertThat(sanction.pullEvents()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("임시 정지와 해제는 이벤트를 남기지 않는다")
+    void temporaryAndLiftRaiseNothing() {
+        Sanction temporary = Sanction.temporary(11L, 5L, NOW);
+        temporary.liftForDismissedReport(99L, NOW);
+        Sanction warning = Sanction.confirm(11L, 5L, SanctionType.WARNING, 1, "욕설", NOW, 99L);
+        ReflectionTestUtils.setField(warning, "id", 80L);
+        warning.pullEvents();
+        warning.lift(99L, SanctionLiftReason.END_EARLY, NOW);
+
+        assertThat(temporary.pullEvents()).isEmpty();
+        assertThat(warning.pullEvents()).isEmpty();
+    }
+
+    private static OutboxEventDraft memberEvent(String eventType, Object payload) {
+        return new OutboxEventDraft(eventType, TrustEvents.MEMBER_AGGREGATE_TYPE, 11L, payload);
     }
 
     private static Sanction sanctionOf(SanctionType type, SanctionStatus status) {
