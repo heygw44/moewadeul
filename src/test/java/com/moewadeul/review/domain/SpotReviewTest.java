@@ -1,8 +1,11 @@
 package com.moewadeul.review.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,14 +36,17 @@ class SpotReviewTest {
     }
 
     @Test
-    @DisplayName("[F-10] 작성자 ID가 같을 때만 isWrittenBy가 true다")
-    void isWrittenByComparesAuthorId() {
+    @DisplayName("[F-10] 작성자가 아니면 requireWrittenBy가 ACCESS_DENIED다")
+    void requireWrittenByRejectsOthers() {
         // given
         SpotReview review = SpotReview.write(11L, 7L, VISITED, 4, "좋다", NOW);
 
         // then
-        assertThat(review.isWrittenBy(7L)).isTrue();
-        assertThat(review.isWrittenBy(8L)).isFalse();
+        assertThatCode(() -> review.requireWrittenBy(7L)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> review.requireWrittenBy(8L))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
     @Test

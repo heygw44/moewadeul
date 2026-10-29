@@ -1,6 +1,7 @@
 package com.moewadeul.community.domain.comment;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -118,8 +119,10 @@ public class CommunityComment {
         this.updatedAt = now;
     }
 
-    public boolean isWrittenBy(long memberId) {
-        return this.memberId == memberId;
+    public void requireWrittenBy(long memberId) {
+        if (this.memberId != memberId) {
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
+        }
     }
 
     public boolean isActive() {

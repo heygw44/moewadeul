@@ -4,7 +4,6 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
-import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.Password;
 import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
@@ -34,7 +33,7 @@ class PasswordResetApplier {
         PasswordResetToken token = findUsableToken(rawToken, now);
         long memberId = token.getMemberId();
         Member member = memberRepository.findByIdForUpdate(memberId).orElseThrow(() -> memberNotFound(memberId));
-        if (member.getStatus() == MemberStatus.WITHDRAWN) {
+        if (member.isWithdrawn()) {
             throw invalidToken();
         }
         if (passwordResetTokenMapper.markUsed(token.getId(), now) == 0) {

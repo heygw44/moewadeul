@@ -2,6 +2,7 @@ package com.moewadeul.memory.application.report;
 
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -24,11 +25,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class MemoryReportConcurrencyIntegrationTest {
+
+    private static final long MISSING_MEMBER_ID = 999_999_999L;
 
     private static final int THREADS = 10;
     private static final int PENDING_REVIEW_REPORTS = 5;
@@ -155,6 +160,17 @@ class MemoryReportConcurrencyIntegrationTest {
         return memoryCommandService.write(
                 authorId,
                 new MemoryWriteCommand(null, 37.25, 127.25, LocalDate.of(2026, 10, 4), 1, null, "PUBLIC", List.of()));
+    }
+
+    @Test
+    @DisplayName("[F-33] 신고자가 없어서 외래 키가 깨지면 중복 신고로 바꾸지 않고 무결성 위반을 그대로 던진다")
+    void foreignKeyViolationIsNotReportedAsDuplicate() {
+        // given
+        long memoryId = savePublicMemory(saveMember());
+
+        // when, then
+        assertThatThrownBy(() -> memoryReportService.report(MISSING_MEMBER_ID, memoryId, REPORT))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private long saveMember() {

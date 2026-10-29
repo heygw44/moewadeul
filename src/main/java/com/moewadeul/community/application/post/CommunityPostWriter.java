@@ -77,9 +77,7 @@ public class CommunityPostWriter {
     private static CommunityPost requireOwnActive(Optional<CommunityPost> found, long memberId) {
         CommunityPost post = found.filter(CommunityPost::isActive)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!post.isWrittenBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        post.requireWrittenBy(memberId);
         return post;
     }
 

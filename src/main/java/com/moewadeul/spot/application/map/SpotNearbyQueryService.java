@@ -27,7 +27,7 @@ public class SpotNearbyQueryService {
     public PageSlice<SpotNearbyItem> findNearby(SpotNearbyQuery query) {
         long offset = PageSlice.offsetOf(query.page(), query.size());
         int fetchSize = PageSlice.fetchSize(query.size());
-        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
+        LocalDate today = KoreaTime.today(clock);
         double radiusKm = searchRadiusKm(query, today, offset + fetchSize);
         List<SpotNearbyRow> rows =
                 spotNearbyMapper.selectNearby(toCondition(query, radiusKm, today), offset, fetchSize);

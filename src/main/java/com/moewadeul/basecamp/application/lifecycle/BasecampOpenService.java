@@ -17,7 +17,6 @@ import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.application.sanction.SanctionQueryService;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,8 +39,7 @@ public class BasecampOpenService {
         // 잠금이 트랜잭션의 첫 쿼리여야 한다. 그래야 아래 개수 조회가 잠금을 얻은 뒤의 스냅숏을 읽어서, 먼저 끝난 요청이 연 베이스캠프가 보인다.
         basecampLockMapper.lockMember(leaderId);
         Instant now = clock.instant();
-        BasecampOpenPolicy.requireSchedule(
-                command.startDate(), command.endDate(), LocalDate.ofInstant(now, KoreaTime.ZONE));
+        BasecampOpenPolicy.requireSchedule(command.startDate(), command.endDate(), KoreaTime.dateOf(now));
         Capacity capacity = Capacity.of(command.capacity());
         TrustDetail trust = trustSummaryService.detail(leaderId);
         requireTrustLevel(trust);

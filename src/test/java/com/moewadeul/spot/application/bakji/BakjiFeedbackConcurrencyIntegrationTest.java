@@ -2,6 +2,7 @@ package com.moewadeul.spot.application.bakji;
 
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.moewadeul.common.error.BusinessException;
@@ -29,12 +30,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @IntegrationTest
 class BakjiFeedbackConcurrencyIntegrationTest {
+
+    private static final long MISSING_MEMBER_ID = 999_999_999L;
 
     private static final int THREADS = 10;
     private static final int PENDING_REVIEW_REPORTS = 5;
@@ -193,6 +197,28 @@ class BakjiFeedbackConcurrencyIntegrationTest {
 
     private static List<Long> sameMember(long memberId) {
         return Collections.nCopies(THREADS, memberId);
+    }
+
+    @Test
+    @DisplayName("[F-08] 확인한 회원이 없어서 외래 키가 깨지면 이미 확인했다고 바꾸지 않고 무결성 위반을 그대로 던진다")
+    void confirmForeignKeyViolationIsNotReportedAsDuplicate() {
+        // given
+        long spotId = saveBakji();
+
+        // when, then
+        assertThatThrownBy(() -> bakjiFeedbackService.confirm(MISSING_MEMBER_ID, spotId))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("[F-08] 신고자가 없어서 외래 키가 깨지면 이미 신고했다고 바꾸지 않고 무결성 위반을 그대로 던진다")
+    void reportForeignKeyViolationIsNotReportedAsDuplicate() {
+        // given
+        long spotId = saveBakji();
+
+        // when, then
+        assertThatThrownBy(() -> bakjiFeedbackService.reportProblem(MISSING_MEMBER_ID, spotId, REPORT))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private long saveBakji() {

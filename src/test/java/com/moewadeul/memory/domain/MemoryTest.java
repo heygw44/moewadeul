@@ -1,9 +1,11 @@
 package com.moewadeul.memory.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -74,8 +76,11 @@ class MemoryTest {
         assertThat(memory.details()).isEqualTo(changed);
         assertThat(memory.getUpdatedAt()).isEqualTo(NOW.plusSeconds(60));
         assertThat(memory.getCreatedAt()).isEqualTo(NOW);
-        assertThat(memory.isWrittenBy(1L)).isTrue();
-        assertThat(memory.isWrittenBy(2L)).isFalse();
+        assertThatCode(() -> memory.requireWrittenBy(1L)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> memory.requireWrittenBy(2L))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
     @Test

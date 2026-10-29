@@ -2,6 +2,7 @@ package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.application.ProgramApplicationEvents;
 import com.moewadeul.program.domain.Payment;
@@ -25,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class ProgramPaymentService {
+
+    private static final String PAYMENT_UNIQUE_CONSTRAINT = "uk_payment_program_application";
 
     private final ProgramApplicationRepository programApplicationRepository;
     private final ProgramRepository programRepository;
@@ -81,9 +84,7 @@ public class ProgramPaymentService {
         ProgramApplication application = programApplicationRepository
                 .findByIdForUpdate(applicationId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (application.getMemberId() != memberId) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        application.requireAppliedBy(memberId);
         return application;
     }
 
@@ -97,7 +98,7 @@ public class ProgramPaymentService {
         try {
             paymentRepository.saveAndFlush(payment);
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw UniqueViolations.translate(e, PAYMENT_UNIQUE_CONSTRAINT, ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
     }
 

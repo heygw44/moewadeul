@@ -24,7 +24,7 @@ public class BasecampAutoTransitionService {
 
     public Result run() {
         Instant now = clock.instant();
-        LocalDate today = LocalDate.ofInstant(now, KoreaTime.ZONE);
+        LocalDate today = KoreaTime.dateOf(now);
         Outcome completed = processAll(
                 (afterId, limit) -> autoTransitionMapper.selectDueForCompletionIds(today, afterId, limit),
                 basecampId -> applier.complete(basecampId, today, now));

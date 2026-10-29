@@ -27,10 +27,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class SpotReviewServiceIntegrationTest {
+
+    private static final long MISSING_MEMBER_ID = 999_999_999L;
 
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 5);
 
@@ -464,6 +467,17 @@ class SpotReviewServiceIntegrationTest {
 
     private static List<Long> ids(PageSlice<SpotReviewItem> page) {
         return page.content().stream().map(SpotReviewItem::reviewId).toList();
+    }
+
+    @Test
+    @DisplayName("[F-10] 작성자가 없어서 외래 키가 깨지면 SPOT_REVIEW_DUPLICATED로 바꾸지 않고 무결성 위반을 그대로 던진다")
+    void foreignKeyViolationIsNotReportedAsDuplicate() {
+        // given
+        long spotId = saveSpot();
+
+        // when, then
+        assertThatThrownBy(() -> commandService.write(MISSING_MEMBER_ID, spotId, write(TODAY, 4, "좋다")))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private static SpotReviewWriteCommand write(LocalDate visitedDate, int rating, String content) {

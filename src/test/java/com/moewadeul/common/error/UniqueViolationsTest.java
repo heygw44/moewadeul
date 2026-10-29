@@ -95,6 +95,64 @@ class UniqueViolationsTest {
         assertThat(violated).isFalse();
     }
 
+    @Test
+    @DisplayName("[translate] 어긴 제약이 같으면 지정한 오류 코드의 BusinessException으로 바꾼다")
+    void translateConvertsMatchingConstraint() {
+        // given
+        DataIntegrityViolationException e = duplicate("Duplicate entry 'a@b.com' for key 'member.uk_member_email'");
+
+        // when
+        RuntimeException translated = UniqueViolations.translate(e, EMAIL_KEY, CommonErrorCode.INVALID_INPUT);
+
+        // then
+        assertThat(translated)
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        be -> assertThat(be.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT));
+    }
+
+    @Test
+    @DisplayName("[translate] 다른 유니크 제약을 어겼으면 원래 예외를 그대로 돌려준다")
+    void translateKeepsOtherUniqueViolation() {
+        // given
+        DataIntegrityViolationException e = duplicate("Duplicate entry 'x' for key 'member.uk_member_nickname'");
+
+        // when
+        RuntimeException translated = UniqueViolations.translate(e, EMAIL_KEY, CommonErrorCode.INVALID_INPUT);
+
+        // then
+        assertThat(translated).isSameAs(e);
+    }
+
+    @Test
+    @DisplayName("[translate] 외래 키 위반은 중복으로 바꾸지 않고 원래 예외를 그대로 돌려준다")
+    void translateKeepsForeignKeyViolation() {
+        // given
+        DataIntegrityViolationException e = duplicate(
+                "Cannot add or update a child row: a foreign key constraint fails (`moewadeul`.`spot_review`, "
+                        + "CONSTRAINT `fk_spot_review_member` FOREIGN KEY (`member_id`) REFERENCES `member` (`id`))");
+
+        // when
+        RuntimeException translated =
+                UniqueViolations.translate(e, "uk_spot_review_spot_member_visited_date", CommonErrorCode.INVALID_INPUT);
+
+        // then
+        assertThat(translated).isSameAs(e);
+    }
+
+    @Test
+    @DisplayName("[translate] NOT NULL 위반은 중복으로 바꾸지 않고 원래 예외를 그대로 돌려준다")
+    void translateKeepsNotNullViolation() {
+        // given
+        DataIntegrityViolationException e = duplicate("Column 'content' cannot be null");
+
+        // when
+        RuntimeException translated = UniqueViolations.translate(e, EMAIL_KEY, CommonErrorCode.INVALID_INPUT);
+
+        // then
+        assertThat(translated).isSameAs(e);
+    }
+
     private static DataIntegrityViolationException duplicate(String message) {
         return new DataIntegrityViolationException(
                 "could not execute statement", new SQLIntegrityConstraintViolationException(message));

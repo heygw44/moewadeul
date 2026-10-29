@@ -6,7 +6,6 @@ import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
-import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.infra.password.PasswordResetTokenMapper;
 import java.time.Clock;
 import java.time.Duration;
@@ -42,7 +41,7 @@ public class MemberWithdrawalService {
     private Member findWithdrawableMember(long memberId) {
         return memberRepository
                 .findById(memberId)
-                .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN && found.getPasswordHash() != null)
+                .filter(Member::canAuthenticateWithPassword)
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
     }
 
@@ -56,7 +55,7 @@ public class MemberWithdrawalService {
     @Transactional(propagation = Propagation.MANDATORY)
     public void lockAndWithdraw(long memberId) {
         Member member = memberRepository.findByIdForUpdate(memberId).orElse(null);
-        if (member == null || member.getStatus() == MemberStatus.WITHDRAWN) {
+        if (member == null || member.isWithdrawn()) {
             throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
         }
         Instant now = clock.instant();
@@ -66,9 +65,6 @@ public class MemberWithdrawalService {
 
     @Transactional(readOnly = true)
     public Optional<Instant> findWithdrawnAt(long memberId) {
-        return memberRepository
-                .findById(memberId)
-                .filter(member -> member.getStatus() == MemberStatus.WITHDRAWN)
-                .map(Member::getWithdrawnAt);
+        return memberRepository.findById(memberId).filter(Member::isWithdrawn).map(Member::getWithdrawnAt);
     }
 }

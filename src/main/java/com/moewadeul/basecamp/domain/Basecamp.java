@@ -223,7 +223,7 @@ public class Basecamp {
             throw new IllegalArgumentException("취소 사유가 null입니다.");
         }
         requireStatus(NOT_FINISHED);
-        if (!LocalDate.ofInstant(now, KoreaTime.ZONE).isBefore(startDate)) {
+        if (!KoreaTime.dateOf(now).isBefore(startDate)) {
             throw new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE);
         }
         markCanceled(reason, now);

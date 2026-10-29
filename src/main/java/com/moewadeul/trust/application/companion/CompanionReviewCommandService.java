@@ -2,6 +2,7 @@ package com.moewadeul.trust.application.companion;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.CompanionReviewPolicy;
 import com.moewadeul.trust.domain.TrustErrorCode;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CompanionReviewCommandService {
 
+    private static final String UNIQUE_CONSTRAINT = "uk_companion_review_basecamp_reviewer_reviewee";
     private static final String COMPLETED = "COMPLETED";
 
     private final TrustSummaryService trustSummaryService;
@@ -76,7 +78,7 @@ public class CompanionReviewCommandService {
         try {
             return companionReviewRepository.saveAndFlush(review);
         } catch (DataIntegrityViolationException e) {
-            throw CompanionReviewUniqueConstraintTranslator.translate(e);
+            throw UniqueViolations.translate(e, UNIQUE_CONSTRAINT, TrustErrorCode.COMPANION_REVIEW_DUPLICATED);
         }
     }
 }

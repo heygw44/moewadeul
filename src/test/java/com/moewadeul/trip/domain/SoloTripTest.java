@@ -1,9 +1,11 @@
 package com.moewadeul.trip.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -96,12 +98,15 @@ class SoloTripTest {
     }
 
     @Test
-    @DisplayName("[F-23][ST-05] 등록한 회원만 자기 일정으로 본다")
-    void knowsWhoRegistered() {
+    @DisplayName("[F-23][ST-05] 등록한 회원이 아니면 requireRegisteredBy가 ACCESS_DENIED다")
+    void requireRegisteredByRejectsOthers() {
         SoloTrip trip = trip("2026-11-07", "2026-11-09");
 
-        assertThat(trip.isRegisteredBy(MEMBER_ID)).isTrue();
-        assertThat(trip.isRegisteredBy(MEMBER_ID + 1)).isFalse();
+        assertThatCode(() -> trip.requireRegisteredBy(MEMBER_ID)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> trip.requireRegisteredBy(MEMBER_ID + 1))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
     private static SoloTrip trip(String start, String end) {

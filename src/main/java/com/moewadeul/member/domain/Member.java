@@ -102,6 +102,14 @@ public class Member {
         return new Member(email, passwordHash, nickname, now);
     }
 
+    public boolean isWithdrawn() {
+        return status == MemberStatus.WITHDRAWN;
+    }
+
+    public boolean canAuthenticateWithPassword() {
+        return !isWithdrawn() && passwordHash != null;
+    }
+
     public void changePassword(String passwordHash, Instant now) {
         if (passwordHash == null || passwordHash.isBlank()) {
             throw new IllegalArgumentException("비밀번호 해시가 비어 있습니다.");
@@ -116,7 +124,7 @@ public class Member {
 
     public void withdraw(Instant now) {
         requireNow(now);
-        if (status == MemberStatus.WITHDRAWN) {
+        if (isWithdrawn()) {
             return;
         }
         this.email = null;
@@ -133,7 +141,7 @@ public class Member {
         if (until == null || now == null) {
             throw new IllegalArgumentException("정지 종료 시각이나 수정 시각이 null입니다.");
         }
-        if (status == MemberStatus.WITHDRAWN) {
+        if (isWithdrawn()) {
             return;
         }
         if (status == MemberStatus.SUSPENDED && (suspendedUntil == null || suspendedUntil.isAfter(until))) {
@@ -148,7 +156,7 @@ public class Member {
         if (now == null) {
             throw new IllegalArgumentException("수정 시각이 null입니다.");
         }
-        if (status == MemberStatus.WITHDRAWN) {
+        if (isWithdrawn()) {
             return;
         }
         this.status = MemberStatus.SUSPENDED;
@@ -171,7 +179,7 @@ public class Member {
 
     public void resyncSuspension(boolean permanent, Instant latestEnd, Instant now) {
         requireNow(now);
-        if (status == MemberStatus.WITHDRAWN) {
+        if (isWithdrawn()) {
             return;
         }
         if (permanent) {

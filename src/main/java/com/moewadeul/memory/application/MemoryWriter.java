@@ -10,7 +10,6 @@ import com.moewadeul.memory.infra.MemoryMapper;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -30,7 +29,7 @@ class MemoryWriter {
     @Transactional
     public long write(long memberId, MemoryWriteCommand command) {
         Instant now = clock.instant();
-        MemoryDetails details = command.toDetails(today(now));
+        MemoryDetails details = command.toDetails(KoreaTime.dateOf(now));
         if (details.spotId() != null) {
             requireLinkable(details.spotId());
         }
@@ -45,7 +44,7 @@ class MemoryWriter {
     public MemoryView revise(long memberId, long memoryId, MemoryReviseCommand command) {
         Memory memory = lockOwnMemory(memberId, memoryId);
         Instant now = clock.instant();
-        MemoryDetails details = command.mergeInto(memory.details()).toDetails(today(now));
+        MemoryDetails details = command.mergeInto(memory.details()).toDetails(KoreaTime.dateOf(now));
         if (command.linksNewSpot(memory.getSpotId())) {
             requireLinkable(details.spotId());
         }
@@ -84,9 +83,7 @@ class MemoryWriter {
 
     private static Memory requireOwn(Optional<Memory> found, long memberId) {
         Memory memory = found.orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!memory.isWrittenBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        memory.requireWrittenBy(memberId);
         return memory;
     }
 
@@ -94,9 +91,5 @@ class MemoryWriter {
         if (!activeSpotChecker.isActive(spotId)) {
             throw MemoryWriteCommand.invalid("spotId", "연결할 수 없는 장소예요.");
         }
-    }
-
-    private static LocalDate today(Instant now) {
-        return LocalDate.ofInstant(now, KoreaTime.ZONE);
     }
 }

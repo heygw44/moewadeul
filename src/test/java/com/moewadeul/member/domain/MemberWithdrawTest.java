@@ -78,6 +78,33 @@ class MemberWithdrawTest {
         assertThat(Member.isValidNickname(nickname)).isTrue();
     }
 
+    @Test
+    @DisplayName("[PV-01] 탈퇴한 회원만 isWithdrawn이 참이다")
+    void isWithdrawnOnlyAfterWithdraw() {
+        Member member = savedMember(12L);
+        assertThat(member.isWithdrawn()).isFalse();
+
+        member.suspendPermanently(NOW);
+        assertThat(member.isWithdrawn()).isFalse();
+
+        member.withdraw(LATER);
+        assertThat(member.isWithdrawn()).isTrue();
+    }
+
+    @Test
+    @DisplayName("[PV-01] 비밀번호 인증은 탈퇴하지 않았고 비밀번호 해시가 있는 회원만 할 수 있다")
+    void canAuthenticateWithPasswordNeedsLiveMemberWithHash() {
+        Member member = savedMember(12L);
+        assertThat(member.canAuthenticateWithPassword()).isTrue();
+
+        ReflectionTestUtils.setField(member, "passwordHash", null);
+        assertThat(member.canAuthenticateWithPassword()).isFalse();
+
+        Member withdrawn = savedMember(13L);
+        ReflectionTestUtils.setField(withdrawn, "status", MemberStatus.WITHDRAWN);
+        assertThat(withdrawn.canAuthenticateWithPassword()).isFalse();
+    }
+
     private static Member savedMember(long id) {
         Member member = Member.register(Email.of("User@Example.com"), HASH, "nick", NOW);
         ReflectionTestUtils.setField(member, "id", id);

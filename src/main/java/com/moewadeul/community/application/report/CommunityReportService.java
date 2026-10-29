@@ -2,6 +2,7 @@ package com.moewadeul.community.application.report;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import com.moewadeul.community.domain.comment.CommunityComment;
 import com.moewadeul.community.domain.comment.CommunityCommentRepository;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CommunityReportService {
 
+    private static final String REPORT_UNIQUE_CONSTRAINT = "uk_community_report_target_reporter";
     private static final int PENDING_REVIEW_REPORT_THRESHOLD = 5;
 
     private final CommunityPostRepository communityPostRepository;
@@ -81,7 +83,8 @@ public class CommunityReportService {
             communityReportRepository.saveAndFlush(
                     CommunityReport.of(targetType, targetId, memberId, reason, content, now));
         } catch (DataIntegrityViolationException e) {
-            throw alreadyReported();
+            throw UniqueViolations.translate(
+                    e, REPORT_UNIQUE_CONSTRAINT, CommunityErrorCode.COMMUNITY_ALREADY_REPORTED);
         }
         return communityReportRepository.countByTargetTypeAndTargetIdAndReviewedAtIsNull(targetType, targetId)
                 >= PENDING_REVIEW_REPORT_THRESHOLD;

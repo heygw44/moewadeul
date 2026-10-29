@@ -2,6 +2,7 @@ package com.moewadeul.community.application.report;
 
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -26,11 +27,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
 class CommunityReportConcurrencyIntegrationTest {
+
+    private static final long MISSING_MEMBER_ID = 999_999_999L;
 
     private static final int THREADS = 10;
     private static final int PENDING_REVIEW_REPORTS = 5;
@@ -183,6 +188,17 @@ class CommunityReportConcurrencyIntegrationTest {
                             e -> assertThat(e.getErrorCode().name()).isEqualTo("NOT_FOUND"));
             assertThat(reportCount("POST", postId)).isEqualTo(PENDING_REVIEW_REPORTS - 1);
         }
+    }
+
+    @Test
+    @DisplayName("[F-29] 신고자가 없어서 외래 키가 깨지면 중복 신고로 바꾸지 않고 무결성 위반을 그대로 던진다")
+    void foreignKeyViolationIsNotReportedAsDuplicate() {
+        // given
+        long postId = savePost(saveMember());
+
+        // when, then
+        assertThatThrownBy(() -> communityReportService.reportPost(MISSING_MEMBER_ID, postId, REPORT))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private long savePost(long authorId) {

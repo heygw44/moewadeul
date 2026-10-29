@@ -12,7 +12,6 @@ import com.moewadeul.weather.infra.KmaClient;
 import com.moewadeul.weather.infra.KmaMidTermItem;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -60,7 +59,7 @@ public class WeatherQueryService {
         Optional<KmaMidTermItem> ta =
                 caches.midTerm(MID_TA, region.taRegId(), tmFc, () -> kmaClient.getMidTa(region.taRegId(), tmFc));
         List<MidTermForecast> midTerm =
-                KmaForecastConverter.toMidTerm(land, ta, tmFc.toLocalDate(), LocalDate.ofInstant(now, KoreaTime.ZONE));
+                KmaForecastConverter.toMidTerm(land, ta, tmFc.toLocalDate(), KoreaTime.dateOf(now));
 
         return new WeatherForecast(WeatherForecast.KMA_SOURCE, shortTerm, midTerm);
     }

@@ -7,7 +7,6 @@ import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
-import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.password.PasswordResetRequestPolicy;
 import com.moewadeul.member.domain.password.PasswordResetThrottle;
 import com.moewadeul.member.domain.password.PasswordResetThrottleRepository;
@@ -111,6 +110,6 @@ public class PasswordResetRequestService {
     }
 
     private static boolean isTarget(Member member) {
-        return member.getStatus() != MemberStatus.WITHDRAWN;
+        return !member.isWithdrawn();
     }
 }

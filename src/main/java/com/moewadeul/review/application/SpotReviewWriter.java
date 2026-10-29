@@ -2,6 +2,7 @@ package com.moewadeul.review.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.review.domain.ReviewErrorCode;
 import com.moewadeul.review.domain.SpotReview;
@@ -20,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 class SpotReviewWriter {
+
+    private static final String UNIQUE_CONSTRAINT = "uk_spot_review_spot_member_visited_date";
 
     private final ActiveSpotChecker activeSpotChecker;
     private final SpotReviewRepository spotReviewRepository;
@@ -75,9 +78,7 @@ class SpotReviewWriter {
         SpotReview review = spotReviewRepository
                 .findById(reviewId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!review.isWrittenBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        review.requireWrittenBy(memberId);
         return review;
     }
 
@@ -85,7 +86,7 @@ class SpotReviewWriter {
         try {
             return spotReviewRepository.saveAndFlush(review);
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(ReviewErrorCode.SPOT_REVIEW_DUPLICATED);
+            throw UniqueViolations.translate(e, UNIQUE_CONSTRAINT, ReviewErrorCode.SPOT_REVIEW_DUPLICATED);
         }
     }
 
@@ -93,7 +94,7 @@ class SpotReviewWriter {
         if (visitedDate == null) {
             throw invalidInput("방문일을 입력해 주세요.");
         }
-        if (visitedDate.isAfter(LocalDate.ofInstant(now, KoreaTime.ZONE))) {
+        if (visitedDate.isAfter(KoreaTime.dateOf(now))) {
             throw invalidInput("방문일은 오늘(한국 날짜)보다 뒤일 수 없어요.");
         }
     }
