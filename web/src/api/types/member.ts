@@ -11,6 +11,7 @@ export interface SignupRequest {
   password: string;
   passwordConfirm: string;
   nickname: string;
+  ageConfirmed: boolean;
 }
 
 export interface SignupResponse {

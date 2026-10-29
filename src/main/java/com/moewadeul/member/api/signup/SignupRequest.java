@@ -5,6 +5,7 @@ import com.moewadeul.member.api.MailableEmail;
 import com.moewadeul.member.api.PasswordsMatch;
 import com.moewadeul.member.application.signup.SignupCommand;
 import com.moewadeul.member.domain.Member;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,8 +23,13 @@ public record SignupRequest(
 
         @NotNull(message = "비밀번호 확인을 입력해 주세요.") String passwordConfirm,
 
-        @NotBlank(message = "닉네임을 입력해 주세요.") @ValidNickname String nickname)
+        @NotBlank(message = "닉네임을 입력해 주세요.") @ValidNickname String nickname,
+
+        @NotNull(message = AGE_CONFIRM_MESSAGE) @AssertTrue(message = AGE_CONFIRM_MESSAGE)
+        Boolean ageConfirmed)
         implements ConfirmedPassword {
+
+    private static final String AGE_CONFIRM_MESSAGE = "만 14세 이상만 가입할 수 있어요.";
 
     public SignupCommand toCommand(String requestIp) {
         return new SignupCommand(email, password, nickname, requestIp);
