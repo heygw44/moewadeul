@@ -1,6 +1,5 @@
 package com.moewadeul.basecamp.domain;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,8 +35,14 @@ public final class JoinEligibilityPolicy {
         return List.copyOf(reasons);
     }
 
-    public static boolean overlaps(LocalDate startA, LocalDate endA, LocalDate startB, LocalDate endB) {
-        return !startA.isAfter(endB) && !endA.isBefore(startB);
+    public static boolean hasDateConflict(BasecampSchedule target, List<BasecampSchedule> inProgress) {
+        return inProgress.stream()
+                .filter(schedule -> schedule.basecampId() != target.basecampId())
+                .anyMatch(schedule -> overlaps(target, schedule));
+    }
+
+    private static boolean overlaps(BasecampSchedule a, BasecampSchedule b) {
+        return !a.startDate().isAfter(b.endDate()) && !a.endDate().isBefore(b.startDate());
     }
 
     private static boolean meetsTrustLevel(JoinCondition condition, Applicant applicant) {

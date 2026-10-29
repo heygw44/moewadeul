@@ -106,8 +106,12 @@ public class Memory implements Moderatable {
         return status == MemoryStatus.ACTIVE;
     }
 
+    public static boolean isVisibleToOthers(MemoryVisibility visibility, MemoryStatus status) {
+        return visibility == MemoryVisibility.PUBLIC && status == MemoryStatus.ACTIVE;
+    }
+
     public boolean isVisibleToOthers() {
-        return isPublic() && isActive();
+        return isVisibleToOthers(visibility, status);
     }
 
     public void receiveReport(long unreviewedReportCount, Instant now) {

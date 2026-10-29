@@ -212,4 +212,16 @@ class MemoryTest {
     private static MemoryDetails details(int nights, String content) {
         return new MemoryDetails(null, 37.25, 127.25, TODAY, nights, content, MemoryVisibility.PRIVATE);
     }
+
+    @Test
+    @DisplayName("[F-33][MM-10] 다른 사람에게 보이는 조건은 공개이면서 ACTIVE일 때뿐이다")
+    void staticVisibilityRequiresPublicAndActive() {
+        for (MemoryVisibility visibility : MemoryVisibility.values()) {
+            for (MemoryStatus status : MemoryStatus.values()) {
+                boolean expected = visibility == MemoryVisibility.PUBLIC && status == MemoryStatus.ACTIVE;
+
+                assertThat(Memory.isVisibleToOthers(visibility, status)).isEqualTo(expected);
+            }
+        }
+    }
 }

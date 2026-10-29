@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import com.moewadeul.basecamp.application.query.BasecampSpotType;
 import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
 import com.moewadeul.basecamp.domain.BasecampMemberStatus;
+import com.moewadeul.basecamp.domain.BasecampSchedule;
 import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.domain.JoinGender;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -385,14 +386,14 @@ class BasecampSearchMapperIntegrationTest {
         insertBasecamp(leader, spotId, "CONFIRMED", DAY, 4);
 
         // when
-        List<InProgressScheduleRow> rows = mapper.selectInProgressSchedules(viewer.getId());
+        List<BasecampSchedule> rows = mapper.selectInProgressSchedules(viewer.getId());
 
         // then
         assertThat(rows)
                 .containsExactlyInAnyOrder(
-                        new InProgressScheduleRow(confirmedMember, DAY, DAY.plusDays(2)),
-                        new InProgressScheduleRow(recruitingMember, DAY, DAY.plusDays(2)),
-                        new InProgressScheduleRow(closedMember, DAY, DAY.plusDays(2)));
+                        new BasecampSchedule(confirmedMember, DAY, DAY.plusDays(2)),
+                        new BasecampSchedule(recruitingMember, DAY, DAY.plusDays(2)),
+                        new BasecampSchedule(closedMember, DAY, DAY.plusDays(2)));
     }
 
     @Test
