@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { buttonClassName } from '../../components/buttonClass';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import type { FormEvent, ReactNode } from 'react';
 import {
   approveApplication,
@@ -15,7 +15,7 @@ import {
 } from '../../api/basecamps';
 import { ApiError } from '../../api/client';
 import type { BasecampApplicationItem, BasecampDetail, BasecampMember, KickReason } from '../../api/types';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link } from '../../app/router';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
@@ -29,10 +29,12 @@ import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
+import { usePagedList } from '../../components/usePagedList';
+import type { PagedList } from '../../components/usePagedList';
 import { formatKstDateTime, todayKst } from '../../lib/datetime';
 import { trustLevelBadge } from '../member/memberLabels';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { useRequireAuth } from '../member/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText, profileSummary } from './basecampLabels';
 
 const CONTACT_MAX = 255;
@@ -45,20 +47,9 @@ const KICK_OPTIONS: ReadonlyArray<ChoiceOption<KickReason>> = [
   { value: 'OTHER', label: '기타' },
 ];
 
-const LINK_BUTTON_CLASS = buttonClassName('secondary');
-
 type DetailResult =
   | { basecampId: number; attempt: number; detail: BasecampDetail }
   | { basecampId: number; attempt: number; error: unknown };
-
-type ApplicationsState = {
-  basecampId: number;
-  attempt: number;
-  items: BasecampApplicationItem[];
-  page: number;
-  hasNext: boolean;
-  error: { cause: unknown } | null;
-};
 
 type DialogState =
   | { kind: 'confirm' }
@@ -68,25 +59,16 @@ type DialogState =
   | null;
 
 export function BasecampManagePage({ basecampId }: { basecampId: number }) {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<DetailResult | null>(null);
-  const [applications, setApplications] = useState<ApplicationsState | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [kickReason, setKickReason] = useState<KickReason | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<{ title: string; cause: unknown } | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
-  useEffect(() => {
-    document.title = '베이스캠프 관리 · 뫼와들';
-  }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
+  useDocumentTitle('베이스캠프 관리 · 뫼와들');
 
   const authenticated = session.status === 'authenticated';
 
@@ -108,37 +90,12 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const detail = current && 'detail' in current ? current.detail : null;
   const isLeader = detail?.myRelation === 'LEADER';
 
-  useEffect(() => {
-    if (!isLeader) return;
-    const controller = new AbortController();
-    fetchBasecampApplications(basecampId, 0, controller.signal).then(
-      (page) => {
-        if (controller.signal.aborted) return;
-        setApplications({
-          basecampId,
-          attempt,
-          items: page.content,
-          page: page.page,
-          hasNext: page.hasNext,
-          error: null,
-        });
-      },
-      (caught: unknown) => {
-        if (controller.signal.aborted) return;
-        setApplications((previous) => ({
-          basecampId,
-          attempt,
-          items: previous?.basecampId === basecampId ? previous.items : [],
-          page: previous?.page ?? 0,
-          hasNext: false,
-          error: { cause: caught },
-        }));
-      },
-    );
-    return () => controller.abort();
-  }, [isLeader, basecampId, attempt]);
+  const applications = usePagedList(isLeader, basecampId, fetchBasecampApplications);
 
-  const reload = () => setAttempt((value) => value + 1);
+  const reload = () => {
+    setAttempt((value) => value + 1);
+    applications.reload();
+  };
   const showSkeleton = useDelayedFlag(session.status === 'loading' || (authenticated && current === null));
 
   async function run(action: () => Promise<unknown>, successText: string, failTitle: string) {
@@ -158,29 +115,6 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
     }
   }
 
-  async function loadMore() {
-    if (!applications || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const next = await fetchBasecampApplications(basecampId, applications.page + 1);
-      setApplications((previous) =>
-        previous && previous.basecampId === basecampId
-          ? {
-              ...previous,
-              items: [...previous.items, ...next.content],
-              page: next.page,
-              hasNext: next.hasNext,
-              error: null,
-            }
-          : previous,
-      );
-    } catch (caught) {
-      setApplications((previous) => (previous ? { ...previous, error: { cause: caught } } : previous));
-    } finally {
-      setLoadingMore(false);
-    }
-  }
-
   let body: ReactNode;
   if (!authenticated || current === null) {
     body = showSkeleton ? <Skeleton className="h-40 w-full" /> : null;
@@ -189,7 +123,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
       current.error instanceof ApiError && current.error.code === 'NOT_FOUND' ? (
         <PageCard title="베이스캠프를 찾을 수 없어요">
           <p className="text-base text-ink">삭제됐거나 주소가 잘못됐어요.</p>
-          <Link to="/basecamps" className={`${LINK_BUTTON_CLASS} self-start`}>
+          <Link to="/basecamps" className={`${SECONDARY_LINK_CLASS} self-start`}>
             목록으로
           </Link>
         </PageCard>
@@ -210,7 +144,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
         title="캠프 리더만 관리할 수 있어요"
         description="내가 연 베이스캠프가 아니에요."
         action={
-          <Link to={`/basecamps/${basecampId}`} className={LINK_BUTTON_CLASS}>
+          <Link to={`/basecamps/${basecampId}`} className={SECONDARY_LINK_CLASS}>
             베이스캠프 보기
           </Link>
         }
@@ -235,9 +169,9 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
         {active && <StatusActions detail={view} submitting={submitting} run={run} onDialog={setDialog} />}
         <ApplicationsCard
           detail={view}
-          state={applications && applications.basecampId === basecampId ? applications : null}
+          state={applications.current}
           submitting={submitting}
-          loadingMore={loadingMore}
+          loadingMore={applications.loadingMore}
           onApprove={(application) =>
             run(
               () => approveApplication(basecampId, application.applicationId),
@@ -246,7 +180,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
             )
           }
           onReject={(application) => setDialog({ kind: 'reject', application })}
-          onLoadMore={loadMore}
+          onLoadMore={() => void applications.loadMore()}
           onRetry={reload}
         />
         <MembersCard
@@ -492,7 +426,7 @@ function ApplicationsCard({
   onRetry,
 }: {
   detail: BasecampDetail;
-  state: ApplicationsState | null;
+  state: PagedList<BasecampApplicationItem, number>['current'];
   submitting: boolean;
   loadingMore: boolean;
   onApprove: (application: BasecampApplicationItem) => void;
@@ -509,7 +443,11 @@ function ApplicationsCard({
         <>
           {state.error && (
             <div className="flex flex-col gap-2">
-              <ErrorNotice title="신청 목록을 불러오지 못했어요" error={state.error.cause} />
+              <ErrorNotice
+                title="신청 목록을 불러오지 못했어요"
+                error={state.error}
+                traceId={state.traceId ?? undefined}
+              />
               <div>
                 <Button variant="secondary" onClick={onRetry}>
                   다시 불러오기

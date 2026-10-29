@@ -5,7 +5,7 @@ import type { MemoryLikeResponse } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/icons';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 

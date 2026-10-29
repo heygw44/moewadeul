@@ -3,7 +3,7 @@ import { regionLabelInView } from '../../map/regionName';
 import type { RegionLabel } from '../../map/regionLabel';
 import type { MapView } from '../../map/types';
 
-export function useRegionName(map: MapView | null): RegionLabel | null {
+export function useRegionLabelInView(map: MapView | null): RegionLabel | null {
   const [label, setLabel] = useState<RegionLabel | null>(null);
 
   useEffect(() => {

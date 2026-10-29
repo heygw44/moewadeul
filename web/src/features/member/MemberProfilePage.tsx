@@ -11,6 +11,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { PageCard, PageLayout } from '../../components/PageLayout';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { MemberBoard, MEMBER_BOARD_LINK_CLASS } from './MemberBoard';
 import { AGE_GROUP_LABELS, companionTagLabel, GENDER_LABELS } from './memberLabels';
 import { withNext } from './nextPath';
@@ -42,9 +43,7 @@ export function MemberProfilePage({ memberId }: { memberId: number }) {
   const showSkeleton = useDelayedFlag(current === null);
   const nickname = current && 'profile' in current ? current.profile.nickname : null;
 
-  useEffect(() => {
-    document.title = nickname ? `${nickname} · 뫼와들` : '회원 프로필 · 뫼와들';
-  }, [nickname]);
+  useDocumentTitle(nickname ? `${nickname} · 뫼와들` : '회원 프로필 · 뫼와들');
 
   let body: ReactNode;
   if (current === null) {

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import { listMyProgramApplications } from '../../api/programs';
 import type { MyProgramApplicationItem, ProgramApplicationStatus } from '../../api/types';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -13,12 +13,12 @@ import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { useRequireAuth } from '../member/useRequireAuth';
 import { APPLICATION_FILTERS, APPLICATION_STATUS_META, CANCEL_REASON_LABELS, countdownText } from './programLabels';
 import { useNow } from './useNow';
-import { usePagedList } from './usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 
 type ApplicationFilter = ProgramApplicationStatus | 'ALL';
 
@@ -27,8 +27,7 @@ function fetchApplications(filter: ApplicationFilter, page: number, signal?: Abo
 }
 
 export function MyProgramApplicationsPage() {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const [filter, setFilter] = useState<ApplicationFilter>('ALL');
   const authenticated = session.status === 'authenticated';
   const { current, loadingMore, loadMore, retry } = usePagedList(authenticated, filter, fetchApplications);
@@ -36,13 +35,7 @@ export function MyProgramApplicationsPage() {
   const hasPending = current?.items.some((item) => item.status === 'PENDING_PAYMENT') ?? false;
   const now = useNow(hasPending);
 
-  useEffect(() => {
-    document.title = '내 행사 신청 · 뫼와들';
-  }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
+  useDocumentTitle('내 행사 신청 · 뫼와들');
 
   return (
     <PageLayout

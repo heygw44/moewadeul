@@ -6,7 +6,7 @@ export type RegionLookup = { status: 'loading' } | { status: 'ready'; name: stri
 
 type Result = { key: string; name: string | null };
 
-export function useRegionName(position: LatLng): RegionLookup {
+export function useRegionNameAt(position: LatLng): RegionLookup {
   const { lat, lng } = position;
   const key = `${lat},${lng}`;
   const [result, setResult] = useState<Result | null>(null);

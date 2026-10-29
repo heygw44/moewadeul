@@ -12,13 +12,14 @@ import { Icon } from '../../components/icons';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime, formatRelativeKst } from '../../lib/datetime';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { useViewerEpoch } from '../member/useViewerEpoch';
 import { CommunityComments } from './CommunityComments';
 import { CommunityReportDialog } from './CommunityReportDialog';
-import { SECONDARY_LINK_CLASS } from './communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 
 type LoadResult = { postId: number; post: CommunityPostDetail } | { postId: number; error: unknown };
 
@@ -45,9 +46,7 @@ export function CommunityPostDetailPage({ postId }: { postId: number }) {
   const showSkeleton = useDelayedFlag(current === null);
   const loadedTitle = current !== null && 'post' in current ? current.post.title : null;
 
-  useEffect(() => {
-    document.title = loadedTitle ? `${loadedTitle} · 뫼와들` : '커뮤니티 · 뫼와들';
-  }, [loadedTitle]);
+  useDocumentTitle(loadedTitle ? `${loadedTitle} · 뫼와들` : '커뮤니티 · 뫼와들');
 
   const reload = () => setAttempt((value) => value + 1);
 

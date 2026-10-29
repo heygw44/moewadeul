@@ -19,14 +19,15 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { restorableImages, useImageUploads } from '../../components/useImageUploads';
 import type { UploadImageItem } from '../../components/useImageUploads';
 import { todayKst } from '../../lib/datetime';
 import type { LatLng } from '../../map/types';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
-import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
+import { useRequireAuth } from '../member/useRequireAuth';
 import { LocationLabel } from '../spot/LocationLabel';
 import {
   MEMORY_CONTENT_MAX,
@@ -42,18 +43,11 @@ type MemoryFormPageProps = { mode: 'create' } | { mode: 'edit'; memoryId: number
 const CRUMB_LINK = 'inline-flex min-h-11 items-center gap-1 text-accent underline underline-offset-2';
 
 export function MemoryFormPage(props: MemoryFormPageProps) {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const showSkeleton = useDelayedFlag(session.status === 'loading');
   const editMemoryId = props.mode === 'edit' ? props.memoryId : null;
 
-  useEffect(() => {
-    document.title = props.mode === 'create' ? '기록 남기기 · 뫼와들' : '기록 수정 · 뫼와들';
-  }, [props.mode]);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
+  useDocumentTitle(props.mode === 'create' ? '기록 남기기 · 뫼와들' : '기록 수정 · 뫼와들');
 
   const layout = (children: ReactNode) => (
     <HubLayout

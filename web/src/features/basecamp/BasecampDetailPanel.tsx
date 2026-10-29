@@ -5,7 +5,7 @@ import { ApiError } from '../../api/client';
 import type { BasecampDetail, BasecampMember, JoinUnmetReason } from '../../api/types';
 import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
-import { buttonClassName } from '../../components/buttonClass';
+import { buttonClassName, SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/icons';
@@ -15,7 +15,9 @@ import { StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { departureInstant, formatLocalDate } from '../../lib/datetime';
+import { parseHttpsUrl } from '../../lib/url';
 import { trustLevelBadge } from '../member/memberLabels';
 import { withNext } from '../member/nextPath';
 import { MemberReportDialog } from '../report/MemberReportDialog';
@@ -30,6 +32,7 @@ import {
   profileSummary,
   unmetReasonText,
 } from './basecampLabels';
+import { PanelBackBar } from '../../components/PanelBackBar';
 
 type BasecampDetailPanelProps = {
   basecampId: number;
@@ -43,7 +46,6 @@ const SECTION_CLASS = 'mt-8';
 const SECTION_TITLE_CLASS = 'mb-3 text-[1.1875rem] font-extrabold tracking-[-0.02em] text-ink';
 const BOARD_CLASS = 'overflow-hidden rounded-sheet bg-fill';
 const MESSAGE_MAX = 500;
-const ACTION_LINK_CLASS = buttonClassName('secondary');
 const SPOT_UNAVAILABLE_TEXT = '이 장소는 지금 지도에서 볼 수 없어요.';
 const APPLY_CLOSED_BY_SPOT_TEXT = '장소를 지도에서 볼 수 없는 동안에는 합류 신청을 받지 않아요.';
 
@@ -81,13 +83,7 @@ export function BasecampDetailPanel({ basecampId, onBack, onLoaded }: BasecampDe
     if (loadedDetail !== null) reportLoaded(loadedDetail);
   }, [loadedDetail]);
 
-  useEffect(() => {
-    if (loadedTitle === null) return;
-    document.title = `${loadedTitle} · 뫼와들`;
-    return () => {
-      document.title = '뫼와들';
-    };
-  }, [loadedTitle]);
+  useDocumentTitle(loadedTitle === null ? null : `${loadedTitle} · 뫼와들`, { resetOnLeave: true });
 
   const reload = () => setAttempt((value) => value + 1);
 
@@ -117,16 +113,7 @@ export function BasecampDetailPanel({ basecampId, onBack, onLoaded }: BasecampDe
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="sticky top-0 z-10 flex items-center bg-surface px-2 lg:px-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex min-h-11 items-center gap-1 rounded-control pr-3 pl-1 text-sm font-semibold text-ink hover:bg-fill"
-        >
-          <Icon name="chevronLeft" size={22} />
-          베이스캠프 목록
-        </button>
-      </div>
+      <PanelBackBar label="베이스캠프 목록" onBack={onBack} />
       <div aria-busy={current === null} className="flex flex-1 flex-col">
         {body}
       </div>
@@ -362,15 +349,6 @@ function SeatRow({ headcount, capacity, recruiting }: { headcount: number; capac
   );
 }
 
-function parseHttpsUrl(value: string): URL | null {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' ? url : null;
-  } catch {
-    return null;
-  }
-}
-
 function ContactInfo({ contactInfo, isMember }: { contactInfo: string | undefined; isMember: boolean }) {
   if (contactInfo === undefined) {
     return (
@@ -485,11 +463,11 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
       <>
         <p className="text-base text-ink">내가 연 베이스캠프예요.</p>
         <div className="flex flex-wrap gap-2">
-          <Link to={`/basecamps/${detail.basecampId}/manage`} className={ACTION_LINK_CLASS}>
+          <Link to={`/basecamps/${detail.basecampId}/manage`} className={SECONDARY_LINK_CLASS}>
             관리하기
           </Link>
           {detail.status === 'COMPLETED' && (
-            <Link to="/me/companion-reviews" className={ACTION_LINK_CLASS}>
+            <Link to="/me/companion-reviews" className={SECONDARY_LINK_CLASS}>
               동행 후기 쓰기
             </Link>
           )}
@@ -507,7 +485,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
             </Button>
           )}
           {detail.status === 'COMPLETED' && (
-            <Link to="/me/companion-reviews" className={ACTION_LINK_CLASS}>
+            <Link to="/me/companion-reviews" className={SECONDARY_LINK_CLASS}>
               동행 후기 쓰기
             </Link>
           )}

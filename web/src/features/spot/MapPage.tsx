@@ -17,6 +17,7 @@ import { SHEET_SNAP_DVH, sheetTopFromBottom } from '../../components/sheetSnap';
 import type { SheetSnap } from '../../components/sheetSnap';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { createMapView } from '../../map/KakaoMap';
 import { MapLoadError } from '../../map/kakaoLoader';
 import type { MapLoadErrorReason } from '../../map/kakaoLoader';
@@ -51,7 +52,7 @@ import type { SpotFilters } from './spotFilters';
 import { SpotListRow } from './SpotListRow';
 import { SpotPreviewBoard } from './SpotPreviewBoard';
 import { useMapMoving } from './useMapMoving';
-import { useRegionName } from './useRegionName';
+import { useRegionLabelInView } from './useRegionLabelInView';
 import { useSpotsInView } from './useSpotsInView';
 import type { SpotsInView } from './useSpotsInView';
 import { useSpotsNearby } from './useSpotsNearby';
@@ -252,7 +253,7 @@ export function MapPage({
     session.me?.memberId ?? null,
   );
 
-  const regionName = useRegionName(map);
+  const regionName = useRegionLabelInView(map);
   const overlayRef = useRef<HTMLDivElement>(null);
   const mapButtonsRef = useRef<HTMLDivElement>(null);
   const keepOverlay = useCallback(() => overlayRef.current?.contains(document.activeElement) ?? false, []);
@@ -438,14 +439,15 @@ export function MapPage({
     map?.setTerrain(terrainOn);
   }, [map, terrainOn]);
 
-  useEffect(() => {
-    if (spotId !== undefined || basecampId !== undefined) return;
-    if (reporting) document.title = '박지 제보 · 뫼와들';
-    else if (editing) document.title = '박지 수정 · 뫼와들';
-    else if (opening) document.title = '베이스캠프 열기 · 뫼와들';
-    else if (basecampMode) document.title = '베이스캠프 · 뫼와들';
-    else document.title = '지도 · 뫼와들';
-  }, [spotId, basecampId, reporting, editing, opening, basecampMode]);
+  let pageTitle: string | null = null;
+  if (spotId === undefined && basecampId === undefined) {
+    if (reporting) pageTitle = '박지 제보 · 뫼와들';
+    else if (editing) pageTitle = '박지 수정 · 뫼와들';
+    else if (opening) pageTitle = '베이스캠프 열기 · 뫼와들';
+    else if (basecampMode) pageTitle = '베이스캠프 · 뫼와들';
+    else pageTitle = '지도 · 뫼와들';
+  }
+  useDocumentTitle(pageTitle);
 
   let sheetLabel = '장소 목록';
   if (reporting) sheetLabel = '박지 제보';

@@ -9,7 +9,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
-import { usePagedList } from '../program/usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 import { LocationLabel } from '../spot/LocationLabel';
 import { REPORT_REASON_LABELS, SPOT_TYPE_META } from '../spot/spotLabels';
 import { AdminPage } from './AdminGate';
@@ -51,7 +51,7 @@ function SpotReview() {
       {current?.error && (
         <div role="alert" className="flex flex-col gap-3">
           <ErrorNotice title="박지를 불러오지 못했어요" error={current.error} traceId={current.traceId ?? undefined} />
-          {current.items.length === 0 && (
+          {current.failedOn === 'first' && (
             <div>
               <Button variant="secondary" onClick={retry}>
                 다시 불러오기

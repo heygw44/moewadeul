@@ -10,6 +10,7 @@ import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { PasswordField } from '../../components/PasswordField';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
 import {
   emailRequiredMessage,
@@ -38,9 +39,7 @@ export function PasswordResetPage() {
     if (fromHash !== null) setToken(fromHash);
   }
 
-  useEffect(() => {
-    document.title = '비밀번호 재설정 · 뫼와들';
-  }, []);
+  useDocumentTitle('비밀번호 재설정 · 뫼와들');
 
   useEffect(() => {
     if (hash !== '') navigate(pathname, { replace: true });

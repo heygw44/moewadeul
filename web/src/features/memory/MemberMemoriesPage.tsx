@@ -10,7 +10,8 @@ import { HubLayout } from '../../components/HubLayout';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { useSession } from '../member/session';
 import type { MemoryCellItem } from './memoryItems';
 import { MemoryMapGrid } from './MemoryMapGrid';
@@ -57,9 +58,7 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
   const name = nickname?.memberId === memberId ? nickname.value : null;
   const title = name ? `${name}님의 기록` : '회원의 기록';
 
-  useEffect(() => {
-    document.title = `${title} · 뫼와들`;
-  }, [title]);
+  useDocumentTitle(`${title} · 뫼와들`);
 
   const items = useMemo<MemoryCellItem[]>(
     () =>

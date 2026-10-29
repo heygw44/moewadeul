@@ -9,7 +9,7 @@ import { fetchMeWithRetry } from './fetchMeWithRetry';
 import { forgetFormDraft, keepFormDraft } from './formDraft';
 import { SessionUnavailable } from './SessionUnavailable';
 
-export type SessionStatus = 'loading' | 'anonymous' | 'authenticated';
+type SessionStatus = 'loading' | 'anonymous' | 'authenticated';
 
 export interface Session {
   status: SessionStatus;

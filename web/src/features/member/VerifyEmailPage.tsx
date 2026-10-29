@@ -1,18 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { resendVerification, verifyEmail } from '../../api/auth';
 import { ApiError } from '../../api/client';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
 import { enterAfterAuth } from './enterAfterAuth';
 import { safeNextPath, withNext } from './nextPath';
-import { useSession } from './session';
+import { useRequireAuth } from './useRequireAuth';
 import { useRetryCountdown } from './useRetryCountdown';
 import { buttonClassName } from '../../components/buttonClass';
 
@@ -29,7 +30,7 @@ type ResendNotice = { tone: 'info'; title: string } | { tone: 'danger'; title: s
 export function VerifyEmailPage() {
   const { search } = useLocation();
   const next = safeNextPath(search);
-  const session = useSession();
+  const session = useRequireAuth(withNext('/verify-email', next));
   const showSkeleton = useDelayedFlag(session.status === 'loading');
   const cooldown = useRetryCountdown();
 
@@ -40,15 +41,7 @@ export function VerifyEmailPage() {
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState<ResendNotice | null>(null);
 
-  useEffect(() => {
-    document.title = '이메일 인증 · 뫼와들';
-  }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') {
-      navigate(withNext('/login', withNext('/verify-email', next)), { replace: true });
-    }
-  }, [session.status, next]);
+  useDocumentTitle('이메일 인증 · 뫼와들');
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

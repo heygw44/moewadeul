@@ -9,6 +9,7 @@ import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { Icon } from '../../components/icons';
 import { MetaLine, StatusText } from '../../components/StatusText';
+import { roundCoordinate } from '../../lib/geo';
 import type { LatLng } from '../../map/types';
 import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
@@ -21,10 +22,6 @@ const SAME_PLACE_RADIUS_KM = 0.05;
 const GUIDE_LINK_CLASS = 'inline-flex min-h-11 items-center text-accent underline underline-offset-2';
 
 const MEMORY_LINK_CLASS = `${buttonClassName('secondary')} w-full`;
-
-function roundCoordinate(value: number): number {
-  return Math.round(value * 1e6) / 1e6;
-}
 
 type MapOpenMenuProps = {
   position: LatLng;

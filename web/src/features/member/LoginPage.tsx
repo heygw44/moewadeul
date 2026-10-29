@@ -11,6 +11,7 @@ import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { TextField } from '../../components/TextField';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime } from '../../lib/datetime';
 import { AuthLayout } from './AuthLayout';
 import { enterAfterAuth } from './enterAfterAuth';
@@ -43,9 +44,7 @@ export function LoginPage() {
   const [formError, setFormError] = useState<FormError | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    document.title = '로그인 · 뫼와들';
-  }, []);
+  useDocumentTitle('로그인 · 뫼와들');
 
   useEffect(() => {
     if (session.status === 'authenticated' && session.me && !submitting) {

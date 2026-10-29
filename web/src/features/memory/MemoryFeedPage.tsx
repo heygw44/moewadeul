@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { fetchMemoryFeed } from '../../api/memories';
 import type { MemoryFeedItem } from '../../api/types';
 import { Link } from '../../app/router';
@@ -9,10 +9,11 @@ import { Icon } from '../../components/icons';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatLocalDate } from '../../lib/datetime';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useViewerEpoch } from '../member/useViewerEpoch';
-import { usePagedList } from '../program/usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 
 const FEED_PAGE_SIZE = 24;
 const FEED_GRID_CLASS = 'grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
@@ -25,9 +26,7 @@ export function MemoryFeedPage() {
   const { current } = feed;
   const showSkeleton = useDelayedFlag(current === null);
 
-  useEffect(() => {
-    document.title = '피드 · 뫼와들';
-  }, []);
+  useDocumentTitle('피드 · 뫼와들');
 
   let body;
   if (current === null) {
