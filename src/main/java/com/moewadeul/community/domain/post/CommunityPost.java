@@ -110,6 +110,9 @@ public class CommunityPost implements Moderatable {
         if (isDeleted()) {
             return;
         }
+        if (status != CommunityPostStatus.ACTIVE) {
+            throw new BusinessException(CommunityErrorCode.COMMUNITY_INVALID_STATE);
+        }
         this.status = CommunityPostStatus.DELETED;
         this.updatedAt = now;
     }

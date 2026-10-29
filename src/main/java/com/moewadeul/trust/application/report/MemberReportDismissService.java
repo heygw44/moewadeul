@@ -65,7 +65,7 @@ public class MemberReportDismissService {
     }
 
     private Long liftTemporarySuspensions(MemberReport report, LockedMember target, long adminId, Instant now) {
-        List<Sanction> temporaries = sanctionRepository.findUnliftedTemporaryByReportId(report.getId());
+        List<Sanction> temporaries = sanctionRepository.findUnrevokedTemporaryByReportId(report.getId());
         if (temporaries.isEmpty()) {
             return null;
         }

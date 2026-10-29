@@ -37,6 +37,9 @@ class EmailVerificationServiceIntegrationTest {
     private EmailVerificationService emailVerificationService;
 
     @Autowired
+    private EmailVerificationActivator emailVerificationActivator;
+
+    @Autowired
     private MemberJpaRepository memberRepository;
 
     @Autowired
@@ -141,6 +144,27 @@ class EmailVerificationServiceIntegrationTest {
         assertThatThrownBy(() -> emailVerificationService.verify(member.getId(), wrongCodeFor(code)))
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_CODE_EXPIRED);
         assertThat(latestAttemptCount(member)).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-01] 활성화 시점에 코드가 이미 만료됐으면 인증 처리하지 않고 회원도 UNVERIFIED로 남는다")
+    void activationDoesNotMarkExpiredCodeVerified() {
+        // given
+        Member member = newMember();
+        issue(member);
+        long verificationId = jdbc.queryForObject(
+                "SELECT id FROM email_verification WHERE member_id = ?", Long.class, member.getId());
+        clock.advance(Duration.ofMinutes(10));
+
+        // when & then
+        assertThatThrownBy(() -> emailVerificationActivator.activate(verificationId, member.getId(), clock.instant()))
+                .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_ALREADY_VERIFIED);
+        assertThat(jdbc.queryForObject(
+                        "SELECT verified_at IS NULL FROM email_verification WHERE id = ?",
+                        Boolean.class,
+                        verificationId))
+                .isTrue();
+        assertThat(statusOf(member)).isEqualTo("UNVERIFIED");
     }
 
     @Test

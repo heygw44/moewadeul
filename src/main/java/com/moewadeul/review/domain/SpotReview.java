@@ -2,6 +2,7 @@ package com.moewadeul.review.domain;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.time.KoreaTime;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -65,6 +66,9 @@ public class SpotReview {
             long spotId, long memberId, LocalDate visitedDate, int rating, String content, Instant now) {
         if (visitedDate == null || now == null) {
             throw new IllegalArgumentException("후기를 만드는 데 필요한 값이 null입니다.");
+        }
+        if (visitedDate.isAfter(KoreaTime.dateOf(now))) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "방문일은 오늘(한국 날짜)보다 뒤일 수 없어요.");
         }
         requireValidBody(rating, content);
         return new SpotReview(spotId, memberId, visitedDate, rating, content, now);

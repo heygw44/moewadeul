@@ -9,6 +9,7 @@ import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.trust.application.TrustAuditDetails;
 import com.moewadeul.trust.domain.sanction.Sanction;
+import com.moewadeul.trust.domain.sanction.SanctionLiftReason;
 import com.moewadeul.trust.domain.sanction.SanctionRepository;
 import com.moewadeul.trust.domain.sanction.SanctionStatus;
 import java.time.Clock;
@@ -29,13 +30,13 @@ class SanctionLiftApplier {
     private final Clock clock;
 
     @Transactional
-    SanctionLiftResult apply(long memberId, long sanctionId, long adminId) {
+    SanctionLiftResult apply(long memberId, long sanctionId, SanctionLiftReason reason, long adminId) {
         LockedMember member = memberSuspensionService.lockForSanction(memberId);
         Sanction sanction = sanctionRepository
                 .findByIdForUpdate(sanctionId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         SanctionStatus before = sanction.getStatus();
-        sanction.lift(adminId, clock.instant());
+        sanction.lift(adminId, reason, clock.instant());
         if (sanction.getType().isSuspension()) {
             suspensionResyncer.resync(member);
         }

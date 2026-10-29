@@ -1040,8 +1040,8 @@
             "type": "prometheus",
             "uid": "__PROM_UID__"
           },
-          "expr": "sum by (job) (increase(moewadeul_scheduled_job_failures_total{job=\"moewadeul-app\"}[24h]))",
-          "legendFormat": "{{job}}",
+          "expr": "sum by (exported_job) (increase(moewadeul_scheduled_job_failures_total{job=\"moewadeul-app\"}[24h]))",
+          "legendFormat": "{{exported_job}}",
           "range": true
         }
       ],

@@ -179,27 +179,60 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-16][PV-05] 해제되지 않은 제재 이력이 있으면 CI 해시를 365일 뒤까지 남기고, 해제된 제재만 있으면 30일이다")
-    void ciRetentionDependsOnUnliftedSanction() {
+    @DisplayName("[F-16][PV-05] 제재 이력이 있으면 조기 종료한 제재도 CI 해시를 365일 뒤까지 남기고, 처분 취소한 제재만 있으면 30일이다")
+    void ciRetentionDependsOnSanctionHistory() {
         long adminId = fixture.saveVerifiedMember(TestSequence.nickname());
         Member sanctioned = saveActiveMember();
-        Member lifted = saveActiveMember();
+        Member endedEarly = saveActiveMember();
+        Member revoked = saveActiveMember();
         Cookie sanctionedSession = login(sanctioned);
-        Cookie liftedSession = login(lifted);
+        Cookie endedEarlySession = login(endedEarly);
+        Cookie revokedSession = login(revoked);
         verifyIdentity(sanctionedSession, "key-" + TestSequence.next());
-        verifyIdentity(liftedSession, "key-" + TestSequence.next());
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(sanctioned.getId(), null, SanctionType.WARNING, "욕설", adminId));
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(lifted.getId(), null, SanctionType.WARNING, "욕설", adminId));
-        jdbc.update("UPDATE sanction SET status = 'LIFTED', lifted_at = NOW(6) WHERE member_id = ?", lifted.getId());
+        verifyIdentity(endedEarlySession, "key-" + TestSequence.next());
+        verifyIdentity(revokedSession, "key-" + TestSequence.next());
+        for (Member member : List.of(sanctioned, endedEarly, revoked)) {
+            sanctionConfirmService.confirm(
+                    new SanctionConfirmCommand(member.getId(), null, SanctionType.WARNING, "욕설", adminId));
+        }
+        liftSanctionOf(endedEarly, "ENDED_EARLY");
+        liftSanctionOf(revoked, "REVOKED");
 
         withdraw(sanctionedSession, PASSWORD);
-        withdraw(liftedSession, PASSWORD);
+        withdraw(endedEarlySession, PASSWORD);
+        withdraw(revokedSession, PASSWORD);
 
         LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
         assertThat(retainedUntil(sanctioned)).isEqualTo(now.plusDays(365));
-        assertThat(retainedUntil(lifted)).isEqualTo(now.plusDays(30));
+        assertThat(retainedUntil(endedEarly)).isEqualTo(now.plusDays(365));
+        assertThat(retainedUntil(revoked)).isEqualTo(now.plusDays(30));
+    }
+
+    @Test
+    @DisplayName(
+            "[F-16][PV-05][SN-05] 검토 전에 72시간이 지나 만료된 임시 정지만 있어도 CI 해시를 365일 남겨, 31일째 정리 작업이 지우지 않고 같은 사람의 재가입을 막는다")
+    void expiredUnreviewedTemporarySuspensionRetainsCi() {
+        Member member = saveActiveMember();
+        Cookie session = login(member);
+        String demoKey = "key-" + TestSequence.next();
+        verifyIdentity(session, demoKey);
+        Instant startedAt = clock.instant().minus(Duration.ofDays(4));
+        jdbc.update(
+                "INSERT INTO sanction (member_id, type, reason, starts_at, ends_at, status, created_at, updated_at)"
+                        + " VALUES (?, 'TEMPORARY_72H', '임시 정지', ?, ?, 'EXPIRED', NOW(6), NOW(6))",
+                member.getId(),
+                LocalDateTime.ofInstant(startedAt, ZoneOffset.UTC),
+                LocalDateTime.ofInstant(startedAt.plus(Duration.ofHours(72)), ZoneOffset.UTC));
+
+        withdraw(session, PASSWORD);
+
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
+        assertThat(retainedUntil(member)).isEqualTo(now.plusDays(365));
+        clock.advance(Duration.ofDays(31));
+        ciRetentionCleanupService.deleteRetentionExpired();
+        assertThat(count("identity_verification WHERE member_id = ?", member.getId()))
+                .isEqualTo(1);
+        assertThat(identityRequest(login(saveActiveMember()), demoKey)).hasStatus(HttpStatus.CONFLICT);
     }
 
     @Test
@@ -622,6 +655,10 @@ class WithdrawalApiIntegrationTest {
                         + " VALUES (?, ?, '2026-09-20', 5, '조용하고 좋았어요', NOW(6), NOW(6))",
                 spotId,
                 memberId);
+    }
+
+    private void liftSanctionOf(Member member, String status) {
+        jdbc.update("UPDATE sanction SET status = ?, lifted_at = NOW(6) WHERE member_id = ?", status, member.getId());
     }
 
     private LocalDateTime retainedUntil(Member member) {

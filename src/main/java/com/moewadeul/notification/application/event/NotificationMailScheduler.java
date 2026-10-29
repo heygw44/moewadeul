@@ -1,5 +1,6 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,26 +17,34 @@ import org.springframework.stereotype.Component;
         matchIfMissing = true)
 class NotificationMailScheduler {
 
+    private static final String JOB_NAME = "notification-mail";
+
     private final NotificationMailer mailer;
+    private final ScheduledJobRunner jobRunner;
 
     NotificationMailScheduler(
             NotificationMailer mailer,
+            ScheduledJobRunner jobRunner,
             NotificationMailProperties properties,
             @Value("${moewadeul.mail.send-timeout}") Duration sendTimeout,
             @Value("${spring.task.scheduling.pool.size:1}") int schedulingPoolSize) {
         requireLeaseOutlastsBatch(properties, sendTimeout);
         requireSchedulerThreadNotShared(schedulingPoolSize);
         this.mailer = mailer;
+        this.jobRunner = jobRunner;
+        jobRunner.register(JOB_NAME);
     }
 
     @Scheduled(
             fixedDelayString =
                     "${moewadeul.notification.mail.poll-delay:" + NotificationMailProperties.DEFAULT_POLL_DELAY + "}")
     void send() {
-        int sent = mailer.sendDue();
-        if (sent > 0) {
-            log.debug("notification mails processed count={}", sent);
-        }
+        jobRunner.run(JOB_NAME, () -> {
+            int sent = mailer.sendDue();
+            if (sent > 0) {
+                log.debug("notification mails processed count={}", sent);
+            }
+        });
     }
 
     private static void requireLeaseOutlastsBatch(NotificationMailProperties properties, Duration sendTimeout) {

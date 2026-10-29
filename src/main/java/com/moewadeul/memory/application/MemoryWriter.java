@@ -2,7 +2,6 @@ package com.moewadeul.memory.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryDetails;
 import com.moewadeul.memory.domain.MemoryRepository;
@@ -29,7 +28,7 @@ class MemoryWriter {
     @Transactional
     public long write(long memberId, MemoryWriteCommand command) {
         Instant now = clock.instant();
-        MemoryDetails details = command.toDetails(KoreaTime.dateOf(now));
+        MemoryDetails details = command.toDetails();
         if (details.spotId() != null) {
             requireLinkable(details.spotId());
         }
@@ -44,7 +43,7 @@ class MemoryWriter {
     public MemoryView revise(long memberId, long memoryId, MemoryReviseCommand command) {
         Memory memory = lockOwnMemory(memberId, memoryId);
         Instant now = clock.instant();
-        MemoryDetails details = command.mergeInto(memory.details()).toDetails(KoreaTime.dateOf(now));
+        MemoryDetails details = command.mergeInto(memory.details()).toDetails();
         if (command.linksNewSpot(memory.getSpotId())) {
             requireLinkable(details.spotId());
         }

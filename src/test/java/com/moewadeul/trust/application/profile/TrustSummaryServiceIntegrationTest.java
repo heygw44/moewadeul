@@ -167,16 +167,27 @@ class TrustSummaryServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[TR-01][SN-10] 180일보다 1마이크로초 앞선 제재, 해제된 제재, 임시 정지는 단계에 영향이 없다")
-    void oldLiftedAndTemporarySanctionsDoNotMatter() {
+    @DisplayName("[TR-01][SN-10] 180일보다 1마이크로초 앞선 제재, 처분 취소된 제재, 임시 정지는 단계에 영향이 없다")
+    void oldRevokedAndTemporarySanctionsDoNotMatter() {
         long member = fixture.saveVerifiedMember(TestSequence.nickname());
         makeQualified(member);
         insertSanction(member, "WARNING", "EXPIRED", NOW.minus(RECENT_PERIOD).minusNanos(1_000));
-        insertSanction(member, "SUSPEND_7D", "LIFTED", NOW.minus(Duration.ofDays(1)));
+        insertSanction(member, "SUSPEND_7D", "REVOKED", NOW.minus(Duration.ofDays(1)));
         insertSanction(member, "TEMPORARY_72H", "ACTIVE", NOW.minus(Duration.ofDays(1)));
 
         assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(2);
         assertThat(trustSummaryService.detail(member).noRecentSanction()).isTrue();
+    }
+
+    @Test
+    @DisplayName("[TR-01][SN-10] 조기 종료한 제재도 시작한 지 180일이 안 됐으면 단계 2에서 뺀다")
+    void endedEarlySanctionStillCountsWithinPeriod() {
+        long member = fixture.saveVerifiedMember(TestSequence.nickname());
+        makeQualified(member);
+        insertSanction(member, "SUSPEND_7D", "ENDED_EARLY", NOW.minus(Duration.ofDays(30)));
+
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(1);
+        assertThat(trustSummaryService.detail(member).noRecentSanction()).isFalse();
     }
 
     @Test

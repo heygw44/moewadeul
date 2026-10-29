@@ -3,7 +3,6 @@ package com.moewadeul.review.application;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
-import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.review.domain.ReviewErrorCode;
 import com.moewadeul.review.domain.SpotReview;
 import com.moewadeul.review.domain.SpotReviewRepository;
@@ -35,7 +34,7 @@ class SpotReviewWriter {
     public long write(long memberId, long spotId, SpotReviewWriteCommand command) {
         activeSpotChecker.requireActive(spotId);
         Instant now = clock.instant();
-        requireNotFuture(command.visitedDate(), now);
+        requireVisitedDate(command.visitedDate());
         requireValidBody(command.rating(), command.content());
         SpotReview review =
                 SpotReview.write(spotId, memberId, command.visitedDate(), command.rating(), command.content(), now);
@@ -90,12 +89,9 @@ class SpotReviewWriter {
         }
     }
 
-    private static void requireNotFuture(LocalDate visitedDate, Instant now) {
+    private static void requireVisitedDate(LocalDate visitedDate) {
         if (visitedDate == null) {
             throw invalidInput("방문일을 입력해 주세요.");
-        }
-        if (visitedDate.isAfter(KoreaTime.dateOf(now))) {
-            throw invalidInput("방문일은 오늘(한국 날짜)보다 뒤일 수 없어요.");
         }
     }
 

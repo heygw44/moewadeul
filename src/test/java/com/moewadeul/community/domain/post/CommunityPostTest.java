@@ -162,6 +162,38 @@ class CommunityPostTest {
         assertThat(post.getUpdatedAt()).isEqualTo(LATER);
     }
 
+    @ParameterizedTest(name = "[{index}] {0}")
+    @EnumSource(
+            value = CommunityPostStatus.class,
+            names = {"HIDDEN", "PENDING_REVIEW"})
+    @DisplayName("[F-29][CM-03] 숨겼거나 검토 대기인 글은 지울 수 없고 COMMUNITY_INVALID_STATE이며 상태와 수정 시각은 그대로다")
+    void deleteRejectsHiddenOrPendingReview(CommunityPostStatus status) {
+        // given
+        CommunityPost post = postIn(status);
+
+        // when // then
+        assertThatThrownBy(() -> post.delete(LATER))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommunityErrorCode.COMMUNITY_INVALID_STATE));
+        assertThat(post.getStatus()).isEqualTo(status);
+        assertThat(post.getUpdatedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-03] 이미 지운 글을 다시 지워도 예외 없이 그대로이고 수정 시각이 바뀌지 않는다")
+    void deleteTwiceIsNoOp() {
+        // given
+        CommunityPost post = postIn(CommunityPostStatus.DELETED);
+
+        // when
+        post.delete(LATER);
+
+        // then
+        assertThat(post.getStatus()).isEqualTo(CommunityPostStatus.DELETED);
+        assertThat(post.getUpdatedAt()).isEqualTo(NOW);
+    }
+
     @Test
     @DisplayName("[F-29][CM-03] 작성자가 아니면 requireWrittenBy가 ACCESS_DENIED다")
     void requireWrittenByRejectsOthers() {
