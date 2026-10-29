@@ -74,6 +74,6 @@ public class BasecampTransitionService {
     }
 
     private static BasecampStatusResult resultOf(Basecamp basecamp) {
-        return new BasecampStatusResult(basecamp.getId(), basecamp.getStatus().name());
+        return new BasecampStatusResult(basecamp.getId(), basecamp.getStatus());
     }
 }

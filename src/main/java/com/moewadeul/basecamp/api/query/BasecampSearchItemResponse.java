@@ -2,6 +2,8 @@ package com.moewadeul.basecamp.api.query;
 
 import com.moewadeul.basecamp.application.JoinConditionSummary;
 import com.moewadeul.basecamp.application.query.BasecampSearchItem;
+import com.moewadeul.basecamp.application.query.BasecampSpotType;
+import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.domain.JoinUnmetReason;
 import java.time.LocalDate;
 import java.util.List;
@@ -49,7 +51,7 @@ public sealed interface BasecampSearchItemResponse {
             LocalDate endDate,
             int capacity,
             int headcount,
-            String status,
+            BasecampStatus status,
             JoinConditionSummary joinCondition)
             implements BasecampSearchItemResponse {}
 
@@ -61,11 +63,11 @@ public sealed interface BasecampSearchItemResponse {
             LocalDate endDate,
             int capacity,
             int headcount,
-            String status,
+            BasecampStatus status,
             JoinConditionSummary joinCondition,
             boolean canApply,
             List<JoinUnmetReason> unmetReasons)
             implements BasecampSearchItemResponse {}
 
-    public record SpotResponse(long spotId, String name, String type, double lat, double lng) {}
+    public record SpotResponse(long spotId, String name, BasecampSpotType type, double lat, double lng) {}
 }

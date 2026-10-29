@@ -1,3 +1,5 @@
 package com.moewadeul.basecamp.application.lifecycle;
 
-public record BasecampStatusResult(long basecampId, String status) {}
+import com.moewadeul.basecamp.domain.BasecampStatus;
+
+public record BasecampStatusResult(long basecampId, BasecampStatus status) {}

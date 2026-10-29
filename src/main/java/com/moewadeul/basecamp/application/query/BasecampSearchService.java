@@ -18,8 +18,6 @@ import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,15 +48,13 @@ public class BasecampSearchService {
                 area = new BasecampSearchCondition.Area(region.swLat(), region.swLng(), region.neLat(), region.neLng());
             case BasecampSearchQuery.Radius radius -> nearby = toNearby(radius);
         }
-        Set<String> spotTypes =
-                query.spotTypes().stream().map(BasecampSpotType::name).collect(Collectors.toSet());
         return new BasecampSearchCondition(
                 area,
                 nearby,
                 query.fromDate(),
                 query.toDate(),
                 query.hasVacancy(),
-                spotTypes,
+                query.spotTypes(),
                 query.nights(),
                 query.maxTrustLevel(),
                 query.noAgeLimit(),
@@ -105,7 +101,7 @@ public class BasecampSearchService {
                 row.endDate(),
                 row.capacity(),
                 row.headcount(),
-                row.status().name(),
+                row.status(),
                 condition,
                 judge == null ? null : judge.judge(row));
     }

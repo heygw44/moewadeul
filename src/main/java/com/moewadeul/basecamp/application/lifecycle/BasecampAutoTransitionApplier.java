@@ -23,7 +23,7 @@ class BasecampAutoTransitionApplier {
         // 베이스캠프 행을 쓰기 잠금으로 읽는 조회가 이 트랜잭션의 첫 조회여야 한다. MySQL의 반복 가능한 읽기에서는
         // 잠그지 않는 조회가 먼저 일어나면 그 시점에 읽기 스냅숏이 정해져서, 잠금을 얻은 뒤에도 먼저 끝난 탈퇴 같은
         // 다른 트랜잭션의 커밋이 보이지 않는다. 그러면 이미 빠진 멤버를 세어 인원을 잘못 판단한다.
-        String status = autoTransitionMapper.selectStatusForUpdate(basecampId);
+        BasecampStatus status = autoTransitionMapper.selectStatusForUpdate(basecampId);
         if (!isBeforeConfirm(status)) {
             return false;
         }
@@ -51,9 +51,8 @@ class BasecampAutoTransitionApplier {
         return true;
     }
 
-    private static boolean isBeforeConfirm(String status) {
-        return BasecampStatus.RECRUITING.name().equals(status)
-                || BasecampStatus.CLOSED.name().equals(status);
+    private static boolean isBeforeConfirm(BasecampStatus status) {
+        return status == BasecampStatus.RECRUITING || status == BasecampStatus.CLOSED;
     }
 
     private void recordTransition(String eventType, long basecampId) {

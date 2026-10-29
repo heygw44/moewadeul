@@ -23,6 +23,7 @@ import com.moewadeul.basecamp.application.membership.BasecampMembershipService;
 import com.moewadeul.basecamp.application.membership.BasecampRejectResult;
 import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
+import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.domain.KickReason;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
@@ -86,7 +87,8 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13][BC-06] 합류를 신청하면 201과 applicationId·status를 응답하고, 경로의 베이스캠프 ID와 로그인한 회원 ID, 메시지를 서비스에 넘긴다")
     void applyReturnsCreated() {
         // given
-        when(basecampApplyService.apply(any())).thenReturn(new BasecampApplyResult(901L, "PENDING"));
+        when(basecampApplyService.apply(any()))
+                .thenReturn(new BasecampApplyResult(901L, BasecampApplicationStatus.PENDING));
 
         // when
         MvcTestResult result = postApply(verified(), "{\"message\":\"같이 가고 싶어요\"}");
@@ -101,7 +103,8 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13][BC-06] 요청 본문이 없거나 message가 없어도 201이고, 메시지는 null로 넘긴다")
     void applyAcceptsMissingBodyAndMessage() {
         // given
-        when(basecampApplyService.apply(any())).thenReturn(new BasecampApplyResult(901L, "PENDING"));
+        when(basecampApplyService.apply(any()))
+                .thenReturn(new BasecampApplyResult(901L, BasecampApplicationStatus.PENDING));
 
         // when
         MvcTestResult withoutBody =
@@ -118,7 +121,8 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13] 신청 메시지가 500자이면 받고, 501자이면 message 필드 오류로 400 INVALID_INPUT을 응답한다")
     void applyMessageLengthBoundary() {
         // given
-        when(basecampApplyService.apply(any())).thenReturn(new BasecampApplyResult(901L, "PENDING"));
+        when(basecampApplyService.apply(any()))
+                .thenReturn(new BasecampApplyResult(901L, BasecampApplicationStatus.PENDING));
 
         // when
         MvcTestResult atLimit = postApply(verified(), "{\"message\":\"" + "가".repeat(500) + "\"}");
@@ -257,7 +261,8 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13][BC-08] 승인하면 200이고 인원과 베이스캠프 상태를 응답하며, 경로의 ID와 로그인한 회원 ID를 서비스에 넘긴다")
     void approveReturnsHeadcountAndStatus() {
         // given
-        when(basecampApprovalService.approve(77L, 501L, MEMBER_ID)).thenReturn(new BasecampApproveResult(4, "CLOSED"));
+        when(basecampApprovalService.approve(77L, 501L, MEMBER_ID))
+                .thenReturn(new BasecampApproveResult(4, BasecampStatus.CLOSED));
 
         // when
         MvcTestResult result =
@@ -273,7 +278,7 @@ class BasecampMembershipControllerTest {
     void rejectReturnsApplicationStatus() {
         // given
         when(basecampApprovalService.reject(77L, 501L, MEMBER_ID))
-                .thenReturn(new BasecampRejectResult(501L, "REJECTED"));
+                .thenReturn(new BasecampRejectResult(501L, BasecampApplicationStatus.REJECTED));
 
         // when
         MvcTestResult result =

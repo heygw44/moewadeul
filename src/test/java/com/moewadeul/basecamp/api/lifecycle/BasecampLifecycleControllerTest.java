@@ -18,6 +18,7 @@ import com.moewadeul.basecamp.application.lifecycle.BasecampReviseCommand;
 import com.moewadeul.basecamp.application.lifecycle.BasecampStatusResult;
 import com.moewadeul.basecamp.application.lifecycle.BasecampTransitionService;
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
+import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
@@ -87,7 +88,8 @@ class BasecampLifecycleControllerTest {
     @DisplayName("[F-12] 베이스캠프를 열면 201과 basecampId·status를 응답하고, 요청 값과 로그인한 회원의 ID를 서비스에 넘긴다")
     void openReturnsCreated() {
         // given
-        when(basecampOpenService.open(eq(MEMBER_ID), any())).thenReturn(new BasecampOpenResult(55L, "RECRUITING"));
+        when(basecampOpenService.open(eq(MEMBER_ID), any()))
+                .thenReturn(new BasecampOpenResult(55L, BasecampStatus.RECRUITING));
 
         // when
         MvcTestResult result = post(verified(), VALID_BODY);
@@ -106,7 +108,8 @@ class BasecampLifecycleControllerTest {
     @DisplayName("[F-12][BC-05] 합류 조건을 보내면 그대로 서비스에 넘긴다")
     void joinConditionIsPassedToService() {
         // given
-        when(basecampOpenService.open(eq(MEMBER_ID), any())).thenReturn(new BasecampOpenResult(55L, "RECRUITING"));
+        when(basecampOpenService.open(eq(MEMBER_ID), any()))
+                .thenReturn(new BasecampOpenResult(55L, BasecampStatus.RECRUITING));
         String joinCondition =
                 "\"joinCondition\":{\"minTrustLevel\":2,\"ageGroupMin\":20,\"ageGroupMax\":30,\"sameGenderOnly\":true}";
 
@@ -124,7 +127,8 @@ class BasecampLifecycleControllerTest {
     @DisplayName("[F-12] 제목이 100자이면 받고, 101자이면 title 필드 오류로 400 INVALID_INPUT을 응답한다")
     void titleLengthBoundary() {
         // given
-        when(basecampOpenService.open(eq(MEMBER_ID), any())).thenReturn(new BasecampOpenResult(1L, "RECRUITING"));
+        when(basecampOpenService.open(eq(MEMBER_ID), any()))
+                .thenReturn(new BasecampOpenResult(1L, BasecampStatus.RECRUITING));
 
         // when
         MvcTestResult atLimit = post(verified(), body("\"title\":\"" + "가".repeat(100) + "\"", "\"capacity\":4"));
@@ -275,10 +279,14 @@ class BasecampLifecycleControllerTest {
     @DisplayName("[F-14][BC-12] 마감·재개·확정·취소는 200과 basecampId·status를 응답하고, 경로의 ID와 로그인한 회원 ID를 서비스에 넘긴다")
     void transitionsReturnStatus() {
         // given
-        when(basecampTransitionService.close(77L, MEMBER_ID)).thenReturn(new BasecampStatusResult(77L, "CLOSED"));
-        when(basecampTransitionService.reopen(77L, MEMBER_ID)).thenReturn(new BasecampStatusResult(77L, "RECRUITING"));
-        when(basecampTransitionService.confirm(77L, MEMBER_ID)).thenReturn(new BasecampStatusResult(77L, "CONFIRMED"));
-        when(basecampTransitionService.cancel(77L, MEMBER_ID)).thenReturn(new BasecampStatusResult(77L, "CANCELED"));
+        when(basecampTransitionService.close(77L, MEMBER_ID))
+                .thenReturn(new BasecampStatusResult(77L, BasecampStatus.CLOSED));
+        when(basecampTransitionService.reopen(77L, MEMBER_ID))
+                .thenReturn(new BasecampStatusResult(77L, BasecampStatus.RECRUITING));
+        when(basecampTransitionService.confirm(77L, MEMBER_ID))
+                .thenReturn(new BasecampStatusResult(77L, BasecampStatus.CONFIRMED));
+        when(basecampTransitionService.cancel(77L, MEMBER_ID))
+                .thenReturn(new BasecampStatusResult(77L, BasecampStatus.CANCELED));
 
         // when
         MvcTestResult close = send("POST", BASECAMP + "/close", verified(), true, null);
@@ -299,7 +307,7 @@ class BasecampLifecycleControllerTest {
     void registerContactReturnsStatus() {
         // given
         when(basecampEditService.registerContact(77L, MEMBER_ID, CONTACT_URL))
-                .thenReturn(new BasecampStatusResult(77L, "CONFIRMED"));
+                .thenReturn(new BasecampStatusResult(77L, BasecampStatus.CONFIRMED));
 
         // when
         MvcTestResult result = send("PUT", BASECAMP + "/contact", verified(), true, contactBody(CONTACT_URL));
@@ -314,7 +322,7 @@ class BasecampLifecycleControllerTest {
     void reviseReturnsStatus() {
         // given
         when(basecampEditService.revise(eq(77L), eq(MEMBER_ID), any()))
-                .thenReturn(new BasecampStatusResult(77L, "RECRUITING"));
+                .thenReturn(new BasecampStatusResult(77L, BasecampStatus.RECRUITING));
 
         // when
         MvcTestResult result = send("PATCH", BASECAMP, verified(), true, "{\"capacity\":5}");

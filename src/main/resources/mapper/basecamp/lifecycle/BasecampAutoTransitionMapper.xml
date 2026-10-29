@@ -22,7 +22,7 @@
         LIMIT #{limit}
     </select>
 
-    <select id="selectStatusForUpdate" resultType="string">
+    <select id="selectStatusForUpdate" resultType="com.moewadeul.basecamp.domain.BasecampStatus">
         SELECT status
         FROM basecamp
         WHERE id = #{id}

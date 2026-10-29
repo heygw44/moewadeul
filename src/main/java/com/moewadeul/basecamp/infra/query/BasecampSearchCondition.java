@@ -1,5 +1,6 @@
 package com.moewadeul.basecamp.infra.query;
 
+import com.moewadeul.basecamp.application.query.BasecampSpotType;
 import java.time.LocalDate;
 import java.util.Set;
 
@@ -9,7 +10,7 @@ public record BasecampSearchCondition(
         LocalDate fromDate,
         LocalDate toDate,
         boolean hasVacancy,
-        Set<String> spotTypes,
+        Set<BasecampSpotType> spotTypes,
         Set<Integer> nights,
         Integer maxTrustLevel,
         boolean noAgeLimit,

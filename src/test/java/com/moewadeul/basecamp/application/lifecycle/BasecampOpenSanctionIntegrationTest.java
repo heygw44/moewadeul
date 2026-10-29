@@ -3,6 +3,7 @@ package com.moewadeul.basecamp.application.lifecycle;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -78,7 +79,7 @@ class BasecampOpenSanctionIntegrationTest {
 
         BasecampOpenResult result = open();
 
-        assertThat(result.status()).isEqualTo("RECRUITING");
+        assertThat(result.status()).isEqualTo(BasecampStatus.RECRUITING);
     }
 
     private BasecampOpenResult open() {

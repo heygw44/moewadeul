@@ -1,10 +1,15 @@
 package com.moewadeul.basecamp.api.membership;
 
 import com.moewadeul.basecamp.application.membership.BasecampApplicationItem;
+import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
 import java.time.Instant;
 
 public record BasecampApplicationResponse(
-        long applicationId, String status, String message, Instant appliedAt, ApplicantEntry applicant) {
+        long applicationId,
+        BasecampApplicationStatus status,
+        String message,
+        Instant appliedAt,
+        ApplicantEntry applicant) {
 
     static BasecampApplicationResponse from(BasecampApplicationItem item) {
         BasecampApplicationItem.Applicant applicant = item.applicant();

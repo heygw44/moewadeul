@@ -57,7 +57,7 @@ public class BasecampOpenService {
                 capacity,
                 joinCondition);
         Basecamp basecamp = basecampRepository.saveAndFlush(open(leaderId, command.spotId(), details, now));
-        return new BasecampOpenResult(basecamp.getId(), basecamp.getStatus().name());
+        return new BasecampOpenResult(basecamp.getId(), basecamp.getStatus());
     }
 
     private static void requireTrustLevel(TrustDetail trust) {

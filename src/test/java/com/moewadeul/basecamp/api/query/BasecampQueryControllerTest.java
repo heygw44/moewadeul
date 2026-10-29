@@ -19,6 +19,7 @@ import com.moewadeul.basecamp.application.query.BasecampSearchService;
 import com.moewadeul.basecamp.application.query.BasecampSpotType;
 import com.moewadeul.basecamp.application.query.MyBasecampListQuery;
 import com.moewadeul.basecamp.application.query.MyBasecampListService;
+import com.moewadeul.basecamp.domain.BasecampMemberRole;
 import com.moewadeul.basecamp.domain.BasecampRelation;
 import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.domain.JoinUnmetReason;
@@ -498,12 +499,12 @@ class BasecampQueryControllerTest {
         return new BasecampSearchItem(
                 77L,
                 "굴업도 주말 1박",
-                new BasecampSearchItem.SpotSummary(101L, "개머리언덕", "BAKJI", 37.25, 127.25),
+                new BasecampSearchItem.SpotSummary(101L, "개머리언덕", BasecampSpotType.BAKJI, 37.25, 127.25),
                 LocalDate.of(2026, 11, 7),
                 LocalDate.of(2026, 11, 8),
                 4,
                 3,
-                "RECRUITING",
+                BasecampStatus.RECRUITING,
                 new JoinConditionSummary(null, null, null, false),
                 eligibility);
     }
@@ -517,17 +518,20 @@ class BasecampQueryControllerTest {
                 77L,
                 "굴업도 주말 1박",
                 "함께 가요",
-                new BasecampDetail.SpotSummary(101L, "개머리언덕", "BAKJI", 37.0712, 125.9893),
+                new BasecampDetail.SpotSummary(101L, "개머리언덕", BasecampSpotType.BAKJI, 37.0712, 125.9893),
                 LocalDate.of(2026, 11, 7),
                 LocalDate.of(2026, 11, 8),
                 4,
                 2,
-                "CONFIRMED",
+                BasecampStatus.CONFIRMED,
                 new JoinConditionSummary(1, null, null, false),
-                new BasecampDetail.DetailMember(31L, "새벽능선", "LEADER", "THIRTIES", true, "FEMALE", true, 2, 5),
+                new BasecampDetail.DetailMember(
+                        31L, "새벽능선", BasecampMemberRole.LEADER, "THIRTIES", true, "FEMALE", true, 2, 5),
                 List.of(
-                        new BasecampDetail.DetailMember(31L, "새벽능선", "LEADER", "THIRTIES", true, "FEMALE", true, 2, 5),
-                        new BasecampDetail.DetailMember(32L, "달빛야영", "MEMBER", null, false, null, false, 1, 0)),
+                        new BasecampDetail.DetailMember(
+                                31L, "새벽능선", BasecampMemberRole.LEADER, "THIRTIES", true, "FEMALE", true, 2, 5),
+                        new BasecampDetail.DetailMember(
+                                32L, "달빛야영", BasecampMemberRole.MEMBER, null, false, null, false, 1, 0)),
                 relation,
                 contactInfo,
                 eligibility);
