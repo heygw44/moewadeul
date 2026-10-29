@@ -16,6 +16,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { departureInstant, formatLocalDate } from '../../lib/datetime';
+import { parseHttpsUrl } from '../../lib/url';
 import { trustLevelBadge } from '../member/memberLabels';
 import { withNext } from '../member/nextPath';
 import { MemberReportDialog } from '../report/MemberReportDialog';
@@ -355,15 +356,6 @@ function SeatRow({ headcount, capacity, recruiting }: { headcount: number; capac
       {recruiting && left > 0 && <span className="ml-auto text-[0.8125rem] text-ink-muted">{left}자리 남았어요</span>}
     </div>
   );
-}
-
-function parseHttpsUrl(value: string): URL | null {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' ? url : null;
-  } catch {
-    return null;
-  }
 }
 
 function ContactInfo({ contactInfo, isMember }: { contactInfo: string | undefined; isMember: boolean }) {

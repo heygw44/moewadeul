@@ -21,6 +21,7 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstMonthDay, formatKstTime, formatLocalDate } from '../../lib/datetime';
+import { parseHttpsUrl } from '../../lib/url';
 import { newMemoryPath } from '../memory/memoryLabels';
 import { UnverifiedNote } from '../member/GatedButton';
 import { SpotReviews } from '../review/SpotReviews';
@@ -327,15 +328,6 @@ function BakjiSection({
   );
 }
 
-function parseHomepage(homepage: string): URL | null {
-  try {
-    const url = new URL(homepage);
-    return url.protocol === 'https:' ? url : null;
-  } catch {
-    return null;
-  }
-}
-
 function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
   const { category, facilities, phone, homepage, source, sourceDate, checkedAt } = publicDetail;
   const facilityRows = facilities
@@ -344,7 +336,7 @@ function PublicSection({ publicDetail }: { publicDetail: PublicDetail }) {
         return value === null ? [] : [{ key, label, value }];
       })
     : [];
-  const homepageUrl = homepage ? parseHomepage(homepage) : null;
+  const homepageUrl = homepage ? parseHttpsUrl(homepage) : null;
 
   return (
     <section className={SECTION_CLASS} aria-labelledby="spot-public-title">
