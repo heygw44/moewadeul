@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -41,11 +42,11 @@ class CommunityImageAttachmentPrecheck {
         if (imageIds.size() > CommunityImage.MAX_PER_POST) {
             throw invalid("이미지는 " + CommunityImage.MAX_PER_POST + "장까지 붙일 수 있어요.");
         }
+        if (imageIds.stream().anyMatch(Objects::isNull)) {
+            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
+        }
         if (new HashSet<>(imageIds).size() != imageIds.size()) {
             throw invalid("같은 이미지를 두 번 붙일 수 없어요.");
-        }
-        if (imageIds.stream().anyMatch(id -> id == null)) {
-            throw invalid(UNUSABLE_MESSAGE_FOR_ANY_REASON);
         }
     }
 
