@@ -1,4 +1,4 @@
-package com.moewadeul.admin.api.member;
+package com.moewadeul.admin.api.trust;
 
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.trust.application.sanction.SanctionLiftService;

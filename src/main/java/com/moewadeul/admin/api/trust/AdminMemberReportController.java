@@ -1,7 +1,7 @@
-package com.moewadeul.admin.api.member;
+package com.moewadeul.admin.api.trust;
 
-import com.moewadeul.admin.api.member.AdminMemberReportRequests.ActionRequest;
-import com.moewadeul.admin.api.member.AdminMemberReportRequests.DismissRequest;
+import com.moewadeul.admin.api.trust.AdminMemberReportRequests.ActionRequest;
+import com.moewadeul.admin.api.trust.AdminMemberReportRequests.DismissRequest;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.trust.application.report.AdminMemberReportQueryService;
 import com.moewadeul.trust.application.report.MemberReportActionCommand;
