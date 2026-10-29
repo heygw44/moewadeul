@@ -1,15 +1,18 @@
 package com.moewadeul.basecamp.domain;
 
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class JoinEligibilityPolicy {
 
-    public static final int BASE_TRUST_LEVEL = 1;
+    public static final TrustLevel BASE_TRUST_LEVEL = TrustLevel.IDENTITY_VERIFIED;
 
     private JoinEligibilityPolicy() {}
 
-    public record Applicant(int trustLevel, Integer verifiedAgeGroup, JoinGender verifiedGender) {}
+    public record Applicant(TrustLevel trustLevel, AgeGroup verifiedAgeGroup, Gender verifiedGender) {}
 
     public static List<JoinUnmetReason> unmetReasons(
             JoinCondition condition, Applicant applicant, boolean dateConflict, PriorRelation priorRelation) {
@@ -38,27 +41,23 @@ public final class JoinEligibilityPolicy {
     public static boolean hasDateConflict(BasecampSchedule target, List<BasecampSchedule> inProgress) {
         return inProgress.stream()
                 .filter(schedule -> schedule.basecampId() != target.basecampId())
-                .anyMatch(schedule -> overlaps(target, schedule));
-    }
-
-    private static boolean overlaps(BasecampSchedule a, BasecampSchedule b) {
-        return !a.startDate().isAfter(b.endDate()) && !a.endDate().isBefore(b.startDate());
+                .anyMatch(schedule -> target.schedule().sharesDateWith(schedule.schedule()));
     }
 
     private static boolean meetsTrustLevel(JoinCondition condition, Applicant applicant) {
-        int required =
-                Math.max(BASE_TRUST_LEVEL, condition.getMinTrustLevel() == null ? 0 : condition.getMinTrustLevel());
-        return applicant.trustLevel() >= required;
+        TrustLevel minimum = condition.getMinTrustLevel();
+        return applicant.trustLevel().atLeast(BASE_TRUST_LEVEL)
+                && (minimum == null || applicant.trustLevel().atLeast(minimum));
     }
 
     private static boolean meetsAgeGroup(JoinCondition condition, Applicant applicant) {
-        Integer min = condition.getAgeGroupMin();
-        Integer max = condition.getAgeGroupMax();
+        AgeGroup min = condition.getAgeGroupMin();
+        AgeGroup max = condition.getAgeGroupMax();
         if (min == null || max == null) {
             return true;
         }
-        Integer ageGroup = applicant.verifiedAgeGroup();
-        return ageGroup != null && ageGroup >= min && ageGroup <= max;
+        AgeGroup ageGroup = applicant.verifiedAgeGroup();
+        return ageGroup != null && ageGroup.compareTo(min) >= 0 && ageGroup.compareTo(max) <= 0;
     }
 
     private static boolean meetsGender(JoinCondition condition, Applicant applicant) {

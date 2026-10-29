@@ -13,6 +13,8 @@ import com.moewadeul.basecamp.infra.query.BasecampSearchMapper;
 import com.moewadeul.basecamp.infra.query.BasecampSearchRow;
 import com.moewadeul.basecamp.infra.query.ViewerHistoryRow;
 import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.spot.application.SpotSearchBox;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.HashMap;
@@ -57,6 +59,7 @@ public class BasecampSearchService {
                 query.spotTypes(),
                 query.nights(),
                 query.maxTrustLevel(),
+                JoinEligibilityPolicy.BASE_TRUST_LEVEL.level(),
                 query.noAgeLimit(),
                 query.noSameGenderOnly());
     }
@@ -124,10 +127,11 @@ public class BasecampSearchService {
         private static JoinCondition toJoinCondition(BasecampSearchRow row) {
             JoinCondition condition = JoinCondition.none();
             if (row.minTrustLevel() != null) {
-                condition = condition.withMinTrustLevel(row.minTrustLevel());
+                condition = condition.withMinTrustLevel(TrustLevel.of(row.minTrustLevel()));
             }
             if (row.ageGroupMin() != null && row.ageGroupMax() != null) {
-                condition = condition.withAgeGroupRange(row.ageGroupMin(), row.ageGroupMax());
+                condition = condition.withAgeGroupRange(
+                        AgeGroup.ofDecade(row.ageGroupMin()), AgeGroup.ofDecade(row.ageGroupMax()));
             }
             if (row.sameGenderOnly()) {
                 condition = condition.withSameGenderOnly(row.requiredGender());

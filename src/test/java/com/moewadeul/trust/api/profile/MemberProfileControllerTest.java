@@ -8,6 +8,9 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
@@ -49,7 +52,7 @@ class MemberProfileControllerTest {
     @DisplayName("[NFR-11] 비로그인 요청은 memberId와 nickname만 응답하고 신뢰 정보를 조회하지 않는다")
     void anonymousSeesOnlyIdAndNickname() {
         when(memberProfileService.find(TARGET_ID))
-                .thenReturn(new MemberProfile(TARGET_ID, "산바람", "THIRTIES", "FEMALE"));
+                .thenReturn(new MemberProfile(TARGET_ID, "산바람", AgeGroup.THIRTIES, Gender.FEMALE));
 
         MvcTestResult result = mvc.get().uri(PATH).exchange();
 
@@ -64,8 +67,17 @@ class MemberProfileControllerTest {
     @DisplayName("[NFR-11] 로그인한 회원은 연령대·성별·신뢰 정보를 보고, 값이 없으면 null로 응답한다")
     void loggedInMemberSeesTrustFields() {
         when(memberProfileQueryService.find(TARGET_ID))
-                .thenReturn(
-                        new MemberTrustProfile(TARGET_ID, "산바람", null, false, "FEMALE", true, 1, 0, null, List.of()));
+                .thenReturn(new MemberTrustProfile(
+                        TARGET_ID,
+                        "산바람",
+                        null,
+                        false,
+                        Gender.FEMALE,
+                        true,
+                        TrustLevel.IDENTITY_VERIFIED,
+                        0,
+                        null,
+                        List.of()));
 
         MvcTestResult result = mvc.get().uri(PATH).with(login(false)).exchange();
 

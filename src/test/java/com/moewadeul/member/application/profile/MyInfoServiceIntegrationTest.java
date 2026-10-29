@@ -7,14 +7,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.ErrorCode;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.common.web.PatchField;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.SelfAgeGroup;
-import com.moewadeul.member.domain.SelfGender;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -39,8 +39,8 @@ class MyInfoServiceIntegrationTest {
     void findReturnsAllFields() {
         // given
         Member member = aMember().email("Me@Example.com").nickname("camper").build();
-        member.changeSelfAgeGroup(SelfAgeGroup.THIRTIES, MutableClock.DEFAULT_INSTANT);
-        member.changeSelfGender(SelfGender.FEMALE, MutableClock.DEFAULT_INSTANT);
+        member.changeSelfAgeGroup(AgeGroup.THIRTIES, MutableClock.DEFAULT_INSTANT);
+        member.changeSelfGender(Gender.FEMALE, MutableClock.DEFAULT_INSTANT);
         Member saved = memberJpaRepository.saveAndFlush(member);
 
         // when
@@ -49,7 +49,13 @@ class MyInfoServiceIntegrationTest {
         // then
         assertThat(info)
                 .isEqualTo(new MyInfo(
-                        saved.getId(), "me@example.com", "camper", "UNVERIFIED", "USER", "THIRTIES", "FEMALE"));
+                        saved.getId(),
+                        "me@example.com",
+                        "camper",
+                        "UNVERIFIED",
+                        "USER",
+                        AgeGroup.THIRTIES,
+                        Gender.FEMALE));
     }
 
     @Test
@@ -92,12 +98,12 @@ class MyInfoServiceIntegrationTest {
 
         // then
         assertThat(info.nickname()).isEqualTo(newNickname);
-        assertThat(info.selfAgeGroup()).isEqualTo("FORTIES");
-        assertThat(info.selfGender()).isEqualTo("MALE");
+        assertThat(info.selfAgeGroup()).isEqualTo(AgeGroup.FORTIES);
+        assertThat(info.selfGender()).isEqualTo(Gender.MALE);
         Member reloaded = reload(saved);
         assertThat(reloaded.getNickname()).isEqualTo(newNickname);
-        assertThat(reloaded.getSelfAgeGroup()).isEqualTo(SelfAgeGroup.FORTIES);
-        assertThat(reloaded.getSelfGender()).isEqualTo(SelfGender.MALE);
+        assertThat(reloaded.getSelfAgeGroup()).isEqualTo(AgeGroup.FORTIES);
+        assertThat(reloaded.getSelfGender()).isEqualTo(Gender.MALE);
         assertThat(reloaded.getUpdatedAt()).isEqualTo(Instant.now(clock));
     }
 
@@ -106,8 +112,8 @@ class MyInfoServiceIntegrationTest {
     void absentFieldsAreKept() {
         // given
         Member member = aMember().build();
-        member.changeSelfAgeGroup(SelfAgeGroup.TWENTIES, MutableClock.DEFAULT_INSTANT);
-        member.changeSelfGender(SelfGender.FEMALE, MutableClock.DEFAULT_INSTANT);
+        member.changeSelfAgeGroup(AgeGroup.TWENTIES, MutableClock.DEFAULT_INSTANT);
+        member.changeSelfGender(Gender.FEMALE, MutableClock.DEFAULT_INSTANT);
         Member saved = memberJpaRepository.saveAndFlush(member);
         clock.advance(Duration.ofMinutes(5));
 
@@ -117,11 +123,11 @@ class MyInfoServiceIntegrationTest {
 
         // then
         assertThat(info.nickname()).isEqualTo(saved.getNickname());
-        assertThat(info.selfAgeGroup()).isEqualTo("TWENTIES");
-        assertThat(info.selfGender()).isEqualTo("FEMALE");
+        assertThat(info.selfAgeGroup()).isEqualTo(AgeGroup.TWENTIES);
+        assertThat(info.selfGender()).isEqualTo(Gender.FEMALE);
         Member reloaded = reload(saved);
-        assertThat(reloaded.getSelfAgeGroup()).isEqualTo(SelfAgeGroup.TWENTIES);
-        assertThat(reloaded.getSelfGender()).isEqualTo(SelfGender.FEMALE);
+        assertThat(reloaded.getSelfAgeGroup()).isEqualTo(AgeGroup.TWENTIES);
+        assertThat(reloaded.getSelfGender()).isEqualTo(Gender.FEMALE);
         assertThat(reloaded.getUpdatedAt()).isEqualTo(MutableClock.DEFAULT_INSTANT);
     }
 
@@ -130,8 +136,8 @@ class MyInfoServiceIntegrationTest {
     void explicitNullClearsSelfFields() {
         // given
         Member member = aMember().build();
-        member.changeSelfAgeGroup(SelfAgeGroup.FIFTIES, MutableClock.DEFAULT_INSTANT);
-        member.changeSelfGender(SelfGender.MALE, MutableClock.DEFAULT_INSTANT);
+        member.changeSelfAgeGroup(AgeGroup.FIFTIES, MutableClock.DEFAULT_INSTANT);
+        member.changeSelfGender(Gender.MALE, MutableClock.DEFAULT_INSTANT);
         Member saved = memberJpaRepository.saveAndFlush(member);
 
         // when
@@ -286,8 +292,8 @@ class MyInfoServiceIntegrationTest {
                 saved.getId(), command(PatchField.absent(), PatchField.of("SIXTIES_PLUS"), PatchField.absent()));
 
         // then
-        assertThat(reload(saved).getSelfAgeGroup()).isEqualTo(SelfAgeGroup.SIXTIES_PLUS);
-        assertThat(myInfoService.find(saved.getId()).selfAgeGroup()).isEqualTo("SIXTIES_PLUS");
+        assertThat(reload(saved).getSelfAgeGroup()).isEqualTo(AgeGroup.SIXTIES_PLUS);
+        assertThat(myInfoService.find(saved.getId()).selfAgeGroup()).isEqualTo(AgeGroup.SIXTIES_PLUS);
     }
 
     private Member reload(Member member) {

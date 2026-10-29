@@ -2,7 +2,7 @@ package com.moewadeul.trust.infra.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.moewadeul.trust.domain.identity.Gender;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.trust.domain.identity.IdentityClaim;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.VerifiedIdentity;

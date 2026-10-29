@@ -1,3 +1,5 @@
 package com.moewadeul.trust.application.profile;
 
-public record TrustSummary(boolean identityVerified, int trustLevel) {}
+import com.moewadeul.common.profile.TrustLevel;
+
+public record TrustSummary(boolean identityVerified, TrustLevel trustLevel) {}

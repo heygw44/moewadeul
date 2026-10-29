@@ -13,6 +13,7 @@ public record BasecampSearchCondition(
         Set<BasecampSpotType> spotTypes,
         Set<Integer> nights,
         Integer maxTrustLevel,
+        int baseTrustLevel,
         boolean noAgeLimit,
         boolean noSameGenderOnly) {
 

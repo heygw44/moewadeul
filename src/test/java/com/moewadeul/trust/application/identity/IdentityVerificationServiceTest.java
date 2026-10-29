@@ -12,11 +12,12 @@ import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.identity.CiHash;
-import com.moewadeul.trust.domain.identity.Gender;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.IdentityVerification;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
@@ -55,8 +56,8 @@ class IdentityVerificationServiceTest {
                 serviceAt("2025-12-31T15:00:00Z").verify(MEMBER_ID, command(2007));
 
         // then
-        assertThat(beforeNewYear).isEqualTo(new IdentityVerificationResult(true, false, 0));
-        assertThat(afterNewYear).isEqualTo(new IdentityVerificationResult(true, true, 1));
+        assertThat(beforeNewYear).isEqualTo(new IdentityVerificationResult(true, false, TrustLevel.EMAIL_VERIFIED));
+        assertThat(afterNewYear).isEqualTo(new IdentityVerificationResult(true, true, TrustLevel.IDENTITY_VERIFIED));
     }
 
     @Test

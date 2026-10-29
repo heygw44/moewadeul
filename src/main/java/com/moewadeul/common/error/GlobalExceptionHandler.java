@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.core.MethodParameter;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -83,6 +85,29 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(CommonErrorCode.RESOURCE_BUSY.httpStatus())
                 .header(HttpHeaders.RETRY_AFTER, LOCK_RETRY_AFTER_SECONDS)
                 .body(ErrorResponse.of(CommonErrorCode.RESOURCE_BUSY));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        if (!UniqueViolations.isDuplicateEntry(e)) {
+            return handleUnexpectedException(e);
+        }
+        log.warn("untranslated unique violation cause={}", UniqueViolations.redactedMessage(e));
+        return dataConflict();
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailure(OptimisticLockingFailureException e) {
+        log.warn(
+                "optimistic locking failed cause={}: {}",
+                e.getClass().getSimpleName(),
+                e.getMostSpecificCause().getMessage());
+        return dataConflict();
+    }
+
+    private static ResponseEntity<ErrorResponse> dataConflict() {
+        return ResponseEntity.status(CommonErrorCode.DATA_CONFLICT.httpStatus())
+                .body(ErrorResponse.of(CommonErrorCode.DATA_CONFLICT));
     }
 
     @ExceptionHandler(Exception.class)

@@ -11,6 +11,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
@@ -18,7 +20,6 @@ import com.moewadeul.trust.application.identity.IdentityVerificationResult;
 import com.moewadeul.trust.application.identity.IdentityVerificationService;
 import com.moewadeul.trust.application.identity.IdentityVerifyCommand;
 import com.moewadeul.trust.domain.TrustErrorCode;
-import com.moewadeul.trust.domain.identity.Gender;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -57,7 +58,7 @@ class IdentityVerificationControllerTest {
     void verifiedMemberGetsResult() {
         // given
         when(identityVerificationService.verify(eq(MEMBER_ID), any()))
-                .thenReturn(new IdentityVerificationResult(true, true, 1));
+                .thenReturn(new IdentityVerificationResult(true, true, TrustLevel.IDENTITY_VERIFIED));
 
         // when
         MvcTestResult result = post(verified(), VALID_BODY);

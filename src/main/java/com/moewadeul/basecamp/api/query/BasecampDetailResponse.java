@@ -7,6 +7,8 @@ import com.moewadeul.basecamp.application.query.BasecampSpotType;
 import com.moewadeul.basecamp.domain.BasecampMemberRole;
 import com.moewadeul.basecamp.domain.BasecampRelation;
 import com.moewadeul.basecamp.domain.BasecampStatus;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -124,9 +126,9 @@ public sealed interface BasecampDetailResponse {
             long memberId,
             String nickname,
             BasecampMemberRole role,
-            String ageGroup,
+            AgeGroup ageGroup,
             boolean ageGroupVerified,
-            String gender,
+            Gender gender,
             boolean genderVerified,
             int trustLevel,
             int completedCompanions) {
@@ -140,7 +142,7 @@ public sealed interface BasecampDetailResponse {
                     member.ageGroupVerified(),
                     member.gender(),
                     member.genderVerified(),
-                    member.trustLevel(),
+                    member.trustLevel().level(),
                     member.completedCompanions());
         }
     }

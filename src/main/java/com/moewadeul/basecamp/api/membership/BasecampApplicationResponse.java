@@ -2,6 +2,8 @@ package com.moewadeul.basecamp.api.membership;
 
 import com.moewadeul.basecamp.application.membership.BasecampApplicationItem;
 import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import java.time.Instant;
 
 public record BasecampApplicationResponse(
@@ -25,16 +27,16 @@ public record BasecampApplicationResponse(
                         applicant.ageGroupVerified(),
                         applicant.gender(),
                         applicant.genderVerified(),
-                        applicant.trustLevel(),
+                        applicant.trustLevel().level(),
                         applicant.completedCompanions()));
     }
 
     public record ApplicantEntry(
             long memberId,
             String nickname,
-            String ageGroup,
+            AgeGroup ageGroup,
             boolean ageGroupVerified,
-            String gender,
+            Gender gender,
             boolean genderVerified,
             int trustLevel,
             int completedCompanions) {}

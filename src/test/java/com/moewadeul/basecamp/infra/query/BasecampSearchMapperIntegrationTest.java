@@ -9,7 +9,8 @@ import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
 import com.moewadeul.basecamp.domain.BasecampMemberStatus;
 import com.moewadeul.basecamp.domain.BasecampSchedule;
 import com.moewadeul.basecamp.domain.BasecampStatus;
-import com.moewadeul.basecamp.domain.JoinGender;
+import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -27,6 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class BasecampSearchMapperIntegrationTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 10, 20);
+    private static final int BASE_TRUST_LEVEL = JoinEligibilityPolicy.BASE_TRUST_LEVEL.level();
 
     private static final BasecampSearchCondition.Area AREA = new BasecampSearchCondition.Area(37.0, 127.0, 38.0, 128.0);
 
@@ -330,7 +332,7 @@ class BasecampSearchMapperIntegrationTest {
         assertThat(row.ageGroupMin()).isEqualTo(20);
         assertThat(row.ageGroupMax()).isEqualTo(30);
         assertThat(row.sameGenderOnly()).isTrue();
-        assertThat(row.requiredGender()).isEqualTo(JoinGender.FEMALE);
+        assertThat(row.requiredGender()).isEqualTo(Gender.FEMALE);
     }
 
     @Test
@@ -424,7 +426,7 @@ class BasecampSearchMapperIntegrationTest {
             LocalDate toDate,
             boolean hasVacancy) {
         return new BasecampSearchCondition(
-                area, nearby, fromDate, toDate, hasVacancy, Set.of(), Set.of(), null, false, false);
+                area, nearby, fromDate, toDate, hasVacancy, Set.of(), Set.of(), null, BASE_TRUST_LEVEL, false, false);
     }
 
     private static BasecampSearchCondition detailCondition(
@@ -434,7 +436,17 @@ class BasecampSearchMapperIntegrationTest {
             boolean noAgeLimit,
             boolean noSameGenderOnly) {
         return new BasecampSearchCondition(
-                AREA, null, null, null, false, spotTypes, nights, maxTrustLevel, noAgeLimit, noSameGenderOnly);
+                AREA,
+                null,
+                null,
+                null,
+                false,
+                spotTypes,
+                nights,
+                maxTrustLevel,
+                BASE_TRUST_LEVEL,
+                noAgeLimit,
+                noSameGenderOnly);
     }
 
     private static BasecampSearchCondition areaCondition(BasecampSearchCondition.Area area) {

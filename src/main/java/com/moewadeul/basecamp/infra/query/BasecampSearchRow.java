@@ -2,7 +2,7 @@ package com.moewadeul.basecamp.infra.query;
 
 import com.moewadeul.basecamp.application.query.BasecampSpotType;
 import com.moewadeul.basecamp.domain.BasecampStatus;
-import com.moewadeul.basecamp.domain.JoinGender;
+import com.moewadeul.common.profile.Gender;
 import java.time.LocalDate;
 
 public record BasecampSearchRow(
@@ -22,4 +22,4 @@ public record BasecampSearchRow(
         Integer ageGroupMin,
         Integer ageGroupMax,
         boolean sameGenderOnly,
-        JoinGender requiredGender) {}
+        Gender requiredGender) {}
