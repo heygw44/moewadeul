@@ -158,7 +158,7 @@ class BasecampAutoTransitionRuleIntegrationTest {
 
     @ParameterizedTest(name = "종료일 {0}")
     @MethodSource("endDateOffsetsFromToday")
-    @DisplayName("완료 SQL은 종료일이 오늘보다 이전일 때만 확정된 베이스캠프를 바꾸고, 완료 대상 조회도 같은 기준을 쓴다")
+    @DisplayName("완료 처리는 종료일이 오늘보다 이전일 때만 확정된 베이스캠프를 바꾸고, 완료 대상 조회도 같은 기준을 쓴다")
     void completionGuardOnEndDate(long daysBeforeToday, int expectedChanged) {
         // given
         LocalDate endDate = TODAY.minusDays(daysBeforeToday);
@@ -166,10 +166,10 @@ class BasecampAutoTransitionRuleIntegrationTest {
 
         // when
         boolean selected = mapper.selectDueForCompletionIds(TODAY, 0, 100).contains(id);
-        int changed = mapper.completeIfConfirmed(id, TODAY, NOW);
+        boolean changed = applier.complete(id, TODAY, NOW);
 
         // then
-        assertThat(changed).isEqualTo(expectedChanged);
+        assertThat(changed).isEqualTo(expectedChanged == 1);
         assertThat(selected).isEqualTo(expectedChanged == 1);
     }
 
