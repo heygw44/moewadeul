@@ -31,38 +31,19 @@
     </select>
 
     <select id="selectReasonCountsOfNonEmpty" resultType="com.moewadeul.common.moderation.ReportReasonCount">
-        SELECT mr.memory_id AS target_id,
-               mr.reason AS reason,
-               COUNT(*) AS report_count
-        FROM memory_report mr
-        WHERE mr.reviewed_at IS NULL
-          AND mr.memory_id IN
-        <foreach collection="memoryIds" item="memoryId" open="(" separator="," close=")">
-            #{memoryId}
-        </foreach>
-        GROUP BY mr.memory_id, mr.reason
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.reasonCounts">
+            <property name="reportTable" value="memory_report"/>
+            <property name="targetColumn" value="memory_id"/>
+            <property name="targetScope" value="com.moewadeul.common.moderation.ModerationReportSql.anyTarget"/>
+        </include>
     </select>
 
-    <select id="selectRecentReportsOfNonEmpty" resultType="com.moewadeul.memory.infra.moderation.AdminMemoryRecentReportRow">
-        SELECT ranked.memory_id AS memory_id,
-               ranked.reason AS reason,
-               ranked.content AS content,
-               ranked.created_at AS created_at
-        FROM (
-            SELECT mr.memory_id AS memory_id,
-                   mr.reason AS reason,
-                   mr.content AS content,
-                   mr.created_at AS created_at,
-                   ROW_NUMBER() OVER (PARTITION BY mr.memory_id ORDER BY mr.created_at DESC, mr.id DESC) AS row_num
-            FROM memory_report mr
-            WHERE mr.reviewed_at IS NULL
-              AND mr.memory_id IN
-            <foreach collection="memoryIds" item="memoryId" open="(" separator="," close=")">
-                #{memoryId}
-            </foreach>
-        ) ranked
-        WHERE ranked.row_num &lt;= 5
-        ORDER BY ranked.memory_id ASC, ranked.row_num ASC
+    <select id="selectRecentReportsOfNonEmpty" resultType="com.moewadeul.common.moderation.RecentReportRow">
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.recentReports">
+            <property name="reportTable" value="memory_report"/>
+            <property name="targetColumn" value="memory_id"/>
+            <property name="targetScope" value="com.moewadeul.common.moderation.ModerationReportSql.anyTarget"/>
+        </include>
     </select>
 
 </mapper>

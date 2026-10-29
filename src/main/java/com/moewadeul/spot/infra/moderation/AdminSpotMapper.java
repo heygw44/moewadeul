@@ -1,5 +1,6 @@
 package com.moewadeul.spot.infra.moderation;
 
+import com.moewadeul.common.moderation.RecentReportRow;
 import com.moewadeul.common.moderation.ReportReasonCount;
 import com.moewadeul.spot.domain.SpotStatus;
 import java.util.Collection;
@@ -13,7 +14,7 @@ public interface AdminSpotMapper {
     List<AdminSpotRow> selectPage(
             @Param("status") SpotStatus status, @Param("offset") long offset, @Param("limit") int limit);
 
-    List<ReportReasonCount> selectReasonCounts(@Param("spotIds") Collection<Long> spotIds);
+    List<ReportReasonCount> selectReasonCounts(@Param("targetIds") Collection<Long> targetIds);
 
-    List<AdminSpotRecentReportRow> selectRecentReports(@Param("spotIds") Collection<Long> spotIds);
+    List<RecentReportRow> selectRecentReports(@Param("targetIds") Collection<Long> targetIds);
 }

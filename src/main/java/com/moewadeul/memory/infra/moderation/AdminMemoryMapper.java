@@ -1,5 +1,6 @@
 package com.moewadeul.memory.infra.moderation;
 
+import com.moewadeul.common.moderation.RecentReportRow;
 import com.moewadeul.common.moderation.ReportReasonCount;
 import com.moewadeul.memory.domain.MemoryStatus;
 import java.util.Collection;
@@ -17,11 +18,11 @@ public interface AdminMemoryMapper {
         return memoryIds.isEmpty() ? List.of() : selectReasonCountsOfNonEmpty(memoryIds);
     }
 
-    List<ReportReasonCount> selectReasonCountsOfNonEmpty(@Param("memoryIds") Collection<Long> memoryIds);
+    List<ReportReasonCount> selectReasonCountsOfNonEmpty(@Param("targetIds") Collection<Long> memoryIds);
 
-    default List<AdminMemoryRecentReportRow> selectRecentReports(Collection<Long> memoryIds) {
+    default List<RecentReportRow> selectRecentReports(Collection<Long> memoryIds) {
         return memoryIds.isEmpty() ? List.of() : selectRecentReportsOfNonEmpty(memoryIds);
     }
 
-    List<AdminMemoryRecentReportRow> selectRecentReportsOfNonEmpty(@Param("memoryIds") Collection<Long> memoryIds);
+    List<RecentReportRow> selectRecentReportsOfNonEmpty(@Param("targetIds") Collection<Long> memoryIds);
 }
