@@ -39,10 +39,9 @@ public interface SanctionJpaRepository extends JpaRepository<Sanction, Long>, Sa
     @Query("""
             select count(s) > 0 from Sanction s
             where s.memberId = :memberId
-              and s.type <> com.moewadeul.trust.domain.sanction.SanctionType.TEMPORARY_72H
               and s.status <> com.moewadeul.trust.domain.sanction.SanctionStatus.REVOKED
             """)
-    boolean existsHistory(@Param("memberId") long memberId);
+    boolean existsCiRetentionSanction(@Param("memberId") long memberId);
 
     @Override
     Optional<Sanction> findById(Long id);
