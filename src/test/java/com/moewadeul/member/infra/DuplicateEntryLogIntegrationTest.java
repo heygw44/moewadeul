@@ -3,6 +3,7 @@ package com.moewadeul.member.infra;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.domain.MemberBuilder;
@@ -40,5 +41,25 @@ class DuplicateEntryLogIntegrationTest {
 
         // then
         assertThat(output.getAll()).doesNotContain(email);
+    }
+
+    @Test
+    @DisplayName("JPA로 저장하다 유니크 제약을 어기면 예외 타입이 DuplicateKeyException이 아니어도 고유 제약 위반으로 판별한다")
+    void jpaUniqueViolationIsDuplicateEntry() {
+        // given
+        String email = TestSequence.email();
+        memberRepository.saveAndFlush(new MemberBuilder()
+                .email(email)
+                .nickname(TestSequence.nickname())
+                .build());
+
+        // when, then
+        assertThatThrownBy(() -> memberRepository.saveAndFlush(new MemberBuilder()
+                        .email(email)
+                        .nickname(TestSequence.nickname())
+                        .build()))
+                .isInstanceOfSatisfying(
+                        DataIntegrityViolationException.class,
+                        e -> assertThat(UniqueViolations.isDuplicateEntry(e)).isTrue());
     }
 }
