@@ -2,9 +2,11 @@ import type { ReactNode } from 'react';
 import { BrandMark } from '../../components/BrandMark';
 import { useSession } from '../../features/member/session';
 import { Link } from '../router';
+import { CONTACT_EMAIL } from '../legal/siteInfo';
 import { DATA_SOURCES } from './dataSources';
 
 const LINK_CLASS = 'inline-flex min-h-11 items-center text-sm text-ink-muted hover:text-ink hover:underline lg:min-h-8';
+const PRIVACY_LINK_CLASS = 'inline-flex min-h-11 items-center text-sm font-bold text-ink hover:underline lg:min-h-8';
 
 export function SiteFooter() {
   const session = useSession();
@@ -64,13 +66,29 @@ export function SiteFooter() {
       </div>
 
       <div>
+        <div className="mx-auto flex max-w-screen-xl flex-wrap items-center gap-x-5 px-4">
+          <Link to="/privacy" className={PRIVACY_LINK_CLASS}>
+            개인정보 처리방침
+          </Link>
+          <Link to="/terms" className={LINK_CLASS}>
+            이용약관
+          </Link>
+          <a href={`mailto:${CONTACT_EMAIL}`} className={LINK_CLASS}>
+            문의
+          </a>
+        </div>
+        <p className="mx-auto max-w-screen-xl px-4 pt-2 text-[0.9375rem] leading-relaxed text-ink-muted">
+          <span className="block max-w-[72ch]">
+            뫼와들은 개인이 운영하는 비영리 포트폴리오 서비스예요. 문의 {CONTACT_EMAIL}
+          </span>
+        </p>
         <p className="mx-auto max-w-screen-xl px-4 pt-2 text-[0.9375rem] leading-relaxed text-ink-muted">
           <span className="block max-w-[72ch]">데이터 · {DATA_SOURCES.join(' · ')}</span>
         </p>
         <div className="mx-auto flex max-w-screen-xl flex-col gap-2 px-4 pt-3 pb-10 text-[0.9375rem] text-ink-muted md:flex-row md:items-center md:justify-between">
           <p className="max-w-[72ch]">
-            공원 경계는 법적 효력이 없는 참고 자료예요. 공식 경계는 고시 도면에서 확인해 주세요. 뫼와들은 장소 정보만
-            안내하고, 야영 중에 생긴 일에는 책임지지 않아요. 본인확인과 결제는 시연용 가짜 구현이에요.
+            공원 경계는 법적 효력이 없는 참고 자료예요. 야영 중에 생긴 일에는 책임지지 않아요. 본인확인과 결제는 시연용
+            가짜 구현이에요. 자세한 내용은 이용약관에서 확인해 주세요.
           </p>
           <p className="flex items-center gap-3">
             <span>© 2026 뫼와들</span>
