@@ -8,7 +8,6 @@
                   AND rv.reviewee_id = r.reviewer_id)
     </sql>
 
-    <!-- CompanionReviewPolicy.isRevealed와 같은 규칙이다. 별칭은 r(companion_review)과 b(basecamp)다. -->
     <sql id="revealed">
         (b.completed_at &lt; #{revealCutoff}
             OR <include refid="com.moewadeul.trust.infra.companion.CompanionReviewSql.reverseWritten"/>)
