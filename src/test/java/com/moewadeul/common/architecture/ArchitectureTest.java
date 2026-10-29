@@ -57,6 +57,12 @@ class ArchitectureTest {
     }
 
     @Test
+    @DisplayName("[ADR-005] *Applier 는 OutsideTransaction 가드를 둔 같은 패키지의 *Service 만 부른다")
+    void appliersAreCalledOnlyFromGuardedServices() {
+        ArchitectureRules.applierCallerRule(ROOT_PACKAGE).check(productionClasses);
+    }
+
+    @Test
     @DisplayName("[ADR-012] @Scheduled 메서드는 모두 ScheduledJobRunner를 거친다")
     void scheduledMethodsRunThroughJobRunner() {
         ArchitectureRules.scheduledJobsRunThroughRunnerRule(ROOT_PACKAGE).check(productionClasses);

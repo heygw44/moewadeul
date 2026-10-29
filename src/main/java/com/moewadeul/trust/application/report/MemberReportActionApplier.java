@@ -8,9 +8,9 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.trust.application.TrustAuditDetails;
-import com.moewadeul.trust.application.sanction.SanctionConfirmApplier;
 import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
 import com.moewadeul.trust.application.sanction.SanctionConfirmResult;
+import com.moewadeul.trust.application.sanction.SanctionConfirmWriter;
 import com.moewadeul.trust.domain.companion.CompanionReview;
 import com.moewadeul.trust.domain.companion.CompanionReviewRepository;
 import com.moewadeul.trust.domain.report.MemberReport;
@@ -33,7 +33,7 @@ class MemberReportActionApplier {
     private final MemberReportRepository memberReportRepository;
     private final CompanionReviewRepository companionReviewRepository;
     private final SanctionRepository sanctionRepository;
-    private final SanctionConfirmApplier sanctionConfirmApplier;
+    private final SanctionConfirmWriter sanctionConfirmWriter;
     private final OutboxEventRecorder outboxEventRecorder;
     private final AdminAuditRecorder adminAuditRecorder;
     private final Clock clock;
@@ -80,7 +80,7 @@ class MemberReportActionApplier {
 
     private SanctionConfirmResult confirmSanction(
             MemberReport report, MemberReportActionCommand command, SanctionType sanctionType) {
-        return sanctionConfirmApplier.apply(new SanctionConfirmCommand(
+        return sanctionConfirmWriter.confirm(new SanctionConfirmCommand(
                 report.getTargetMemberId(), report.getId(), sanctionType, command.sanctionReason(), command.adminId()));
     }
 
