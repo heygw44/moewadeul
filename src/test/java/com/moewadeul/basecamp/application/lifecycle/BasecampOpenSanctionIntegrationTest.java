@@ -3,6 +3,7 @@ package com.moewadeul.basecamp.application.lifecycle;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -73,12 +74,13 @@ class BasecampOpenSanctionIntegrationTest {
     void warningExpiredAndLiftedDoNotBlock() {
         insertSanction("WARNING", "ACTIVE", null);
         insertSanction("SUSPEND_7D", "EXPIRED", NOW.minus(Duration.ofDays(1)));
-        insertSanction("SUSPEND_30D", "LIFTED", NOW.plus(Duration.ofDays(20)));
+        insertSanction("SUSPEND_30D", "ENDED_EARLY", NOW.plus(Duration.ofDays(20)));
+        insertSanction("SUSPEND_30D", "REVOKED", NOW.plus(Duration.ofDays(20)));
         insertSanction("SUSPEND_7D", "ACTIVE", NOW.minusSeconds(1));
 
         BasecampOpenResult result = open();
 
-        assertThat(result.status()).isEqualTo("RECRUITING");
+        assertThat(result.status()).isEqualTo(BasecampStatus.RECRUITING);
     }
 
     private BasecampOpenResult open() {

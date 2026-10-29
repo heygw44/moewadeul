@@ -1,35 +1,29 @@
 package com.moewadeul.review.application;
 
-import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.image.application.ImageUploadIssuer;
+import com.moewadeul.common.image.domain.AttachableImage.Thumbnail;
 import com.moewadeul.common.storage.ImageStorage;
-import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
 import com.moewadeul.review.domain.ReviewImage;
 import com.moewadeul.review.domain.ReviewImageRepository;
+import com.moewadeul.review.infra.ReviewImageMapper;
 import java.time.Clock;
-import java.util.UUID;
-import lombok.RequiredArgsConstructor;
+import java.time.Instant;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
-public class ReviewImageUploadService {
+public class ReviewImageUploadService extends ImageUploadIssuer<ReviewImage> {
 
-    private final ReviewImageRepository reviewImageRepository;
-    private final ImageStorage imageStorage;
-    private final Clock clock;
+    ReviewImageUploadService(
+            ReviewImageRepository reviewImageRepository,
+            ReviewImageMapper reviewImageMapper,
+            ImageStorage imageStorage,
+            Clock clock) {
+        super(ReviewImage.KIND, reviewImageRepository, reviewImageMapper, imageStorage, clock);
+    }
 
-    @Transactional
-    public ReviewImageUpload issue(long memberId, String contentType, long sizeBytes) {
-        String extension = ReviewImage.extensionOf(contentType)
-                .orElseThrow(() -> new InvalidFieldException("contentType", "허용하지 않는 이미지 형식이에요."));
-        if (!ReviewImage.isAllowedSize(sizeBytes)) {
-            throw new InvalidFieldException("sizeBytes", "이미지 크기는 1바이트 이상 5MB 이하여야 해요.");
-        }
-        String key = "review/" + memberId + "/" + UUID.randomUUID() + "." + extension;
-        ReviewImage image = reviewImageRepository.saveAndFlush(
-                ReviewImage.issue(memberId, key, contentType, sizeBytes, clock.instant()));
-        PresignedUpload upload = imageStorage.presignUpload(key, contentType, sizeBytes);
-        return new ReviewImageUpload(image.getId(), upload.url(), upload.headers(), upload.expiresAt());
+    @Override
+    protected ReviewImage newImage(
+            long memberId, String objectKey, String contentType, long sizeBytes, Instant now, Thumbnail thumbnail) {
+        return ReviewImage.issue(memberId, objectKey, contentType, sizeBytes, now);
     }
 }

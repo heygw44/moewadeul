@@ -1,9 +1,9 @@
 package com.moewadeul.memory.application;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.memory.domain.ApproximateLocation;
-import com.moewadeul.memory.domain.MemoryStatus;
+import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryVisibility;
 import com.moewadeul.memory.infra.MemoryFeedRow;
 import com.moewadeul.memory.infra.MemoryMapper;
@@ -25,10 +25,8 @@ public class MemoryQueryService {
     public MemoryView findVisible(long memoryId, Long viewerId) {
         return memoryViewReader
                 .read(memoryId, viewerId)
-                .filter(view -> view.viewedByAuthor()
-                        || (MemoryVisibility.PUBLIC.name().equals(view.visibility())
-                                && MemoryStatus.ACTIVE.name().equals(view.status())))
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .filter(view -> view.viewedByAuthor() || Memory.isVisibleToOthers(view.visibility(), view.status()))
+                .orElseThrow(BusinessException::notFound);
     }
 
     @Transactional(readOnly = true)
@@ -39,20 +37,18 @@ public class MemoryQueryService {
     }
 
     @Transactional(readOnly = true)
-    public MemoryFeedPage listFeed(int page, int size, Long viewerId) {
-        List<MemoryFeedRow> rows = memoryMapper.selectPublicFeed(viewerId, size + 1, (long) page * size);
-        boolean hasNext = rows.size() > size;
-        List<MemoryFeedRow> pageRows = hasNext ? rows.subList(0, size) : rows;
-        List<MemoryFeedItem> content = pageRows.stream().map(this::toFeedItem).toList();
-        return new MemoryFeedPage(content, page, size, hasNext);
+    public PageSlice<MemoryFeedItem> listFeed(int page, int size, Long viewerId) {
+        List<MemoryFeedRow> rows =
+                memoryMapper.selectPublicFeed(viewerId, PageSlice.fetchSize(size), PageSlice.offsetOf(page, size));
+        return PageSlice.of(rows, page, size).map(this::toFeedItem);
     }
 
     @Transactional(readOnly = true)
     public List<PublicMemorySummary> listPublicOf(long memberId) {
         if (!memoryMapper.existsActiveMember(memberId)) {
-            throw new BusinessException(CommonErrorCode.NOT_FOUND);
+            throw BusinessException.notFound();
         }
-        return memoryMapper.selectByMember(memberId, MemoryVisibility.PUBLIC.name()).stream()
+        return memoryMapper.selectByMember(memberId, MemoryVisibility.PUBLIC).stream()
                 .map(this::toPublicSummary)
                 .toList();
     }

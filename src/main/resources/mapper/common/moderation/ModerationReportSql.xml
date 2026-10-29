@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.common.moderation.ModerationReportSql">
+
+    <!-- 빈 조각을 include하면 MyBatis가 바로 뒤 텍스트의 ${targetColumn} 치환을 건너뛴다. -->
+    <sql id="anyTarget">AND TRUE</sql>
+
+    <sql id="reasonCounts">
+        SELECT r.${targetColumn} AS target_id,
+               r.reason AS reason,
+               COUNT(*) AS report_count
+        FROM ${reportTable} r
+        WHERE r.reviewed_at IS NULL
+          <include refid="${targetScope}"/>
+          AND r.${targetColumn} IN
+        <foreach collection="targetIds" item="targetId" open="(" separator="," close=")">
+            #{targetId}
+        </foreach>
+        GROUP BY r.${targetColumn}, r.reason
+    </sql>
+
+    <sql id="recentReports">
+        <bind name="maxPerTarget" value="@com.moewadeul.common.moderation.RecentReport@MAX_PER_TARGET"/>
+        SELECT ranked.target_id AS target_id,
+               ranked.reason AS reason,
+               ranked.content AS content,
+               ranked.created_at AS created_at
+        FROM (
+            SELECT r.${targetColumn} AS target_id,
+                   r.reason AS reason,
+                   r.content AS content,
+                   r.created_at AS created_at,
+                   ROW_NUMBER() OVER (PARTITION BY r.${targetColumn} ORDER BY r.created_at DESC, r.id DESC) AS row_num
+            FROM ${reportTable} r
+            WHERE r.reviewed_at IS NULL
+              <include refid="${targetScope}"/>
+              AND r.${targetColumn} IN
+            <foreach collection="targetIds" item="targetId" open="(" separator="," close=")">
+                #{targetId}
+            </foreach>
+        ) ranked
+        WHERE ranked.row_num &lt;= #{maxPerTarget}
+        ORDER BY ranked.target_id ASC, ranked.row_num ASC
+    </sql>
+
+</mapper>

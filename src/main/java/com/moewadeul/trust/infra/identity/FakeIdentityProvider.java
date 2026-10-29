@@ -1,16 +1,22 @@
 package com.moewadeul.trust.infra.identity;
 
+import com.moewadeul.trust.application.identity.IdentityProvider;
 import com.moewadeul.trust.domain.identity.IdentityClaim;
-import com.moewadeul.trust.domain.identity.IdentityProvider;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.VerifiedIdentity;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(
+        prefix = "moewadeul.identity.fake-provider",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 class FakeIdentityProvider implements IdentityProvider {
 
     private static final String CI_SEED_PREFIX = "moewadeul-fake-ci:";

@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.companion.CompanionReviewTag;
 import java.time.Duration;
 import java.time.Instant;
@@ -127,7 +129,7 @@ class CompanionReviewQueryServiceIntegrationTest {
         assertThatThrownBy(() -> queryService.pending(unverified))
                 .isInstanceOfSatisfying(
                         BusinessException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT));
+                        e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT));
     }
 
     @Test
@@ -140,10 +142,10 @@ class CompanionReviewQueryServiceIntegrationTest {
         fixture.insertTag(reviewId, "CONSIDERATE");
 
         // when
-        CompanionReviewPage<ReceivedCompanionReview> before = queryService.received(pair.me(), 0, 20);
+        PageSlice<ReceivedCompanionReview> before = queryService.received(pair.me(), 0, 20);
         commandService.write(
                 pair.me(), pair.basecampId(), new CompanionReviewWriteCommand(pair.other(), false, List.of(), null));
-        CompanionReviewPage<ReceivedCompanionReview> after = queryService.received(pair.me(), 0, 20);
+        PageSlice<ReceivedCompanionReview> after = queryService.received(pair.me(), 0, 20);
 
         // then
         assertThat(before.content()).hasSize(1);
@@ -205,8 +207,8 @@ class CompanionReviewQueryServiceIntegrationTest {
         fixture.hide(hidden);
 
         // when
-        CompanionReviewPage<ReceivedCompanionReview> first = queryService.received(pair.me(), 0, 2);
-        CompanionReviewPage<ReceivedCompanionReview> next = queryService.received(pair.me(), 1, 2);
+        PageSlice<ReceivedCompanionReview> first = queryService.received(pair.me(), 0, 2);
+        PageSlice<ReceivedCompanionReview> next = queryService.received(pair.me(), 1, 2);
 
         // then
         assertThat(first.content())
@@ -240,7 +242,7 @@ class CompanionReviewQueryServiceIntegrationTest {
         fixture.insertTag(revealedByReverse, "LEAVE_NO_TRACE");
 
         // when
-        CompanionReviewPage<PublicCompanionReview> page = queryService.forMember(target, 0, 20);
+        PageSlice<PublicCompanionReview> page = queryService.forMember(target, 0, 20);
 
         // then
         assertThat(page.content()).hasSize(1);

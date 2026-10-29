@@ -1,20 +1,18 @@
 package com.moewadeul.member.api.login;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.login.MemberLoginService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
 import com.moewadeul.member.domain.password.ResetToken;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.security.SecureRandom;
 import java.util.concurrent.CountDownLatch;
@@ -31,7 +29,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -46,16 +43,13 @@ class LoginSessionCommitRaceIntegrationTest {
     private static final long WAIT_SECONDS = 60;
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private PasswordResetTokenRepository tokenRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -78,7 +72,7 @@ class LoginSessionCommitRaceIntegrationTest {
     @Test
     @DisplayName("[PW-02] 컨트롤러가 회원을 확인한 뒤 세션이 저장되기 전에 재설정이 끝나도, 저장된 세션은 지워지고 그 쿠키는 401이다")
     void resetBetweenControllerCheckAndSessionSaveLeavesNoSession() throws Exception {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
 
         MvcTestResult login = loginWhileOtherWorkRuns(member, () -> {
             MvcTestResult confirm = postJson("/api/auth/password-reset/confirm", confirmBody(issueToken(member)));
@@ -94,7 +88,7 @@ class LoginSessionCommitRaceIntegrationTest {
     @Test
     @DisplayName("[SN-12] 컨트롤러가 회원을 확인한 뒤 세션이 저장되기 전에 이용 정지가 확정돼도, 저장된 세션은 지워진다")
     void suspensionBetweenControllerCheckAndSessionSaveLeavesNoSession() throws Exception {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
 
         loginWhileOtherWorkRuns(
                 member,
@@ -132,14 +126,6 @@ class LoginSessionCommitRaceIntegrationTest {
         } finally {
             executor.shutdownNow();
         }
-    }
-
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(OLD_PASSWORD))
-                .now(clock.instant())
-                .build());
     }
 
     private String issueToken(Member member) {

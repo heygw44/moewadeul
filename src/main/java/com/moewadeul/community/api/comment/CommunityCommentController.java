@@ -1,10 +1,11 @@
 package com.moewadeul.community.api.comment;
 
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotentRequest;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.community.application.comment.CommunityCommentCommandService;
 import com.moewadeul.community.application.comment.CommunityCommentQueryService;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.application.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
@@ -49,10 +50,11 @@ class CommunityCommentController {
                     + "author·content·createdAt·updatedAt 필드는 뺀다. 보이는 답글이 없으면 목록에서 뺀다. "
                     + "글이 없거나 ACTIVE가 아니면 404 NOT_FOUND, 범위를 벗어난 page나 size는 400 INVALID_INPUT이다.")
     @GetMapping("/api/community/posts/{postId}/comments")
-    CommunityCommentPageResponse list(
+    PageResponse<CommunityCommentItemResponse> list(
             @PathVariable long postId, @Valid @ParameterObject @ModelAttribute CommunityCommentListRequest request) {
-        return CommunityCommentPageResponse.from(
-                communityCommentQueryService.list(postId, request.pageOrDefault(), request.sizeOrDefault()));
+        return PageResponse.from(
+                communityCommentQueryService.list(postId, request.pageOrDefault(), request.sizeOrDefault()),
+                CommunityCommentItemResponse::from);
     }
 
     @Operation(

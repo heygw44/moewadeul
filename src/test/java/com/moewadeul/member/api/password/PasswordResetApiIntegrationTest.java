@@ -1,13 +1,13 @@
 package com.moewadeul.member.api.password;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.mail.MailMessage;
 import com.moewadeul.common.mail.TestMailSender;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.password.PasswordResetMails;
@@ -16,7 +16,6 @@ import com.moewadeul.member.domain.password.PasswordResetPolicy;
 import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
 import com.moewadeul.member.domain.password.ResetToken;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import jakarta.servlet.http.Cookie;
 import java.nio.charset.StandardCharsets;
@@ -32,7 +31,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -50,16 +48,13 @@ class PasswordResetApiIntegrationTest {
     private static final String INVALID_TOKEN = "PASSWORD_RESET_TOKEN_INVALID";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private PasswordResetTokenRepository tokenRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private OutboxPublisher publisher;
@@ -81,7 +76,7 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-04] 가입된 이메일과 없는 이메일 모두 본문 없는 204로 같게 응답하고, 가입된 경우에만 이벤트가 쌓인다")
     void requestResponseDoesNotRevealMembership() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
 
         MvcTestResult registered = postJson(REQUEST_PATH, emailBody(member.getEmail()), null);
         MvcTestResult unknown = postJson(REQUEST_PATH, emailBody(TestSequence.email()), null);
@@ -105,7 +100,7 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[F-02][PW-02] 요청하고 메일의 토큰으로 확인하면 204이고, 예전 비밀번호는 401 LOGIN_FAILED, 새 비밀번호는 200이다")
     void resetsPasswordEndToEnd() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
 
         assertThat(postJson(REQUEST_PATH, emailBody(member.getEmail()), null)).hasStatus(HttpStatus.NO_CONTENT);
         publisher.publishPending();
@@ -122,8 +117,8 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-02] 확인하면 그 회원의 세션이 모두 사라지고 쿠키는 401이며 다른 회원의 세션은 그대로다")
     void invalidatesAllSessionsOfTheMemberOnly() {
-        Member member = saveMember();
-        Member other = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Member other = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie first = login(member);
         Cookie second = login(member);
         Cookie otherSession = login(other);
@@ -142,7 +137,7 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-02] 확인 요청이 그 회원의 세션 쿠키를 달고 와도 응답 뒤에 그 세션은 되살아나지 않는다")
     void sessionOfTheConfirmRequestIsNotResurrected() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie session = login(member);
 
         MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(issueToken(member), NEW_PASSWORD), session);
@@ -155,7 +150,7 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-02] 같은 토큰을 두 번 쓰면 두 번째는 400 PASSWORD_RESET_TOKEN_INVALID이고 비밀번호는 첫 번째 값이다")
     void tokenIsSingleUse() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         String token = issueToken(member);
 
         MvcTestResult first = postJson(CONFIRM_PATH, confirmBody(token, NEW_PASSWORD), null);
@@ -171,9 +166,9 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-02] 만료 1초 전까지는 되고, 30분이 되는 순간과 그 뒤에는 400 PASSWORD_RESET_TOKEN_INVALID이다")
     void expiryBoundary() {
-        String justBefore = issueToken(saveMember());
-        String atBoundary = issueToken(saveMember());
-        String after = issueToken(saveMember());
+        String justBefore = issueToken(memberFixture.saveWithPassword(OLD_PASSWORD));
+        String atBoundary = issueToken(memberFixture.saveWithPassword(OLD_PASSWORD));
+        String after = issueToken(memberFixture.saveWithPassword(OLD_PASSWORD));
 
         clock.advance(PasswordResetPolicy.TOKEN_VALIDITY.minusSeconds(1));
         MvcTestResult beforeExpiry = postJson(CONFIRM_PATH, confirmBody(justBefore, NEW_PASSWORD), null);
@@ -210,7 +205,7 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-01] 규칙을 어긴 새 비밀번호는 400 MEMBER_PASSWORD_POLICY이고 토큰은 소모되지 않아 다시 쓸 수 있다")
     void policyViolationDoesNotConsumeToken() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         String token = issueToken(member);
 
         for (String weak : List.of("Abcde-1ab", "Abcdefghij1", "Valid pass1!")) {
@@ -230,7 +225,7 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-02] 재설정에 성공하면 그 회원의 사용하지 않은 다른 토큰도 무효가 된다")
     void otherUnusedTokensAreInvalidated() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         String first = issueToken(member);
         String second = issueToken(member);
 
@@ -248,8 +243,8 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-02] 확인이 실패하면(만료된 토큰, 규칙을 어긴 비밀번호) 그 회원의 세션은 지워지지 않는다")
     void failedConfirmKeepsSessions() {
-        Member expiredMember = saveMember();
-        Member weakMember = saveMember();
+        Member expiredMember = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Member weakMember = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie expiredSession = login(expiredMember);
         Cookie weakSession = login(weakMember);
         String expiredToken = issueToken(expiredMember);
@@ -272,8 +267,8 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-02][PW-03] 재설정해도 회원 상태는 그대로이고 로그인 실패 기록은 지워지지 않는다")
     void keepsStatusAndLoginFailureHistory() {
-        Member unverified = saveMember();
-        Member active = saveMember();
+        Member unverified = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Member active = memberFixture.saveWithPassword(OLD_PASSWORD);
         jdbc.update("UPDATE member SET status = 'ACTIVE' WHERE id = ?", active.getId());
         loginRequest(unverified.getEmail(), "Wrong-pass-1!");
         loginRequest(unverified.getEmail(), "Wrong-pass-1!");
@@ -323,7 +318,7 @@ class PasswordResetApiIntegrationTest {
     @Test
     @DisplayName("[PW-02] 토큰은 해시로만 저장되고, 토큰과 새 비밀번호는 접속 기록·아웃박스·응답 본문에 남지 않는다")
     void secretsAreNotLeaked() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         postJson(REQUEST_PATH, emailBody(member.getEmail()), null);
         publisher.publishPending();
         String token = tokenFromMail();
@@ -349,11 +344,39 @@ class PasswordResetApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[PW-02][PW-07] 재설정 토큰을 받은 회원이 비밀번호를 바꾸면 그 토큰은 사용 처리되고, 확인하면 400 PASSWORD_RESET_TOKEN_INVALID이다")
+    void passwordChangeInvalidatesIssuedToken() {
+        // given
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        String token = issueToken(member);
+        Cookie session = login(member);
+        MvcTestResult change = mvc.put()
+                .uri("/api/me/password")
+                .with(csrf())
+                .cookie(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"%s\",\"newPassword\":\"%s\",\"newPasswordConfirm\":\"%s\"}"
+                        .formatted(OLD_PASSWORD, NEW_PASSWORD, NEW_PASSWORD))
+                .exchange();
+        assertThat(change).hasStatus(HttpStatus.NO_CONTENT);
+
+        // when
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(token, "Third-pass3"), null);
+
+        // then
+        assertThat(count("password_reset_token WHERE member_id = ? AND used_at IS NULL", member.getId()))
+                .isZero();
+        assertThat(confirm).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(confirm).bodyJson().extractingPath("$.code").isEqualTo(INVALID_TOKEN);
+        assertThat(loginRequest(member.getEmail(), NEW_PASSWORD)).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
     @DisplayName(
             "[F-01][PV-01] 재설정 토큰을 받은 회원이 탈퇴하면 그 토큰은 사용 처리되고, 확인하면 400 PASSWORD_RESET_TOKEN_INVALID이며 비밀번호 해시는 NULL로 남는다")
     void withdrawalInvalidatesIssuedToken() {
         // given
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         String token = issueToken(member);
         Cookie session = login(member);
         MvcTestResult withdrawal = mvc.delete()
@@ -380,7 +403,7 @@ class PasswordResetApiIntegrationTest {
     @DisplayName("[F-01][PV-01] 탈퇴한 뒤에 만들어진 재설정 토큰으로 확인해도 400 PASSWORD_RESET_TOKEN_INVALID이고 비밀번호 해시는 NULL로 남는다")
     void tokenOfWithdrawnMemberIsRejected() {
         // given
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie session = login(member);
         MvcTestResult withdrawal = mvc.delete()
                 .uri("/api/me")
@@ -407,14 +430,6 @@ class PasswordResetApiIntegrationTest {
         assertThat(row.get("status")).isEqualTo("WITHDRAWN");
         assertThat(row.get("password_hash")).isNull();
         assertThat(row.get("password_changed_at")).isNull();
-    }
-
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(OLD_PASSWORD))
-                .now(clock.instant())
-                .build());
     }
 
     private String issueToken(Member member) {

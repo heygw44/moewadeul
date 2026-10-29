@@ -13,7 +13,9 @@ export type ReportStatus = 'RECEIVED' | 'IN_REVIEW' | 'ACTIONED' | 'DISMISSED';
 
 export type SanctionType = 'WARNING' | 'SUSPEND_7D' | 'SUSPEND_30D' | 'PERMANENT' | 'TEMPORARY_72H';
 
-export type SanctionStatus = 'ACTIVE' | 'LIFTED' | 'EXPIRED';
+export type SanctionStatus = 'ACTIVE' | 'EXPIRED' | 'ENDED_EARLY' | 'REVOKED';
+
+export type SanctionLiftReason = 'END_EARLY' | 'REVOKE';
 
 export interface MemberReportCreateRequest {
   targetMemberId: number;

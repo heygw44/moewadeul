@@ -1,9 +1,12 @@
 package com.moewadeul.community.domain.comment;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.moderation.ModerationTransition;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
@@ -177,15 +180,37 @@ class CommunityCommentTest {
         assertThat(comment.getUpdatedAt()).isEqualTo(LATER);
     }
 
+    @ParameterizedTest(name = "[{index}] {0}")
+    @EnumSource(
+            value = CommunityCommentStatus.class,
+            names = {"HIDDEN", "PENDING_REVIEW"})
+    @DisplayName("[F-29][CM-03] 숨겼거나 검토 대기인 댓글은 지울 수 없고 COMMUNITY_INVALID_STATE이며 상태와 내용은 그대로다")
+    void deleteRejectsHiddenOrPendingReview(CommunityCommentStatus status) {
+        // given
+        CommunityComment comment = commentIn(status);
+
+        // when // then
+        assertThatThrownBy(() -> comment.delete(LATER))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommunityErrorCode.COMMUNITY_INVALID_STATE));
+        assertThat(comment.getStatus()).isEqualTo(status);
+        assertThat(comment.getContent()).isEqualTo("내용");
+        assertThat(comment.getUpdatedAt()).isEqualTo(NOW);
+    }
+
     @Test
-    @DisplayName("[F-29] 작성자 ID와 글 ID를 비교한다")
-    void isWrittenByAndBelongsTo() {
+    @DisplayName("[F-29] 작성자가 아니면 requireWrittenBy가 ACCESS_DENIED이고, 글 ID를 비교한다")
+    void requireWrittenByAndBelongsTo() {
         // given
         CommunityComment comment = CommunityComment.write(3L, 7L, null, "댓글", NOW);
 
         // then
-        assertThat(comment.isWrittenBy(7L)).isTrue();
-        assertThat(comment.isWrittenBy(8L)).isFalse();
+        assertThatCode(() -> comment.requireWrittenBy(7L)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> comment.requireWrittenBy(8L))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
         assertThat(comment.belongsTo(3L)).isTrue();
         assertThat(comment.belongsTo(4L)).isFalse();
     }
@@ -194,7 +219,7 @@ class CommunityCommentTest {
         CommunityComment comment = CommunityComment.write(3L, 7L, null, "내용", NOW);
         switch (status) {
             case ACTIVE -> {}
-            case PENDING_REVIEW -> comment.markPendingReview(NOW);
+            case PENDING_REVIEW -> comment.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW);
             case HIDDEN -> comment.hide(NOW);
             case DELETED -> comment.delete(NOW);
         }
@@ -202,13 +227,20 @@ class CommunityCommentTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-07] ACTIVE 댓글을 검토 대기로 바꾸면 상태와 수정 시각이 바뀐다")
-    void markPendingReviewFromActive() {
+    @DisplayName("[F-29][CM-07] 검토 전 신고가 4건이면 ACTIVE 댓글은 그대로이고, 5건이 되면 검토 대기로 바뀌며 수정 시각이 바뀐다")
+    void receiveReportMovesToPendingReviewAtFive() {
         // given
         CommunityComment comment = commentIn(CommunityCommentStatus.ACTIVE);
 
         // when
-        comment.markPendingReview(LATER);
+        comment.receiveReport(4, NOW.plusSeconds(1));
+
+        // then
+        assertThat(comment.getStatus()).isEqualTo(CommunityCommentStatus.ACTIVE);
+        assertThat(comment.getUpdatedAt()).isEqualTo(NOW);
+
+        // when
+        comment.receiveReport(5, LATER);
 
         // then
         assertThat(comment.getStatus()).isEqualTo(CommunityCommentStatus.PENDING_REVIEW);
@@ -220,13 +252,13 @@ class CommunityCommentTest {
     @EnumSource(
             value = CommunityCommentStatus.class,
             names = {"PENDING_REVIEW", "HIDDEN", "DELETED"})
-    @DisplayName("[F-29][CM-07] ACTIVE가 아닌 댓글을 검토 대기로 바꾸려 하면 IllegalStateException을 던진다")
-    void markPendingReviewRejectsNonActive(CommunityCommentStatus status) {
+    @DisplayName("[F-29][CM-07] ACTIVE가 아닌 댓글의 검토 전 신고가 5건이 되면 IllegalStateException을 던진다")
+    void receiveReportRejectsNonActive(CommunityCommentStatus status) {
         // given
         CommunityComment comment = commentIn(status);
 
         // when // then
-        assertThatThrownBy(() -> comment.markPendingReview(LATER)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> comment.receiveReport(5, LATER)).isInstanceOf(IllegalStateException.class);
     }
 
     @ParameterizedTest(name = "[{index}] {0}")

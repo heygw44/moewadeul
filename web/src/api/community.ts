@@ -14,8 +14,8 @@ import type {
   Page,
 } from './types';
 
-export const COMMUNITY_POST_PAGE_SIZE = 20;
-export const COMMUNITY_COMMENT_PAGE_SIZE = 20;
+const COMMUNITY_POST_PAGE_SIZE = 20;
+const COMMUNITY_COMMENT_PAGE_SIZE = 20;
 
 export interface CommunityPostQuery {
   spotId?: number;

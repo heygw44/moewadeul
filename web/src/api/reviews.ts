@@ -8,7 +8,7 @@ import type {
   SpotReviewUpdateRequest,
 } from './types';
 
-export const SPOT_REVIEW_PAGE_SIZE = 10;
+const SPOT_REVIEW_PAGE_SIZE = 10;
 
 export function fetchSpotReviews(spotId: number, page: number, signal?: AbortSignal): Promise<Page<SpotReview>> {
   return apiFetch<Page<SpotReview>>(`/api/spots/${spotId}/reviews`, {

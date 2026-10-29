@@ -1,24 +1,21 @@
 package com.moewadeul.spot.application.moderation;
 
 import com.moewadeul.common.audit.AdminAuditAction;
-import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.moderation.AdminModeration;
+import com.moewadeul.common.moderation.ModerationResult;
+import com.moewadeul.common.moderation.ModerationTarget;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.SpotRepository;
-import com.moewadeul.spot.domain.SpotStatus;
 import com.moewadeul.spot.domain.bakji.BakjiReportRepository;
 import com.moewadeul.spot.infra.publicspot.PublicSpotMapper;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SpotModerationService {
@@ -26,62 +23,65 @@ public class SpotModerationService {
     private final SpotRepository spotRepository;
     private final BakjiReportRepository bakjiReportRepository;
     private final PublicSpotMapper publicSpotMapper;
-    private final AdminAuditRecorder adminAuditRecorder;
-    private final Clock clock;
+    private final AdminModeration adminModeration;
+
+    private final ModerationTarget<Spot> target = new ModerationTarget<>() {
+
+        @Override
+        public AdminAuditAction hideAction() {
+            return AdminAuditAction.SPOT_HIDE;
+        }
+
+        @Override
+        public AdminAuditAction restoreAction() {
+            return AdminAuditAction.SPOT_RESTORE;
+        }
+
+        @Override
+        public AdminAuditTargetType auditTargetType() {
+            return AdminAuditTargetType.SPOT;
+        }
+
+        @Override
+        public Spot lock(long spotId) {
+            return spotRepository
+                    .findByIdForUpdate(spotId)
+                    .filter(spot -> !spot.isDeleted())
+                    .orElseThrow(BusinessException::notFound);
+        }
+
+        @Override
+        public int markReviewed(long spotId, Instant now) {
+            return bakjiReportRepository.markReviewed(spotId, now);
+        }
+
+        @Override
+        public void afterHide(Spot spot, Instant now) {
+            if (spot.isPublicData()) {
+                publicSpotMapper.clearSourceRemoved(List.of(spot.getId()), now);
+            }
+        }
+
+        @Override
+        public void afterRestore(Spot spot, Instant now) {
+            if (spot.isPublicData()) {
+                publicSpotMapper.markSourceRemovedIfAbsent(List.of(spot.getId()), now);
+            }
+        }
+
+        @Override
+        public Object auditDetail(Spot spot, Object transition) {
+            return new SpotAuditDetail(spot.getType().name(), transition);
+        }
+    };
 
     @Transactional
-    public SpotStatusResult hide(long spotId, long adminId) {
-        Spot spot = lockSpot(spotId);
-        SpotStatus before = spot.getStatus();
-        Instant now = clock.instant();
-        spot.hide(now);
-        clearSourceRemovedIfPublicData(spot, now);
-        adminAuditRecorder.record(
-                adminId,
-                AdminAuditAction.SPOT_HIDE,
-                AdminAuditTargetType.SPOT,
-                spotId,
-                new SpotAuditDetails.Hide(
-                        spot.getType().name(), before.name(), spot.getStatus().name()));
-        log.info("spot hidden spotId={} adminId={}", spotId, adminId);
-        return new SpotStatusResult(spotId, spot.getStatus().name());
+    public ModerationResult hide(long spotId, long adminId) {
+        return adminModeration.hide(target, spotId, adminId);
     }
 
     @Transactional
-    public SpotStatusResult restore(long spotId, long adminId) {
-        Spot spot = lockSpot(spotId);
-        SpotStatus before = spot.getStatus();
-        Instant now = clock.instant();
-        spot.restore(now);
-        markSourceRemovedIfPublicData(spot, now);
-        int reviewedReportCount = bakjiReportRepository.markReviewed(spotId, now);
-        adminAuditRecorder.record(
-                adminId,
-                AdminAuditAction.SPOT_RESTORE,
-                AdminAuditTargetType.SPOT,
-                spotId,
-                new SpotAuditDetails.Restore(
-                        spot.getType().name(), before.name(), spot.getStatus().name(), reviewedReportCount));
-        log.info("spot restored spotId={} adminId={} reviewedReportCount={}", spotId, adminId, reviewedReportCount);
-        return new SpotStatusResult(spotId, spot.getStatus().name());
-    }
-
-    private Spot lockSpot(long spotId) {
-        return spotRepository
-                .findByIdForUpdate(spotId)
-                .filter(spot -> !spot.isDeleted())
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-    }
-
-    private void clearSourceRemovedIfPublicData(Spot spot, Instant now) {
-        if (spot.isPublicData()) {
-            publicSpotMapper.clearSourceRemoved(List.of(spot.getId()), now);
-        }
-    }
-
-    private void markSourceRemovedIfPublicData(Spot spot, Instant now) {
-        if (spot.isPublicData()) {
-            publicSpotMapper.markSourceRemovedIfAbsent(List.of(spot.getId()), now);
-        }
+    public ModerationResult restore(long spotId, long adminId) {
+        return adminModeration.restore(target, spotId, adminId);
     }
 }

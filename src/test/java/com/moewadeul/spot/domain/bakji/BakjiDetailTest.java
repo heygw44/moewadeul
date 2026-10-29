@@ -1,8 +1,11 @@
 package com.moewadeul.spot.domain.bakji;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
@@ -30,8 +33,8 @@ class BakjiDetailTest {
         // then
         assertThat(detail.getReporterId()).isEqualTo(REPORTER_ID);
         assertThat(detail.getDescription()).isEqualTo("바람이 약한 평지");
-        assertThat(detail.isHasWater()).isTrue();
-        assertThat(detail.isHasToilet()).isFalse();
+        assertThat(detail.hasWater()).isTrue();
+        assertThat(detail.hasToilet()).isFalse();
         assertThat(detail.getSignalLevel()).isEqualTo(BakjiSignalLevel.WEAK);
         assertThat(detail.getGroundType()).isEqualTo(BakjiGroundType.GRASS);
         assertThat(detail.getCreatedAt()).isEqualTo(NOW);
@@ -39,14 +42,17 @@ class BakjiDetailTest {
     }
 
     @Test
-    @DisplayName("[F-07] 제보자 본인만 isReportedBy가 true다")
-    void isReportedByMatchesOnlyReporter() {
+    @DisplayName("[F-07] 제보자가 아니면 requireReportedBy가 ACCESS_DENIED다")
+    void requireReportedByRejectsOthers() {
         // given
         BakjiDetail detail = BakjiDetail.of(savedBakji(), REPORTER_ID, CONTENT, NOW);
 
         // when & then
-        assertThat(detail.isReportedBy(REPORTER_ID)).isTrue();
-        assertThat(detail.isReportedBy(REPORTER_ID + 1)).isFalse();
+        assertThatCode(() -> detail.requireReportedBy(REPORTER_ID)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> detail.requireReportedBy(REPORTER_ID + 1))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
     @Test
@@ -64,8 +70,8 @@ class BakjiDetailTest {
 
         // then
         assertThat(detail.getDescription()).isNull();
-        assertThat(detail.isHasWater()).isFalse();
-        assertThat(detail.isHasToilet()).isTrue();
+        assertThat(detail.hasWater()).isFalse();
+        assertThat(detail.hasToilet()).isTrue();
         assertThat(detail.getSignalLevel()).isNull();
         assertThat(detail.getGroundType()).isEqualTo(BakjiGroundType.DECK);
         assertThat(detail.getUpdatedAt()).isEqualTo(changedAt);

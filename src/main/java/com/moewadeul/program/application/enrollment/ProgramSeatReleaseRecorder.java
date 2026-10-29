@@ -1,9 +1,9 @@
 package com.moewadeul.program.application.enrollment;
 
+import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
-import com.moewadeul.program.domain.ProgramPhase;
 import com.moewadeul.program.domain.ProgramVacancyAlertRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -25,8 +25,7 @@ public class ProgramSeatReleaseRecorder {
     private final OutboxEventRecorder outboxEventRecorder;
 
     public void record(Program program, Instant now) {
-        ProgramPhase phase = program.phaseAt(now);
-        if (phase == ProgramPhase.CANCELED || phase == ProgramPhase.CLOSED) {
+        if (!program.takesVacancyAlertsAt(now)) {
             return;
         }
         long programId = program.getId();
@@ -43,10 +42,10 @@ public class ProgramSeatReleaseRecorder {
         }
         vacancyAlertRepository.markNotified(programId, targets, now);
         outboxEventRecorder.record(
-                ProgramSeatEvents.SEAT_RELEASED_EVENT_TYPE,
-                ProgramSeatEvents.AGGREGATE_TYPE,
+                ProgramEvents.SEAT_RELEASED,
+                ProgramEvents.PROGRAM_AGGREGATE_TYPE,
                 programId,
-                new ProgramSeatEvents.SeatReleasedPayload(programId, targets));
+                new ProgramEvents.SeatReleasedPayload(programId, targets));
         log.info("program seat released programId={} targetCount={}", programId, targets.size());
     }
 }

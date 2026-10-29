@@ -2,7 +2,8 @@ package com.moewadeul.spot.application.bakji;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.SpotParkWarning;
 import com.moewadeul.spot.application.SpotSearchBox;
@@ -24,7 +25,6 @@ import com.moewadeul.spot.infra.park.ParkAreaJudgeMapper;
 import com.moewadeul.spot.infra.park.ProtectedAreaEvidenceRow;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +36,10 @@ public class BakjiCommandService {
 
     private static final int DUPLICATE_RADIUS_METERS = 50;
     private static final int MAX_DUPLICATE_CANDIDATES = 10;
+    private static final String SIGNAL_LEVEL_MESSAGE =
+            "통신 상태는 " + EnumParser.names(BakjiSignalLevel.class) + " 중 하나여야 해요.";
+    private static final String GROUND_TYPE_MESSAGE =
+            "바닥 유형은 " + EnumParser.names(BakjiGroundType.class) + " 중 하나여야 해요.";
 
     private final SpotRepository spotRepository;
     private final BakjiDetailRepository bakjiDetailRepository;
@@ -55,8 +59,8 @@ public class BakjiCommandService {
                 command.description(),
                 command.hasWater(),
                 command.hasToilet(),
-                parseEnum(BakjiSignalLevel.class, command.signalLevel(), "통신 상태는"),
-                parseEnum(BakjiGroundType.class, command.groundType(), "바닥 유형은"));
+                EnumParser.parseNullable(BakjiSignalLevel.class, command.signalLevel(), SIGNAL_LEVEL_MESSAGE),
+                EnumParser.parseNullable(BakjiGroundType.class, command.groundType(), GROUND_TYPE_MESSAGE));
 
         ParkAreaJudgement judgement = parkAreaJudgeService.judge(location);
         Spot spot = spotRepository.save(Spot.bakji(name, location, judgement, now));
@@ -82,10 +86,7 @@ public class BakjiCommandService {
     }
 
     private Spot loadActiveBakji(long spotId) {
-        return spotRepository
-                .findById(spotId)
-                .filter(Spot::isActiveBakji)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return spotRepository.findById(spotId).filter(Spot::isActiveBakji).orElseThrow(BusinessException::notFound);
     }
 
     private Spot loadActiveBakjiBumpingVersionOnDetailChange(long spotId, BakjiUpdateCommand command) {
@@ -95,7 +96,7 @@ public class BakjiCommandService {
         return spotRepository
                 .findByIdForVersionIncrement(spotId)
                 .filter(Spot::isActiveBakji)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
     }
 
     private static boolean changesDetail(BakjiUpdateCommand command) {
@@ -107,12 +108,8 @@ public class BakjiCommandService {
     }
 
     private BakjiDetail loadOwnDetail(long spotId, long memberId) {
-        BakjiDetail detail = bakjiDetailRepository
-                .findById(spotId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!detail.isReportedBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        BakjiDetail detail = bakjiDetailRepository.findById(spotId).orElseThrow(BusinessException::notFound);
+        detail.requireReportedBy(memberId);
         return detail;
     }
 
@@ -150,17 +147,21 @@ public class BakjiCommandService {
         }
         if (command.hasWater().present() || command.hasToilet().present()) {
             detail.changeFacilities(
-                    facilityOrCurrent(command.hasWater(), detail.isHasWater(), "물 유무는"),
-                    facilityOrCurrent(command.hasToilet(), detail.isHasToilet(), "화장실 유무는"),
+                    facilityOrCurrent(command.hasWater(), detail.hasWater(), "물 유무는"),
+                    facilityOrCurrent(command.hasToilet(), detail.hasToilet(), "화장실 유무는"),
                     now);
         }
         if (command.signalLevel().present()) {
             detail.changeSignalLevel(
-                    parseEnum(BakjiSignalLevel.class, command.signalLevel().value(), "통신 상태는"), now);
+                    EnumParser.parseNullable(
+                            BakjiSignalLevel.class, command.signalLevel().value(), SIGNAL_LEVEL_MESSAGE),
+                    now);
         }
         if (command.groundType().present()) {
             detail.changeGroundType(
-                    parseEnum(BakjiGroundType.class, command.groundType().value(), "바닥 유형은"), now);
+                    EnumParser.parseNullable(
+                            BakjiGroundType.class, command.groundType().value(), GROUND_TYPE_MESSAGE),
+                    now);
         }
     }
 
@@ -250,21 +251,6 @@ public class BakjiCommandService {
         if (!WeatherGrid.covers(location)) {
             throw invalidInput("서비스 지역 밖 좌표예요.");
         }
-    }
-
-    private static <E extends Enum<E>> E parseEnum(Class<E> type, String value, String topic) {
-        if (value == null) {
-            return null;
-        }
-        return Arrays.stream(type.getEnumConstants())
-                .filter(constant -> constant.name().equals(value))
-                .findFirst()
-                .orElseThrow(() -> invalidInput(topic + " " + allowedValues(type) + " 중 하나여야 해요."));
-    }
-
-    private static String allowedValues(Class<? extends Enum<?>> type) {
-        return String.join(
-                ", ", Arrays.stream(type.getEnumConstants()).map(Enum::name).toList());
     }
 
     private static BusinessException invalidInput(String message) {

@@ -1,9 +1,10 @@
 package com.moewadeul.basecamp.application.lifecycle;
 
 import com.moewadeul.basecamp.domain.RemovalCause;
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
-import com.moewadeul.trust.application.withdrawal.WithdrawalEvents;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,8 +17,8 @@ class WithdrawalBasecampCleanupHandler implements OutboxEventHandler {
     }
 
     @Override
-    public String eventType() {
-        return WithdrawalEvents.BASECAMP_CLEANUP_EVENT_TYPE;
+    public Set<String> eventTypes() {
+        return Set.of(TrustEvents.WITHDRAWAL_BASECAMP_CLEANUP);
     }
 
     @Override

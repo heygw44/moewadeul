@@ -2,8 +2,8 @@ package com.moewadeul.member.application.verification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assumptions.assumeThat;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.mail.MailMessage;
 import com.moewadeul.common.mail.TestMailSender;
 import com.moewadeul.common.outbox.OutboxMessage;
@@ -14,7 +14,6 @@ import com.moewadeul.member.application.signup.MemberSignupService;
 import com.moewadeul.member.application.signup.SignupCommand;
 import com.moewadeul.member.application.signup.SignupResult;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.verification.VerificationCode;
 import com.moewadeul.outbox.application.OutboxProperties;
@@ -147,7 +146,7 @@ class EmailVerificationFlowIntegrationTest {
         // when
         assertThatThrownBy(() -> signUp(email))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
         publisher.publishPending();
 
@@ -211,8 +210,8 @@ class EmailVerificationFlowIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01][EV-01] 같은 이벤트를 처리기가 두 번 처리하면 코드 행은 하나이고 두 번째 코드만 유효하다")
-    void duplicateDeliveryKeepsOneRowAndOnlyLatestCodeValid() {
+    @DisplayName("[F-01][EV-03] 같은 이벤트를 처리기가 두 번 처리하면 코드 행은 하나이고 두 메일의 코드가 같아서 먼저 받은 메일의 코드로 인증된다")
+    void duplicateDeliveryResendsSameCode() {
         // given
         SignupResult signedUp = signUp(TestSequence.email());
         OutboxMessage message = toMessage(findOnlyEvent());
@@ -227,14 +226,9 @@ class EmailVerificationFlowIntegrationTest {
         List<MailMessage> mails = mailSender.sent();
         assertThat(mails).hasSize(2);
         String firstCode = VerificationMails.extractCode(mails.get(0));
-        String latestCode = VerificationMails.extractCode(mails.get(1));
-        assumeThat(firstCode).isNotEqualTo(latestCode);
-        assertThatThrownBy(() -> emailVerificationService.verify(signedUp.memberId(), firstCode))
-                .isInstanceOfSatisfying(
-                        MemberException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.EMAIL_CODE_INVALID));
+        assertThat(VerificationMails.extractCode(mails.get(1))).isEqualTo(firstCode);
         assertThat(emailVerificationService
-                        .verify(signedUp.memberId(), latestCode)
+                        .verify(signedUp.memberId(), firstCode)
                         .status())
                 .isEqualTo(MemberStatus.ACTIVE);
     }

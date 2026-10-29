@@ -3,6 +3,7 @@ package com.moewadeul.member.application.signup;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -10,7 +11,6 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.EmailVerificationEvents;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.Nickname;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.sql.Timestamp;
@@ -193,7 +193,7 @@ class MemberSignupConcurrencyIntegrationTest {
                 .hasSize(THREADS - 1)
                 .allSatisfy(failure -> assertThat(failure)
                         .isInstanceOfSatisfying(
-                                MemberException.class,
+                                BusinessException.class,
                                 e -> assertThat(e.getErrorCode()).isEqualTo(expected)));
     }
 

@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchMyMemories } from '../../api/memories';
 import type { MemorySummary } from '../../api/types';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { HubLayout } from '../../components/HubLayout';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { SECONDARY_LINK_CLASS } from '../community/communityLabels';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import type { MemoryCellItem } from './memoryItems';
 import { MEMORY_STATUS_LABEL } from './memoryLabels';
 import { MemoryMapGrid } from './MemoryMapGrid';
@@ -18,19 +18,12 @@ import { MemoryMapGrid } from './MemoryMapGrid';
 type LoadResult = { attempt: number; memories: MemorySummary[] } | { attempt: number; error: unknown };
 
 export function MyMemoriesPage() {
-  const session = useSession();
-  const { pathname, search } = useLocation();
+  const session = useRequireAuth();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
   const authenticated = session.status === 'authenticated';
 
-  useEffect(() => {
-    document.title = '내 기록 지도 · 뫼와들';
-  }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') navigate(withNext('/login', pathname + search), { replace: true });
-  }, [session.status, pathname, search]);
+  useDocumentTitle('내 기록 지도 · 뫼와들');
 
   useEffect(() => {
     if (!authenticated) return;

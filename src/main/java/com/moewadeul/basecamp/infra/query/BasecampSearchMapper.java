@@ -1,5 +1,6 @@
 package com.moewadeul.basecamp.infra.query;
 
+import com.moewadeul.basecamp.domain.BasecampSchedule;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -15,7 +16,7 @@ public interface BasecampSearchMapper {
     List<ViewerHistoryRow> selectViewerHistory(
             @Param("viewerId") long viewerId, @Param("basecampIds") List<Long> basecampIds);
 
-    List<InProgressScheduleRow> selectInProgressSchedules(@Param("viewerId") long viewerId);
+    List<BasecampSchedule> selectInProgressSchedules(@Param("viewerId") long viewerId);
 
     SpotSummaryRow selectSpotSummary(@Param("spotId") long spotId);
 }

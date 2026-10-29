@@ -3,7 +3,7 @@ import { ApiError } from '../../api/client';
 import type { GroundType, SignalLevel } from '../../api/types';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import type { LatLng } from '../../map/types';
-import { GROUND_TYPE_LABELS } from './spotLabels';
+import { GROUND_TYPE_LABELS } from '../../lib/spotLabels';
 
 export type YesNo = 'YES' | 'NO';
 export type Unknown = 'UNKNOWN';
@@ -37,10 +37,6 @@ export const GROUND_OPTIONS_WITH_KEEP: ChoiceOption<GroundChoice>[] = [
 
 export const PRIMARY_LINK_CLASS =
   'inline-flex min-h-11 items-center justify-center rounded-control border border-ink bg-ink px-4 text-base font-semibold text-white hover:border-ink-muted hover:bg-ink-muted';
-
-export function roundCoordinate(value: number): number {
-  return Math.round(value * 1e6) / 1e6;
-}
 
 export function requiredFieldErrors(draft: LatLng | null, values: BakjiFormValues): FieldErrors {
   const errors: FieldErrors = {};

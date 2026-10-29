@@ -1,5 +1,6 @@
 package com.moewadeul.notification.application.event;
 
+import com.moewadeul.common.retry.RetryPolicy;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -21,14 +22,19 @@ public record NotificationMailProperties(
 
     public NotificationMailProperties {
         requirePositive(batchSize, "batchSize");
-        requirePositive(maxAttempts, "maxAttempts");
         requirePositive(pollDelay, "pollDelay");
-        requirePositive(lease, "lease");
-        requirePositive(retryDelay, "retryDelay");
-        requirePositive(retryMaxDelay, "retryMaxDelay");
-        if (retryMaxDelay.compareTo(retryDelay) < 0) {
-            throw new IllegalArgumentException(
-                    "moewadeul.notification.mail.retryMaxDelay must not be shorter than retryDelay");
+        RetryPolicy.requireValid("moewadeul.notification.mail", lease, retryDelay, retryMaxDelay, maxAttempts);
+    }
+
+    public RetryPolicy retryPolicy() {
+        return new RetryPolicy(lease, retryDelay, retryMaxDelay, maxAttempts);
+    }
+
+    void requireLeaseOutlastsBatch(Duration sendTimeout) {
+        Duration worstBatch = sendTimeout.multipliedBy(batchSize);
+        if (lease.compareTo(worstBatch) <= 0) {
+            throw new IllegalStateException("moewadeul.notification.mail.lease(" + lease
+                    + ") must be longer than batchSize x moewadeul.mail.send-timeout(" + worstBatch + ")");
         }
     }
 

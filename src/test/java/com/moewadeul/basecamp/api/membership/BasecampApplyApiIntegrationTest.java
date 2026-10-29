@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.api.BasecampApiFixture;
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
@@ -45,7 +45,7 @@ class BasecampApplyApiIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -62,7 +62,7 @@ class BasecampApplyApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        fixture = new BasecampApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationService, jdbc);
+        fixture = new BasecampApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationIssuer, jdbc);
         leader = fixture.saveMember();
         applicant = fixture.saveMember();
         applicantSession = fixture.identityVerifiedSession(applicant, "MALE");
@@ -452,19 +452,6 @@ class BasecampApplyApiIntegrationTest {
         // then
         assertFailure(withoutApplication, HttpStatus.NOT_FOUND, "NOT_FOUND");
         assertFailure(approvedApplication, HttpStatus.CONFLICT, "BASECAMP_INVALID_STATE");
-    }
-
-    @Test
-    @DisplayName("[F-13] 본인확인하지 않은 회원이 취소하면 403 TRUST_LEVEL_INSUFFICIENT다")
-    void cancelRequiresIdentityVerification() {
-        // given
-        Cookie session = fixture.verifiedSession(fixture.saveMember());
-
-        // when
-        MvcTestResult result = cancel(session, basecampId);
-
-        // then
-        assertFailure(result, HttpStatus.FORBIDDEN, "TRUST_LEVEL_INSUFFICIENT");
     }
 
     private MvcTestResult apply(Cookie session, long id, String message) {

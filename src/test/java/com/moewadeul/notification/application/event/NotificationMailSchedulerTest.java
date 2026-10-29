@@ -1,9 +1,15 @@
 package com.moewadeul.notification.application.event;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
+import com.moewadeul.common.mail.MailProperties;
+import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.scheduling.ScheduledJobRunner;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,9 +41,45 @@ class NotificationMailSchedulerTest {
                 .hasMessageContaining("spring.task.scheduling.pool.size");
     }
 
+    @Test
+    @DisplayName("[NFR-09] 알림 메일 발송이 예외로 끝나면 스케줄러는 예외를 삼키고 작업 실패 수를 1 올린다")
+    void countsSendFailure() {
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+        NotificationMailer mailer = mock(NotificationMailer.class);
+        doThrow(new IllegalStateException("DB 연결 실패")).when(mailer).sendDue();
+
+        new NotificationMailScheduler(
+                        mailer,
+                        jobRunner(meterRegistry),
+                        properties(20, Duration.ofMinutes(10)),
+                        mailProperties(SEND_TIMEOUT),
+                        4)
+                .send();
+
+        assertThat(meterRegistry
+                        .get("moewadeul.scheduled.job.failures")
+                        .tag("job", "notification-mail")
+                        .counter()
+                        .count())
+                .isEqualTo(1);
+    }
+
     private static NotificationMailScheduler scheduler(
             NotificationMailProperties properties, Duration sendTimeout, int poolSize) {
-        return new NotificationMailScheduler(mock(NotificationMailer.class), properties, sendTimeout, poolSize);
+        return new NotificationMailScheduler(
+                mock(NotificationMailer.class),
+                jobRunner(new SimpleMeterRegistry()),
+                properties,
+                mailProperties(sendTimeout),
+                poolSize);
+    }
+
+    private static MailProperties mailProperties(Duration sendTimeout) {
+        return new MailProperties("moewadeul@example.com", "뫼와들", sendTimeout);
+    }
+
+    private static ScheduledJobRunner jobRunner(SimpleMeterRegistry meterRegistry) {
+        return new ScheduledJobRunner(new ScheduledJobMetrics(meterRegistry));
     }
 
     private static NotificationMailProperties properties(int batchSize, Duration lease) {

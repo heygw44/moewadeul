@@ -41,6 +41,9 @@ class EmailVerificationConcurrencyIntegrationTest {
     private EmailVerificationService emailVerificationService;
 
     @Autowired
+    private EmailVerificationIssuer emailVerificationIssuer;
+
+    @Autowired
     private MemberJpaRepository memberRepository;
 
     @Autowired
@@ -135,7 +138,7 @@ class EmailVerificationConcurrencyIntegrationTest {
     }
 
     private String issueCode(Member member) {
-        return emailVerificationService
+        return emailVerificationIssuer
                 .issueFor(member.getId(), IP, TestSequence.next())
                 .orElseThrow(() -> new AssertionError("미인증 회원인데 코드를 발급하지 않았습니다."))
                 .code();

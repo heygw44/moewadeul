@@ -2,6 +2,7 @@ package com.moewadeul.aisearch.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
@@ -24,9 +25,9 @@ public class AiInterpretService {
 
     public SpotQueryConditions interpret(long memberId, String query) {
         OutsideTransaction.require("OpenAI 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
-        LocalDate today = AiSearchDay.today(clock);
-        claim(memberId, today);
+        LocalDate today = KoreaTime.today(clock);
         requireBudgetLeft(today);
+        claim(memberId, today);
         SpotQueryInterpretation result = callInterpreter(memberId, today, query.strip());
         countRequest("success");
         if (!result.conditions().unparsed().isEmpty()) {

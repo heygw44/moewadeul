@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.spot;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -12,17 +13,19 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.moderation.ModerationResult;
+import com.moewadeul.common.moderation.RecentReport;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
-import com.moewadeul.spot.application.moderation.AdminSpotPage;
 import com.moewadeul.spot.application.moderation.AdminSpotQueryService;
 import com.moewadeul.spot.application.moderation.AdminSpotSummary;
 import com.moewadeul.spot.application.moderation.SpotModerationService;
-import com.moewadeul.spot.application.moderation.SpotStatusResult;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,8 +89,8 @@ class AdminSpotControllerTest {
                 true,
                 new AdminSpotSummary.Reporter(4L, "제보자"),
                 5L,
-                new AdminSpotSummary.ReasonCounts(2L, 1L, 2L),
-                List.of(new AdminSpotSummary.RecentReport("CLOSED", "길이 막혔다", AT)),
+                Map.of("ILLEGAL_AREA", 2L, "CLOSED", 1L, "FALSE_INFO", 2L),
+                List.of(new RecentReport("CLOSED", "길이 막혔다", AT)),
                 AT);
         var publicSpot = new AdminSpotSummary(
                 10L,
@@ -99,11 +102,11 @@ class AdminSpotControllerTest {
                 false,
                 null,
                 0L,
-                new AdminSpotSummary.ReasonCounts(0L, 0L, 0L),
+                Map.of("ILLEGAL_AREA", 0L, "CLOSED", 0L, "FALSE_INFO", 0L),
                 List.of(),
                 AT);
         when(spotQueryService.list(eq(null), anyInt(), anyInt()))
-                .thenReturn(new AdminSpotPage(List.of(summary, publicSpot), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(summary, publicSpot), 0, 20, false));
 
         MvcTestResult result = mvc.get().uri(SPOTS).with(admin()).exchange();
 
@@ -137,7 +140,7 @@ class AdminSpotControllerTest {
                 .extractingPath("$.content[0].statusChangedAt")
                 .isEqualTo("2026-10-05T03:00:00Z");
         assertThat(result).bodyJson().extractingPath("$.content[1].reporter").isNull();
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(result, 0, 20, false);
     }
 
     @Test
@@ -164,8 +167,8 @@ class AdminSpotControllerTest {
     @Test
     @DisplayName("[F-21] 장소 숨김과 복구는 로그인한 관리자 ID로 서비스를 부르고 장소 ID와 상태를 응답한다")
     void hideAndRestoreReturnStatus() {
-        when(spotModerationService.hide(9L, ADMIN_ID)).thenReturn(new SpotStatusResult(9L, "HIDDEN"));
-        when(spotModerationService.restore(9L, ADMIN_ID)).thenReturn(new SpotStatusResult(9L, "ACTIVE"));
+        when(spotModerationService.hide(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "HIDDEN"));
+        when(spotModerationService.restore(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "ACTIVE"));
 
         MvcTestResult hide = post(admin(), SPOTS + "/9/hide", null);
         MvcTestResult restore = post(admin(), SPOTS + "/9/restore", null);

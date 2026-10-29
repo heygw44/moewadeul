@@ -2,7 +2,7 @@ package com.moewadeul.community.application.post;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.domain.post.CommunityPostRepository;
 import com.moewadeul.spot.application.ActiveSpotChecker;
@@ -20,7 +20,7 @@ public class CommunityPostWriter {
     private final ActiveSpotChecker activeSpotChecker;
     private final CommunityPostRepository communityPostRepository;
     private final CommunityPostItemReader communityPostItemReader;
-    private final CommunityPostImageAttacher communityPostImageAttacher;
+    private final CommunityImageAttachments communityImageAttachments;
     private final Clock clock;
 
     @Transactional
@@ -34,7 +34,7 @@ public class CommunityPostWriter {
                 CommunityPost.write(memberId, command.title(), command.content(), command.spotId(), clock.instant());
         long postId = communityPostRepository.saveAndFlush(post).getId();
         if (!command.imageIds().isEmpty()) {
-            communityPostImageAttacher.replace(memberId, postId, command.imageIds());
+            communityImageAttachments.replace(memberId, postId, command.imageIds());
         }
         return postId;
     }
@@ -45,15 +45,13 @@ public class CommunityPostWriter {
         Instant now = clock.instant();
         applyChanges(post, command, now);
         if (command.imageIds().present()
-                && communityPostImageAttacher.replace(
+                && communityImageAttachments.replace(
                         memberId, postId, command.imageIds().value())) {
             post.markEdited(now);
         }
         // 고친 내용을 MyBatis로 읽기 전에 DB에 반영한다.
         communityPostRepository.flush();
-        return communityPostItemReader
-                .findDetail(postId, memberId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return communityPostItemReader.findDetail(postId, memberId).orElseThrow(BusinessException::notFound);
     }
 
     @Transactional
@@ -75,11 +73,8 @@ public class CommunityPostWriter {
     }
 
     private static CommunityPost requireOwnActive(Optional<CommunityPost> found, long memberId) {
-        CommunityPost post = found.filter(CommunityPost::isActive)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!post.isWrittenBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        CommunityPost post = found.filter(CommunityPost::isActive).orElseThrow(BusinessException::notFound);
+        post.requireWrittenBy(memberId);
         return post;
     }
 

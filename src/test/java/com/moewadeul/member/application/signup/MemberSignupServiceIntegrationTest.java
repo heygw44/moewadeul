@@ -10,8 +10,8 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.domain.Member;
+import com.moewadeul.member.domain.MemberBuilder;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRole;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.signup.DisposableEmailDomain;
@@ -114,6 +114,50 @@ class MemberSignupServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-01][EV-03] 같은 IP에서 이미 쓰인 이메일로 가입을 20번 시도하면 그다음 가입은 중복이든 새 이메일이든 SIGNUP_LIMITED다")
+    void duplicateEmailAttemptsCountTowardIpLimit() {
+        // given
+        String taken = TestSequence.email();
+        memberJpaRepository.saveAndFlush(MemberBuilder.aMember().email(taken).build());
+        for (int attempted = 0; attempted < 20; attempted++) {
+            SignupCommand duplicate = new SignupCommand(taken, VALID_PASSWORD, nickname(), REQUEST_IP);
+            assertThatThrownBy(() -> memberSignupService.signUp(duplicate))
+                    .isInstanceOfSatisfying(
+                            BusinessException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
+        }
+
+        // when & then
+        assertSignupLimited(new SignupCommand(taken, VALID_PASSWORD, nickname(), REQUEST_IP));
+        assertSignupLimited(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP));
+        assertThat(countRows("member")).isEqualTo(1);
+
+        // when & then
+        clock.advance(Duration.ofHours(1));
+        memberSignupService.signUp(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP));
+        assertThat(countRows("member")).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-03] 같은 IP에서 이미 쓰인 닉네임으로 가입을 20번 시도해도 그다음 가입은 SIGNUP_LIMITED다")
+    void duplicateNicknameAttemptsCountTowardIpLimit() {
+        // given
+        String taken = nickname();
+        memberJpaRepository.saveAndFlush(MemberBuilder.aMember().nickname(taken).build());
+        for (int attempted = 0; attempted < 20; attempted++) {
+            SignupCommand duplicate = new SignupCommand(TestSequence.email(), VALID_PASSWORD, taken, REQUEST_IP);
+            assertThatThrownBy(() -> memberSignupService.signUp(duplicate))
+                    .isInstanceOfSatisfying(
+                            BusinessException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED));
+        }
+
+        // when & then
+        assertSignupLimited(new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname(), REQUEST_IP));
+        assertThat(countRows("member")).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("[F-01][EV-06] ASCII가 아닌 글자가 든 이메일은 가입 서비스에서 거부하고 회원을 만들지 않는다")
     void nonAsciiEmailIsRejected() {
         // when & then
@@ -152,7 +196,7 @@ class MemberSignupServiceIntegrationTest {
         SignupCommand duplicate = new SignupCommand("USER@EXAMPLE.COM", VALID_PASSWORD, nickname(), REQUEST_IP);
         assertThatThrownBy(() -> memberSignupService.signUp(duplicate))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
         assertThat(memberJpaRepository.count()).isEqualTo(1);
     }
@@ -186,7 +230,7 @@ class MemberSignupServiceIntegrationTest {
         SignupCommand duplicate = new SignupCommand(TestSequence.email(), VALID_PASSWORD, nickname, REQUEST_IP);
         assertThatThrownBy(() -> memberSignupService.signUp(duplicate))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED));
         assertThat(memberJpaRepository.count()).isEqualTo(1);
     }
@@ -216,7 +260,7 @@ class MemberSignupServiceIntegrationTest {
         // when & then
         assertThatThrownBy(() -> memberSignupService.signUp(command))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_PASSWORD_POLICY));
         assertThat(memberJpaRepository.count()).isZero();
     }
@@ -225,8 +269,15 @@ class MemberSignupServiceIntegrationTest {
         SignupCommand command = new SignupCommand(email, VALID_PASSWORD, nickname(), REQUEST_IP);
         assertThatThrownBy(() -> memberSignupService.signUp(command))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_DISPOSABLE_EMAIL));
+    }
+
+    private void assertSignupLimited(SignupCommand command) {
+        assertThatThrownBy(() -> memberSignupService.signUp(command))
+                .isInstanceOfSatisfying(
+                        RateLimitedException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.SIGNUP_LIMITED));
     }
 
     private int countRows(String table) {

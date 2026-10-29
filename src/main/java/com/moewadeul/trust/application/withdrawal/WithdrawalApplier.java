@@ -1,11 +1,11 @@
 package com.moewadeul.trust.application.withdrawal;
 
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.MemberWithdrawalService;
 import com.moewadeul.trust.domain.identity.IdentityVerification;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
 import com.moewadeul.trust.domain.sanction.SanctionRepository;
-import com.moewadeul.trust.domain.sanction.SanctionStatus;
 import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class WithdrawalApplier {
+class WithdrawalApplier {
 
     private final MemberWithdrawalService memberWithdrawalService;
     private final IdentityVerificationRepository identityVerificationRepository;
@@ -23,21 +23,20 @@ public class WithdrawalApplier {
     private final Clock clock;
 
     @Transactional
-    public void apply(long memberId) {
+    void apply(long memberId) {
         memberWithdrawalService.lockAndWithdraw(memberId);
         Instant now = clock.instant();
         identityVerificationRepository.findByMemberId(memberId).ifPresent(identity -> {
-            boolean hasSanctionHistory =
-                    sanctionRepository.existsByMemberIdAndStatusNot(memberId, SanctionStatus.LIFTED);
-            identity.withdraw(IdentityVerification.ciRetainedUntil(now, hasSanctionHistory), now);
+            boolean retainsCi = sanctionRepository.existsCiRetentionSanction(memberId);
+            identity.withdraw(IdentityVerification.ciRetainedUntil(now, retainsCi), now);
         });
-        recordCleanup(WithdrawalEvents.BASECAMP_CLEANUP_EVENT_TYPE, memberId);
-        recordCleanup(WithdrawalEvents.PROGRAM_CLEANUP_EVENT_TYPE, memberId);
-        recordCleanup(WithdrawalEvents.MEMORY_CLEANUP_EVENT_TYPE, memberId);
+        recordCleanup(TrustEvents.WITHDRAWAL_BASECAMP_CLEANUP, memberId);
+        recordCleanup(TrustEvents.WITHDRAWAL_PROGRAM_CLEANUP, memberId);
+        recordCleanup(TrustEvents.WITHDRAWAL_MEMORY_CLEANUP, memberId);
     }
 
     private void recordCleanup(String eventType, long memberId) {
         outboxEventRecorder.record(
-                eventType, WithdrawalEvents.AGGREGATE_TYPE, memberId, new WithdrawalEvents.Payload(memberId));
+                eventType, TrustEvents.MEMBER_AGGREGATE_TYPE, memberId, new TrustEvents.WithdrawalPayload(memberId));
     }
 }

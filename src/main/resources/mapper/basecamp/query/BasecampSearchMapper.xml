@@ -2,10 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.basecamp.infra.query.BasecampSearchMapper">
 
-    <sql id="headcount">
-        (SELECT COUNT(*) FROM basecamp_member m WHERE m.basecamp_id = b.id AND m.status = 'ACTIVE')
-    </sql>
-
     <!-- MBRIntersects 조건은 MySQL이 spot.location의 공간 인덱스로 후보를 좁히게 하려고 둔다. SRID 4326 다각형의 변은 위도선이 아니라
          지구 위의 최단 경로(측지선)라서, 다각형만으로는 화면 사각형과 정확히 같은 영역이 되지 않는다. 그래서 영역 조회는 그 뒤에
          ST_Latitude와 ST_Longitude의 BETWEEN 조건으로 경계선을 포함한 정확한 사각형만 남긴다. MBRContains는 경계선 위의 점을 포함으로 보지
@@ -61,7 +57,7 @@
                b.start_date AS start_date,
                b.end_date AS end_date,
                b.capacity AS capacity,
-               <include refid="headcount"/> AS headcount,
+               <include refid="com.moewadeul.basecamp.infra.query.BasecampSql.headcount"/> AS headcount,
                b.status AS status,
                b.min_trust_level AS min_trust_level,
                b.age_group_min AS age_group_min,
@@ -80,7 +76,7 @@
           AND b.start_date &lt;= #{condition.toDate}
         </if>
         <if test="condition.hasVacancy">
-          AND <include refid="headcount"/> &lt; b.capacity
+          AND <include refid="com.moewadeul.basecamp.infra.query.BasecampSql.headcount"/> &lt; b.capacity
         </if>
         <if test="!condition.spotTypes.isEmpty()">
           AND s.type IN
@@ -95,7 +91,7 @@
             </foreach>
         </if>
         <if test="condition.maxTrustLevel != null">
-          AND COALESCE(b.min_trust_level, 1) &lt;= #{condition.maxTrustLevel}
+          AND COALESCE(b.min_trust_level, #{condition.baseTrustLevel}) &lt;= #{condition.maxTrustLevel}
         </if>
         <if test="condition.noAgeLimit">
           AND b.age_group_min IS NULL
@@ -122,7 +118,7 @@
           AND (m.id IS NOT NULL OR a.id IS NOT NULL)
     </select>
 
-    <select id="selectInProgressSchedules" resultType="com.moewadeul.basecamp.infra.query.InProgressScheduleRow">
+    <select id="selectInProgressSchedules" resultType="com.moewadeul.basecamp.domain.BasecampSchedule">
         SELECT b.id AS basecamp_id,
                b.start_date AS start_date,
                b.end_date AS end_date

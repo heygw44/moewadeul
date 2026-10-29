@@ -17,6 +17,7 @@
             updated_at = #{now}
         WHERE id = #{id}
           AND verified_at IS NULL
+          AND expires_at &gt; #{now}
           AND attempt_count &lt; #{maxAttempts}
     </update>
 

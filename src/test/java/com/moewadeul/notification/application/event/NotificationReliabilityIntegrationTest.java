@@ -1,14 +1,13 @@
 package com.moewadeul.notification.application.event;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,19 +34,19 @@ class NotificationReliabilityIntegrationTest {
     private static final long THREAD_TIMEOUT_SECONDS = 30;
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private OutboxPublisher publisher;
 
     @Autowired
     private OutboxEventRecorder recorder;
 
     @Autowired
-    private BasecampApprovedNotificationHandler approvedHandler;
+    private NotificationEventHandler handler;
 
     @Autowired
     private NotificationWriter writer;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -62,13 +61,13 @@ class NotificationReliabilityIntegrationTest {
     @DisplayName("[F-20][NFR-04] 같은 이벤트를 처리기가 두 번 처리해도 알림은 한 건이다")
     void handlerCalledTwiceWithSameEventCreatesOneNotification() {
         // given
-        long applicantId = saveMember();
+        long applicantId = memberFixture.save().getId();
         OutboxMessage message = new OutboxMessage(
                 9001L, APPROVED, AGGREGATE_TYPE, 3L, approvedPayload(applicantId, 3L), clock.instant());
 
         // when
-        approvedHandler.handle(message);
-        approvedHandler.handle(message);
+        handler.handle(message);
+        handler.handle(message);
 
         // then
         assertThat(countNotifications()).isEqualTo(1);
@@ -80,7 +79,7 @@ class NotificationReliabilityIntegrationTest {
     @DisplayName("[F-20][NFR-04] 발행을 마친 이벤트를 PENDING으로 되돌려 다시 발행해도 알림은 한 건이다")
     void republishingPublishedEventCreatesOneNotification() {
         // given
-        long applicantId = saveMember();
+        long applicantId = memberFixture.save().getId();
         long eventId = recordApproved(applicantId, 3L);
 
         // when
@@ -104,7 +103,7 @@ class NotificationReliabilityIntegrationTest {
         // given
         List<Long> applicantIds = new ArrayList<>();
         for (int i = 0; i < CONCURRENT_EVENT_COUNT; i++) {
-            applicantIds.add(saveMember());
+            applicantIds.add(memberFixture.save().getId());
         }
         transactionTemplate.executeWithoutResult(status -> {
             for (int i = 0; i < applicantIds.size(); i++) {
@@ -147,7 +146,7 @@ class NotificationReliabilityIntegrationTest {
     @DisplayName("[F-20][NFR-04] 원래 작업의 트랜잭션이 롤백되면 이벤트가 남지 않아 알림도 생기지 않는다")
     void rolledBackOriginalWorkCreatesNoNotification() {
         // given
-        long applicantId = saveMember();
+        long applicantId = memberFixture.save().getId();
 
         // when
         assertThatThrownBy(() -> transactionTemplate.executeWithoutResult(status -> {
@@ -165,7 +164,7 @@ class NotificationReliabilityIntegrationTest {
     @DisplayName("[F-20][NFR-04] 알림을 저장하는 트랜잭션이 롤백되면 알림이 남지 않는다")
     void rolledBackWriteLeavesNoNotification() {
         // given
-        long applicantId = saveMember();
+        long applicantId = memberFixture.save().getId();
         List<NotificationDraft> drafts = List.of(new NotificationDraft(applicantId, APPROVED, "제목", "본문", null));
 
         // when
@@ -177,10 +176,6 @@ class NotificationReliabilityIntegrationTest {
 
         // then
         assertThat(countNotifications()).isZero();
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private long recordApproved(long applicantId, long basecampId) {

@@ -23,7 +23,13 @@ class ArchitectureRulesTest {
         CROSS_MODULE_ACCESS(ArchitectureRules::crossModuleAccessRule),
         DOMAIN_INDEPENDENCE(ArchitectureRules::domainIndependenceRule),
         API_PERSISTENCE(ArchitectureRules::apiPersistenceRule),
-        TRANSACTIONAL_PLACEMENT(ArchitectureRules::transactionalPlacementRule);
+        TRANSACTIONAL_PLACEMENT(ArchitectureRules::transactionalPlacementRule),
+        APPLIER_VISIBILITY(ArchitectureRules::applierVisibilityRule),
+        APPLIER_CALLER(ArchitectureRules::applierCallerRule),
+        SCHEDULED_JOB_RUNNER(ArchitectureRules::scheduledJobsRunThroughRunnerRule),
+        APPLICATION_JPA_REPOSITORY(ArchitectureRules::applicationJpaRepositoryRule),
+        DOMAIN_PORT(ArchitectureRules::domainPortRule),
+        API_EXTERNAL_ADAPTER(ArchitectureRules::apiExternalAdapterRule);
 
         private final Function<String, ArchRule> factory;
 
@@ -42,7 +48,8 @@ class ArchitectureRulesTest {
     }
 
     @Test
-    @DisplayName("[ADR-005] 허용된 모듈 방향, application 경유, 계층 분리, application의 @Transactional은 모든 규칙을 통과한다")
+    @DisplayName(
+            "[ADR-005] 허용된 모듈 방향, application 경유, 계층 분리, application의 @Transactional, package-private Applier는 모든 규칙을 통과한다")
     void compliantStructurePassesAllRules() {
         for (Rule rule : Rule.values()) {
             assertThatCode(() -> rule.check(COMPLIANT)).as(rule.name()).doesNotThrowAnyException();
@@ -100,6 +107,28 @@ class ArchitectureRulesTest {
     }
 
     @Test
+    @DisplayName("[ADR-005] common.<패키지>.domain이나 모듈 domain이 common의 application·infra에 의존하면 R3 위반이다")
+    void domainIndependenceRuleRejectsDependencyOnCommonOuterLayers() {
+        assertOnlyRuleFails(
+                Rule.DOMAIN_INDEPENDENCE,
+                "violation.r3.common",
+                "common.media.domain.Media",
+                "common.media.infra.MediaRow",
+                "member.domain.Member",
+                "common.media.application.MediaUploader");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] api가 common.<패키지>.infra를 쓰면 R4 위반이다")
+    void apiPersistenceRuleRejectsCommonInfraDependency() {
+        assertOnlyRuleFails(
+                Rule.API_PERSISTENCE,
+                "violation.r4.common",
+                "member.api.MemberController",
+                "common.media.infra.MediaRow");
+    }
+
+    @Test
     @DisplayName("[ADR-005] api가 infra 패키지를 쓰면 R4 위반이다")
     void apiPersistenceRuleRejectsInfraDependency() {
         assertOnlyRuleFails(
@@ -130,6 +159,84 @@ class ArchitectureRulesTest {
                 "member.domain.Member",
                 "member.infra.MemberPersistence.save",
                 "member.api.MemberController");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] public *Applier 는 R6 위반이다")
+    void applierVisibilityRuleRejectsPublicApplier() {
+        assertOnlyRuleFails(Rule.APPLIER_VISIBILITY, "violation.r6.exposed", "member.application.MemberApplier");
+    }
+
+    @Test
+    @DisplayName("[ADR-012] run·runCountingFailures 를 부르지 않는 @Scheduled·@Schedules 메서드는 R7 위반이다")
+    void scheduledJobRuleRejectsSchedulerBypassingRunner() {
+        assertOnlyRuleFails(
+                Rule.SCHEDULED_JOB_RUNNER,
+                "violation.r7.bypass",
+                "member.application.MemberCleanupScheduler.cleanUp",
+                "member.application.MemberRegisterOnlyScheduler.cleanUp",
+                "member.application.MemberMultiScheduleScheduler.cleanUp");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] *Service 가 아닌 클래스가 *Applier 를 부르면 R8 위반이다")
+    void applierCallerRuleRejectsNonServiceCaller() {
+        assertOnlyRuleFails(Rule.APPLIER_CALLER, "violation.r8.caller", "member.application.MemberCleanupJob");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] OutsideTransaction 가드 없이 *Applier 를 부르는 *Service 는 R8 위반이다")
+    void applierCallerRuleRejectsUnguardedService() {
+        assertOnlyRuleFails(Rule.APPLIER_CALLER, "violation.r8.unguarded", "member.application.MemberService");
+    }
+
+    @Test
+    @DisplayName("[ADR-009] application이 *JpaRepository나 Spring Data 리포지토리를 쓰면 R9 위반이고, domain 저장소 포트는 허용한다")
+    void applicationJpaRepositoryRuleRejectsJpaRepositoryDependency() {
+        assertOnlyRuleFails(
+                Rule.APPLICATION_JPA_REPOSITORY,
+                "violation.r9.jpa",
+                "member.application.MemberService",
+                "member.infra.MemberJpaRepository",
+                "member.application.ProfileService",
+                "member.infra.ProfileStore");
+        assertThatThrownBy(() -> Rule.APPLICATION_JPA_REPOSITORY.check("violation.r9.jpa"))
+                .hasMessageNotContaining("MemberFinder");
+    }
+
+    @Test
+    @DisplayName("[ADR-009] infra가 구현하는 domain 인터페이스의 이름이 Repository로 끝나지 않으면 R10 위반이다")
+    void domainPortRuleRejectsNonRepositoryPort() {
+        assertOnlyRuleFails(
+                Rule.DOMAIN_PORT,
+                "violation.r10.port",
+                "member.domain.MemberGateway",
+                "member.infra.MemberGatewayAdapter");
+        assertThatThrownBy(() -> Rule.DOMAIN_PORT.check("violation.r10.port")).hasMessageNotContaining("MemberPolicy");
+    }
+
+    @Test
+    @DisplayName("[ADR-009] common.<패키지>.domain 인터페이스를 common의 infra나 계층 없는 어댑터가 구현하면 R10 위반이다")
+    void domainPortRuleRejectsCommonAdapterImplementation() {
+        assertOnlyRuleFails(
+                Rule.DOMAIN_PORT,
+                "violation.r10.common",
+                "common.media.domain.MediaScanner",
+                "common.media.infra.S3MediaScanner",
+                "common.media.domain.MediaNotifier",
+                "common.mail.MailMediaNotifier");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] api가 common.storage·common.mail 을 쓰면 R11 위반이다")
+    void apiExternalAdapterRuleRejectsStorageAndMailDependency() {
+        assertOnlyRuleFails(
+                Rule.API_EXTERNAL_ADAPTER,
+                "violation.r11.adapter",
+                "member.api.MemberController",
+                "common.storage.ImageStorage",
+                "member.api.NoticeController",
+                "common.mail.MailSender");
     }
 
     private static void assertOnlyRuleFails(Rule failing, String subRoot, String... expectedFixtures) {

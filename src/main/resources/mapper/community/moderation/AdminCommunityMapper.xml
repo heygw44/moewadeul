@@ -10,24 +10,13 @@
                m.nickname AS author_nickname,
                p.status AS status,
                COALESCE(rc.report_count, 0) AS report_count,
-               COALESCE(rc.spam_count, 0) AS spam_count,
-               COALESCE(rc.abuse_count, 0) AS abuse_count,
-               COALESCE(rc.illegal_camping_count, 0) AS illegal_camping_count,
-               COALESCE(rc.privacy_count, 0) AS privacy_count,
-               COALESCE(rc.money_scam_count, 0) AS money_scam_count,
-               COALESCE(rc.other_count, 0) AS other_count,
                p.updated_at AS status_changed_at
         FROM community_post p
         JOIN member m ON m.id = p.member_id
         LEFT JOIN (
             SELECT r.target_id AS target_id,
                    COUNT(*) AS report_count,
-                   COUNT(CASE WHEN r.reason = 'SPAM' THEN 1 END) AS spam_count,
-                   COUNT(CASE WHEN r.reason = 'ABUSE' THEN 1 END) AS abuse_count,
-                   COUNT(CASE WHEN r.reason = 'ILLEGAL_CAMPING' THEN 1 END) AS illegal_camping_count,
-                   COUNT(CASE WHEN r.reason = 'PRIVACY' THEN 1 END) AS privacy_count,
-                   COUNT(CASE WHEN r.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count,
-                   COUNT(CASE WHEN r.reason = 'OTHER' THEN 1 END) AS other_count
+                   COUNT(CASE WHEN r.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count
             FROM community_report r
             WHERE r.target_type = 'POST'
               AND r.reviewed_at IS NULL
@@ -46,24 +35,13 @@
                m.nickname AS author_nickname,
                c.status AS status,
                COALESCE(rc.report_count, 0) AS report_count,
-               COALESCE(rc.spam_count, 0) AS spam_count,
-               COALESCE(rc.abuse_count, 0) AS abuse_count,
-               COALESCE(rc.illegal_camping_count, 0) AS illegal_camping_count,
-               COALESCE(rc.privacy_count, 0) AS privacy_count,
-               COALESCE(rc.money_scam_count, 0) AS money_scam_count,
-               COALESCE(rc.other_count, 0) AS other_count,
                c.updated_at AS status_changed_at
         FROM community_comment c
         JOIN member m ON m.id = c.member_id
         LEFT JOIN (
             SELECT r.target_id AS target_id,
                    COUNT(*) AS report_count,
-                   COUNT(CASE WHEN r.reason = 'SPAM' THEN 1 END) AS spam_count,
-                   COUNT(CASE WHEN r.reason = 'ABUSE' THEN 1 END) AS abuse_count,
-                   COUNT(CASE WHEN r.reason = 'ILLEGAL_CAMPING' THEN 1 END) AS illegal_camping_count,
-                   COUNT(CASE WHEN r.reason = 'PRIVACY' THEN 1 END) AS privacy_count,
-                   COUNT(CASE WHEN r.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count,
-                   COUNT(CASE WHEN r.reason = 'OTHER' THEN 1 END) AS other_count
+                   COUNT(CASE WHEN r.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count
             FROM community_report r
             WHERE r.target_type = 'COMMENT'
               AND r.reviewed_at IS NULL
@@ -74,27 +52,22 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="selectRecentReports" resultType="com.moewadeul.community.infra.moderation.AdminCommunityRecentReportRow">
-        SELECT ranked.target_id AS target_id,
-               ranked.reason AS reason,
-               ranked.content AS content,
-               ranked.created_at AS created_at
-        FROM (
-            SELECT r.target_id AS target_id,
-                   r.reason AS reason,
-                   r.content AS content,
-                   r.created_at AS created_at,
-                   ROW_NUMBER() OVER (PARTITION BY r.target_id ORDER BY r.created_at DESC, r.id DESC) AS row_num
-            FROM community_report r
-            WHERE r.reviewed_at IS NULL
-              AND r.target_type = #{targetType}
-              AND r.target_id IN
-            <foreach collection="targetIds" item="targetId" open="(" separator="," close=")">
-                #{targetId}
-            </foreach>
-        ) ranked
-        WHERE ranked.row_num &lt;= 5
-        ORDER BY ranked.target_id ASC, ranked.row_num ASC
+    <sql id="ofTargetType">AND r.target_type = #{targetType}</sql>
+
+    <select id="selectReasonCounts" resultType="com.moewadeul.common.moderation.ReportReasonCount">
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.reasonCounts">
+            <property name="reportTable" value="community_report"/>
+            <property name="targetColumn" value="target_id"/>
+            <property name="targetScope" value="com.moewadeul.community.infra.moderation.AdminCommunityMapper.ofTargetType"/>
+        </include>
+    </select>
+
+    <select id="selectRecentReports" resultType="com.moewadeul.common.moderation.RecentReportRow">
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.recentReports">
+            <property name="reportTable" value="community_report"/>
+            <property name="targetColumn" value="target_id"/>
+            <property name="targetScope" value="com.moewadeul.community.infra.moderation.AdminCommunityMapper.ofTargetType"/>
+        </include>
     </select>
 
 </mapper>

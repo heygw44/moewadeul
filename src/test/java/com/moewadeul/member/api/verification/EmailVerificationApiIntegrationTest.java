@@ -1,16 +1,15 @@
 package com.moewadeul.member.api.verification;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.verification.EmailVerificationPolicy;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +19,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -36,16 +34,13 @@ class EmailVerificationApiIntegrationTest {
     private static final String VERIFIED_ONLY_PATH = "/api/bakjis";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -68,7 +63,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-01] 올바른 코드를 보내면 200 ACTIVE를 응답하고 회원 상태와 인증 행이 바뀐다")
     void correctCodeActivatesMember() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
         String code = issueCode(member);
 
@@ -84,7 +79,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][TR-03] 인증에 성공하면 같은 세션으로 다시 로그인하지 않고 이메일 인증이 필요한 경로를 쓸 수 있다")
     void sessionGainsVerifiedAuthorityWithoutNewLogin() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
         assertThat(postJson(VERIFIED_ONLY_PATH, "{}", session)).hasStatus(HttpStatus.FORBIDDEN);
 
@@ -97,7 +92,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][TR-03] 인증 전에 다른 기기에서 만든 세션은 다시 로그인하기 전까지 인증 권한이 없다")
     void otherSessionOfSameMemberKeepsOldAuthorityUntilNextLogin() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie verifyingSession = login(member);
         Cookie otherSession = login(member);
 
@@ -113,7 +108,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-01] 코드가 틀리면 400 EMAIL_CODE_INVALID를 응답하고 세션은 인증 권한을 얻지 못한다")
     void wrongCodeIsRejected() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
         String code = issueCode(member);
 
@@ -128,7 +123,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-01] 코드 입력이 비어 있으면 400 INVALID_INPUT, 숫자 6자리가 아니면 400 EMAIL_CODE_INVALID를 응답한다")
     void blankAndMalformedCodes() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
         issueCode(member);
 
@@ -144,7 +139,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-01] 발급한 지 10분이 지난 코드는 400 EMAIL_CODE_EXPIRED를 응답한다")
     void expiredCodeIsRejected() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
         String code = issueCode(member);
         clock.advance(EmailVerificationPolicy.CODE_VALIDITY);
@@ -159,7 +154,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-02] 코드를 5번 틀리면 이후에는 맞는 코드를 보내도 400 EMAIL_CODE_ATTEMPTS_EXCEEDED를 응답한다")
     void codeBecomesInvalidAfterFiveWrongAttempts() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
         String code = issueCode(member);
         String wrongCode = differentCode(code);
@@ -178,7 +173,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01] 이미 인증을 마친 회원이 코드 확인이나 재발송을 호출하면 409 EMAIL_ALREADY_VERIFIED를 응답한다")
     void alreadyVerifiedMemberGetsConflict() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
         String code = issueCode(member);
         assertThat(postJson(VERIFY_PATH, codeBody(code), session)).hasStatus(HttpStatus.OK);
@@ -195,7 +190,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-03] 재발송하면 204를 응답하고 발송 요청 이벤트가 1건 생기며 이벤트에는 코드가 없다")
     void resendRecordsOneEventWithoutCode() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
 
         MvcTestResult result = postJson(RESEND_PATH, null, session);
@@ -216,7 +211,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-03] 재발송 요청 뒤 60초 안에 다시 재발송하면 429 EMAIL_RESEND_LIMITED와 Retry-After를 응답한다")
     void resendWithinIntervalIsLimited() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
         assertThat(postJson(RESEND_PATH, null, session)).hasStatus(HttpStatus.NO_CONTENT);
 
@@ -231,7 +226,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][EV-03] 하루에 5번 발송한 뒤에는 간격이 지나도 429 EMAIL_RESEND_LIMITED를 응답하고 풀리는 시각까지 기다리게 한다")
     void resendAfterDailyLimitIsLimited() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
         for (int sent = 0; sent < EmailVerificationPolicy.DAILY_LIMIT; sent++) {
             issueCode(member);
@@ -252,7 +247,7 @@ class EmailVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-01][ADR-002] CSRF 토큰 없이 코드 확인이나 재발송을 호출하면 403 ACCESS_DENIED를 응답한다")
     void requestsWithoutCsrfTokenAreForbidden() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = login(member);
 
         MvcTestResult verify = mvc.post()
@@ -269,15 +264,8 @@ class EmailVerificationApiIntegrationTest {
         assertThat(resend).bodyJson().extractingPath("$.code").isEqualTo("ACCESS_DENIED");
     }
 
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(VALID_PASSWORD))
-                .build());
-    }
-
     private String issueCode(Member member) {
-        return emailVerificationService
+        return emailVerificationIssuer
                 .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();

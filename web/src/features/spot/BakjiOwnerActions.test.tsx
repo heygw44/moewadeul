@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { SessionProvider } from '../member/session';
+import { SessionProvider } from '../../app/session/session';
 import { BakjiOwnerActions } from './BakjiOwnerActions';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

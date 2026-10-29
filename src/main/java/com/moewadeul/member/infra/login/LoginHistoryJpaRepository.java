@@ -28,4 +28,20 @@ public interface LoginHistoryJpaRepository extends JpaRepository<LoginHistory, L
             """)
     List<Instant> findFailureTimesSinceLastSuccess(
             @Param("attemptedEmail") String attemptedEmail, @Param("after") Instant after);
+
+    @Override
+    @Query("""
+            SELECT h.createdAt FROM LoginHistory h
+            WHERE h.memberId = :memberId
+              AND h.success = false
+              AND h.createdAt > :after
+              AND h.createdAt > COALESCE(
+                  (SELECT m.passwordChangedAt FROM Member m WHERE m.id = :memberId), :after)
+              AND h.id > COALESCE(
+                  (SELECT MAX(s.id) FROM LoginHistory s
+                   WHERE s.memberId = :memberId AND s.success = true), 0L)
+            ORDER BY h.createdAt ASC
+            """)
+    List<Instant> findMemberFailureTimesSinceLastSuccess(
+            @Param("memberId") long memberId, @Param("after") Instant after);
 }

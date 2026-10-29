@@ -5,8 +5,10 @@ import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
-import com.moewadeul.program.application.ProgramApplicationEvents;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.program.domain.PaymentRepository;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplication;
@@ -19,6 +21,7 @@ import com.moewadeul.program.domain.ProgramRepository;
 import com.moewadeul.program.domain.ProgramRevision;
 import com.moewadeul.program.infra.catalog.ProgramApplicantRow;
 import com.moewadeul.program.infra.catalog.ProgramQueryMapper;
+import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashSet;
@@ -39,6 +42,7 @@ public class ProgramAdminService {
     private final PaymentRepository paymentRepository;
     private final ProgramQueryMapper programQueryMapper;
     private final ProgramQueryService programQueryService;
+    private final ActiveSpotChecker activeSpotChecker;
     private final AdminAuditRecorder adminAuditRecorder;
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
@@ -111,10 +115,10 @@ public class ProgramAdminService {
         for (ProgramApplication application : applications) {
             long applicationId = application.getId();
             outboxEventRecorder.record(
-                    ProgramApplicationEvents.CANCELED_EVENT_TYPE,
-                    ProgramApplicationEvents.AGGREGATE_TYPE,
+                    ProgramEvents.APPLICATION_CANCELED,
+                    ProgramEvents.APPLICATION_AGGREGATE_TYPE,
                     applicationId,
-                    new ProgramApplicationEvents.CanceledPayload(
+                    new ProgramEvents.CanceledPayload(
                             applicationId,
                             application.getMemberId(),
                             programId,
@@ -124,39 +128,21 @@ public class ProgramAdminService {
     }
 
     @Transactional(readOnly = true)
-    public ProgramApplicantPage applications(long programId, ProgramApplicantQuery query) {
-        programRepository.findById(programId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        ProgramApplicationStatus status = parseStatus(query.status());
-        long offset = (long) query.page() * query.size();
-        List<ProgramApplicantRow> rows =
-                programQueryMapper.selectApplicants(programId, status, offset, query.size() + 1);
-        boolean hasNext = rows.size() > query.size();
-        List<ProgramApplicantItem> content = rows.stream()
-                .limit(query.size())
-                .map(ProgramAdminService::toItem)
-                .toList();
-        return new ProgramApplicantPage(content, query.page(), query.size(), hasNext);
-    }
-
-    private static ProgramApplicationStatus parseStatus(String status) {
-        if (status == null) {
-            return null;
-        }
-        try {
-            return ProgramApplicationStatus.valueOf(status);
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "status: 신청 상태가 맞지 않아요.");
-        }
+    public PageSlice<ProgramApplicantItem> applications(long programId, ProgramApplicantQuery query) {
+        programRepository.findById(programId).orElseThrow(BusinessException::notFound);
+        ProgramApplicationStatus status =
+                EnumParser.parseNullable(ProgramApplicationStatus.class, query.status(), "status: 신청 상태가 맞지 않아요.");
+        List<ProgramApplicantRow> rows = programQueryMapper.selectApplicants(
+                programId, status, PageSlice.offsetOf(query.page(), query.size()), PageSlice.fetchSize(query.size()));
+        return PageSlice.of(rows, query.page(), query.size()).map(ProgramAdminService::toItem);
     }
 
     private Program lockProgram(long programId) {
-        return programRepository
-                .findByIdForUpdate(programId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return programRepository.findByIdForUpdate(programId).orElseThrow(BusinessException::notFound);
     }
 
     private void requireVisibleSpot(Long spotId) {
-        if (spotId != null && !programQueryMapper.existsActiveSpot(spotId)) {
+        if (spotId != null && !activeSpotChecker.isActive(spotId)) {
             throw new BusinessException(CommonErrorCode.INVALID_INPUT, "spotId: 지도에 보이는 장소만 연결할 수 있어요.");
         }
     }

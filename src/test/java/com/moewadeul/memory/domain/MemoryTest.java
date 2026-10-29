@@ -1,9 +1,13 @@
 package com.moewadeul.memory.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.moderation.ModerationTransition;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -54,12 +58,42 @@ class MemoryTest {
     }
 
     @Test
-    @DisplayName("[F-33][MM-02] 오늘 방문한 기록은 미래가 아니고, 내일 방문했다고 적은 기록은 미래다")
-    void visitedAfterToday() {
-        assertThat(details(1, null).isVisitedAfter(TODAY)).isFalse();
-        assertThat(new MemoryDetails(null, 37.0, 127.0, TODAY.plusDays(1), 1, null, MemoryVisibility.PRIVATE)
-                        .isVisitedAfter(TODAY))
-                .isTrue();
+    @DisplayName("[F-33][MM-02] 방문일이 오늘(한국 날짜)이면 기록을 만들 수 있고, 내일이면 visitedDate 필드 오류로 거부한다")
+    void writeRejectsFutureVisitedDate() {
+        assertThat(Memory.write(1L, detailsVisitedOn(TODAY), NOW).getVisitedDate())
+                .isEqualTo(TODAY);
+        assertThatThrownBy(() -> Memory.write(1L, detailsVisitedOn(TODAY.plusDays(1)), NOW))
+                .isInstanceOfSatisfying(
+                        InvalidFieldException.class,
+                        e -> assertThat(e.getField()).isEqualTo("visitedDate"));
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-02] 고칠 때도 방문일이 오늘이면 받고 내일이면 거부하며, 거부하면 기록은 그대로다")
+    void reviseRejectsFutureVisitedDate() {
+        Memory memory = Memory.write(1L, details(1, "처음"), NOW);
+        Instant later = NOW.plusSeconds(60);
+
+        memory.revise(detailsVisitedOn(TODAY), later);
+        assertThatThrownBy(() -> memory.revise(detailsVisitedOn(TODAY.plusDays(1)), later.plusSeconds(1)))
+                .isInstanceOfSatisfying(
+                        InvalidFieldException.class,
+                        e -> assertThat(e.getField()).isEqualTo("visitedDate"));
+
+        assertThat(memory.getVisitedDate()).isEqualTo(TODAY);
+        assertThat(memory.getUpdatedAt()).isEqualTo(later);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-02] 방문일의 기준은 UTC가 아니라 한국 날짜라서, 한국에서 이미 다음 날인 시각에는 그 날짜까지 받는다")
+    void futureCheckUsesKoreaDate() {
+        Instant lateUtc = Instant.parse("2026-10-05T15:30:00Z");
+
+        assertThat(Memory.write(1L, detailsVisitedOn(TODAY.plusDays(1)), lateUtc)
+                        .getVisitedDate())
+                .isEqualTo(TODAY.plusDays(1));
+        assertThatThrownBy(() -> Memory.write(1L, detailsVisitedOn(TODAY.plusDays(2)), lateUtc))
+                .isInstanceOf(InvalidFieldException.class);
     }
 
     @Test
@@ -74,20 +108,15 @@ class MemoryTest {
         assertThat(memory.details()).isEqualTo(changed);
         assertThat(memory.getUpdatedAt()).isEqualTo(NOW.plusSeconds(60));
         assertThat(memory.getCreatedAt()).isEqualTo(NOW);
-        assertThat(memory.isWrittenBy(1L)).isTrue();
-        assertThat(memory.isWrittenBy(2L)).isFalse();
+        assertThatCode(() -> memory.requireWrittenBy(1L)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> memory.requireWrittenBy(2L))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
     @Test
-    @DisplayName("[F-33][MM-01] 공개 범위 이름은 PRIVATE와 PUBLIC만 알아본다")
-    void parsesVisibility() {
-        assertThat(MemoryVisibility.from("PUBLIC")).contains(MemoryVisibility.PUBLIC);
-        assertThat(MemoryVisibility.from("public")).isEmpty();
-        assertThat(MemoryVisibility.from(null)).isEmpty();
-    }
-
-    @Test
-    @DisplayName("[F-33][MM-10] 새 기록은 ACTIVE로 시작하고, 공개이면서 ACTIVE일 때만 다른 사람에게 보인다")
+    @DisplayName("[F-33][MM-10] 새 기록은 ACTIVE로 시작하고 공개이면서 ACTIVE일 때만 다른 사람에게 보이며, 검토 전 신고가 4건이면 그대로이고 5건이 되면 검토 대기가 된다")
     void newMemoryIsActiveAndVisibleOnlyWhenPublic() {
         Memory privateMemory = Memory.write(1L, details(1, null), NOW);
         Memory publicMemory = Memory.write(1L, publicDetails(), NOW);
@@ -96,7 +125,12 @@ class MemoryTest {
         assertThat(privateMemory.isVisibleToOthers()).isFalse();
         assertThat(publicMemory.isVisibleToOthers()).isTrue();
 
-        publicMemory.markPendingReview(NOW.plusSeconds(60));
+        publicMemory.receiveReport(4, NOW.plusSeconds(30));
+
+        assertThat(publicMemory.isVisibleToOthers()).isTrue();
+        assertThat(publicMemory.getUpdatedAt()).isEqualTo(NOW);
+
+        publicMemory.receiveReport(5, NOW.plusSeconds(60));
 
         assertThat(publicMemory.getStatus()).isEqualTo(MemoryStatus.PENDING_REVIEW);
         assertThat(publicMemory.isVisibleToOthers()).isFalse();
@@ -104,15 +138,15 @@ class MemoryTest {
     }
 
     @Test
-    @DisplayName("[F-33][MM-10] 검토 대기로는 ACTIVE에서만 바꾸고, 이미 검토 대기이거나 숨긴 기록이면 거부한다")
-    void markPendingReviewOnlyFromActive() {
+    @DisplayName("[F-33][MM-10] 검토 대기로는 ACTIVE에서만 바꾸고, 이미 검토 대기이거나 숨긴 기록의 신고가 5건이 되면 거부한다")
+    void receiveReportOnlyFromActive() {
         Memory pending = Memory.write(1L, publicDetails(), NOW);
-        pending.markPendingReview(NOW);
+        pending.receiveReport(5, NOW);
         Memory hidden = Memory.write(1L, publicDetails(), NOW);
         hidden.hide(NOW);
 
-        assertThatThrownBy(() -> pending.markPendingReview(NOW)).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> hidden.markPendingReview(NOW)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> pending.receiveReport(5, NOW)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> hidden.receiveReport(5, NOW)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -120,7 +154,7 @@ class MemoryTest {
     void hideFromActiveOrPendingReview() {
         Memory active = Memory.write(1L, publicDetails(), NOW);
         Memory pending = Memory.write(1L, publicDetails(), NOW);
-        pending.markPendingReview(NOW);
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW);
 
         active.hide(NOW.plusSeconds(60));
         pending.hide(NOW.plusSeconds(60));
@@ -138,7 +172,7 @@ class MemoryTest {
     @DisplayName("[F-33][MM-11] 관리자는 검토 대기와 숨긴 기록을 ACTIVE로 복구하고, ACTIVE 기록을 복구하면 MEMORY_INVALID_STATE다")
     void restoreFromPendingReviewOrHidden() {
         Memory pending = Memory.write(1L, publicDetails(), NOW);
-        pending.markPendingReview(NOW);
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW);
         Memory hidden = Memory.write(1L, publicDetails(), NOW);
         hidden.hide(NOW);
         Memory active = Memory.write(1L, publicDetails(), NOW);
@@ -171,7 +205,23 @@ class MemoryTest {
         return new MemoryDetails(null, 37.25, 127.25, TODAY, 1, null, MemoryVisibility.PUBLIC);
     }
 
+    private static MemoryDetails detailsVisitedOn(LocalDate visitedDate) {
+        return new MemoryDetails(null, 37.25, 127.25, visitedDate, 1, null, MemoryVisibility.PRIVATE);
+    }
+
     private static MemoryDetails details(int nights, String content) {
         return new MemoryDetails(null, 37.25, 127.25, TODAY, nights, content, MemoryVisibility.PRIVATE);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-10] 다른 사람에게 보이는 조건은 공개이면서 ACTIVE일 때뿐이다")
+    void staticVisibilityRequiresPublicAndActive() {
+        for (MemoryVisibility visibility : MemoryVisibility.values()) {
+            for (MemoryStatus status : MemoryStatus.values()) {
+                boolean expected = visibility == MemoryVisibility.PUBLIC && status == MemoryStatus.ACTIVE;
+
+                assertThat(Memory.isVisibleToOthers(visibility, status)).isEqualTo(expected);
+            }
+        }
     }
 }

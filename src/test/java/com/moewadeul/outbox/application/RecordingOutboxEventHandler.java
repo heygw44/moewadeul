@@ -4,6 +4,7 @@ import com.moewadeul.common.mail.MailDeliveryException;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -19,8 +20,8 @@ public class RecordingOutboxEventHandler implements OutboxEventHandler {
     private volatile boolean transientFailures;
 
     @Override
-    public String eventType() {
-        return EVENT_TYPE;
+    public Set<String> eventTypes() {
+        return Set.of(EVENT_TYPE);
     }
 
     @Override

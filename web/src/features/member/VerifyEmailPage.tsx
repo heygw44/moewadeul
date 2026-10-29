@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { resendVerification, verifyEmail } from '../../api/auth';
 import { ApiError } from '../../api/client';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
-import { safeNextPath, withNext } from './nextPath';
-import { useSession } from './session';
-import { useRetryCountdown } from './useRetryCountdown';
+import { enterAfterAuth } from './enterAfterAuth';
+import { safeNextPath, withNext } from '../../app/session/nextPath';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
+import { useRetryCountdown } from '../../components/useRetryCountdown';
 import { buttonClassName } from '../../components/buttonClass';
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -28,7 +30,7 @@ type ResendNotice = { tone: 'info'; title: string } | { tone: 'danger'; title: s
 export function VerifyEmailPage() {
   const { search } = useLocation();
   const next = safeNextPath(search);
-  const session = useSession();
+  const session = useRequireAuth(withNext('/verify-email', next));
   const showSkeleton = useDelayedFlag(session.status === 'loading');
   const cooldown = useRetryCountdown();
 
@@ -39,15 +41,7 @@ export function VerifyEmailPage() {
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState<ResendNotice | null>(null);
 
-  useEffect(() => {
-    document.title = '이메일 인증 · 뫼와들';
-  }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') {
-      navigate(withNext('/login', withNext('/verify-email', next)), { replace: true });
-    }
-  }, [session.status, next]);
+  useDocumentTitle('이메일 인증 · 뫼와들');
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,8 +58,6 @@ export function VerifyEmailPage() {
     setSubmitting(true);
     try {
       await verifyEmail(trimmed);
-      await session.refresh();
-      navigate(next ?? '/map', { replace: true });
     } catch (error) {
       setSubmitting(false);
       if (error instanceof ApiError && CODE_ERROR_CODES[error.code]) {
@@ -77,7 +69,9 @@ export function VerifyEmailPage() {
       } else {
         setFormError({ cause: error });
       }
+      return;
     }
+    await enterAfterAuth(session, () => next ?? '/map');
   }
 
   async function handleResend() {

@@ -1,10 +1,11 @@
 package com.moewadeul.member.application.password;
 
+import static com.moewadeul.member.application.MemberGuards.memberNotFound;
+
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
-import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.Password;
 import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
@@ -19,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class PasswordResetApplier {
+class PasswordResetApplier {
 
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordResetTokenMapper passwordResetTokenMapper;
@@ -28,13 +29,13 @@ public class PasswordResetApplier {
     private final Clock clock;
 
     @Transactional
-    public long apply(String rawToken, String newPassword) {
+    long apply(String rawToken, String newPassword) {
         Password password = Password.of(newPassword);
         Instant now = Instant.now(clock);
         PasswordResetToken token = findUsableToken(rawToken, now);
         long memberId = token.getMemberId();
         Member member = memberRepository.findByIdForUpdate(memberId).orElseThrow(() -> memberNotFound(memberId));
-        if (member.getStatus() == MemberStatus.WITHDRAWN) {
+        if (member.isWithdrawn()) {
             throw invalidToken();
         }
         if (passwordResetTokenMapper.markUsed(token.getId(), now) == 0) {
@@ -55,11 +56,7 @@ public class PasswordResetApplier {
                 .orElseThrow(PasswordResetApplier::invalidToken);
     }
 
-    private static MemberException invalidToken() {
-        return new MemberException(MemberErrorCode.PASSWORD_RESET_TOKEN_INVALID);
-    }
-
-    private static IllegalStateException memberNotFound(long memberId) {
-        return new IllegalStateException("재설정 토큰의 회원이 없습니다. memberId=" + memberId);
+    private static BusinessException invalidToken() {
+        return new BusinessException(MemberErrorCode.PASSWORD_RESET_TOKEN_INVALID);
     }
 }

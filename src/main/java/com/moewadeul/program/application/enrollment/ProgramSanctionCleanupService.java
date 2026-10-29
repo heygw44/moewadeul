@@ -1,5 +1,6 @@
 package com.moewadeul.program.application.enrollment;
 
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramCancelReason;
 import java.util.ArrayList;
@@ -17,6 +18,7 @@ public class ProgramSanctionCleanupService {
     private final ProgramSanctionCleanupApplier applier;
 
     public void cleanUp(long memberId, ProgramCancelReason reason) {
+        OutsideTransaction.require("신청마다 따로 커밋해야 한 건의 실패가 나머지 정리를 되돌리지 않는다.");
         List<Long> applicationIds = applicationRepository.findPendingPaymentIdsByMember(memberId);
         List<Long> failedApplicationIds = new ArrayList<>();
         int canceledCount = 0;

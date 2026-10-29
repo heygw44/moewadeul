@@ -10,12 +10,11 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.image.application.ImageUpload;
+import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
-import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
 import com.moewadeul.common.trace.TraceIdFilter;
-import com.moewadeul.community.application.image.CommunityImageUpload;
-import com.moewadeul.community.application.image.CommunityImageUploadCommand;
 import com.moewadeul.community.application.image.CommunityImageUploadService;
 import java.time.Instant;
 import java.util.List;
@@ -54,9 +53,8 @@ class CommunityImageControllerTest {
     @DisplayName("[F-29][CM-06] 이미지 업로드 URL을 발급하면 201과 imageId, uploadUrl, PUT, 서명한 헤더, 만료 시각을 응답한다")
     void issuesUploadUrl() {
         // given
-        when(communityImageUploadService.issue(
-                        MEMBER_ID, new CommunityImageUploadCommand("image/jpeg", 2483011L, null)))
-                .thenReturn(new CommunityImageUpload(
+        when(communityImageUploadService.issue(MEMBER_ID, new ImageUploadCommand("image/jpeg", 2483011L, null)))
+                .thenReturn(new ImageUpload(
                         31L,
                         "https://upload.example.test/community/7/key?sig=1",
                         Map.of("Content-Type", "image/jpeg", "Content-Length", "2483011"),
@@ -83,14 +81,13 @@ class CommunityImageControllerTest {
     @DisplayName("[F-29][CM-06] 썸네일 크기를 보내면 서비스에 넘기고, 응답에 썸네일 업로드 URL과 서명한 헤더를 더 담는다")
     void issuesThumbnailUploadUrl() {
         // given
-        when(communityImageUploadService.issue(
-                        MEMBER_ID, new CommunityImageUploadCommand("image/png", 2483011L, 48000L)))
-                .thenReturn(new CommunityImageUpload(
+        when(communityImageUploadService.issue(MEMBER_ID, new ImageUploadCommand("image/png", 2483011L, 48000L)))
+                .thenReturn(new ImageUpload(
                         31L,
                         "https://upload.example.test/community/7/key.png?sig=1",
                         Map.of("Content-Type", "image/png", "Content-Length", "2483011"),
                         Instant.parse("2026-11-20T10:10:00Z"),
-                        new PresignedUpload(
+                        new ImageUpload.ThumbnailUpload(
                                 "https://upload.example.test/community/7/key_thumb.jpg?sig=1",
                                 Map.of("Content-Type", "image/jpeg", "Content-Length", "48000"),
                                 Instant.parse("2026-11-20T10:10:00Z"))));
@@ -126,7 +123,7 @@ class CommunityImageControllerTest {
     void acceptsThumbnailSizeBoundaries(long thumbnailSizeBytes) {
         // given
         when(communityImageUploadService.issue(anyLong(), any()))
-                .thenReturn(new CommunityImageUpload(1L, "https://u.example.test/x", Map.of(), Instant.EPOCH, null));
+                .thenReturn(new ImageUpload(1L, "https://u.example.test/x", Map.of(), Instant.EPOCH, null));
 
         // when
         MvcTestResult result = send(
@@ -138,40 +135,13 @@ class CommunityImageControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.CREATED);
         verify(communityImageUploadService)
-                .issue(MEMBER_ID, new CommunityImageUploadCommand("image/png", 1000L, thumbnailSizeBytes));
+                .issue(MEMBER_ID, new ImageUploadCommand("image/png", 1000L, thumbnailSizeBytes));
     }
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(longs = {0L, 262145L, -1L})
-    @DisplayName("[F-29][CM-06] 썸네일 크기가 1~262144 밖이면 400 INVALID_INPUT과 thumbnailSizeBytes 필드 오류를 응답하고 서비스를 부르지 않는다")
-    void rejectsThumbnailSizeOutOfRange(long thumbnailSizeBytes) {
-        // when
-        MvcTestResult result = send(
-                IMAGES,
-                verified(),
-                "{\"contentType\":\"image/png\",\"sizeBytes\":1000,\"thumbnailSizeBytes\":%d}"
-                        .formatted(thumbnailSizeBytes));
-
-        // then
-        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
-        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("thumbnailSizeBytes");
-        verifyNoInteractions(communityImageUploadService);
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(
-            strings = {
-                "{\"contentType\":\"image/gif\",\"sizeBytes\":1000}",
-                "{\"contentType\":\"IMAGE/JPEG\",\"sizeBytes\":1000}",
-                "{\"sizeBytes\":1000}",
-                "{\"contentType\":\"image/png\"}",
-                "{\"contentType\":\"image/png\",\"sizeBytes\":0}",
-                "{\"contentType\":\"image/png\",\"sizeBytes\":5242881}",
-                "{\"contentType\":\"image/png\",\"sizeBytes\":-1}"
-            })
-    @DisplayName("[F-29][CM-06] 허용하지 않는 형식이거나 크기가 1~5242880 밖이거나 값이 없으면 400 INVALID_INPUT을 응답하고 서비스를 부르지 않는다")
-    void rejectsInvalidBody(String body) {
+    @ValueSource(strings = {"{\"sizeBytes\":1000}", "{\"contentType\":\"image/png\"}"})
+    @DisplayName("[F-29][CM-06] 형식이나 크기가 없으면 400 INVALID_INPUT을 응답하고 서비스를 부르지 않는다")
+    void rejectsMissingValue(String body) {
         // when
         MvcTestResult result = send(IMAGES, verified(), body);
 
@@ -187,7 +157,7 @@ class CommunityImageControllerTest {
     void acceptsAllowedTypesAndMaximumSize(String contentType) {
         // given
         when(communityImageUploadService.issue(anyLong(), any()))
-                .thenReturn(new CommunityImageUpload(1L, "https://u.example.test/x", Map.of(), Instant.EPOCH, null));
+                .thenReturn(new ImageUpload(1L, "https://u.example.test/x", Map.of(), Instant.EPOCH, null));
 
         // when
         MvcTestResult result =
@@ -195,8 +165,7 @@ class CommunityImageControllerTest {
 
         // then
         assertThat(result).hasStatus(HttpStatus.CREATED);
-        verify(communityImageUploadService)
-                .issue(MEMBER_ID, new CommunityImageUploadCommand(contentType, 5242880L, null));
+        verify(communityImageUploadService).issue(MEMBER_ID, new ImageUploadCommand(contentType, 5242880L, null));
     }
 
     @Test

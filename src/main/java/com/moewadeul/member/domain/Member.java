@@ -2,6 +2,8 @@ package com.moewadeul.member.domain;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -60,11 +62,11 @@ public class Member {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "self_age_group")
-    private SelfAgeGroup selfAgeGroup;
+    private AgeGroup selfAgeGroup;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "self_gender")
-    private SelfGender selfGender;
+    private Gender selfGender;
 
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
@@ -102,6 +104,14 @@ public class Member {
         return new Member(email, passwordHash, nickname, now);
     }
 
+    public boolean isWithdrawn() {
+        return status == MemberStatus.WITHDRAWN;
+    }
+
+    public boolean canAuthenticateWithPassword() {
+        return !isWithdrawn() && passwordHash != null;
+    }
+
     public void changePassword(String passwordHash, Instant now) {
         if (passwordHash == null || passwordHash.isBlank()) {
             throw new IllegalArgumentException("비밀번호 해시가 비어 있습니다.");
@@ -116,7 +126,7 @@ public class Member {
 
     public void withdraw(Instant now) {
         requireNow(now);
-        if (status == MemberStatus.WITHDRAWN) {
+        if (isWithdrawn()) {
             return;
         }
         this.email = null;
@@ -133,7 +143,7 @@ public class Member {
         if (until == null || now == null) {
             throw new IllegalArgumentException("정지 종료 시각이나 수정 시각이 null입니다.");
         }
-        if (status == MemberStatus.WITHDRAWN) {
+        if (isWithdrawn()) {
             return;
         }
         if (status == MemberStatus.SUSPENDED && (suspendedUntil == null || suspendedUntil.isAfter(until))) {
@@ -148,7 +158,7 @@ public class Member {
         if (now == null) {
             throw new IllegalArgumentException("수정 시각이 null입니다.");
         }
-        if (status == MemberStatus.WITHDRAWN) {
+        if (isWithdrawn()) {
             return;
         }
         this.status = MemberStatus.SUSPENDED;
@@ -156,22 +166,38 @@ public class Member {
         this.updatedAt = now;
     }
 
+    public boolean isSuspensionOverAt(Instant now) {
+        return status == MemberStatus.SUSPENDED && suspendedUntil != null && !suspendedUntil.isAfter(now);
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerifiedAt != null;
+    }
+
+    public boolean isAwaitingEmailVerification() {
+        return status == MemberStatus.UNVERIFIED;
+    }
+
     public boolean releaseSuspensionIfExpired(Instant now) {
         if (now == null) {
             throw new IllegalArgumentException("현재 시각이 null입니다.");
         }
-        if (status != MemberStatus.SUSPENDED || suspendedUntil == null || suspendedUntil.isAfter(now)) {
+        if (!isSuspensionOverAt(now)) {
             return false;
         }
-        this.status = emailVerifiedAt != null ? MemberStatus.ACTIVE : MemberStatus.UNVERIFIED;
+        endSuspension(now);
+        return true;
+    }
+
+    private void endSuspension(Instant now) {
+        this.status = isEmailVerified() ? MemberStatus.ACTIVE : MemberStatus.UNVERIFIED;
         this.suspendedUntil = null;
         this.updatedAt = now;
-        return true;
     }
 
     public void resyncSuspension(boolean permanent, Instant latestEnd, Instant now) {
         requireNow(now);
-        if (status == MemberStatus.WITHDRAWN) {
+        if (isWithdrawn()) {
             return;
         }
         if (permanent) {
@@ -187,9 +213,7 @@ public class Member {
         if (status != MemberStatus.SUSPENDED) {
             return;
         }
-        this.status = emailVerifiedAt != null ? MemberStatus.ACTIVE : MemberStatus.UNVERIFIED;
-        this.suspendedUntil = null;
-        this.updatedAt = now;
+        endSuspension(now);
     }
 
     public void changeNickname(String nickname, Instant now) {
@@ -199,13 +223,13 @@ public class Member {
         this.updatedAt = now;
     }
 
-    public void changeSelfAgeGroup(SelfAgeGroup selfAgeGroup, Instant now) {
+    public void changeSelfAgeGroup(AgeGroup selfAgeGroup, Instant now) {
         requireNow(now);
         this.selfAgeGroup = selfAgeGroup;
         this.updatedAt = now;
     }
 
-    public void changeSelfGender(SelfGender selfGender, Instant now) {
+    public void changeSelfGender(Gender selfGender, Instant now) {
         requireNow(now);
         this.selfGender = selfGender;
         this.updatedAt = now;

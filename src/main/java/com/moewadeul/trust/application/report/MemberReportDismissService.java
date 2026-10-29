@@ -4,7 +4,6 @@ import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.LockedMember;
 import com.moewadeul.member.application.MemberSuspensionService;
@@ -39,21 +38,15 @@ public class MemberReportDismissService {
 
     @Transactional
     public MemberReportStatusResult dismiss(long reportId, long adminId, String note) {
-        MemberReport report = memberReportRepository
-                .findByIdForUpdate(reportId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        MemberReport report =
+                memberReportRepository.findByIdForUpdate(reportId).orElseThrow(BusinessException::notFound);
         report.requireInReview();
         Instant now = clock.instant();
         LockedMember target = memberSuspensionService.lockForSanction(report.getTargetMemberId());
         Long liftedSanctionId = liftTemporarySuspensions(report, target, adminId, now);
         ReportStatus before = report.getStatus();
         report.dismiss(adminId, note, now);
-        outboxEventRecorder.record(
-                MemberReportEvents.RESOLVED_EVENT_TYPE,
-                MemberReportEvents.AGGREGATE_TYPE,
-                reportId,
-                new MemberReportEvents.ResolvedPayload(
-                        reportId, report.getReporterId(), ReportStatus.DISMISSED.name()));
+        outboxEventRecorder.recordAll(report.pullEvents());
         adminAuditRecorder.record(
                 adminId,
                 AdminAuditAction.REPORT_DISMISS,
@@ -65,7 +58,7 @@ public class MemberReportDismissService {
     }
 
     private Long liftTemporarySuspensions(MemberReport report, LockedMember target, long adminId, Instant now) {
-        List<Sanction> temporaries = sanctionRepository.findUnliftedTemporaryByReportId(report.getId());
+        List<Sanction> temporaries = sanctionRepository.findUnrevokedTemporaryByReportId(report.getId());
         if (temporaries.isEmpty()) {
             return null;
         }

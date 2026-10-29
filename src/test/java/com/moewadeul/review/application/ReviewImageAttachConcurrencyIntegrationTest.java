@@ -4,6 +4,7 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
@@ -64,7 +65,9 @@ class ReviewImageAttachConcurrencyIntegrationTest {
                         ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT),
                         MutableClock.DEFAULT_INSTANT))
                 .getId();
-        long imageId = uploadService.issue(memberId, "image/jpeg", 1000L).imageId();
+        long imageId = uploadService
+                .issue(memberId, new ImageUploadCommand("image/jpeg", 1000L, null))
+                .imageId();
         storage.markUploaded(
                 jdbc.queryForObject("SELECT object_key FROM review_image WHERE id = ?", String.class, imageId), 1000L);
         List<Callable<Object>> tasks = new ArrayList<>();

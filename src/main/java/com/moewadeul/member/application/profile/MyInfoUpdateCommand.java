@@ -1,6 +1,6 @@
 package com.moewadeul.member.application.profile;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.member.domain.Member;
 import java.util.Objects;
 

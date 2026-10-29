@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.community;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -12,21 +13,21 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.moderation.ModerationResult;
+import com.moewadeul.common.moderation.RecentReport;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.community.application.moderation.AdminCommunityAuthor;
 import com.moewadeul.community.application.moderation.AdminCommunityCommentSummary;
-import com.moewadeul.community.application.moderation.AdminCommunityPage;
 import com.moewadeul.community.application.moderation.AdminCommunityPostSummary;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
-import com.moewadeul.community.application.moderation.AdminCommunityReasonCounts;
-import com.moewadeul.community.application.moderation.AdminCommunityRecentReport;
-import com.moewadeul.community.application.moderation.CommunityModerationResult;
 import com.moewadeul.community.application.moderation.CommunityModerationService;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,11 +88,11 @@ class AdminCommunityControllerTest {
                 new AdminCommunityAuthor(4L, "작성자"),
                 "PENDING_REVIEW",
                 5L,
-                new AdminCommunityReasonCounts(2L, 1L, 0L, 0L, 1L, 1L),
-                List.of(new AdminCommunityRecentReport("MONEY_SCAM", "돈을 요구한다", AT)),
+                Map.of("SPAM", 2L, "ABUSE", 1L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 1L, "OTHER", 1L),
+                List.of(new RecentReport("MONEY_SCAM", "돈을 요구한다", AT)),
                 AT);
         when(queryService.listPosts(eq(null), anyInt(), anyInt()))
-                .thenReturn(new AdminCommunityPage<>(List.of(summary), 0, 20, true));
+                .thenReturn(new PageSlice<>(List.of(summary), 0, 20, true));
 
         // when
         MvcTestResult result = mvc.get().uri(BASE + "/posts").with(admin()).exchange();
@@ -124,11 +125,11 @@ class AdminCommunityControllerTest {
                 new AdminCommunityAuthor(4L, "작성자"),
                 "HIDDEN",
                 0L,
-                new AdminCommunityReasonCounts(0L, 0L, 0L, 0L, 0L, 0L),
+                Map.of("SPAM", 0L, "ABUSE", 0L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 0L, "OTHER", 0L),
                 List.of(),
                 AT);
         when(queryService.listComments(eq("HIDDEN"), anyInt(), anyInt()))
-                .thenReturn(new AdminCommunityPage<>(List.of(summary), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(summary), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get()
@@ -146,7 +147,7 @@ class AdminCommunityControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].author.nickname")
                 .isEqualTo("작성자");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(result, 0, 20, false);
     }
 
     @Test
@@ -182,10 +183,10 @@ class AdminCommunityControllerTest {
     @DisplayName("[F-29][CM-08] 글과 댓글 숨김·복구는 로그인한 관리자 ID로 서비스를 부르고 대상 ID와 상태를 응답한다")
     void hideAndRestoreReturnStatus() {
         // given
-        when(moderationService.hidePost(9L, ADMIN_ID)).thenReturn(new CommunityModerationResult(9L, "HIDDEN"));
-        when(moderationService.restorePost(9L, ADMIN_ID)).thenReturn(new CommunityModerationResult(9L, "ACTIVE"));
-        when(moderationService.hideComment(5L, ADMIN_ID)).thenReturn(new CommunityModerationResult(5L, "HIDDEN"));
-        when(moderationService.restoreComment(5L, ADMIN_ID)).thenReturn(new CommunityModerationResult(5L, "ACTIVE"));
+        when(moderationService.hidePost(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "HIDDEN"));
+        when(moderationService.restorePost(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "ACTIVE"));
+        when(moderationService.hideComment(5L, ADMIN_ID)).thenReturn(new ModerationResult(5L, "HIDDEN"));
+        when(moderationService.restoreComment(5L, ADMIN_ID)).thenReturn(new ModerationResult(5L, "ACTIVE"));
 
         // when
         MvcTestResult hidePost = post(admin(), BASE + "/posts/9/hide");

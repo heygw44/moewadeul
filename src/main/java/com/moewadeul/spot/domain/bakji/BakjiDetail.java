@@ -1,5 +1,7 @@
 package com.moewadeul.spot.domain.bakji;
 
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.SpotType;
 import jakarta.persistence.Column;
@@ -39,9 +41,11 @@ public class BakjiDetail {
     private String description;
 
     @Column(name = "has_water")
+    @Getter(AccessLevel.NONE)
     private boolean hasWater;
 
     @Column(name = "has_toilet")
+    @Getter(AccessLevel.NONE)
     private boolean hasToilet;
 
     @Enumerated(EnumType.STRING)
@@ -83,8 +87,18 @@ public class BakjiDetail {
         return new BakjiDetail(spot, reporterId, content, now);
     }
 
-    public boolean isReportedBy(long memberId) {
-        return reporterId == memberId;
+    public boolean hasWater() {
+        return hasWater;
+    }
+
+    public boolean hasToilet() {
+        return hasToilet;
+    }
+
+    public void requireReportedBy(long memberId) {
+        if (reporterId != memberId) {
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
+        }
     }
 
     public void changeDescription(String description, Instant now) {

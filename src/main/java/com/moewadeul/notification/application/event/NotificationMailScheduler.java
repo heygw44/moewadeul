@@ -1,6 +1,7 @@
 package com.moewadeul.notification.application.event;
 
-import java.time.Duration;
+import com.moewadeul.common.mail.MailProperties;
+import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -16,34 +17,34 @@ import org.springframework.stereotype.Component;
         matchIfMissing = true)
 class NotificationMailScheduler {
 
+    private static final String JOB_NAME = "notification-mail";
+
     private final NotificationMailer mailer;
+    private final ScheduledJobRunner jobRunner;
 
     NotificationMailScheduler(
             NotificationMailer mailer,
+            ScheduledJobRunner jobRunner,
             NotificationMailProperties properties,
-            @Value("${moewadeul.mail.send-timeout}") Duration sendTimeout,
+            MailProperties mailProperties,
             @Value("${spring.task.scheduling.pool.size:1}") int schedulingPoolSize) {
-        requireLeaseOutlastsBatch(properties, sendTimeout);
+        properties.requireLeaseOutlastsBatch(mailProperties.sendTimeout());
         requireSchedulerThreadNotShared(schedulingPoolSize);
         this.mailer = mailer;
+        this.jobRunner = jobRunner;
+        jobRunner.register(JOB_NAME);
     }
 
     @Scheduled(
             fixedDelayString =
                     "${moewadeul.notification.mail.poll-delay:" + NotificationMailProperties.DEFAULT_POLL_DELAY + "}")
     void send() {
-        int sent = mailer.sendDue();
-        if (sent > 0) {
-            log.debug("notification mails processed count={}", sent);
-        }
-    }
-
-    private static void requireLeaseOutlastsBatch(NotificationMailProperties properties, Duration sendTimeout) {
-        Duration worstBatch = sendTimeout.multipliedBy(properties.batchSize());
-        if (properties.lease().compareTo(worstBatch) <= 0) {
-            throw new IllegalStateException("moewadeul.notification.mail.lease(" + properties.lease()
-                    + ") must be longer than batchSize x moewadeul.mail.send-timeout(" + worstBatch + ")");
-        }
+        jobRunner.run(JOB_NAME, () -> {
+            int sent = mailer.sendDue();
+            if (sent > 0) {
+                log.debug("notification mails processed count={}", sent);
+            }
+        });
     }
 
     private static void requireSchedulerThreadNotShared(int schedulingPoolSize) {

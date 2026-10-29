@@ -13,24 +13,13 @@
                r.content AS content,
                r.status AS status,
                COALESCE(rc.report_count, 0) AS report_count,
-               COALESCE(rc.spam_count, 0) AS spam_count,
-               COALESCE(rc.abuse_count, 0) AS abuse_count,
-               COALESCE(rc.illegal_camping_count, 0) AS illegal_camping_count,
-               COALESCE(rc.privacy_count, 0) AS privacy_count,
-               COALESCE(rc.money_scam_count, 0) AS money_scam_count,
-               COALESCE(rc.other_count, 0) AS other_count,
                r.updated_at AS status_changed_at
         FROM memory r
         JOIN member m ON m.id = r.member_id
         LEFT JOIN (
             SELECT mr.memory_id AS memory_id,
                    COUNT(*) AS report_count,
-                   COUNT(CASE WHEN mr.reason = 'SPAM' THEN 1 END) AS spam_count,
-                   COUNT(CASE WHEN mr.reason = 'ABUSE' THEN 1 END) AS abuse_count,
-                   COUNT(CASE WHEN mr.reason = 'ILLEGAL_CAMPING' THEN 1 END) AS illegal_camping_count,
-                   COUNT(CASE WHEN mr.reason = 'PRIVACY' THEN 1 END) AS privacy_count,
-                   COUNT(CASE WHEN mr.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count,
-                   COUNT(CASE WHEN mr.reason = 'OTHER' THEN 1 END) AS other_count
+                   COUNT(CASE WHEN mr.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count
             FROM memory_report mr
             WHERE mr.reviewed_at IS NULL
             GROUP BY mr.memory_id
@@ -41,26 +30,20 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="selectRecentReportsOfNonEmpty" resultType="com.moewadeul.memory.infra.moderation.AdminMemoryRecentReportRow">
-        SELECT ranked.memory_id AS memory_id,
-               ranked.reason AS reason,
-               ranked.content AS content,
-               ranked.created_at AS created_at
-        FROM (
-            SELECT mr.memory_id AS memory_id,
-                   mr.reason AS reason,
-                   mr.content AS content,
-                   mr.created_at AS created_at,
-                   ROW_NUMBER() OVER (PARTITION BY mr.memory_id ORDER BY mr.created_at DESC, mr.id DESC) AS row_num
-            FROM memory_report mr
-            WHERE mr.reviewed_at IS NULL
-              AND mr.memory_id IN
-            <foreach collection="memoryIds" item="memoryId" open="(" separator="," close=")">
-                #{memoryId}
-            </foreach>
-        ) ranked
-        WHERE ranked.row_num &lt;= 5
-        ORDER BY ranked.memory_id ASC, ranked.row_num ASC
+    <select id="selectReasonCountsOfNonEmpty" resultType="com.moewadeul.common.moderation.ReportReasonCount">
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.reasonCounts">
+            <property name="reportTable" value="memory_report"/>
+            <property name="targetColumn" value="memory_id"/>
+            <property name="targetScope" value="com.moewadeul.common.moderation.ModerationReportSql.anyTarget"/>
+        </include>
+    </select>
+
+    <select id="selectRecentReportsOfNonEmpty" resultType="com.moewadeul.common.moderation.RecentReportRow">
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.recentReports">
+            <property name="reportTable" value="memory_report"/>
+            <property name="targetColumn" value="memory_id"/>
+            <property name="targetScope" value="com.moewadeul.common.moderation.ModerationReportSql.anyTarget"/>
+        </include>
     </select>
 
 </mapper>

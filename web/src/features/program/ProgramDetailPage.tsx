@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ApiError, newIdempotencyKey } from '../../api/client';
+import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
+import { createIdempotentRunner } from '../../api/idempotency';
 import {
   applyProgram,
   cancelApplication,
@@ -21,11 +22,12 @@ import { PageLayout } from '../../components/PageLayout';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
-import { buttonClassName } from '../../components/buttonClass';
+import { buttonClassName, SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
-import { useViewerEpoch } from '../member/useViewerEpoch';
+import { withNext } from '../../app/session/nextPath';
+import { useSession } from '../../app/session/session';
+import { useViewerEpoch } from '../../app/session/useViewerEpoch';
 import { countdownText, feeText, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { useApplyPhaseRefresh } from './useApplyPhaseRefresh';
 import { useNow } from './useNow';
@@ -33,7 +35,6 @@ import { useNow } from './useNow';
 type LoadResult = { programId: number; detail: ProgramDetail } | { programId: number; error: unknown };
 
 const LINK_BUTTON_CLASS = buttonClassName('primary');
-const SECONDARY_LINK_CLASS = buttonClassName('secondary');
 const BOARD_ROW_CLASS =
   'grid grid-cols-[6.5rem_minmax(0,1fr)] gap-3 px-4 py-2.5 text-[0.9375rem] sm:grid-cols-[8rem_minmax(0,1fr)] sm:px-5';
 
@@ -59,9 +60,7 @@ export function ProgramDetailPage({ programId }: { programId: number }) {
   const showSkeleton = useDelayedFlag(current === null);
   const loadedTitle = current !== null && 'detail' in current ? current.detail.title : null;
 
-  useEffect(() => {
-    document.title = loadedTitle ? `${loadedTitle} · 뫼와들` : '공식 행사 · 뫼와들';
-  }, [loadedTitle]);
+  useDocumentTitle(loadedTitle ? `${loadedTitle} · 뫼와들` : '공식 행사 · 뫼와들');
 
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
 
@@ -237,8 +236,6 @@ const FAIL_TITLES: Record<Exclude<Busy, null>, string> = {
   alert: '빈자리 알림을 바꾸지 못했어요',
 };
 
-type KeyRef = { current: { scope: number; key: string } | null };
-
 const HOUR_MS = 60 * 60 * 1000;
 const REFUND_BEFORE_START_HOURS = 72;
 
@@ -247,11 +244,11 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<{ kind: Exclude<Busy, null>; apiError: ApiError } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [soldOut, setSoldOut] = useState(false);
+  const [soldOutDetail, setSoldOutDetail] = useState<ProgramDetail | null>(null);
   const [alertOn, setAlertOn] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const applyKey: KeyRef = useRef(null);
-  const payKey: KeyRef = useRef(null);
+  const [applyRunner] = useState(createIdempotentRunner);
+  const [payRunner] = useState(createIdempotentRunner);
 
   const mine = detail.myApplication;
   const pending = mine?.status === 'PENDING_PAYMENT';
@@ -266,18 +263,17 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
     return () => window.clearInterval(timer);
   }, [payExpired, onChanged]);
 
-  async function run(kind: Exclude<Busy, null>, keyRef: KeyRef | null, call: () => Promise<void>): Promise<void> {
+  async function run(kind: Exclude<Busy, null>, call: () => Promise<void>): Promise<void> {
     if (busy !== null) return;
     setBusy(kind);
     setError(null);
     setNotice(null);
     try {
       await call();
-      if (keyRef) keyRef.current = null;
     } catch (caught) {
       const apiError = caught instanceof ApiError ? caught : new ApiError(0, 'INTERNAL_ERROR', null);
-      if (keyRef && apiError.code !== 'NETWORK_ERROR') keyRef.current = null;
-      if (apiError.code === 'PROGRAM_SOLD_OUT') setSoldOut(true);
+      if (apiError.code === 'PROGRAM_SOLD_OUT') setSoldOutDetail(detail);
+      if (apiError.code === 'PROGRAM_SEATS_AVAILABLE') setSoldOutDetail(null);
       setError({ kind, apiError });
       if (STALE_CODES.has(apiError.code)) onChanged();
     } finally {
@@ -285,24 +281,17 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
     }
   }
 
-  function keyFor(keyRef: KeyRef, scope: number): string {
-    if (keyRef.current === null || keyRef.current.scope !== scope) {
-      keyRef.current = { scope, key: newIdempotencyKey() };
-    }
-    return keyRef.current.key;
-  }
-
   const apply = () =>
-    run('apply', applyKey, async () => {
-      await applyProgram(detail.programId, keyFor(applyKey, detail.programId));
+    run('apply', async () => {
+      await applyRunner.run({ programId: detail.programId }, (key) => applyProgram(detail.programId, key));
       setNotice('신청했어요. 결제 기한 안에 결제해 주세요.');
       onChanged();
     });
 
   const pay = () => {
     if (!mine) return;
-    return run('pay', payKey, async () => {
-      await payApplication(mine.applicationId, keyFor(payKey, mine.applicationId));
+    return run('pay', async () => {
+      await payRunner.run({ applicationId: mine.applicationId }, (key) => payApplication(mine.applicationId, key));
       setNotice('결제를 마쳤어요. 신청이 확정됐어요.');
       onChanged();
     });
@@ -310,7 +299,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
   const cancel = async () => {
     if (!mine) return;
-    await run('cancel', null, async () => {
+    await run('cancel', async () => {
       const response = await cancelApplication(mine.applicationId);
       setNotice(response.refunded ? '신청을 취소하고 환불했어요.' : '신청을 취소했어요.');
       onChanged();
@@ -319,14 +308,14 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   };
 
   const subscribe = () =>
-    run('alert', null, async () => {
+    run('alert', async () => {
       await subscribeVacancyAlert(detail.programId);
       setAlertOn(true);
       setNotice('빈자리 알림을 신청했어요. 자리가 나면 알림이 가요.');
     });
 
   const unsubscribe = () =>
-    run('alert', null, async () => {
+    run('alert', async () => {
       await unsubscribeVacancyAlert(detail.programId);
       setAlertOn(false);
       setNotice('빈자리 알림을 껐어요.');
@@ -336,7 +325,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
 
   const authenticated = session.status === 'authenticated';
   const active = pending || confirmed;
-  const noSeats = detail.remainingSeats === 0 || soldOut;
+  const noSeats = detail.remainingSeats === 0 || soldOutDetail === detail;
   const canAlert = authenticated && !active && detail.status === 'OPEN' && (noSeats || alertOn);
   const refundDeadlineMs = Date.parse(detail.startAt) - REFUND_BEFORE_START_HOURS * HOUR_MS;
   const refundClosed = now > refundDeadlineMs;
@@ -481,6 +470,7 @@ const STALE_CODES = new Set([
   'PROGRAM_INVALID_STATE',
   'PROGRAM_NOT_IN_APPLY_PERIOD',
   'PROGRAM_PAYMENT_EXPIRED',
+  'PROGRAM_SEATS_AVAILABLE',
 ]);
 
 function ClosedApplyButton({ detail }: { detail: ProgramDetail }) {

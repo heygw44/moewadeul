@@ -1,5 +1,7 @@
 package com.moewadeul.publicdata.application.gocamping;
 
+import com.moewadeul.common.transaction.OutsideTransaction;
+import com.moewadeul.publicdata.application.SyncJob;
 import com.moewadeul.publicdata.application.SyncJobRunService;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
 import com.moewadeul.publicdata.domain.SyncJobType;
@@ -11,6 +13,7 @@ import com.moewadeul.spot.application.publicspot.PublicSpotCommand;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
 import com.moewadeul.spot.application.publicspot.PublicSpotSyncService;
 import com.moewadeul.spot.application.publicspot.PublicSpotUpsertResult;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,7 +25,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class GoCampingSyncService {
+public class GoCampingSyncService implements SyncJob<GoCampingSyncResult> {
 
     private static final PublicSpotUpsertResult NOTHING_UPSERTED = new PublicSpotUpsertResult(0, 0, 0, 0);
 
@@ -38,7 +41,19 @@ public class GoCampingSyncService {
                 .map(this::run);
     }
 
+    @Override
+    public SyncJobType type() {
+        return SyncJobType.GOCAMPING;
+    }
+
+    @Override
+    public Duration staleAfter() {
+        return syncProperties.staleAfter();
+    }
+
+    @Override
     public GoCampingSyncResult run(SyncJobStart start) {
+        OutsideTransaction.require("고캠핑 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         long runId = start.runId();
         try {
             int firstPage = firstPage(start.resumeCursor());

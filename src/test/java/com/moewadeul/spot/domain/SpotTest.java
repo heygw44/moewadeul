@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.moderation.ModerationTransition;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Duration;
 import java.time.Instant;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -155,14 +157,63 @@ class SpotTest {
     }
 
     @Test
-    @DisplayName("[F-08] ACTIVE 박지를 검토 대기로 바꾸면 상태가 PENDING_REVIEW가 되고 수정 시각을 갱신하며 ACTIVE 박지가 아니게 된다")
-    void markPendingReviewChangesActiveBakji() {
+    @DisplayName("[F-07] 숨겼거나 검토 대기인 박지는 삭제, 이름 변경, 이동이 SPOT_INVALID_STATE로 거부되고 아무것도 바뀌지 않는다")
+    void editAndDeleteRejectNonActiveSpot() {
+        // given
+        Spot hidden = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
+        hidden.hide(NOW);
+        Spot pending = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW);
+        GeoPoint busan = new GeoPoint(35.1796, 129.0756);
+        Instant later = NOW.plusSeconds(60);
+
+        // when & then
+        for (Spot spot : new Spot[] {hidden, pending}) {
+            SpotStatus before = spot.getStatus();
+            assertSpotInvalidState(() -> spot.delete(later));
+            assertSpotInvalidState(() -> spot.rename("계곡 옆 평지", later));
+            assertSpotInvalidState(() -> spot.moveTo(busan, ParkAreaJudgement.outside(later), later));
+            assertThat(spot.getStatus()).isEqualTo(before);
+            assertThat(spot.getName()).isEqualTo("능선 끝 평지");
+            assertThat(spot.getLocation()).isEqualTo(SEOUL_CITY_HALL);
+            assertThat(spot.getUpdatedAt()).isEqualTo(NOW);
+        }
+    }
+
+    @Test
+    @DisplayName("[F-07] 이미 삭제한 박지는 다시 삭제해도 그대로이지만 이름 변경과 이동은 SPOT_INVALID_STATE로 거부한다")
+    void deletedSpotIgnoresDeleteButRejectsEdits() {
+        // given
+        Spot spot = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
+        spot.delete(NOW.plusSeconds(1));
+        Instant later = NOW.plusSeconds(60);
+
+        // when
+        spot.delete(later);
+
+        // then
+        assertThat(spot.getStatus()).isEqualTo(SpotStatus.DELETED);
+        assertThat(spot.getUpdatedAt()).isEqualTo(NOW.plusSeconds(1));
+        assertSpotInvalidState(() -> spot.rename("계곡 옆 평지", later));
+        assertSpotInvalidState(() -> spot.moveTo(SEOUL_CITY_HALL, ParkAreaJudgement.outside(later), later));
+    }
+
+    @Test
+    @DisplayName("[F-08] ACTIVE 박지는 검토 전 신고가 4건이면 그대로이고, 5건이 되면 PENDING_REVIEW가 되어 수정 시각을 갱신하며 ACTIVE 박지가 아니게 된다")
+    void receiveReportMovesActiveBakjiToPendingReviewAtFive() {
         // given
         Spot spot = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
         Instant reviewedAt = NOW.plusSeconds(10);
 
         // when
-        spot.markPendingReview(reviewedAt);
+        spot.receiveReport(4, NOW.plusSeconds(5));
+
+        // then
+        assertThat(spot.isActiveBakji()).isTrue();
+        assertThat(spot.getUpdatedAt()).isEqualTo(NOW);
+
+        // when
+        spot.receiveReport(5, reviewedAt);
 
         // then
         assertThat(spot.getStatus()).isEqualTo(SpotStatus.PENDING_REVIEW);
@@ -171,14 +222,14 @@ class SpotTest {
     }
 
     @Test
-    @DisplayName("[F-08] ACTIVE가 아닌 박지를 검토 대기로 바꾸면 IllegalStateException을 던지고 상태는 그대로다")
-    void markPendingReviewRejectsNonActiveSpot() {
+    @DisplayName("[F-08] ACTIVE가 아닌 박지의 검토 전 신고가 5건이 되면 IllegalStateException을 던지고 상태는 그대로다")
+    void receiveReportRejectsNonActiveSpot() {
         // given
         Spot spot = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
         spot.delete(NOW.plusSeconds(1));
 
         // when & then
-        assertThatThrownBy(() -> spot.markPendingReview(NOW.plusSeconds(2))).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> spot.receiveReport(5, NOW.plusSeconds(2))).isInstanceOf(IllegalStateException.class);
         assertThat(spot.getStatus()).isEqualTo(SpotStatus.DELETED);
     }
 
@@ -188,7 +239,7 @@ class SpotTest {
         // given
         Spot active = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
         Spot pending = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
-        pending.markPendingReview(NOW.plusSeconds(1));
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW.plusSeconds(1));
         Instant hiddenAt = NOW.plusSeconds(10);
 
         // when
@@ -228,7 +279,7 @@ class SpotTest {
     void restoreChangesPendingReviewAndHiddenToActive() {
         // given
         Spot pending = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
-        pending.markPendingReview(NOW.plusSeconds(1));
+        pending.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW.plusSeconds(1));
         Spot hidden = Spot.bakji("능선 끝 평지", SEOUL_CITY_HALL, ParkAreaJudgement.outside(NOW), NOW);
         hidden.hide(NOW.plusSeconds(1));
         Instant restoredAt = NOW.plusSeconds(10);
@@ -262,5 +313,12 @@ class SpotTest {
             assertThat(spot.getStatus()).isEqualTo(before);
             assertThat(spot.getUpdatedAt()).isEqualTo(NOW);
         }
+    }
+
+    private static void assertSpotInvalidState(ThrowingCallable action) {
+        assertThatThrownBy(action)
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(SpotErrorCode.SPOT_INVALID_STATE));
     }
 }

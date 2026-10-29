@@ -10,6 +10,7 @@ import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { PasswordField } from '../../components/PasswordField';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
 import {
   emailRequiredMessage,
@@ -17,8 +18,8 @@ import {
   PASSWORD_CONFIRM_MISMATCH,
   PASSWORD_CONFIRM_REQUIRED,
 } from './requiredMessages';
-import { useSession } from './session';
-import { useRetryCountdown } from './useRetryCountdown';
+import { useSession } from '../../app/session/session';
+import { useRetryCountdown } from '../../components/useRetryCountdown';
 
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
@@ -38,9 +39,7 @@ export function PasswordResetPage() {
     if (fromHash !== null) setToken(fromHash);
   }
 
-  useEffect(() => {
-    document.title = '비밀번호 재설정 · 뫼와들';
-  }, []);
+  useDocumentTitle('비밀번호 재설정 · 뫼와들');
 
   useEffect(() => {
     if (hash !== '') navigate(pathname, { replace: true });
@@ -175,7 +174,7 @@ function ConfirmStep({ token, onTokenInvalid }: { token: string; onTokenInvalid:
       setNewPassword('');
       setNewPasswordConfirm('');
       setDone(true);
-      void session.refresh();
+      void session.refresh().catch(() => null);
     } catch (error) {
       handleError(error);
     } finally {

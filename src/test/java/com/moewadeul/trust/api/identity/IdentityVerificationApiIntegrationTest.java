@@ -1,19 +1,18 @@
 package com.moewadeul.trust.api.identity;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.trust.application.identity.CiHasher;
+import com.moewadeul.trust.application.identity.IdentityProvider;
 import com.moewadeul.trust.domain.identity.CiHash;
-import com.moewadeul.trust.domain.identity.CiHasher;
-import com.moewadeul.trust.domain.identity.Gender;
 import com.moewadeul.trust.domain.identity.IdentityClaim;
-import com.moewadeul.trust.domain.identity.IdentityProvider;
 import jakarta.servlet.http.Cookie;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +22,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -40,16 +38,13 @@ class IdentityVerificationApiIntegrationTest {
     private static final int MINOR_BIRTH_YEAR = 2008;
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -64,7 +59,7 @@ class IdentityVerificationApiIntegrationTest {
     @DisplayName("[F-11][ID-01][ID-02] 본인확인하면 200 {true, true, 1}이고, DB에는 출생연도·성별·CI 해시만 저장되고 CI 원값과 식별 문자열은 없다")
     void storesOnlyMinimalData() {
         // given
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
 
         // when
@@ -94,7 +89,7 @@ class IdentityVerificationApiIntegrationTest {
     @Test
     @DisplayName("[ID-01] 이미 본인확인한 회원이 다시 요청하면 409 IDENTITY_ALREADY_VERIFIED이고 기록은 하나다")
     void secondRequestIsConflict() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
         verify(session, ADULT_BIRTH_YEAR, "FEMALE", "demo-person-1");
 
@@ -108,9 +103,9 @@ class IdentityVerificationApiIntegrationTest {
     @Test
     @DisplayName("[ID-04] 다른 회원이 같은 시연용 식별 문자열로 본인확인하면 409 IDENTITY_CI_DUPLICATED이고, 다른 문자열이면 성공한다")
     void sameKeyFromAnotherMemberIsConflict() {
-        Cookie first = verifiedSession(saveMember());
-        Cookie second = verifiedSession(saveMember());
-        Cookie third = verifiedSession(saveMember());
+        Cookie first = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie second = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie third = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         verify(first, ADULT_BIRTH_YEAR, "FEMALE", "demo-person-1");
 
         MvcTestResult duplicated = verify(second, ADULT_BIRTH_YEAR, "FEMALE", "demo-person-1");
@@ -125,7 +120,7 @@ class IdentityVerificationApiIntegrationTest {
     @Test
     @DisplayName("[ID-03] 올해에서 18을 뺀 해에 태어난 회원은 200 {true, false, 0}이고 기록은 저장된다")
     void minorIsVerifiedButNotAdult() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie session = verifiedSession(member);
 
         MvcTestResult result = verify(session, MINOR_BIRTH_YEAR, "MALE", "demo-minor");
@@ -140,7 +135,7 @@ class IdentityVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-11] 출생연도가 범위를 벗어나거나 필드가 빠지면 400 INVALID_INPUT이고 저장하지 않는다")
     void invalidInputIsRejected() {
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult tooOld = verify(session, 1899, "FEMALE", "demo-1");
         MvcTestResult future = verify(session, 2027, "FEMALE", "demo-1");
@@ -157,7 +152,7 @@ class IdentityVerificationApiIntegrationTest {
     @Test
     @DisplayName("[TR-03] 이메일 인증 전인 회원은 403 MEMBER_NOT_VERIFIED이고 저장하지 않는다")
     void emailUnverifiedMemberIsForbidden() {
-        Cookie session = login(saveMember());
+        Cookie session = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult result = verify(session, ADULT_BIRTH_YEAR, "FEMALE", "demo-1");
 
@@ -169,7 +164,7 @@ class IdentityVerificationApiIntegrationTest {
     @Test
     @DisplayName("[F-11] 본인확인한 뒤 GET /api/me가 identityVerified와 trustLevel을 반영한다")
     void meReflectsVerification() throws Exception {
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         verify(session, ADULT_BIRTH_YEAR, "FEMALE", "demo-1");
 
         MvcTestResult me = mvc.get().uri("/api/me").cookie(session).exchange();
@@ -203,13 +198,6 @@ class IdentityVerificationApiIntegrationTest {
                 .exchange();
     }
 
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(VALID_PASSWORD))
-                .build());
-    }
-
     private Cookie login(Member member) {
         MvcTestResult result = mvc.post()
                 .uri("/api/auth/login")
@@ -225,7 +213,7 @@ class IdentityVerificationApiIntegrationTest {
 
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
-        String code = emailVerificationService
+        String code = emailVerificationIssuer
                 .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();

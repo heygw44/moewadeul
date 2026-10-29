@@ -1,5 +1,6 @@
 package com.moewadeul.community.infra.like;
 
+import com.moewadeul.community.domain.post.CommunityPostStatus;
 import java.time.Instant;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -12,7 +13,7 @@ public interface CommunityPostLikeMapper {
 
     void delete(@Param("postId") long postId, @Param("memberId") long memberId);
 
-    String lockPostStatus(@Param("postId") long postId);
+    CommunityPostStatus lockPostStatus(@Param("postId") long postId);
 
     void refreshLikeCount(@Param("postId") long postId);
 

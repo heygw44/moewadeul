@@ -1,5 +1,6 @@
 package com.moewadeul.memory.application;
 
+import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.memory.domain.MemoryDetails;
 import com.moewadeul.memory.domain.MemoryVisibility;
@@ -20,13 +21,10 @@ public record MemoryWriteCommand(
         imageIds = imageIds == null ? List.of() : List.copyOf(imageIds);
     }
 
-    MemoryDetails toDetails(LocalDate today) {
+    MemoryDetails toDetails() {
         requireCoordinates();
         if (visitedDate == null) {
             throw invalid("visitedDate", "방문일을 입력해 주세요.");
-        }
-        if (visitedDate.isAfter(today)) {
-            throw invalid("visitedDate", "방문일은 오늘(한국 날짜)보다 뒤일 수 없어요.");
         }
         if (nights == null || !MemoryDetails.isValidNights(nights)) {
             throw invalid("nights", "박 수는 " + MemoryDetails.MIN_NIGHTS + "~" + MemoryDetails.MAX_NIGHTS + "이어야 해요.");
@@ -50,7 +48,7 @@ public record MemoryWriteCommand(
         if (visibility == null) {
             return MemoryVisibility.PRIVATE;
         }
-        return MemoryVisibility.from(visibility)
+        return EnumParser.find(MemoryVisibility.class, visibility)
                 .orElseThrow(() -> invalid("visibility", "공개 범위는 PRIVATE나 PUBLIC이어야 해요."));
     }
 

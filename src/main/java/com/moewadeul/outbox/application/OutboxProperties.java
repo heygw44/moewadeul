@@ -1,5 +1,6 @@
 package com.moewadeul.outbox.application;
 
+import com.moewadeul.common.retry.RetryPolicy;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -18,14 +19,12 @@ public record OutboxProperties(
 
     public OutboxProperties {
         requirePositive(batchSize, "batchSize");
-        requirePositive(maxAttempts, "maxAttempts");
         requirePositive(pollDelay, "pollDelay");
-        requirePositive(lease, "lease");
-        requirePositive(retryDelay, "retryDelay");
-        requirePositive(retryMaxDelay, "retryMaxDelay");
-        if (retryMaxDelay.compareTo(retryDelay) < 0) {
-            throw new IllegalArgumentException("moewadeul.outbox.retryMaxDelay must not be shorter than retryDelay");
-        }
+        RetryPolicy.requireValid("moewadeul.outbox", lease, retryDelay, retryMaxDelay, maxAttempts);
+    }
+
+    public RetryPolicy retryPolicy() {
+        return new RetryPolicy(lease, retryDelay, retryMaxDelay, maxAttempts);
     }
 
     private static void requirePositive(int value, String name) {

@@ -37,6 +37,12 @@ class EmailVerificationServiceIntegrationTest {
     private EmailVerificationService emailVerificationService;
 
     @Autowired
+    private EmailVerificationIssuer emailVerificationIssuer;
+
+    @Autowired
+    private EmailVerificationApplier emailVerificationApplier;
+
+    @Autowired
     private MemberJpaRepository memberRepository;
 
     @Autowired
@@ -97,9 +103,9 @@ class EmailVerificationServiceIntegrationTest {
         long rowsBefore = countVerificationRows();
 
         // when & then
-        assertThat(emailVerificationService.issueFor(activeMember.getId(), IP, TestSequence.next()))
+        assertThat(emailVerificationIssuer.issueFor(activeMember.getId(), IP, TestSequence.next()))
                 .isEmpty();
-        assertThat(emailVerificationService.issueFor(Long.MAX_VALUE, IP, TestSequence.next()))
+        assertThat(emailVerificationIssuer.issueFor(Long.MAX_VALUE, IP, TestSequence.next()))
                 .isEmpty();
         assertThat(countVerificationRows()).isEqualTo(rowsBefore);
     }
@@ -141,6 +147,27 @@ class EmailVerificationServiceIntegrationTest {
         assertThatThrownBy(() -> emailVerificationService.verify(member.getId(), wrongCodeFor(code)))
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_CODE_EXPIRED);
         assertThat(latestAttemptCount(member)).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-01] 활성화 시점에 코드가 이미 만료됐으면 인증 처리하지 않고 회원도 UNVERIFIED로 남는다")
+    void activationDoesNotMarkExpiredCodeVerified() {
+        // given
+        Member member = newMember();
+        issue(member);
+        long verificationId = jdbc.queryForObject(
+                "SELECT id FROM email_verification WHERE member_id = ?", Long.class, member.getId());
+        clock.advance(Duration.ofMinutes(10));
+
+        // when & then
+        assertThatThrownBy(() -> emailVerificationApplier.activate(verificationId, member.getId(), clock.instant()))
+                .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_ALREADY_VERIFIED);
+        assertThat(jdbc.queryForObject(
+                        "SELECT verified_at IS NULL FROM email_verification WHERE id = ?",
+                        Boolean.class,
+                        verificationId))
+                .isTrue();
+        assertThat(statusOf(member)).isEqualTo("UNVERIFIED");
     }
 
     @Test
@@ -407,13 +434,14 @@ class EmailVerificationServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01][EV-03] 같은 발송 요청 이벤트로 코드를 다시 발급하면 행은 하나이고, 새 코드만 유효하며 시도 횟수와 만료는 새 코드 기준이다")
-    void reissueForSameEventReplacesCodeInSameRow() {
+    @DisplayName(
+            "[F-01][EV-02][EV-03] 같은 발송 요청 이벤트로 코드를 다시 발급하면 행은 하나이고 같은 코드를 다시 주며, 틀린 횟수는 이어서 세고 만료는 다시 발급한 시각부터 센다")
+    void reissueForSameEventKeepsSameCodeInSameRow() {
         // given
         Member member = newMember();
         long eventId = TestSequence.next();
         Instant firstIssuedAt = clock.instant();
-        String firstCode = emailVerificationService
+        String firstCode = emailVerificationIssuer
                 .issueFor(member.getId(), IP, eventId)
                 .orElseThrow()
                 .code();
@@ -422,19 +450,20 @@ class EmailVerificationServiceIntegrationTest {
         clock.advance(Duration.ofMinutes(5));
 
         // when
-        String secondCode = emailVerificationService
+        String secondCode = emailVerificationIssuer
                 .issueFor(member.getId(), IP, eventId)
                 .orElseThrow()
                 .code();
 
         // then
         assertThat(countVerificationRows()).isEqualTo(1);
-        assertThat(latestAttemptCount(member)).isZero();
+        assertThat(latestAttemptCount(member)).isEqualTo(1);
         assertThat(queryInstant("SELECT expires_at FROM email_verification WHERE member_id = ?", member.getId()))
                 .isEqualTo(clock.instant().plus(Duration.ofMinutes(10)));
         assertThat(queryInstant("SELECT created_at FROM email_verification WHERE member_id = ?", member.getId()))
                 .isEqualTo(firstIssuedAt);
-        assertThat(emailVerificationService.verify(member.getId(), secondCode).status())
+        assertThat(secondCode).isEqualTo(firstCode);
+        assertThat(emailVerificationService.verify(member.getId(), firstCode).status())
                 .isEqualTo(MemberStatus.ACTIVE);
     }
 
@@ -464,7 +493,7 @@ class EmailVerificationServiceIntegrationTest {
         }
         Member requester = newMember();
         emailVerificationService.requestResend(requester.getId(), IP);
-        emailVerificationService.issueFor(requester.getId(), IP, eventIdOf(requester));
+        emailVerificationIssuer.issueFor(requester.getId(), IP, eventIdOf(requester));
         Member another = newMember();
 
         // when
@@ -519,7 +548,7 @@ class EmailVerificationServiceIntegrationTest {
     }
 
     private String issue(Member member) {
-        return emailVerificationService
+        return emailVerificationIssuer
                 .issueFor(member.getId(), IP, TestSequence.next())
                 .orElseThrow(() -> new AssertionError("미인증 회원인데 코드를 발급하지 않았습니다."))
                 .code();

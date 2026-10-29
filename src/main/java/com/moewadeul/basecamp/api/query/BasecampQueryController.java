@@ -4,6 +4,7 @@ import com.moewadeul.basecamp.application.query.BasecampDetailQueryService;
 import com.moewadeul.basecamp.application.query.BasecampSearchService;
 import com.moewadeul.basecamp.application.query.MyBasecampListService;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,11 +41,12 @@ class BasecampQueryController {
                     + "지역이 없거나 두 묶음을 모두 보냈거나 일부만 보냈을 때, 값이 범위를 벗어났을 때, 반경이 50을 넘을 때, "
                     + "fromDate가 toDate보다 늦을 때, 날짜 형식이 틀렸을 때는 400 INVALID_INPUT으로 응답한다.")
     @GetMapping("/api/basecamps")
-    BasecampSearchPageResponse search(
+    PageResponse<BasecampSearchItemResponse> search(
             @AuthenticationPrincipal LoginMember loginMember,
             @Valid @ParameterObject @ModelAttribute BasecampSearchRequest request) {
         Long viewerId = loginMember == null ? null : loginMember.memberId();
-        return BasecampSearchPageResponse.from(basecampSearchService.search(viewerId, request.toQuery()));
+        return PageResponse.from(
+                basecampSearchService.search(viewerId, request.toQuery()), BasecampSearchItemResponse::from);
     }
 
     @Operation(
@@ -61,10 +63,11 @@ class BasecampQueryController {
                             + "status, myRelation(LEADER, MEMBER, APPLICANT 중 하나)이 있다. "
                             + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, relation이나 status가 허용 값이 아니거나 page·size가 범위를 벗어나면 400 INVALID_INPUT이다.")
     @GetMapping("/api/me/basecamps")
-    MyBasecampPageResponse listMine(
+    PageResponse<MyBasecampResponse> listMine(
             @AuthenticationPrincipal LoginMember loginMember,
             @Valid @ParameterObject @ModelAttribute MyBasecampListRequest request) {
-        return MyBasecampPageResponse.from(myBasecampListService.list(loginMember.memberId(), request.toQuery()));
+        return PageResponse.from(
+                myBasecampListService.list(loginMember.memberId(), request.toQuery()), MyBasecampResponse::from);
     }
 
     @Operation(

@@ -1,8 +1,11 @@
 package com.moewadeul.review.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,14 +36,41 @@ class SpotReviewTest {
     }
 
     @Test
-    @DisplayName("[F-10] 작성자 ID가 같을 때만 isWrittenBy가 true다")
-    void isWrittenByComparesAuthorId() {
+    @DisplayName("[F-10] 방문일이 오늘(한국 날짜)이면 후기를 쓸 수 있고, 내일이면 INVALID_INPUT으로 거부한다")
+    void writeRejectsFutureVisitedDate() {
+        LocalDate today = LocalDate.of(2026, 10, 5);
+
+        assertThat(SpotReview.write(11L, 7L, today, 4, "좋다", NOW).getVisitedDate())
+                .isEqualTo(today);
+        assertThatThrownBy(() -> SpotReview.write(11L, 7L, today.plusDays(1), 4, "좋다", NOW))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT));
+    }
+
+    @Test
+    @DisplayName("[F-10] 방문일의 기준은 UTC가 아니라 한국 날짜라서, 한국에서 이미 다음 날인 시각에는 그 날짜까지 받는다")
+    void futureCheckUsesKoreaDate() {
+        Instant lateUtc = Instant.parse("2026-10-05T15:30:00Z");
+
+        assertThat(SpotReview.write(11L, 7L, LocalDate.of(2026, 10, 6), 4, "좋다", lateUtc))
+                .isNotNull();
+        assertThatThrownBy(() -> SpotReview.write(11L, 7L, LocalDate.of(2026, 10, 7), 4, "좋다", lateUtc))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("[F-10] 작성자가 아니면 requireWrittenBy가 ACCESS_DENIED다")
+    void requireWrittenByRejectsOthers() {
         // given
         SpotReview review = SpotReview.write(11L, 7L, VISITED, 4, "좋다", NOW);
 
         // then
-        assertThat(review.isWrittenBy(7L)).isTrue();
-        assertThat(review.isWrittenBy(8L)).isFalse();
+        assertThatCode(() -> review.requireWrittenBy(7L)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> review.requireWrittenBy(8L))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
     @Test

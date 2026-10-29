@@ -1,13 +1,13 @@
 package com.moewadeul.memory.application;
 
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
 class WithdrawalMemoryCleanupHandler implements OutboxEventHandler {
-
-    static final String EVENT_TYPE = "WITHDRAWAL_MEMORY_CLEANUP";
 
     private final MemoryWithdrawalCleanupService cleanupService;
 
@@ -16,8 +16,8 @@ class WithdrawalMemoryCleanupHandler implements OutboxEventHandler {
     }
 
     @Override
-    public String eventType() {
-        return EVENT_TYPE;
+    public Set<String> eventTypes() {
+        return Set.of(TrustEvents.WITHDRAWAL_MEMORY_CLEANUP);
     }
 
     @Override

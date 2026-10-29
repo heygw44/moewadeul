@@ -1,6 +1,6 @@
 package com.moewadeul.admin.api.program;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.program.application.catalog.ProgramLimits;
 import com.moewadeul.program.application.catalog.ProgramReviseCommand;
 import io.swagger.v3.oas.annotations.media.Schema;

@@ -4,8 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.common.web.PatchField;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
@@ -133,7 +134,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.revise(revision().capacity(19).build(), afterOpen, false))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE));
         assertThat(program.getCapacity()).isEqualTo(20);
     }
@@ -165,7 +166,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.revise(postponeAndShrink, afterOpen, false))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE));
     }
 
@@ -176,7 +177,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.revise(revision().capacity(19).build(), NOW, true))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE));
         assertThat(program.getCapacity()).isEqualTo(20);
         program.revise(revision().capacity(21).build(), NOW, true);
@@ -244,7 +245,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.revise(revision().title("새 제목").build(), NOW, false))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
     }
 
@@ -258,7 +259,7 @@ class ProgramTest {
         assertThat(program.getStatus()).isEqualTo(ProgramStatus.CANCELED);
         assertThatThrownBy(() -> program.cancel(NOW))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
     }
 
@@ -288,7 +289,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.requireApplicableAt(open.minusNanos(1000)))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD));
         assertThatCode(() -> program.requireApplicableAt(open)).doesNotThrowAnyException();
         assertThatCode(() -> program.requireApplicableAt(close.minusNanos(1000)))
@@ -302,7 +303,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.requireApplicableAt(program.getApplyCloseAt()))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD));
     }
 
@@ -314,7 +315,56 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.requireApplicableAt(program.getApplyOpenAt()))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 빈자리 알림은 취소되거나 신청이 마감된 행사에는 받지 않고, 신청 시작 전과 모집 중에는 받는다")
+    void takesVacancyAlertsUntilCanceledOrClosed() {
+        Program program = create(details());
+        Instant open = program.getApplyOpenAt();
+        Instant close = program.getApplyCloseAt();
+
+        assertThat(program.takesVacancyAlertsAt(open.minusNanos(1000))).isTrue();
+        assertThat(program.takesVacancyAlertsAt(open)).isTrue();
+        assertThat(program.takesVacancyAlertsAt(close.minusNanos(1000))).isTrue();
+        assertThat(program.takesVacancyAlertsAt(close)).isFalse();
+
+        program.cancel(NOW);
+
+        assertThat(program.takesVacancyAlertsAt(open)).isFalse();
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 자리 보유 수가 정원 이상일 때만 빈자리 알림을 받고, 모자라면 PROGRAM_SEATS_AVAILABLE이다")
+    void vacancyAlertRequiresFullSeats() {
+        Program program = create(details());
+        Instant open = program.getApplyOpenAt();
+
+        assertThatCode(() -> program.requireVacancyAlertAcceptableAt(open, 20)).doesNotThrowAnyException();
+        assertThatCode(() -> program.requireVacancyAlertAcceptableAt(open, 21)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> program.requireVacancyAlertAcceptableAt(open, 19))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_SEATS_AVAILABLE));
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 취소되거나 마감된 행사는 자리가 남았어도 PROGRAM_INVALID_STATE가 먼저다")
+    void vacancyAlertInvalidStateComesBeforeSeatsAvailable() {
+        Program program = create(details());
+
+        assertThatThrownBy(() -> program.requireVacancyAlertAcceptableAt(program.getApplyCloseAt(), 0))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
+
+        program.cancel(NOW);
+
+        assertThatThrownBy(() -> program.requireVacancyAlertAcceptableAt(program.getApplyOpenAt(), 0))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
     }
 
@@ -324,34 +374,6 @@ class ProgramTest {
         Program program = create(detail("제목", "설명", "장소", 20, 30000, 45));
 
         assertThat(program.paymentDueAt(NOW)).isEqualTo(NOW.plus(Duration.ofMinutes(45)));
-    }
-
-    @Test
-    @DisplayName("[F-18][PG-02] 숙박 행사는 신뢰 단계 1 이상만, 숙박 없는 행사는 단계 0도 신청할 수 있다")
-    void overnightRequiresTrustLevelOne() {
-        Program overnight = create(details());
-        Program dayTrip = create(withOvernight(false));
-
-        assertThat(overnight.isTrustLevelSufficient(0)).isFalse();
-        assertThat(overnight.isTrustLevelSufficient(1)).isTrue();
-        assertThat(dayTrip.isTrustLevelSufficient(0)).isTrue();
-    }
-
-    private static ProgramDetails withOvernight(boolean overnight) {
-        ProgramDetails base = details();
-        return new ProgramDetails(
-                base.title(),
-                base.description(),
-                base.spotId(),
-                base.locationText(),
-                base.startAt(),
-                base.endAt(),
-                base.capacity(),
-                base.fee(),
-                base.applyOpenAt(),
-                base.applyCloseAt(),
-                base.paymentDeadlineMinutes(),
-                overnight);
     }
 
     private static Program create(ProgramDetails details) {

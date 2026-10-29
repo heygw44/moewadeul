@@ -1,14 +1,12 @@
 package com.moewadeul.member.api.password;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +17,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -35,13 +32,10 @@ class PasswordChangeApiIntegrationTest {
     private static final String LOGIN_REQUIRED_PATH = "/api/me";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -52,7 +46,7 @@ class PasswordChangeApiIntegrationTest {
     @Test
     @DisplayName("[F-32][PW-07] 이메일 인증 전인 회원이 바꾸면 204이고, 예전 비밀번호는 401 LOGIN_FAILED, 새 비밀번호는 200이다")
     void changesPassword() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie session = login(member);
 
         MvcTestResult result = change(session, OLD_PASSWORD, NEW_PASSWORD);
@@ -67,8 +61,8 @@ class PasswordChangeApiIntegrationTest {
     @Test
     @DisplayName("[F-32][PW-07] 바꾸면 같은 회원의 다른 세션은 401이 되고, 요청한 세션은 새 ID로 유지되며 다른 회원의 세션은 그대로다")
     void keepsOnlyTheRequestingSessionWithNewId() {
-        Member member = saveMember();
-        Member other = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Member other = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie current = login(member);
         Cookie another = login(member);
         Cookie otherSession = login(other);
@@ -91,7 +85,7 @@ class PasswordChangeApiIntegrationTest {
     @Test
     @DisplayName("[F-32][PW-07] 현재 비밀번호가 틀리면 400 MEMBER_CURRENT_PASSWORD_MISMATCH이고, 실패 기록이 남고 비밀번호와 세션은 그대로다")
     void wrongCurrentPasswordIsRecordedAsFailure() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie current = login(member);
         Cookie another = login(member);
 
@@ -109,7 +103,7 @@ class PasswordChangeApiIntegrationTest {
     @DisplayName(
             "[F-32][PW-01][PW-07] 새 비밀번호가 규칙을 어기면 400 MEMBER_PASSWORD_POLICY, 현재와 같으면 400 MEMBER_PASSWORD_UNCHANGED이고 실패로 세지 않는다")
     void rejectsInvalidNewPasswordWithoutCountingFailure() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie session = login(member);
 
         MvcTestResult weak = change(session, OLD_PASSWORD, "short1!");
@@ -127,7 +121,7 @@ class PasswordChangeApiIntegrationTest {
     @Test
     @DisplayName("[F-32][PW-03][PW-07] 현재 비밀번호를 5번 틀리면 변경과 로그인 모두 429 LOGIN_LOCKED와 Retry-After를 받는다")
     void repeatedMismatchLocksChangeAndLogin() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie session = login(member);
         for (int attempt = 0; attempt < 5; attempt++) {
             assertThat(change(session, WRONG_PASSWORD, NEW_PASSWORD)).hasStatus(HttpStatus.BAD_REQUEST);
@@ -147,7 +141,7 @@ class PasswordChangeApiIntegrationTest {
     @Test
     @DisplayName("[F-32][PW-06][PW-07] 바꾸기 전의 로그인 실패는 잠금 계산에서 빠진다")
     void failuresBeforeChangeAreNotCounted() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie session = login(member);
         for (int attempt = 0; attempt < 4; attempt++) {
             assertThat(loginRequest(member.getEmail(), WRONG_PASSWORD)).hasStatus(HttpStatus.UNAUTHORIZED);
@@ -159,15 +153,6 @@ class PasswordChangeApiIntegrationTest {
         assertThat(loginRequest(member.getEmail(), WRONG_PASSWORD)).hasStatus(HttpStatus.UNAUTHORIZED);
 
         assertThat(loginRequest(member.getEmail(), NEW_PASSWORD)).hasStatus(HttpStatus.OK);
-    }
-
-    private Member saveMember() {
-        Member member = memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(OLD_PASSWORD))
-                .now(clock.instant())
-                .build());
-        return member;
     }
 
     private Cookie login(Member member) {

@@ -14,7 +14,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.basecamp.application.membership.BasecampApplicationCancelService;
 import com.moewadeul.basecamp.application.membership.BasecampApplicationListQuery;
 import com.moewadeul.basecamp.application.membership.BasecampApplicationListService;
-import com.moewadeul.basecamp.application.membership.BasecampApplicationPage;
 import com.moewadeul.basecamp.application.membership.BasecampApplyCommand;
 import com.moewadeul.basecamp.application.membership.BasecampApplyResult;
 import com.moewadeul.basecamp.application.membership.BasecampApplyService;
@@ -24,14 +23,16 @@ import com.moewadeul.basecamp.application.membership.BasecampMembershipService;
 import com.moewadeul.basecamp.application.membership.BasecampRejectResult;
 import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
-import com.moewadeul.basecamp.domain.BasecampException;
+import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.domain.KickReason;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
@@ -87,7 +88,8 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13][BC-06] 합류를 신청하면 201과 applicationId·status를 응답하고, 경로의 베이스캠프 ID와 로그인한 회원 ID, 메시지를 서비스에 넘긴다")
     void applyReturnsCreated() {
         // given
-        when(basecampApplyService.apply(any())).thenReturn(new BasecampApplyResult(901L, "PENDING"));
+        when(basecampApplyService.apply(any()))
+                .thenReturn(new BasecampApplyResult(901L, BasecampApplicationStatus.PENDING));
 
         // when
         MvcTestResult result = postApply(verified(), "{\"message\":\"같이 가고 싶어요\"}");
@@ -102,7 +104,8 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13][BC-06] 요청 본문이 없거나 message가 없어도 201이고, 메시지는 null로 넘긴다")
     void applyAcceptsMissingBodyAndMessage() {
         // given
-        when(basecampApplyService.apply(any())).thenReturn(new BasecampApplyResult(901L, "PENDING"));
+        when(basecampApplyService.apply(any()))
+                .thenReturn(new BasecampApplyResult(901L, BasecampApplicationStatus.PENDING));
 
         // when
         MvcTestResult withoutBody =
@@ -119,7 +122,8 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13] 신청 메시지가 500자이면 받고, 501자이면 message 필드 오류로 400 INVALID_INPUT을 응답한다")
     void applyMessageLengthBoundary() {
         // given
-        when(basecampApplyService.apply(any())).thenReturn(new BasecampApplyResult(901L, "PENDING"));
+        when(basecampApplyService.apply(any()))
+                .thenReturn(new BasecampApplyResult(901L, BasecampApplicationStatus.PENDING));
 
         // when
         MvcTestResult atLimit = postApply(verified(), "{\"message\":\"" + "가".repeat(500) + "\"}");
@@ -194,15 +198,15 @@ class BasecampMembershipControllerTest {
 
     static Stream<Arguments> applyErrors() {
         return Stream.of(
-                Arguments.of(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT), HttpStatus.FORBIDDEN),
+                Arguments.of(new BusinessException(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT), HttpStatus.FORBIDDEN),
                 Arguments.of(new BusinessException(CommonErrorCode.NOT_FOUND), HttpStatus.NOT_FOUND),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE), HttpStatus.CONFLICT),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED), HttpStatus.CONFLICT),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE), HttpStatus.CONFLICT),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED), HttpStatus.CONFLICT),
                 Arguments.of(
-                        new BasecampException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED), HttpStatus.CONFLICT),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_CONDITION_NOT_MET), HttpStatus.FORBIDDEN),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_DATE_CONFLICT), HttpStatus.CONFLICT),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_PENDING_LIMIT), HttpStatus.CONFLICT));
+                        new BusinessException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED), HttpStatus.CONFLICT),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_CONDITION_NOT_MET), HttpStatus.FORBIDDEN),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_DATE_CONFLICT), HttpStatus.CONFLICT),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_PENDING_LIMIT), HttpStatus.CONFLICT));
     }
 
     @Test
@@ -237,7 +241,7 @@ class BasecampMembershipControllerTest {
     void cancelErrorsAreMapped() {
         // given
         doThrow(new BusinessException(CommonErrorCode.NOT_FOUND))
-                .doThrow(new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE))
+                .doThrow(new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE))
                 .when(basecampApplicationCancelService)
                 .cancel(77L, MEMBER_ID);
 
@@ -258,7 +262,8 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13][BC-08] 승인하면 200이고 인원과 베이스캠프 상태를 응답하며, 경로의 ID와 로그인한 회원 ID를 서비스에 넘긴다")
     void approveReturnsHeadcountAndStatus() {
         // given
-        when(basecampApprovalService.approve(77L, 501L, MEMBER_ID)).thenReturn(new BasecampApproveResult(4, "CLOSED"));
+        when(basecampApprovalService.approve(77L, 501L, MEMBER_ID))
+                .thenReturn(new BasecampApproveResult(4, BasecampStatus.CLOSED));
 
         // when
         MvcTestResult result =
@@ -274,7 +279,7 @@ class BasecampMembershipControllerTest {
     void rejectReturnsApplicationStatus() {
         // given
         when(basecampApprovalService.reject(77L, 501L, MEMBER_ID))
-                .thenReturn(new BasecampRejectResult(501L, "REJECTED"));
+                .thenReturn(new BasecampRejectResult(501L, BasecampApplicationStatus.REJECTED));
 
         // when
         MvcTestResult result =
@@ -313,7 +318,7 @@ class BasecampMembershipControllerTest {
         // given
         when(basecampApprovalService.approve(77L, 501L, MEMBER_ID))
                 .thenThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED))
-                .thenThrow(new BasecampException(BasecampErrorCode.BASECAMP_FULL));
+                .thenThrow(new BusinessException(BasecampErrorCode.BASECAMP_FULL));
         when(basecampApprovalService.reject(77L, 501L, MEMBER_ID))
                 .thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
 
@@ -339,7 +344,7 @@ class BasecampMembershipControllerTest {
     void listApplicationsUsesDefaults() {
         // given
         when(basecampApplicationListService.list(eq(77L), eq(MEMBER_ID), any()))
-                .thenReturn(new BasecampApplicationPage(List.of(), 0, 20, false));
+                .thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(APPLICATIONS).with(verified()).exchange();
@@ -432,26 +437,21 @@ class BasecampMembershipControllerTest {
     @DisplayName("[F-13] 탈퇴·강퇴 서비스가 던진 오류는 코드와 상태 그대로 응답한다")
     void membershipErrorsAreMapped() {
         // given
-        doThrow(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT))
-                .doThrow(new BasecampException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE))
+        doThrow(new BusinessException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE))
                 .when(basecampMembershipService)
                 .leave(77L, MEMBER_ID);
         doThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED))
-                .doThrow(new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE))
+                .doThrow(new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE))
                 .when(basecampMembershipService)
                 .kick(77L, 31L, MEMBER_ID, KickReason.OTHER);
 
         // when
-        MvcTestResult lowTrust =
-                mvc.delete().uri(LEAVE).with(verified()).with(csrf()).exchange();
         MvcTestResult leader =
                 mvc.delete().uri(LEAVE).with(verified()).with(csrf()).exchange();
         MvcTestResult denied = postKick(verified(), "{\"reason\":\"OTHER\"}");
         MvcTestResult invalidState = postKick(verified(), "{\"reason\":\"OTHER\"}");
 
         // then
-        assertThat(lowTrust).hasStatus(HttpStatus.FORBIDDEN);
-        assertThat(lowTrust).bodyJson().extractingPath("$.code").isEqualTo("TRUST_LEVEL_INSUFFICIENT");
         assertThat(leader).hasStatus(HttpStatus.CONFLICT);
         assertThat(leader).bodyJson().extractingPath("$.code").isEqualTo("BASECAMP_LEADER_CANNOT_LEAVE");
         assertThat(denied).hasStatus(HttpStatus.FORBIDDEN);

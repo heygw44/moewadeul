@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ class ProgramPaymentExpirySchedulerTest {
         ProgramPaymentExpiryService service = mock(ProgramPaymentExpiryService.class);
         doThrow(new IllegalStateException("DB 연결 실패")).when(service).run();
 
-        new ProgramPaymentExpiryScheduler(service, metrics).expire();
+        new ProgramPaymentExpiryScheduler(service, new ScheduledJobRunner(metrics)).expire();
 
         assertThat(meterRegistry
                         .get("moewadeul.scheduled.job.failures")
@@ -37,7 +38,7 @@ class ProgramPaymentExpirySchedulerTest {
         ProgramPaymentExpiryService service = mock(ProgramPaymentExpiryService.class);
         when(service.run()).thenReturn(new ProgramPaymentExpiryService.Result(4, 2));
 
-        new ProgramPaymentExpiryScheduler(service, metrics).expire();
+        new ProgramPaymentExpiryScheduler(service, new ScheduledJobRunner(metrics)).expire();
 
         assertThat(failureCount()).isEqualTo(1);
     }
@@ -48,7 +49,7 @@ class ProgramPaymentExpirySchedulerTest {
         ProgramPaymentExpiryService service = mock(ProgramPaymentExpiryService.class);
         when(service.run()).thenReturn(new ProgramPaymentExpiryService.Result(4, 0));
 
-        new ProgramPaymentExpiryScheduler(service, metrics).expire();
+        new ProgramPaymentExpiryScheduler(service, new ScheduledJobRunner(metrics)).expire();
 
         assertThat(failureCount()).isZero();
     }

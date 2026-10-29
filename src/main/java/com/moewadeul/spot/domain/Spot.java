@@ -1,6 +1,8 @@
 package com.moewadeul.spot.domain;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.moderation.Moderatable;
+import com.moewadeul.common.moderation.ModerationTransition;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,7 +22,7 @@ import org.locationtech.jts.geom.Point;
 @Table(name = "spot")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Spot {
+public class Spot implements Moderatable {
 
     public static final int NAME_MAX_LENGTH = 100;
 
@@ -97,6 +99,7 @@ public class Spot {
 
     public void rename(String name, Instant now) {
         requireValidName(name);
+        requireActive();
         this.name = name;
         this.updatedAt = now;
     }
@@ -105,6 +108,7 @@ public class Spot {
         if (newLocation == null || judgement == null || now == null) {
             throw new IllegalArgumentException("장소를 옮기는 데 필요한 값이 null입니다.");
         }
+        requireActive();
         WeatherGrid grid = WeatherGrid.from(newLocation);
         this.location = newLocation.toPoint();
         this.weatherNx = (short) grid.nx();
@@ -114,30 +118,32 @@ public class Spot {
     }
 
     public void delete(Instant now) {
+        if (status == SpotStatus.DELETED) {
+            return;
+        }
+        requireActive();
         this.status = SpotStatus.DELETED;
         this.updatedAt = now;
     }
 
-    public void markPendingReview(Instant now) {
-        if (status != SpotStatus.ACTIVE) {
-            throw new IllegalStateException("지도에 보이는 장소만 검토 대기로 바꿀 수 있습니다. 현재 상태: " + status);
+    public void receiveReport(long unreviewedReportCount, Instant now) {
+        if (!ModerationTransition.reachesPendingReview(status, unreviewedReportCount)) {
+            return;
         }
         this.status = SpotStatus.PENDING_REVIEW;
         this.updatedAt = now;
     }
 
+    @Override
     public void hide(Instant now) {
-        if (status != SpotStatus.ACTIVE && status != SpotStatus.PENDING_REVIEW) {
-            throw new BusinessException(SpotErrorCode.SPOT_INVALID_STATE);
-        }
+        ModerationTransition.requireHideable(status, SpotErrorCode.SPOT_INVALID_STATE);
         this.status = SpotStatus.HIDDEN;
         this.updatedAt = now;
     }
 
+    @Override
     public void restore(Instant now) {
-        if (status != SpotStatus.PENDING_REVIEW && status != SpotStatus.HIDDEN) {
-            throw new BusinessException(SpotErrorCode.SPOT_INVALID_STATE);
-        }
+        ModerationTransition.requireRestorable(status, SpotErrorCode.SPOT_INVALID_STATE);
         this.status = SpotStatus.ACTIVE;
         this.updatedAt = now;
     }
@@ -152,6 +158,12 @@ public class Spot {
 
     public boolean isActiveBakji() {
         return type == SpotType.BAKJI && status == SpotStatus.ACTIVE;
+    }
+
+    private void requireActive() {
+        if (status != SpotStatus.ACTIVE) {
+            throw new BusinessException(SpotErrorCode.SPOT_INVALID_STATE);
+        }
     }
 
     private static void requireValidName(String name) {

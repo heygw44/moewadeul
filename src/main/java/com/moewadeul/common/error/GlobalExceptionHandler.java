@@ -10,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.core.MethodParameter;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -34,6 +37,7 @@ import tools.jackson.databind.exc.InvalidFormatException;
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String LOCK_RETRY_AFTER_SECONDS = "5";
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
@@ -70,6 +74,40 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static long retryAfterSeconds(Duration retryAfter) {
         long seconds = retryAfter.getSeconds() + (retryAfter.getNano() > 0 ? 1 : 0);
         return Math.max(1, seconds);
+    }
+
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleLockAcquisitionFailure(PessimisticLockingFailureException e) {
+        log.warn(
+                "lock acquisition failed cause={}: {}",
+                e.getClass().getSimpleName(),
+                e.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(CommonErrorCode.RESOURCE_BUSY.httpStatus())
+                .header(HttpHeaders.RETRY_AFTER, LOCK_RETRY_AFTER_SECONDS)
+                .body(ErrorResponse.of(CommonErrorCode.RESOURCE_BUSY));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        if (!UniqueViolations.isDuplicateEntry(e)) {
+            return handleUnexpectedException(e);
+        }
+        log.warn("untranslated unique violation cause={}", UniqueViolations.redactedMessage(e));
+        return dataConflict();
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailure(OptimisticLockingFailureException e) {
+        log.warn(
+                "optimistic locking failed cause={}: {}",
+                e.getClass().getSimpleName(),
+                e.getMostSpecificCause().getMessage());
+        return dataConflict();
+    }
+
+    private static ResponseEntity<ErrorResponse> dataConflict() {
+        return ResponseEntity.status(CommonErrorCode.DATA_CONFLICT.httpStatus())
+                .body(ErrorResponse.of(CommonErrorCode.DATA_CONFLICT));
     }
 
     @ExceptionHandler(Exception.class)

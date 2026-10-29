@@ -1,9 +1,14 @@
 package com.moewadeul.basecamp.infra;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
+import com.moewadeul.common.testsupport.SpotFixture;
+import com.moewadeul.member.domain.MemberStatus;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,8 +23,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @IntegrationTest
 class BasecampSchemaIntegrationTest {
 
-    // SRID 4326 WKT는 위도, 경도 순서다.
-    private static final String SEOUL_CITY_HALL_WKT = "POINT(37.5665 126.978)";
+    @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     JdbcTemplate jdbcTemplate;
@@ -44,8 +52,9 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[BC-02] 정원이 2명이나 6명인 베이스캠프는 저장된다")
     void basecampWithBoundaryCapacityIsSaved(int capacity) {
         // given
-        long leaderId = insertMember("leader");
-        long spotId = insertSpot("정원 경계 장소");
+        long leaderId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
+        long spotId = spotFixture.insert(aSpot().name("정원 경계 장소"));
 
         // when
         insertBasecamp(leaderId, spotId, capacity);
@@ -59,8 +68,9 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[BC-02] 정원이 2~6명 밖인 베이스캠프는 저장할 수 없다")
     void basecampWithCapacityOutOfRangeIsRejected(int capacity) {
         // given
-        long leaderId = insertMember("leader");
-        long spotId = insertSpot("정원 범위 밖 장소");
+        long leaderId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
+        long spotId = spotFixture.insert(aSpot().name("정원 범위 밖 장소"));
 
         // when & then
         assertThatThrownBy(() -> insertBasecamp(leaderId, spotId, capacity))
@@ -73,8 +83,9 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[BC-07] 같은 회원이 같은 베이스캠프에 합류 신청 행을 두 개 만들 수 없다")
     void memberCannotApplyToSameBasecampTwice() {
         // given
-        long basecampId = insertBasecampWithLeader("leader");
-        long applicantId = insertMember("applicant");
+        long basecampId = insertBasecampWithLeader();
+        long applicantId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         insertApplication(basecampId, applicantId);
 
         // when & then
@@ -85,9 +96,10 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[BC-07] 같은 회원이 다른 베이스캠프에는 합류를 신청할 수 있다")
     void memberCanApplyToDifferentBasecamps() {
         // given
-        long firstBasecampId = insertBasecampWithLeader("first-leader");
-        long secondBasecampId = insertBasecampWithLeader("second-leader");
-        long applicantId = insertMember("applicant");
+        long firstBasecampId = insertBasecampWithLeader();
+        long secondBasecampId = insertBasecampWithLeader();
+        long applicantId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         insertApplication(firstBasecampId, applicantId);
 
         // when
@@ -101,8 +113,9 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[BC-07][BC-22] 같은 회원이 같은 베이스캠프에 멤버 행을 두 개 만들 수 없다")
     void memberCannotJoinSameBasecampTwice() {
         // given
-        long basecampId = insertBasecampWithLeader("leader");
-        long memberId = insertMember("member");
+        long basecampId = insertBasecampWithLeader();
+        long memberId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         insertBasecampMember(basecampId, memberId);
 
         // when & then
@@ -113,8 +126,9 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[BC-05][BC-21] 동성만 조건과 임박 탈퇴 표시는 값을 주지 않으면 false로 저장된다")
     void sameGenderOnlyAndEarlyLeaveDefaultToFalse() {
         // given
-        long basecampId = insertBasecampWithLeader("leader");
-        long memberId = insertMember("member");
+        long basecampId = insertBasecampWithLeader();
+        long memberId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
 
         // when
         insertBasecampMember(basecampId, memberId);
@@ -132,7 +146,8 @@ class BasecampSchemaIntegrationTest {
     @DisplayName("[ADR-001] 없는 장소를 가리키는 베이스캠프는 저장할 수 없다")
     void basecampMustReferenceExistingSpot() {
         // given
-        long leaderId = insertMember("leader");
+        long leaderId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long missingSpotId = 999_999L;
 
         // when & then
@@ -141,28 +156,11 @@ class BasecampSchemaIntegrationTest {
         assertThat(count("basecamp")).isZero();
     }
 
-    private long insertBasecampWithLeader(String leaderNickname) {
-        long leaderId = insertMember(leaderNickname);
-        long spotId = insertSpot(leaderNickname + "의 장소");
+    private long insertBasecampWithLeader() {
+        long leaderId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
+        long spotId = spotFixture.insert(aSpot());
         return insertBasecamp(leaderId, spotId, 4);
-    }
-
-    private long insertMember(String nickname) {
-        jdbcTemplate.update(
-                "INSERT INTO member (email, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, 'ACTIVE', 'USER', NOW(6), NOW(6))",
-                nickname + "@example.com",
-                nickname);
-        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
-    }
-
-    private long insertSpot(String name) {
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES ('BAKJI', ?, ST_GeomFromText(?, 4326), 60, 127, 'ACTIVE', NOW(6), NOW(6))",
-                name,
-                SEOUL_CITY_HALL_WKT);
-        return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
     }
 
     private long insertBasecamp(long leaderId, long spotId, int capacity) {

@@ -1,8 +1,8 @@
 package com.moewadeul.weather.infra;
 
-public class KasiApiException extends RuntimeException {
+import com.moewadeul.common.external.ExternalApiException;
 
-    private final boolean retryable;
+public class KasiApiException extends ExternalApiException {
 
     public KasiApiException(String message) {
         this(message, null, false);
@@ -13,8 +13,7 @@ public class KasiApiException extends RuntimeException {
     }
 
     private KasiApiException(String message, Throwable cause, boolean retryable) {
-        super(message, cause);
-        this.retryable = retryable;
+        super(message, cause, retryable);
     }
 
     static KasiApiException retryable(String message) {
@@ -23,9 +22,5 @@ public class KasiApiException extends RuntimeException {
 
     static KasiApiException retryable(String message, Throwable cause) {
         return new KasiApiException(message, cause, true);
-    }
-
-    boolean isRetryable() {
-        return retryable;
     }
 }

@@ -1,6 +1,12 @@
 package com.moewadeul.basecamp.domain;
 
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.AgeGroupConverter;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
+import com.moewadeul.common.profile.TrustLevelConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -16,37 +22,34 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class JoinCondition {
 
-    public static final int MIN_TRUST_LEVEL = 1;
-    public static final int MAX_TRUST_LEVEL = 2;
-    public static final int MIN_AGE_GROUP = 20;
-    public static final int MAX_AGE_GROUP = 60;
-    public static final int AGE_GROUP_STEP = 10;
-
     @Column(name = "min_trust_level")
+    @Convert(converter = TrustLevelConverter.class)
     @JdbcTypeCode(SqlTypes.TINYINT)
-    private Integer minTrustLevel;
+    private TrustLevel minTrustLevel;
 
     @Column(name = "age_group_min")
+    @Convert(converter = AgeGroupConverter.class)
     @JdbcTypeCode(SqlTypes.TINYINT)
-    private Integer ageGroupMin;
+    private AgeGroup ageGroupMin;
 
     @Column(name = "age_group_max")
+    @Convert(converter = AgeGroupConverter.class)
     @JdbcTypeCode(SqlTypes.TINYINT)
-    private Integer ageGroupMax;
+    private AgeGroup ageGroupMax;
 
     @Column(name = "same_gender_only")
     private boolean sameGenderOnly;
 
     @Column(name = "required_gender")
     @Enumerated(EnumType.STRING)
-    private JoinGender requiredGender;
+    private Gender requiredGender;
 
     private JoinCondition(
-            Integer minTrustLevel,
-            Integer ageGroupMin,
-            Integer ageGroupMax,
+            TrustLevel minTrustLevel,
+            AgeGroup ageGroupMin,
+            AgeGroup ageGroupMax,
             boolean sameGenderOnly,
-            JoinGender requiredGender) {
+            Gender requiredGender) {
         this.minTrustLevel = minTrustLevel;
         this.ageGroupMin = ageGroupMin;
         this.ageGroupMax = ageGroupMax;
@@ -58,43 +61,35 @@ public class JoinCondition {
         return new JoinCondition(null, null, null, false, null);
     }
 
-    public JoinCondition withMinTrustLevel(int level) {
-        if (level < MIN_TRUST_LEVEL || level > MAX_TRUST_LEVEL) {
-            throw new IllegalArgumentException("최소 신뢰 단계는 " + MIN_TRUST_LEVEL + " 또는 " + MAX_TRUST_LEVEL + "이어야 합니다.");
+    public JoinCondition withMinTrustLevel(TrustLevel level) {
+        if (level != TrustLevel.IDENTITY_VERIFIED && level != TrustLevel.TRUSTED) {
+            throw new IllegalArgumentException("최소 신뢰 단계는 " + TrustLevel.IDENTITY_VERIFIED.level() + " 또는 "
+                    + TrustLevel.TRUSTED.level() + "이어야 합니다.");
         }
         return new JoinCondition(level, ageGroupMin, ageGroupMax, sameGenderOnly, requiredGender);
     }
 
-    public JoinCondition withAgeGroupRange(int min, int max) {
-        requireAgeGroup(min);
-        requireAgeGroup(max);
-        if (min > max) {
+    public JoinCondition withAgeGroupRange(AgeGroup min, AgeGroup max) {
+        if (min.compareTo(max) > 0) {
             throw new IllegalArgumentException("연령대 하한은 상한보다 클 수 없습니다.");
         }
         return new JoinCondition(minTrustLevel, min, max, sameGenderOnly, requiredGender);
     }
 
-    public JoinCondition withSameGenderOnly(JoinGender gender) {
+    public JoinCondition withSameGenderOnly(Gender gender) {
         if (gender == null) {
             throw new IllegalArgumentException("동성만 받으려면 캠프 리더의 성별이 필요합니다.");
         }
         return new JoinCondition(minTrustLevel, ageGroupMin, ageGroupMax, true, gender);
     }
 
-    private static void requireAgeGroup(int ageGroup) {
-        boolean inRange = ageGroup >= MIN_AGE_GROUP && ageGroup <= MAX_AGE_GROUP;
-        if (!inRange || ageGroup % AGE_GROUP_STEP != 0) {
-            throw new IllegalArgumentException("연령대는 " + MIN_AGE_GROUP + "~" + MAX_AGE_GROUP + " 사이의 십 단위여야 합니다.");
-        }
-    }
-
     @Override
     public boolean equals(Object other) {
         return other instanceof JoinCondition that
                 && sameGenderOnly == that.sameGenderOnly
-                && Objects.equals(minTrustLevel, that.minTrustLevel)
-                && Objects.equals(ageGroupMin, that.ageGroupMin)
-                && Objects.equals(ageGroupMax, that.ageGroupMax)
+                && minTrustLevel == that.minTrustLevel
+                && ageGroupMin == that.ageGroupMin
+                && ageGroupMax == that.ageGroupMax
                 && requiredGender == that.requiredGender;
     }
 

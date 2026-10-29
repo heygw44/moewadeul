@@ -7,9 +7,9 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.trust.application.TrustAuditDetails;
-import com.moewadeul.trust.application.sanction.SanctionConfirmApplier;
 import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
 import com.moewadeul.trust.application.sanction.SanctionConfirmResult;
+import com.moewadeul.trust.application.sanction.SanctionConfirmWriter;
 import com.moewadeul.trust.domain.companion.CompanionReview;
 import com.moewadeul.trust.domain.companion.CompanionReviewRepository;
 import com.moewadeul.trust.domain.report.MemberReport;
@@ -27,21 +27,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class MemberReportActionApplier {
+class MemberReportActionApplier {
 
     private final MemberReportRepository memberReportRepository;
     private final CompanionReviewRepository companionReviewRepository;
     private final SanctionRepository sanctionRepository;
-    private final SanctionConfirmApplier sanctionConfirmApplier;
+    private final SanctionConfirmWriter sanctionConfirmWriter;
     private final OutboxEventRecorder outboxEventRecorder;
     private final AdminAuditRecorder adminAuditRecorder;
     private final Clock clock;
 
     @Transactional
-    public MemberReportActionResult apply(MemberReportActionCommand command, SanctionType sanctionType) {
-        MemberReport report = memberReportRepository
-                .findByIdForUpdate(command.reportId())
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+    MemberReportActionResult apply(MemberReportActionCommand command, SanctionType sanctionType) {
+        MemberReport report =
+                memberReportRepository.findByIdForUpdate(command.reportId()).orElseThrow(BusinessException::notFound);
         report.requireInReview();
         requireConsistentRequest(report, command, sanctionType);
         Instant now = clock.instant();
@@ -51,12 +50,7 @@ public class MemberReportActionApplier {
         }
         ReportStatus before = report.getStatus();
         report.action(command.adminId(), command.note(), now);
-        outboxEventRecorder.record(
-                MemberReportEvents.RESOLVED_EVENT_TYPE,
-                MemberReportEvents.AGGREGATE_TYPE,
-                report.getId(),
-                new MemberReportEvents.ResolvedPayload(
-                        report.getId(), report.getReporterId(), ReportStatus.ACTIONED.name()));
+        outboxEventRecorder.recordAll(report.pullEvents());
         Long sanctionId = confirmed == null ? null : confirmed.sanctionId();
         recordAudit(report, before, command, sanctionId);
         return new MemberReportActionResult(
@@ -79,7 +73,7 @@ public class MemberReportActionApplier {
 
     private SanctionConfirmResult confirmSanction(
             MemberReport report, MemberReportActionCommand command, SanctionType sanctionType) {
-        return sanctionConfirmApplier.apply(new SanctionConfirmCommand(
+        return sanctionConfirmWriter.confirm(new SanctionConfirmCommand(
                 report.getTargetMemberId(), report.getId(), sanctionType, command.sanctionReason(), command.adminId()));
     }
 

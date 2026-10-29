@@ -1,7 +1,6 @@
 import type { SpotType } from '../../api/types';
 import type { ActiveFilterChip } from '../../components/ActiveFilterChips';
-import { SPOT_TYPE_META } from '../spot/spotLabels';
-import { SPOT_TYPE_ORDER } from '../spot/spotFilters';
+import { SPOT_TYPE_META, SPOT_TYPE_ORDER } from '../../lib/spotLabels';
 
 export type BasecampFilters = {
   fromDate: string;

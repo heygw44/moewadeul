@@ -1,5 +1,7 @@
 package com.moewadeul.program.domain;
 
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.profile.TrustLevel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -35,7 +37,7 @@ public class Program {
     public static final int PAYMENT_DEADLINE_MINUTES_MIN = 1;
     public static final int PAYMENT_DEADLINE_MINUTES_MAX = 1440;
     public static final int DEFAULT_PAYMENT_DEADLINE_MINUTES = 15;
-    public static final int MIN_TRUST_LEVEL_FOR_OVERNIGHT = 1;
+    public static final TrustLevel MIN_TRUST_LEVEL_FOR_OVERNIGHT = TrustLevel.IDENTITY_VERIFIED;
     public static final int REFUND_CANCEL_HOURS_BEFORE_START = 72;
 
     @Id
@@ -129,11 +131,11 @@ public class Program {
             throw new IllegalArgumentException("행사를 고치는 데 필요한 값이 null입니다.");
         }
         if (status == ProgramStatus.CANCELED) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
         int newCapacity = revision.capacity() == null ? capacity : revision.capacity();
         if ((applicationsExist || !now.isBefore(applyOpenAt)) && newCapacity < capacity) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE);
         }
         Program merged = merge(revision);
         requireValid(
@@ -152,7 +154,7 @@ public class Program {
 
     public void cancel(Instant now) {
         if (status == ProgramStatus.CANCELED) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
         this.status = ProgramStatus.CANCELED;
         this.updatedAt = now;
@@ -164,14 +166,26 @@ public class Program {
 
     public void requireApplicableAt(Instant now) {
         switch (phaseAt(now)) {
-            case CANCELED -> throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
-            case UPCOMING, CLOSED -> throw new ProgramException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD);
+            case CANCELED -> throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            case UPCOMING, CLOSED -> throw new BusinessException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD);
             case OPEN -> {}
         }
     }
 
-    public boolean isTrustLevelSufficient(int trustLevel) {
-        return !overnight || trustLevel >= MIN_TRUST_LEVEL_FOR_OVERNIGHT;
+    public boolean takesVacancyAlertsAt(Instant now) {
+        return switch (phaseAt(now)) {
+            case CANCELED, CLOSED -> false;
+            case UPCOMING, OPEN -> true;
+        };
+    }
+
+    public void requireVacancyAlertAcceptableAt(Instant now, long seatHolders) {
+        if (!takesVacancyAlertsAt(now)) {
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+        }
+        if (seatHolders < capacity) {
+            throw new BusinessException(ProgramErrorCode.PROGRAM_SEATS_AVAILABLE);
+        }
     }
 
     public Instant paymentDueAt(Instant now) {

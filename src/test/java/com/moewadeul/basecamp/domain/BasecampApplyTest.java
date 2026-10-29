@@ -3,14 +3,18 @@ package com.moewadeul.basecamp.domain;
 import static com.moewadeul.basecamp.domain.BasecampAssertions.assertFailsWith;
 import static com.moewadeul.basecamp.domain.BasecampAssertions.assertFailsWithInvalidState;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.APPLICANT_ID;
+import static com.moewadeul.basecamp.domain.BasecampBuilder.BASECAMP_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.LEADER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.MEMBER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.NOW;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.OUTSIDER_ID;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.aBasecamp;
+import static com.moewadeul.basecamp.domain.BasecampBuilder.applicationIdOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.moewadeul.common.event.BasecampEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -137,5 +141,58 @@ class BasecampApplyTest {
 
         // then
         assertThat(basecamp.relationOf(APPLICANT_ID)).isEqualTo(BasecampRelation.NONE);
+    }
+
+    @Test
+    @DisplayName("[F-13] 신청하면 BASECAMP_APPLIED 이벤트를 남기고, 신청 ID는 꺼내는 시점의 값이다")
+    void applyRaisesAppliedEventWithApplicationId() {
+        // given
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+        // when
+        BasecampBuilder.apply(basecamp, OUTSIDER_ID);
+
+        // then
+        assertThat(basecamp.pullEvents())
+                .containsExactly(new OutboxEventDraft(
+                        BasecampEvents.APPLIED,
+                        BasecampEvents.AGGREGATE_TYPE,
+                        BASECAMP_ID,
+                        new BasecampEvents.AppliedPayload(applicationIdOf(OUTSIDER_ID), OUTSIDER_ID, LEADER_ID)));
+        assertThat(basecamp.pullEvents()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-13] 스스로 취소했던 회원이 다시 신청해도 BASECAMP_APPLIED 이벤트를 남긴다")
+    void resubmitRaisesAppliedEvent() {
+        // given
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+        basecamp.cancelApplication(APPLICANT_ID, NOW);
+        basecamp.pullEvents();
+
+        // when
+        basecamp.apply(APPLICANT_ID, "다시요", NOW);
+
+        // then
+        assertThat(basecamp.pullEvents())
+                .containsExactly(new OutboxEventDraft(
+                        BasecampEvents.APPLIED,
+                        BasecampEvents.AGGREGATE_TYPE,
+                        BASECAMP_ID,
+                        new BasecampEvents.AppliedPayload(applicationIdOf(APPLICANT_ID), APPLICANT_ID, LEADER_ID)));
+    }
+
+    @Test
+    @DisplayName("[F-13] 신청이 거부되면 이벤트를 남기지 않고, 신청을 취소하는 것도 이벤트가 아니다")
+    void rejectedApplyAndCancelApplicationRaiseNothing() {
+        // given
+        Basecamp basecamp = aBasecamp().inState(BasecampStatus.RECRUITING);
+
+        // when
+        assertFailsWith(BasecampErrorCode.BASECAMP_ALREADY_APPLIED, () -> basecamp.apply(APPLICANT_ID, "또요", NOW));
+        basecamp.cancelApplication(APPLICANT_ID, NOW);
+
+        // then
+        assertThat(basecamp.pullEvents()).isEmpty();
     }
 }

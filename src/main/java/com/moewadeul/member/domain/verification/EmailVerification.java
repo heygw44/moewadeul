@@ -76,11 +76,15 @@ public class EmailVerification {
         return new EmailVerification(memberId, outboxEventId, codeHash, requestIp, now);
     }
 
+    // 같은 발송 요청을 다시 처리하면 보통 같은 코드가 나온다. 그 코드의 틀린 횟수는 이어서 센다.
+    // 코드가 달라지는 것은 HMAC 키를 바꾼 뒤뿐이다.
     public void reissue(String codeHash, Instant now) {
         requireCodeHash(codeHash);
         requireNow(now);
+        if (!codeHash.equals(this.codeHash)) {
+            this.attemptCount = 0;
+        }
         this.codeHash = codeHash;
-        this.attemptCount = 0;
         this.expiresAt = now.plus(EmailVerificationPolicy.CODE_VALIDITY);
         this.updatedAt = now;
     }

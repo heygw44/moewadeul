@@ -51,6 +51,11 @@ export function navigate(to: string, options?: { replace?: boolean }): void {
   notify();
 }
 
+// navigate와 달리 앱의 메모리 상태를 버리고 그 주소를 처음부터 다시 연다.
+export function loadPage(to: string): void {
+  window.location.replace(to);
+}
+
 export function useLocation(): { pathname: string; search: string; hash: string } {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
@@ -59,7 +64,7 @@ function splitPath(path: string): string[] {
   return path.split('/').filter((segment) => segment !== '');
 }
 
-export function matchPath(pattern: string, pathname: string): RouteParams | null {
+function matchPath(pattern: string, pathname: string): RouteParams | null {
   const patternSegments = splitPath(pattern);
   const pathSegments = splitPath(pathname);
   if (patternSegments.length !== pathSegments.length) return null;

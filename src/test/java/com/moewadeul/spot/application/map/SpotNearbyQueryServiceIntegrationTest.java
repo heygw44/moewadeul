@@ -1,14 +1,20 @@
 package com.moewadeul.spot.application.map;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.spot.application.PublicSpotSetting;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import com.moewadeul.spot.domain.SpotType;
@@ -16,7 +22,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +46,12 @@ class SpotNearbyQueryServiceIntegrationTest {
     private static final Coordinate EAST_10_2_KM = new Coordinate(37.5665, 127.0936);
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
+    private SpotFixture spotFixture;
+
+    @Autowired
     private SpotNearbyQueryService spotNearbyQueryService;
 
     @Autowired
@@ -59,7 +70,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         long eastId = insertSpot("CAMPSITE", "동쪽 5km 야영장", EAST_5_KM);
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
         // then
         assertThat(result.content()).extracting(SpotNearbyItem::spotId).containsExactly(northId, eastId, southId);
@@ -92,7 +103,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         insertSpot("CAMPSITE", "동쪽 경계 밖", EAST_10_2_KM);
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
         // then
         assertThat(result.content())
@@ -109,7 +120,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         insertSpot("CAMPSITE", "좌표를 맞바꾼 야영장", new Coordinate(37.6, 37.5));
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(query(center, 5));
+        PageSlice<SpotNearbyItem> result = spotNearbyQueryService.findNearby(query(center, 5));
 
         // then
         assertThat(result.content()).extracting(SpotNearbyItem::spotId).containsExactly(centerSpotId);
@@ -128,7 +139,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         insertSpot("CAMPSITE", "DELETED", false, NORTH_2_KM);
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
         // then
         assertThat(result.content()).extracting(SpotNearbyItem::spotId).containsExactly(activeId);
@@ -143,9 +154,9 @@ class SpotNearbyQueryServiceIntegrationTest {
         long bakjiId = insertSpot("BAKJI", "박지", SOUTH_8_KM);
 
         // when
-        SpotNearbyPage filtered = spotNearbyQueryService.findNearby(
+        PageSlice<SpotNearbyItem> filtered = spotNearbyQueryService.findNearby(
                 query(CENTER, RADIUS_KM, Set.of(SpotType.FOREST, SpotType.BAKJI), false, false, false, 0, 20));
-        SpotNearbyPage all = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> all = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
         // then
         assertThat(filtered.content()).extracting(SpotNearbyItem::spotId).containsExactly(forestId, bakjiId);
@@ -163,10 +174,11 @@ class SpotNearbyQueryServiceIntegrationTest {
         long forestId = insertSpot("FOREST", "휴양림", SOUTH_9_8_KM);
 
         // when
-        SpotNearbyPage valley = spotNearbyQueryService.findNearby(querying(Set.of(PublicSpotSetting.VALLEY)));
-        SpotNearbyPage anyOf =
+        PageSlice<SpotNearbyItem> valley =
+                spotNearbyQueryService.findNearby(querying(Set.of(PublicSpotSetting.VALLEY)));
+        PageSlice<SpotNearbyItem> anyOf =
                 spotNearbyQueryService.findNearby(querying(Set.of(PublicSpotSetting.BEACH, PublicSpotSetting.LAKE)));
-        SpotNearbyPage all = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> all = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
         // then
         assertThat(valley.content()).extracting(SpotNearbyItem::spotId).containsExactly(valleyId);
@@ -185,8 +197,8 @@ class SpotNearbyQueryServiceIntegrationTest {
         long plainId = insertSpot("BAKJI", "ACTIVE", false, EAST_5_KM);
 
         // when
-        SpotNearbyPage withWarned = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
-        SpotNearbyPage withoutWarned =
+        PageSlice<SpotNearbyItem> withWarned = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> withoutWarned =
                 spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM, Set.of(), false, false, true, 0, 20));
 
         // then
@@ -200,7 +212,8 @@ class SpotNearbyQueryServiceIntegrationTest {
     @DisplayName("[F-04] 물·화장실 필터는 해당 시설이 있는 박지만 남기고, 야영장과 휴양림은 시설과 상관없이 남긴다")
     void facilityFiltersApplyOnlyToBakji() {
         // given
-        long reporterId = insertMember();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long campsiteId = insertSpot("CAMPSITE", "야영장", NORTH_2_KM);
         long forestId = insertSpot("FOREST", "휴양림", NORTH_2_KM);
         long waterOnlyId = insertBakji(reporterId, true, false);
@@ -209,13 +222,13 @@ class SpotNearbyQueryServiceIntegrationTest {
         long noneId = insertBakji(reporterId, false, false);
 
         // when
-        SpotNearbyPage water =
+        PageSlice<SpotNearbyItem> water =
                 spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM, Set.of(), true, false, false, 0, 20));
-        SpotNearbyPage toilet =
+        PageSlice<SpotNearbyItem> toilet =
                 spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM, Set.of(), false, true, false, 0, 20));
-        SpotNearbyPage both =
+        PageSlice<SpotNearbyItem> both =
                 spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM, Set.of(), true, true, false, 0, 20));
-        SpotNearbyPage none = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> none = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
         // then
         assertThat(water.content())
@@ -235,7 +248,8 @@ class SpotNearbyQueryServiceIntegrationTest {
     void keepsClosedSpotsAndMarksThemClosed() {
         // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
-        long reporterId = insertMember();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long closedId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", NORTH_2_KM);
         insertPublicDetail(
                 closedId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));
@@ -244,7 +258,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         long bakjiId = insertBakji(reporterId, true, true);
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
         // then
         assertThat(result.content())
@@ -257,7 +271,8 @@ class SpotNearbyQueryServiceIntegrationTest {
     void hideClosedExcludesClosedSpotsFromNearby() {
         // given
         clock.setInstant(Instant.parse("2026-10-31T15:30:00Z"));
-        long reporterId = insertMember();
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long closedId = insertSpot("CAMPSITE", "휴장 기간 중 야영장", NORTH_2_KM);
         insertPublicDetail(
                 closedId, "GOCAMPING", "OPERATING", LocalDate.parse("2026-11-01"), LocalDate.parse("2027-03-31"));
@@ -268,7 +283,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         long bakjiId = insertBakji(reporterId, true, true);
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(hidingClosed(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> result = spotNearbyQueryService.findNearby(hidingClosed(CENTER, RADIUS_KM));
 
         // then
         assertThat(result.content()).extracting(SpotNearbyItem::spotId).containsExactly(operatingId, bakjiId);
@@ -283,9 +298,9 @@ class SpotNearbyQueryServiceIntegrationTest {
         long secondNearId = insertSpot("CAMPSITE", "가까운 야영장 2", NORTH_2_KM);
 
         // when
-        SpotNearbyPage first =
+        PageSlice<SpotNearbyItem> first =
                 spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM, Set.of(), false, false, false, 0, 2));
-        SpotNearbyPage second =
+        PageSlice<SpotNearbyItem> second =
                 spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM, Set.of(), false, false, false, 1, 2));
 
         // then
@@ -307,7 +322,8 @@ class SpotNearbyQueryServiceIntegrationTest {
         long farId = insertSpot("CAMPSITE", "북쪽 30km 야영장", new Coordinate(37.8363, 126.978));
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(query(CENTER, SpotNearbyQuery.MAX_RADIUS_KM));
+        PageSlice<SpotNearbyItem> result =
+                spotNearbyQueryService.findNearby(query(CENTER, SpotNearbyQuery.MAX_RADIUS_KM));
 
         // then
         assertThat(result.content()).extracting(SpotNearbyItem::spotId).containsExactly(nearId, middleId, farId);
@@ -328,7 +344,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         List<Long> actual = new ArrayList<>();
         List<Boolean> hasNexts = new ArrayList<>();
         for (int page = 0; page < 3; page++) {
-            SpotNearbyPage result = spotNearbyQueryService.findNearby(
+            PageSlice<SpotNearbyItem> result = spotNearbyQueryService.findNearby(
                     query(CENTER, SpotNearbyQuery.MAX_RADIUS_KM, Set.of(), false, false, false, page, 10));
             result.content().forEach(item -> actual.add(item.spotId()));
             hasNexts.add(result.hasNext());
@@ -349,7 +365,7 @@ class SpotNearbyQueryServiceIntegrationTest {
         long forestId = insertSpot("FOREST", "동쪽 5km 휴양림", EAST_5_KM);
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(
+        PageSlice<SpotNearbyItem> result = spotNearbyQueryService.findNearby(
                 query(CENTER, RADIUS_KM, Set.of(SpotType.FOREST), false, false, false, 0, 20));
 
         // then
@@ -367,7 +383,7 @@ class SpotNearbyQueryServiceIntegrationTest {
                 insertSpot("CAMPSITE", "동쪽 5km", EAST_5_KM));
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
+        PageSlice<SpotNearbyItem> result = spotNearbyQueryService.findNearby(query(CENTER, RADIUS_KM));
 
         // then
         assertThat(result.content()).hasSize(ids.size());
@@ -389,7 +405,8 @@ class SpotNearbyQueryServiceIntegrationTest {
         long farId = insertSpot("CAMPSITE", "북쪽 49km 야영장", new Coordinate(38.0072, 126.978));
 
         // when
-        SpotNearbyPage result = spotNearbyQueryService.findNearby(query(CENTER, SpotNearbyQuery.MAX_RADIUS_KM));
+        PageSlice<SpotNearbyItem> result =
+                spotNearbyQueryService.findNearby(query(CENTER, SpotNearbyQuery.MAX_RADIUS_KM));
 
         // then
         assertThat(result.content())
@@ -445,27 +462,12 @@ class SpotNearbyQueryServiceIntegrationTest {
     }
 
     private long insertSpot(String type, String name, Coordinate at) {
-        jdbcTemplate.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, 'ACTIVE', NOW(6), NOW(6))",
-                type,
-                name,
-                at.wkt());
-        return findSpotId(name);
+        return spotFixture.insert(aSpot().type(type).name(name).at(at.lat(), at.lng()));
     }
 
     private long insertSpot(String type, String status, boolean parkWarning, Coordinate at) {
-        String name = TestSequence.unique(status);
-        jdbcTemplate.update(
-                "INSERT INTO spot"
-                        + " (type, name, location, weather_nx, weather_ny, park_warning, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, ?, ?, NOW(6), NOW(6))",
-                type,
-                name,
-                at.wkt(),
-                parkWarning,
-                status);
-        return findSpotId(name);
+        return spotFixture.insert(
+                aSpot().type(type).status(status).parkWarning(parkWarning).at(at.lat(), at.lng()));
     }
 
     private long insertBakji(long reporterId, boolean hasWater, boolean hasToilet) {
@@ -504,25 +506,5 @@ class SpotNearbyQueryServiceIntegrationTest {
         return spotId;
     }
 
-    private long insertMember() {
-        String nickname = TestSequence.nickname();
-        jdbcTemplate.update(
-                "INSERT INTO member (email, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, 'ACTIVE', 'USER', NOW(6), NOW(6))",
-                TestSequence.email(),
-                nickname);
-        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
-    }
-
-    private long findSpotId(String name) {
-        return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
-    }
-
-    private record Coordinate(double lat, double lng) {
-
-        // SRID 4326 좌표의 WKT는 위도, 경도 순서다.
-        String wkt() {
-            return String.format(Locale.ROOT, "POINT(%s %s)", lat, lng);
-        }
-    }
+    private record Coordinate(double lat, double lng) {}
 }

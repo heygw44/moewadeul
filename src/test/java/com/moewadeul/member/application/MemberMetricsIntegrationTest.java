@@ -3,13 +3,15 @@ package com.moewadeul.member.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.signup.MemberSignupService;
 import com.moewadeul.member.application.signup.SignupCommand;
 import com.moewadeul.member.application.signup.SignupResult;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.application.verification.EmailVerificationService;
-import com.moewadeul.member.domain.MemberException;
+import com.moewadeul.member.domain.MemberErrorCode;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,9 @@ class MemberMetricsIntegrationTest {
 
     @Autowired
     private EmailVerificationService emailVerificationService;
+
+    @Autowired
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -51,7 +56,9 @@ class MemberMetricsIntegrationTest {
         signUp(email);
         double before = signups();
 
-        assertThatThrownBy(() -> signUp(email)).isInstanceOf(MemberException.class);
+        assertThatThrownBy(() -> signUp(email))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.MEMBER_EMAIL_DUPLICATED);
 
         assertThat(signups()).isEqualTo(before);
     }
@@ -74,7 +81,7 @@ class MemberMetricsIntegrationTest {
     void countsOnlySuccessfulEmailVerification() {
         // given
         long memberId = signUp(TestSequence.email()).memberId();
-        String code = emailVerificationService
+        String code = emailVerificationIssuer
                 .issueFor(memberId, REQUEST_IP, TestSequence.next())
                 .orElseThrow()
                 .code();
@@ -83,7 +90,8 @@ class MemberMetricsIntegrationTest {
 
         // when
         assertThatThrownBy(() -> emailVerificationService.verify(memberId, wrongCode))
-                .isInstanceOf(MemberException.class);
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_CODE_INVALID);
         double afterWrongCode = emailVerifications();
         emailVerificationService.verify(memberId, code);
 

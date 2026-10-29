@@ -1,6 +1,8 @@
 package com.moewadeul.community.application.post;
 
-import com.moewadeul.common.web.PatchField;
+import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.image.application.ImageAttachments;
+import com.moewadeul.common.patch.PatchField;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -10,10 +12,10 @@ import org.springframework.stereotype.Service;
 public class CommunityPostCommandService {
 
     private final CommunityPostWriter communityPostWriter;
-    private final CommunityImageAttachmentPrecheck communityImageAttachmentPrecheck;
+    private final CommunityImageAttachments communityImageAttachments;
 
     public long write(long memberId, CommunityPostWriteCommand command) {
-        communityImageAttachmentPrecheck.verify(memberId, null, command.imageIds());
+        communityImageAttachments.precheck(memberId, null, command.imageIds());
         return communityPostWriter.write(memberId, command);
     }
 
@@ -22,9 +24,10 @@ public class CommunityPostCommandService {
         if (imageIds.present()) {
             communityPostWriter.requireOwnActivePost(memberId, postId);
             if (imageIds.value() == null) {
-                throw CommunityImageAttachmentPrecheck.invalid("imageIds는 비울 수 없어요. 이미지를 모두 떼려면 빈 배열을 보내 주세요.");
+                throw new InvalidFieldException(
+                        ImageAttachments.FIELD, "imageIds는 비울 수 없어요. 이미지를 모두 떼려면 빈 배열을 보내 주세요.");
             }
-            communityImageAttachmentPrecheck.verify(memberId, postId, imageIds.value());
+            communityImageAttachments.precheck(memberId, postId, imageIds.value());
         }
         return communityPostWriter.revise(memberId, postId, command);
     }

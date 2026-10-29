@@ -20,4 +20,3 @@ export function parseSpotId(raw: string | null): number | null {
 export const UNVERIFIED_WRITE_REASON = '이메일 인증을 마치면 쓸 수 있어요';
 
 export const LINK_BUTTON_CLASS = buttonClassName('primary');
-export const SECONDARY_LINK_CLASS = buttonClassName('secondary');

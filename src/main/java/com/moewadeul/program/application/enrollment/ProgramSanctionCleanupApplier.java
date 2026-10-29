@@ -1,9 +1,7 @@
 package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
-import com.moewadeul.program.application.ProgramApplicationEvents;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplication;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
@@ -20,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ProgramSanctionCleanupApplier {
+class ProgramSanctionCleanupApplier {
 
     private final ProgramApplicationRepository applicationRepository;
     private final ProgramRepository programRepository;
@@ -29,7 +27,7 @@ public class ProgramSanctionCleanupApplier {
     private final Clock clock;
 
     @Transactional
-    public boolean cancelPending(long applicationId, long memberId, ProgramCancelReason reason) {
+    boolean cancelPending(long applicationId, long memberId, ProgramCancelReason reason) {
         ProgramApplication application =
                 applicationRepository.findByIdForUpdate(applicationId).orElse(null);
         if (application == null || application.getStatus() != ProgramApplicationStatus.PENDING_PAYMENT) {
@@ -37,29 +35,17 @@ public class ProgramSanctionCleanupApplier {
         }
         Instant now = clock.instant();
         application.cancelByMemberRemoval(reason, now);
-        if (reason == ProgramCancelReason.SANCTIONED) {
-            recordApplicantCanceled(application, memberId, reason);
-        }
-        Program program = programRepository
-                .findById(application.getProgramId())
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        outboxEventRecorder.recordAll(application.pullEvents());
+        Program program =
+                programRepository.findById(application.getProgramId()).orElseThrow(BusinessException::notFound);
         seatReleaseRecorder.record(program, now);
         log.info(
                 "program application canceled reason={} applicationId={} memberId={}", reason, applicationId, memberId);
         return true;
     }
 
-    private void recordApplicantCanceled(ProgramApplication application, long memberId, ProgramCancelReason reason) {
-        outboxEventRecorder.record(
-                ProgramApplicationEvents.CANCELED_EVENT_TYPE,
-                ProgramApplicationEvents.AGGREGATE_TYPE,
-                application.getId(),
-                new ProgramApplicationEvents.CanceledPayload(
-                        application.getId(), memberId, application.getProgramId(), reason.name(), false));
-    }
-
     @Transactional
-    public int requestReview(long memberId) {
+    int requestReview(long memberId) {
         return applicationRepository.requestReviewForConfirmed(memberId, clock.instant());
     }
 }

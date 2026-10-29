@@ -10,7 +10,7 @@ import { MyPage } from '../features/member/MyPage';
 import { SignupPage } from '../features/member/SignupPage';
 import { VerifyEmailPage } from '../features/member/VerifyEmailPage';
 import { IdentityVerificationPage } from '../features/trust/IdentityVerificationPage';
-import { MapPage } from '../features/spot/MapPage';
+import { MapPage } from '../features/map/MapPage';
 import NotFoundPage from './NotFoundPage';
 import { lazyPage } from './lazyPage';
 import type { LatLng } from '../map/types';
@@ -39,6 +39,8 @@ const MyProgramApplicationsPage = lazyPage(
 );
 const ProgramDetailPage = lazyPage(() => import('../features/program/ProgramDetailPage'), 'ProgramDetailPage');
 const ProgramListPage = lazyPage(() => import('../features/program/ProgramListPage'), 'ProgramListPage');
+const PrivacyPolicyPage = lazyPage(() => import('./legal/PrivacyPolicyPage'), 'PrivacyPolicyPage');
+const TermsPage = lazyPage(() => import('./legal/TermsPage'), 'TermsPage');
 const LandingPage = lazyPage(() => import('../features/landing/LandingPage'), 'LandingPage');
 const MemoryDetailPage = lazyPage(() => import('../features/memory/MemoryDetailPage'), 'MemoryDetailPage');
 const MemoryFeedPage = lazyPage(() => import('../features/memory/MemoryFeedPage'), 'MemoryFeedPage');
@@ -180,6 +182,8 @@ export const routes: RouteDef[] = [
   { path: '/admin/spots', render: () => <AdminSpotsPage />, preload: AdminSpotsPage.preload },
   { path: '/admin/memories', render: () => <AdminMemoriesPage />, preload: AdminMemoriesPage.preload },
   { path: '/admin/sync-jobs', render: () => <AdminSyncJobsPage />, preload: AdminSyncJobsPage.preload },
+  { path: '/privacy', render: () => <PrivacyPolicyPage />, preload: PrivacyPolicyPage.preload },
+  { path: '/terms', render: () => <TermsPage />, preload: TermsPage.preload },
   { path: '/login', render: () => <LoginPage /> },
   { path: '/signup', render: () => <SignupPage /> },
   { path: '/password-reset', render: () => <PasswordResetPage /> },

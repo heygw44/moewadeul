@@ -1,5 +1,6 @@
 package com.moewadeul.spot.infra.publicspot;
 
+import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import java.time.LocalDate;
 
 public record PublicSpotRow(
@@ -13,7 +14,7 @@ public record PublicSpotRow(
         String facilities,
         String phone,
         String homepage,
-        String operatingStatus,
+        PublicSpotOperatingStatus operatingStatus,
         LocalDate closedFrom,
         LocalDate closedUntil,
         LocalDate sourceDate,

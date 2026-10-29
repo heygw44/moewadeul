@@ -13,7 +13,6 @@ import com.moewadeul.basecamp.domain.JoinCondition;
 import com.moewadeul.basecamp.infra.query.BasecampSearchMapper;
 import com.moewadeul.basecamp.infra.query.SpotSummaryRow;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.trust.application.profile.MemberProfileQueryService;
 import com.moewadeul.trust.application.profile.MemberTrustProfile;
 import java.time.Clock;
@@ -35,9 +34,7 @@ public class BasecampDetailQueryService {
 
     @Transactional(readOnly = true)
     public BasecampDetail find(Long viewerId, long basecampId) {
-        Basecamp basecamp = basecampRepository
-                .findById(basecampId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        Basecamp basecamp = basecampRepository.findById(basecampId).orElseThrow(BusinessException::notFound);
         SpotSummaryRow spot = basecampSearchMapper.selectSpotSummary(basecamp.getSpotId());
         List<BasecampDetail.DetailMember> members = readMembers(basecamp);
         BasecampDetail.DetailMember leader = findLeader(basecamp, members);
@@ -54,7 +51,7 @@ public class BasecampDetailQueryService {
                 basecamp.getEndDate(),
                 basecamp.getCapacity().getValue(),
                 members.size(),
-                basecamp.getStatus().name(),
+                basecamp.getStatus(),
                 toSummary(basecamp.getJoinCondition()),
                 leader,
                 members,
@@ -90,7 +87,7 @@ public class BasecampDetailQueryService {
         return new BasecampDetail.DetailMember(
                 profile.memberId(),
                 profile.nickname(),
-                role.name(),
+                role,
                 profile.ageGroup(),
                 profile.ageGroupVerified(),
                 profile.gender(),
@@ -115,9 +112,15 @@ public class BasecampDetailQueryService {
 
     private static JoinConditionSummary toSummary(JoinCondition condition) {
         return new JoinConditionSummary(
-                condition.getMinTrustLevel(),
-                condition.getAgeGroupMin(),
-                condition.getAgeGroupMax(),
+                condition.getMinTrustLevel() == null
+                        ? null
+                        : condition.getMinTrustLevel().level(),
+                condition.getAgeGroupMin() == null
+                        ? null
+                        : condition.getAgeGroupMin().decade(),
+                condition.getAgeGroupMax() == null
+                        ? null
+                        : condition.getAgeGroupMax().decade(),
                 condition.isSameGenderOnly());
     }
 }

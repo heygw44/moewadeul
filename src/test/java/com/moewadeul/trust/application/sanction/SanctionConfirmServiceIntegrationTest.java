@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -70,20 +71,20 @@ class SanctionConfirmServiceIntegrationTest {
         assertThat(member.get("suspended_until")).isEqualTo(sanction.get("ends_at"));
         Map<String, Object> event = jdbc.queryForMap(
                 "SELECT status, aggregate_type, aggregate_id FROM outbox_event WHERE event_type = ?",
-                SanctionEvents.BASECAMP_CLEANUP_EVENT_TYPE);
+                TrustEvents.SANCTION_BASECAMP_CLEANUP);
         assertThat(event.get("status")).isEqualTo("PENDING");
         assertThat(event.get("aggregate_type")).isEqualTo("MEMBER");
         assertThat(event.get("aggregate_id")).isEqualTo(targetId);
         assertThat(count("outbox_event")).isEqualTo(4);
-        assertThat(countEvents(SanctionEvents.BASECAMP_CLEANUP_EVENT_TYPE)).isEqualTo(1);
-        assertThat(countEvents(SanctionEvents.PROGRAM_CLEANUP_EVENT_TYPE)).isEqualTo(1);
+        assertThat(countEvents(TrustEvents.SANCTION_BASECAMP_CLEANUP)).isEqualTo(1);
+        assertThat(countEvents(TrustEvents.SANCTION_PROGRAM_CLEANUP)).isEqualTo(1);
         Map<String, Object> programEvent = jdbc.queryForMap(
                 "SELECT status, aggregate_type, aggregate_id FROM outbox_event WHERE event_type = ?",
-                SanctionEvents.PROGRAM_CLEANUP_EVENT_TYPE);
+                TrustEvents.SANCTION_PROGRAM_CLEANUP);
         assertThat(programEvent.get("status")).isEqualTo("PENDING");
         assertThat(programEvent.get("aggregate_type")).isEqualTo("MEMBER");
         assertThat(programEvent.get("aggregate_id")).isEqualTo(targetId);
-        assertThat(countEvents(SanctionEvents.NOTIFICATION_EVENT_TYPE)).isEqualTo(2);
+        assertThat(countEvents(TrustEvents.SANCTION_CONFIRMED)).isEqualTo(2);
     }
 
     @Test
@@ -97,9 +98,9 @@ class SanctionConfirmServiceIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT status FROM member WHERE id = ?", String.class, targetId))
                 .isEqualTo("UNVERIFIED");
         assertThat(count("outbox_event")).isEqualTo(1);
-        assertThat(countEvents(SanctionEvents.BASECAMP_CLEANUP_EVENT_TYPE)).isZero();
-        assertThat(countEvents(SanctionEvents.PROGRAM_CLEANUP_EVENT_TYPE)).isZero();
-        assertThat(countEvents(SanctionEvents.NOTIFICATION_EVENT_TYPE)).isEqualTo(1);
+        assertThat(countEvents(TrustEvents.SANCTION_BASECAMP_CLEANUP)).isZero();
+        assertThat(countEvents(TrustEvents.SANCTION_PROGRAM_CLEANUP)).isZero();
+        assertThat(countEvents(TrustEvents.SANCTION_CONFIRMED)).isEqualTo(1);
     }
 
     @Test
@@ -141,14 +142,26 @@ class SanctionConfirmServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[SN-10] 다음 단계 계산에서 해제된 제재와 임시 정지는 빼고, 기간이 끝난 제재는 넣는다")
-    void nextLevelIgnoresLiftedAndTemporaryButCountsExpired() {
+    @DisplayName("[SN-10] 다음 단계 계산에서 처분 취소된 제재와 임시 정지는 빼고, 기간이 끝난 제재는 넣는다")
+    void nextLevelIgnoresRevokedAndTemporaryButCountsExpired() {
         insertSanction("TEMPORARY_72H", null, "ACTIVE");
-        insertSanction("SUSPEND_7D", 2, "LIFTED");
+        insertSanction("SUSPEND_7D", 2, "REVOKED");
         confirm(SanctionType.WARNING);
         insertSanction("SUSPEND_7D", 2, "EXPIRED");
 
         assertThatThrownBy(() -> confirm(SanctionType.SUSPEND_7D)).isInstanceOf(BusinessException.class);
+        confirm(SanctionType.SUSPEND_30D);
+
+        assertThat(jdbc.queryForObject("SELECT MAX(level) FROM sanction WHERE type = 'SUSPEND_30D'", Integer.class))
+                .isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("[SN-10] 조기 종료한 제재도 다음 단계 계산에 넣는다")
+    void nextLevelCountsEndedEarly() {
+        insertSanction("SUSPEND_7D", 2, "ENDED_EARLY");
+
+        assertThatThrownBy(() -> confirm(SanctionType.WARNING)).isInstanceOf(BusinessException.class);
         confirm(SanctionType.SUSPEND_30D);
 
         assertThat(jdbc.queryForObject("SELECT MAX(level) FROM sanction WHERE type = 'SUSPEND_30D'", Integer.class))

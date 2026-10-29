@@ -1,15 +1,16 @@
 package com.moewadeul.member.application.verification;
 
+import static com.moewadeul.member.application.MemberGuards.memberNotFound;
+import static com.moewadeul.member.application.MemberGuards.requireRequestIp;
+
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
-import com.moewadeul.common.outbox.OutboxEventJpaRepository;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
-import com.moewadeul.common.outbox.OutboxEventStatus;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.application.EmailVerificationEvents;
 import com.moewadeul.member.application.MemberMetrics;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.verification.EmailVerification;
@@ -18,9 +19,6 @@ import com.moewadeul.member.domain.verification.EmailVerificationPolicy.ResendHi
 import com.moewadeul.member.domain.verification.EmailVerificationRepository;
 import com.moewadeul.member.domain.verification.SendWindow;
 import com.moewadeul.member.domain.verification.VerificationCode;
-import com.moewadeul.member.infra.verification.EmailVerificationIpLockMapper;
-import com.moewadeul.member.infra.verification.EmailVerificationMapper;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -28,7 +26,6 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -38,56 +35,18 @@ public class EmailVerificationService {
 
     private final MemberRepository memberRepository;
     private final EmailVerificationRepository emailVerificationRepository;
-    private final EmailVerificationMapper emailVerificationMapper;
-    private final EmailVerificationIpLockMapper ipLockMapper;
-    private final EmailVerificationActivator emailVerificationActivator;
+    private final EmailSendIpLimiter emailSendIpLimiter;
+    private final EmailVerificationApplier emailVerificationApplier;
     private final OutboxEventRecorder outboxEventRecorder;
-    private final OutboxEventJpaRepository outboxEventRepository;
     private final MemberMetrics memberMetrics;
     private final Clock clock;
-
-    private final SecureRandom secureRandom = new SecureRandom();
-
-    @Transactional
-    public Optional<IssuedVerification> issueFor(long memberId, String requestIp, long outboxEventId) {
-        requireRequestIp(requestIp);
-        return memberRepository
-                .findById(memberId)
-                .filter(EmailVerificationService::isUnverified)
-                .map(member -> issue(member, requestIp, outboxEventId));
-    }
-
-    private IssuedVerification issue(Member member, String requestIp, long outboxEventId) {
-        VerificationCode code = VerificationCode.generate(secureRandom);
-        String codeHash = VerificationCode.hash(member.getId(), code.value());
-        Instant now = Instant.now(clock);
-        emailVerificationRepository
-                .findByOutboxEventId(outboxEventId)
-                .ifPresentOrElse(
-                        existing -> existing.reissue(codeHash, now),
-                        () -> emailVerificationRepository.save(
-                                EmailVerification.issue(member.getId(), outboxEventId, codeHash, requestIp, now)));
-        return new IssuedVerification(member.getEmail(), code.value());
-    }
-
-    /**
-     * 호출하는 쪽의 트랜잭션에서 잠그지 않는 조회를 하기 전에 부른다.
-     * MySQL은 트랜잭션의 첫 일반 조회 때 읽기 스냅숏을 정한다. 그래서 먼저 조회하면, 잠금을 기다리는 동안 다른 요청이 커밋한
-     * 발송 요청을 세지 못한다.
-     */
-    @Transactional(propagation = Propagation.MANDATORY)
-    public SendWindow lockSendsByIp(String requestIp) {
-        requireRequestIp(requestIp);
-        ipLockMapper.lock(requestIp, Instant.now(clock));
-        return summarizeSentByIp(requestIp, Instant.now(clock));
-    }
 
     @Transactional
     public void requestResend(long memberId, String requestIp) {
         requireRequestIp(requestIp);
         Member member = memberRepository.findByIdForUpdate(memberId).orElseThrow(() -> memberNotFound(memberId));
         rejectIfAlreadyVerified(member);
-        SendWindow sentByIp = lockSendsByIp(requestIp);
+        SendWindow sentByIp = emailSendIpLimiter.lockSendsByIp(requestIp);
 
         Instant now = Instant.now(clock);
         ResendHistory history = loadResendHistory(memberId, sentByIp, now);
@@ -113,7 +72,7 @@ public class EmailVerificationService {
         if (!verification.matches(code)) {
             rejectWrongCode(verification, now);
         }
-        emailVerificationActivator.activate(verification.getId(), memberId, now);
+        emailVerificationApplier.activate(verification.getId(), memberId, now);
         log.info("email verified memberId={}", memberId);
         memberMetrics.recordEmailVerified();
         return new VerificationResult(MemberStatus.ACTIVE);
@@ -121,33 +80,31 @@ public class EmailVerificationService {
 
     private EmailVerification findLatest(long memberId, String code) {
         if (!VerificationCode.isWellFormed(code)) {
-            throw new MemberException(MemberErrorCode.EMAIL_CODE_INVALID);
+            throw new BusinessException(MemberErrorCode.EMAIL_CODE_INVALID);
         }
         EmailVerification latest = emailVerificationRepository
                 .findLatestByMemberId(memberId)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.EMAIL_CODE_INVALID));
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.EMAIL_CODE_INVALID));
         if (latest.isVerified()) {
-            throw new MemberException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
+            throw new BusinessException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         }
         return latest;
     }
 
     private void rejectIfExpiredOrExhausted(EmailVerification verification, Instant now) {
         if (verification.isExpiredAt(now)) {
-            throw new MemberException(MemberErrorCode.EMAIL_CODE_EXPIRED);
+            throw new BusinessException(MemberErrorCode.EMAIL_CODE_EXPIRED);
         }
         if (verification.hasReachedAttemptLimit()) {
-            throw new MemberException(MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
+            throw new BusinessException(MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
         }
     }
 
     private void rejectWrongCode(EmailVerification verification, Instant now) {
-        int updated = emailVerificationMapper.incrementAttempt(
-                verification.getId(), EmailVerificationPolicy.MAX_ATTEMPTS, now);
-        if (updated == 0) {
-            throw new MemberException(MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
+        if (!emailVerificationApplier.countWrongAttempt(verification.getId(), now)) {
+            throw new BusinessException(MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
         }
-        throw new MemberException(MemberErrorCode.EMAIL_CODE_INVALID);
+        throw new BusinessException(MemberErrorCode.EMAIL_CODE_INVALID);
     }
 
     private ResendHistory loadResendHistory(long memberId, SendWindow sentByIp, Instant now) {
@@ -162,43 +119,14 @@ public class EmailVerificationService {
                 hasPendingSendRequest(memberId));
     }
 
-    private SendWindow summarizeSentByIp(String requestIp, Instant now) {
-        Instant since = now.minus(EmailVerificationPolicy.IP_WINDOW);
-        SendWindow issued = emailVerificationRepository.summarizeSentByIpSince(requestIp, since);
-        SendWindow queued = emailVerificationMapper.summarizeQueuedSendsByIpSince(
-                EmailVerificationEvents.EVENT_TYPE,
-                EmailVerificationEvents.AGGREGATE_TYPE,
-                OutboxEventStatus.PENDING,
-                requestIp,
-                since);
-        return issued.plus(queued);
-    }
-
     private boolean hasPendingSendRequest(long memberId) {
-        return outboxEventRepository.existsByEventTypeAndAggregateTypeAndAggregateIdAndStatus(
-                EmailVerificationEvents.EVENT_TYPE,
-                EmailVerificationEvents.AGGREGATE_TYPE,
-                memberId,
-                OutboxEventStatus.PENDING);
+        return outboxEventRecorder.hasPending(
+                EmailVerificationEvents.EVENT_TYPE, EmailVerificationEvents.AGGREGATE_TYPE, memberId);
     }
 
     private void rejectIfAlreadyVerified(Member member) {
-        if (!isUnverified(member)) {
-            throw new MemberException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
-        }
-    }
-
-    private static boolean isUnverified(Member member) {
-        return member.getStatus() == MemberStatus.UNVERIFIED;
-    }
-
-    private static IllegalStateException memberNotFound(long memberId) {
-        return new IllegalStateException("인증을 요청한 회원이 없습니다. memberId=" + memberId);
-    }
-
-    private static void requireRequestIp(String requestIp) {
-        if (requestIp == null || requestIp.isBlank()) {
-            throw new IllegalArgumentException("요청 IP가 비어 있습니다.");
+        if (!member.isAwaitingEmailVerification()) {
+            throw new BusinessException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         }
     }
 }

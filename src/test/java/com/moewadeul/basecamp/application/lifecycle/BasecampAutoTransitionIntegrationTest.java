@@ -4,6 +4,7 @@ import static com.moewadeul.basecamp.application.lifecycle.BasecampAutoTransitio
 import static com.moewadeul.basecamp.application.lifecycle.BasecampAutoTransitionFixture.START_DATE;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -79,9 +80,8 @@ class BasecampAutoTransitionIntegrationTest {
                 .containsEntry("closed_reason", null)
                 .doesNotContainEntry("confirmed_at", null);
         assertThat(fixture.applicationStatusOf(applicationId)).isEqualTo("EXPIRED");
-        assertThat(fixture.eventCount(BasecampTransitionEvents.CONFIRMED_EVENT_TYPE, basecampId))
-                .isEqualTo(1);
-        assertThat(fixture.payloadMemberIdsOf(BasecampTransitionEvents.CONFIRMED_EVENT_TYPE, basecampId))
+        assertThat(fixture.eventCount(BasecampEvents.CONFIRMED, basecampId)).isEqualTo(1);
+        assertThat(fixture.payloadMemberIdsOf(BasecampEvents.CONFIRMED, basecampId))
                 .containsExactly(fixture.leaderIdOf(basecampId), fixture.firstMemberIdOf(basecampId));
     }
 
@@ -99,7 +99,7 @@ class BasecampAutoTransitionIntegrationTest {
                 .containsEntry("cancel_reason", "NOT_ENOUGH_MEMBERS")
                 .doesNotContainEntry("canceled_at", null);
         assertThat(fixture.applicationStatusOf(applicationId)).isEqualTo("EXPIRED");
-        assertThat(fixture.payloadMemberIdsOf(BasecampTransitionEvents.CANCELED_EVENT_TYPE, basecampId))
+        assertThat(fixture.payloadMemberIdsOf(BasecampEvents.CANCELED, basecampId))
                 .containsExactly(fixture.leaderIdOf(basecampId));
     }
 
@@ -113,7 +113,7 @@ class BasecampAutoTransitionIntegrationTest {
         autoTransitionService.run();
 
         assertThat(fixture.statusOf(basecampId)).isEqualTo("CANCELED");
-        assertThat(fixture.payloadMemberIdsOf(BasecampTransitionEvents.CANCELED_EVENT_TYPE, basecampId))
+        assertThat(fixture.payloadMemberIdsOf(BasecampEvents.CANCELED, basecampId))
                 .containsExactly(fixture.leaderIdOf(basecampId));
     }
 
@@ -182,7 +182,7 @@ class BasecampAutoTransitionIntegrationTest {
                 .containsEntry("status", "COMPLETED")
                 .doesNotContainEntry("completed_at", null);
         assertThat(fixture.applicationStatusOf(applicationId)).isEqualTo("EXPIRED");
-        assertThat(fixture.payloadMemberIdsOf(BasecampTransitionEvents.COMPLETED_EVENT_TYPE, basecampId))
+        assertThat(fixture.payloadMemberIdsOf(BasecampEvents.COMPLETED, basecampId))
                 .containsExactly(fixture.leaderIdOf(basecampId), fixture.firstMemberIdOf(basecampId));
     }
 
@@ -197,10 +197,9 @@ class BasecampAutoTransitionIntegrationTest {
         BasecampAutoTransitionService.Result second = autoTransitionService.run();
 
         assertThat(second.departureProcessed()).isZero();
-        assertThat(fixture.eventCount(BasecampTransitionEvents.CONFIRMED_EVENT_TYPE, confirmedTarget))
+        assertThat(fixture.eventCount(BasecampEvents.CONFIRMED, confirmedTarget))
                 .isEqualTo(1);
-        assertThat(fixture.eventCount(BasecampTransitionEvents.CANCELED_EVENT_TYPE, canceledTarget))
-                .isEqualTo(1);
+        assertThat(fixture.eventCount(BasecampEvents.CANCELED, canceledTarget)).isEqualTo(1);
         assertThat(fixture.totalEventCount()).isEqualTo(2);
     }
 

@@ -24,6 +24,6 @@ public interface CommunityImageJpaRepository extends JpaRepository<CommunityImag
     List<CommunityImage> findAllByIdForUpdate(@Param("ids") Collection<Long> ids);
 
     @Override
-    @Query("SELECT i.id FROM CommunityImage i WHERE i.postId = :postId ORDER BY i.displayOrder")
-    List<Long> findIdsByPostId(@Param("postId") long postId);
+    @Query("SELECT i.id FROM CommunityImage i WHERE i.parentId = :postId ORDER BY i.displayOrder")
+    List<Long> findIdsByParentId(@Param("postId") long postId);
 }

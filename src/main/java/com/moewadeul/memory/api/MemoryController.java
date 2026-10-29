@@ -1,8 +1,9 @@
 package com.moewadeul.memory.api;
 
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotentRequest;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.application.IdempotentRequest;
 import com.moewadeul.memory.application.MemoryCommandService;
 import com.moewadeul.memory.application.MemoryQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -71,10 +72,12 @@ class MemoryController {
                     + "1시간 동안 쓸 수 있고, 사진이 없으면 필드를 뺀다. imageCount는 사진 수이고 없으면 0이다. "
                     + "likedByMe는 로그인한 사람이 조회할 때만 주고, 비회원이면 필드를 뺀다.")
     @GetMapping("/api/memories/feed")
-    MemoryFeedPageResponse feed(@AuthenticationPrincipal LoginMember loginMember, @Valid MemoryFeedRequest request) {
+    PageResponse<MemoryFeedItemResponse> feed(
+            @AuthenticationPrincipal LoginMember loginMember, @Valid MemoryFeedRequest request) {
         Long viewerId = loginMember == null ? null : loginMember.memberId();
-        return MemoryFeedPageResponse.from(
-                memoryQueryService.listFeed(request.pageOrDefault(), request.sizeOrDefault(), viewerId));
+        return PageResponse.from(
+                memoryQueryService.listFeed(request.pageOrDefault(), request.sizeOrDefault(), viewerId),
+                MemoryFeedItemResponse::from);
     }
 
     @Operation(

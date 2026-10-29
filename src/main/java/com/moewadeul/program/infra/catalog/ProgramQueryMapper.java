@@ -1,6 +1,7 @@
 package com.moewadeul.program.infra.catalog;
 
 import com.moewadeul.program.domain.ProgramApplicationStatus;
+import com.moewadeul.program.domain.ProgramPhase;
 import java.time.Instant;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -10,7 +11,7 @@ import org.apache.ibatis.annotations.Param;
 public interface ProgramQueryMapper {
 
     List<ProgramListRow> selectList(
-            @Param("phase") String phase,
+            @Param("phase") ProgramPhase phase,
             @Param("now") Instant now,
             @Param("offset") long offset,
             @Param("limit") int limit);
@@ -32,6 +33,4 @@ public interface ProgramQueryMapper {
             @Param("status") ProgramApplicationStatus status,
             @Param("offset") long offset,
             @Param("limit") int limit);
-
-    boolean existsActiveSpot(@Param("spotId") long spotId);
 }

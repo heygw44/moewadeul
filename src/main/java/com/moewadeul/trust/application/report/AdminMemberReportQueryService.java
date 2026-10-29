@@ -1,7 +1,8 @@
 package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.trust.domain.report.ReportStatus;
 import com.moewadeul.trust.infra.report.AdminMemberReportDetailRow;
 import com.moewadeul.trust.infra.report.AdminMemberReportMapper;
@@ -16,26 +17,22 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AdminMemberReportQueryService {
 
+    private static final String STATUS_MESSAGE = "알 수 없는 신고 상태예요.";
+
     private final AdminMemberReportMapper adminMemberReportMapper;
 
     @Transactional(readOnly = true)
-    public AdminMemberReportPage list(String status, Boolean urgent, int page, int size) {
-        String statusName = status == null ? null : parseStatus(status).name();
-        long offset = (long) page * size;
-        List<AdminMemberReportRow> rows = adminMemberReportMapper.selectList(statusName, urgent, offset, size + 1);
-        boolean hasNext = rows.size() > size;
-        List<AdminMemberReportSummary> content = rows.stream()
-                .limit(size)
-                .map(AdminMemberReportQueryService::toSummary)
-                .toList();
-        return new AdminMemberReportPage(content, page, size, hasNext);
+    public PageSlice<AdminMemberReportSummary> list(String status, Boolean urgent, int page, int size) {
+        ReportStatus reportStatus = EnumParser.parseNullable(ReportStatus.class, status, STATUS_MESSAGE);
+        List<AdminMemberReportRow> rows = adminMemberReportMapper.selectList(
+                reportStatus, urgent, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+        return PageSlice.of(rows, page, size).map(AdminMemberReportQueryService::toSummary);
     }
 
     @Transactional(readOnly = true)
     public AdminMemberReportDetail detail(long reportId) {
-        AdminMemberReportDetailRow row = adminMemberReportMapper
-                .selectDetail(reportId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        AdminMemberReportDetailRow row =
+                adminMemberReportMapper.selectDetail(reportId).orElseThrow(BusinessException::notFound);
         List<AdminMemberReportDetail.SanctionHistory> history =
                 adminMemberReportMapper.selectSanctionHistory(row.targetId()).stream()
                         .map(AdminMemberReportQueryService::toHistory)
@@ -52,14 +49,6 @@ public class AdminMemberReportQueryService {
                 history);
     }
 
-    private static ReportStatus parseStatus(String status) {
-        try {
-            return ReportStatus.valueOf(status);
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "알 수 없는 신고 상태예요.");
-        }
-    }
-
     private AdminMemberReportDetail.Review toReview(AdminMemberReportDetailRow row) {
         if (row.reviewId() == null) {
             return null;
@@ -74,10 +63,10 @@ public class AdminMemberReportQueryService {
     private static AdminMemberReportSummary toSummary(AdminMemberReportRow row) {
         return new AdminMemberReportSummary(
                 row.reportId(),
-                row.kind(),
-                row.type(),
+                row.kind().name(),
+                row.type().name(),
                 row.urgent(),
-                row.status(),
+                row.status().name(),
                 row.reporterId(),
                 row.reporterNickname(),
                 row.targetId(),
@@ -89,10 +78,10 @@ public class AdminMemberReportQueryService {
     private static AdminMemberReportSummary toSummary(AdminMemberReportDetailRow row) {
         return new AdminMemberReportSummary(
                 row.reportId(),
-                row.kind(),
-                row.type(),
+                row.kind().name(),
+                row.type().name(),
                 row.urgent(),
-                row.status(),
+                row.status().name(),
                 row.reporterId(),
                 row.reporterNickname(),
                 row.targetId(),
@@ -104,9 +93,9 @@ public class AdminMemberReportQueryService {
     private static AdminMemberReportDetail.SanctionHistory toHistory(AdminSanctionHistoryRow row) {
         return new AdminMemberReportDetail.SanctionHistory(
                 row.sanctionId(),
-                row.type(),
+                row.type().name(),
                 row.level(),
-                row.status(),
+                row.status().name(),
                 row.reason(),
                 row.startsAt(),
                 row.endsAt(),

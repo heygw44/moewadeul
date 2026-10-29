@@ -2,6 +2,7 @@ package com.moewadeul.weather.application;
 
 import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.time.KoreaTime;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.weather.application.WeatherForecast.MidTermForecast;
 import com.moewadeul.weather.application.WeatherForecast.ShortTermForecast;
 import com.moewadeul.weather.domain.KmaBaseTimes;
@@ -12,7 +13,6 @@ import com.moewadeul.weather.infra.KmaClient;
 import com.moewadeul.weather.infra.KmaMidTermItem;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +37,7 @@ public class WeatherQueryService {
     private final Clock clock;
 
     public Optional<WeatherForecast> forecast(int nx, int ny, double lat, double lng) {
+        OutsideTransaction.require("기상청 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         try {
             return Optional.of(fetchForecast(nx, ny, lat, lng));
         } catch (KmaApiException e) {
@@ -60,7 +61,7 @@ public class WeatherQueryService {
         Optional<KmaMidTermItem> ta =
                 caches.midTerm(MID_TA, region.taRegId(), tmFc, () -> kmaClient.getMidTa(region.taRegId(), tmFc));
         List<MidTermForecast> midTerm =
-                KmaForecastConverter.toMidTerm(land, ta, tmFc.toLocalDate(), LocalDate.ofInstant(now, KoreaTime.ZONE));
+                KmaForecastConverter.toMidTerm(land, ta, tmFc.toLocalDate(), KoreaTime.dateOf(now));
 
         return new WeatherForecast(WeatherForecast.KMA_SOURCE, shortTerm, midTerm);
     }

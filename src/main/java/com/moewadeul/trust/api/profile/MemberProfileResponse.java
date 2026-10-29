@@ -1,5 +1,7 @@
 package com.moewadeul.trust.api.profile;
 
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.trust.application.profile.MemberTrustProfile;
 import java.util.List;
 
@@ -10,9 +12,9 @@ public sealed interface MemberProfileResponse {
     record Member(
             long memberId,
             String nickname,
-            String ageGroup,
+            AgeGroup ageGroup,
             boolean ageGroupVerified,
-            String gender,
+            Gender gender,
             boolean genderVerified,
             int trustLevel,
             int completedCompanions,
@@ -27,7 +29,7 @@ public sealed interface MemberProfileResponse {
                     profile.ageGroupVerified(),
                     profile.gender(),
                     profile.genderVerified(),
-                    profile.trustLevel(),
+                    profile.trustLevel().level(),
                     profile.completedCompanions(),
                     new CompanionReviewSummary(profile.rejoinRate(), profile.topTags()));
         }

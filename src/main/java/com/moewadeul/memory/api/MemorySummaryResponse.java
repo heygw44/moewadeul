@@ -3,6 +3,8 @@ package com.moewadeul.memory.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.moewadeul.memory.api.MemoryDetailResponse.LinkedSpot;
 import com.moewadeul.memory.application.MemorySummary;
+import com.moewadeul.memory.domain.MemoryStatus;
+import com.moewadeul.memory.domain.MemoryVisibility;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -14,8 +16,8 @@ public record MemorySummaryResponse(
         LocalDate visitedDate,
         int nights,
         @JsonInclude(JsonInclude.Include.NON_NULL) String excerpt,
-        String visibility,
-        String status,
+        MemoryVisibility visibility,
+        MemoryStatus status,
         @JsonInclude(JsonInclude.Include.NON_NULL) String thumbnailUrl,
         long imageCount,
         Instant createdAt) {

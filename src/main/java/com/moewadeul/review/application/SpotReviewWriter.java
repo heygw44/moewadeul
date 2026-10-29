@@ -2,7 +2,8 @@ package com.moewadeul.review.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.time.KoreaTime;
+import com.moewadeul.common.error.UniqueViolations;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.review.domain.ReviewErrorCode;
 import com.moewadeul.review.domain.SpotReview;
 import com.moewadeul.review.domain.SpotReviewRepository;
@@ -21,10 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 class SpotReviewWriter {
 
+    private static final String UNIQUE_CONSTRAINT = "uk_spot_review_spot_member_visited_date";
+
     private final ActiveSpotChecker activeSpotChecker;
     private final SpotReviewRepository spotReviewRepository;
     private final SpotReviewMapper spotReviewMapper;
-    private final ReviewImageAttacher reviewImageAttacher;
+    private final ReviewImageAttachments reviewImageAttachments;
     private final ReviewImageReader reviewImageReader;
     private final Clock clock;
 
@@ -32,12 +35,12 @@ class SpotReviewWriter {
     public long write(long memberId, long spotId, SpotReviewWriteCommand command) {
         activeSpotChecker.requireActive(spotId);
         Instant now = clock.instant();
-        requireNotFuture(command.visitedDate(), now);
+        requireVisitedDate(command.visitedDate());
         requireValidBody(command.rating(), command.content());
         SpotReview review =
                 SpotReview.write(spotId, memberId, command.visitedDate(), command.rating(), command.content(), now);
         long reviewId = save(review).getId();
-        reviewImageAttacher.replace(memberId, reviewId, command.imageIds());
+        reviewImageAttachments.replace(memberId, reviewId, command.imageIds());
         return reviewId;
     }
 
@@ -47,22 +50,22 @@ class SpotReviewWriter {
         requireValidBody(command.rating(), command.content());
         review.revise(command.rating(), command.content(), clock.instant());
         if (command.imageIds() != null) {
-            reviewImageAttacher.replace(memberId, reviewId, command.imageIds());
+            reviewImageAttachments.replace(memberId, reviewId, command.imageIds());
         }
         // 고친 내용을 MyBatis로 읽기 전에 DB에 반영한다.
         spotReviewRepository.flush();
-        List<SpotReviewImage> images =
+        List<ImageView> images =
                 reviewImageReader.readByReviewIds(List.of(reviewId)).getOrDefault(reviewId, List.of());
         return spotReviewMapper
                 .selectById(reviewId)
                 .map(row -> SpotReviewItem.from(row, images))
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
     }
 
     @Transactional
     public void delete(long memberId, long reviewId) {
         SpotReview review = loadOwnReview(memberId, reviewId);
-        reviewImageAttacher.replace(memberId, reviewId, List.of());
+        reviewImageAttachments.replace(memberId, reviewId, List.of());
         spotReviewRepository.delete(review);
     }
 
@@ -72,12 +75,8 @@ class SpotReviewWriter {
     }
 
     private SpotReview loadOwnReview(long memberId, long reviewId) {
-        SpotReview review = spotReviewRepository
-                .findById(reviewId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!review.isWrittenBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        SpotReview review = spotReviewRepository.findById(reviewId).orElseThrow(BusinessException::notFound);
+        review.requireWrittenBy(memberId);
         return review;
     }
 
@@ -85,16 +84,13 @@ class SpotReviewWriter {
         try {
             return spotReviewRepository.saveAndFlush(review);
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(ReviewErrorCode.SPOT_REVIEW_DUPLICATED);
+            throw UniqueViolations.translate(e, UNIQUE_CONSTRAINT, ReviewErrorCode.SPOT_REVIEW_DUPLICATED);
         }
     }
 
-    private static void requireNotFuture(LocalDate visitedDate, Instant now) {
+    private static void requireVisitedDate(LocalDate visitedDate) {
         if (visitedDate == null) {
             throw invalidInput("방문일을 입력해 주세요.");
-        }
-        if (visitedDate.isAfter(LocalDate.ofInstant(now, KoreaTime.ZONE))) {
-            throw invalidInput("방문일은 오늘(한국 날짜)보다 뒤일 수 없어요.");
         }
     }
 

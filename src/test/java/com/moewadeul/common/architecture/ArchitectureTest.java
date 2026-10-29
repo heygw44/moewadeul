@@ -45,8 +45,44 @@ class ArchitectureTest {
     }
 
     @Test
+    @DisplayName("[ADR-009] application 패키지는 *JpaRepository를 직접 쓰지 않는다")
+    void applicationDoesNotUseJpaRepositoryDirectly() {
+        ArchitectureRules.applicationJpaRepositoryRule(ROOT_PACKAGE).check(productionClasses);
+    }
+
+    @Test
+    @DisplayName("[ADR-009] domain 패키지에는 저장소가 아닌 외부 포트를 두지 않는다")
+    void domainHoldsOnlyRepositoryPorts() {
+        ArchitectureRules.domainPortRule(ROOT_PACKAGE).check(productionClasses);
+    }
+
+    @Test
+    @DisplayName("[ADR-005] api 패키지는 common.storage·common.mail 을 직접 쓰지 않는다")
+    void apiDoesNotUseExternalAdaptersDirectly() {
+        ArchitectureRules.apiExternalAdapterRule(ROOT_PACKAGE).check(productionClasses);
+    }
+
+    @Test
     @DisplayName("[ADR-005] @Transactional 은 application 패키지에만 둔다")
     void transactionalIsOnlyInApplication() {
         ArchitectureRules.transactionalPlacementRule(ROOT_PACKAGE).check(productionClasses);
+    }
+
+    @Test
+    @DisplayName("[ADR-005] *Applier 는 package-private 이라 짝 서비스를 거치지 않고 부를 수 없다")
+    void appliersArePackagePrivate() {
+        ArchitectureRules.applierVisibilityRule(ROOT_PACKAGE).check(productionClasses);
+    }
+
+    @Test
+    @DisplayName("[ADR-005] *Applier 는 OutsideTransaction 가드를 둔 같은 패키지의 *Service 만 부른다")
+    void appliersAreCalledOnlyFromGuardedServices() {
+        ArchitectureRules.applierCallerRule(ROOT_PACKAGE).check(productionClasses);
+    }
+
+    @Test
+    @DisplayName("[ADR-012] @Scheduled 메서드는 모두 ScheduledJobRunner를 거친다")
+    void scheduledMethodsRunThroughJobRunner() {
+        ArchitectureRules.scheduledJobsRunThroughRunnerRule(ROOT_PACKAGE).check(productionClasses);
     }
 }

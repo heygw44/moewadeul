@@ -10,11 +10,13 @@ import type {
   AdminSpotSummary,
   Page,
   ReportStatus,
+  SanctionLiftReason,
+  SanctionStatus,
   SyncJobRun,
   SyncJobType,
 } from './types';
 
-export const ADMIN_PAGE_SIZE = 20;
+const ADMIN_PAGE_SIZE = 20;
 
 export function fetchAdminMemberReports(
   params: { status?: ReportStatus; urgent?: boolean; page: number },
@@ -48,8 +50,11 @@ export function dismissReport(
   return apiFetch(`/api/admin/member-reports/${reportId}/dismiss`, { method: 'POST', body: request });
 }
 
-export function liftSanction(sanctionId: number): Promise<{ sanctionId: number; status: string }> {
-  return apiFetch(`/api/admin/sanctions/${sanctionId}/lift`, { method: 'POST' });
+export function liftSanction(
+  sanctionId: number,
+  reason: SanctionLiftReason,
+): Promise<{ sanctionId: number; status: SanctionStatus }> {
+  return apiFetch(`/api/admin/sanctions/${sanctionId}/lift`, { method: 'POST', body: { reason } });
 }
 
 export function fetchAdminSpots(

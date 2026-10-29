@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -19,7 +20,7 @@ class PasswordTest {
     private static void assertPolicyViolation(String raw) {
         assertThatThrownBy(() -> Password.of(raw))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_PASSWORD_POLICY));
     }
 

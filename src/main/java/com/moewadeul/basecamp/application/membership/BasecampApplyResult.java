@@ -1,3 +1,5 @@
 package com.moewadeul.basecamp.application.membership;
 
-public record BasecampApplyResult(long applicationId, String status) {}
+import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
+
+public record BasecampApplyResult(long applicationId, BasecampApplicationStatus status) {}

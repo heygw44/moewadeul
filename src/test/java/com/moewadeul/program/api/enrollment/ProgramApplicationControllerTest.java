@@ -11,17 +11,17 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import com.moewadeul.program.application.enrollment.ProgramApplicationCancelResult;
 import com.moewadeul.program.application.enrollment.ProgramPayResult;
 import com.moewadeul.program.application.enrollment.ProgramPaymentService;
+import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -61,13 +61,14 @@ class ProgramApplicationControllerTest {
     private ProgramPaymentService programPaymentService;
 
     @MockitoBean
-    private IdempotencyRecordJpaRepository idempotencyRecordRepository;
+    private IdempotencyRecordRepository idempotencyRecordRepository;
 
     @Test
     @DisplayName("[F-19] 인증 회원이 결제하면 200과 신청 ID, 상태, 결제 시각을 응답하고 로그인한 회원 ID로 서비스를 부른다")
     void payReturnsOk() {
         when(idempotencyRecordRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(programPaymentService.pay(4L, 70L)).thenReturn(new ProgramPayResult(70L, "CONFIRMED", AT));
+        when(programPaymentService.pay(4L, 70L))
+                .thenReturn(new ProgramPayResult(70L, ProgramApplicationStatus.CONFIRMED, AT));
 
         MvcTestResult result =
                 payRequest(70L, "key-1", VALID_BODY).with(member(4L)).exchange();
@@ -157,8 +158,9 @@ class ProgramApplicationControllerTest {
         when(programPaymentService.pay(4L, 1L)).thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
         when(programPaymentService.pay(4L, 2L)).thenThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED));
         when(programPaymentService.pay(4L, 3L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED));
-        when(programPaymentService.pay(4L, 4L)).thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED));
+        when(programPaymentService.pay(4L, 4L))
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE));
 
         assertPayError(1L, HttpStatus.NOT_FOUND, "NOT_FOUND");
         assertPayError(2L, HttpStatus.FORBIDDEN, "ACCESS_DENIED");
@@ -169,7 +171,8 @@ class ProgramApplicationControllerTest {
     @Test
     @DisplayName("[F-19][PG-06] 인증 회원이 취소하면 200과 상태, 환불 여부를 응답하고 멱등성 키 없이도 된다")
     void cancelReturnsOk() {
-        when(programPaymentService.cancel(4L, 70L)).thenReturn(new ProgramApplicationCancelResult("CANCELED", true));
+        when(programPaymentService.cancel(4L, 70L))
+                .thenReturn(new ProgramApplicationCancelResult(ProgramApplicationStatus.CANCELED, true));
 
         MvcTestResult result = mvc.post()
                 .uri("/api/program-applications/70/cancel")
@@ -187,7 +190,7 @@ class ProgramApplicationControllerTest {
     void cancelMapsServiceErrors() {
         when(programPaymentService.cancel(4L, 1L)).thenThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED));
         when(programPaymentService.cancel(4L, 2L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_CANCEL_NOT_ALLOWED));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_CANCEL_NOT_ALLOWED));
 
         MvcTestResult denied = mvc.post()
                 .uri("/api/program-applications/1/cancel")

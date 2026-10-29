@@ -1,9 +1,11 @@
 package com.moewadeul.memory.application.moderation;
 
-import com.moewadeul.memory.application.MemoryPhoto;
+import com.moewadeul.common.image.application.ImageView;
+import com.moewadeul.common.moderation.RecentReport;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public record AdminMemorySummary(
         long memoryId,
@@ -14,14 +16,9 @@ public record AdminMemorySummary(
         LocalDate visitedDate,
         int nights,
         String content,
-        List<MemoryPhoto> images,
+        List<ImageView> images,
         String status,
         long reportCount,
-        ReasonCounts reasonCounts,
+        Map<String, Long> reasonCounts,
         List<RecentReport> recentReports,
-        Instant statusChangedAt) {
-
-    public record ReasonCounts(long spam, long abuse, long illegalCamping, long privacy, long moneyScam, long other) {}
-
-    public record RecentReport(String reason, String content, Instant createdAt) {}
-}
+        Instant statusChangedAt) {}

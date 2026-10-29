@@ -1,11 +1,14 @@
 package com.moewadeul.spot.infra.map;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.common.testsupport.TestSequence;
-import java.math.BigDecimal;
+import com.moewadeul.common.testsupport.MemberFixture;
+import com.moewadeul.common.testsupport.SpotFixture;
+import com.moewadeul.member.domain.MemberStatus;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,15 +31,21 @@ class SpotClusterCellTriggerIntegrationTest {
             + " park_warning, spot_count, lat_sum, lng_sum FROM spot_cluster_cell";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
+    private SpotFixture spotFixture;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("[F-03] 장소를 넣으면 트리거가 8단계 격자 칸마다 장소 수와 위도·경도 합을 더한다")
     void insertAddsSpotToEveryGridLevel() {
         // given & when
-        insertSpot("CAMPSITE", "ACTIVE", false, 37.5665, 126.978);
-        insertSpot("CAMPSITE", "ACTIVE", false, 37.5701, 126.9832);
-        insertSpot("CAMPSITE", "HIDDEN", false, 37.5665, 126.978);
+        spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.5665, 126.978));
+        spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.5701, 126.9832));
+        spotFixture.insert(aSpot().type("CAMPSITE").status("HIDDEN").at(37.5665, 126.978));
 
         // then
         List<Map<String, Object>> coarsest =
@@ -54,12 +63,16 @@ class SpotClusterCellTriggerIntegrationTest {
     @DisplayName("[F-03] 숨김·복구, 좌표 이동, 경고·시설 변경, 삭제를 거쳐도 두 집계 표가 장소 테이블과 같다")
     void aggregatesFollowEveryKindOfSpotChange() {
         // given
-        long memberId = insertMember();
-        long campsiteId = insertSpot("CAMPSITE", "ACTIVE", false, 37.5665, 126.978);
-        long forestId = insertSpot("FOREST", "ACTIVE", true, 37.71, 128.75);
-        long bakjiId = insertSpot("BAKJI", "ACTIVE", false, 37.72, 128.76);
+        long memberId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
+        long campsiteId =
+                spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.5665, 126.978));
+        long forestId = spotFixture.insert(
+                aSpot().type("FOREST").status("ACTIVE").parkWarning(true).at(37.71, 128.75));
+        long bakjiId = spotFixture.insert(aSpot().type("BAKJI").status("ACTIVE").at(37.72, 128.76));
         insertBakjiDetail(bakjiId, memberId, true, false);
-        long hiddenBakjiId = insertSpot("BAKJI", "PENDING_REVIEW", false, 35.1796, 129.0756);
+        long hiddenBakjiId = spotFixture.insert(
+                aSpot().type("BAKJI").status("PENDING_REVIEW").at(35.1796, 129.0756));
         insertBakjiDetail(hiddenBakjiId, memberId, false, true);
         assertTablesMatchSpots();
 
@@ -89,7 +102,7 @@ class SpotClusterCellTriggerIntegrationTest {
     @DisplayName("[F-03] 집계 표를 먼저 비운 뒤 장소를 지워도 음수 행이 남지 않는다")
     void deletingSpotsAfterAggregatesAreClearedLeavesNoNegativeRows() {
         // given
-        insertSpot("CAMPSITE", "ACTIVE", false, 37.5665, 126.978);
+        spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.5665, 126.978));
         jdbcTemplate.update("DELETE FROM spot_cluster_total");
         jdbcTemplate.update("DELETE FROM spot_cluster_cell");
 
@@ -110,13 +123,13 @@ class SpotClusterCellTriggerIntegrationTest {
         double coarsest = SpotGridCells.cellSize(SpotGridCells.LEVEL_COUNT - 1);
 
         // when
-        insertSpot("CAMPSITE", "ACTIVE", false, -33.8688, -70.6693);
-        insertSpot("CAMPSITE", "ACTIVE", false, -0.00001, 0.00001);
-        insertSpot("CAMPSITE", "ACTIVE", false, 0.0, 0.0);
-        insertSpot("CAMPSITE", "ACTIVE", false, 37.08, 126.82);
-        insertSpot("CAMPSITE", "ACTIVE", false, 37.08 - 1e-9, 126.82 + 1e-9);
-        insertSpot("FOREST", "ACTIVE", false, -37.84, -70.68);
-        insertSpot("FOREST", "ACTIVE", false, 100 * coarsest, -100 * coarsest);
+        spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(-33.8688, -70.6693));
+        spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(-0.00001, 0.00001));
+        spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(0.0, 0.0));
+        spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.08, 126.82));
+        spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.08 - 1e-9, 126.82 + 1e-9));
+        spotFixture.insert(aSpot().type("FOREST").status("ACTIVE").at(-37.84, -70.68));
+        spotFixture.insert(aSpot().type("FOREST").status("ACTIVE").at(100 * coarsest, -100 * coarsest));
 
         // then
         assertTablesMatchSpots();
@@ -187,21 +200,6 @@ class SpotClusterCellTriggerIntegrationTest {
         }
     }
 
-    private long insertSpot(String type, String status, boolean parkWarning, double lat, double lng) {
-        String name = TestSequence.unique("집계");
-        jdbcTemplate.update(
-                "INSERT INTO spot"
-                        + " (type, name, location, weather_nx, weather_ny, park_warning, status, created_at, updated_at)"
-                        + " VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, ?, ?, NOW(6), NOW(6))",
-                type,
-                name,
-                "POINT(" + BigDecimal.valueOf(lat).toPlainString() + " "
-                        + BigDecimal.valueOf(lng).toPlainString() + ")",
-                parkWarning,
-                status);
-        return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
-    }
-
     private void insertBakjiDetail(long spotId, long reporterId, boolean hasWater, boolean hasToilet) {
         jdbcTemplate.update(
                 "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
@@ -210,15 +208,5 @@ class SpotClusterCellTriggerIntegrationTest {
                 reporterId,
                 hasWater,
                 hasToilet);
-    }
-
-    private long insertMember() {
-        String nickname = TestSequence.nickname();
-        jdbcTemplate.update(
-                "INSERT INTO member (email, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, 'ACTIVE', 'USER', NOW(6), NOW(6))",
-                TestSequence.email(),
-                nickname);
-        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
     }
 }

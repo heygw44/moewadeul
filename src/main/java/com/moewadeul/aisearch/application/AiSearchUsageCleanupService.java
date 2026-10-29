@@ -1,6 +1,8 @@
 package com.moewadeul.aisearch.application;
 
 import com.moewadeul.aisearch.infra.AiSearchUsageMapper;
+import com.moewadeul.common.batch.BatchDeletion;
+import com.moewadeul.common.time.KoreaTime;
 import java.time.Clock;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +22,8 @@ public class AiSearchUsageCleanupService {
     private final Clock clock;
 
     public int deleteExpiredUsage() {
-        LocalDate cutoff = AiSearchDay.today(clock).minusDays(RETENTION_DAYS);
-        int deletedTotal = 0;
-        int deleted;
-        do {
-            deleted = usageMapper.deleteBefore(cutoff, BATCH_SIZE);
-            deletedTotal += deleted;
-        } while (deleted >= BATCH_SIZE);
+        LocalDate cutoff = KoreaTime.today(clock).minusDays(RETENTION_DAYS);
+        int deletedTotal = BatchDeletion.untilDrained(BATCH_SIZE, size -> usageMapper.deleteBefore(cutoff, size));
         log.info("ai search usage deleted count={}", deletedTotal);
         return deletedTotal;
     }

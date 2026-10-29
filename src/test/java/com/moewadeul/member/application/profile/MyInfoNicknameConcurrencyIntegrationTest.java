@@ -3,12 +3,12 @@ package com.moewadeul.member.application.profile;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.common.web.PatchField;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +52,7 @@ class MyInfoNicknameConcurrencyIntegrationTest {
                 .hasSize(THREADS - 1)
                 .allSatisfy(failure -> assertThat(failure)
                         .isInstanceOfSatisfying(
-                                MemberException.class,
+                                BusinessException.class,
                                 e -> assertThat(e.getErrorCode())
                                         .isEqualTo(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED)));
         List<Member> owners = memberJpaRepository.findAllById(memberIds).stream()

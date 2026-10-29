@@ -251,7 +251,7 @@ class SecurityConfigIntegrationTest {
 
         MvcTestResult result = withCsrf(mvc.post().uri("/api/members"), csrfToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"not-an-email\",\"password\":\"x\",\"nickname\":\"x\"}")
+                .content("{\"email\":\"not-an-email\",\"password\":\"x\",\"nickname\":\"x\",\"ageConfirmed\":true}")
                 .exchange();
 
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);

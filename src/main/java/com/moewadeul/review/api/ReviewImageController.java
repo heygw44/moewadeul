@@ -27,12 +27,14 @@ class ReviewImageController {
                     + "201과 함께 imageId, uploadUrl, method(PUT), headers(Content-Type, Content-Length), expiresAt을 준다. "
                     + "화면은 uploadUrl로 파일을 PUT하면서 headers를 그대로 보낸다. 서명에 형식과 크기가 들어 있어서 다르게 올리면 저장소가 거부한다. "
                     + "URL은 10분 동안 쓸 수 있다. 올린 뒤 후기 작성·수정 요청의 imageIds에 imageId를 넣는다. 후기 하나에 3장까지 붙인다. "
-                    + "24시간 안에 후기에 붙이지 않은 이미지는 서버가 지운다.")
+                    + "24시간 안에 후기에 붙이지 않은 이미지는 서버가 지운다. "
+                    + "최근 24시간 안에 받고 아직 후기에 붙이지 않은 이미지가 9장이면 429 IMAGE_UPLOAD_LIMITED이고, "
+                    + "Retry-After는 그중 가장 오래된 이미지가 24시간을 넘길 때까지 남은 초다.")
     @PostMapping("/api/reviews/images")
     @ResponseStatus(HttpStatus.CREATED)
     ReviewImageUploadResponse issueUpload(
             @AuthenticationPrincipal LoginMember loginMember, @Valid @RequestBody ReviewImageUploadRequest request) {
         return ReviewImageUploadResponse.from(
-                reviewImageUploadService.issue(loginMember.memberId(), request.contentType(), request.sizeBytes()));
+                reviewImageUploadService.issue(loginMember.memberId(), request.toCommand()));
     }
 }

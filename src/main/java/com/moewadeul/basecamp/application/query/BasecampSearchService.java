@@ -3,6 +3,7 @@ package com.moewadeul.basecamp.application.query;
 import com.moewadeul.basecamp.application.JoinApplicants;
 import com.moewadeul.basecamp.application.JoinConditionSummary;
 import com.moewadeul.basecamp.application.JoinEligibility;
+import com.moewadeul.basecamp.domain.BasecampSchedule;
 import com.moewadeul.basecamp.domain.JoinCondition;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy;
 import com.moewadeul.basecamp.domain.JoinEligibilityPolicy.Applicant;
@@ -10,15 +11,15 @@ import com.moewadeul.basecamp.domain.PriorRelation;
 import com.moewadeul.basecamp.infra.query.BasecampSearchCondition;
 import com.moewadeul.basecamp.infra.query.BasecampSearchMapper;
 import com.moewadeul.basecamp.infra.query.BasecampSearchRow;
-import com.moewadeul.basecamp.infra.query.InProgressScheduleRow;
 import com.moewadeul.basecamp.infra.query.ViewerHistoryRow;
+import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.spot.application.SpotSearchBox;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,16 +34,12 @@ public class BasecampSearchService {
     private final TrustSummaryService trustSummaryService;
 
     @Transactional(readOnly = true)
-    public BasecampSearchPage search(Long viewerId, BasecampSearchQuery query) {
-        long offset = (long) query.page() * query.size();
-        List<BasecampSearchRow> rows =
-                basecampSearchMapper.selectRecruiting(toCondition(query), offset, query.size() + 1);
-        boolean hasNext = rows.size() > query.size();
-        List<BasecampSearchRow> pageRows = rows.stream().limit(query.size()).toList();
-        EligibilityJudge judge = viewerId == null ? null : judgeFor(viewerId, pageRows);
-        List<BasecampSearchItem> content =
-                pageRows.stream().map(row -> toItem(row, judge)).toList();
-        return new BasecampSearchPage(content, query.page(), query.size(), hasNext);
+    public PageSlice<BasecampSearchItem> search(Long viewerId, BasecampSearchQuery query) {
+        List<BasecampSearchRow> rows = basecampSearchMapper.selectRecruiting(
+                toCondition(query), PageSlice.offsetOf(query.page(), query.size()), PageSlice.fetchSize(query.size()));
+        PageSlice<BasecampSearchRow> slice = PageSlice.of(rows, query.page(), query.size());
+        EligibilityJudge judge = viewerId == null ? null : judgeFor(viewerId, slice.content());
+        return slice.map(row -> toItem(row, judge));
     }
 
     private static BasecampSearchCondition toCondition(BasecampSearchQuery query) {
@@ -53,17 +50,16 @@ public class BasecampSearchService {
                 area = new BasecampSearchCondition.Area(region.swLat(), region.swLng(), region.neLat(), region.neLng());
             case BasecampSearchQuery.Radius radius -> nearby = toNearby(radius);
         }
-        Set<String> spotTypes =
-                query.spotTypes().stream().map(BasecampSpotType::name).collect(Collectors.toSet());
         return new BasecampSearchCondition(
                 area,
                 nearby,
                 query.fromDate(),
                 query.toDate(),
                 query.hasVacancy(),
-                spotTypes,
+                query.spotTypes(),
                 query.nights(),
                 query.maxTrustLevel(),
+                JoinEligibilityPolicy.BASE_TRUST_LEVEL.level(),
                 query.noAgeLimit(),
                 query.noSameGenderOnly());
     }
@@ -108,13 +104,13 @@ public class BasecampSearchService {
                 row.endDate(),
                 row.capacity(),
                 row.headcount(),
-                row.status().name(),
+                row.status(),
                 condition,
                 judge == null ? null : judge.judge(row));
     }
 
     private record EligibilityJudge(
-            Applicant applicant, Map<Long, PriorRelation> priorRelations, List<InProgressScheduleRow> schedules) {
+            Applicant applicant, Map<Long, PriorRelation> priorRelations, List<BasecampSchedule> schedules) {
 
         JoinEligibility judge(BasecampSearchRow row) {
             JoinCondition condition = toJoinCondition(row);
@@ -124,19 +120,18 @@ public class BasecampSearchService {
         }
 
         private boolean hasDateConflict(BasecampSearchRow row) {
-            return schedules.stream()
-                    .filter(schedule -> schedule.basecampId() != row.basecampId())
-                    .anyMatch(schedule -> JoinEligibilityPolicy.overlaps(
-                            row.startDate(), row.endDate(), schedule.startDate(), schedule.endDate()));
+            return JoinEligibilityPolicy.hasDateConflict(
+                    new BasecampSchedule(row.basecampId(), row.startDate(), row.endDate()), schedules);
         }
 
         private static JoinCondition toJoinCondition(BasecampSearchRow row) {
             JoinCondition condition = JoinCondition.none();
             if (row.minTrustLevel() != null) {
-                condition = condition.withMinTrustLevel(row.minTrustLevel());
+                condition = condition.withMinTrustLevel(TrustLevel.of(row.minTrustLevel()));
             }
             if (row.ageGroupMin() != null && row.ageGroupMax() != null) {
-                condition = condition.withAgeGroupRange(row.ageGroupMin(), row.ageGroupMax());
+                condition = condition.withAgeGroupRange(
+                        AgeGroup.ofDecade(row.ageGroupMin()), AgeGroup.ofDecade(row.ageGroupMax()));
             }
             if (row.sameGenderOnly()) {
                 condition = condition.withSameGenderOnly(row.requiredGender());

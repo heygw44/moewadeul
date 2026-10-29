@@ -5,12 +5,12 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -24,7 +24,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -37,19 +36,16 @@ class SpotReviewApiIntegrationTest {
     private static final String LOCAL_IP = "127.0.0.1";
 
     @Autowired
-    private MockMvcTester mvc;
+    private MemberFixture memberFixture;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
+    private MockMvcTester mvc;
 
     @Autowired
     private SpotJpaRepository spotRepository;
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -62,7 +58,7 @@ class SpotReviewApiIntegrationTest {
     void writeThenListAndDetailAsAnonymous() {
         // given
         long spotId = saveSpot();
-        Member author = saveMember("새벽능선");
+        Member author = memberFixture.saveWithPassword(aMember().nickname("새벽능선"), VALID_PASSWORD);
         Cookie session = verifiedSession(author);
 
         // when
@@ -106,7 +102,7 @@ class SpotReviewApiIntegrationTest {
     void responsesDoNotExposeEmail() throws Exception {
         // given
         long spotId = saveSpot();
-        Member author = saveMember("새벽능선");
+        Member author = memberFixture.saveWithPassword(aMember().nickname("새벽능선"), VALID_PASSWORD);
         send(
                 mvc.post().uri("/api/spots/" + spotId + "/reviews"),
                 verifiedSession(author),
@@ -126,7 +122,7 @@ class SpotReviewApiIntegrationTest {
     void duplicatedAndFutureDateErrors() {
         // given
         long spotId = saveSpot();
-        Cookie session = verifiedSession(saveMember(null));
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         String uri = "/api/spots/" + spotId + "/reviews";
         send(mvc.post().uri(uri), session, "{\"visitedDate\":\"2026-10-04\",\"rating\":4,\"content\":\"좋다\"}");
 
@@ -149,8 +145,8 @@ class SpotReviewApiIntegrationTest {
     void patchAndDeleteByAuthorAndOthers() {
         // given
         long spotId = saveSpot();
-        Cookie authorSession = verifiedSession(saveMember(null));
-        Cookie otherSession = verifiedSession(saveMember(null));
+        Cookie authorSession = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie otherSession = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         MvcTestResult created = send(
                 mvc.post().uri("/api/spots/" + spotId + "/reviews"),
                 authorSession,
@@ -182,7 +178,7 @@ class SpotReviewApiIntegrationTest {
     void uploadAndAttachImageThroughApi() {
         // given
         long spotId = saveSpot();
-        Cookie session = verifiedSession(saveMember(null));
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         MvcTestResult issued = send(
                 mvc.post().uri("/api/reviews/images"), session, "{\"contentType\":\"image/png\",\"sizeBytes\":2048}");
         int imageId = idOf(issued, "$.imageId");
@@ -235,7 +231,8 @@ class SpotReviewApiIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body)
                 .exchange();
-        MvcTestResult unverified = send(mvc.post().uri(uri), login(saveMember(null)), body);
+        MvcTestResult unverified =
+                send(mvc.post().uri(uri), login(memberFixture.saveWithPassword(VALID_PASSWORD)), body);
         MvcTestResult list = mvc.get().uri(uri).exchange();
 
         // then
@@ -252,7 +249,7 @@ class SpotReviewApiIntegrationTest {
         // given
         long spotId = saveSpot();
         jdbc.update("UPDATE spot SET status = 'HIDDEN' WHERE id = ?", spotId);
-        Cookie session = verifiedSession(saveMember(null));
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult list = mvc.get().uri("/api/spots/" + spotId + "/reviews").exchange();
@@ -303,14 +300,6 @@ class SpotReviewApiIntegrationTest {
         return spotRepository.save(spot).getId();
     }
 
-    private Member saveMember(String nickname) {
-        String passwordHash = passwordEncoder.encode(VALID_PASSWORD);
-        Member member = nickname == null
-                ? aMember().passwordHash(passwordHash).build()
-                : aMember().passwordHash(passwordHash).nickname(nickname).build();
-        return memberRepository.saveAndFlush(member);
-    }
-
     private Cookie login(Member member) {
         MvcTestResult result = mvc.post()
                 .uri("/api/auth/login")
@@ -326,7 +315,7 @@ class SpotReviewApiIntegrationTest {
 
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
-        String code = emailVerificationService
+        String code = emailVerificationIssuer
                 .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();

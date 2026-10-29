@@ -4,6 +4,8 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.image.application.ImageUpload;
+import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.community.application.post.CommunityPostCommandService;
@@ -49,8 +51,7 @@ class CommunityImageAttachConcurrencyIntegrationTest {
     void sameImageAttachedByConcurrentPostsSucceedsOnce() throws Exception {
         // given
         long memberId = memberRepository.saveAndFlush(aMember().build()).getId();
-        CommunityImageUpload upload =
-                uploadService.issue(memberId, new CommunityImageUploadCommand("image/jpeg", 1000L, null));
+        ImageUpload upload = uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", 1000L, null));
         storage.markUploaded(keyOf(upload.imageId()), 1000L);
         List<Callable<Object>> tasks = new ArrayList<>();
         for (int i = 0; i < THREADS; i++) {

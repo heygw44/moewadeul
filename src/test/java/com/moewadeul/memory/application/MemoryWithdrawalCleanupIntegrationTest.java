@@ -1,14 +1,13 @@
 package com.moewadeul.memory.application;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
-import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.memory.application.image.MemoryImageUploadCommand;
 import com.moewadeul.memory.application.image.MemoryImageUploadService;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
@@ -20,7 +19,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @IntegrationTest
 class MemoryWithdrawalCleanupIntegrationTest {
@@ -30,6 +28,9 @@ class MemoryWithdrawalCleanupIntegrationTest {
     private static final LocalDate YESTERDAY = LocalDate.of(2026, 10, 4);
     private static final long SIZE = 1024;
     private static final long THUMBNAIL_SIZE = 64;
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private WithdrawalService withdrawalService;
@@ -47,12 +48,6 @@ class MemoryWithdrawalCleanupIntegrationTest {
     private MemoryWithdrawalCleanupService cleanupService;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
     private TestImageStorage storage;
 
     @Autowired
@@ -66,8 +61,8 @@ class MemoryWithdrawalCleanupIntegrationTest {
             "[F-33][PV-10] 회원이 탈퇴하고 발행기가 돌면 그 회원의 기록과 사진(방금 올린 사진 포함)이 썸네일과 함께 저장소까지 모두 지워지고, 기록에 달린 좋아요도 함께 지워지며, 다른 회원의 기록은 남는다")
     void withdrawalDeletesMemoriesAndImages() {
         // given
-        long member = saveMember();
-        long other = saveMember();
+        long member = memberFixture.saveWithPassword(PASSWORD).getId();
+        long other = memberFixture.saveWithPassword(PASSWORD).getId();
         long attached = uploaded(member);
         long justUploaded = uploaded(member);
         List<String> keys =
@@ -107,7 +102,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
     @DisplayName("[F-33][PV-10] 사진 객체를 지우지 못하면 그 사진 행을 남기고 예외를 던지며, 다른 사진은 계속 지우고, 저장소가 돌아온 뒤 다시 정리하면 객체와 행이 모두 지워진다")
     void failedObjectDeleteKeepsRowUntilRetrySucceeds() {
         // given
-        long member = saveMember();
+        long member = memberFixture.saveWithPassword(PASSWORD).getId();
         long failing = uploaded(member);
         long other = uploaded(member);
         commandService.write(member, write(List.of(failing)));
@@ -140,7 +135,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
     @DisplayName("[F-33][PV-10] 원본은 지웠지만 썸네일 객체를 지우지 못하면 그 사진 행을 남기고, 다시 정리하면 썸네일과 행이 지워진다")
     void failedThumbnailDeleteKeepsRow() {
         // given
-        long member = saveMember();
+        long member = memberFixture.saveWithPassword(PASSWORD).getId();
         long image = uploaded(member);
         String key = keyOf(image);
         String thumbnailKey = thumbnailKeyOf(image);
@@ -167,7 +162,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
     @DisplayName("[F-33][PV-10] 탈퇴 정리 중 저장소 삭제가 실패하면 이벤트는 발행 완료가 되지 않고 남아, 저장소가 돌아온 뒤 재시도에서 사진이 모두 지워진다")
     void outboxEventRetriesUntilObjectsAreDeleted() {
         // given
-        long member = saveMember();
+        long member = memberFixture.saveWithPassword(PASSWORD).getId();
         long image = uploaded(member);
         String key = keyOf(image);
         storage.failDeleteOf(key);
@@ -207,7 +202,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
 
     private long uploaded(long ownerId) {
         long imageId = uploadService
-                .issue(ownerId, new MemoryImageUploadCommand("image/png", SIZE, THUMBNAIL_SIZE))
+                .issue(ownerId, new ImageUploadCommand("image/png", SIZE, THUMBNAIL_SIZE))
                 .imageId();
         storage.markUploaded(keyOf(imageId), SIZE);
         storage.markUploaded(thumbnailKeyOf(imageId), THUMBNAIL_SIZE);
@@ -224,12 +219,5 @@ class MemoryWithdrawalCleanupIntegrationTest {
 
     private int count(String fromWhere, long id) {
         return jdbc.queryForObject("SELECT COUNT(*) FROM " + fromWhere, Integer.class, id);
-    }
-
-    private long saveMember() {
-        return memberRepository
-                .saveAndFlush(
-                        aMember().passwordHash(passwordEncoder.encode(PASSWORD)).build())
-                .getId();
     }
 }

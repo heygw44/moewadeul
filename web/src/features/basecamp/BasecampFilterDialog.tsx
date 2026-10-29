@@ -5,8 +5,7 @@ import { Dialog } from '../../components/Dialog';
 import { Icon } from '../../components/icons';
 import { TextField } from '../../components/TextField';
 import { ToggleChip } from '../../components/ToggleChip';
-import { SPOT_TYPE_META } from '../spot/spotLabels';
-import { SPOT_TYPE_ORDER } from '../spot/spotFilters';
+import { SPOT_TYPE_META, SPOT_TYPE_ORDER } from '../../lib/spotLabels';
 import { NIGHT_OPTIONS, NO_BASECAMP_FILTERS, isDateRangeReversed } from './basecampFilters';
 import type { BasecampFilters } from './basecampFilters';
 

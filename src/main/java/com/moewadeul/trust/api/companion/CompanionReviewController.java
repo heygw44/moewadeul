@@ -1,6 +1,7 @@
 package com.moewadeul.trust.api.companion;
 
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.trust.application.companion.CompanionReviewCommandService;
 import com.moewadeul.trust.application.companion.CompanionReviewQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -74,10 +75,10 @@ class CompanionReviewController {
                     + "page는 0부터 시작하고 기본값은 0이다. size는 1~50이고 기본값은 20이다. "
                     + "응답에는 전체 개수가 없고 다음 페이지가 있는지만 hasNext로 알려 준다. 파라미터가 범위를 벗어나면 400 INVALID_INPUT으로 응답한다.")
     @GetMapping("/api/me/companion-reviews/received")
-    CompanionReviewPageResponse<ReceivedCompanionReviewResponse> received(
+    PageResponse<ReceivedCompanionReviewResponse> received(
             @AuthenticationPrincipal LoginMember loginMember,
             @Valid @ParameterObject @ModelAttribute CompanionReviewListRequest request) {
-        return CompanionReviewPageResponse.from(
+        return PageResponse.from(
                 companionReviewQueryService.received(
                         loginMember.memberId(), request.pageOrDefault(), request.sizeOrDefault()),
                 ReceivedCompanionReviewResponse::from);
@@ -90,9 +91,9 @@ class CompanionReviewController {
                     + "page는 0부터 시작하고 기본값은 0이다. size는 1~50이고 기본값은 20이다. "
                     + "파라미터가 범위를 벗어나면 400 INVALID_INPUT으로, 없거나 탈퇴한 회원이면 404 NOT_FOUND로 응답한다.")
     @GetMapping("/api/members/{memberId}/companion-reviews")
-    CompanionReviewPageResponse<PublicCompanionReviewResponse> forMember(
+    PageResponse<PublicCompanionReviewResponse> forMember(
             @PathVariable long memberId, @Valid @ParameterObject @ModelAttribute CompanionReviewListRequest request) {
-        return CompanionReviewPageResponse.from(
+        return PageResponse.from(
                 companionReviewQueryService.forMember(memberId, request.pageOrDefault(), request.sizeOrDefault()),
                 PublicCompanionReviewResponse::from);
     }

@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.program;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,12 +14,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
 import com.moewadeul.program.application.catalog.ProgramApplicantItem;
-import com.moewadeul.program.application.catalog.ProgramApplicantPage;
 import com.moewadeul.program.application.catalog.ProgramApplicantQuery;
 import com.moewadeul.program.application.catalog.ProgramCancelResult;
 import com.moewadeul.program.application.catalog.ProgramCreateCommand;
@@ -253,7 +254,7 @@ class AdminProgramControllerTest {
                 AT,
                 AT);
         when(programAdminService.applications(eq(9L), any(ProgramApplicantQuery.class)))
-                .thenReturn(new ProgramApplicantPage(List.of(item), 0, 20, true));
+                .thenReturn(new PageSlice<>(List.of(item), 0, 20, true));
 
         MvcTestResult result = mvc.get()
                 .uri(PROGRAMS + "/9/applications")
@@ -279,7 +280,7 @@ class AdminProgramControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].cancelReason")
                 .isEqualTo("PROGRAM_CANCELED");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertEnvelope(result, 0, 20, true);
         verify(programAdminService).applications(9L, new ProgramApplicantQuery("CANCELED", 0, 20));
     }
 

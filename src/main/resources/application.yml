@@ -85,6 +85,12 @@ logging:
 moewadeul:
   identity:
     ci-hmac-key: ${CI_HMAC_KEY:}
+    # 실제 본인확인기관을 붙이기 전까지 쓰는 가짜 공급자다. false로 끄면 본인확인 요청이 503으로 끝난다.
+    fake-provider:
+      enabled: ${IDENTITY_FAKE_PROVIDER_ENABLED:true}
+  member:
+    mail-secret:
+      hmac-key: ${MAIL_SECRET_HMAC_KEY:}
   mail:
     # Gmail은 발신 주소가 로그인한 계정과 다르면 계정 주소로 바꿔 보낸다.
     from: ${spring.mail.username:}
@@ -115,5 +121,14 @@ moewadeul:
     park-boundary:
       file: ${PUBLICDATA_PARK_BOUNDARY_FILE:}
   image-storage:
-    storage: ${COMMUNITY_IMAGE_STORAGE:fake}
+    storage: ${IMAGE_STORAGE:fake}
     bucket: ${UPLOAD_BUCKET:}
+  community:
+    image-cleanup:
+      cron: 0 10 5 * * *
+  review:
+    image-cleanup:
+      cron: 0 20 5 * * *
+  memory:
+    image-cleanup:
+      cron: 0 30 5 * * *

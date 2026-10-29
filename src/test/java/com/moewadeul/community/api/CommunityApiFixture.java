@@ -5,7 +5,7 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
@@ -28,19 +28,19 @@ public final class CommunityApiFixture {
     private final MockMvcTester mvc;
     private final MemberJpaRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailVerificationService emailVerificationService;
+    private final EmailVerificationIssuer emailVerificationIssuer;
     private final JdbcTemplate jdbc;
 
     public CommunityApiFixture(
             MockMvcTester mvc,
             MemberJpaRepository memberRepository,
             PasswordEncoder passwordEncoder,
-            EmailVerificationService emailVerificationService,
+            EmailVerificationIssuer emailVerificationIssuer,
             JdbcTemplate jdbc) {
         this.mvc = mvc;
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
-        this.emailVerificationService = emailVerificationService;
+        this.emailVerificationIssuer = emailVerificationIssuer;
         this.jdbc = jdbc;
     }
 
@@ -61,7 +61,7 @@ public final class CommunityApiFixture {
         assertThat(login).hasStatus(HttpStatus.OK);
         Cookie session = login.getResponse().getCookie(SESSION_COOKIE);
         assertThat(session).isNotNull();
-        String code = emailVerificationService
+        String code = emailVerificationIssuer
                 .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();

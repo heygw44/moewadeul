@@ -1,10 +1,11 @@
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import type { SelectOption } from '../../components/SelectField';
 import type { MemoryStatus, MemoryVisibility } from '../../api/types';
+import { roundCoordinate } from '../../lib/geo';
 
 export const MEMORY_CONTENT_MAX = 2000;
 export const MEMORY_MAX_IMAGES = 10;
-export const MEMORY_MAX_NIGHTS = 30;
+const MEMORY_MAX_NIGHTS = 30;
 
 export const VISIBILITY_OPTIONS: ReadonlyArray<ChoiceOption<MemoryVisibility>> = [
   { value: 'PRIVATE', label: '나만 보기' },
@@ -46,10 +47,6 @@ export function parsePositiveId(raw: string | null): number | null {
   if (raw === null || !/^\d+$/.test(raw)) return null;
   const value = Number(raw);
   return Number.isSafeInteger(value) && value > 0 ? value : null;
-}
-
-export function roundCoordinate(value: number): number {
-  return Math.round(value * 1e6) / 1e6;
 }
 
 export function newMemoryPath(position: { lat: number; lng: number }, spotId?: number): string {

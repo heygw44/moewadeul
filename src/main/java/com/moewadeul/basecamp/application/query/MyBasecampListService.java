@@ -2,6 +2,7 @@ package com.moewadeul.basecamp.application.query;
 
 import com.moewadeul.basecamp.infra.query.MyBasecampMapper;
 import com.moewadeul.basecamp.infra.query.MyBasecampRow;
+import com.moewadeul.common.paging.PageSlice;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,16 +15,14 @@ public class MyBasecampListService {
     private final MyBasecampMapper myBasecampMapper;
 
     @Transactional(readOnly = true)
-    public MyBasecampPage list(long memberId, MyBasecampListQuery query) {
-        long offset = (long) query.page() * query.size();
-        List<MyBasecampRow> rows =
-                myBasecampMapper.selectMine(memberId, query.relation(), query.status(), offset, query.size() + 1);
-        boolean hasNext = rows.size() > query.size();
-        List<MyBasecampItem> content = rows.stream()
-                .limit(query.size())
-                .map(MyBasecampListService::toItem)
-                .toList();
-        return new MyBasecampPage(content, query.page(), query.size(), hasNext);
+    public PageSlice<MyBasecampItem> list(long memberId, MyBasecampListQuery query) {
+        List<MyBasecampRow> rows = myBasecampMapper.selectMine(
+                memberId,
+                query.relation(),
+                query.status(),
+                PageSlice.offsetOf(query.page(), query.size()),
+                PageSlice.fetchSize(query.size()));
+        return PageSlice.of(rows, query.page(), query.size()).map(MyBasecampListService::toItem);
     }
 
     private static MyBasecampItem toItem(MyBasecampRow row) {
@@ -35,7 +34,7 @@ public class MyBasecampListService {
                 row.endDate(),
                 row.capacity(),
                 row.headcount(),
-                row.status().name(),
-                row.myRelation().name());
+                row.status(),
+                row.myRelation());
     }
 }

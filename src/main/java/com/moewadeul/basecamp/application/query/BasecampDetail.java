@@ -2,7 +2,12 @@ package com.moewadeul.basecamp.application.query;
 
 import com.moewadeul.basecamp.application.JoinConditionSummary;
 import com.moewadeul.basecamp.application.JoinEligibility;
+import com.moewadeul.basecamp.domain.BasecampMemberRole;
 import com.moewadeul.basecamp.domain.BasecampRelation;
+import com.moewadeul.basecamp.domain.BasecampStatus;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
+import com.moewadeul.common.profile.TrustLevel;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -15,7 +20,7 @@ public record BasecampDetail(
         LocalDate endDate,
         int capacity,
         int headcount,
-        String status,
+        BasecampStatus status,
         JoinConditionSummary joinCondition,
         DetailMember leader,
         List<DetailMember> members,
@@ -23,16 +28,16 @@ public record BasecampDetail(
         String contactInfo,
         JoinEligibility eligibility) {
 
-    public record SpotSummary(long spotId, String name, String type, double lat, double lng) {}
+    public record SpotSummary(long spotId, String name, BasecampSpotType type, double lat, double lng) {}
 
     public record DetailMember(
             long memberId,
             String nickname,
-            String role,
-            String ageGroup,
+            BasecampMemberRole role,
+            AgeGroup ageGroup,
             boolean ageGroupVerified,
-            String gender,
+            Gender gender,
             boolean genderVerified,
-            int trustLevel,
+            TrustLevel trustLevel,
             int completedCompanions) {}
 }

@@ -1,5 +1,5 @@
 import { Icon } from '../../components/icons';
-import { useSession } from '../../features/member/session';
+import { useSession } from '../session/session';
 import { Link, useLocation } from '../router';
 import { activeNavKey, NAV_ITEMS, navTarget } from './navItems';
 

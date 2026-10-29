@@ -1,7 +1,9 @@
 package com.moewadeul.basecamp.domain;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.BasecampEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
+import com.moewadeul.common.schedule.CampingSchedule;
 import com.moewadeul.common.time.KoreaTime;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -14,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -23,6 +26,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,7 +53,6 @@ public class Basecamp {
     private static final Set<BasecampStatus> BEFORE_CONFIRM = Set.of(BasecampStatus.RECRUITING, BasecampStatus.CLOSED);
     private static final Set<BasecampStatus> NOT_FINISHED =
             Set.of(BasecampStatus.RECRUITING, BasecampStatus.CLOSED, BasecampStatus.CONFIRMED);
-    private static final Set<BasecampStatus> CONFIRMED_ONLY = Set.of(BasecampStatus.CONFIRMED);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -118,6 +121,10 @@ public class Basecamp {
             cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<BasecampApplication> applications = new ArrayList<>();
 
+    @Transient
+    @Getter(AccessLevel.NONE)
+    private final List<Supplier<OutboxEventDraft>> deferredEvents = new ArrayList<>();
+
     private Basecamp(long leaderId, long spotId, BasecampDetails details, Instant now) {
         this.leaderId = leaderId;
         this.spotId = spotId;
@@ -137,8 +144,9 @@ public class Basecamp {
         if (details == null || now == null) {
             throw new IllegalArgumentException("베이스캠프를 만드는 데 필요한 값이 null입니다.");
         }
+        BasecampOpenPolicy.requireSchedule(
+                new CampingSchedule(details.startDate(), details.endDate()), KoreaTime.dateOf(now));
         requireValidText(details.title(), details.description());
-        requireValidSchedule(details.startDate(), details.endDate());
         if (details.capacity() == null || details.joinCondition() == null) {
             throw new IllegalArgumentException("정원과 합류 조건은 null일 수 없습니다.");
         }
@@ -154,6 +162,13 @@ public class Basecamp {
                 .filter(BasecampMember::isActive)
                 .map(BasecampMember::getMemberId)
                 .toList();
+    }
+
+    public List<OutboxEventDraft> pullEvents() {
+        List<OutboxEventDraft> events =
+                deferredEvents.stream().map(Supplier::get).toList();
+        deferredEvents.clear();
+        return events;
     }
 
     public boolean isFull() {
@@ -206,7 +221,7 @@ public class Basecamp {
     public void reopen(Instant now) {
         requireStatus(Set.of(BasecampStatus.CLOSED));
         if (isFull()) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_FULL);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_FULL);
         }
         markRecruiting(now);
     }
@@ -214,7 +229,7 @@ public class Basecamp {
     public void confirm(Instant now) {
         requireStatus(BEFORE_CONFIRM);
         if (headcount() < MIN_CONFIRM_HEADCOUNT) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_NOT_ENOUGH_MEMBERS);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_NOT_ENOUGH_MEMBERS);
         }
         markConfirmed(now);
     }
@@ -224,27 +239,35 @@ public class Basecamp {
             throw new IllegalArgumentException("취소 사유가 null입니다.");
         }
         requireStatus(NOT_FINISHED);
-        if (!LocalDate.ofInstant(now, KoreaTime.ZONE).isBefore(startDate)) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE);
+        if (!KoreaTime.dateOf(now).isBefore(startDate)) {
+            throw new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE);
         }
         markCanceled(reason, now);
     }
 
-    public void processDayBeforeDeparture(Instant now) {
-        requireStatus(BEFORE_CONFIRM);
+    public boolean departDayBefore(Instant now) {
+        if (!BEFORE_CONFIRM.contains(status)
+                || startDate.isAfter(KoreaTime.dateOf(now).plusDays(1))) {
+            return false;
+        }
         if (headcount() < MIN_CONFIRM_HEADCOUNT) {
             markCanceled(CancelReason.NOT_ENOUGH_MEMBERS, now);
-            return;
+        } else {
+            markConfirmed(now);
         }
-        markConfirmed(now);
+        return true;
     }
 
-    public void complete(Instant now) {
-        requireStatus(CONFIRMED_ONLY);
+    public boolean complete(LocalDate today, Instant now) {
+        if (status != BasecampStatus.CONFIRMED || !endDate.isBefore(today)) {
+            return false;
+        }
         this.status = BasecampStatus.COMPLETED;
         this.completedAt = now;
         expirePendingApplications(now);
         touch(now);
+        raiseMembers(BasecampEvents.COMPLETED, activeMemberIds());
+        return true;
     }
 
     public void checkApplicable(long applicantId) {
@@ -259,16 +282,18 @@ public class Basecamp {
         Optional<BasecampApplication> existing = findApplicationOf(applicantId);
         if (existing.isPresent()) {
             existing.get().resubmit(message, now);
+            raiseApplied(existing.get(), applicantId);
             return existing.get();
         }
         BasecampApplication application = BasecampApplication.submit(this, applicantId, message, now);
         applications.add(application);
+        raiseApplied(application, applicantId);
         return application;
     }
 
     public void cancelApplication(long applicantId, Instant now) {
         requireStatus(BEFORE_CONFIRM);
-        BasecampApplication application = findApplicationOf(applicantId).orElseThrow(Basecamp::notFound);
+        BasecampApplication application = findApplicationOf(applicantId).orElseThrow(BusinessException::notFound);
         requirePending(application);
         application.cancel(now);
     }
@@ -278,7 +303,7 @@ public class Basecamp {
         requireStatus(RECRUITING_ONLY);
         requirePending(application);
         if (isFull()) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_FULL);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_FULL);
         }
         return application;
     }
@@ -288,6 +313,7 @@ public class Basecamp {
         application.approve(now);
         members.add(BasecampMember.member(this, application.getApplicantId(), now));
         closeIfFull(now);
+        raiseDecision(BasecampEvents.APPROVED, application);
         return application;
     }
 
@@ -296,6 +322,7 @@ public class Basecamp {
         requireStatus(RECRUITING_ONLY);
         requirePending(application);
         application.reject(now);
+        raiseDecision(BasecampEvents.REJECTED, application);
         return application;
     }
 
@@ -303,7 +330,7 @@ public class Basecamp {
         requireStatus(NOT_FINISHED);
         BasecampMember member = requireActiveMember(memberId);
         if (member.isLeader()) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE);
         }
         member.leave(isEarlyLeave(now), now);
         reopenIfAutoClosed(now);
@@ -326,6 +353,7 @@ public class Basecamp {
         if (activeMember.isPresent()) {
             activeMember.get().removeByCleanup(now);
             reopenIfAutoClosed(now);
+            raiseMembers(BasecampEvents.MEMBER_CHANGED, activeMemberIds());
             return MemberRemoval.MEMBER_LEFT;
         }
         Optional<BasecampApplication> pending = findApplicationOf(memberId).filter(BasecampApplication::isPending);
@@ -344,10 +372,11 @@ public class Basecamp {
         requireStatus(BEFORE_CONFIRM);
         BasecampMember member = requireActiveMember(memberId);
         if (member.isLeader()) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_LEADER_CANNOT_LEAVE);
         }
         member.kick(reason, now);
         reopenIfAutoClosed(now);
+        raise(BasecampEvents.KICKED, () -> new BasecampEvents.KickedPayload(id, memberId, reason.name()));
     }
 
     public void revise(BasecampRevision revision, Instant now) {
@@ -357,7 +386,7 @@ public class Basecamp {
             throw new IllegalArgumentException("정원과 합류 조건은 null일 수 없습니다.");
         }
         if (revision.capacity().isLessThan(capacity)) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_CAPACITY_INVALID);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_CAPACITY_INVALID);
         }
         this.title = revision.title();
         this.description = revision.description();
@@ -394,6 +423,7 @@ public class Basecamp {
         this.confirmedAt = now;
         expirePendingApplications(now);
         touch(now);
+        raiseMembers(BasecampEvents.CONFIRMED, activeMemberIds());
     }
 
     private void markCanceled(CancelReason reason, Instant now) {
@@ -403,6 +433,34 @@ public class Basecamp {
         this.cancelReason = reason;
         expirePendingApplications(now);
         touch(now);
+        List<Long> recipients = reason.notifiesLeader() ? activeMemberIds() : activeMembersExceptLeader();
+        raiseMembers(BasecampEvents.CANCELED, recipients);
+    }
+
+    private void raise(String eventType, Supplier<Object> payload) {
+        deferredEvents.add(() -> new OutboxEventDraft(eventType, BasecampEvents.AGGREGATE_TYPE, id, payload.get()));
+    }
+
+    private void raiseApplied(BasecampApplication application, long applicantId) {
+        raise(
+                BasecampEvents.APPLIED,
+                () -> new BasecampEvents.AppliedPayload(application.getId(), applicantId, leaderId));
+    }
+
+    private void raiseMembers(String eventType, List<Long> memberIds) {
+        List<Long> snapshot = List.copyOf(memberIds);
+        raise(eventType, () -> new BasecampEvents.MembersPayload(id, snapshot));
+    }
+
+    private void raiseDecision(String eventType, BasecampApplication application) {
+        long applicantId = application.getApplicantId();
+        raise(eventType, () -> new BasecampEvents.DecisionPayload(application.getId(), applicantId, id));
+    }
+
+    private List<Long> activeMembersExceptLeader() {
+        return activeMemberIds().stream()
+                .filter(memberId -> !isLeader(memberId))
+                .toList();
     }
 
     private void closeIfFull(Instant now) {
@@ -429,9 +487,9 @@ public class Basecamp {
     private static void requireResubmittable(BasecampApplication existing) {
         switch (existing.getStatus()) {
             case CANCELED -> {}
-            case REJECTED -> throw new BasecampException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED);
-            case PENDING, APPROVED -> throw new BasecampException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED);
-            case EXPIRED -> throw new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE);
+            case REJECTED -> throw new BusinessException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED);
+            case PENDING, APPROVED -> throw new BusinessException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED);
+            case EXPIRED -> throw new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE);
         }
     }
 
@@ -439,7 +497,7 @@ public class Basecamp {
         long pending =
                 applications.stream().filter(BasecampApplication::isPending).count();
         if (pending >= MAX_PENDING_APPLICATIONS) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_PENDING_LIMIT);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_PENDING_LIMIT);
         }
     }
 
@@ -449,9 +507,9 @@ public class Basecamp {
             return;
         }
         if (member.get().isActive()) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_ALREADY_APPLIED);
         }
-        throw new BasecampException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED);
+        throw new BusinessException(BasecampErrorCode.BASECAMP_REAPPLY_NOT_ALLOWED);
     }
 
     private boolean isEarlyLeave(Instant now) {
@@ -473,7 +531,7 @@ public class Basecamp {
     }
 
     private BasecampMember requireActiveMember(long memberId) {
-        return findMember(memberId).filter(BasecampMember::isActive).orElseThrow(Basecamp::notFound);
+        return findMember(memberId).filter(BasecampMember::isActive).orElseThrow(BusinessException::notFound);
     }
 
     private Optional<BasecampApplication> findApplicationOf(long applicantId) {
@@ -486,23 +544,19 @@ public class Basecamp {
         return applications.stream()
                 .filter(application -> Objects.equals(application.getId(), applicationId))
                 .findFirst()
-                .orElseThrow(Basecamp::notFound);
+                .orElseThrow(BusinessException::notFound);
     }
 
     private static void requirePending(BasecampApplication application) {
         if (!application.isPending()) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE);
         }
     }
 
     private void requireStatus(Set<BasecampStatus> allowed) {
         if (!allowed.contains(status)) {
-            throw new BasecampException(BasecampErrorCode.BASECAMP_INVALID_STATE);
+            throw new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE);
         }
-    }
-
-    private static BusinessException notFound() {
-        return new BusinessException(CommonErrorCode.NOT_FOUND);
     }
 
     private void touch(Instant now) {
@@ -515,12 +569,6 @@ public class Basecamp {
         }
         if (description == null || description.isBlank() || description.length() > DESCRIPTION_MAX_LENGTH) {
             throw new IllegalArgumentException("설명은 공백뿐이 아닌 " + DESCRIPTION_MAX_LENGTH + "자 이하여야 합니다.");
-        }
-    }
-
-    private static void requireValidSchedule(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
-            throw new IllegalArgumentException("종료일은 출발일보다 늦어야 합니다.");
         }
     }
 }

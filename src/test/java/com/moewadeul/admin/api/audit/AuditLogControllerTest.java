@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.audit;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -8,10 +9,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
-import com.moewadeul.admin.application.audit.AuditLogPage;
 import com.moewadeul.admin.application.audit.AuditLogQueryService;
 import com.moewadeul.admin.application.audit.AuditLogView;
+import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
@@ -52,9 +54,15 @@ class AuditLogControllerTest {
     @DisplayName("[F-21] 감사 로그 조회는 필터를 서비스에 넘기고 detail을 JSON 객체로 응답한다")
     void auditLogsReturnDetailAsObject() {
         AuditLogView view = new AuditLogView(
-                1L, ADMIN_ID, "REPORT_ACTION", "MEMBER_REPORT", 5L, jsonMapper.readTree("{\"hideReview\":true}"), AT);
+                1L,
+                ADMIN_ID,
+                AdminAuditAction.REPORT_ACTION,
+                "MEMBER_REPORT",
+                5L,
+                jsonMapper.readTree("{\"hideReview\":true}"),
+                AT);
         when(auditLogQueryService.findLogs(any(), any(), any(), any(), anyInt(), anyInt()))
-                .thenReturn(new AuditLogPage(List.of(view), 0, 20, true));
+                .thenReturn(new PageSlice<>(List.of(view), 0, 20, true));
 
         MvcTestResult result = mvc.get()
                 .uri(AUDIT_LOGS)
@@ -71,7 +79,7 @@ class AuditLogControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].detail.hideReview")
                 .isEqualTo(true);
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertEnvelope(result, 0, 20, true);
         verify(auditLogQueryService)
                 .findLogs(
                         1L,

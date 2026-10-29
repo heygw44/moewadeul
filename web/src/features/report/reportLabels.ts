@@ -33,6 +33,7 @@ export const SANCTION_TYPE_LABELS: Record<SanctionType, string> = {
 
 export const SANCTION_STATUS_LABELS: Record<SanctionStatus, string> = {
   ACTIVE: '적용 중',
-  LIFTED: '해제됨',
   EXPIRED: '기간 끝남',
+  ENDED_EARLY: '조기 종료',
+  REVOKED: '처분 취소',
 };

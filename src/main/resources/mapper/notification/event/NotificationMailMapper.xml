@@ -71,12 +71,20 @@
          그래서 email_attempt_count를 맨 뒤에 두어야, 앞의 두 식이 아직 올리지 않은 실패 횟수로 계산한다. -->
     <update id="markFailedAttempt">
         UPDATE notification
-        SET email_status = CASE WHEN NOT #{transientFailure} AND email_attempt_count + 1 &gt;= #{maxAttempts}
+        SET email_status = CASE WHEN
+                <include refid="com.moewadeul.common.retry.RetryPolicySql.exhausted">
+                    <property name="attemptCount" value="email_attempt_count"/>
+                </include>
                 THEN 'FAILED' ELSE email_status END,
-            email_next_attempt_at = CASE WHEN NOT #{transientFailure} AND email_attempt_count + 1 &gt;= #{maxAttempts}
+            email_next_attempt_at = CASE WHEN
+                <include refid="com.moewadeul.common.retry.RetryPolicySql.exhausted">
+                    <property name="attemptCount" value="email_attempt_count"/>
+                </include>
                 THEN NULL
-                ELSE DATE_ADD(#{now}, INTERVAL
-                    LEAST(#{retryDelayMillis} * POW(2, LEAST(email_attempt_count, 20)), #{retryMaxDelayMillis}) * 1000 MICROSECOND)
+                ELSE
+                    <include refid="com.moewadeul.common.retry.RetryPolicySql.nextAttemptAt">
+                        <property name="attemptCount" value="email_attempt_count"/>
+                    </include>
                 END,
             email_attempt_count = email_attempt_count + 1
         WHERE id = #{id}

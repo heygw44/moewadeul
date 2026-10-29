@@ -3,13 +3,16 @@ package com.moewadeul.spot.api.map;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.member.domain.MemberStatus;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +30,9 @@ class SpotApiIntegrationTest {
 
     private static final String PATH = "/api/spots";
     private static final String NEARBY_PATH = "/api/spots/nearby";
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private MockMvcTester mvc;
@@ -212,10 +218,16 @@ class SpotApiIntegrationTest {
     @DisplayName("[F-05] 로그인하지 않은 사용자가 박지 상세를 조회하면 박지 상세와 확인 수, 제보자 닉네임을 받고 publicDetail은 null이다")
     void anonymousReadsBakjiDetail() {
         // given
-        long reporterId = insertMember("새벽능선");
+        long reporterId = memberFixture
+                .save(aMember().nickname("새벽능선").status(MemberStatus.ACTIVE))
+                .getId();
         long spotId = insertBakji("능선 끝 평지", "ACTIVE", reporterId);
-        insertConfirmation(spotId, insertMember("확인자하나"));
-        insertConfirmation(spotId, insertMember("확인자둘"));
+        insertConfirmation(
+                spotId,
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId());
+        insertConfirmation(
+                spotId,
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId());
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/" + spotId).exchange();
@@ -252,7 +264,8 @@ class SpotApiIntegrationTest {
     @DisplayName("[F-05] 로그인하지 않은 사용자도 장소 상세에서 모집 중인 베이스캠프를 받고, 연락 수단은 받지 않는다")
     void anonymousReadsRecruitingBasecampsWithoutContactInfo() {
         // given
-        long reporterId = insertMember("모집제보자");
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long spotId = insertBakji("모집 박지", "ACTIVE", reporterId);
         jdbc.update(
                 "INSERT INTO basecamp (leader_id, spot_id, title, description, start_date, end_date, capacity, status,"
@@ -297,7 +310,8 @@ class SpotApiIntegrationTest {
     @DisplayName("[F-05][F-09] 장소 상세 응답에는 weather 필드가 없고, 서버는 상세를 줄 때 기상청을 부르지 않는다")
     void detailHasNoWeatherField() {
         // given
-        long reporterId = insertMember("날씨없는제보자");
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long spotId = insertBakji("날씨 없는 상세 박지", "ACTIVE", reporterId);
 
         // when
@@ -314,7 +328,8 @@ class SpotApiIntegrationTest {
     @DisplayName("[F-09][NFR-05] 기상청 응답이 응답 대기 시간보다 늦어도 날씨 조회는 200으로 응답하고 weather가 null이다")
     void weatherRespondsWithNullWhenKmaIsSlow() {
         // given
-        long reporterId = insertMember("느린날씨제보자");
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         long spotId = insertBakji("날씨 지연 박지", "ACTIVE", reporterId);
         wireMock.stubFor(get(urlPathEqualTo("/1360000/VilageFcstInfoService_2.0/getVilageFcst"))
                 .willReturn(okJson("{}").withFixedDelay(2_000)));
@@ -364,7 +379,10 @@ class SpotApiIntegrationTest {
     @DisplayName("[F-05] 숨김 상태인 장소의 상세를 조회하면 404 NOT_FOUND를 응답한다")
     void hiddenSpotReturnsNotFound() {
         // given
-        long spotId = insertBakji("숨긴 박지", "HIDDEN", insertMember("숨김제보자"));
+        long spotId = insertBakji(
+                "숨긴 박지",
+                "HIDDEN",
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId());
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/" + spotId).exchange();
@@ -436,17 +454,5 @@ class SpotApiIntegrationTest {
                 spotId,
                 memberId,
                 MutableClock.DEFAULT_INSTANT);
-    }
-
-    private long insertMember(String nickname) {
-        Instant now = MutableClock.DEFAULT_INSTANT;
-        jdbc.update(
-                "INSERT INTO member (email, nickname, status, role, created_at, updated_at)"
-                        + " VALUES (?, ?, 'ACTIVE', 'USER', ?, ?)",
-                nickname + "@example.com",
-                nickname,
-                now,
-                now);
-        return jdbc.queryForObject("SELECT id FROM member WHERE nickname = ?", Long.class, nickname);
     }
 }

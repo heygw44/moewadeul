@@ -1,9 +1,12 @@
 package com.moewadeul.community.domain.post;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.moderation.ModerationTransition;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
@@ -159,22 +162,57 @@ class CommunityPostTest {
         assertThat(post.getUpdatedAt()).isEqualTo(LATER);
     }
 
+    @ParameterizedTest(name = "[{index}] {0}")
+    @EnumSource(
+            value = CommunityPostStatus.class,
+            names = {"HIDDEN", "PENDING_REVIEW"})
+    @DisplayName("[F-29][CM-03] 숨겼거나 검토 대기인 글은 지울 수 없고 COMMUNITY_INVALID_STATE이며 상태와 수정 시각은 그대로다")
+    void deleteRejectsHiddenOrPendingReview(CommunityPostStatus status) {
+        // given
+        CommunityPost post = postIn(status);
+
+        // when // then
+        assertThatThrownBy(() -> post.delete(LATER))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommunityErrorCode.COMMUNITY_INVALID_STATE));
+        assertThat(post.getStatus()).isEqualTo(status);
+        assertThat(post.getUpdatedAt()).isEqualTo(NOW);
+    }
+
     @Test
-    @DisplayName("[F-29][CM-03] 작성자 ID가 같을 때만 isWrittenBy가 true다")
-    void isWrittenByComparesAuthorId() {
+    @DisplayName("[F-29][CM-03] 이미 지운 글을 다시 지워도 예외 없이 그대로이고 수정 시각이 바뀌지 않는다")
+    void deleteTwiceIsNoOp() {
+        // given
+        CommunityPost post = postIn(CommunityPostStatus.DELETED);
+
+        // when
+        post.delete(LATER);
+
+        // then
+        assertThat(post.getStatus()).isEqualTo(CommunityPostStatus.DELETED);
+        assertThat(post.getUpdatedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-03] 작성자가 아니면 requireWrittenBy가 ACCESS_DENIED다")
+    void requireWrittenByRejectsOthers() {
         // given
         CommunityPost post = CommunityPost.write(7L, "제목", "본문", null, NOW);
 
         // then
-        assertThat(post.isWrittenBy(7L)).isTrue();
-        assertThat(post.isWrittenBy(8L)).isFalse();
+        assertThatCode(() -> post.requireWrittenBy(7L)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> post.requireWrittenBy(8L))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
     private CommunityPost postIn(CommunityPostStatus status) {
         CommunityPost post = CommunityPost.write(7L, "제목", "본문", null, NOW);
         switch (status) {
             case ACTIVE -> {}
-            case PENDING_REVIEW -> post.markPendingReview(NOW);
+            case PENDING_REVIEW -> post.receiveReport(ModerationTransition.REPORT_THRESHOLD, NOW);
             case HIDDEN -> post.hide(NOW);
             case DELETED -> post.delete(NOW);
         }
@@ -182,13 +220,20 @@ class CommunityPostTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-07] ACTIVE 글을 검토 대기로 바꾸면 상태와 수정 시각이 바뀐다")
-    void markPendingReviewFromActive() {
+    @DisplayName("[F-29][CM-07] 검토 전 신고가 4건이면 ACTIVE 글은 그대로이고, 5건이 되면 검토 대기로 바뀌며 수정 시각이 바뀐다")
+    void receiveReportMovesToPendingReviewAtFive() {
         // given
         CommunityPost post = postIn(CommunityPostStatus.ACTIVE);
 
         // when
-        post.markPendingReview(LATER);
+        post.receiveReport(4, NOW.plusSeconds(1));
+
+        // then
+        assertThat(post.getStatus()).isEqualTo(CommunityPostStatus.ACTIVE);
+        assertThat(post.getUpdatedAt()).isEqualTo(NOW);
+
+        // when
+        post.receiveReport(5, LATER);
 
         // then
         assertThat(post.getStatus()).isEqualTo(CommunityPostStatus.PENDING_REVIEW);
@@ -200,13 +245,13 @@ class CommunityPostTest {
     @EnumSource(
             value = CommunityPostStatus.class,
             names = {"PENDING_REVIEW", "HIDDEN", "DELETED"})
-    @DisplayName("[F-29][CM-07] ACTIVE가 아닌 글을 검토 대기로 바꾸려 하면 IllegalStateException을 던진다")
-    void markPendingReviewRejectsNonActive(CommunityPostStatus status) {
+    @DisplayName("[F-29][CM-07] ACTIVE가 아닌 글의 검토 전 신고가 5건이 되면 IllegalStateException을 던진다")
+    void receiveReportRejectsNonActive(CommunityPostStatus status) {
         // given
         CommunityPost post = postIn(status);
 
         // when // then
-        assertThatThrownBy(() -> post.markPendingReview(LATER)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> post.receiveReport(5, LATER)).isInstanceOf(IllegalStateException.class);
     }
 
     @ParameterizedTest(name = "[{index}] {0}")

@@ -90,6 +90,25 @@ class MemberSignupApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-01] 만 14세 확인 없이 가입하면 400 ageConfirmed 오류를 응답하고 회원을 만들지 않는다")
+    void signUpWithoutAgeConfirmedIsRejected() {
+        String email = TestSequence.email();
+
+        MvcTestResult result = mvc.post()
+                .uri("/api/members")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"%s\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"%s\"}"
+                        .formatted(email, VALID_PASSWORD, VALID_PASSWORD, TestSequence.nickname()))
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("ageConfirmed");
+        assertThat(memberRepository.findAll()).noneMatch(m -> m.getEmail().equals(email));
+    }
+
+    @Test
     @DisplayName("[F-01] 닉네임이 중복이면 409를 응답한다")
     void duplicatedNicknameReturnsConflict() {
         String nickname = TestSequence.nickname();
@@ -161,9 +180,26 @@ class MemberSignupApiIntegrationTest {
         assertThat(memberRepository.count()).isEqualTo(20);
     }
 
+    @Test
+    @DisplayName("[F-01][EV-03] 같은 IP에서 이미 쓰인 이메일로 가입을 20번 시도하면 21번째 같은 요청은 409가 아니라 429 SIGNUP_LIMITED다")
+    void twentyFirstDuplicateEmailSignupFromSameIpIsLimited() {
+        String taken = TestSequence.email();
+        assertThat(post(taken, VALID_PASSWORD, TestSequence.nickname())).hasStatus(HttpStatus.CREATED);
+        for (int attempted = 0; attempted < 19; attempted++) {
+            assertThat(post(taken, VALID_PASSWORD, TestSequence.nickname())).hasStatus(HttpStatus.CONFLICT);
+        }
+
+        MvcTestResult limited = post(taken, VALID_PASSWORD, TestSequence.nickname());
+
+        assertThat(limited).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(limited).bodyJson().extractingPath("$.code").isEqualTo("SIGNUP_LIMITED");
+        assertThat(memberRepository.count()).isEqualTo(1);
+    }
+
     private MvcTestResult post(String email, String password, String nickname) {
-        String body = "{\"email\":\"%s\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"%s\"}"
-                .formatted(email, password, password, nickname);
+        String body =
+                "{\"email\":\"%s\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"%s\",\"ageConfirmed\":true}"
+                        .formatted(email, password, password, nickname);
         return mvc.post()
                 .uri("/api/members")
                 .with(csrf())

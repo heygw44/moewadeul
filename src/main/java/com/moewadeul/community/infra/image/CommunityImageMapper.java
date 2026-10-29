@@ -1,17 +1,12 @@
 package com.moewadeul.community.infra.image;
 
-import java.time.Instant;
+import com.moewadeul.common.image.infra.AttachableImageMapper;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 @Mapper
-public interface CommunityImageMapper {
+public interface CommunityImageMapper extends AttachableImageMapper {
 
     List<CommunityImageRow> selectByPostId(@Param("postId") long postId);
-
-    List<CommunityImageRow> selectUnattachedCreatedBefore(
-            @Param("createdBefore") Instant createdBefore, @Param("limit") int limit);
-
-    int deleteIfUnattached(@Param("imageId") long imageId);
 }

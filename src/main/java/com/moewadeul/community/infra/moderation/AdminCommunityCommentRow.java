@@ -1,5 +1,6 @@
 package com.moewadeul.community.infra.moderation;
 
+import com.moewadeul.community.domain.comment.CommunityCommentStatus;
 import java.time.Instant;
 
 public record AdminCommunityCommentRow(
@@ -8,12 +9,6 @@ public record AdminCommunityCommentRow(
         String content,
         long authorId,
         String authorNickname,
-        String status,
+        CommunityCommentStatus status,
         long reportCount,
-        long spamCount,
-        long abuseCount,
-        long illegalCampingCount,
-        long privacyCount,
-        long moneyScamCount,
-        long otherCount,
         Instant statusChangedAt) {}

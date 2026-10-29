@@ -11,17 +11,18 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotencyRecordJpaRepository;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import com.moewadeul.program.application.enrollment.ProgramApplyResult;
 import com.moewadeul.program.application.enrollment.ProgramApplyService;
 import com.moewadeul.program.application.enrollment.ProgramVacancyAlertService;
+import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -62,13 +63,14 @@ class ProgramEnrollmentControllerTest {
     private ProgramVacancyAlertService programVacancyAlertService;
 
     @MockitoBean
-    private IdempotencyRecordJpaRepository idempotencyRecordRepository;
+    private IdempotencyRecordRepository idempotencyRecordRepository;
 
     @Test
     @DisplayName("[F-18] 인증 회원이 신청하면 201과 신청 ID, 상태, 결제 기한, 금액을 응답한다")
     void applyReturnsCreated() {
         when(idempotencyRecordRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(programApplyService.apply(4L, 9L)).thenReturn(new ProgramApplyResult(70L, "PENDING_PAYMENT", AT, 30000));
+        when(programApplyService.apply(4L, 9L))
+                .thenReturn(new ProgramApplyResult(70L, ProgramApplicationStatus.PENDING_PAYMENT, AT, 30000));
 
         MvcTestResult result = applyRequest(9L, "key-1").with(member(4L)).exchange();
 
@@ -139,12 +141,12 @@ class ProgramEnrollmentControllerTest {
         when(idempotencyRecordRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(programApplyService.apply(4L, 1L)).thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
         when(programApplyService.apply(4L, 2L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD));
-        when(programApplyService.apply(4L, 3L)).thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_SOLD_OUT));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD));
+        when(programApplyService.apply(4L, 3L)).thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_SOLD_OUT));
         when(programApplyService.apply(4L, 4L))
-                .thenThrow(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT));
+                .thenThrow(new BusinessException(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT));
         when(programApplyService.apply(4L, 5L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_ALREADY_APPLIED));
 
         assertError(1L, HttpStatus.NOT_FOUND, "NOT_FOUND");
         assertError(2L, HttpStatus.BAD_REQUEST, "PROGRAM_NOT_IN_APPLY_PERIOD");
@@ -157,7 +159,7 @@ class ProgramEnrollmentControllerTest {
     @DisplayName("[F-18][PG-07] 자리가 없어 409이면 응답 메시지로 빈자리 알림 신청을 안내한다")
     void soldOutMessageGuidesVacancyAlert() {
         when(idempotencyRecordRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(programApplyService.apply(4L, 3L)).thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_SOLD_OUT));
+        when(programApplyService.apply(4L, 3L)).thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_SOLD_OUT));
 
         MvcTestResult result = applyRequest(3L, "key-3").with(member(4L)).exchange();
 
@@ -207,19 +209,24 @@ class ProgramEnrollmentControllerTest {
     }
 
     @Test
-    @DisplayName("[F-20][PG-07] 서비스가 던진 NOT_FOUND와 PROGRAM_INVALID_STATE를 404와 409로 응답한다")
+    @DisplayName("[F-20][PG-07] 서비스가 던진 NOT_FOUND, PROGRAM_INVALID_STATE, PROGRAM_SEATS_AVAILABLE를 404와 409로 응답한다")
     void subscribeVacancyAlertMapsServiceErrors() {
         when(programVacancyAlertService.subscribe(4L, 1L)).thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
         when(programVacancyAlertService.subscribe(4L, 2L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE));
+        when(programVacancyAlertService.subscribe(4L, 3L))
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_SEATS_AVAILABLE));
 
         MvcTestResult notFound = vacancyAlertPost(1L).with(member(4L)).exchange();
         MvcTestResult invalidState = vacancyAlertPost(2L).with(member(4L)).exchange();
+        MvcTestResult seatsAvailable = vacancyAlertPost(3L).with(member(4L)).exchange();
 
         assertThat(notFound).hasStatus(HttpStatus.NOT_FOUND);
         assertThat(notFound).bodyJson().extractingPath("$.code").isEqualTo("NOT_FOUND");
         assertThat(invalidState).hasStatus(HttpStatus.CONFLICT);
         assertThat(invalidState).bodyJson().extractingPath("$.code").isEqualTo("PROGRAM_INVALID_STATE");
+        assertThat(seatsAvailable).hasStatus(HttpStatus.CONFLICT);
+        assertThat(seatsAvailable).bodyJson().extractingPath("$.code").isEqualTo("PROGRAM_SEATS_AVAILABLE");
     }
 
     private MockMvcTester.MockMvcRequestBuilder vacancyAlertPost(long programId) {

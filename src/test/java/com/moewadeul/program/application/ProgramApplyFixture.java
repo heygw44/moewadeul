@@ -82,6 +82,12 @@ public final class ProgramApplyFixture {
         return jdbc.queryForObject("SELECT MAX(id) FROM program_application", Long.class);
     }
 
+    public void fillSeats(long programId, int count) {
+        for (int i = 0; i < count; i++) {
+            saveApplication(programId, saveMember(), "CONFIRMED");
+        }
+    }
+
     public long saveApplication(long programId, long memberId, String status, Instant paymentDueAt) {
         jdbc.update(
                 "INSERT INTO program_application (program_id, member_id, status, payment_due_at, created_at, updated_at)"

@@ -34,7 +34,7 @@ public class SpotMapQueryService {
 
     @Transactional(readOnly = true)
     public SpotAreaResult findInArea(SpotAreaQuery query) {
-        LocalDate today = LocalDate.now(clock.withZone(KoreaTime.ZONE));
+        LocalDate today = KoreaTime.today(clock);
         SpotAreaCondition condition = toCondition(query, today);
         SpotClusterGrid grid = toGrid(query);
         double viewCellSize = Math.min(grid.cellLat(), grid.cellLng());

@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.profile.AgeGroup;
+import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Duration;
 import java.time.Instant;
@@ -25,8 +27,8 @@ class MemberWithdrawTest {
     @DisplayName("[F-01][PV-01][PV-02][PV-03] 탈퇴하면 이메일·비밀번호 해시·자기 신고 값을 지우고 닉네임을 탈퇴회원_{id}로 바꾼다")
     void withdrawErasesPersonalData() {
         Member member = savedMember(12L);
-        member.changeSelfAgeGroup(SelfAgeGroup.TWENTIES, NOW);
-        member.changeSelfGender(SelfGender.FEMALE, NOW);
+        member.changeSelfAgeGroup(AgeGroup.TWENTIES, NOW);
+        member.changeSelfGender(Gender.FEMALE, NOW);
 
         member.withdraw(LATER);
 
@@ -76,6 +78,33 @@ class MemberWithdrawTest {
     @DisplayName("[PV-02] 숫자만 이어지지 않는 비슷한 닉네임은 쓸 수 있다")
     void similarNicknameIsAllowed(String nickname) {
         assertThat(Member.isValidNickname(nickname)).isTrue();
+    }
+
+    @Test
+    @DisplayName("[PV-01] 탈퇴한 회원만 isWithdrawn이 참이다")
+    void isWithdrawnOnlyAfterWithdraw() {
+        Member member = savedMember(12L);
+        assertThat(member.isWithdrawn()).isFalse();
+
+        member.suspendPermanently(NOW);
+        assertThat(member.isWithdrawn()).isFalse();
+
+        member.withdraw(LATER);
+        assertThat(member.isWithdrawn()).isTrue();
+    }
+
+    @Test
+    @DisplayName("[PV-01] 비밀번호 인증은 탈퇴하지 않았고 비밀번호 해시가 있는 회원만 할 수 있다")
+    void canAuthenticateWithPasswordNeedsLiveMemberWithHash() {
+        Member member = savedMember(12L);
+        assertThat(member.canAuthenticateWithPassword()).isTrue();
+
+        ReflectionTestUtils.setField(member, "passwordHash", null);
+        assertThat(member.canAuthenticateWithPassword()).isFalse();
+
+        Member withdrawn = savedMember(13L);
+        ReflectionTestUtils.setField(withdrawn, "status", MemberStatus.WITHDRAWN);
+        assertThat(withdrawn.canAuthenticateWithPassword()).isFalse();
     }
 
     private static Member savedMember(long id) {

@@ -1,7 +1,8 @@
 package com.moewadeul.spot.application.bakji;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.EnumParser;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import com.moewadeul.spot.domain.SpotRepository;
@@ -12,7 +13,6 @@ import com.moewadeul.spot.domain.bakji.BakjiReportReason;
 import com.moewadeul.spot.domain.bakji.BakjiReportRepository;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BakjiFeedbackService {
 
-    private static final int PENDING_REVIEW_REPORT_THRESHOLD = 5;
+    private static final String CONFIRMATION_UNIQUE_CONSTRAINT = "PRIMARY";
+    private static final String REPORT_UNIQUE_CONSTRAINT = "uk_bakji_report_spot_id_reporter_id";
+    private static final String REASON_MESSAGE = "신고 사유는 " + EnumParser.names(BakjiReportReason.class) + " 중 하나여야 해요.";
 
     private final SpotRepository spotRepository;
     private final BakjiConfirmationRepository bakjiConfirmationRepository;
@@ -37,10 +39,8 @@ public class BakjiFeedbackService {
 
     @Transactional
     public long confirm(long memberId, long spotId) {
-        Spot spot = spotRepository
-                .findById(spotId)
-                .filter(Spot::isActiveBakji)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        Spot spot =
+                spotRepository.findById(spotId).filter(Spot::isActiveBakji).orElseThrow(BusinessException::notFound);
         if (bakjiConfirmationRepository.existsBySpotIdAndMemberId(spot.getId(), memberId)) {
             throw alreadyConfirmed();
         }
@@ -53,23 +53,21 @@ public class BakjiFeedbackService {
         Spot spot = spotRepository
                 .findByIdForUpdate(spotId)
                 .filter(Spot::isActiveBakji)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        BakjiReportReason reason = parseReason(command.reason());
+                .orElseThrow(BusinessException::notFound);
+        BakjiReportReason reason = EnumParser.parse(BakjiReportReason.class, command.reason(), REASON_MESSAGE);
         if (bakjiReportRepository.existsBySpotIdAndReporterId(spot.getId(), memberId)) {
             throw alreadyReported();
         }
         Instant now = clock.instant();
         saveReport(BakjiReport.of(spot.getId(), memberId, reason, command.content(), now));
-        if (bakjiReportRepository.countBySpotIdAndReviewedAtIsNull(spot.getId()) >= PENDING_REVIEW_REPORT_THRESHOLD) {
-            spot.markPendingReview(now);
-        }
+        spot.receiveReport(bakjiReportRepository.countBySpotIdAndReviewedAtIsNull(spot.getId()), now);
     }
 
     private void saveConfirmation(BakjiConfirmation confirmation) {
         try {
             bakjiConfirmationRepository.saveAndFlush(confirmation);
         } catch (DataIntegrityViolationException e) {
-            throw alreadyConfirmed();
+            throw UniqueViolations.translate(e, CONFIRMATION_UNIQUE_CONSTRAINT, SpotErrorCode.BAKJI_ALREADY_CONFIRMED);
         }
     }
 
@@ -77,21 +75,8 @@ public class BakjiFeedbackService {
         try {
             bakjiReportRepository.saveAndFlush(report);
         } catch (DataIntegrityViolationException e) {
-            throw alreadyReported();
+            throw UniqueViolations.translate(e, REPORT_UNIQUE_CONSTRAINT, SpotErrorCode.BAKJI_ALREADY_REPORTED);
         }
-    }
-
-    private static BakjiReportReason parseReason(String value) {
-        return Arrays.stream(BakjiReportReason.values())
-                .filter(reason -> reason.name().equals(value))
-                .findFirst()
-                .orElseThrow(() -> new BusinessException(
-                        CommonErrorCode.INVALID_INPUT, "신고 사유는 " + allowedReasons() + " 중 하나여야 해요."));
-    }
-
-    private static String allowedReasons() {
-        return String.join(
-                ", ", Arrays.stream(BakjiReportReason.values()).map(Enum::name).toList());
     }
 
     private static BusinessException alreadyConfirmed() {

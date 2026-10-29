@@ -1,18 +1,15 @@
 package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
-import com.moewadeul.program.application.ProgramApplicationEvents;
 import com.moewadeul.program.domain.Payment;
 import com.moewadeul.program.domain.PaymentRepository;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplication;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
-import com.moewadeul.program.domain.ProgramCancelReason;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import com.moewadeul.program.domain.ProgramRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -26,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class ProgramPaymentService {
+
+    private static final String PAYMENT_UNIQUE_CONSTRAINT = "uk_payment_program_application";
 
     private final ProgramApplicationRepository programApplicationRepository;
     private final ProgramRepository programRepository;
@@ -41,13 +40,9 @@ public class ProgramPaymentService {
         application.confirmPayment(now);
         Program program = findProgram(application.getProgramId());
         savePayment(Payment.paid(applicationId, program.getFee(), now));
-        outboxEventRecorder.record(
-                ProgramApplicationEvents.CONFIRMED_EVENT_TYPE,
-                ProgramApplicationEvents.AGGREGATE_TYPE,
-                applicationId,
-                new ProgramApplicationEvents.ConfirmedPayload(applicationId, memberId, application.getProgramId()));
+        outboxEventRecorder.recordAll(application.pullEvents());
         log.info("program payment confirmed applicationId={} memberId={}", applicationId, memberId);
-        return new ProgramPayResult(applicationId, ProgramApplicationStatus.CONFIRMED.name(), now);
+        return new ProgramPayResult(applicationId, ProgramApplicationStatus.CONFIRMED, now);
     }
 
     @Transactional
@@ -59,46 +54,32 @@ public class ProgramPaymentService {
         if (refunded) {
             refundPayment(applicationId, now);
         }
-        outboxEventRecorder.record(
-                ProgramApplicationEvents.CANCELED_EVENT_TYPE,
-                ProgramApplicationEvents.AGGREGATE_TYPE,
-                applicationId,
-                new ProgramApplicationEvents.CanceledPayload(
-                        applicationId,
-                        memberId,
-                        application.getProgramId(),
-                        ProgramCancelReason.USER.name(),
-                        refunded));
+        outboxEventRecorder.recordAll(application.pullEvents());
         seatReleaseRecorder.record(program, now);
         log.info(
                 "program application canceled applicationId={} memberId={} refunded={}",
                 applicationId,
                 memberId,
                 refunded);
-        return new ProgramApplicationCancelResult(ProgramApplicationStatus.CANCELED.name(), refunded);
+        return new ProgramApplicationCancelResult(ProgramApplicationStatus.CANCELED, refunded);
     }
 
     private ProgramApplication lockOwnApplication(long memberId, long applicationId) {
-        ProgramApplication application = programApplicationRepository
-                .findByIdForUpdate(applicationId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (application.getMemberId() != memberId) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        ProgramApplication application =
+                programApplicationRepository.findByIdForUpdate(applicationId).orElseThrow(BusinessException::notFound);
+        application.requireAppliedBy(memberId);
         return application;
     }
 
     private Program findProgram(long programId) {
-        return programRepository
-                .findById(programId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return programRepository.findById(programId).orElseThrow(BusinessException::notFound);
     }
 
     private void savePayment(Payment payment) {
         try {
             paymentRepository.saveAndFlush(payment);
         } catch (DataIntegrityViolationException e) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw UniqueViolations.translate(e, PAYMENT_UNIQUE_CONSTRAINT, ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
     }
 

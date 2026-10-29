@@ -1,14 +1,13 @@
 package com.moewadeul.spot.api.bakji;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +17,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -36,16 +34,13 @@ class BakjiApiIntegrationTest {
             "{\"name\":\"능선 끝 평지\",\"lat\":37.25,\"lng\":127.25,\"hasWater\":true,\"hasToilet\":false}";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -67,7 +62,7 @@ class BakjiApiIntegrationTest {
     @Test
     @DisplayName("[F-07][TR-03] 이메일 인증 전인 회원이 제보하면 403 MEMBER_NOT_VERIFIED를 응답하고 박지를 저장하지 않는다")
     void unverifiedMemberCannotReport() {
-        Cookie session = login(saveMember());
+        Cookie session = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult result = send(mvc.post().uri(PATH), session, INSIDE_PARK_BODY);
 
@@ -80,7 +75,7 @@ class BakjiApiIntegrationTest {
     @Test
     @DisplayName("[F-07] CSRF 토큰 없이 제보하면 403을 응답하고 박지를 저장하지 않는다")
     void reportWithoutCsrfIsForbidden() {
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult result = mvc.post()
                 .uri(PATH)
@@ -106,7 +101,7 @@ class BakjiApiIntegrationTest {
                         + " ST_GeomFromText(?, 4326, 'axis-order=long-lat'), NOW(6), NOW(6))",
                 areaName,
                 PARK_SQUARE);
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult first = send(mvc.post().uri(PATH), session, INSIDE_PARK_BODY);
@@ -167,7 +162,7 @@ class BakjiApiIntegrationTest {
     @Test
     @DisplayName("[F-07] 기상청 격자 밖 좌표로 제보하면 400 INVALID_INPUT과 lat·lng 필드 오류를 응답한다")
     void reportOutsideWeatherGridReturnsFieldErrors() {
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         MvcTestResult result = send(
                 mvc.post().uri(PATH),
@@ -194,7 +189,7 @@ class BakjiApiIntegrationTest {
     @DisplayName("[F-07] 제보자가 수정하면 200과 함께 바뀐 값이 저장되고, 삭제하면 204 뒤에 장소 상세가 404가 된다")
     void reporterUpdatesAndDeletes() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int spotId = readSpotId(send(mvc.post().uri(PATH), session, INSIDE_PARK_BODY));
 
         // when
@@ -228,8 +223,8 @@ class BakjiApiIntegrationTest {
     @DisplayName("[F-07] 다른 회원이 수정하거나 삭제하면 403 ACCESS_DENIED를 응답하고 박지는 그대로다")
     void otherMemberCannotUpdateOrDelete() {
         // given
-        Cookie reporter = verifiedSession(saveMember());
-        Cookie stranger = verifiedSession(saveMember());
+        Cookie reporter = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie stranger = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int spotId = readSpotId(send(mvc.post().uri(PATH), reporter, INSIDE_PARK_BODY));
 
         // when
@@ -267,13 +262,6 @@ class BakjiApiIntegrationTest {
         return spotId.get();
     }
 
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(VALID_PASSWORD))
-                .build());
-    }
-
     private Cookie login(Member member) {
         String body = "{\"email\":\"%s\",\"password\":\"%s\"}".formatted(member.getEmail(), VALID_PASSWORD);
         MvcTestResult result = mvc.post()
@@ -290,7 +278,7 @@ class BakjiApiIntegrationTest {
 
     private Cookie verifiedSession(Member member) {
         Cookie session = login(member);
-        String code = emailVerificationService
+        String code = emailVerificationIssuer
                 .issueFor(member.getId(), LOCAL_IP, TestSequence.next())
                 .orElseThrow()
                 .code();

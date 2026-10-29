@@ -1,7 +1,7 @@
 import { apiFetch } from './client';
 import type { CompanionReviewCreateRequest, Page, PendingCompanionReview, ReceivedCompanionReview } from './types';
 
-export const RECEIVED_REVIEW_PAGE_SIZE = 10;
+const RECEIVED_REVIEW_PAGE_SIZE = 10;
 
 export function fetchPendingCompanionReviews(signal?: AbortSignal): Promise<PendingCompanionReview[]> {
   return apiFetch<PendingCompanionReview[]>('/api/me/companion-reviews/pending', { signal });

@@ -1,11 +1,13 @@
 package com.moewadeul.admin.api.program;
 
+import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
@@ -36,6 +38,9 @@ class AdminProgramApiIntegrationTest {
     private static final String PROGRAMS = "/api/programs";
     private static final String PASSWORD = "Valid-pass1";
     private static final String SESSION_COOKIE = "SESSION";
+
+    @Autowired
+    private SpotFixture spotFixture;
 
     @Autowired
     private MockMvcTester mvc;
@@ -127,25 +132,28 @@ class AdminProgramApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-17] 지도에 보이는 장소만 연결할 수 있고, 숨김이거나 없는 장소는 400 INVALID_INPUT이다")
+    @DisplayName("[F-17] 지도에 보이는 장소만 연결할 수 있고, 숨김·삭제됐거나 없는 장소는 400 INVALID_INPUT이다")
     void createLinksOnlyActiveSpot() {
         // given
         Instant open = clock.instant().plus(Duration.ofDays(1));
         long active = insertSpot("ACTIVE");
         long hidden = insertSpot("HIDDEN");
+        long deleted = insertSpot("DELETED");
 
         // when
         MvcTestResult linked = createProgram(body(open, 200, active));
         MvcTestResult hiddenResult = createProgram(body(open, 200, hidden));
+        MvcTestResult deletedResult = createProgram(body(open, 200, deleted));
         MvcTestResult missing = createProgram(body(open, 200, 999_999L));
 
         // then
         assertThat(linked).hasStatus(HttpStatus.CREATED);
         MvcTestResult detail = mvc.get().uri(PROGRAMS + "/" + programId(linked)).exchange();
         assertThat(detail).bodyJson().extractingPath("$.spotId").isEqualTo((int) active);
-        for (MvcTestResult result : List.of(hiddenResult, missing)) {
+        for (MvcTestResult result : List.of(hiddenResult, deletedResult, missing)) {
             assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
             assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+            assertThat(result).bodyJson().extractingPath("$.message").isEqualTo("spotId: 지도에 보이는 장소만 연결할 수 있어요.");
         }
         assertThat(count("program")).isEqualTo(1);
     }
@@ -588,15 +596,7 @@ class AdminProgramApiIntegrationTest {
     }
 
     private long insertSpot(String status) {
-        String name = TestSequence.unique("장소");
-        jdbc.update(
-                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES ('CAMPSITE', ?, ST_SRID(POINT(127.3, 37.3), 4326), 60, 127, ?, ?, ?)",
-                name,
-                status,
-                clock.instant(),
-                clock.instant());
-        return jdbc.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
+        return spotFixture.insert(aSpot().type("CAMPSITE").status(status).createdAt(clock.instant()));
     }
 
     private long insertApplication(long programId, String status, Instant now) {

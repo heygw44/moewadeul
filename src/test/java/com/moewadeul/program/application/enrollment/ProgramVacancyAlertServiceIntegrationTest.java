@@ -10,7 +10,6 @@ import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +43,7 @@ class ProgramVacancyAlertServiceIntegrationTest {
     @DisplayName("[F-20][PG-07] 처음 신청하면 true이고, 다시 신청하면 false이며 행은 하나뿐이다")
     void subscribeIsIdempotent() {
         long programId = fixture.saveProgram(3, false);
+        fixture.fillSeats(programId, 3);
         long memberId = fixture.saveMember();
 
         boolean first = vacancyAlertService.subscribe(memberId, programId);
@@ -55,13 +55,41 @@ class ProgramVacancyAlertServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20][PG-07] 남은 자리가 있어도 신청을 저장한다")
-    void subscribeStoresEvenWhenSeatsRemain() {
-        long programId = fixture.saveProgram(5, false);
+    @DisplayName("[F-20][PG-07] 자리가 모두 찬 행사이면 신청을 저장한다")
+    void subscribeStoresWhenFull() {
+        long programId = fixture.saveProgram(2, false);
+        fixture.fillSeats(programId, 2);
         long memberId = fixture.saveMember();
 
         assertThat(vacancyAlertService.subscribe(memberId, programId)).isTrue();
-        assertThat(fixture.activeCount(programId)).isZero();
+        assertThat(fixture.vacancyAlertCount(programId, memberId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 남은 자리가 있으면 PROGRAM_SEATS_AVAILABLE이고 신청을 저장하지 않는다")
+    void subscribeRejectsWhenSeatsRemain() {
+        long programId = fixture.saveProgram(3, false);
+        fixture.fillSeats(programId, 2);
+        long memberId = fixture.saveMember();
+
+        assertThatThrownBy(() -> vacancyAlertService.subscribe(memberId, programId))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ProgramErrorCode.PROGRAM_SEATS_AVAILABLE);
+        assertThat(fixture.vacancyAlertCount(programId, memberId)).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 결제 기한이 지난 신청은 자리를 차지하지 않으므로 PROGRAM_SEATS_AVAILABLE이다")
+    void expiredPendingPaymentDoesNotHoldSeat() {
+        long programId = fixture.saveProgram(1, false);
+        fixture.saveApplication(programId, fixture.saveMember(), "PENDING_PAYMENT", NOW.minusSeconds(1));
+        long memberId = fixture.saveMember();
+
+        assertThatThrownBy(() -> vacancyAlertService.subscribe(memberId, programId))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ProgramErrorCode.PROGRAM_SEATS_AVAILABLE);
     }
 
     @Test
@@ -72,8 +100,8 @@ class ProgramVacancyAlertServiceIntegrationTest {
         long memberId = fixture.saveMember();
 
         assertThatThrownBy(() -> vacancyAlertService.subscribe(memberId, programId))
-                .isInstanceOf(ProgramException.class)
-                .extracting(e -> ((ProgramException) e).getErrorCode())
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE);
         assertThat(fixture.vacancyAlertCount(programId, memberId)).isZero();
     }
@@ -85,8 +113,8 @@ class ProgramVacancyAlertServiceIntegrationTest {
         long memberId = fixture.saveMember();
 
         assertThatThrownBy(() -> vacancyAlertService.subscribe(memberId, programId))
-                .isInstanceOf(ProgramException.class)
-                .extracting(e -> ((ProgramException) e).getErrorCode())
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE);
     }
 
@@ -109,6 +137,7 @@ class ProgramVacancyAlertServiceIntegrationTest {
     @DisplayName("[F-20][PG-07] 해제하면 행이 지워지고, 신청한 적이 없어도 오류가 없으며, 해제 뒤 다시 신청할 수 있다")
     void unsubscribeRemovesAndAllowsResubscribe() {
         long programId = fixture.saveProgram(3, false);
+        fixture.fillSeats(programId, 3);
         long memberId = fixture.saveMember();
         vacancyAlertService.subscribe(memberId, programId);
 

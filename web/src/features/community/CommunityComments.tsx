@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { createComment, deleteComment, listComments, updateComment } from '../../api/community';
 import { ApiError } from '../../api/client';
@@ -13,20 +13,15 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { usePagedList } from '../../components/usePagedList';
 import { formatKstDateTime, formatRelativeKst } from '../../lib/datetime';
-import { withNext } from '../member/nextPath';
-import { UnverifiedNote } from '../member/GatedButton';
-import { useSession } from '../member/session';
+import { withNext } from '../../app/session/nextPath';
+import { UnverifiedNote } from '../../app/session/GatedButton';
+import { useSession } from '../../app/session/session';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import type { CommunityReportTarget } from './CommunityReportDialog';
 
 const CONTENT_MAX = 1000;
-
-type ListState = {
-  comments: CommunityComment[];
-  page: number;
-  hasNext: boolean;
-};
 
 type CommunityCommentsProps = {
   postId: number;
@@ -37,66 +32,21 @@ type CommunityCommentsProps = {
 export function CommunityComments({ postId, count, onChanged }: CommunityCommentsProps) {
   const session = useSession();
   const myMemberId = session.status === 'authenticated' ? (session.me?.memberId ?? null) : null;
-  const [list, setList] = useState<ListState | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
+  const { current: list, loadingMore, loadMore, retry, reload } = usePagedList(true, postId, listComments);
   const [replyingId, setReplyingId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [reporting, setReporting] = useState<CommunityReportTarget | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [idempotentRunner] = useState(createIdempotentRunner);
-  const controllerRef = useRef<AbortController | null>(null);
-  const showSkeleton = useDelayedFlag(list === null && listError === null);
+  const showSkeleton = useDelayedFlag(list === null);
 
-  const loadPage = useCallback(
-    async (page: number) => {
-      controllerRef.current?.abort();
-      const controller = new AbortController();
-      controllerRef.current = controller;
-      setLoading(true);
-      setListError(null);
-      try {
-        const result = await listComments(postId, page, controller.signal);
-        if (controller.signal.aborted) return;
-        setList((previous) => ({
-          comments: page === 0 || previous === null ? result.content : [...previous.comments, ...result.content],
-          page: result.page,
-          hasNext: result.hasNext,
-        }));
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        setListError(toUserMessage(error));
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    },
-    [postId],
-  );
-
-  useEffect(() => {
-    const controller = new AbortController();
-    listComments(postId, 0, controller.signal).then(
-      (result) => {
-        if (!controller.signal.aborted)
-          setList({ comments: result.content, page: result.page, hasNext: result.hasNext });
-      },
-      (error: unknown) => {
-        if (!controller.signal.aborted) setListError(toUserMessage(error));
-      },
-    );
-    return () => {
-      controller.abort();
-      controllerRef.current?.abort();
-    };
-  }, [postId]);
-
-  async function refreshAfterChange(message: string) {
+  function refreshAfterChange(message: string) {
     setStatus(message);
     setReplyingId(null);
     setEditingId(null);
     onChanged();
-    await loadPage(0);
+    reload();
   }
 
   return (
@@ -110,7 +60,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
           onSubmit={async (content) => {
             const request = { postId, content };
             await idempotentRunner.run(request, (key) => createComment(postId, { content }, key));
-            await refreshAfterChange('댓글을 남겼어요.');
+            refreshAfterChange('댓글을 남겼어요.');
           }}
         />
         {status && (
@@ -120,13 +70,13 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
         )}
       </div>
 
-      {listError && (
+      {list?.error && (
         <div role="alert" className="flex flex-col gap-2">
           <Notice tone="danger" title="댓글을 불러오지 못했어요">
-            <p>{listError}</p>
+            <p>{list.error}</p>
           </Notice>
           <div>
-            <Button variant="secondary" onClick={() => void loadPage(list?.page ?? 0)}>
+            <Button variant="secondary" onClick={retry}>
               다시 불러오기
             </Button>
           </div>
@@ -140,13 +90,13 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
         </div>
       )}
 
-      {list && list.comments.length === 0 && !listError && (
+      {list && list.items.length === 0 && !list.error && (
         <p className="text-base text-ink-muted">아직 댓글이 없어요.</p>
       )}
 
-      {list && (list.comments.length > 0 || list.hasNext) && (
+      {list && (list.items.length > 0 || list.hasNext) && (
         <ul className="flex flex-col gap-1">
-          {list.comments.map((comment) => (
+          {list.items.map((comment) => (
             <li key={comment.commentId} className="py-3">
               <CommentItem
                 comment={comment}
@@ -160,7 +110,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                 onCancelEdit={() => setEditingId(null)}
                 onSaveEdit={async (id, content) => {
                   await updateComment(id, { content });
-                  await refreshAfterChange('댓글을 수정했어요.');
+                  refreshAfterChange('댓글을 수정했어요.');
                 }}
                 onDelete={setDeleting}
                 onReport={(id) => setReporting({ type: 'comment', id })}
@@ -174,7 +124,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                 onSubmitReply={async (content) => {
                   const body = { content, parentId: comment.commentId };
                   await idempotentRunner.run({ postId, ...body }, (key) => createComment(postId, body, key));
-                  await refreshAfterChange('답글을 남겼어요.');
+                  refreshAfterChange('답글을 남겼어요.');
                 }}
               />
               {comment.replies.length > 0 && (
@@ -193,7 +143,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                         onCancelEdit={() => setEditingId(null)}
                         onSaveEdit={async (id, content) => {
                           await updateComment(id, { content });
-                          await refreshAfterChange('답글을 수정했어요.');
+                          refreshAfterChange('답글을 수정했어요.');
                         }}
                         onDelete={setDeleting}
                         onReport={(id) => setReporting({ type: 'comment', id })}
@@ -207,7 +157,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                         onSubmitReply={async (content) => {
                           const body = { content, parentId: reply.commentId };
                           await idempotentRunner.run({ postId, ...body }, (key) => createComment(postId, body, key));
-                          await refreshAfterChange('답글을 남겼어요.');
+                          refreshAfterChange('답글을 남겼어요.');
                         }}
                       />
                     </li>
@@ -221,8 +171,8 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
               <Button
                 variant="ghost"
                 fullWidth
-                loading={loading}
-                onClick={() => void loadPage(list.page + 1)}
+                loading={loadingMore}
+                onClick={() => void loadMore()}
                 className="rounded-none"
               >
                 댓글 더 보기
@@ -238,7 +188,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
           onClose={() => setDeleting(null)}
           onDeleted={async () => {
             setDeleting(null);
-            await refreshAfterChange('댓글을 삭제했어요.');
+            refreshAfterChange('댓글을 삭제했어요.');
           }}
         />
       )}

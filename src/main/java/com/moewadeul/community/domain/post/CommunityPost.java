@@ -1,6 +1,9 @@
 package com.moewadeul.community.domain.post;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.moderation.Moderatable;
+import com.moewadeul.common.moderation.ModerationTransition;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "community_post")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class CommunityPost {
+public class CommunityPost implements Moderatable {
 
     public static final int TITLE_MAX_LENGTH = 100;
 
@@ -104,39 +107,46 @@ public class CommunityPost {
 
     public void delete(Instant now) {
         requireNow(now);
-        if (status == CommunityPostStatus.DELETED) {
+        if (isDeleted()) {
             return;
+        }
+        if (status != CommunityPostStatus.ACTIVE) {
+            throw new BusinessException(CommunityErrorCode.COMMUNITY_INVALID_STATE);
         }
         this.status = CommunityPostStatus.DELETED;
         this.updatedAt = now;
     }
 
-    public void markPendingReview(Instant now) {
-        if (status != CommunityPostStatus.ACTIVE) {
-            throw new IllegalStateException("보이는 글만 검토 대기로 바꿀 수 있습니다. 현재 상태: " + status);
+    public boolean isDeleted() {
+        return status == CommunityPostStatus.DELETED;
+    }
+
+    public void receiveReport(long unreviewedReportCount, Instant now) {
+        if (!ModerationTransition.reachesPendingReview(status, unreviewedReportCount)) {
+            return;
         }
         this.status = CommunityPostStatus.PENDING_REVIEW;
         this.updatedAt = now;
     }
 
+    @Override
     public void hide(Instant now) {
-        if (status != CommunityPostStatus.ACTIVE && status != CommunityPostStatus.PENDING_REVIEW) {
-            throw new BusinessException(CommunityErrorCode.COMMUNITY_INVALID_STATE);
-        }
+        ModerationTransition.requireHideable(status, CommunityErrorCode.COMMUNITY_INVALID_STATE);
         this.status = CommunityPostStatus.HIDDEN;
         this.updatedAt = now;
     }
 
+    @Override
     public void restore(Instant now) {
-        if (status != CommunityPostStatus.PENDING_REVIEW && status != CommunityPostStatus.HIDDEN) {
-            throw new BusinessException(CommunityErrorCode.COMMUNITY_INVALID_STATE);
-        }
+        ModerationTransition.requireRestorable(status, CommunityErrorCode.COMMUNITY_INVALID_STATE);
         this.status = CommunityPostStatus.ACTIVE;
         this.updatedAt = now;
     }
 
-    public boolean isWrittenBy(long memberId) {
-        return this.memberId == memberId;
+    public void requireWrittenBy(long memberId) {
+        if (this.memberId != memberId) {
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
+        }
     }
 
     public boolean isActive() {

@@ -1,5 +1,7 @@
 package com.moewadeul.review.application;
 
+import com.moewadeul.common.image.application.ImageView;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.review.infra.SpotReviewMapper;
 import com.moewadeul.review.infra.SpotReviewRow;
 import com.moewadeul.spot.application.ActiveSpotChecker;
@@ -18,17 +20,13 @@ public class SpotReviewQueryService {
     private final ReviewImageReader reviewImageReader;
 
     @Transactional(readOnly = true)
-    public SpotReviewPage list(long spotId, int page, int size) {
+    public PageSlice<SpotReviewItem> list(long spotId, int page, int size) {
         activeSpotChecker.requireActive(spotId);
-        long offset = (long) page * size;
-        List<SpotReviewRow> rows = spotReviewMapper.selectBySpot(spotId, offset, size + 1);
-        boolean hasNext = rows.size() > size;
-        List<SpotReviewRow> pageRows = rows.stream().limit(size).toList();
-        Map<Long, List<SpotReviewImage>> images = reviewImageReader.readByReviewIds(
-                pageRows.stream().map(SpotReviewRow::reviewId).toList());
-        List<SpotReviewItem> content = pageRows.stream()
-                .map(row -> SpotReviewItem.from(row, images.getOrDefault(row.reviewId(), List.of())))
-                .toList();
-        return new SpotReviewPage(content, page, size, hasNext);
+        List<SpotReviewRow> rows =
+                spotReviewMapper.selectBySpot(spotId, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+        PageSlice<SpotReviewRow> slice = PageSlice.of(rows, page, size);
+        Map<Long, List<ImageView>> images = reviewImageReader.readByReviewIds(
+                slice.content().stream().map(SpotReviewRow::reviewId).toList());
+        return slice.map(row -> SpotReviewItem.from(row, images.getOrDefault(row.reviewId(), List.of())));
     }
 }

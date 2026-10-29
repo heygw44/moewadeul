@@ -3,24 +3,23 @@
 <mapper namespace="com.moewadeul.memory.infra.image.MemoryImageMapper">
 
     <select id="selectByNonEmptyMemoryIds" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
-        SELECT id AS image_id, memory_id, object_key, thumbnail_object_key AS thumbnail_key
+        SELECT id AS image_id, memory_id, object_key
         FROM memory_image
         WHERE memory_id IN
         <foreach collection="memoryIds" item="memoryId" open="(" separator="," close=")">#{memoryId}</foreach>
         ORDER BY memory_id, display_order
     </select>
 
-    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
-        SELECT id AS image_id, memory_id, object_key, thumbnail_object_key AS thumbnail_key
-        FROM memory_image
-        WHERE memory_id IS NULL
-          AND created_at &lt; #{createdBefore}
-        ORDER BY id
-        LIMIT #{limit}
+    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedBefore">
+            <property name="table" value="memory_image"/>
+            <property name="parentColumn" value="memory_id"/>
+            <property name="thumbnailColumn" value="thumbnail_object_key"/>
+        </include>
     </select>
 
-    <select id="selectUnattachedByMember" resultType="com.moewadeul.memory.infra.image.MemoryImageRow">
-        SELECT id AS image_id, memory_id, object_key, thumbnail_object_key AS thumbnail_key
+    <select id="selectUnattachedByMember" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
+        SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM memory_image
         WHERE member_id = #{memberId}
           AND memory_id IS NULL
@@ -30,8 +29,20 @@
     </select>
 
     <delete id="deleteIfUnattached">
-        DELETE FROM memory_image
-        WHERE id = #{imageId}
-          AND memory_id IS NULL
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.deleteIfUnattached">
+            <property name="table" value="memory_image"/>
+            <property name="parentColumn" value="memory_id"/>
+        </include>
     </delete>
+
+    <select id="lockMember" resultType="long">
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.lockMember"/>
+    </select>
+
+    <select id="selectUnattachedCreatedAtsAfter" resultType="java.time.Instant">
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedAtsAfter">
+            <property name="table" value="memory_image"/>
+            <property name="parentColumn" value="memory_id"/>
+        </include>
+    </select>
 </mapper>

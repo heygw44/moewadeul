@@ -56,7 +56,7 @@ const SPREAD_SPACING_PX = 52;
 const CIRCLE_MIN_RADIUS_PX = 48;
 const CIRCLE_MAX_COUNT = 9;
 
-export function spreadSlots(count: number): Offset[] {
+function spreadSlots(count: number): Offset[] {
   if (count <= CIRCLE_MAX_COUNT) {
     const radius = Math.max(CIRCLE_MIN_RADIUS_PX, (count * SPREAD_SPACING_PX) / (2 * Math.PI));
     return Array.from({ length: count }, (_, i) => {

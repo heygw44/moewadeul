@@ -14,11 +14,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.trust.application.companion.CompanionReviewCommandService;
-import com.moewadeul.trust.application.companion.CompanionReviewPage;
 import com.moewadeul.trust.application.companion.CompanionReviewQueryService;
 import com.moewadeul.trust.application.companion.CompanionReviewWriteCommand;
 import com.moewadeul.trust.application.companion.PendingCompanionReview;
@@ -182,7 +182,7 @@ class CompanionReviewControllerTest {
         when(commandService.write(anyLong(), eq(3L), any()))
                 .thenThrow(new BusinessException(TrustErrorCode.COMPANION_REVIEW_DUPLICATED));
         when(commandService.write(anyLong(), eq(4L), any()))
-                .thenThrow(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT));
+                .thenThrow(new BusinessException(TrustErrorCode.TRUST_LEVEL_INSUFFICIENT));
 
         // when
         MvcTestResult notEligible = postTo(verified(), 1L, VALID_BODY);
@@ -227,7 +227,7 @@ class CompanionReviewControllerTest {
     @DisplayName("[F-15] 이메일 인증 전의 회원은 쓰기·작성 목록·회원 후기가 403 MEMBER_NOT_VERIFIED지만, 받은 후기는 볼 수 있다")
     void unverifiedMemberCanOnlyReadReceived() {
         // given
-        when(queryService.received(MEMBER_ID, 0, 20)).thenReturn(new CompanionReviewPage<>(List.of(), 0, 20, false));
+        when(queryService.received(MEMBER_ID, 0, 20)).thenReturn(new PageSlice<>(List.of(), 0, 20, false));
 
         // when
         MvcTestResult write = post(unverified(), VALID_BODY);
@@ -280,7 +280,7 @@ class CompanionReviewControllerTest {
                 21L, true, 9L, "굴업도 주말 1박", 31L, "새벽능선", true, List.of(CompanionReviewTag.ON_TIME), "좋았다", CREATED_AT);
         ReceivedCompanionReview sealed = ReceivedCompanionReview.sealed(22L);
         when(queryService.received(MEMBER_ID, 0, 20))
-                .thenReturn(new CompanionReviewPage<>(List.of(revealed, sealed), 0, 20, true));
+                .thenReturn(new PageSlice<>(List.of(revealed, sealed), 0, 20, true));
 
         // when
         MvcTestResult result = mvc.get().uri(RECEIVED_URI).with(verified()).exchange();
@@ -313,7 +313,7 @@ class CompanionReviewControllerTest {
     void memberReviewsHaveOnlyPublicFields() {
         // given
         when(queryService.forMember(31L, 1, 5))
-                .thenReturn(new CompanionReviewPage<>(
+                .thenReturn(new PageSlice<>(
                         List.of(new PublicCompanionReview(List.of(CompanionReviewTag.LATE), "늦었다", CREATED_AT)),
                         1,
                         5,

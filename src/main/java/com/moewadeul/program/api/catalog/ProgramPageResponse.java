@@ -1,8 +1,10 @@
 package com.moewadeul.program.api.catalog;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.program.application.catalog.ProgramPage;
 import com.moewadeul.program.application.catalog.ProgramSummary;
+import com.moewadeul.program.domain.ProgramPhase;
 import java.time.Instant;
 import java.util.List;
 
@@ -14,9 +16,9 @@ public record ProgramPageResponse(
         @JsonInclude(JsonInclude.Include.NON_NULL) Instant nextApplyOpenAt) {
 
     static ProgramPageResponse from(ProgramPage page) {
-        List<ProgramSummaryResponse> content =
-                page.content().stream().map(ProgramSummaryResponse::from).toList();
-        return new ProgramPageResponse(content, page.page(), page.size(), page.hasNext(), page.nextApplyOpenAt());
+        PageSlice<ProgramSummaryResponse> slice = page.slice().map(ProgramSummaryResponse::from);
+        return new ProgramPageResponse(
+                slice.content(), slice.page(), slice.size(), slice.hasNext(), page.nextApplyOpenAt());
     }
 
     public record ProgramSummaryResponse(
@@ -32,7 +34,7 @@ public record ProgramPageResponse(
             int remainingSeats,
             int fee,
             boolean overnight,
-            String status) {
+            ProgramPhase status) {
 
         static ProgramSummaryResponse from(ProgramSummary summary) {
             return new ProgramSummaryResponse(

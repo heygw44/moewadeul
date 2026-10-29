@@ -2,6 +2,7 @@ package com.moewadeul.program.infra.enrollment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -10,7 +11,6 @@ import com.moewadeul.program.domain.ProgramApplication;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramCancelReason;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import com.moewadeul.program.infra.ProgramApplicationJpaRepository;
 import java.time.Instant;
 import java.util.Map;
@@ -102,7 +102,7 @@ class ProgramPaymentExpirySqlParityIntegrationTest {
                     applicationRepository.findById(applicationId).orElseThrow();
             try {
                 application.confirmPayment(NOW);
-            } catch (ProgramException e) {
+            } catch (BusinessException e) {
                 return (ProgramErrorCode) e.getErrorCode();
             }
             return null;

@@ -13,19 +13,13 @@
                b.reporter_id AS reporter_id,
                m.nickname AS reporter_nickname,
                COALESCE(rc.report_count, 0) AS report_count,
-               COALESCE(rc.illegal_area_count, 0) AS illegal_area_count,
-               COALESCE(rc.closed_count, 0) AS closed_count,
-               COALESCE(rc.false_info_count, 0) AS false_info_count,
                s.updated_at AS status_changed_at
         FROM spot s
         LEFT JOIN bakji_detail b ON b.spot_id = s.id
         LEFT JOIN member m ON m.id = b.reporter_id
         LEFT JOIN (
             SELECT r.spot_id AS spot_id,
-                   COUNT(*) AS report_count,
-                   COUNT(CASE WHEN r.reason = 'ILLEGAL_AREA' THEN 1 END) AS illegal_area_count,
-                   COUNT(CASE WHEN r.reason = 'CLOSED' THEN 1 END) AS closed_count,
-                   COUNT(CASE WHEN r.reason = 'FALSE_INFO' THEN 1 END) AS false_info_count
+                   COUNT(*) AS report_count
             FROM bakji_report r
             JOIN spot target ON target.id = r.spot_id
             WHERE r.reviewed_at IS NULL
@@ -37,27 +31,20 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="selectRecentReports" resultType="com.moewadeul.spot.infra.moderation.AdminSpotRecentReportRow">
-        SELECT ranked.spot_id AS spot_id,
-               ranked.reason AS reason,
-               ranked.content AS content,
-               ranked.created_at AS created_at
-        FROM (
-            SELECT r.spot_id AS spot_id,
-                   r.reason AS reason,
-                   r.content AS content,
-                   r.created_at AS created_at,
-                   r.id AS id,
-                   ROW_NUMBER() OVER (PARTITION BY r.spot_id ORDER BY r.created_at DESC, r.id DESC) AS row_num
-            FROM bakji_report r
-            WHERE r.reviewed_at IS NULL
-              AND r.spot_id IN
-            <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">
-                #{spotId}
-            </foreach>
-        ) ranked
-        WHERE ranked.row_num &lt;= 5
-        ORDER BY ranked.spot_id ASC, ranked.row_num ASC
+    <select id="selectReasonCounts" resultType="com.moewadeul.common.moderation.ReportReasonCount">
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.reasonCounts">
+            <property name="reportTable" value="bakji_report"/>
+            <property name="targetColumn" value="spot_id"/>
+            <property name="targetScope" value="com.moewadeul.common.moderation.ModerationReportSql.anyTarget"/>
+        </include>
+    </select>
+
+    <select id="selectRecentReports" resultType="com.moewadeul.common.moderation.RecentReportRow">
+        <include refid="com.moewadeul.common.moderation.ModerationReportSql.recentReports">
+            <property name="reportTable" value="bakji_report"/>
+            <property name="targetColumn" value="spot_id"/>
+            <property name="targetScope" value="com.moewadeul.common.moderation.ModerationReportSql.anyTarget"/>
+        </include>
     </select>
 
 </mapper>

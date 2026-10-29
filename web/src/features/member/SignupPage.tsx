@@ -1,31 +1,37 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { login, signUp } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { serverTraceId, toUserMessage } from '../../api/errors';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
+import { Checkbox } from '../../components/Checkbox';
 import { EmailField } from '../../components/EmailField';
 import { composeEmail, EMPTY_EMAIL } from '../../components/emailValue';
 import type { EmailValue } from '../../components/emailValue';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { PasswordField } from '../../components/PasswordField';
 import { TextField } from '../../components/TextField';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { AuthLayout } from './AuthLayout';
-import { safeNextPath, withNext } from './nextPath';
+import { enterAfterAuth } from './enterAfterAuth';
+import { safeNextPath, withNext } from '../../app/session/nextPath';
 import {
+  AGE_CONFIRM_REQUIRED,
   emailRequiredMessage,
   NICKNAME_REQUIRED,
   PASSWORD_CONFIRM_MISMATCH,
   PASSWORD_CONFIRM_REQUIRED,
   PASSWORD_REQUIRED,
 } from './requiredMessages';
-import { useSession } from './session';
+import { useSession } from '../../app/session/session';
 
-type SignupField = 'email' | 'password' | 'passwordConfirm' | 'nickname';
+type SignupField = 'email' | 'password' | 'passwordConfirm' | 'nickname' | 'ageConfirmed';
 
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
+
+const NOTICE_LINK_CLASS = 'font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
 
 const FIELD_BY_CODE: Record<string, SignupField> = {
   MEMBER_EMAIL_DUPLICATED: 'email',
@@ -35,7 +41,13 @@ const FIELD_BY_CODE: Record<string, SignupField> = {
 };
 
 function isSignupField(field: string): field is SignupField {
-  return field === 'email' || field === 'password' || field === 'passwordConfirm' || field === 'nickname';
+  return (
+    field === 'email' ||
+    field === 'password' ||
+    field === 'passwordConfirm' ||
+    field === 'nickname' ||
+    field === 'ageConfirmed'
+  );
 }
 
 export function SignupPage() {
@@ -47,13 +59,12 @@ export function SignupPage() {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [nickname, setNickname] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<SignupField, string>>>({});
   const [formError, setFormError] = useState<{ message: string; traceId?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    document.title = '회원가입 · 뫼와들';
-  }, []);
+  useDocumentTitle('회원가입 · 뫼와들');
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,6 +77,7 @@ export function SignupPage() {
     if (passwordConfirm === '') emptyErrors.passwordConfirm = PASSWORD_CONFIRM_REQUIRED;
     else if (passwordConfirm !== password) emptyErrors.passwordConfirm = PASSWORD_CONFIRM_MISMATCH;
     if (nickname === '') emptyErrors.nickname = NICKNAME_REQUIRED;
+    if (!ageConfirmed) emptyErrors.ageConfirmed = AGE_CONFIRM_REQUIRED;
     setFieldErrors(emptyErrors);
     setFormError(null);
     if (Object.keys(emptyErrors).length > 0) return;
@@ -73,7 +85,7 @@ export function SignupPage() {
     setSubmitting(true);
     const credentials = { email: composeEmail(email), password };
     try {
-      await signUp({ ...credentials, passwordConfirm, nickname });
+      await signUp({ ...credentials, passwordConfirm, nickname, ageConfirmed });
     } catch (error) {
       setSubmitting(false);
       handleError(error);
@@ -82,11 +94,11 @@ export function SignupPage() {
 
     try {
       await login(credentials);
-      await session.refresh();
-      navigate(withNext('/verify-email', next), { replace: true });
     } catch {
       navigate(withNext('/login', next), { replace: true });
+      return;
     }
+    await enterAfterAuth(session, () => withNext('/verify-email', next));
   }
 
   function handlePasswordConfirmBlur() {
@@ -169,11 +181,29 @@ export function SignupPage() {
           onChange={(event) => setNickname(event.target.value)}
           error={fieldErrors.nickname}
         />
+        <Checkbox
+          label="만 14세 이상이에요"
+          name="ageConfirmed"
+          checked={ageConfirmed}
+          onChange={(event) => setAgeConfirmed(event.target.checked)}
+          error={fieldErrors.ageConfirmed}
+        />
         {formError && (
           <div role="alert">
             <ErrorNotice title="가입하지 못했어요" error={formError.message} traceId={formError.traceId} />
           </div>
         )}
+        <p className="text-sm text-ink-muted">
+          가입하면{' '}
+          <Link to="/terms" className={NOTICE_LINK_CLASS}>
+            이용약관
+          </Link>
+          과{' '}
+          <Link to="/privacy" className={NOTICE_LINK_CLASS}>
+            개인정보 처리방침
+          </Link>
+          에 동의하게 돼요.
+        </p>
         <Button type="submit" fullWidth loading={submitting}>
           가입하기
         </Button>

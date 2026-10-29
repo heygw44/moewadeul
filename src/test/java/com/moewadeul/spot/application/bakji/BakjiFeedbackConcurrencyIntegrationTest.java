@@ -1,13 +1,13 @@
 package com.moewadeul.spot.application.bakji;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -29,6 +29,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -36,18 +37,20 @@ import org.springframework.transaction.support.TransactionTemplate;
 @IntegrationTest
 class BakjiFeedbackConcurrencyIntegrationTest {
 
+    private static final long MISSING_MEMBER_ID = 999_999_999L;
+
     private static final int THREADS = 10;
     private static final int PENDING_REVIEW_REPORTS = 5;
     private static final BakjiProblemReportCommand REPORT = new BakjiProblemReportCommand("CLOSED", "길이 막혔다");
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private BakjiFeedbackService bakjiFeedbackService;
 
     @Autowired
     private SpotJpaRepository spotRepository;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -61,7 +64,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
         // given
         long spotId = saveBakji();
         for (int i = 0; i < PENDING_REVIEW_REPORTS - 2; i++) {
-            bakjiFeedbackService.reportProblem(saveMember(), spotId, REPORT);
+            bakjiFeedbackService.reportProblem(memberFixture.save().getId(), spotId, REPORT);
         }
         List<Long> memberIds = saveMembers(2);
 
@@ -106,7 +109,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
     void sameMemberReportsOnlyOnce() throws Exception {
         // given
         long spotId = saveBakji();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
 
         // when
         List<Throwable> failures = runConcurrently(sameMember(memberId), id -> {
@@ -129,7 +132,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
     void sameMemberConfirmsOnlyOnce() throws Exception {
         // given
         long spotId = saveBakji();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
 
         // when
         List<Throwable> failures =
@@ -152,7 +155,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
     void reportGivesUpWaitingForLockedBakjiAfterAboutFiveSeconds() throws Exception {
         // given
         long spotId = saveBakji();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         CountDownLatch locked = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         ExecutorService holder = Executors.newSingleThreadExecutor();
@@ -195,6 +198,28 @@ class BakjiFeedbackConcurrencyIntegrationTest {
         return Collections.nCopies(THREADS, memberId);
     }
 
+    @Test
+    @DisplayName("[F-08] 확인한 회원이 없어서 외래 키가 깨지면 이미 확인했다고 바꾸지 않고 무결성 위반을 그대로 던진다")
+    void confirmForeignKeyViolationIsNotReportedAsDuplicate() {
+        // given
+        long spotId = saveBakji();
+
+        // when, then
+        assertThatThrownBy(() -> bakjiFeedbackService.confirm(MISSING_MEMBER_ID, spotId))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("[F-08] 신고자가 없어서 외래 키가 깨지면 이미 신고했다고 바꾸지 않고 무결성 위반을 그대로 던진다")
+    void reportForeignKeyViolationIsNotReportedAsDuplicate() {
+        // given
+        long spotId = saveBakji();
+
+        // when, then
+        assertThatThrownBy(() -> bakjiFeedbackService.reportProblem(MISSING_MEMBER_ID, spotId, REPORT))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
     private long saveBakji() {
         Spot spot = Spot.bakji(
                 "능선 끝 평지",
@@ -204,14 +229,10 @@ class BakjiFeedbackConcurrencyIntegrationTest {
         return spotRepository.save(spot).getId();
     }
 
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
-    }
-
     private List<Long> saveMembers(int count) {
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            ids.add(saveMember());
+            ids.add(memberFixture.save().getId());
         }
         return ids;
     }

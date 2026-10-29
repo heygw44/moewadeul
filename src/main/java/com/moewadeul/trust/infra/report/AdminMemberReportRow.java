@@ -1,13 +1,16 @@
 package com.moewadeul.trust.infra.report;
 
+import com.moewadeul.trust.domain.report.ReportKind;
+import com.moewadeul.trust.domain.report.ReportStatus;
+import com.moewadeul.trust.domain.report.ReportType;
 import java.time.Instant;
 
 public record AdminMemberReportRow(
         long reportId,
-        String kind,
-        String type,
+        ReportKind kind,
+        ReportType type,
         boolean urgent,
-        String status,
+        ReportStatus status,
         long reporterId,
         String reporterNickname,
         long targetId,

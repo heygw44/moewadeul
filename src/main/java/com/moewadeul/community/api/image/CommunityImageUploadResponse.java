@@ -1,8 +1,7 @@
 package com.moewadeul.community.api.image;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
-import com.moewadeul.community.application.image.CommunityImageUpload;
+import com.moewadeul.common.image.application.ImageUpload;
 import java.time.Instant;
 import java.util.Map;
 
@@ -16,7 +15,7 @@ public record CommunityImageUploadResponse(
 
     private static final String UPLOAD_METHOD = "PUT";
 
-    static CommunityImageUploadResponse from(CommunityImageUpload upload) {
+    static CommunityImageUploadResponse from(ImageUpload upload) {
         return new CommunityImageUploadResponse(
                 upload.imageId(),
                 upload.uploadUrl(),
@@ -28,11 +27,11 @@ public record CommunityImageUploadResponse(
 
     public record ThumbnailUpload(String uploadUrl, String method, Map<String, String> headers, Instant expiresAt) {
 
-        static ThumbnailUpload from(PresignedUpload upload) {
+        static ThumbnailUpload from(ImageUpload.ThumbnailUpload upload) {
             if (upload == null) {
                 return null;
             }
-            return new ThumbnailUpload(upload.url(), UPLOAD_METHOD, upload.headers(), upload.expiresAt());
+            return new ThumbnailUpload(upload.uploadUrl(), UPLOAD_METHOD, upload.headers(), upload.expiresAt());
         }
     }
 }

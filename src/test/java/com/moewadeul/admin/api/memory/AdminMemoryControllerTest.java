@@ -1,5 +1,6 @@
 package com.moewadeul.admin.api.memory;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -13,19 +14,21 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.image.application.ImageView;
+import com.moewadeul.common.moderation.ModerationResult;
+import com.moewadeul.common.moderation.RecentReport;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
-import com.moewadeul.memory.application.MemoryPhoto;
-import com.moewadeul.memory.application.moderation.AdminMemoryPage;
 import com.moewadeul.memory.application.moderation.AdminMemoryQueryService;
 import com.moewadeul.memory.application.moderation.AdminMemorySummary;
-import com.moewadeul.memory.application.moderation.MemoryModerationResult;
 import com.moewadeul.memory.application.moderation.MemoryModerationService;
 import com.moewadeul.memory.domain.MemoryErrorCode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,13 +90,13 @@ class AdminMemoryControllerTest {
                 LocalDate.of(2026, 9, 30),
                 1,
                 null,
-                List.of(new MemoryPhoto(11L, "https://example.test/view")),
+                List.of(new ImageView(11L, "https://example.test/view")),
                 "PENDING_REVIEW",
                 5,
-                new AdminMemorySummary.ReasonCounts(2, 0, 0, 0, 3, 0),
-                List.of(new AdminMemorySummary.RecentReport("MONEY_SCAM", "송금 요구", AT)),
+                Map.of("SPAM", 2L, "ABUSE", 0L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 3L, "OTHER", 0L),
+                List.of(new RecentReport("MONEY_SCAM", "송금 요구", AT)),
                 AT);
-        when(queryService.list(null, 0, 20)).thenReturn(new AdminMemoryPage(List.of(summary), 0, 20, false));
+        when(queryService.list(null, 0, 20)).thenReturn(new PageSlice<>(List.of(summary), 0, 20, false));
 
         // when
         MvcTestResult result = mvc.get().uri(BASE).with(admin()).exchange();
@@ -120,7 +123,7 @@ class AdminMemoryControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].recentReports[0].content")
                 .isEqualTo("송금 요구");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertEnvelope(result, 0, 20, false);
     }
 
     @Test
@@ -141,8 +144,8 @@ class AdminMemoryControllerTest {
     @DisplayName("[F-33][MM-11] 숨김과 복구는 로그인한 관리자 ID로 서비스를 부르고 처리 뒤 상태를 응답한다")
     void hideAndRestoreCallServiceWithAdminId() {
         // given
-        when(moderationService.hide(9L, ADMIN_ID)).thenReturn(new MemoryModerationResult(9L, "HIDDEN"));
-        when(moderationService.restore(9L, ADMIN_ID)).thenReturn(new MemoryModerationResult(9L, "ACTIVE"));
+        when(moderationService.hide(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "HIDDEN"));
+        when(moderationService.restore(9L, ADMIN_ID)).thenReturn(new ModerationResult(9L, "ACTIVE"));
 
         // when
         MvcTestResult hide = post(admin(), BASE + "/9/hide");

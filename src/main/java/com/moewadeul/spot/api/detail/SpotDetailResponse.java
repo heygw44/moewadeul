@@ -14,6 +14,7 @@ import com.moewadeul.spot.application.detail.SpotRecentReview;
 import com.moewadeul.spot.application.detail.SpotRecruitingBasecamp;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
 import com.moewadeul.spot.domain.SpotType;
+import com.moewadeul.spot.domain.bakji.BakjiSignalLevel;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -96,7 +97,7 @@ public record SpotDetailResponse(
             String description,
             boolean hasWater,
             boolean hasToilet,
-            String signalLevel,
+            BakjiSignalLevel signalLevel,
             long confirmationCount,
             Reporter reporter,
             @JsonInclude(JsonInclude.Include.NON_NULL) String notice) {

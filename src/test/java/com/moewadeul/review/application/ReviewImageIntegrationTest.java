@@ -1,23 +1,28 @@
 package com.moewadeul.review.application;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.image.application.ImageUpload;
+import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
-import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.review.domain.ReviewImage;
 import com.moewadeul.spot.application.detail.SpotDetail;
 import com.moewadeul.spot.application.detail.SpotDetailQueryService;
-import com.moewadeul.spot.application.detail.SpotRecentReview;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.infra.SpotJpaRepository;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
@@ -32,6 +37,10 @@ class ReviewImageIntegrationTest {
 
     private static final LocalDate YESTERDAY = LocalDate.of(2026, 10, 4);
     private static final long SIZE = 1024;
+    private static final String UNUSABLE = "붙일 수 없는 이미지가 있어요.";
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private ReviewImageUploadService uploadService;
@@ -52,9 +61,6 @@ class ReviewImageIntegrationTest {
     private SpotJpaRepository spotRepository;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private TestImageStorage storage;
 
     @Autowired
@@ -68,7 +74,7 @@ class ReviewImageIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        memberId = saveMember();
+        memberId = memberFixture.save().getId();
         spotId = saveSpot();
     }
 
@@ -76,7 +82,7 @@ class ReviewImageIntegrationTest {
     @DisplayName("[F-24][RI-01] 업로드 URL을 발급하면 후기에 붙지 않은 행을 만들고, 객체 키는 review/회원 ID/로 시작한다")
     void issueCreatesUnattachedRow() {
         // when
-        ReviewImageUpload upload = uploadService.issue(memberId, "image/webp", SIZE);
+        ImageUpload upload = uploadService.issue(memberId, new ImageUploadCommand("image/webp", SIZE, null));
 
         // then
         assertThat(keyOf(upload.imageId()))
@@ -90,8 +96,40 @@ class ReviewImageIntegrationTest {
     @Test
     @DisplayName("[F-24][RI-01] 허용하지 않는 형식이나 5MB를 넘는 크기는 INVALID_INPUT으로 거부한다")
     void issueRejectsTypeAndSize() {
-        assertInvalid(() -> uploadService.issue(memberId, "image/gif", SIZE), "contentType");
-        assertInvalid(() -> uploadService.issue(memberId, "image/png", 5L * 1024 * 1024 + 1), "sizeBytes");
+        assertInvalid(
+                () -> uploadService.issue(memberId, new ImageUploadCommand("image/gif", SIZE, null)),
+                "contentType",
+                "허용하지 않는 이미지 형식이에요.");
+        assertInvalid(
+                () -> uploadService.issue(memberId, new ImageUploadCommand("image/png", 5L * 1024 * 1024 + 1, null)),
+                "sizeBytes",
+                "이미지 크기는 1바이트 이상 5MB 이하여야 해요.");
+    }
+
+    @Test
+    @DisplayName(
+            "[F-24][RI-01] 24시간 안에 발급해 후기에 붙지 않은 이미지가 9장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED이고 행을 만들지 않으며, 가장 오래된 이미지가 24시간을 넘기면 다시 발급한다")
+    void issueLimitsUnattachedUploads() {
+        // given
+        uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
+        clock.advance(Duration.ofHours(1));
+        for (int i = 1; i < ReviewImage.KIND.maxUnattachedPerMember(); i++) {
+            uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
+        }
+
+        // when
+        ThrowingCallable overLimit =
+                () -> uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
+
+        // then
+        assertThatThrownBy(overLimit).isInstanceOfSatisfying(RateLimitedException.class, e -> {
+            assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_UPLOAD_LIMITED);
+            assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(23));
+        });
+        assertThat(imageRowCount()).isEqualTo(ReviewImage.KIND.maxUnattachedPerMember());
+        clock.advance(Duration.ofHours(23));
+        uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
+        assertThat(imageRowCount()).isEqualTo(ReviewImage.KIND.maxUnattachedPerMember() + 1);
     }
 
     @Test
@@ -107,29 +145,38 @@ class ReviewImageIntegrationTest {
         // then
         SpotReviewItem item = queryService.list(spotId, 0, 20).content().get(0);
         assertThat(item.reviewId()).isEqualTo(reviewId);
-        assertThat(item.images()).extracting(SpotReviewImage::imageId).containsExactly(second, first);
+        assertThat(item.images()).extracting(ImageView::imageId).containsExactly(second, first);
         assertThat(item.images().get(0).url()).contains(keyOf(second));
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
         assertThat(detail.recentReviews().get(0).images())
-                .extracting(SpotRecentReview.Image::imageId)
+                .extracting(ImageView::imageId)
                 .containsExactly(second, first);
     }
 
     @Test
-    @DisplayName("[F-24][RI-02] 이미지 4장, 같은 ID 두 번, 다른 회원의 이미지, 저장소에 없는 이미지는 imageIds 오류로 거부하고 후기를 저장하지 않는다")
+    @DisplayName("[F-24][RI-02] 이미지 4장, 같은 ID 두 번, 다른 회원의 이미지, 저장소에 없는 이미지, 빈 ID는 imageIds 오류로 거부하고 후기를 저장하지 않는다")
     void rejectsUnusableImages() {
         // given
-        long otherMember = saveMember();
+        long otherMember = memberFixture.save().getId();
         long others = uploaded(otherMember);
-        long notUploaded = uploadService.issue(memberId, "image/png", SIZE).imageId();
+        long notUploaded = uploadService
+                .issue(memberId, new ImageUploadCommand("image/png", SIZE, null))
+                .imageId();
         List<Long> four = List.of(uploaded(memberId), uploaded(memberId), uploaded(memberId), uploaded(memberId));
         long mine = uploaded(memberId);
 
         // when, then
-        assertInvalid(() -> commandService.write(memberId, spotId, write(four)), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(mine, mine))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(others))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(notUploaded))), "imageIds");
+        assertInvalid(() -> commandService.write(memberId, spotId, write(four)), "imageIds", "이미지는 3장까지 붙일 수 있어요.");
+        assertInvalid(
+                () -> commandService.write(memberId, spotId, write(List.of(mine, mine))),
+                "imageIds",
+                "같은 이미지를 두 번 붙일 수 없어요.");
+        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(others))), "imageIds", UNUSABLE);
+        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(notUploaded))), "imageIds", UNUSABLE);
+        assertInvalid(
+                () -> commandService.write(memberId, spotId, write(Arrays.asList(mine, null))), "imageIds", UNUSABLE);
+        assertInvalid(
+                () -> commandService.write(memberId, spotId, write(Arrays.asList(null, null))), "imageIds", UNUSABLE);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM spot_review", Integer.class))
                 .isZero();
     }
@@ -147,7 +194,8 @@ class ReviewImageIntegrationTest {
                         memberId,
                         spotId,
                         new SpotReviewWriteCommand(YESTERDAY.minusDays(1), 4, "또 갔다", List.of(image))),
-                "imageIds");
+                "imageIds",
+                UNUSABLE);
     }
 
     @Test
@@ -167,9 +215,9 @@ class ReviewImageIntegrationTest {
                 commandService.revise(memberId, reviewId, new SpotReviewReviseCommand(2, "비웠다", List.of()));
 
         // then
-        assertThat(replaced.images()).extracting(SpotReviewImage::imageId).containsExactly(added, kept);
+        assertThat(replaced.images()).extracting(ImageView::imageId).containsExactly(added, kept);
         assertThat(reviewIdOf(removed)).isNull();
-        assertThat(untouched.images()).extracting(SpotReviewImage::imageId).containsExactly(added, kept);
+        assertThat(untouched.images()).extracting(ImageView::imageId).containsExactly(added, kept);
         assertThat(cleared.images()).isEmpty();
         assertThat(reviewIdOf(kept)).isNull();
     }
@@ -224,7 +272,9 @@ class ReviewImageIntegrationTest {
     }
 
     private long uploaded(long ownerId) {
-        long imageId = uploadService.issue(ownerId, "image/jpeg", SIZE).imageId();
+        long imageId = uploadService
+                .issue(ownerId, new ImageUploadCommand("image/jpeg", SIZE, null))
+                .imageId();
         storage.markUploaded(keyOf(imageId), SIZE);
         return imageId;
     }
@@ -237,6 +287,10 @@ class ReviewImageIntegrationTest {
         return jdbc.queryForObject("SELECT review_id FROM review_image WHERE id = ?", Long.class, imageId);
     }
 
+    private int imageRowCount() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM review_image", Integer.class);
+    }
+
     private long saveSpot() {
         Spot spot = Spot.bakji(
                 "능선 끝 평지",
@@ -246,14 +300,10 @@ class ReviewImageIntegrationTest {
         return spotRepository.save(spot).getId();
     }
 
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
-    }
-
-    private static void assertInvalid(ThrowingCallable action, String field) {
-        assertThatThrownBy(action)
-                .isInstanceOfSatisfying(
-                        InvalidFieldException.class,
-                        e -> assertThat(e.getField()).isEqualTo(field));
+    private static void assertInvalid(ThrowingCallable action, String field, String reason) {
+        assertThatThrownBy(action).isInstanceOfSatisfying(InvalidFieldException.class, e -> {
+            assertThat(e.getField()).isEqualTo(field);
+            assertThat(e.getMessage()).isEqualTo(reason);
+        });
     }
 }

@@ -1,7 +1,6 @@
 package com.moewadeul.notification.application.inbox;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.notification.domain.Notification;
 import com.moewadeul.notification.domain.NotificationRepository;
 import java.time.Clock;
@@ -20,7 +19,7 @@ public class NotificationReadService {
     public void markRead(long memberId, long notificationId) {
         Notification notification = notificationRepository
                 .findByIdAndMemberId(notificationId, memberId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
         notification.markRead(clock.instant());
     }
 

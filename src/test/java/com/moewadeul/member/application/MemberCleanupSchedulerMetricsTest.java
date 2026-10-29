@@ -5,6 +5,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
+import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import com.moewadeul.member.application.password.PasswordResetThrottleCleanupScheduler;
 import com.moewadeul.member.application.password.PasswordResetThrottleCleanupService;
 import com.moewadeul.member.application.verification.UnverifiedMemberCleanupScheduler;
@@ -24,7 +25,7 @@ class MemberCleanupSchedulerMetricsTest {
         UnverifiedMemberCleanupService service = mock(UnverifiedMemberCleanupService.class);
         doThrow(new IllegalStateException("DB 연결 실패")).when(service).deleteExpiredUnverifiedMembers();
 
-        new UnverifiedMemberCleanupScheduler(service, metrics).cleanUp();
+        new UnverifiedMemberCleanupScheduler(service, new ScheduledJobRunner(metrics)).cleanUp();
 
         assertThat(failures("unverified-member-cleanup")).isEqualTo(1);
     }
@@ -35,7 +36,7 @@ class MemberCleanupSchedulerMetricsTest {
         PasswordResetThrottleCleanupService service = mock(PasswordResetThrottleCleanupService.class);
         doThrow(new IllegalStateException("DB 연결 실패")).when(service).deleteStaleThrottles();
 
-        new PasswordResetThrottleCleanupScheduler(service, metrics).cleanUp();
+        new PasswordResetThrottleCleanupScheduler(service, new ScheduledJobRunner(metrics)).cleanUp();
 
         assertThat(failures("password-reset-throttle-cleanup")).isEqualTo(1);
     }

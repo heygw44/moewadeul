@@ -8,10 +8,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.community.api.CommunityApiFixture;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.community.domain.image.CommunityImage;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -19,8 +21,11 @@ import java.util.stream.LongStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -35,6 +40,7 @@ class CommunityImageApiIntegrationTest {
     private static final String IMAGES = "/api/community/images";
     private static final long SIZE = 2483011L;
     private static final long THUMBNAIL_SIZE = 48000L;
+    private static final String UNUSABLE = "붙일 수 없는 이미지가 있어요.";
 
     @Autowired
     private MockMvcTester mvc;
@@ -46,7 +52,7 @@ class CommunityImageApiIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -60,7 +66,7 @@ class CommunityImageApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        fixture = new CommunityApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationService, jdbc);
+        fixture = new CommunityApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationIssuer, jdbc);
         author = fixture.saveMember("새벽능선");
         session = fixture.verifiedSession(author);
     }
@@ -134,8 +140,8 @@ class CommunityImageApiIntegrationTest {
         MvcTestResult created = writePost(session, List.of(complete));
 
         // then
-        assertImageIdsRejected(missing);
-        assertImageIdsRejected(different);
+        assertImageIdsRejected(missing, UNUSABLE);
+        assertImageIdsRejected(different, UNUSABLE);
         assertThat(created).hasStatus(HttpStatus.CREATED);
         assertThat(postIdOfImage(complete)).isEqualTo(postIdOf(created));
     }
@@ -188,6 +194,50 @@ class CommunityImageApiIntegrationTest {
         assertThat(notVerified).hasStatus(HttpStatus.FORBIDDEN);
         assertThat(gif).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(imageRowCount()).isZero();
+    }
+
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource(delimiter = '|', textBlock = """
+                    {"contentType":"image/gif","sizeBytes":1000}                                 | contentType
+                    {"contentType":"IMAGE/JPEG","sizeBytes":1000}                                | contentType
+                    {"contentType":"image/png","sizeBytes":0}                                    | sizeBytes
+                    {"contentType":"image/png","sizeBytes":-1}                                   | sizeBytes
+                    {"contentType":"image/png","sizeBytes":5242881}                              | sizeBytes
+                    {"contentType":"image/png","sizeBytes":1000,"thumbnailSizeBytes":0}          | thumbnailSizeBytes
+                    {"contentType":"image/png","sizeBytes":1000,"thumbnailSizeBytes":-1}         | thumbnailSizeBytes
+                    {"contentType":"image/png","sizeBytes":1000,"thumbnailSizeBytes":262145}     | thumbnailSizeBytes
+                    """)
+    @DisplayName("[F-29][CM-06] 허용하지 않는 형식이거나 크기와 썸네일 크기가 한도 밖이면 400 INVALID_INPUT과 해당 필드 오류이고 이미지 행이 생기지 않는다")
+    void issueUploadUrlRejectsUnsupportedTypeAndOutOfRangeSizes(String body, String field) {
+        // when
+        MvcTestResult result = fixture.send(mvc.post().uri(IMAGES), session, body);
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo(field);
+        assertThat(imageRowCount()).isZero();
+    }
+
+    @Test
+    @DisplayName(
+            "[F-29][CM-06] 24시간 안에 발급해 글에 붙지 않은 이미지가 15장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED와 Retry-After이고 이미지 행이 생기지 않는다")
+    void issueUploadUrlOverUnattachedLimitIsRejected() {
+        // given
+        for (int i = 0; i < CommunityImage.KIND.maxUnattachedPerMember(); i++) {
+            issueImage(session, SIZE);
+        }
+
+        // when
+        MvcTestResult limited = fixture.send(
+                mvc.post().uri(IMAGES), session, "{\"contentType\":\"image/jpeg\",\"sizeBytes\":" + SIZE + "}");
+
+        // then
+        assertThat(limited).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(limited).bodyJson().extractingPath("$.code").isEqualTo("IMAGE_UPLOAD_LIMITED");
+        assertThat(limited.getResponse().getHeader(HttpHeaders.RETRY_AFTER))
+                .isEqualTo(String.valueOf(Duration.ofHours(24).toSeconds()));
+        assertThat(imageRowCount()).isEqualTo(CommunityImage.KIND.maxUnattachedPerMember());
     }
 
     @Test
@@ -255,8 +305,8 @@ class CommunityImageApiIntegrationTest {
         MvcTestResult different = writePost(session, List.of(wrongSize));
 
         // then
-        assertImageIdsRejected(missing);
-        assertImageIdsRejected(different);
+        assertImageIdsRejected(missing, UNUSABLE);
+        assertImageIdsRejected(different, UNUSABLE);
         assertThat(fixture.postCount()).isZero();
     }
 
@@ -274,8 +324,8 @@ class CommunityImageApiIntegrationTest {
         MvcTestResult duplicated = writePost(session, List.of(one, one));
 
         // then
-        assertImageIdsRejected(tooMany);
-        assertImageIdsRejected(duplicated);
+        assertImageIdsRejected(tooMany, "이미지는 5장까지 붙일 수 있어요.");
+        assertImageIdsRejected(duplicated, "같은 이미지를 두 번 붙일 수 없어요.");
         assertThat(fixture.postCount()).isZero();
     }
 
@@ -306,8 +356,8 @@ class CommunityImageApiIntegrationTest {
         MvcTestResult missing = writePost(session, List.of(999_999L));
 
         // then
-        assertImageIdsRejected(stolen);
-        assertImageIdsRejected(missing);
+        assertImageIdsRejected(stolen, UNUSABLE);
+        assertImageIdsRejected(missing, UNUSABLE);
         assertThat(postIdOfImage(othersImage)).isNull();
     }
 
@@ -322,7 +372,7 @@ class CommunityImageApiIntegrationTest {
         MvcTestResult second = writePost(session, List.of(image));
 
         // then
-        assertImageIdsRejected(second);
+        assertImageIdsRejected(second, UNUSABLE);
         assertThat(postIdOfImage(image)).isEqualTo(firstPost);
         assertThat(fixture.postCount()).isEqualTo(1);
     }
@@ -382,10 +432,27 @@ class CommunityImageApiIntegrationTest {
         MvcTestResult missing = patch(session, 999_999L, "{\"imageIds\":[1]}");
 
         // then
-        assertThat(cleared).hasStatus(HttpStatus.BAD_REQUEST);
+        assertImageIdsRejected(cleared, "imageIds는 비울 수 없어요. 이미지를 모두 떼려면 빈 배열을 보내 주세요.");
         assertThat(forbidden).hasStatus(HttpStatus.FORBIDDEN);
         assertThat(missing).hasStatus(HttpStatus.NOT_FOUND);
         assertThat(postIdOfImage(otherImage)).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-06] 수정에서 imageIds에 빈 ID를 섞어 보내면 빈 ID가 여러 개여도 붙일 수 없는 이미지로 400이고 이미지는 그대로다")
+    void reviseRejectsNullImageId() {
+        // given
+        long image = uploadedImage(session, SIZE);
+        long postId = postIdOf(writePost(session, List.of(image)));
+
+        // when
+        MvcTestResult withNull = patch(session, postId, "{\"imageIds\":[" + image + ",null]}");
+        MvcTestResult onlyNulls = patch(session, postId, "{\"imageIds\":[null,null]}");
+
+        // then
+        assertImageIdsRejected(withNull, UNUSABLE);
+        assertImageIdsRejected(onlyNulls, UNUSABLE);
+        assertThat(postIdOfImage(image)).isEqualTo(postId);
     }
 
     @Test
@@ -403,10 +470,11 @@ class CommunityImageApiIntegrationTest {
         assertThat(postIdOfImage(image)).isEqualTo(postId);
     }
 
-    private void assertImageIdsRejected(MvcTestResult result) {
+    private void assertImageIdsRejected(MvcTestResult result, String reason) {
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
         assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("imageIds");
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].reason").isEqualTo(reason);
     }
 
     private MvcTestResult writePost(Cookie cookie, List<Long> imageIds) {

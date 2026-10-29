@@ -1,13 +1,12 @@
 package com.moewadeul.basecamp.application.membership;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.domain.KickReason;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.common.testsupport.MemberFixture;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,13 +29,13 @@ class BasecampMembershipConcurrencyIntegrationTest {
     private static final String AT_DEFAULT_INSTANT = "2026-10-05 03:00:00";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private BasecampMembershipService basecampMembershipService;
 
     @Autowired
     private BasecampApprovalService basecampApprovalService;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -112,7 +111,7 @@ class BasecampMembershipConcurrencyIntegrationTest {
     }
 
     private Scenario saveFullBasecamp() {
-        long leaderId = saveMember();
+        long leaderId = memberFixture.save().getId();
         long basecampId = saveBasecamp(leaderId, "CLOSED", "'AUTO_FULL'");
         insertMember(basecampId, leaderId, "LEADER");
         long memberId = saveVerifiedMember();
@@ -122,7 +121,7 @@ class BasecampMembershipConcurrencyIntegrationTest {
     }
 
     private Scenario saveRecruitingBasecampWithPendingApplication() {
-        long leaderId = saveMember();
+        long leaderId = memberFixture.save().getId();
         long basecampId = saveBasecamp(leaderId, "RECRUITING", "NULL");
         insertMember(basecampId, leaderId, "LEADER");
         long memberId = saveVerifiedMember();
@@ -167,12 +166,8 @@ class BasecampMembershipConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT MAX(id) FROM basecamp", Long.class);
     }
 
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
-    }
-
     private long saveVerifiedMember() {
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         jdbc.update(
                 "INSERT INTO identity_verification (member_id, birth_year, gender, ci_hash, provider, verified_at,"
                         + " created_at, updated_at) VALUES (?, 2007, 'MALE', ?, 'FAKE', ?, ?, ?)",

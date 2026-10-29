@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link, useLocation } from '../../app/router';
 import { buttonClassName } from '../../components/buttonClass';
 import { Icon } from '../../components/icons';
-import { withNext } from './nextPath';
-import { useSession } from './session';
+import { withNext } from '../../app/session/nextPath';
+import { useSession } from '../../app/session/session';
 
 const TEXT_LINK_CLASS = 'inline-flex min-h-11 items-center whitespace-nowrap px-2 text-sm font-semibold sm:text-base';
 

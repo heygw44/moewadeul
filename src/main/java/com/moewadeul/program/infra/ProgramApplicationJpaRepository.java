@@ -14,7 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProgramApplicationJpaRepository
-        extends JpaRepository<ProgramApplication, Long>, ProgramApplicationRepository {
+        extends JpaRepository<ProgramApplication, Long>, ProgramApplicationRepository, ProgramSeatHolderCounter {
 
     @Override
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -72,14 +72,4 @@ public interface ProgramApplicationJpaRepository
 
     @Override
     boolean existsByProgramId(long programId);
-
-    @Override
-    @Query("""
-            select count(a) from ProgramApplication a
-            where a.programId = :programId
-              and (a.status = com.moewadeul.program.domain.ProgramApplicationStatus.CONFIRMED
-                   or (a.status = com.moewadeul.program.domain.ProgramApplicationStatus.PENDING_PAYMENT
-                       and a.paymentDueAt > :now))
-            """)
-    long countSeatHolders(@Param("programId") long programId, @Param("now") Instant now);
 }

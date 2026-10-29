@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.basecamp.api.BasecampApiFixture;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.member.application.verification.EmailVerificationService;
+import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
@@ -46,7 +46,7 @@ class BasecampMembershipApiIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private EmailVerificationService emailVerificationService;
+    private EmailVerificationIssuer emailVerificationIssuer;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -67,7 +67,7 @@ class BasecampMembershipApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        fixture = new BasecampApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationService, jdbc);
+        fixture = new BasecampApiFixture(mvc, memberRepository, passwordEncoder, emailVerificationIssuer, jdbc);
         leader = fixture.saveMember();
         leaderSession = fixture.identityVerifiedSession(leader, "FEMALE");
         member = fixture.saveMember();
@@ -103,22 +103,18 @@ class BasecampMembershipApiIntegrationTest {
     }
 
     @Test
-    @DisplayName(
-            "[F-13][BC-21] 멤버가 아닌 회원의 탈퇴는 404 NOT_FOUND, 없는 베이스캠프는 404, 본인확인하지 않은 회원은 403 TRUST_LEVEL_INSUFFICIENT다")
+    @DisplayName("[F-13][BC-21] 멤버가 아닌 회원의 탈퇴는 404 NOT_FOUND, 없는 베이스캠프도 404다")
     void leaveByNonMemberOrUnknown() {
         // given
         Cookie outsider = fixture.identityVerifiedSession(fixture.saveMember(), "MALE");
-        Cookie unverified = fixture.verifiedSession(fixture.saveMember());
 
         // when
         MvcTestResult byOutsider = leave(outsider, basecampId);
         MvcTestResult unknown = leave(memberSession, basecampId + 1000);
-        MvcTestResult byUnverified = leave(unverified, basecampId);
 
         // then
         assertFailure(byOutsider, HttpStatus.NOT_FOUND, "NOT_FOUND");
         assertFailure(unknown, HttpStatus.NOT_FOUND, "NOT_FOUND");
-        assertFailure(byUnverified, HttpStatus.FORBIDDEN, "TRUST_LEVEL_INSUFFICIENT");
     }
 
     @Test

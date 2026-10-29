@@ -4,7 +4,10 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.Dependency;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.properties.CanBeAnnotated;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
@@ -37,26 +40,42 @@ public final class ArchitectureRules {
             "memory",
             "aisearch",
             "admin",
+            "idempotency",
             COMMON);
 
     static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.of(
-            "admin", Set.of("trust", "program", "spot", "member", "community", "memory"),
-            "community", Set.of("spot"),
-            "basecamp", Set.of("trust", "spot"),
-            "program", Set.of("trust"),
+            "admin", Set.of("trust", "program", "spot", "community", "memory"),
+            "community", Set.of("spot", "idempotency"),
+            "basecamp", Set.of("trust", "spot", "idempotency"),
+            "program", Set.of("trust", "spot", "idempotency"),
             "review", Set.of("spot"),
-            "trip", Set.of("spot"),
-            "memory", Set.of("spot"),
+            "trip", Set.of("spot", "idempotency"),
+            "memory", Set.of("spot", "idempotency"),
             "spot", Set.of("weather"),
             "publicdata", Set.of("spot"),
             "trust", Set.of("member"));
+
+    private static final String APPLIER_SUFFIX = "Applier";
 
     private static final String APPLICATION = "application";
     private static final String API = "api";
     private static final String DOMAIN = "domain";
     private static final String INFRA = "infra";
+    private static final Set<String> LAYERS = Set.of(API, APPLICATION, DOMAIN, INFRA);
+
+    private static final String SCHEDULED = "org.springframework.scheduling.annotation.Scheduled";
+    private static final String SCHEDULES = "org.springframework.scheduling.annotation.Schedules";
+    private static final String SCHEDULED_JOB_RUNNER = "com.moewadeul.common.scheduling.ScheduledJobRunner";
+    private static final Set<String> JOB_RUNNER_ENTRY_METHODS = Set.of("run", "runCountingFailures");
+
+    private static final String SERVICE_SUFFIX = "Service";
+    private static final String OUTSIDE_TRANSACTION = "com.moewadeul.common.transaction.OutsideTransaction";
+    private static final String OUTSIDE_TRANSACTION_GUARD = "require";
 
     private static final String SPRING_DATA_REPOSITORY = "org.springframework.data.repository.Repository";
+    private static final String JPA_REPOSITORY_SUFFIX = "JpaRepository";
+    private static final String DOMAIN_PORT_SUFFIX = "Repository";
+    private static final List<String> EXTERNAL_ADAPTER_PACKAGES = List.of("storage", "mail");
     private static final List<String> PERSISTENCE_NAME_SUFFIXES = List.of("Repository", "Mapper");
     private static final List<String> TRANSACTIONAL_TYPES =
             List.of("org.springframework.transaction.annotation.Transactional", "jakarta.transaction.Transactional");
@@ -100,10 +119,10 @@ public final class ArchitectureRules {
                         return Optional.empty();
                     }
                     return scope.locate(dep.getTargetClass())
-                            .filter(t -> t.module().equals(source.module()))
+                            .filter(t -> t.module().equals(source.module()) || COMMON.equals(t.module()))
                             .filter(t ->
                                     API.equals(t.layer()) || APPLICATION.equals(t.layer()) || INFRA.equals(t.layer()))
-                            .map(t -> "domain 은(는) 같은 모듈의 " + t.layer() + " 에 의존할 수 없다");
+                            .map(t -> "domain 은(는) " + t.module() + " 의 " + t.layer() + " 에 의존할 수 없다");
                 }))
                 .as("domain 패키지는 api·application·infra 패키지에 의존하지 않는다")
                 .allowEmptyShould(true);
@@ -122,11 +141,79 @@ public final class ArchitectureRules {
                 .allowEmptyShould(true);
     }
 
+    public static ArchRule applicationJpaRepositoryRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(noDependency(scope, "keep application away from JpaRepository", (source, dep) -> {
+                    if (!APPLICATION.equals(source.layer())) {
+                        return Optional.empty();
+                    }
+                    JavaClass target = dep.getTargetClass();
+                    if (target.getSimpleName().endsWith(JPA_REPOSITORY_SUFFIX)
+                            || target.isAssignableTo(SPRING_DATA_REPOSITORY)) {
+                        return Optional.of("application 은(는) *JpaRepository 를 직접 쓸 수 없다(domain 저장소 포트를 거친다)");
+                    }
+                    return Optional.empty();
+                }))
+                .as("application 패키지는 *JpaRepository를 직접 쓰지 않는다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule domainPortRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(domainPortsAreRepositories(scope))
+                .as("domain 패키지에는 저장소가 아닌 외부 포트를 두지 않는다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule apiExternalAdapterRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(noDependency(scope, "keep api away from external adapters", (source, dep) -> {
+                    if (!API.equals(source.layer())) {
+                        return Optional.empty();
+                    }
+                    String packageName = dep.getTargetClass().getPackageName();
+                    return EXTERNAL_ADAPTER_PACKAGES.stream()
+                            .map(name -> rootPackage + "." + COMMON + "." + name)
+                            .filter(prefix -> packageName.equals(prefix) || packageName.startsWith(prefix + "."))
+                            .findFirst()
+                            .map(prefix -> "api 은(는) " + prefix + " 패키지를 쓸 수 없다(application 결과로 받는다)");
+                }))
+                .as("api 패키지는 common.storage·common.mail 을 직접 쓰지 않는다")
+                .allowEmptyShould(true);
+    }
+
     public static ArchRule transactionalPlacementRule(String rootPackage) {
         Scope scope = new Scope(rootPackage);
         return scope.moduleClasses()
                 .should(transactionalOnlyInApplication(scope))
                 .as("@Transactional 은 application 패키지에만 둔다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule applierVisibilityRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(applierNotPublic())
+                .as("*Applier 는 package-private 이다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule applierCallerRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(appliersCalledOnlyFromGuardedServices())
+                .as("*Applier 는 OutsideTransaction 가드를 둔 같은 패키지의 *Service 만 부른다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule scheduledJobsRunThroughRunnerRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(scheduledMethodsUseJobRunner())
+                .as("@Scheduled 메서드는 ScheduledJobRunner 를 거쳐 실패 수를 센다")
                 .allowEmptyShould(true);
     }
 
@@ -187,6 +274,92 @@ public final class ArchitectureRules {
         };
     }
 
+    private static ArchCondition<JavaClass> domainPortsAreRepositories(Scope scope) {
+        return new ArchCondition<>("name every domain interface implemented by an adapter *Repository") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                boolean domainInterface = item.isInterface()
+                        && scope.locate(item).map(l -> DOMAIN.equals(l.layer())).orElse(false);
+                if (!domainInterface || item.getSimpleName().endsWith(DOMAIN_PORT_SUFFIX)) {
+                    return;
+                }
+                item.getAllSubclasses().stream()
+                        .filter(sub ->
+                                scope.locate(sub).map(Location::isAdapter).orElse(false))
+                        .findFirst()
+                        .ifPresent(sub -> events.add(SimpleConditionEvent.violated(
+                                item,
+                                "domain 인터페이스 " + item.getName() + " 을(를) 어댑터 " + sub.getName()
+                                        + " 이(가) 구현한다. 저장소가 아닌 포트는 application 에 두고,"
+                                        + " 여러 모듈이 쓰면 common.<패키지>.application 에 둔다")));
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> scheduledMethodsUseJobRunner() {
+        return new ArchCondition<>("call ScheduledJobRunner from every @Scheduled method") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                for (JavaMethod method : item.getMethods()) {
+                    boolean scheduled = method.isAnnotatedWith(SCHEDULED) || method.isAnnotatedWith(SCHEDULES);
+                    boolean viaRunner = method.getMethodCallsFromSelf().stream()
+                            .anyMatch(call -> call.getTargetOwner().getName().equals(SCHEDULED_JOB_RUNNER)
+                                    && JOB_RUNNER_ENTRY_METHODS.contains(call.getName()));
+                    if (scheduled && !viaRunner) {
+                        events.add(SimpleConditionEvent.violated(
+                                method,
+                                "@Scheduled 메서드가 ScheduledJobRunner 를 거치지 않아 실패가 moewadeul.scheduled.job.failures 에 잡히지 않는다: "
+                                        + method.getFullName()));
+                    }
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> applierNotPublic() {
+        return new ArchCondition<>("not be public when named *Applier") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                boolean applier = item.getSimpleName().endsWith(APPLIER_SUFFIX);
+                if (applier && item.getModifiers().contains(JavaModifier.PUBLIC)) {
+                    events.add(SimpleConditionEvent.violated(
+                            item, "public Applier 는 서비스의 트랜잭션 밖 가드를 우회하게 한다: " + item.getName()));
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> appliersCalledOnlyFromGuardedServices() {
+        return new ArchCondition<>("be called only from a guarded *Service when named *Applier") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                if (!item.getSimpleName().endsWith(APPLIER_SUFFIX)) {
+                    return;
+                }
+                for (JavaAccess<?> access : item.getAccessesToSelf()) {
+                    JavaClass owner = access.getOriginOwner();
+                    if (owner.equals(item) || isGuardedPairService(item, owner)) {
+                        continue;
+                    }
+                    events.add(SimpleConditionEvent.violated(
+                            access, "*Applier 는 트랜잭션 밖을 확인하는 같은 패키지의 *Service 에서만 부른다: " + access.getDescription()));
+                }
+            }
+        };
+    }
+
+    private static boolean isGuardedPairService(JavaClass applier, JavaClass owner) {
+        return owner.getPackageName().equals(applier.getPackageName())
+                && owner.getSimpleName().endsWith(SERVICE_SUFFIX)
+                && callsOutsideTransactionGuard(owner);
+    }
+
+    private static boolean callsOutsideTransactionGuard(JavaClass owner) {
+        return owner.getMethodCallsFromSelf().stream()
+                .anyMatch(call -> call.getTargetOwner().getName().equals(OUTSIDE_TRANSACTION)
+                        && call.getName().equals(OUTSIDE_TRANSACTION_GUARD));
+    }
+
     private static ArchCondition<JavaClass> transactionalOnlyInApplication(Scope scope) {
         return new ArchCondition<>("use @Transactional only in application") {
             @Override
@@ -225,7 +398,11 @@ public final class ArchitectureRules {
     private record Location(String module, String layer) {
 
         boolean isApplication() {
-            return !COMMON.equals(module) && APPLICATION.equals(layer);
+            return APPLICATION.equals(layer);
+        }
+
+        boolean isAdapter() {
+            return INFRA.equals(layer) || (COMMON.equals(module) && layer.isEmpty());
         }
     }
 
@@ -239,8 +416,11 @@ public final class ArchitectureRules {
             }
             String[] segments = packageName.substring(prefix.length()).split("\\.");
             String module = segments[0];
-            boolean layered = !COMMON.equals(module) && segments.length > 1;
-            return Optional.of(new Location(module, layered ? segments[1] : ""));
+            if (!COMMON.equals(module)) {
+                return Optional.of(new Location(module, segments.length > 1 ? segments[1] : ""));
+            }
+            boolean layered = segments.length > 2 && LAYERS.contains(segments[2]);
+            return Optional.of(new Location(module, layered ? segments[2] : ""));
         }
 
         GivenClassesConjunction moduleClasses() {

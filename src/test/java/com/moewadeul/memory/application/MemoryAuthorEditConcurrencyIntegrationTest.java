@@ -1,13 +1,13 @@
 package com.moewadeul.memory.application;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.moderation.ContentReportReason;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.TestImageStorage;
-import com.moewadeul.common.web.PatchField;
-import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.memory.application.image.MemoryImageUploadCommand;
 import com.moewadeul.memory.application.image.MemoryImageUploadService;
 import com.moewadeul.memory.application.moderation.MemoryModerationService;
 import com.moewadeul.memory.application.report.MemoryReportCommand;
@@ -45,10 +45,13 @@ class MemoryAuthorEditConcurrencyIntegrationTest {
     private static final int REPETITIONS = 3;
     private static final long MIDDLE_WAIT_SECONDS = 2;
     private static final long IMAGE_SIZE = 1024;
-    private static final MemoryReportCommand REPORT = new MemoryReportCommand("SPAM", "광고 사진입니다");
+    private static final MemoryReportCommand REPORT = new MemoryReportCommand(ContentReportReason.SPAM, "광고 사진입니다");
     private static final Set<String> MEMORY_READ =
             Set.of("MemoryRepository.findById", "MemoryRepository.findByIdForUpdate");
-    private static final Set<String> CURRENT_IMAGES_READ = Set.of("MemoryImageRepository.findIdsByMemoryId");
+    private static final Set<String> CURRENT_IMAGES_READ = Set.of("MemoryImageRepository.findIdsByParentId");
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private MemoryCommandService commandService;
@@ -61,9 +64,6 @@ class MemoryAuthorEditConcurrencyIntegrationTest {
 
     @Autowired
     private MemoryImageUploadService uploadService;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private TestImageStorage storage;
@@ -80,7 +80,7 @@ class MemoryAuthorEditConcurrencyIntegrationTest {
     @BeforeEach
     void setUp() {
         executor = Executors.newFixedThreadPool(2);
-        authorId = saveMember();
+        authorId = memberFixture.save().getId();
     }
 
     @AfterEach
@@ -95,7 +95,7 @@ class MemoryAuthorEditConcurrencyIntegrationTest {
     @DisplayName("[F-33][MM-11] 작성자가 기록을 고치는 사이 관리자가 기록을 숨기면, 기록은 HIDDEN으로 남는다")
     void reviseDuringHideKeepsHidden() throws Exception {
         long memoryId = savePublicMemory();
-        long adminId = saveMember();
+        long adminId = memberFixture.save().getId();
         pauseAfter(MEMORY_READ);
 
         Future<?> revise = executor.submit(() -> commandService.revise(authorId, memoryId, nights(3)));
@@ -113,9 +113,9 @@ class MemoryAuthorEditConcurrencyIntegrationTest {
     void reviseDuringFifthReportKeepsPendingReview() throws Exception {
         long memoryId = savePublicMemory();
         for (int i = 0; i < 4; i++) {
-            reportService.report(saveMember(), memoryId, REPORT);
+            reportService.report(memberFixture.save().getId(), memoryId, REPORT);
         }
-        long fifthReporter = saveMember();
+        long fifthReporter = memberFixture.save().getId();
         pauseAfter(MEMORY_READ);
 
         Future<?> revise = executor.submit(() -> commandService.revise(authorId, memoryId, nights(3)));
@@ -194,15 +194,11 @@ class MemoryAuthorEditConcurrencyIntegrationTest {
                 new MemoryWriteCommand(null, 37.25, 127.25, LocalDate.of(2026, 10, 4), 1, null, "PUBLIC", List.of()));
     }
 
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
-    }
-
     private List<Long> uploadedImages(int count) {
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             long imageId = uploadService
-                    .issue(authorId, new MemoryImageUploadCommand("image/jpeg", IMAGE_SIZE, null))
+                    .issue(authorId, new ImageUploadCommand("image/jpeg", IMAGE_SIZE, null))
                     .imageId();
             storage.markUploaded(
                     jdbc.queryForObject("SELECT object_key FROM memory_image WHERE id = ?", String.class, imageId),

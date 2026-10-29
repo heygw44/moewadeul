@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.notification.infra.NotificationProbeMapper">
+    <select id="readOwn" resultType="long">
+        <include refid="com.moewadeul.common.probe.ProbeSql.selectAll">
+            <property name="table" value="notification"/>
+        </include>
+    </select>
+    <select id="readOther" resultType="long">
+        <include refid="com.moewadeul.common.probe.ProbeSql.selectAll">
+            <property name="table" value="sanction"/>
+        </include>
+    </select>
+    <delete id="deleteOther">
+        <include refid="com.moewadeul.common.probe.ProbeSql.deleteById">
+            <property name="table" value="sanction"/>
+        </include>
+    </delete>
+    <select id="missingTable" resultType="long">
+        <include refid="com.moewadeul.common.probe.ProbeSql.selectAll"/>
+    </select>
+    <select id="missingQuotedTable" resultType="long">
+        <include refid="com.moewadeul.common.probe.ProbeSql.selectAllQuoted"/>
+    </select>
+</mapper>

@@ -12,13 +12,13 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.community.application.report.CommunityReportCommand;
 import com.moewadeul.community.application.report.CommunityReportService;
 import com.moewadeul.community.domain.CommunityErrorCode;
-import com.moewadeul.community.domain.report.CommunityReportReason;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -60,7 +60,7 @@ class CommunityReportControllerTest {
         assertThat(result).hasStatus(HttpStatus.CREATED);
         assertThat(result.getResponse().getContentAsByteArray()).isEmpty();
         verify(communityReportService)
-                .reportPost(MEMBER_ID, 9L, new CommunityReportCommand(CommunityReportReason.SPAM, "광고입니다"));
+                .reportPost(MEMBER_ID, 9L, new CommunityReportCommand(ContentReportReason.SPAM, "광고입니다"));
     }
 
     @Test
@@ -73,7 +73,7 @@ class CommunityReportControllerTest {
         assertThat(result).hasStatus(HttpStatus.CREATED);
         assertThat(result.getResponse().getContentAsByteArray()).isEmpty();
         verify(communityReportService)
-                .reportComment(MEMBER_ID, 5L, new CommunityReportCommand(CommunityReportReason.ABUSE, null));
+                .reportComment(MEMBER_ID, 5L, new CommunityReportCommand(ContentReportReason.ABUSE, null));
     }
 
     @Test

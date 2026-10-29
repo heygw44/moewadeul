@@ -3,8 +3,10 @@ package com.moewadeul.member.application.verification;
 import com.moewadeul.common.mail.MailSender;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.application.EmailVerificationEvents;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
@@ -14,20 +16,21 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 class EmailVerificationRequestedHandler implements OutboxEventHandler {
 
-    private final EmailVerificationService emailVerificationService;
+    private final EmailVerificationIssuer emailVerificationIssuer;
     private final MailSender mailSender;
     private final JsonMapper jsonMapper;
 
     @Override
-    public String eventType() {
-        return EmailVerificationEvents.EVENT_TYPE;
+    public Set<String> eventTypes() {
+        return Set.of(EmailVerificationEvents.EVENT_TYPE);
     }
 
     @Override
     public void handle(OutboxMessage message) {
+        OutsideTransaction.require("메일 서버 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         EmailVerificationEvents.Payload payload = parse(message);
         Optional<IssuedVerification> issued =
-                emailVerificationService.issueFor(message.aggregateId(), payload.requestIp(), message.eventId());
+                emailVerificationIssuer.issueFor(message.aggregateId(), payload.requestIp(), message.eventId());
         issued.ifPresent(this::sendMail);
     }
 

@@ -9,7 +9,7 @@ import { Icon } from '../../components/icons';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstTime, formatLocalDate } from '../../lib/datetime';
-import { SPOT_TYPE_META, sourceLabel } from './spotLabels';
+import { SPOT_TYPE_META, sourceLabel } from '../../lib/spotLabels';
 import { useSpotWeather } from './useSpotWeather';
 import type { SpotWeatherState } from './useSpotWeather';
 

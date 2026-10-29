@@ -1,12 +1,14 @@
 package com.moewadeul.member.application.password;
 
+import static com.moewadeul.member.application.MemberGuards.requireRequestIp;
+
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.member.application.MailSecretDeriver;
 import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
-import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.password.PasswordResetRequestPolicy;
 import com.moewadeul.member.domain.password.PasswordResetThrottle;
 import com.moewadeul.member.domain.password.PasswordResetThrottleRepository;
@@ -14,7 +16,7 @@ import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
 import com.moewadeul.member.domain.password.ResetToken;
 import com.moewadeul.member.infra.password.PasswordResetThrottleMapper;
-import java.security.SecureRandom;
+import com.moewadeul.member.infra.password.PasswordResetTokenMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -32,9 +34,9 @@ public class PasswordResetRequestService {
     private final OutboxEventRecorder outboxEventRecorder;
     private final PasswordResetThrottleRepository throttleRepository;
     private final PasswordResetThrottleMapper throttleMapper;
+    private final PasswordResetTokenMapper passwordResetTokenMapper;
+    private final MailSecretDeriver mailSecretDeriver;
     private final Clock clock;
-
-    private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
     public void request(String email, String requestIp) {
@@ -80,28 +82,30 @@ public class PasswordResetRequestService {
         return new IllegalStateException("재설정 요청 한도 행을 만들었는데 읽을 수 없습니다.");
     }
 
-    private static void requireRequestIp(String requestIp) {
-        if (requestIp == null || requestIp.isBlank()) {
-            throw new IllegalArgumentException("요청 IP가 비어 있습니다.");
-        }
-    }
-
     @Transactional
-    public Optional<IssuedPasswordReset> issueFor(long memberId) {
+    public Optional<IssuedPasswordReset> issueFor(long memberId, long outboxEventId) {
         return memberRepository
                 .findById(memberId)
                 .filter(PasswordResetRequestService::isTarget)
-                .map(this::issue);
+                .map(member -> issue(member, outboxEventId));
     }
 
-    private IssuedPasswordReset issue(Member member) {
-        ResetToken token = ResetToken.generate(secureRandom);
-        passwordResetTokenRepository.save(
-                PasswordResetToken.issue(member.getId(), ResetToken.hash(token.value()), Instant.now(clock)));
+    // 살아 있는 링크는 마지막으로 보낸 요청의 것 하나만 둔다.
+    private IssuedPasswordReset issue(Member member, long outboxEventId) {
+        ResetToken token = ResetToken.fromSeed(
+                mailSecretDeriver.derive(MailSecretDeriver.Purpose.PASSWORD_RESET, outboxEventId, member.getId()));
+        String tokenHash = ResetToken.hash(token.value());
+        Instant now = Instant.now(clock);
+        passwordResetTokenRepository
+                .findByTokenHash(tokenHash)
+                .ifPresentOrElse(resent -> resent.renewIfUnused(now), () -> {
+                    passwordResetTokenMapper.invalidateUnusedTokens(member.getId(), now);
+                    passwordResetTokenRepository.save(PasswordResetToken.issue(member.getId(), tokenHash, now));
+                });
         return new IssuedPasswordReset(member.getEmail(), token.value());
     }
 
     private static boolean isTarget(Member member) {
-        return member.getStatus() != MemberStatus.WITHDRAWN;
+        return !member.isWithdrawn();
     }
 }

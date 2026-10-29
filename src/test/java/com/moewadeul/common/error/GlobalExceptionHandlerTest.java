@@ -6,6 +6,8 @@ import com.moewadeul.common.trace.TraceIdFilter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -22,9 +24,12 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -204,6 +209,64 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("행 잠금을 얻지 못하면 503 RESOURCE_BUSY와 Retry-After 5초로 응답하고, 스택 트레이스 없이 WARN 한 줄만 남긴다")
+    void lockAcquisitionFailureReturnsResourceBusy(CapturedOutput output) {
+        // when
+        MvcTestResult result = mvc.get().uri("/test/lock-wait-timeout").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(result.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isEqualTo("5");
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("RESOURCE_BUSY");
+        assertThat(result).bodyJson().extractingPath("$.traceId").asString().isNotBlank();
+        assertThat(result).bodyJson().doesNotHavePath("$.fieldErrors");
+        assertThat(output.getOut())
+                .contains("WARN")
+                .contains("cause=CannotAcquireLockException: Lock wait timeout exceeded")
+                .doesNotContain("ERROR")
+                .doesNotContain("\tat ");
+    }
+
+    @Test
+    @DisplayName("번역되지 않은 고유 제약 위반(MySQL 1062)은 409 DATA_CONFLICT로 응답하고, 로그에는 제약 이름만 남기고 중복 값과 스택 트레이스는 남기지 않는다")
+    void untranslatedDataIntegrityViolationReturnsDataConflict(CapturedOutput output) {
+        // when
+        MvcTestResult result = mvc.get().uri("/test/untranslated-duplicate").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.CONFLICT);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("DATA_CONFLICT");
+        assertThat(output.getOut())
+                .contains("WARN")
+                .contains("uk_member_email")
+                .doesNotContain("secret@example.com")
+                .doesNotContain("\tat ");
+    }
+
+    @Test
+    @DisplayName("고유 제약이 아닌 무결성 위반(NOT NULL 등)은 서버 결함이므로 500 INTERNAL_ERROR로 응답하고 ERROR와 스택 트레이스를 남긴다")
+    void nonUniqueDataIntegrityViolationReturnsInternalError(CapturedOutput output) {
+        // when
+        MvcTestResult result = mvc.get().uri("/test/not-null-violation").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INTERNAL_ERROR");
+        assertThat(output.getOut()).contains("ERROR").contains("\tat ");
+    }
+
+    @Test
+    @DisplayName("낙관적 락 충돌은 409 DATA_CONFLICT로 응답한다")
+    void optimisticLockingFailureReturnsDataConflict() {
+        // when
+        MvcTestResult result = mvc.get().uri("/test/optimistic-lock").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.CONFLICT);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("DATA_CONFLICT");
+    }
+
+    @Test
     @DisplayName("503이 아닌 5xx BusinessException은 지금처럼 ERROR와 스택 트레이스를 남긴다")
     void otherServerErrorBusinessExceptionLogsError(CapturedOutput output) {
         // when
@@ -375,6 +438,33 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/server-error")
         String serverError() {
             throw new BusinessException(SampleErrorCode.SAMPLE_SERVER_ERROR);
+        }
+
+        @GetMapping("/lock-wait-timeout")
+        String lockWaitTimeout() {
+            throw new CannotAcquireLockException(
+                    "could not execute statement",
+                    new SQLException("Lock wait timeout exceeded; try restarting transaction", "40001", 1205));
+        }
+
+        @GetMapping("/untranslated-duplicate")
+        String untranslatedDuplicate() {
+            throw new DataIntegrityViolationException(
+                    "could not execute statement",
+                    new SQLIntegrityConstraintViolationException(
+                            "Duplicate entry 'secret@example.com' for key 'member.uk_member_email'", "23000", 1062));
+        }
+
+        @GetMapping("/not-null-violation")
+        String notNullViolation() {
+            throw new DataIntegrityViolationException(
+                    "could not execute statement",
+                    new SQLIntegrityConstraintViolationException("Column 'content' cannot be null", "23000", 1048));
+        }
+
+        @GetMapping("/optimistic-lock")
+        String optimisticLock() {
+            throw new ObjectOptimisticLockingFailureException("Spot", 1L);
         }
 
         @GetMapping("/unexpected")

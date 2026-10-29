@@ -1,10 +1,10 @@
 package com.moewadeul.common.audit;
 
+import com.moewadeul.common.transaction.InsideTransaction;
 import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -16,17 +16,12 @@ public class AdminAuditRecorder {
     private final JsonMapper jsonMapper;
     private final Clock clock;
 
-    public void record(long adminId, AdminAuditAction action, String targetType, long targetId, Object detail) {
-        requireActiveTransaction();
+    public void record(
+            long adminId, AdminAuditAction action, AdminAuditTargetType targetType, long targetId, Object detail) {
+        InsideTransaction.require("감사 로그는 관리자 조치와 같은 트랜잭션에서 기록해야 한다.");
         String detailJson = detail == null ? null : toJson(detail);
         adminAuditLogRepository.save(
                 AdminAuditLog.record(adminId, action, targetType, targetId, detailJson, Instant.now(clock)));
-    }
-
-    private void requireActiveTransaction() {
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException("감사 로그는 관리자 조치와 같은 트랜잭션 안에서 기록해야 합니다.");
-        }
     }
 
     private String toJson(Object detail) {

@@ -1,29 +1,35 @@
 package com.moewadeul.memory.application.image;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.InvalidFieldException;
+import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.image.application.ImageUpload;
+import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.image.application.ImageView;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
-import com.moewadeul.common.web.PatchField;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.memory.application.MemoryCommandService;
-import com.moewadeul.memory.application.MemoryPhoto;
 import com.moewadeul.memory.application.MemoryReviseCommand;
 import com.moewadeul.memory.application.MemoryView;
 import com.moewadeul.memory.application.MemoryWriteCommand;
+import com.moewadeul.memory.domain.image.MemoryImage;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
@@ -32,6 +38,11 @@ class MemoryImageIntegrationTest {
     private static final LocalDate YESTERDAY = LocalDate.of(2026, 10, 4);
     private static final long SIZE = 1024;
     private static final long THUMBNAIL_SIZE = 64;
+    private static final String UNUSABLE = "붙일 수 없는 사진이 있어요.";
+    private static final String THUMBNAIL_SIZE_REASON = "썸네일 크기는 1바이트 이상 256KB 이하여야 해요.";
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private MemoryImageUploadService uploadService;
@@ -41,9 +52,6 @@ class MemoryImageIntegrationTest {
 
     @Autowired
     private MemoryImageCleanupService cleanupService;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private TestImageStorage storage;
@@ -58,14 +66,14 @@ class MemoryImageIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        memberId = saveMember();
+        memberId = memberFixture.save().getId();
     }
 
     @Test
     @DisplayName("[F-33][MM-05] 업로드 URL을 발급하면 기록에 붙지 않은 행을 만들고, 객체 키는 memory/회원 ID/로 시작한다")
     void issueCreatesUnattachedRow() {
         // when
-        MemoryImageUpload upload = uploadService.issue(memberId, command("image/webp", SIZE));
+        ImageUpload upload = uploadService.issue(memberId, command("image/webp", SIZE));
 
         // then
         assertThat(keyOf(upload.imageId()))
@@ -81,13 +89,13 @@ class MemoryImageIntegrationTest {
     @DisplayName("[F-33][MM-05] 썸네일 크기를 보내면 원본과 같은 UUID에 _thumb.jpg를 붙인 키로 JPEG 썸네일 업로드 URL도 발급한다")
     void issueWithThumbnailCreatesThumbnailKey() {
         // when
-        MemoryImageUpload upload = uploadService.issue(memberId, withThumbnail("image/png", SIZE, THUMBNAIL_SIZE));
+        ImageUpload upload = uploadService.issue(memberId, withThumbnail("image/png", SIZE, THUMBNAIL_SIZE));
 
         // then
         String key = keyOf(upload.imageId());
         String thumbnailKey = thumbnailKeyOf(upload.imageId());
         assertThat(thumbnailKey).isEqualTo(key.substring(0, key.length() - ".png".length()) + "_thumb.jpg");
-        assertThat(upload.thumbnailUpload().url()).contains(thumbnailKey);
+        assertThat(upload.thumbnailUpload().uploadUrl()).contains(thumbnailKey);
         assertThat(upload.thumbnailUpload().headers())
                 .containsEntry("Content-Type", "image/jpeg")
                 .containsEntry("Content-Length", String.valueOf(THUMBNAIL_SIZE));
@@ -99,10 +107,14 @@ class MemoryImageIntegrationTest {
     @Test
     @DisplayName("[F-33][MM-05] 썸네일 크기가 0이거나 256KB를 넘으면 thumbnailSizeBytes 필드의 INVALID_INPUT으로 거부한다")
     void issueRejectsThumbnailSize() {
-        assertInvalid(() -> uploadService.issue(memberId, withThumbnail("image/png", SIZE, 0)), "thumbnailSizeBytes");
+        assertInvalid(
+                () -> uploadService.issue(memberId, withThumbnail("image/png", SIZE, 0)),
+                "thumbnailSizeBytes",
+                THUMBNAIL_SIZE_REASON);
         assertInvalid(
                 () -> uploadService.issue(memberId, withThumbnail("image/png", SIZE, 256L * 1024 + 1)),
-                "thumbnailSizeBytes");
+                "thumbnailSizeBytes",
+                THUMBNAIL_SIZE_REASON);
     }
 
     @Test
@@ -122,16 +134,65 @@ class MemoryImageIntegrationTest {
         long memoryId = commandService.write(memberId, write(List.of(complete)));
 
         // then
-        assertInvalid(() -> commandService.write(memberId, write(List.of(missing))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, write(List.of(wrongSize))), "imageIds");
+        assertInvalid(() -> commandService.write(memberId, write(List.of(missing))), "imageIds", UNUSABLE);
+        assertInvalid(() -> commandService.write(memberId, write(List.of(wrongSize))), "imageIds", UNUSABLE);
         assertThat(memoryIdOf(complete)).isEqualTo(memoryId);
     }
 
     @Test
     @DisplayName("[F-33][MM-05] 허용하지 않는 형식이나 5MB를 넘는 크기는 INVALID_INPUT으로 거부한다")
     void issueRejectsTypeAndSize() {
-        assertInvalid(() -> uploadService.issue(memberId, command("image/gif", SIZE)), "contentType");
-        assertInvalid(() -> uploadService.issue(memberId, command("image/png", 5L * 1024 * 1024 + 1)), "sizeBytes");
+        assertInvalid(
+                () -> uploadService.issue(memberId, command("image/gif", SIZE)), "contentType", "허용하지 않는 사진 형식이에요.");
+        assertInvalid(
+                () -> uploadService.issue(memberId, command("image/png", 5L * 1024 * 1024 + 1)),
+                "sizeBytes",
+                "사진 크기는 1바이트 이상 5MB 이하여야 해요.");
+    }
+
+    @Test
+    @DisplayName(
+            "[F-33][MM-05] 24시간 안에 발급해 기록에 붙지 않은 사진이 30장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED이고 행을 만들지 않으며, 가장 오래된 사진이 24시간을 넘기면 다시 발급한다")
+    void issueLimitsUnattachedUploads() {
+        // given
+        uploadService.issue(memberId, command("image/jpeg", SIZE));
+        clock.advance(Duration.ofHours(1));
+        for (int i = 1; i < MemoryImage.KIND.maxUnattachedPerMember(); i++) {
+            uploadService.issue(memberId, command("image/jpeg", SIZE));
+        }
+
+        // when
+        ThrowingCallable overLimit = () -> uploadService.issue(memberId, command("image/jpeg", SIZE));
+
+        // then
+        assertThatThrownBy(overLimit).isInstanceOfSatisfying(RateLimitedException.class, e -> {
+            assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_UPLOAD_LIMITED);
+            assertThat(e.getErrorCode().httpStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+            assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(23));
+        });
+        assertThat(imageRowCount()).isEqualTo(MemoryImage.KIND.maxUnattachedPerMember());
+        clock.advance(Duration.ofHours(23));
+        uploadService.issue(memberId, command("image/jpeg", SIZE));
+        assertThat(imageRowCount()).isEqualTo(MemoryImage.KIND.maxUnattachedPerMember() + 1);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 기록에 붙인 사진과 다른 회원의 사진은 발급 상한에 세지 않는다")
+    void issueLimitCountsOnlyOwnUnattachedUploads() {
+        // given
+        List<Long> attached = uploadedImages(MemoryImage.MAX_PER_MEMORY);
+        uploadedImages(MemoryImage.KIND.maxUnattachedPerMember() - MemoryImage.MAX_PER_MEMORY);
+        commandService.write(memberId, write(attached));
+        long otherMemberId = memberFixture.save().getId();
+        for (int i = 0; i < MemoryImage.KIND.maxUnattachedPerMember(); i++) {
+            uploadService.issue(otherMemberId, command("image/jpeg", SIZE));
+        }
+
+        // when
+        ImageUpload upload = uploadService.issue(memberId, command("image/jpeg", SIZE));
+
+        // then
+        assertThat(memoryIdOf(upload.imageId())).isNull();
     }
 
     @Test
@@ -153,12 +214,40 @@ class MemoryImageIntegrationTest {
         assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM memory_image WHERE memory_id = ?", Integer.class, memoryId))
                 .isEqualTo(10);
-        assertInvalid(() -> commandService.write(memberId, write(eleven)), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, write(List.of(mine, mine))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, write(List.of(notUploaded))), "imageIds");
-        assertInvalid(() -> commandService.write(memberId, write(List.of(attached))), "imageIds");
+        assertInvalid(() -> commandService.write(memberId, write(eleven)), "imageIds", "사진은 10장까지 붙일 수 있어요.");
+        assertInvalid(
+                () -> commandService.write(memberId, write(List.of(mine, mine))), "imageIds", "같은 사진을 두 번 붙일 수 없어요.");
+        assertInvalid(() -> commandService.write(memberId, write(List.of(notUploaded))), "imageIds", UNUSABLE);
+        assertInvalid(() -> commandService.write(memberId, write(List.of(attached))), "imageIds", UNUSABLE);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory", Integer.class))
                 .isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 다른 회원의 사진과 빈 사진 ID는 붙일 수 없는 사진으로 거부하고, 수정에서 imageIds를 null로 보내면 빈 배열을 보내라고 안내한다")
+    void reviseRejectsOthersImagesAndNullIds() {
+        // given
+        long others = uploaded(memberFixture.save().getId());
+        long mine = uploaded(memberId);
+        long memoryId = commandService.write(memberId, write(List.of()));
+
+        // when, then
+        assertInvalid(
+                () -> commandService.revise(memberId, memoryId, imagesOnly(List.of(others))), "imageIds", UNUSABLE);
+        assertInvalid(
+                () -> commandService.revise(memberId, memoryId, imagesOnly(Arrays.asList(mine, null))),
+                "imageIds",
+                UNUSABLE);
+        assertInvalid(
+                () -> commandService.revise(memberId, memoryId, imagesOnly(Arrays.asList(null, null))),
+                "imageIds",
+                UNUSABLE);
+        assertInvalid(
+                () -> commandService.revise(memberId, memoryId, imagesOnly(null)),
+                "imageIds",
+                "imageIds는 비울 수 없어요. 사진을 모두 떼려면 빈 배열을 보내 주세요.");
+        assertThat(memoryIdOf(others)).isNull();
+        assertThat(memoryIdOf(mine)).isNull();
     }
 
     @Test
@@ -176,9 +265,9 @@ class MemoryImageIntegrationTest {
         MemoryView cleared = commandService.revise(memberId, memoryId, imagesOnly(List.of()));
 
         // then
-        assertThat(replaced.images()).extracting(MemoryPhoto::imageId).containsExactly(added, kept);
+        assertThat(replaced.images()).extracting(ImageView::imageId).containsExactly(added, kept);
         assertThat(memoryIdOf(removed)).isNull();
-        assertThat(untouched.images()).extracting(MemoryPhoto::imageId).containsExactly(added, kept);
+        assertThat(untouched.images()).extracting(ImageView::imageId).containsExactly(added, kept);
         assertThat(untouched.nights()).isEqualTo(2);
         assertThat(cleared.images()).isEmpty();
         assertThat(memoryIdOf(kept)).isNull();
@@ -264,12 +353,12 @@ class MemoryImageIntegrationTest {
                 .isZero();
     }
 
-    private static MemoryImageUploadCommand command(String contentType, long sizeBytes) {
-        return new MemoryImageUploadCommand(contentType, sizeBytes, null);
+    private static ImageUploadCommand command(String contentType, long sizeBytes) {
+        return new ImageUploadCommand(contentType, sizeBytes, null);
     }
 
-    private static MemoryImageUploadCommand withThumbnail(String contentType, long sizeBytes, long thumbnailSizeBytes) {
-        return new MemoryImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
+    private static ImageUploadCommand withThumbnail(String contentType, long sizeBytes, long thumbnailSizeBytes) {
+        return new ImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
     }
 
     private long issueWithThumbnail() {
@@ -328,14 +417,14 @@ class MemoryImageIntegrationTest {
         return jdbc.queryForObject("SELECT memory_id FROM memory_image WHERE id = ?", Long.class, imageId);
     }
 
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
+    private int imageRowCount() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM memory_image", Integer.class);
     }
 
-    private static void assertInvalid(ThrowingCallable action, String field) {
-        assertThatThrownBy(action)
-                .isInstanceOfSatisfying(
-                        InvalidFieldException.class,
-                        e -> assertThat(e.getField()).isEqualTo(field));
+    private static void assertInvalid(ThrowingCallable action, String field, String reason) {
+        assertThatThrownBy(action).isInstanceOfSatisfying(InvalidFieldException.class, e -> {
+            assertThat(e.getField()).isEqualTo(field);
+            assertThat(e.getMessage()).isEqualTo(reason);
+        });
     }
 }

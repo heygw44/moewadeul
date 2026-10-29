@@ -1,10 +1,11 @@
 package com.moewadeul.community.api.post;
 
-import com.moewadeul.common.idempotency.IdempotencyExecutor;
-import com.moewadeul.common.idempotency.IdempotentRequest;
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostQueryService;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.application.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
@@ -55,9 +56,11 @@ class CommunityPostController {
                     + "마지막 페이지 너머를 요청하면 빈 content와 hasNext=false를 준다. "
                     + "범위를 벗어난 파라미터나 알 수 없는 searchType, 길이를 벗어난 검색어는 400 INVALID_INPUT으로 응답한다.")
     @GetMapping("/api/community/posts")
-    CommunityPostPageResponse list(@Valid @ParameterObject @ModelAttribute CommunityPostListRequest request) {
-        return CommunityPostPageResponse.from(
-                communityPostQueryService.list(request.toQuery(), request.pageOrDefault(), request.sizeOrDefault()));
+    PageResponse<CommunityPostItemResponse> list(
+            @Valid @ParameterObject @ModelAttribute CommunityPostListRequest request) {
+        return PageResponse.from(
+                communityPostQueryService.list(request.toQuery(), request.pageOrDefault(), request.sizeOrDefault()),
+                CommunityPostItemResponse::from);
     }
 
     @Operation(

@@ -1,8 +1,8 @@
 package com.moewadeul.weather.infra;
 
-public class KmaApiException extends RuntimeException {
+import com.moewadeul.common.external.ExternalApiException;
 
-    private final boolean retryable;
+public class KmaApiException extends ExternalApiException {
 
     public KmaApiException(String message) {
         this(message, null, false);
@@ -13,8 +13,7 @@ public class KmaApiException extends RuntimeException {
     }
 
     private KmaApiException(String message, Throwable cause, boolean retryable) {
-        super(message, cause);
-        this.retryable = retryable;
+        super(message, cause, retryable);
     }
 
     static KmaApiException retryable(String message) {
@@ -23,9 +22,5 @@ public class KmaApiException extends RuntimeException {
 
     static KmaApiException retryable(String message, Throwable cause) {
         return new KmaApiException(message, cause, true);
-    }
-
-    boolean isRetryable() {
-        return retryable;
     }
 }

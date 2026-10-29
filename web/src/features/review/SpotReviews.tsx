@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
@@ -22,10 +22,11 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextArea } from '../../components/TextArea';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { usePagedList } from '../../components/usePagedList';
 import { useImageUploads } from '../../components/useImageUploads';
 import { formatKstDateTime, formatLocalDate, todayKst } from '../../lib/datetime';
-import { useSession } from '../member/session';
-import { GatedButton } from '../member/GatedButton';
+import { useSession } from '../../app/session/session';
+import { GatedButton } from '../../app/session/GatedButton';
 
 const CONTENT_MAX = 2000;
 const MAX_RATING = 5;
@@ -41,71 +42,20 @@ type SpotReviewsProps = {
   initialRating: SpotRating;
 };
 
-type ListState = {
-  reviews: SpotReview[];
-  page: number;
-  hasNext: boolean;
-};
-
 export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
   const session = useSession();
   const myMemberId = session.status === 'authenticated' ? (session.me?.memberId ?? null) : null;
   const [rating, setRating] = useState(initialRating);
-  const [list, setList] = useState<ListState | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [listError, setListError] = useState<{ cause: unknown } | null>(null);
+  const { current: list, loadingMore, loadMore, retry, reload } = usePagedList(true, spotId, fetchSpotReviews);
   const [writing, setWriting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<SpotReview | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const controllerRef = useRef<AbortController | null>(null);
-  const showSkeleton = useDelayedFlag(list === null && listError === null);
-
-  const loadPage = useCallback(
-    async (page: number) => {
-      controllerRef.current?.abort();
-      const controller = new AbortController();
-      controllerRef.current = controller;
-      setLoading(true);
-      setListError(null);
-      try {
-        const result = await fetchSpotReviews(spotId, page, controller.signal);
-        if (controller.signal.aborted) return;
-        setList((previous) => ({
-          reviews: page === 0 || previous === null ? result.content : [...previous.reviews, ...result.content],
-          page: result.page,
-          hasNext: result.hasNext,
-        }));
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        setListError({ cause: error });
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    },
-    [spotId],
-  );
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchSpotReviews(spotId, 0, controller.signal).then(
-      (result) => {
-        if (!controller.signal.aborted)
-          setList({ reviews: result.content, page: result.page, hasNext: result.hasNext });
-      },
-      (error: unknown) => {
-        if (!controller.signal.aborted) setListError({ cause: error });
-      },
-    );
-    return () => {
-      controller.abort();
-      controllerRef.current?.abort();
-    };
-  }, [spotId]);
+  const showSkeleton = useDelayedFlag(list === null);
 
   async function refreshAfterChange(message: string) {
     setStatus(message);
-    await loadPage(0);
+    reload();
     const detail = await fetchSpotDetail(spotId).catch(() => null);
     if (detail) setRating(detail.rating);
   }
@@ -147,11 +97,11 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
         />
       )}
 
-      {listError && (
+      {list?.error && (
         <div role="alert" className="mt-3 flex flex-col gap-2">
-          <ErrorNotice title="후기를 불러오지 못했어요" error={listError.cause} />
+          <ErrorNotice title="후기를 불러오지 못했어요" error={list.error} traceId={list.traceId ?? undefined} />
           <div>
-            <Button variant="secondary" onClick={() => void loadPage(list?.page ?? 0)}>
+            <Button variant="secondary" onClick={retry}>
               다시 불러오기
             </Button>
           </div>
@@ -165,9 +115,9 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
         </div>
       )}
 
-      {list && list.reviews.length > 0 && (
+      {list && list.items.length > 0 && (
         <ul className="mt-3 flex flex-col gap-2">
-          {list.reviews.map((review) =>
+          {list.items.map((review) =>
             editingId === review.reviewId ? (
               <li key={review.reviewId} className="rounded-sheet bg-fill p-4">
                 <ReviewForm
@@ -204,7 +154,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
 
       {list?.hasNext && (
         <div className="mt-2">
-          <Button variant="secondary" loading={loading} onClick={() => void loadPage(list.page + 1)}>
+          <Button variant="secondary" loading={loadingMore} onClick={() => void loadMore()}>
             후기 더 보기
           </Button>
         </div>

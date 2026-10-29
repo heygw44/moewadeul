@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { ApiError } from '../../api/client';
+import { ApiError, serverNow } from '../../api/client';
 import { verifyIdentity } from '../../api/trust';
 import type { IdentityVerificationResponse, SelfGender } from '../../api/types';
-import { Link, navigate, useLocation } from '../../app/router';
+import { Link, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
@@ -12,9 +12,11 @@ import { Notice } from '../../components/Notice';
 import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
+import { useDocumentTitle } from '../../components/useDocumentTitle';
+import { todayKst } from '../../lib/datetime';
 import { AuthLayout } from '../member/AuthLayout';
-import { safeNextPath, withNext } from '../member/nextPath';
-import { useSession } from '../member/session';
+import { safeNextPath, withNext } from '../../app/session/nextPath';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { buttonClassName } from '../../components/buttonClass';
 
 const MIN_BIRTH_YEAR = 1900;
@@ -37,7 +39,7 @@ const linkButtonClass = `${buttonClassName('primary')} w-full`;
 export function IdentityVerificationPage() {
   const { search } = useLocation();
   const next = safeNextPath(search);
-  const session = useSession();
+  const session = useRequireAuth(withNext('/identity-verification', next));
   const showSkeleton = useDelayedFlag(session.status === 'loading');
 
   const [birthYear, setBirthYear] = useState('');
@@ -48,17 +50,7 @@ export function IdentityVerificationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<IdentityVerificationResponse | null>(null);
 
-  useEffect(() => {
-    document.title = '본인확인 · 뫼와들';
-  }, []);
-
-  useEffect(() => {
-    if (session.status === 'anonymous') {
-      navigate(withNext('/login', withNext('/identity-verification', next)), {
-        replace: true,
-      });
-    }
-  }, [session.status, next]);
+  useDocumentTitle('본인확인 · 뫼와들');
 
   function validate(): {
     request: {
@@ -70,7 +62,7 @@ export function IdentityVerificationPage() {
   } {
     const errors: FieldErrors = {};
     const year = Number(birthYear.trim());
-    const currentYear = new Date().getFullYear();
+    const currentYear = Number(todayKst(new Date(serverNow())).slice(0, 4));
     if (!/^\d{4}$/.test(birthYear.trim()) || year < MIN_BIRTH_YEAR || year > currentYear) {
       errors.birthYear = `출생연도는 ${MIN_BIRTH_YEAR}~${currentYear}년 사이 4자리 숫자로 입력해 주세요.`;
     }

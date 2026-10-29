@@ -1,14 +1,15 @@
 package com.moewadeul.community.application.post;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.moderation.ContentReportReason;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.TestImageStorage;
-import com.moewadeul.common.web.PatchField;
 import com.moewadeul.community.application.comment.CommunityCommentCommandService;
 import com.moewadeul.community.application.comment.CommunityCommentWriteCommand;
-import com.moewadeul.community.application.image.CommunityImageUploadCommand;
 import com.moewadeul.community.application.image.CommunityImageUploadService;
 import com.moewadeul.community.application.moderation.CommunityModerationService;
 import com.moewadeul.community.application.report.CommunityReportCommand;
@@ -16,8 +17,6 @@ import com.moewadeul.community.application.report.CommunityReportService;
 import com.moewadeul.community.domain.comment.CommunityCommentRepository;
 import com.moewadeul.community.domain.image.CommunityImageRepository;
 import com.moewadeul.community.domain.post.CommunityPostRepository;
-import com.moewadeul.community.domain.report.CommunityReportReason;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
@@ -48,13 +47,15 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
     private static final int REPETITIONS = 3;
     private static final long MIDDLE_WAIT_SECONDS = 2;
     private static final long IMAGE_SIZE = 1000L;
-    private static final CommunityReportCommand REPORT =
-            new CommunityReportCommand(CommunityReportReason.SPAM, "광고입니다");
+    private static final CommunityReportCommand REPORT = new CommunityReportCommand(ContentReportReason.SPAM, "광고입니다");
     private static final Set<String> POST_READ =
             Set.of("CommunityPostRepository.findById", "CommunityPostRepository.findByIdForUpdate");
     private static final Set<String> COMMENT_READ =
             Set.of("CommunityCommentRepository.findById", "CommunityCommentRepository.findByIdForUpdate");
-    private static final Set<String> CURRENT_IMAGES_READ = Set.of("CommunityImageRepository.findIdsByPostId");
+    private static final Set<String> CURRENT_IMAGES_READ = Set.of("CommunityImageRepository.findIdsByParentId");
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private CommunityPostCommandService postCommandService;
@@ -72,9 +73,6 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
     private CommunityImageUploadService uploadService;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private TestImageStorage storage;
 
     @Autowired
@@ -89,7 +87,7 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
     @BeforeEach
     void setUp() {
         executor = Executors.newFixedThreadPool(2);
-        authorId = saveMember();
+        authorId = memberFixture.save().getId();
     }
 
     @AfterEach
@@ -104,7 +102,7 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
     @DisplayName("[F-29][CM-08] 작성자가 글을 고치는 사이 관리자가 글을 숨기면, 글은 HIDDEN으로 남는다")
     void postReviseDuringHideKeepsHidden() throws Exception {
         long postId = savePost();
-        long adminId = saveMember();
+        long adminId = memberFixture.save().getId();
         pauseAfter(POST_READ);
 
         Future<?> revise = executor.submit(() -> postCommandService.revise(authorId, postId, retitle("새 제목")));
@@ -122,9 +120,9 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
     void postReviseDuringFifthReportKeepsPendingReview() throws Exception {
         long postId = savePost();
         for (int i = 0; i < 4; i++) {
-            reportService.reportPost(saveMember(), postId, REPORT);
+            reportService.reportPost(memberFixture.save().getId(), postId, REPORT);
         }
-        long fifthReporter = saveMember();
+        long fifthReporter = memberFixture.save().getId();
         pauseAfter(POST_READ);
 
         Future<?> revise = executor.submit(() -> postCommandService.revise(authorId, postId, retitle("새 제목")));
@@ -144,7 +142,7 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
     @DisplayName("[F-29][CM-08] 작성자가 댓글을 고치는 사이 관리자가 댓글을 숨기면, 댓글은 HIDDEN으로 남는다")
     void commentReviseDuringHideKeepsHidden() throws Exception {
         long commentId = saveComment(savePost());
-        long adminId = saveMember();
+        long adminId = memberFixture.save().getId();
         pauseAfter(COMMENT_READ);
 
         Future<?> revise = executor.submit(() -> commentCommandService.revise(authorId, commentId, "고친 댓글"));
@@ -160,9 +158,9 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
     void commentReviseDuringFifthReportKeepsPendingReview() throws Exception {
         long commentId = saveComment(savePost());
         for (int i = 0; i < 4; i++) {
-            reportService.reportComment(saveMember(), commentId, REPORT);
+            reportService.reportComment(memberFixture.save().getId(), commentId, REPORT);
         }
-        long fifthReporter = saveMember();
+        long fifthReporter = memberFixture.save().getId();
         pauseAfter(COMMENT_READ);
 
         Future<?> revise = executor.submit(() -> commentCommandService.revise(authorId, commentId, "고친 댓글"));
@@ -243,15 +241,11 @@ class CommunityAuthorEditConcurrencyIntegrationTest {
         return commentCommandService.write(authorId, postId, new CommunityCommentWriteCommand("댓글", null));
     }
 
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
-    }
-
     private List<Long> uploadedImages(int count) {
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             long imageId = uploadService
-                    .issue(authorId, new CommunityImageUploadCommand("image/jpeg", IMAGE_SIZE, null))
+                    .issue(authorId, new ImageUploadCommand("image/jpeg", IMAGE_SIZE, null))
                     .imageId();
             storage.markUploaded(
                     jdbc.queryForObject("SELECT object_key FROM community_image WHERE id = ?", String.class, imageId),

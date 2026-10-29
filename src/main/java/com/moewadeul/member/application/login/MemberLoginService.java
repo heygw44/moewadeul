@@ -1,5 +1,6 @@
 package com.moewadeul.member.application.login;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.member.application.LoginAttemptService;
 import com.moewadeul.member.application.MemberSessions;
@@ -7,13 +8,11 @@ import com.moewadeul.member.application.MemberSuspensionService;
 import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.MemberSuspendedException;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -53,8 +52,10 @@ public class MemberLoginService {
 
     public LoginResult login(LoginCommand command) {
         String attemptedEmail = normalizeEmail(command.email());
-        rejectIfLocked(attemptedEmail);
-        Member authenticated = authenticate(attemptedEmail, command);
+        Member found = findLoginableMember(attemptedEmail);
+        Long memberId = found != null ? found.getId() : null;
+        rejectIfLocked(memberId, attemptedEmail);
+        Member authenticated = authenticate(found, memberId, attemptedEmail, command);
         Member member = releaseIfSuspensionEnded(authenticated);
         rejectIfSuspended(member);
         loginAttemptService.recordSuccess(member.getId(), attemptedEmail, command.ip());
@@ -62,6 +63,7 @@ public class MemberLoginService {
                 member.getId(),
                 member.getNickname(),
                 member.getStatus(),
+                member.isEmailVerified(),
                 member.getRole(),
                 member.getPasswordChangedAt());
     }
@@ -69,16 +71,16 @@ public class MemberLoginService {
     public void ensureStillLoginable(LoginResult loggedIn) {
         Member current = memberRepository
                 .findById(loggedIn.memberId())
-                .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN)
+                .filter(found -> !found.isWithdrawn())
                 .filter(found -> Objects.equals(found.getPasswordChangedAt(), loggedIn.passwordChangedAt()))
-                .orElseThrow(() -> new MemberException(MemberErrorCode.LOGIN_FAILED));
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
         rejectIfSuspended(current);
     }
 
     public void revokeSessionIfMemberChanged(LoginResult loggedIn, String sessionId) {
         try {
             ensureStillLoginable(loggedIn);
-        } catch (MemberException e) {
+        } catch (BusinessException e) {
             memberSessions.invalidate(sessionId);
         }
     }
@@ -92,34 +94,32 @@ public class MemberLoginService {
         }
     }
 
-    private void rejectIfLocked(String attemptedEmail) {
-        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(attemptedEmail);
+    private Member findLoginableMember(String attemptedEmail) {
+        return memberRepository
+                .findByEmail(attemptedEmail)
+                .filter(found -> !found.isWithdrawn())
+                .orElse(null);
+    }
+
+    private void rejectIfLocked(Long memberId, String attemptedEmail) {
+        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(memberId, attemptedEmail);
         if (retryAfter.isPresent()) {
             throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, retryAfter.get());
         }
     }
 
-    private Member authenticate(String attemptedEmail, LoginCommand command) {
-        Member member = memberRepository
-                .findByEmail(attemptedEmail)
-                .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN)
-                .orElse(null);
+    private Member authenticate(Member member, Long memberId, String attemptedEmail, LoginCommand command) {
         String passwordHash = member != null ? member.getPasswordHash() : timingDecoyPasswordHash;
         boolean authenticated = passwordEncoder.matches(command.password(), passwordHash) && member != null;
-        Long memberId = member != null ? member.getId() : null;
         loginAttemptService.recordAttemptUnderEmailLock(memberId, attemptedEmail, command.ip(), authenticated);
         if (!authenticated) {
-            throw new MemberException(MemberErrorCode.LOGIN_FAILED);
+            throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
         }
         return member;
     }
 
     private Member releaseIfSuspensionEnded(Member member) {
-        if (member.getStatus() != MemberStatus.SUSPENDED || member.getSuspendedUntil() == null) {
-            return member;
-        }
-        Instant now = clock.instant();
-        if (member.getSuspendedUntil().isAfter(now)) {
+        if (!member.isSuspensionOverAt(clock.instant())) {
             return member;
         }
         memberSuspensionService.releaseIfExpired(member.getId());

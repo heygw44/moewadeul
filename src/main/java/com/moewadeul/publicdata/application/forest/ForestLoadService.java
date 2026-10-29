@@ -1,5 +1,6 @@
 package com.moewadeul.publicdata.application.forest;
 
+import com.moewadeul.publicdata.application.SyncJob;
 import com.moewadeul.publicdata.application.SyncJobRunService;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
 import com.moewadeul.publicdata.domain.SyncJobType;
@@ -11,6 +12,7 @@ import com.moewadeul.spot.application.publicspot.PublicSpotSource;
 import com.moewadeul.spot.application.publicspot.PublicSpotSyncService;
 import com.moewadeul.spot.application.publicspot.PublicSpotUpsertResult;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,7 +28,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ForestLoadService {
+public class ForestLoadService implements SyncJob<ForestLoadResult> {
 
     private final SyncJobRunService syncJobRunService;
     private final ForestFileReader forestFileReader;
@@ -43,6 +45,17 @@ public class ForestLoadService {
                 .map(start -> run(start, file));
     }
 
+    @Override
+    public SyncJobType type() {
+        return SyncJobType.FOREST;
+    }
+
+    @Override
+    public Duration staleAfter() {
+        return properties.staleAfter();
+    }
+
+    @Override
     public ForestLoadResult run(SyncJobStart start) {
         return run(start, properties.file());
     }

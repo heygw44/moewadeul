@@ -1,5 +1,6 @@
 package com.moewadeul.program.api.catalog;
 
+import static com.moewadeul.common.testsupport.PageEnvelope.assertEnvelope;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -12,11 +13,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.program.application.catalog.MyProgramApplicationItem;
-import com.moewadeul.program.application.catalog.MyProgramApplicationPage;
 import com.moewadeul.program.application.catalog.MyProgramApplicationQuery;
 import com.moewadeul.program.application.catalog.ProgramDetail;
 import com.moewadeul.program.application.catalog.ProgramListQuery;
@@ -59,10 +60,10 @@ class ProgramCatalogControllerTest {
     @Test
     @DisplayName("[F-17] 로그인하지 않아도 행사 목록을 조회하고, status와 page를 서비스에 넘긴다")
     void anonymousCanListPrograms() {
-        ProgramSummary summary =
-                new ProgramSummary(9L, "가을 백패킹", "설악산 입구", null, AT, AT, AT, AT, 200, 150, 30000, true, "OPEN");
+        ProgramSummary summary = new ProgramSummary(
+                9L, "가을 백패킹", "설악산 입구", null, AT, AT, AT, AT, 200, 150, 30000, true, ProgramPhase.OPEN);
         when(programQueryService.list(any(ProgramListQuery.class)))
-                .thenReturn(new ProgramPage(List.of(summary), 1, 5, true, AT));
+                .thenReturn(new ProgramPage(new PageSlice<>(List.of(summary), 1, 5, true), AT));
 
         MvcTestResult result = mvc.get()
                 .uri("/api/programs")
@@ -88,7 +89,7 @@ class ProgramCatalogControllerTest {
     @DisplayName("[F-17] 신청이 열릴 행사가 없으면 목록 응답에 nextApplyOpenAt 키가 없다")
     void listOmitsNextApplyOpenAtWhenNoUpcomingProgram() {
         when(programQueryService.list(any(ProgramListQuery.class)))
-                .thenReturn(new ProgramPage(List.of(), 0, 20, false, null));
+                .thenReturn(new ProgramPage(new PageSlice<>(List.of(), 0, 20, false), null));
 
         MvcTestResult result = mvc.get().uri("/api/programs").exchange();
 
@@ -107,6 +108,37 @@ class ProgramCatalogControllerTest {
             assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
             assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
         }
+    }
+
+    @Test
+    @DisplayName("[F-17] 목록의 status가 허용 값이 아니면 statusValid 필드에 허용 값 안내를 담아 400으로 응답한다")
+    void listReportsAllowedStatusesInFieldError() {
+        MvcTestResult result =
+                mvc.get().uri("/api/programs").param("status", "CANCELED").exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("statusValid");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("status는 UPCOMING, OPEN, CLOSED 중 하나여야 해요.");
+    }
+
+    @Test
+    @DisplayName("[F-18] 내 행사 신청 목록의 status가 허용 값이 아니면 statusValid 필드에 허용 값 안내를 담아 400으로 응답한다")
+    void listMineReportsAllowedStatusesInFieldError() {
+        MvcTestResult result = mvc.get()
+                .uri("/api/me/program-applications")
+                .param("status", "OPEN")
+                .with(member(4L))
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("statusValid");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.fieldErrors[0].reason")
+                .isEqualTo("status는 PENDING_PAYMENT, CONFIRMED, CANCELED, EXPIRED 중 하나여야 해요.");
     }
 
     @Test
@@ -158,15 +190,15 @@ class ProgramCatalogControllerTest {
     void listMineReturnsPage() {
         MyProgramApplicationItem item = new MyProgramApplicationItem(
                 31L,
-                "PENDING_PAYMENT",
+                ProgramApplicationStatus.PENDING_PAYMENT,
                 AT,
                 null,
                 null,
                 null,
                 AT,
-                new MyProgramApplicationItem.Program(4L, "가을 능선 백패킹", "지리산 성삼재", AT, AT, 30000, "OPEN"));
+                new MyProgramApplicationItem.Program(4L, "가을 능선 백패킹", "지리산 성삼재", AT, AT, 30000, ProgramPhase.OPEN));
         when(programQueryService.listMine(4L, new MyProgramApplicationQuery(ProgramApplicationStatus.CONFIRMED, 1, 5)))
-                .thenReturn(new MyProgramApplicationPage(List.of(item), 1, 5, true));
+                .thenReturn(new PageSlice<>(List.of(item), 1, 5, true));
 
         MvcTestResult result = mvc.get()
                 .uri("/api/me/program-applications")
@@ -187,7 +219,7 @@ class ProgramCatalogControllerTest {
                 .bodyJson()
                 .extractingPath("$.content[0].program.status")
                 .isEqualTo("OPEN");
-        assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertEnvelope(result, 1, 5, true);
         assertThat(result).bodyJson().extractingPath("$.content[0]").asMap().containsKey("cancelReason");
     }
 

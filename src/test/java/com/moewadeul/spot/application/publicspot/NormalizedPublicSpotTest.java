@@ -312,7 +312,7 @@ class NormalizedPublicSpotTest {
         assertThat(spot.operatingStatus()).isEqualTo(PublicSpotOperatingStatus.TEMPORARILY_CLOSED);
         assertThat(spot.closedFrom()).isEqualTo(LocalDate.parse("2027-03-15"));
         assertThat(spot.closedUntil()).isEqualTo(LocalDate.parse("2026-11-16"));
-        assertThat(spot.toColumns(null).operatingStatus()).isEqualTo("TEMPORARILY_CLOSED");
+        assertThat(spot.toColumns(null).operatingStatus()).isEqualTo(PublicSpotOperatingStatus.TEMPORARILY_CLOSED);
     }
 
     @Test
@@ -323,8 +323,10 @@ class NormalizedPublicSpotTest {
                 PublicSpotOperatingStatus.TEMPORARILY_CLOSED,
                 LocalDate.parse("2026-11-16"),
                 LocalDate.parse("2027-03-15")));
-        PublicSpotRow stored =
-                detailRow("TEMPORARILY_CLOSED", LocalDate.parse("2026-11-16"), LocalDate.parse("2027-03-15"));
+        PublicSpotRow stored = detailRow(
+                PublicSpotOperatingStatus.TEMPORARILY_CLOSED,
+                LocalDate.parse("2026-11-16"),
+                LocalDate.parse("2027-03-15"));
         NormalizedPublicSpot withoutStatus = NormalizedPublicSpot.from(campsiteCommand(null, null, null));
 
         // when
@@ -347,17 +349,21 @@ class NormalizedPublicSpotTest {
         NormalizedPublicSpot withoutStatus = NormalizedPublicSpot.from(campsiteCommand(null, null, null));
 
         // when & then
-        assertThat(spot.differsInDetailColumns(detailRow("OPERATING", from, until), null))
+        assertThat(spot.differsInDetailColumns(detailRow(PublicSpotOperatingStatus.OPERATING, from, until), null))
                 .isTrue();
         assertThat(spot.differsInDetailColumns(detailRow(null, from, until), null))
                 .isTrue();
-        assertThat(spot.differsInDetailColumns(detailRow("TEMPORARILY_CLOSED", from.plusDays(1), until), null))
+        assertThat(spot.differsInDetailColumns(
+                        detailRow(PublicSpotOperatingStatus.TEMPORARILY_CLOSED, from.plusDays(1), until), null))
                 .isTrue();
-        assertThat(spot.differsInDetailColumns(detailRow("TEMPORARILY_CLOSED", from, null), null))
+        assertThat(spot.differsInDetailColumns(
+                        detailRow(PublicSpotOperatingStatus.TEMPORARILY_CLOSED, from, null), null))
                 .isTrue();
-        assertThat(spot.differsInDetailColumns(detailRow("TEMPORARILY_CLOSED", from, until.plusDays(1)), null))
+        assertThat(spot.differsInDetailColumns(
+                        detailRow(PublicSpotOperatingStatus.TEMPORARILY_CLOSED, from, until.plusDays(1)), null))
                 .isTrue();
-        assertThat(withoutStatus.differsInDetailColumns(detailRow("OPERATING", null, null), null))
+        assertThat(withoutStatus.differsInDetailColumns(
+                        detailRow(PublicSpotOperatingStatus.OPERATING, null, null), null))
                 .isTrue();
         assertThat(withoutStatus.differsInDetailColumns(detailRow(null, from, null), null))
                 .isTrue();
@@ -438,7 +444,8 @@ class NormalizedPublicSpotTest {
                 Set.of());
     }
 
-    private static PublicSpotRow detailRow(String operatingStatus, LocalDate closedFrom, LocalDate closedUntil) {
+    private static PublicSpotRow detailRow(
+            PublicSpotOperatingStatus operatingStatus, LocalDate closedFrom, LocalDate closedUntil) {
         return new PublicSpotRow(
                 1L,
                 "100",

@@ -1,5 +1,5 @@
 import type { IconName } from '../../components/iconPaths';
-import { withNext } from '../../features/member/nextPath';
+import { withNext } from '../session/nextPath';
 
 export type NavKey = 'map' | 'basecamps' | 'footprints' | 'community' | 'programs';
 

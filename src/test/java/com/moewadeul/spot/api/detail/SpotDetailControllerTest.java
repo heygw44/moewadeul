@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.spot.application.PublicSpotOperatingStatus;
@@ -23,8 +24,10 @@ import com.moewadeul.spot.application.detail.SpotRecentReview;
 import com.moewadeul.spot.application.detail.SpotRecruitingBasecamp;
 import com.moewadeul.spot.application.detail.SpotWeather;
 import com.moewadeul.spot.application.detail.SpotWeatherQueryService;
+import com.moewadeul.spot.application.park.ProtectedAreaSource;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
 import com.moewadeul.spot.domain.SpotType;
+import com.moewadeul.spot.domain.bakji.BakjiSignalLevel;
 import com.moewadeul.weather.application.SunTimes;
 import com.moewadeul.weather.application.WeatherForecast;
 import java.time.Instant;
@@ -52,7 +55,7 @@ class SpotDetailControllerTest {
     private static final SpotParkWarning WARNED = new SpotParkWarning(
             true,
             "설악산 국립공원",
-            "KDPA",
+            ProtectedAreaSource.KDPA,
             LocalDate.of(2026, 1, 1),
             "공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요.",
             "자연공원 안에서는 지정된 야영장 밖의 야영과 취사가 금지돼 있고 어기면 과태료 대상이에요. 이곳에서는 야영하지 말고 가까운 지정 야영장을 찾아 주세요.");
@@ -73,7 +76,8 @@ class SpotDetailControllerTest {
             "[F-05][SF-06] 로그인하지 않은 사용자가 경고 박지 상세를 조회하면 박지 상세와 제보자를 받고 확인 안내 notice는 없으며, publicDetail은 null이고 아직 채우지 않는 항목은 빈 값이다")
     void anonymousReadsBakjiDetail() {
         // given
-        SpotBakjiDetail bakji = new SpotBakjiDetail("능선 끝 평지", false, true, "WEAK", 12L, 31L, "새벽능선", null);
+        SpotBakjiDetail bakji =
+                new SpotBakjiDetail("능선 끝 평지", false, true, BakjiSignalLevel.WEAK, 12L, 31L, "새벽능선", null);
         when(spotDetailQueryService.findDetail(101L))
                 .thenReturn(new SpotDetail(
                         101L,
@@ -156,7 +160,7 @@ class SpotDetailControllerTest {
                 LocalDate.of(2026, 10, 4),
                 5,
                 "별이 좋았다",
-                List.of(new SpotRecentReview.Image(5L, "https://view.test.invalid/review/31/a.jpg")),
+                List.of(new ImageView(5L, "https://view.test.invalid/review/31/a.jpg")),
                 Instant.parse("2026-10-05T03:00:00Z"));
         when(spotDetailQueryService.findDetail(106L))
                 .thenReturn(new SpotDetail(
@@ -267,7 +271,8 @@ class SpotDetailControllerTest {
     @DisplayName("[F-05][SF-05] 경고 박지 상세는 경고 필드 전체와 예상 인원, 모집 중 베이스캠프를 응답하고 weather 필드는 없다")
     void readsWarnedBakjiDetailWithoutWeather() {
         // given
-        SpotBakjiDetail bakji = new SpotBakjiDetail("능선 끝 평지", false, true, "WEAK", 12L, 31L, "새벽능선", null);
+        SpotBakjiDetail bakji =
+                new SpotBakjiDetail("능선 끝 평지", false, true, BakjiSignalLevel.WEAK, 12L, 31L, "새벽능선", null);
         when(spotDetailQueryService.findDetail(103L))
                 .thenReturn(new SpotDetail(
                         103L,

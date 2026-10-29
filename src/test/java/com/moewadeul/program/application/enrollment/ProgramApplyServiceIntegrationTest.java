@@ -11,7 +11,9 @@ import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.application.catalog.ProgramQueryService;
+import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
+import com.moewadeul.trust.domain.TrustErrorCode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
@@ -60,7 +63,7 @@ class ProgramApplyServiceIntegrationTest {
         ProgramApplyResult result = programApplyService.apply(memberId, programId);
 
         // then
-        assertThat(result.status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(result.status()).isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
         assertThat(result.amount()).isEqualTo(30000);
         assertThat(result.paymentDueAt()).isEqualTo(MutableClock.DEFAULT_INSTANT.plus(Duration.ofMinutes(15)));
         assertThat(jdbc.queryForObject(
@@ -132,9 +135,10 @@ class ProgramApplyServiceIntegrationTest {
         long level1 = fixture.saveVerifiedMember();
 
         // then
-        assertErrorCode(() -> programApplyService.apply(level0, programId), CommonErrorCode.TRUST_LEVEL_INSUFFICIENT);
+        assertErrorCode(() -> programApplyService.apply(level0, programId), TrustErrorCode.TRUST_LEVEL_INSUFFICIENT);
         assertThat(fixture.applicationCount(programId, level0)).isZero();
-        assertThat(programApplyService.apply(level1, programId).status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(programApplyService.apply(level1, programId).status())
+                .isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
     }
 
     @Test
@@ -143,7 +147,8 @@ class ProgramApplyServiceIntegrationTest {
         long programId = fixture.saveProgram(3, false);
         long memberId = fixture.saveMember();
 
-        assertThat(programApplyService.apply(memberId, programId).status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(programApplyService.apply(memberId, programId).status())
+                .isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
     }
 
     @Test
@@ -162,7 +167,8 @@ class ProgramApplyServiceIntegrationTest {
         assertThat(second.applicationId()).isNotEqualTo(first.applicationId());
 
         jdbc.update("UPDATE program_application SET status = 'EXPIRED' WHERE id = ?", second.applicationId());
-        assertThat(programApplyService.apply(memberId, programId).status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(programApplyService.apply(memberId, programId).status())
+                .isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
         assertThat(fixture.applicationCount(programId, memberId)).isEqualTo(3);
         assertThat(fixture.activeCount(programId)).isEqualTo(1);
     }
@@ -192,7 +198,8 @@ class ProgramApplyServiceIntegrationTest {
 
         jdbc.update("UPDATE program_application SET status = 'CANCELED' WHERE id = ?", firstResult.applicationId());
 
-        assertThat(programApplyService.apply(second, programId).status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(programApplyService.apply(second, programId).status())
+                .isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
     }
 
     @Test
@@ -214,7 +221,7 @@ class ProgramApplyServiceIntegrationTest {
         clock.setInstant(due);
         assertThat(programQueryService.detail(programId, null).remainingSeats()).isEqualTo(1);
         ProgramApplyResult secondResult = programApplyService.apply(second, programId);
-        assertThat(secondResult.status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(secondResult.status()).isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
         assertThat(programQueryService.detail(programId, null).remainingSeats()).isZero();
         assertThat(fixture.applicationStatus(firstResult.applicationId())).isEqualTo("PENDING_PAYMENT");
 
@@ -225,7 +232,7 @@ class ProgramApplyServiceIntegrationTest {
         assertThat(programPaymentService
                         .pay(second, secondResult.applicationId())
                         .status())
-                .isEqualTo("CONFIRMED");
+                .isEqualTo(ProgramApplicationStatus.CONFIRMED);
     }
 
     @Test
@@ -241,7 +248,7 @@ class ProgramApplyServiceIntegrationTest {
         ProgramApplyResult second = programApplyService.apply(memberId, programId);
 
         // then
-        assertThat(second.status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(second.status()).isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
         assertThat(second.applicationId()).isNotEqualTo(first.applicationId());
         assertThat(fixture.applicationStatus(first.applicationId())).isEqualTo("EXPIRED");
         assertThat(fixture.outboxCount("PROGRAM_APPLICATION_EXPIRED", first.applicationId()))
@@ -261,6 +268,18 @@ class ProgramApplyServiceIntegrationTest {
         // when, then
         assertErrorCode(() -> programApplyService.apply(memberId, programId), ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
         assertThat(fixture.applicationStatus(first.applicationId())).isEqualTo("PENDING_PAYMENT");
+    }
+
+    @Test
+    @DisplayName("[F-18][PG-03] 다른 제약 위반은 PROGRAM_ALREADY_APPLIED로 바꾸지 않는다")
+    void doesNotTranslateOtherConstraintViolation() {
+        // given
+        long programId = fixture.saveProgram(3, false);
+        long missingMemberId = Long.MAX_VALUE;
+
+        // when, then
+        assertThatThrownBy(() -> programApplyService.apply(missingMemberId, programId))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private static void assertErrorCode(Runnable action, ErrorCode expected) {

@@ -1,6 +1,9 @@
 package com.moewadeul.trust.domain.report;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.event.TrustEvents;
+import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,7 +13,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -69,6 +76,10 @@ public class MemberReport {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Transient
+    @Getter(AccessLevel.NONE)
+    private final List<Supplier<OutboxEventDraft>> deferredEvents = new ArrayList<>();
+
     private MemberReport(
             long reporterId,
             long targetMemberId,
@@ -101,11 +112,15 @@ public class MemberReport {
         if (type == null || now == null) {
             throw new IllegalArgumentException("신고 유형이나 접수 시각이 null입니다.");
         }
-        if (reporterId == targetMemberId) {
-            throw new IllegalArgumentException("자기 자신은 신고할 수 없습니다.");
+        boolean isReviewReport = type.kind() == ReportKind.REVIEW;
+        if (isReviewReport && companionReviewId == null) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "후기를 신고하려면 동행 후기 ID가 필요해요.");
         }
-        if ((type.kind() == ReportKind.REVIEW) != (companionReviewId != null)) {
-            throw new IllegalArgumentException("후기 신고에만 동행 후기 ID가 필요합니다.");
+        if (!isReviewReport && companionReviewId != null) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT, "회원 신고에는 동행 후기 ID를 넣을 수 없어요.");
+        }
+        if (reporterId == targetMemberId) {
+            throw new BusinessException(TrustErrorCode.REPORT_NOT_ELIGIBLE);
         }
         if (content == null || content.isBlank() || content.length() > CONTENT_MAX_LENGTH) {
             throw new IllegalArgumentException("신고 내용은 1~" + CONTENT_MAX_LENGTH + "자여야 합니다.");
@@ -129,6 +144,13 @@ public class MemberReport {
         resolve(ReportStatus.DISMISSED, adminId, note, now);
     }
 
+    public List<OutboxEventDraft> pullEvents() {
+        List<OutboxEventDraft> events =
+                deferredEvents.stream().map(Supplier::get).toList();
+        deferredEvents.clear();
+        return events;
+    }
+
     public void requireInReview() {
         requireStatus(ReportStatus.IN_REVIEW);
     }
@@ -144,6 +166,13 @@ public class MemberReport {
         this.handledAt = now;
         this.resultNote = note == null || note.isBlank() ? null : note;
         this.updatedAt = now;
+        long reporterId = this.reporterId;
+        String resultName = result.name();
+        deferredEvents.add(() -> new OutboxEventDraft(
+                TrustEvents.REPORT_RESOLVED,
+                TrustEvents.REPORT_AGGREGATE_TYPE,
+                id,
+                new TrustEvents.ReportResolvedPayload(id, reporterId, resultName)));
     }
 
     private void requireStatus(ReportStatus expected) {

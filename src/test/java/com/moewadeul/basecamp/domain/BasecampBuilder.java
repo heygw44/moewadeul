@@ -7,6 +7,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 public class BasecampBuilder {
 
+    public static final long BASECAMP_ID = 500L;
     public static final long LEADER_ID = 1L;
     public static final long MEMBER_ID = 2L;
     public static final long APPLICANT_ID = 3L;
@@ -63,7 +64,9 @@ public class BasecampBuilder {
     }
 
     public Basecamp openOnly() {
-        return Basecamp.open(LEADER_ID, SPOT_ID, details(capacity, startDate), NOW);
+        Basecamp basecamp = Basecamp.open(LEADER_ID, SPOT_ID, details(capacity, startDate), NOW);
+        ReflectionTestUtils.setField(basecamp, "id", BASECAMP_ID);
+        return basecamp;
     }
 
     public Basecamp inState(BasecampStatus state) {
@@ -71,6 +74,7 @@ public class BasecampBuilder {
         join(basecamp, MEMBER_ID);
         apply(basecamp, APPLICANT_ID);
         move(basecamp, state);
+        basecamp.pullEvents();
         return basecamp;
     }
 
@@ -78,6 +82,7 @@ public class BasecampBuilder {
         Basecamp basecamp = capacity(3).openOnly();
         join(basecamp, MEMBER_ID);
         join(basecamp, APPLICANT_ID);
+        basecamp.pullEvents();
         return basecamp;
     }
 
@@ -88,7 +93,9 @@ public class BasecampBuilder {
             case CONFIRMED -> basecamp.confirm(NOW);
             case COMPLETED -> {
                 basecamp.confirm(NOW);
-                basecamp.complete(COMPLETED_AT);
+                ReflectionTestUtils.setField(basecamp, "status", BasecampStatus.COMPLETED);
+                ReflectionTestUtils.setField(basecamp, "completedAt", COMPLETED_AT);
+                ReflectionTestUtils.setField(basecamp, "updatedAt", COMPLETED_AT);
             }
             case CANCELED -> basecamp.cancel(CancelReason.LEADER, NOW);
         }

@@ -3,24 +3,35 @@
 <mapper namespace="com.moewadeul.community.infra.image.CommunityImageMapper">
 
     <select id="selectByPostId" resultType="com.moewadeul.community.infra.image.CommunityImageRow">
-        SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
+        SELECT id AS image_id, object_key
         FROM community_image
         WHERE post_id = #{postId}
         ORDER BY display_order
     </select>
 
-    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.community.infra.image.CommunityImageRow">
-        SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
-        FROM community_image
-        WHERE post_id IS NULL
-          AND created_at &lt; #{createdBefore}
-        ORDER BY id
-        LIMIT #{limit}
+    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedBefore">
+            <property name="table" value="community_image"/>
+            <property name="parentColumn" value="post_id"/>
+            <property name="thumbnailColumn" value="thumbnail_object_key"/>
+        </include>
     </select>
 
     <delete id="deleteIfUnattached">
-        DELETE FROM community_image
-        WHERE id = #{imageId}
-          AND post_id IS NULL
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.deleteIfUnattached">
+            <property name="table" value="community_image"/>
+            <property name="parentColumn" value="post_id"/>
+        </include>
     </delete>
+
+    <select id="lockMember" resultType="long">
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.lockMember"/>
+    </select>
+
+    <select id="selectUnattachedCreatedAtsAfter" resultType="java.time.Instant">
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.selectUnattachedCreatedAtsAfter">
+            <property name="table" value="community_image"/>
+            <property name="parentColumn" value="post_id"/>
+        </include>
+    </select>
 </mapper>
