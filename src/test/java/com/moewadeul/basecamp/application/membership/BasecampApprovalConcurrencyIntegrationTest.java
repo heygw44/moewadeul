@@ -1,6 +1,5 @@
 package com.moewadeul.basecamp.application.membership;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.application.lifecycle.BasecampTransitionService;
@@ -8,7 +7,7 @@ import com.moewadeul.basecamp.domain.BasecampErrorCode;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.ErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.common.testsupport.MemberFixture;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,13 +30,13 @@ class BasecampApprovalConcurrencyIntegrationTest {
     private static final String AT_DEFAULT_INSTANT = "2026-10-05 03:00:00";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private BasecampApprovalService basecampApprovalService;
 
     @Autowired
     private BasecampTransitionService basecampTransitionService;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -111,11 +110,11 @@ class BasecampApprovalConcurrencyIntegrationTest {
     void onlyOneOfTwoOverlappingApprovalsOfSameApplicantSucceeds() throws Exception {
         // given
         long applicantId = saveVerifiedMember();
-        long firstLeader = saveMember();
+        long firstLeader = memberFixture.save().getId();
         long firstBasecamp = saveBasecamp(firstLeader, 4);
         insertMember(firstBasecamp, firstLeader, "LEADER");
         long firstApplication = insertApplication(firstBasecamp, applicantId, "PENDING");
-        long secondLeader = saveMember();
+        long secondLeader = memberFixture.save().getId();
         long secondBasecamp = saveBasecamp(secondLeader, 4);
         insertMember(secondBasecamp, secondLeader, "LEADER");
         long secondApplication = insertApplication(secondBasecamp, applicantId, "PENDING");
@@ -198,12 +197,8 @@ class BasecampApprovalConcurrencyIntegrationTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM outbox_event WHERE event_type = ?", Integer.class, eventType);
     }
 
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
-    }
-
     private long saveVerifiedMember() {
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         jdbc.update(
                 "INSERT INTO identity_verification (member_id, birth_year, gender, ci_hash, provider, verified_at,"
                         + " created_at, updated_at) VALUES (?, 2007, 'MALE', ?, 'FAKE', ?, ?, ?)",
@@ -216,10 +211,10 @@ class BasecampApprovalConcurrencyIntegrationTest {
     }
 
     private Scenario saveScenario(int capacity, int pendingCount) {
-        long leaderId = saveMember();
+        long leaderId = memberFixture.save().getId();
         long basecampId = saveBasecamp(leaderId, capacity);
         insertMember(basecampId, leaderId, "LEADER");
-        long existingMemberId = saveMember();
+        long existingMemberId = memberFixture.save().getId();
         insertMember(basecampId, existingMemberId, "MEMBER");
         insertApplication(basecampId, existingMemberId, "APPROVED");
         List<Long> applicationIds = new ArrayList<>();

@@ -8,6 +8,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -36,6 +37,9 @@ class SpotReviewServiceIntegrationTest {
     private static final long MISSING_MEMBER_ID = 999_999_999L;
 
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 5);
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private SpotReviewCommandService commandService;
@@ -103,9 +107,9 @@ class SpotReviewServiceIntegrationTest {
     void averageIsRoundedToOneDecimal() {
         // given
         long spotId = saveSpot();
-        commandService.write(saveMember(), spotId, write(TODAY, 4, "좋다"));
-        commandService.write(saveMember(), spotId, write(TODAY, 4, "좋다"));
-        commandService.write(saveMember(), spotId, write(TODAY, 5, "좋다"));
+        commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 4, "좋다"));
+        commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 4, "좋다"));
+        commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 5, "좋다"));
 
         // when
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
@@ -120,11 +124,11 @@ class SpotReviewServiceIntegrationTest {
     void averageCountsOneVotePerMember() {
         // given
         long spotId = saveSpot();
-        long repeater = saveMember();
+        long repeater = memberFixture.save().getId();
         commandService.write(repeater, spotId, write(TODAY, 1, "별로"));
         commandService.write(repeater, spotId, write(TODAY.minusDays(1), 1, "별로"));
         commandService.write(repeater, spotId, write(TODAY.minusDays(2), 1, "별로"));
-        commandService.write(saveMember(), spotId, write(TODAY, 5, "좋다"));
+        commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 5, "좋다"));
 
         // when
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
@@ -139,10 +143,10 @@ class SpotReviewServiceIntegrationTest {
     void averageOfPerMemberAverages() {
         // given
         long spotId = saveSpot();
-        long twice = saveMember();
+        long twice = memberFixture.save().getId();
         commandService.write(twice, spotId, write(TODAY, 2, "보통"));
         commandService.write(twice, spotId, write(TODAY.minusDays(1), 4, "좋다"));
-        commandService.write(saveMember(), spotId, write(TODAY, 5, "좋다"));
+        commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 5, "좋다"));
 
         // when
         SpotDetail detail = spotDetailQueryService.findDetail(spotId);
@@ -157,8 +161,8 @@ class SpotReviewServiceIntegrationTest {
     void withdrawnAuthorsKeepSeparateVotes() {
         // given
         long spotId = saveSpot();
-        long first = saveMember();
-        long second = saveMember();
+        long first = memberFixture.save().getId();
+        long second = memberFixture.save().getId();
         commandService.write(first, spotId, write(TODAY, 1, "별로"));
         commandService.write(first, spotId, write(TODAY.minusDays(1), 3, "보통"));
         commandService.write(second, spotId, write(TODAY, 5, "좋다"));
@@ -178,7 +182,7 @@ class SpotReviewServiceIntegrationTest {
     void sameMemberSameSpotSameVisitedDateIsDuplicated() {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         commandService.write(memberId, spotId, write(TODAY, 4, "좋다"));
 
         // when, then
@@ -195,7 +199,7 @@ class SpotReviewServiceIntegrationTest {
     void visitedDateCannotBeAfterTodayInKorea() {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
 
         // when, then
         commandService.write(memberId, spotId, write(TODAY, 3, "오늘 다녀왔다"));
@@ -216,7 +220,7 @@ class SpotReviewServiceIntegrationTest {
     void invalidRatingIsRejected(int rating) {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
 
         // when, then
         assertThatThrownBy(() -> commandService.write(memberId, spotId, write(TODAY, rating, "좋다")))
@@ -231,7 +235,7 @@ class SpotReviewServiceIntegrationTest {
     void invalidContentIsRejected() {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
 
         // when, then
         assertThatThrownBy(() -> commandService.write(memberId, spotId, write(TODAY, 3, "   ")))
@@ -252,7 +256,7 @@ class SpotReviewServiceIntegrationTest {
         long spotId = saveSpot();
         long memberId = saveMember("새벽능선");
         long reviewId = commandService.write(memberId, spotId, write(TODAY.minusDays(2), 2, "별로였다"));
-        commandService.write(saveMember(), spotId, write(TODAY, 4, "좋다"));
+        commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 4, "좋다"));
         clock.advance(Duration.ofHours(1));
 
         // when
@@ -277,9 +281,9 @@ class SpotReviewServiceIntegrationTest {
     void deleteRemovesReviewFromAggregates() {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         long reviewId = commandService.write(memberId, spotId, write(TODAY, 1, "별로였다"));
-        commandService.write(saveMember(), spotId, write(TODAY, 5, "좋다"));
+        commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 5, "좋다"));
 
         // when
         commandService.delete(memberId, reviewId);
@@ -297,8 +301,8 @@ class SpotReviewServiceIntegrationTest {
     void otherMemberCannotReviseOrDelete() {
         // given
         long spotId = saveSpot();
-        long reviewId = commandService.write(saveMember(), spotId, write(TODAY, 4, "좋다"));
-        long other = saveMember();
+        long reviewId = commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 4, "좋다"));
+        long other = memberFixture.save().getId();
 
         // when, then
         assertThatThrownBy(() -> commandService.revise(other, reviewId, new SpotReviewReviseCommand(1, "나쁘다")))
@@ -318,7 +322,7 @@ class SpotReviewServiceIntegrationTest {
     @DisplayName("[F-10] 없는 후기를 고치거나 지우면 NOT_FOUND다")
     void missingReviewIsNotFound() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
 
         // when, then
         assertThatThrownBy(() -> commandService.revise(memberId, 999_999L, new SpotReviewReviseCommand(3, "좋다")))
@@ -337,7 +341,7 @@ class SpotReviewServiceIntegrationTest {
     void inactiveOrMissingSpotIsNotFound(String status) {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         jdbc.update("UPDATE spot SET status = ? WHERE id = ?", status, spotId);
 
         // when, then
@@ -360,7 +364,7 @@ class SpotReviewServiceIntegrationTest {
     void authorCanReviseAndDeleteAfterSpotIsHidden() {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         long reviewId = commandService.write(memberId, spotId, write(TODAY, 4, "좋다"));
         jdbc.update("UPDATE spot SET status = 'HIDDEN' WHERE id = ?", spotId);
 
@@ -378,10 +382,10 @@ class SpotReviewServiceIntegrationTest {
     void listIsNewestFirstWithPaging() {
         // given
         long spotId = saveSpot();
-        long first = commandService.write(saveMember(), spotId, write(TODAY, 1, "첫째"));
+        long first = commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 1, "첫째"));
         clock.advance(Duration.ofMinutes(1));
-        long second = commandService.write(saveMember(), spotId, write(TODAY, 2, "둘째"));
-        long third = commandService.write(saveMember(), spotId, write(TODAY, 3, "셋째, 둘째와 같은 시각"));
+        long second = commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 2, "둘째"));
+        long third = commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 3, "셋째, 둘째와 같은 시각"));
 
         // when
         PageSlice<SpotReviewItem> firstPage = queryService.list(spotId, 0, 2);
@@ -462,7 +466,7 @@ class SpotReviewServiceIntegrationTest {
 
     private long writeAt(long spotId, int rating, Duration advance) {
         clock.advance(advance);
-        return commandService.write(saveMember(), spotId, write(TODAY, rating, "평점 " + rating));
+        return commandService.write(memberFixture.save().getId(), spotId, write(TODAY, rating, "평점 " + rating));
     }
 
     private static List<Long> ids(PageSlice<SpotReviewItem> page) {
@@ -491,10 +495,6 @@ class SpotReviewServiceIntegrationTest {
                 ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT),
                 MutableClock.DEFAULT_INSTANT);
         return spotRepository.save(spot).getId();
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private long saveMember(String nickname) {

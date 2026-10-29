@@ -1,6 +1,5 @@
 package com.moewadeul.spot.application.bakji;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
@@ -10,9 +9,9 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.ErrorCode;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.application.ParkWarningTexts;
 import com.moewadeul.spot.application.SpotParkWarning;
 import com.moewadeul.spot.application.detail.SpotDetailQueryService;
@@ -49,13 +48,13 @@ class BakjiCommandServiceIntegrationTest {
                     + " 뫼와들은 제보된 정보를 보여 줄 뿐이고, 야영 중에 생긴 일에는 책임지지 않아요.";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private BakjiCommandService bakjiCommandService;
 
     @Autowired
     private SpotDetailQueryService spotDetailQueryService;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -67,7 +66,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07][SF-06] 박지를 제보하면 ACTIVE 박지와 제보자, 입력한 내용이 저장되고 경고 없는 안내 문구와 관할 기관 확인 안내를 돌려준다")
     void reportSavesBakjiWithReporter() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
 
         // when
         BakjiSubmission submission = bakjiCommandService.report(
@@ -100,7 +99,7 @@ class BakjiCommandServiceIntegrationTest {
         // given
         String areaName = TestSequence.unique("설악산");
         long areaId = insertProtectedArea(areaName, PARK_SQUARE);
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
 
         // when
         BakjiSubmission submission =
@@ -124,7 +123,7 @@ class BakjiCommandServiceIntegrationTest {
         // given
         double baseLat = 37.6;
         double baseLng = 128.7;
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long at49 = bakjiCommandService
                 .report(reporterId, namedReport("49m 박지", baseLat + 49 * DEGREES_PER_METER, baseLng))
                 .spotId();
@@ -151,7 +150,7 @@ class BakjiCommandServiceIntegrationTest {
         // given
         double baseLat = 37.6;
         double baseLng = 128.7;
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < 12; i++) {
             ids.add(bakjiCommandService
@@ -172,7 +171,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 기상청 격자 밖 좌표나 허용하지 않는 값으로 제보하면 INVALID_INPUT으로 거부하고 아무것도 저장하지 않는다")
     void reportRejectsInvalidInput() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         BakjiReportCommand outsideGrid = minimalReport(35.6762, 139.6503);
         BakjiReportCommand badGroundType = new BakjiReportCommand("이름", 37.6, 128.7, null, true, true, null, "MUD");
         BakjiReportCommand badSignalLevel = new BakjiReportCommand("이름", 37.6, 128.7, null, true, true, "STRONG", null);
@@ -196,7 +195,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 허용하지 않는 바닥 유형과 통신 상태의 오류 메시지는 올바른 조사로 허용 값을 알려 준다")
     void invalidEnumMessagesUseCorrectParticles() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
 
         // when & then
         assertThatThrownBy(() -> bakjiCommandService.report(
@@ -211,7 +210,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 제보자가 수정하면 보낸 필드만 바뀌고, null로 보낸 설명·통신 상태·바닥 유형은 지워지며, 안 보낸 필드는 그대로다")
     void reporterUpdatesOnlySentFields() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long spotId = bakjiCommandService
                 .report(
                         reporterId,
@@ -246,8 +245,8 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 다른 회원이 수정하거나 삭제하면 ACCESS_DENIED로 거부하고 박지는 그대로다")
     void otherMemberCannotUpdateOrDelete() {
         // given
-        long reporterId = saveMember();
-        long strangerId = saveMember();
+        long reporterId = memberFixture.save().getId();
+        long strangerId = memberFixture.save().getId();
         long spotId = bakjiCommandService
                 .report(reporterId, minimalReport(37.6, 128.7))
                 .spotId();
@@ -272,7 +271,7 @@ class BakjiCommandServiceIntegrationTest {
     void movingCoordinateRejudgesBoundaryOnlyWhenChanged() {
         // given
         insertProtectedArea(TestSequence.unique("경계"), PARK_SQUARE);
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         BakjiSubmission created =
                 bakjiCommandService.report(reporterId, minimalReport(INSIDE_PARK_LAT, INSIDE_PARK_LNG));
         long spotId = created.spotId();
@@ -318,7 +317,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 수정하면 중복 후보를 수정한 뒤의 좌표로 계산한다")
     void updateComputesDuplicatesAtNewLocation() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long neighbor = bakjiCommandService
                 .report(reporterId, namedReport("이웃", 36.5, 128.0))
                 .spotId();
@@ -343,7 +342,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 값이 규칙을 어기는 수정 요청은 INVALID_INPUT으로 거부하고 박지는 그대로다")
     void updateRejectsInvalidInput() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long spotId = bakjiCommandService
                 .report(reporterId, minimalReport(37.6, 128.7))
                 .spotId();
@@ -386,7 +385,7 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 제보자가 삭제하면 상태가 DELETED가 되어 장소 상세가 404가 되고, 다시 수정하거나 삭제해도 NOT_FOUND다")
     void deleteHidesBakji() {
         // given
-        long reporterId = saveMember();
+        long reporterId = memberFixture.save().getId();
         long spotId = bakjiCommandService
                 .report(reporterId, minimalReport(37.6, 128.7))
                 .spotId();
@@ -409,8 +408,8 @@ class BakjiCommandServiceIntegrationTest {
     @DisplayName("[F-07] 없는 장소, 공공데이터 장소, ACTIVE가 아닌 박지는 NOT_FOUND이고, 다른 회원의 비ACTIVE 박지도 403이 아니라 404다")
     void updateAndDeleteOfNonActiveBakjiAreNotFound() {
         // given
-        long reporterId = saveMember();
-        long strangerId = saveMember();
+        long reporterId = memberFixture.save().getId();
+        long strangerId = memberFixture.save().getId();
         long campsiteId = insertSpot("CAMPSITE", "ACTIVE", 37.6, 128.7);
         long hiddenId = bakjiCommandService
                 .report(reporterId, minimalReport(37.5, 128.6))
@@ -436,10 +435,6 @@ class BakjiCommandServiceIntegrationTest {
             ErrorCode code = e.getErrorCode();
             assertThat(code).isEqualTo(CommonErrorCode.NOT_FOUND);
         });
-    }
-
-    private long saveMember() {
-        return memberRepository.save(aMember().build()).getId();
     }
 
     private static BakjiReportCommand minimalReport(double lat, double lng) {

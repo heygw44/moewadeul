@@ -1,12 +1,11 @@
 package com.moewadeul.trust.application.identity;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,10 +28,10 @@ class IdentityVerificationConcurrencyIntegrationTest {
     private static final int THREADS = 10;
 
     @Autowired
-    private IdentityVerificationService service;
+    private MemberFixture memberFixture;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
+    private IdentityVerificationService service;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -41,7 +40,7 @@ class IdentityVerificationConcurrencyIntegrationTest {
     @DisplayName("[ID-01] 같은 회원이 동시에 본인확인을 10번 요청하면 1건만 저장되고 나머지는 IDENTITY_ALREADY_VERIFIED다")
     void sameMemberIsVerifiedOnce() throws Exception {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
 
         // when
         List<Throwable> failures = runConcurrently(
@@ -59,7 +58,7 @@ class IdentityVerificationConcurrencyIntegrationTest {
         // given
         List<Long> memberIds = new ArrayList<>();
         for (int i = 0; i < THREADS; i++) {
-            memberIds.add(saveMember());
+            memberIds.add(memberFixture.save().getId());
         }
 
         // when
@@ -80,11 +79,11 @@ class IdentityVerificationConcurrencyIntegrationTest {
         // given
         // 지운 행은 InnoDB가 정리하기 전까지 같은 키의 삭제 표시 레코드로 인덱스에 남는다.
         // 같은 키를 동시에 넣는 트랜잭션들은 이 레코드에 공유 잠금을 건 뒤 삽입 잠금을 기다려서 교착 상태가 생길 수 있다.
-        service.verify(saveMember(), new IdentityVerifyCommand(1995, Gender.MALE, "reused-person"));
+        service.verify(memberFixture.save().getId(), new IdentityVerifyCommand(1995, Gender.MALE, "reused-person"));
         jdbc.update("DELETE FROM identity_verification");
         List<Long> memberIds = new ArrayList<>();
         for (int i = 0; i < THREADS; i++) {
-            memberIds.add(saveMember());
+            memberIds.add(memberFixture.save().getId());
         }
 
         // when
@@ -105,10 +104,6 @@ class IdentityVerificationConcurrencyIntegrationTest {
                         .isInstanceOfSatisfying(
                                 BusinessException.class,
                                 e -> assertThat(e.getErrorCode()).isEqualTo(expectedCode)));
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private int rowCount() {

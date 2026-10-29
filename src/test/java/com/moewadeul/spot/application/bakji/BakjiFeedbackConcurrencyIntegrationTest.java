@@ -1,14 +1,13 @@
 package com.moewadeul.spot.application.bakji;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -45,13 +44,13 @@ class BakjiFeedbackConcurrencyIntegrationTest {
     private static final BakjiProblemReportCommand REPORT = new BakjiProblemReportCommand("CLOSED", "길이 막혔다");
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private BakjiFeedbackService bakjiFeedbackService;
 
     @Autowired
     private SpotJpaRepository spotRepository;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -65,7 +64,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
         // given
         long spotId = saveBakji();
         for (int i = 0; i < PENDING_REVIEW_REPORTS - 2; i++) {
-            bakjiFeedbackService.reportProblem(saveMember(), spotId, REPORT);
+            bakjiFeedbackService.reportProblem(memberFixture.save().getId(), spotId, REPORT);
         }
         List<Long> memberIds = saveMembers(2);
 
@@ -110,7 +109,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
     void sameMemberReportsOnlyOnce() throws Exception {
         // given
         long spotId = saveBakji();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
 
         // when
         List<Throwable> failures = runConcurrently(sameMember(memberId), id -> {
@@ -133,7 +132,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
     void sameMemberConfirmsOnlyOnce() throws Exception {
         // given
         long spotId = saveBakji();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
 
         // when
         List<Throwable> failures =
@@ -156,7 +155,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
     void reportGivesUpWaitingForLockedBakjiAfterAboutFiveSeconds() throws Exception {
         // given
         long spotId = saveBakji();
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         CountDownLatch locked = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         ExecutorService holder = Executors.newSingleThreadExecutor();
@@ -230,14 +229,10 @@ class BakjiFeedbackConcurrencyIntegrationTest {
         return spotRepository.save(spot).getId();
     }
 
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
-    }
-
     private List<Long> saveMembers(int count) {
         List<Long> ids = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            ids.add(saveMember());
+            ids.add(memberFixture.save().getId());
         }
         return ids;
     }

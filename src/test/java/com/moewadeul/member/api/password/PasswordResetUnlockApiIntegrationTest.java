@@ -1,11 +1,11 @@
 package com.moewadeul.member.api.password;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.mail.TestMailSender;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.password.PasswordResetMails;
@@ -15,7 +15,6 @@ import com.moewadeul.member.domain.password.PasswordResetPolicy;
 import com.moewadeul.member.domain.password.PasswordResetToken;
 import com.moewadeul.member.domain.password.PasswordResetTokenRepository;
 import com.moewadeul.member.domain.password.ResetToken;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -28,7 +27,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -45,19 +43,16 @@ class PasswordResetUnlockApiIntegrationTest {
     private static final String REQUEST_IP = "203.0.113.7";
 
     @Autowired
-    private MockMvcTester mvc;
+    private MemberFixture memberFixture;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
+    private MockMvcTester mvc;
 
     @Autowired
     private PasswordResetTokenRepository tokenRepository;
 
     @Autowired
     private PasswordResetRequestService requestService;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private OutboxPublisher publisher;
@@ -79,7 +74,7 @@ class PasswordResetUnlockApiIntegrationTest {
     @Test
     @DisplayName("[F-02][PW-06] 5번 실패해서 잠긴 회원이 재설정을 확인하면 바로 새 비밀번호로 로그인할 수 있다")
     void resetReleasesLockout() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         failLogin(member, 5);
         assertThat(login(member.getEmail(), OLD_PASSWORD)).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
         clock.advance(Duration.ofSeconds(1));
@@ -94,7 +89,7 @@ class PasswordResetUnlockApiIntegrationTest {
     @Test
     @DisplayName("[F-02][PW-06] 메일로 받은 토큰으로 재설정해도 잠금이 풀린다")
     void resetThroughMailReleasesLockout() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         failLogin(member, 5);
         clock.advance(Duration.ofSeconds(1));
         requestService.request(member.getEmail(), REQUEST_IP);
@@ -111,7 +106,7 @@ class PasswordResetUnlockApiIntegrationTest {
     @Test
     @DisplayName("[F-02][PW-06] 재설정해도 그 전의 로그인 실패 기록은 지워지지 않는다")
     void resetKeepsFailureRecords() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         failLogin(member, 5);
         clock.advance(Duration.ofSeconds(1));
 
@@ -127,7 +122,7 @@ class PasswordResetUnlockApiIntegrationTest {
     @Test
     @DisplayName("[F-02][PW-03][PW-06] 재설정한 뒤에는 실패를 처음부터 센다: 4번 실패까지는 로그인할 수 있고 5번째 실패 뒤에 잠긴다")
     void failuresAreCountedAgainAfterReset() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         failLogin(member, 5);
         clock.advance(Duration.ofSeconds(1));
         assertThat(confirm(issueToken(member), NEW_PASSWORD)).hasStatus(HttpStatus.NO_CONTENT);
@@ -146,8 +141,8 @@ class PasswordResetUnlockApiIntegrationTest {
     @Test
     @DisplayName("[F-02][PW-06] 한 회원이 재설정해도 다른 회원의 잠금은 그대로다")
     void resetDoesNotReleaseOtherMembers() {
-        Member member = saveMember();
-        Member other = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Member other = memberFixture.saveWithPassword(OLD_PASSWORD);
         failLogin(member, 5);
         failLogin(other, 5);
         clock.advance(Duration.ofSeconds(1));
@@ -165,9 +160,9 @@ class PasswordResetUnlockApiIntegrationTest {
     @Test
     @DisplayName("[F-02][PW-06] 재설정이 실패하면(잘못된 토큰·만료·비밀번호 규칙 위반) 잠금은 풀리지 않고 변경 시각도 비어 있다")
     void failedResetKeepsLockout() {
-        Member invalidMember = saveMember();
-        Member expiredMember = saveMember();
-        Member weakMember = saveMember();
+        Member invalidMember = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Member expiredMember = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Member weakMember = memberFixture.saveWithPassword(OLD_PASSWORD);
         String expiredToken = issueToken(expiredMember);
         clock.advance(PasswordResetPolicy.TOKEN_VALIDITY);
         failLogin(invalidMember, 5);
@@ -193,7 +188,7 @@ class PasswordResetUnlockApiIntegrationTest {
     @DisplayName("[F-02][PW-06] 가입하지 않은 이메일의 실패 기록과 잠금은 다른 회원의 재설정에 영향받지 않는다")
     void unknownEmailLockoutIsUnaffected() {
         String unknownEmail = TestSequence.email();
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         for (int i = 0; i < 5; i++) {
             assertThat(login(unknownEmail, WRONG_PASSWORD)).hasStatus(HttpStatus.UNAUTHORIZED);
         }
@@ -211,7 +206,7 @@ class PasswordResetUnlockApiIntegrationTest {
     @Test
     @DisplayName("[F-02][PW-03][PW-06] 재설정과 같은 시각의 실패는 재설정 전으로 세므로 잠금이 풀린다")
     void failuresAtTheSameInstantCountAsBeforeReset() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         failLogin(member, 5);
 
         MvcTestResult confirm = confirm(issueToken(member), NEW_PASSWORD);
@@ -225,21 +220,13 @@ class PasswordResetUnlockApiIntegrationTest {
     @Test
     @DisplayName("[F-02][PW-06] 재설정한 뒤 1초가 지나서 쌓인 실패는 센다")
     void failureOneSecondAfterResetIsCounted() {
-        Member member = saveMember();
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         assertThat(confirm(issueToken(member), NEW_PASSWORD)).hasStatus(HttpStatus.NO_CONTENT);
         clock.advance(Duration.ofSeconds(1));
 
         failLogin(member, 5);
 
         assertThat(login(member.getEmail(), NEW_PASSWORD)).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
-    }
-
-    private Member saveMember() {
-        return memberRepository.save(aMember()
-                .email(TestSequence.email())
-                .passwordHash(passwordEncoder.encode(OLD_PASSWORD))
-                .now(clock.instant())
-                .build());
     }
 
     private String issueToken(Member member) {

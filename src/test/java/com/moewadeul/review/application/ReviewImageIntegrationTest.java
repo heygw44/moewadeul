@@ -1,6 +1,5 @@
 package com.moewadeul.review.application;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -11,9 +10,9 @@ import com.moewadeul.common.image.application.ImageUpload;
 import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.review.domain.ReviewImage;
 import com.moewadeul.spot.application.detail.SpotDetail;
 import com.moewadeul.spot.application.detail.SpotDetailQueryService;
@@ -41,6 +40,9 @@ class ReviewImageIntegrationTest {
     private static final String UNUSABLE = "붙일 수 없는 이미지가 있어요.";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private ReviewImageUploadService uploadService;
 
     @Autowired
@@ -59,9 +61,6 @@ class ReviewImageIntegrationTest {
     private SpotJpaRepository spotRepository;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private TestImageStorage storage;
 
     @Autowired
@@ -75,7 +74,7 @@ class ReviewImageIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        memberId = saveMember();
+        memberId = memberFixture.save().getId();
         spotId = saveSpot();
     }
 
@@ -158,7 +157,7 @@ class ReviewImageIntegrationTest {
     @DisplayName("[F-24][RI-02] 이미지 4장, 같은 ID 두 번, 다른 회원의 이미지, 저장소에 없는 이미지, 빈 ID는 imageIds 오류로 거부하고 후기를 저장하지 않는다")
     void rejectsUnusableImages() {
         // given
-        long otherMember = saveMember();
+        long otherMember = memberFixture.save().getId();
         long others = uploaded(otherMember);
         long notUploaded = uploadService
                 .issue(memberId, new ImageUploadCommand("image/png", SIZE, null))
@@ -299,10 +298,6 @@ class ReviewImageIntegrationTest {
                 ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT),
                 MutableClock.DEFAULT_INSTANT);
         return spotRepository.save(spot).getId();
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private static void assertInvalid(ThrowingCallable action, String field, String reason) {

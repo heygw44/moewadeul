@@ -1,17 +1,16 @@
 package com.moewadeul.memory.api;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -27,7 +26,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -45,16 +43,13 @@ class MemoryApiIntegrationTest {
     private static final String YESTERDAY = "2026-10-04";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
     private SpotJpaRepository spotRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailVerificationIssuer emailVerificationIssuer;
@@ -69,7 +64,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-01][MM-02] 인증 회원이 기록을 쓰면 201이고 비공개로 저장되며, 작성자는 상세에서 정확한 좌표와 글을 본다")
     void writeAndReadOwnMemory() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult created = send(mvc.post().uri("/api/memories"), session, """
@@ -99,7 +94,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][NFR-03] 사진이 붙은 기록을 같은 Idempotency-Key로 두 번 보내면 기록은 하나만 만들고, 두 번째에도 처음 memoryId를 응답한다")
     void sameKeyCreatesOneMemoryEvenWithPhotos() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int imageId = uploadedImage(session);
         String key = UUID.randomUUID().toString();
         String body = publicBodyWithImages(YESTERDAY, imageId);
@@ -120,8 +115,8 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-07] 남의 비공개 기록은 회원과 비회원 모두 404이고, 공개로 바꾸면 200이지만 좌표 필드는 없다")
     void privateMemoryIsHiddenAndPublicMemoryHasNoCoordinates() {
         // given
-        Cookie owner = verifiedSession(saveMember());
-        Cookie other = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie other = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int memoryId = idOf(send(mvc.post().uri("/api/memories"), owner, body(YESTERDAY, 1)), "$.memoryId");
 
         // when
@@ -155,8 +150,8 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-06] 남의 기록을 고치거나 지우면 403이고, 없는 기록이면 404이며, 기록은 그대로 남는다")
     void othersCannotReviseOrDelete() {
         // given
-        Cookie owner = verifiedSession(saveMember());
-        Cookie other = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie other = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int memoryId = idOf(send(mvc.post().uri("/api/memories"), owner, body(YESTERDAY, 1)), "$.memoryId");
 
         // when
@@ -177,7 +172,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-04] 작성자가 지우면 204이고, 다시 조회하면 404다")
     void ownerDeletesMemory() {
         // given
-        Cookie owner = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int memoryId = idOf(send(mvc.post().uri("/api/memories"), owner, body(YESTERDAY, 1)), "$.memoryId");
 
         // when
@@ -194,7 +189,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][TR-03] 로그인하지 않으면 쓰기와 내 기록이 401이고, 이메일 인증 전 회원은 쓰기·사진 발급이 403이며 내 기록은 볼 수 있다")
     void authorizationLevels() {
         // given
-        Cookie unverified = login(saveMember());
+        Cookie unverified = login(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult anonymous = mvc.post()
@@ -227,7 +222,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-02] 내일 방문일, 31박, 2,001자 글, 공백뿐인 글, 범위 밖 위도, 모르는 공개 범위는 400 INVALID_INPUT이다")
     void rejectsInvalidInput() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         String longContent = "가".repeat(2001);
 
         // when, then
@@ -258,7 +253,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-03] 지도에 보이는 장소를 연결하면 상세에 장소 이름이 나오고, 숨긴 장소는 400 INVALID_INPUT이다")
     void linksOnlyActiveSpot() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long active = saveSpot();
         long hidden = saveSpot();
         jdbc.update("UPDATE spot SET status = 'HIDDEN' WHERE id = ?", hidden);
@@ -286,7 +281,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-04] 수정에서 content를 null로 보내면 글을 지우고, 위도만 보내거나 공개 범위를 null로 보내면 400이다")
     void patchSemantics() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int memoryId = idOf(send(mvc.post().uri("/api/memories"), session, body(YESTERDAY, 1)), "$.memoryId");
 
         // when
@@ -314,7 +309,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-05] 사진 URL을 받아 올린 뒤 기록에 붙이면 상세와 내 기록 목록에 순서대로 보인다")
     void attachesUploadedImages() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int first = uploadedImage(session);
         int second = uploadedImage(session);
 
@@ -347,7 +342,7 @@ class MemoryApiIntegrationTest {
             "[F-33][MM-05] 썸네일 크기를 보내면 _thumb.jpg 키의 썸네일 업로드 URL을 더 주고, 보내지 않으면 thumbnailUpload 필드가 없으며, 256KB를 넘으면 400이다")
     void issuesThumbnailUploadOnlyWhenRequested() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult withThumbnail = send(
@@ -394,7 +389,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-05] 썸네일 URL도 받은 사진은 썸네일을 올리지 않으면 붙일 수 없고, 둘 다 올리면 붙인다")
     void attachRequiresUploadedThumbnail() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int missingThumbnail = issuedWithThumbnail(session);
         storage.markUploaded(keyOf(missingThumbnail), IMAGE_SIZE);
         int complete = uploadedImageWithThumbnail(session);
@@ -421,7 +416,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-05][MM-08] 목록과 피드의 thumbnailUrl은 첫 사진에 썸네일이 있으면 썸네일 키를, 없으면 원본 키를 서명하고, 상세는 원본을 준다")
     void listsSignThumbnailKeyWithOriginalFallback() {
         // given
-        Cookie session = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int withThumbnail = uploadedImageWithThumbnail(session);
         int plain = uploadedImage(session);
         int plainFirst = uploadedImage(session);
@@ -459,8 +454,8 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-05] 다른 회원이 올린 사진을 붙이면 400 INVALID_INPUT(imageIds)이고 기록은 저장하지 않는다")
     void rejectsOthersImage() {
         // given
-        Cookie owner = verifiedSession(saveMember());
-        Cookie other = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie other = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int othersImage = uploadedImage(other);
 
         // when
@@ -482,7 +477,7 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33][MM-05] imageIds에 null이 들어 있으면 500이 아니라 400 INVALID_INPUT이고 기록은 저장하지 않는다")
     void rejectsNullImageId() {
         // given
-        Cookie owner = verifiedSession(saveMember());
+        Cookie owner = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult result = send(
@@ -502,8 +497,8 @@ class MemoryApiIntegrationTest {
     @DisplayName("[F-33] 내 기록 목록은 공개·비공개 기록을 모두 정확한 좌표와 함께 방문일이 늦은 순서로 주고, 남의 기록은 넣지 않는다")
     void listsOwnMemoriesNewestVisitFirst() {
         // given
-        Cookie session = verifiedSession(saveMember());
-        Cookie other = verifiedSession(saveMember());
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        Cookie other = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         int older = idOf(send(mvc.post().uri("/api/memories"), session, body("2026-09-01", 2)), "$.memoryId");
         int newer = idOf(
                 send(
@@ -629,11 +624,6 @@ class MemoryApiIntegrationTest {
                 ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT),
                 MutableClock.DEFAULT_INSTANT);
         return spotRepository.save(spot).getId();
-    }
-
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(
-                aMember().passwordHash(passwordEncoder.encode(VALID_PASSWORD)).build());
     }
 
     private Cookie login(Member member) {

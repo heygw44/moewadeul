@@ -1,16 +1,15 @@
 package com.moewadeul.memory.api.report;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
@@ -22,7 +21,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -36,13 +34,10 @@ class MemoryReportApiIntegrationTest {
     private static final String YESTERDAY = "2026-10-04";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MockMvcTester mvc;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailVerificationIssuer emailVerificationIssuer;
@@ -57,8 +52,8 @@ class MemoryReportApiIntegrationTest {
     @DisplayName("[F-33][MM-10] 같은 회원이 같은 기록을 두 번 신고하면 처음은 201, 두 번째는 409 MEMORY_ALREADY_REPORTED이고 신고는 한 건만 남는다")
     void duplicateReportIsConflict() {
         // given
-        long memoryId = writePublic(verifiedSession(saveMember()));
-        Cookie reporter = verifiedSession(saveMember());
+        long memoryId = writePublic(verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)));
+        Cookie reporter = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult first = report(memoryId, reporter, "{\"reason\":\"SPAM\",\"content\":\"광고 사진입니다\"}");
@@ -76,11 +71,11 @@ class MemoryReportApiIntegrationTest {
     @DisplayName("[F-33][MM-10] 다섯 번째 신고로 검토 대기가 되면 남에게는 상세·좋아요가 404이고 공개 피드와 회원 추억지도에서 빠진다")
     void fifthReportHidesMemoryFromOthers() {
         // given
-        Member author = saveMember();
+        Member author = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie authorSession = verifiedSession(author);
         long memoryId = writePublic(authorSession);
         insertReviewPendingReports(memoryId, 4);
-        Cookie viewer = verifiedSession(saveMember());
+        Cookie viewer = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult fifth = report(memoryId, viewer, "{\"reason\":\"PRIVACY\"}");
@@ -109,10 +104,10 @@ class MemoryReportApiIntegrationTest {
     @DisplayName("[F-33][MM-10] 작성자는 검토 대기인 자기 기록을 상세와 내 기록 목록에서 상태와 함께 보고, 공개 범위를 바꿔도 상태는 그대로다")
     void authorStillSeesPendingMemoryWithStatus() {
         // given
-        Cookie authorSession = verifiedSession(saveMember());
+        Cookie authorSession = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = writePublic(authorSession);
         insertReviewPendingReports(memoryId, 4);
-        report(memoryId, verifiedSession(saveMember()), "{\"reason\":\"SPAM\"}");
+        report(memoryId, verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)), "{\"reason\":\"SPAM\"}");
 
         // when
         MvcTestResult detail =
@@ -147,7 +142,7 @@ class MemoryReportApiIntegrationTest {
     @DisplayName("[F-33][MM-10] 정상 공개 기록의 상세는 작성자에게만 status를 주고, 다른 사람의 응답에는 status 필드가 없다")
     void statusIsOnlyForAuthor() {
         // given
-        Cookie authorSession = verifiedSession(saveMember());
+        Cookie authorSession = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = writePublic(authorSession);
 
         // when
@@ -165,11 +160,11 @@ class MemoryReportApiIntegrationTest {
     @DisplayName("[F-33][MM-10] 비공개 기록, 숨긴 기록, 없는 기록을 신고하면 404이고 신고가 남지 않는다")
     void reportingInvisibleMemoryIsNotFound() {
         // given
-        Cookie authorSession = verifiedSession(saveMember());
+        Cookie authorSession = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long privateId = writeMemory(authorSession, "PRIVATE");
         long hiddenId = writePublic(authorSession);
         jdbc.update("UPDATE memory SET status = 'HIDDEN' WHERE id = ?", hiddenId);
-        Cookie reporter = verifiedSession(saveMember());
+        Cookie reporter = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
 
         // when
         MvcTestResult privateReport = report(privateId, reporter, "{\"reason\":\"SPAM\"}");
@@ -189,11 +184,13 @@ class MemoryReportApiIntegrationTest {
     @DisplayName("[F-33][MM-10] 모르는 사유는 400 INVALID_INPUT, 이메일 인증 전이면 403, 로그인하지 않으면 401이다")
     void rejectsInvalidReasonAndUnverifiedMember() {
         // given
-        long memoryId = writePublic(verifiedSession(saveMember()));
+        long memoryId = writePublic(verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)));
 
         // when
-        MvcTestResult unknownReason = report(memoryId, verifiedSession(saveMember()), "{\"reason\":\"UNKNOWN\"}");
-        MvcTestResult unverified = report(memoryId, login(saveMember()), "{\"reason\":\"SPAM\"}");
+        MvcTestResult unknownReason = report(
+                memoryId, verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)), "{\"reason\":\"UNKNOWN\"}");
+        MvcTestResult unverified =
+                report(memoryId, login(memberFixture.saveWithPassword(VALID_PASSWORD)), "{\"reason\":\"SPAM\"}");
         MvcTestResult anonymous = mvc.post()
                 .uri("/api/memories/" + memoryId + "/reports")
                 .with(csrf())
@@ -214,9 +211,9 @@ class MemoryReportApiIntegrationTest {
     @DisplayName("[F-33][MM-10] 작성자가 기록을 지우면 그 기록의 신고도 함께 지워진다")
     void deletingMemoryRemovesReports() {
         // given
-        Cookie authorSession = verifiedSession(saveMember());
+        Cookie authorSession = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
         long memoryId = writePublic(authorSession);
-        report(memoryId, verifiedSession(saveMember()), "{\"reason\":\"SPAM\"}");
+        report(memoryId, verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)), "{\"reason\":\"SPAM\"}");
         assertThat(reportRows(memoryId)).isEqualTo(1);
 
         // when
@@ -242,7 +239,7 @@ class MemoryReportApiIntegrationTest {
                     "INSERT INTO memory_report (memory_id, reporter_id, reason, content, reviewed_at, created_at)"
                             + " VALUES (?, ?, 'SPAM', NULL, NULL, ?)",
                     memoryId,
-                    saveMember().getId(),
+                    memberFixture.saveWithPassword(VALID_PASSWORD).getId(),
                     Timestamp.from(clock.instant()));
         }
     }
@@ -281,11 +278,6 @@ class MemoryReportApiIntegrationTest {
                 .cookie(session)
                 .header("Idempotency-Key", UUID.randomUUID().toString())
                 .exchange();
-    }
-
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(
-                aMember().passwordHash(passwordEncoder.encode(VALID_PASSWORD)).build());
     }
 
     private Cookie login(Member member) {

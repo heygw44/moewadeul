@@ -1,6 +1,5 @@
 package com.moewadeul.trip.application;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -8,8 +7,8 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.ErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -30,6 +29,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class SoloTripServiceIntegrationTest {
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private SoloTripCommandService commandService;
 
     @Autowired
@@ -37,9 +39,6 @@ class SoloTripServiceIntegrationTest {
 
     @Autowired
     private SpotJpaRepository spotRepository;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -51,7 +50,7 @@ class SoloTripServiceIntegrationTest {
     @DisplayName("[F-23][ST-01] 일정을 등록하면 행이 저장되고 내 일정 목록에 장소 이름과 함께 보인다")
     void registeredTripAppearsInMyList() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         long spotId = saveSpot("능선 끝 평지", false);
 
         // when
@@ -72,7 +71,7 @@ class SoloTripServiceIntegrationTest {
     @DisplayName("[F-23][ST-04] 공원 경계 경고 박지에도 일정을 등록할 수 있다")
     void registersOnWarningBakji() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         long spotId = saveSpot("공원 안 박지", true);
 
         // when
@@ -88,7 +87,7 @@ class SoloTripServiceIntegrationTest {
     @DisplayName("[F-23][ST-04] 숨김·검토 대기·삭제된 장소에는 NOT_FOUND로 거부한다")
     void rejectsInactiveSpot(String status) {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         long spotId = saveSpot("능선 끝 평지", false);
         jdbc.update("UPDATE spot SET status = ? WHERE id = ?", status, spotId);
 
@@ -103,7 +102,7 @@ class SoloTripServiceIntegrationTest {
     @DisplayName("[F-23][ST-03] 진행 예정 일정이 3개면 4번째는 SOLO_TRIP_LIMIT이고, 종료일이 지난 일정은 세지 않는다")
     void limitCountsOnlyUpcomingTrips() {
         // given
-        long memberId = saveMember();
+        long memberId = memberFixture.save().getId();
         long spotId = saveSpot("능선 끝 평지", false);
         commandService.register(memberId, command(spotId, "2026-10-06", "2026-10-07"));
         commandService.register(memberId, command(spotId, "2026-10-10", "2026-10-11"));
@@ -127,8 +126,8 @@ class SoloTripServiceIntegrationTest {
     @DisplayName("[F-23][ST-03] 내 다른 일정과 밤이 겹치면 SOLO_TRIP_OVERLAP이고, 다른 회원의 일정과는 겹쳐도 된다")
     void overlapIsCheckedPerMember() {
         // given
-        long memberId = saveMember();
-        long otherId = saveMember();
+        long memberId = memberFixture.save().getId();
+        long otherId = memberFixture.save().getId();
         long spotId = saveSpot("능선 끝 평지", false);
         commandService.register(memberId, command(spotId, "2026-11-07", "2026-11-09"));
 
@@ -146,8 +145,8 @@ class SoloTripServiceIntegrationTest {
     @DisplayName("[F-23][ST-05] 내 일정 목록은 출발일 순서이고, 끝난 일정·다른 회원의 일정·숨긴 장소의 일정 구분 없이 내 진행 예정 일정만 준다")
     void myListIsOrderedAndOnlyMine() {
         // given
-        long memberId = saveMember();
-        long otherId = saveMember();
+        long memberId = memberFixture.save().getId();
+        long otherId = memberFixture.save().getId();
         long spotId = saveSpot("능선 끝 평지", false);
         long hiddenSpotId = saveSpot("숨긴 박지", false);
         long past = commandService.register(memberId, command(spotId, "2026-10-06", "2026-10-07"));
@@ -169,8 +168,8 @@ class SoloTripServiceIntegrationTest {
     @DisplayName("[F-23][ST-05] 등록한 회원은 일정을 지우고, 다른 회원은 ACCESS_DENIED, 없는 일정은 NOT_FOUND다")
     void deleteChecksOwner() {
         // given
-        long memberId = saveMember();
-        long otherId = saveMember();
+        long memberId = memberFixture.save().getId();
+        long otherId = memberFixture.save().getId();
         long spotId = saveSpot("능선 끝 평지", false);
         long tripId = commandService.register(memberId, command(spotId, "2026-11-07", "2026-11-08"));
 
@@ -201,10 +200,6 @@ class SoloTripServiceIntegrationTest {
                         + " ST_GeomFromText('MULTIPOLYGON(((128 37, 129 37, 129 38, 128 38, 128 37)))', 4326,"
                         + " 'axis-order=long-lat'), NOW(6), NOW(6))");
         return jdbc.queryForObject("SELECT MAX(id) FROM protected_area", Long.class);
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private int tripCount(long memberId) {

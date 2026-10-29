@@ -1,10 +1,9 @@
 package com.moewadeul.community.application.post;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
-import com.moewadeul.member.infra.MemberJpaRepository;
+import com.moewadeul.common.testsupport.MemberFixture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -28,13 +27,13 @@ class CommunityPostViewCountConcurrencyIntegrationTest {
     private static final int OPENS_PER_VIEWER = 3;
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private CommunityPostQueryService queryService;
 
     @Autowired
     private CommunityPostCommandService postCommandService;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private CommunityViewCountFlusher viewCountFlusher;
@@ -46,11 +45,11 @@ class CommunityPostViewCountConcurrencyIntegrationTest {
     @DisplayName("[F-29][CM-11] 회원 15명과 비회원 5명이 같은 글의 상세를 동시에 3번씩 열면 조회수는 정확히 60이다")
     void concurrentViewsAreAllCounted() throws Exception {
         // given
-        long authorId = saveMember();
+        long authorId = memberFixture.save().getId();
         long postId = postCommandService.write(authorId, new CommunityPostWriteCommand("제목", "본문", null));
         List<Long> viewerIds = new ArrayList<>();
         for (int i = 0; i < MEMBERS; i++) {
-            viewerIds.add(saveMember());
+            viewerIds.add(memberFixture.save().getId());
         }
         for (int i = 0; i < ANONYMOUS_VIEWS; i++) {
             viewerIds.add(null);
@@ -73,7 +72,7 @@ class CommunityPostViewCountConcurrencyIntegrationTest {
     @DisplayName("[F-29][CM-11] DB에 더하기 전에는 상세 응답에 아직 더하지 않은 조회가 보이고, 더하는 사이 숨겨진 글에는 더하지 않는다")
     void pendingViewsAppearInDetailAndHiddenPostIsNotUpdated() {
         // given
-        long authorId = saveMember();
+        long authorId = memberFixture.save().getId();
         long postId = postCommandService.write(authorId, new CommunityPostWriteCommand("제목", "본문", null));
         queryService.detail(postId, null);
 
@@ -85,10 +84,6 @@ class CommunityPostViewCountConcurrencyIntegrationTest {
         // then
         assertThat(secondView).isEqualTo(2);
         assertThat(viewCount(postId)).isZero();
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private int viewCount(long postId) {

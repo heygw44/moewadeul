@@ -2,7 +2,6 @@ package com.moewadeul.basecamp.infra;
 
 import static com.moewadeul.basecamp.domain.BasecampBuilder.NOW;
 import static com.moewadeul.basecamp.domain.BasecampBuilder.details;
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.domain.Basecamp;
@@ -16,9 +15,9 @@ import com.moewadeul.common.profile.AgeGroup;
 import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
@@ -36,10 +35,10 @@ class BasecampJpaRepositoryIntegrationTest {
     private static final LocalDate START_DATE = LocalDate.of(2026, 10, 20);
 
     @Autowired
-    private BasecampJpaRepository basecampRepository;
+    private MemberFixture memberFixture;
 
     @Autowired
-    private MemberJpaRepository memberRepository;
+    private BasecampJpaRepository basecampRepository;
 
     @Autowired
     private SpotJpaRepository spotRepository;
@@ -54,7 +53,7 @@ class BasecampJpaRepositoryIntegrationTest {
     @DisplayName("[F-12] 저장한 베이스캠프를 다시 읽으면 캠프 리더 멤버 행과 합류 조건이 그대로 매핑된다")
     void savedBasecampIsReadBackWithMembersAndJoinCondition() {
         // given
-        Member leader = saveMember();
+        Member leader = memberFixture.save();
         long spotId = saveSpot();
         JoinCondition condition = JoinCondition.none()
                 .withMinTrustLevel(TrustLevel.TRUSTED)
@@ -93,8 +92,8 @@ class BasecampJpaRepositoryIntegrationTest {
     @DisplayName("[F-12][BC-01] 개수는 지정한 회원의 베이스캠프 중 지정한 상태만 센다")
     void countsOnlyGivenLeaderAndStatuses() {
         // given
-        Member leader = saveMember();
-        Member other = saveMember();
+        Member leader = memberFixture.save();
+        Member other = memberFixture.save();
         long spotId = saveSpot();
         insert(leader, spotId, "RECRUITING");
         insert(leader, spotId, "CLOSED");
@@ -118,10 +117,6 @@ class BasecampJpaRepositoryIntegrationTest {
                 leader.getId(),
                 spotId,
                 status);
-    }
-
-    private Member saveMember() {
-        return memberRepository.saveAndFlush(aMember().build());
     }
 
     private long saveSpot() {

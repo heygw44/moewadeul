@@ -1,6 +1,5 @@
 package com.moewadeul.memory.application.image;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -12,9 +11,9 @@ import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
-import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.memory.application.MemoryCommandService;
 import com.moewadeul.memory.application.MemoryReviseCommand;
 import com.moewadeul.memory.application.MemoryView;
@@ -43,6 +42,9 @@ class MemoryImageIntegrationTest {
     private static final String THUMBNAIL_SIZE_REASON = "썸네일 크기는 1바이트 이상 256KB 이하여야 해요.";
 
     @Autowired
+    private MemberFixture memberFixture;
+
+    @Autowired
     private MemoryImageUploadService uploadService;
 
     @Autowired
@@ -50,9 +52,6 @@ class MemoryImageIntegrationTest {
 
     @Autowired
     private MemoryImageCleanupService cleanupService;
-
-    @Autowired
-    private MemberJpaRepository memberRepository;
 
     @Autowired
     private TestImageStorage storage;
@@ -67,7 +66,7 @@ class MemoryImageIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        memberId = saveMember();
+        memberId = memberFixture.save().getId();
     }
 
     @Test
@@ -184,7 +183,7 @@ class MemoryImageIntegrationTest {
         List<Long> attached = uploadedImages(MemoryImage.MAX_PER_MEMORY);
         uploadedImages(MemoryImage.KIND.maxUnattachedPerMember() - MemoryImage.MAX_PER_MEMORY);
         commandService.write(memberId, write(attached));
-        long otherMemberId = saveMember();
+        long otherMemberId = memberFixture.save().getId();
         for (int i = 0; i < MemoryImage.KIND.maxUnattachedPerMember(); i++) {
             uploadService.issue(otherMemberId, command("image/jpeg", SIZE));
         }
@@ -228,7 +227,7 @@ class MemoryImageIntegrationTest {
     @DisplayName("[F-33][MM-05] 다른 회원의 사진과 빈 사진 ID는 붙일 수 없는 사진으로 거부하고, 수정에서 imageIds를 null로 보내면 빈 배열을 보내라고 안내한다")
     void reviseRejectsOthersImagesAndNullIds() {
         // given
-        long others = uploaded(saveMember());
+        long others = uploaded(memberFixture.save().getId());
         long mine = uploaded(memberId);
         long memoryId = commandService.write(memberId, write(List.of()));
 
@@ -420,10 +419,6 @@ class MemoryImageIntegrationTest {
 
     private int imageRowCount() {
         return jdbc.queryForObject("SELECT COUNT(*) FROM memory_image", Integer.class);
-    }
-
-    private long saveMember() {
-        return memberRepository.saveAndFlush(aMember().build()).getId();
     }
 
     private static void assertInvalid(ThrowingCallable action, String field, String reason) {
