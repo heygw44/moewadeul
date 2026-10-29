@@ -3,7 +3,7 @@ import { ApiError } from '../../api/client';
 import type { GroundType, SignalLevel } from '../../api/types';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import type { LatLng } from '../../map/types';
-import { GROUND_TYPE_LABELS } from './spotLabels';
+import { GROUND_TYPE_LABELS } from '../../lib/spotLabels';
 
 export type YesNo = 'YES' | 'NO';
 export type Unknown = 'UNKNOWN';

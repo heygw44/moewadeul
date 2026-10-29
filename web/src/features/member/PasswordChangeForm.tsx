@@ -13,7 +13,7 @@ import {
   PASSWORD_CONFIRM_MISMATCH,
   PASSWORD_CONFIRM_REQUIRED,
 } from './requiredMessages';
-import { useRetryCountdown } from './useRetryCountdown';
+import { useRetryCountdown } from '../../components/useRetryCountdown';
 
 type ChangeField = 'currentPassword' | 'newPassword' | 'newPasswordConfirm';
 type FormErrors = Partial<Record<ChangeField, string>>;

@@ -2,7 +2,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useLocation } from '../../app/router';
+import { useLocation } from '../router';
 import { useRequireAuth } from './useRequireAuth';
 
 const session = vi.hoisted(() => ({ current: { status: 'loading', me: null } as { status: string; me: unknown } }));

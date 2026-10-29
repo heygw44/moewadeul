@@ -12,7 +12,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatLocalDate } from '../../lib/datetime';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
-import { useViewerEpoch } from '../member/useViewerEpoch';
+import { useViewerEpoch } from '../../app/session/useViewerEpoch';
 import { usePagedList } from '../../components/usePagedList';
 
 const FEED_PAGE_SIZE = 24;

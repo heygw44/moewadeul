@@ -14,9 +14,9 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { MemberBoard, MEMBER_BOARD_LINK_CLASS } from './MemberBoard';
 import { AGE_GROUP_LABELS, companionTagLabel, GENDER_LABELS } from './memberLabels';
-import { withNext } from './nextPath';
-import { useSession } from './session';
-import { useViewerEpoch } from './useViewerEpoch';
+import { withNext } from '../../app/session/nextPath';
+import { useSession } from '../../app/session/session';
+import { useViewerEpoch } from '../../app/session/useViewerEpoch';
 
 type ProfileResult =
   { memberId: number; attempt: number; profile: MemberProfile } | { memberId: number; attempt: number; error: unknown };

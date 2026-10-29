@@ -1,9 +1,10 @@
+import { onSignedOut } from '../../app/session/signedOut';
 import type { LatLng } from '../../map/types';
 import { NO_BASECAMP_FILTERS } from '../basecamp/basecampFilters';
 import type { BasecampFilters } from '../basecamp/basecampFilters';
 import type { AiSummary } from './AiInterpretSummary';
-import { NO_SPOT_FILTERS } from './spotFilters';
-import type { SpotFilters } from './spotFilters';
+import { NO_SPOT_FILTERS } from '../spot/spotFilters';
+import type { SpotFilters } from '../spot/spotFilters';
 
 export type RadiusSearch = { center: LatLng; radiusKm: number; label: string };
 
@@ -36,3 +37,5 @@ export function rememberMapScreen(patch: Partial<MapScreenMemory>): void {
 export function forgetMapScreen(): void {
   memory = EMPTY;
 }
+
+onSignedOut(forgetMapScreen);

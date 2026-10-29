@@ -20,9 +20,9 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { restorableImages, useImageUploads } from '../../components/useImageUploads';
 import type { UploadImageItem } from '../../components/useImageUploads';
-import { useDraftCapture, useRestoredDraft } from '../member/formDraft';
-import { useSession } from '../member/session';
-import { useRequireAuth } from '../member/useRequireAuth';
+import { useDraftCapture, useRestoredDraft } from '../../app/session/formDraft';
+import { useSession } from '../../app/session/session';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { parseSpotId } from './communityLabels';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 

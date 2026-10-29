@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link, useLocation } from '../../app/router';
+import { Link, useLocation } from '../router';
 import { Button } from '../../components/Button';
 import { buttonClassName } from '../../components/buttonClass';
 import type { ButtonVariant } from '../../components/buttonClass';

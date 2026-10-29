@@ -4,7 +4,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { PasswordChangeForm } from './PasswordChangeForm';
 import { SelfReportForm } from './SelfReportForm';
-import { useRequireAuth } from './useRequireAuth';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { WithdrawalSection } from './WithdrawalSection';
 
 const TITLE = '계정 설정';

@@ -3,8 +3,8 @@ import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
 import { Dialog } from '../../components/Dialog';
 import { ToggleChip } from '../../components/ToggleChip';
-import { SPOT_SETTING_LABELS, SPOT_TYPE_META } from './spotLabels';
-import { NO_SPOT_FILTERS, SPOT_SETTING_ORDER, SPOT_TYPE_ORDER } from './spotFilters';
+import { SPOT_SETTING_LABELS, SPOT_TYPE_META, SPOT_TYPE_ORDER } from '../../lib/spotLabels';
+import { NO_SPOT_FILTERS, SPOT_SETTING_ORDER } from './spotFilters';
 import type { SpotFilters } from './spotFilters';
 
 type SpotFilterDialogProps = {

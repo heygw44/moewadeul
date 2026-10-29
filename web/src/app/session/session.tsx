@@ -3,10 +3,10 @@ import type { ReactNode } from 'react';
 import { logout as logoutRequest, fetchMe } from '../../api/auth';
 import { setUnauthorizedHandler } from '../../api/client';
 import type { Me } from '../../api/types';
-import { navigate } from '../../app/router';
-import { forgetMapScreen } from '../spot/mapScreenMemory';
+import { navigate } from '../router';
 import { fetchMeWithRetry } from './fetchMeWithRetry';
 import { forgetFormDraft, keepFormDraft } from './formDraft';
+import { notifySignedOut } from './signedOut';
 import { SessionUnavailable } from './SessionUnavailable';
 
 type SessionStatus = 'loading' | 'anonymous' | 'authenticated';
@@ -58,7 +58,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler(() => {
       keepFormDraft();
       setState(ANONYMOUS);
-      forgetMapScreen();
+      notifySignedOut();
       const { pathname, search } = window.location;
       if (pathname === '/login' || pathname === '/signup') return;
       navigate(`/login?next=${encodeURIComponent(pathname + search)}`, { replace: true });
@@ -69,14 +69,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     const me = await fetchMe();
     setState(me ? { status: 'authenticated', me } : ANONYMOUS);
-    if (!me) forgetMapScreen();
+    if (!me) notifySignedOut();
     return me;
   }, []);
 
   const logout = useCallback(async () => {
     await logoutRequest().catch(() => undefined);
     setState(ANONYMOUS);
-    forgetMapScreen();
+    notifySignedOut();
     forgetFormDraft();
     navigate('/');
   }, []);

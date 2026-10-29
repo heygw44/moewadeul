@@ -7,7 +7,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { MetaLine, StatusText } from '../../components/StatusText';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatLocalDate } from '../../lib/datetime';
-import { useSession } from '../member/session';
+import { useSession } from '../../app/session/session';
 import {
   BASECAMP_STATUS_META,
   headcountText,

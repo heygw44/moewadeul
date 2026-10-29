@@ -9,9 +9,9 @@ import { TextField } from '../../components/TextField';
 import type { LatLng } from '../../map/types';
 import { PRIMARY_LINK_CLASS } from './bakjiFormModel';
 import type { BakjiFormValues, FieldErrors, GroundChoice, Unknown, YesNo } from './bakjiFormModel';
-import { LocationLabel } from './LocationLabel';
-import { ParkWarningNotice } from './ParkWarningNotice';
-import { SIGNAL_LEVEL_LABELS } from './spotLabels';
+import { LocationLabel } from '../../components/LocationLabel';
+import { ParkWarningNotice } from '../../components/ParkWarningNotice';
+import { SIGNAL_LEVEL_LABELS } from '../../lib/spotLabels';
 
 const NAME_MAX = 100;
 const DESCRIPTION_MAX = 2000;

@@ -1,7 +1,7 @@
-import type { ParkWarning } from '../../api/types';
-import { Evidence } from '../../components/Evidence';
-import { Notice } from '../../components/Notice';
-import { sourceLabel } from './spotLabels';
+import type { ParkWarning } from '../api/types';
+import { Evidence } from './Evidence';
+import { Notice } from './Notice';
+import { sourceLabel } from '../lib/spotLabels';
 
 const FALLBACK_NOTICE = '공원 경계는 참고 자료예요. 정확한 경계는 공식 고시 도면을 확인해 주세요.';
 const FALLBACK_GUIDE =

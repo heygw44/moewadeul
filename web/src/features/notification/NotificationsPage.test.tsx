@@ -18,8 +18,8 @@ vi.mock('./unreadCount', async (importOriginal) => ({
   refreshUnreadCount: vi.fn(),
 }));
 
-vi.mock('../member/session', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../member/session')>()),
+vi.mock('../../app/session/session', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../app/session/session')>()),
   useSession: () => ({ status: 'authenticated', me: { memberId: 1, nickname: '산사람' } }),
 }));
 

@@ -25,7 +25,7 @@ import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { usePagedList } from '../../components/usePagedList';
 import { daysUntilKst, formatKstDateTime } from '../../lib/datetime';
 import { companionTagLabel, NEGATIVE_COMPANION_TAGS, POSITIVE_COMPANION_TAGS } from '../member/memberLabels';
-import { useRequireAuth } from '../member/useRequireAuth';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { MemberReportDialog } from '../report/MemberReportDialog';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 

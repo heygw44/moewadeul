@@ -15,10 +15,10 @@ import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatKstDateTime } from '../../lib/datetime';
 import { AuthLayout } from './AuthLayout';
 import { enterAfterAuth } from './enterAfterAuth';
-import { safeNextPath, withNext } from './nextPath';
+import { safeNextPath, withNext } from '../../app/session/nextPath';
 import { emailRequiredMessage, PASSWORD_REQUIRED } from './requiredMessages';
-import { useSession } from './session';
-import { useRetryCountdown } from './useRetryCountdown';
+import { useSession } from '../../app/session/session';
+import { useRetryCountdown } from '../../components/useRetryCountdown';
 
 type LoginField = 'email' | 'password';
 

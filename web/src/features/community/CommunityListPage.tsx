@@ -15,7 +15,7 @@ import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { formatRelativeKst } from '../../lib/datetime';
-import { useSession } from '../member/session';
+import { useSession } from '../../app/session/session';
 import { usePagedList } from '../../components/usePagedList';
 import { LINK_BUTTON_CLASS, parseSpotId, UNVERIFIED_WRITE_REASON } from './communityLabels';
 

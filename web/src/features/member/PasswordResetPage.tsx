@@ -18,8 +18,8 @@ import {
   PASSWORD_CONFIRM_MISMATCH,
   PASSWORD_CONFIRM_REQUIRED,
 } from './requiredMessages';
-import { useSession } from './session';
-import { useRetryCountdown } from './useRetryCountdown';
+import { useSession } from '../../app/session/session';
+import { useRetryCountdown } from '../../components/useRetryCountdown';
 
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';

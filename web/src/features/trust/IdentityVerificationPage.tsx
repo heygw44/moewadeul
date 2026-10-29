@@ -15,8 +15,8 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { todayKst } from '../../lib/datetime';
 import { AuthLayout } from '../member/AuthLayout';
-import { safeNextPath, withNext } from '../member/nextPath';
-import { useRequireAuth } from '../member/useRequireAuth';
+import { safeNextPath, withNext } from '../../app/session/nextPath';
+import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { buttonClassName } from '../../components/buttonClass';
 
 const MIN_BIRTH_YEAR = 1900;

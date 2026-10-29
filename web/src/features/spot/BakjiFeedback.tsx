@@ -9,9 +9,9 @@ import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { Dialog } from '../../components/Dialog';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { TextArea } from '../../components/TextArea';
-import { useSession } from '../member/session';
-import { GatedButton } from '../member/GatedButton';
-import { REPORT_REASON_LABELS } from './spotLabels';
+import { useSession } from '../../app/session/session';
+import { GatedButton } from '../../app/session/GatedButton';
+import { REPORT_REASON_LABELS } from '../../lib/spotLabels';
 
 type BakjiFeedbackProps = {
   spotId: number;
