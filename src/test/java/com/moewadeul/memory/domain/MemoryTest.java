@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.moderation.PendingReview;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Instant;
@@ -57,12 +58,42 @@ class MemoryTest {
     }
 
     @Test
-    @DisplayName("[F-33][MM-02] 오늘 방문한 기록은 미래가 아니고, 내일 방문했다고 적은 기록은 미래다")
-    void visitedAfterToday() {
-        assertThat(details(1, null).isVisitedAfter(TODAY)).isFalse();
-        assertThat(new MemoryDetails(null, 37.0, 127.0, TODAY.plusDays(1), 1, null, MemoryVisibility.PRIVATE)
-                        .isVisitedAfter(TODAY))
-                .isTrue();
+    @DisplayName("[F-33][MM-02] 방문일이 오늘(한국 날짜)이면 기록을 만들 수 있고, 내일이면 visitedDate 필드 오류로 거부한다")
+    void writeRejectsFutureVisitedDate() {
+        assertThat(Memory.write(1L, detailsVisitedOn(TODAY), NOW).getVisitedDate())
+                .isEqualTo(TODAY);
+        assertThatThrownBy(() -> Memory.write(1L, detailsVisitedOn(TODAY.plusDays(1)), NOW))
+                .isInstanceOfSatisfying(
+                        InvalidFieldException.class,
+                        e -> assertThat(e.getField()).isEqualTo("visitedDate"));
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-02] 고칠 때도 방문일이 오늘이면 받고 내일이면 거부하며, 거부하면 기록은 그대로다")
+    void reviseRejectsFutureVisitedDate() {
+        Memory memory = Memory.write(1L, details(1, "처음"), NOW);
+        Instant later = NOW.plusSeconds(60);
+
+        memory.revise(detailsVisitedOn(TODAY), later);
+        assertThatThrownBy(() -> memory.revise(detailsVisitedOn(TODAY.plusDays(1)), later.plusSeconds(1)))
+                .isInstanceOfSatisfying(
+                        InvalidFieldException.class,
+                        e -> assertThat(e.getField()).isEqualTo("visitedDate"));
+
+        assertThat(memory.getVisitedDate()).isEqualTo(TODAY);
+        assertThat(memory.getUpdatedAt()).isEqualTo(later);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-02] 방문일의 기준은 UTC가 아니라 한국 날짜라서, 한국에서 이미 다음 날인 시각에는 그 날짜까지 받는다")
+    void futureCheckUsesKoreaDate() {
+        Instant lateUtc = Instant.parse("2026-10-05T15:30:00Z");
+
+        assertThat(Memory.write(1L, detailsVisitedOn(TODAY.plusDays(1)), lateUtc)
+                        .getVisitedDate())
+                .isEqualTo(TODAY.plusDays(1));
+        assertThatThrownBy(() -> Memory.write(1L, detailsVisitedOn(TODAY.plusDays(2)), lateUtc))
+                .isInstanceOf(InvalidFieldException.class);
     }
 
     @Test
@@ -172,6 +203,10 @@ class MemoryTest {
 
     private static MemoryDetails publicDetails() {
         return new MemoryDetails(null, 37.25, 127.25, TODAY, 1, null, MemoryVisibility.PUBLIC);
+    }
+
+    private static MemoryDetails detailsVisitedOn(LocalDate visitedDate) {
+        return new MemoryDetails(null, 37.25, 127.25, visitedDate, 1, null, MemoryVisibility.PRIVATE);
     }
 
     private static MemoryDetails details(int nights, String content) {

@@ -137,7 +137,7 @@ public class Basecamp {
             throw new IllegalArgumentException("베이스캠프를 만드는 데 필요한 값이 null입니다.");
         }
         requireValidText(details.title(), details.description());
-        requireValidSchedule(details.startDate(), details.endDate());
+        BasecampOpenPolicy.requireSchedule(details.startDate(), details.endDate(), KoreaTime.dateOf(now));
         if (details.capacity() == null || details.joinCondition() == null) {
             throw new IllegalArgumentException("정원과 합류 조건은 null일 수 없습니다.");
         }
@@ -497,12 +497,6 @@ public class Basecamp {
         }
         if (description == null || description.isBlank() || description.length() > DESCRIPTION_MAX_LENGTH) {
             throw new IllegalArgumentException("설명은 공백뿐이 아닌 " + DESCRIPTION_MAX_LENGTH + "자 이하여야 합니다.");
-        }
-    }
-
-    private static void requireValidSchedule(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
-            throw new IllegalArgumentException("종료일은 출발일보다 늦어야 합니다.");
         }
     }
 }

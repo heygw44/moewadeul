@@ -10,7 +10,6 @@ import com.moewadeul.basecamp.domain.JoinCondition;
 import com.moewadeul.basecamp.infra.BasecampLockMapper;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import com.moewadeul.trust.application.profile.TrustDetail;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
@@ -39,7 +38,6 @@ public class BasecampOpenService {
         // 잠금이 트랜잭션의 첫 쿼리여야 한다. 그래야 아래 개수 조회가 잠금을 얻은 뒤의 스냅숏을 읽어서, 먼저 끝난 요청이 연 베이스캠프가 보인다.
         basecampLockMapper.lockMember(leaderId);
         Instant now = clock.instant();
-        BasecampOpenPolicy.requireSchedule(command.startDate(), command.endDate(), KoreaTime.dateOf(now));
         Capacity capacity = Capacity.of(command.capacity());
         TrustDetail trust = trustSummaryService.detail(leaderId);
         requireTrustLevel(trust);

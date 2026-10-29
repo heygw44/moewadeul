@@ -98,6 +98,7 @@ public class Spot {
 
     public void rename(String name, Instant now) {
         requireValidName(name);
+        requireActive();
         this.name = name;
         this.updatedAt = now;
     }
@@ -106,6 +107,7 @@ public class Spot {
         if (newLocation == null || judgement == null || now == null) {
             throw new IllegalArgumentException("장소를 옮기는 데 필요한 값이 null입니다.");
         }
+        requireActive();
         WeatherGrid grid = WeatherGrid.from(newLocation);
         this.location = newLocation.toPoint();
         this.weatherNx = (short) grid.nx();
@@ -115,6 +117,10 @@ public class Spot {
     }
 
     public void delete(Instant now) {
+        if (status == SpotStatus.DELETED) {
+            return;
+        }
+        requireActive();
         this.status = SpotStatus.DELETED;
         this.updatedAt = now;
     }
@@ -156,6 +162,12 @@ public class Spot {
 
     public boolean isActiveBakji() {
         return type == SpotType.BAKJI && status == SpotStatus.ACTIVE;
+    }
+
+    private void requireActive() {
+        if (status != SpotStatus.ACTIVE) {
+            throw new BusinessException(SpotErrorCode.SPOT_INVALID_STATE);
+        }
     }
 
     private static void requireValidName(String name) {

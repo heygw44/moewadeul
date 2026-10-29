@@ -33,10 +33,6 @@ public record MemoryDetails(
         }
     }
 
-    public boolean isVisitedAfter(LocalDate today) {
-        return visitedDate.isAfter(today);
-    }
-
     public static boolean isValidLatitude(double latitude) {
         return latitude >= -MAX_LATITUDE && latitude <= MAX_LATITUDE;
     }

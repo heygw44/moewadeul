@@ -96,6 +96,10 @@ public class CompanionReview {
         return new CompanionReview(basecampId, reviewerId, revieweeId, rejoinWanted, safeTags, normalizedComment, now);
     }
 
+    public Set<CompanionReviewTag> getTags() {
+        return Set.copyOf(tags);
+    }
+
     public void hide(Instant now) {
         if (now == null) {
             throw new IllegalArgumentException("후기를 숨기는 시각이 null입니다.");

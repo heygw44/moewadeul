@@ -2,7 +2,9 @@ package com.moewadeul.memory.domain;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.moderation.PendingReview;
+import com.moewadeul.common.time.KoreaTime;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -72,6 +74,7 @@ public class Memory {
         if (details == null || now == null) {
             throw new IllegalArgumentException("기록을 만드는 데 필요한 값이 null입니다.");
         }
+        requireNotFuture(details, now);
         return new Memory(memberId, details, now);
     }
 
@@ -79,6 +82,7 @@ public class Memory {
         if (details == null || now == null) {
             throw new IllegalArgumentException("기록을 고치는 데 필요한 값이 null입니다.");
         }
+        requireNotFuture(details, now);
         apply(details);
         this.updatedAt = now;
     }
@@ -130,6 +134,12 @@ public class Memory {
         }
         this.status = MemoryStatus.ACTIVE;
         this.updatedAt = now;
+    }
+
+    private static void requireNotFuture(MemoryDetails details, Instant now) {
+        if (details.visitedDate().isAfter(KoreaTime.dateOf(now))) {
+            throw new InvalidFieldException("visitedDate", "방문일은 오늘(한국 날짜)보다 뒤일 수 없어요.");
+        }
     }
 
     private void apply(MemoryDetails details) {

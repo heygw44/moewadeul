@@ -109,6 +109,9 @@ public class CommunityPost {
         if (status == CommunityPostStatus.DELETED) {
             return;
         }
+        if (status != CommunityPostStatus.ACTIVE) {
+            throw new BusinessException(CommunityErrorCode.COMMUNITY_INVALID_STATE);
+        }
         this.status = CommunityPostStatus.DELETED;
         this.updatedAt = now;
     }

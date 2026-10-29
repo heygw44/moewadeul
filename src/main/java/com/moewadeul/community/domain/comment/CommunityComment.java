@@ -91,6 +91,9 @@ public class CommunityComment {
         if (status == CommunityCommentStatus.DELETED) {
             return;
         }
+        if (status != CommunityCommentStatus.ACTIVE) {
+            throw new BusinessException(CommunityErrorCode.COMMUNITY_INVALID_STATE);
+        }
         this.status = CommunityCommentStatus.DELETED;
         this.content = null;
         this.updatedAt = now;
