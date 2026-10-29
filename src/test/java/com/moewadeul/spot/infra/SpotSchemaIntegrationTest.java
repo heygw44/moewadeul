@@ -119,7 +119,7 @@ class SpotSchemaIntegrationTest {
                 .longLatBoundary("MULTIPOLYGON(((126 37, 127 37, 127 38, 126 38, 126 37)))"));
 
         // when
-        long spotId = spotFixture.insert(aSpot().name("경계 안 박지"));
+        long spotId = spotFixture.insert(aSpot().name("경계 안 박지").at(37.5665, 126.978));
         jdbcTemplate.update(
                 "UPDATE spot SET park_warning = TRUE, protected_area_id = ? WHERE id = ?", protectedAreaId, spotId);
 
