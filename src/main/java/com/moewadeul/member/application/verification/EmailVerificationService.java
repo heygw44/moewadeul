@@ -1,5 +1,6 @@
 package com.moewadeul.member.application.verification;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.outbox.OutboxEventJpaRepository;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
@@ -10,7 +11,6 @@ import com.moewadeul.member.application.MailSecretDeriver;
 import com.moewadeul.member.application.MemberMetrics;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.verification.EmailVerification;
@@ -128,23 +128,23 @@ public class EmailVerificationService {
 
     private EmailVerification findLatest(long memberId, String code) {
         if (!VerificationCode.isWellFormed(code)) {
-            throw new MemberException(MemberErrorCode.EMAIL_CODE_INVALID);
+            throw new BusinessException(MemberErrorCode.EMAIL_CODE_INVALID);
         }
         EmailVerification latest = emailVerificationRepository
                 .findLatestByMemberId(memberId)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.EMAIL_CODE_INVALID));
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.EMAIL_CODE_INVALID));
         if (latest.isVerified()) {
-            throw new MemberException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
+            throw new BusinessException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         }
         return latest;
     }
 
     private void rejectIfExpiredOrExhausted(EmailVerification verification, Instant now) {
         if (verification.isExpiredAt(now)) {
-            throw new MemberException(MemberErrorCode.EMAIL_CODE_EXPIRED);
+            throw new BusinessException(MemberErrorCode.EMAIL_CODE_EXPIRED);
         }
         if (verification.hasReachedAttemptLimit()) {
-            throw new MemberException(MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
+            throw new BusinessException(MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
         }
     }
 
@@ -152,9 +152,9 @@ public class EmailVerificationService {
         int updated = emailVerificationMapper.incrementAttempt(
                 verification.getId(), EmailVerificationPolicy.MAX_ATTEMPTS, now);
         if (updated == 0) {
-            throw new MemberException(MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
+            throw new BusinessException(MemberErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
         }
-        throw new MemberException(MemberErrorCode.EMAIL_CODE_INVALID);
+        throw new BusinessException(MemberErrorCode.EMAIL_CODE_INVALID);
     }
 
     private ResendHistory loadResendHistory(long memberId, SendWindow sentByIp, Instant now) {
@@ -192,7 +192,7 @@ public class EmailVerificationService {
 
     private void rejectIfAlreadyVerified(Member member) {
         if (!isUnverified(member)) {
-            throw new MemberException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
+            throw new BusinessException(MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         }
     }
 

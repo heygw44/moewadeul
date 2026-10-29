@@ -3,6 +3,7 @@ package com.moewadeul.member.application.verification;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.mail.MailMessage;
 import com.moewadeul.common.mail.TestMailSender;
 import com.moewadeul.common.outbox.OutboxMessage;
@@ -13,7 +14,6 @@ import com.moewadeul.member.application.signup.MemberSignupService;
 import com.moewadeul.member.application.signup.SignupCommand;
 import com.moewadeul.member.application.signup.SignupResult;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.verification.VerificationCode;
 import com.moewadeul.outbox.application.OutboxProperties;
@@ -146,7 +146,7 @@ class EmailVerificationFlowIntegrationTest {
         // when
         assertThatThrownBy(() -> signUp(email))
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
         publisher.publishPending();
 

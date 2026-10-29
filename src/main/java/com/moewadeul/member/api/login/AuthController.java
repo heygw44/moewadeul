@@ -1,11 +1,11 @@
 package com.moewadeul.member.api.login;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.security.AfterSessionCommitFilter;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.LoginSessionManager;
 import com.moewadeul.member.application.login.LoginResult;
 import com.moewadeul.member.application.login.MemberLoginService;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,7 +49,7 @@ class AuthController {
             LoginResult result, HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         try {
             memberLoginService.ensureStillLoginable(result);
-        } catch (MemberException e) {
+        } catch (BusinessException e) {
             loginSessionManager.logout(httpRequest, httpResponse);
             throw e;
         }

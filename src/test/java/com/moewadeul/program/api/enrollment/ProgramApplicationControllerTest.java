@@ -21,7 +21,6 @@ import com.moewadeul.program.application.enrollment.ProgramApplicationCancelResu
 import com.moewadeul.program.application.enrollment.ProgramPayResult;
 import com.moewadeul.program.application.enrollment.ProgramPaymentService;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -157,8 +156,9 @@ class ProgramApplicationControllerTest {
         when(programPaymentService.pay(4L, 1L)).thenThrow(new BusinessException(CommonErrorCode.NOT_FOUND));
         when(programPaymentService.pay(4L, 2L)).thenThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED));
         when(programPaymentService.pay(4L, 3L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED));
-        when(programPaymentService.pay(4L, 4L)).thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED));
+        when(programPaymentService.pay(4L, 4L))
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE));
 
         assertPayError(1L, HttpStatus.NOT_FOUND, "NOT_FOUND");
         assertPayError(2L, HttpStatus.FORBIDDEN, "ACCESS_DENIED");
@@ -187,7 +187,7 @@ class ProgramApplicationControllerTest {
     void cancelMapsServiceErrors() {
         when(programPaymentService.cancel(4L, 1L)).thenThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED));
         when(programPaymentService.cancel(4L, 2L))
-                .thenThrow(new ProgramException(ProgramErrorCode.PROGRAM_CANCEL_NOT_ALLOWED));
+                .thenThrow(new BusinessException(ProgramErrorCode.PROGRAM_CANCEL_NOT_ALLOWED));
 
         MvcTestResult denied = mvc.post()
                 .uri("/api/program-applications/1/cancel")

@@ -4,7 +4,6 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import com.moewadeul.program.domain.ProgramPhase;
 import com.moewadeul.program.domain.ProgramRepository;
 import com.moewadeul.program.domain.ProgramVacancyAlertRepository;
@@ -30,7 +29,7 @@ public class ProgramVacancyAlertService {
         Instant now = clock.instant();
         ProgramPhase phase = program.phaseAt(now);
         if (phase == ProgramPhase.CANCELED || phase == ProgramPhase.CLOSED) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
         boolean created = vacancyAlertRepository.subscribe(programId, memberId, now) == 1;
         log.info("program vacancy alert subscribed programId={} memberId={} created={}", programId, memberId, created);

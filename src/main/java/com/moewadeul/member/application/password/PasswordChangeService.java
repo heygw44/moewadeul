@@ -1,11 +1,11 @@
 package com.moewadeul.member.application.password;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.member.application.LoginAttemptService;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.Password;
@@ -33,7 +33,7 @@ public class PasswordChangeService {
         verifyCurrentPassword(member, command);
         Password newPassword = Password.of(command.newPassword());
         if (passwordEncoder.matches(newPassword.value(), member.getPasswordHash())) {
-            throw new MemberException(MemberErrorCode.MEMBER_PASSWORD_UNCHANGED);
+            throw new BusinessException(MemberErrorCode.MEMBER_PASSWORD_UNCHANGED);
         }
         passwordChangeApplier.apply(member.getId(), newPassword);
         memberSessions.invalidateAllExcept(member.getId(), command.currentSessionId());
@@ -44,7 +44,7 @@ public class PasswordChangeService {
         return memberRepository
                 .findById(memberId)
                 .filter(found -> found.getStatus() != MemberStatus.WITHDRAWN && found.getPasswordHash() != null)
-                .orElseThrow(() -> new MemberException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH));
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH));
     }
 
     private void rejectIfLocked(String email) {
@@ -58,7 +58,7 @@ public class PasswordChangeService {
         boolean matched = passwordEncoder.matches(command.currentPassword(), member.getPasswordHash());
         loginAttemptService.recordAttemptUnderEmailLock(member.getId(), member.getEmail(), command.ip(), matched);
         if (!matched) {
-            throw new MemberException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH);
+            throw new BusinessException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH);
         }
     }
 }

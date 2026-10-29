@@ -18,7 +18,6 @@ import com.moewadeul.basecamp.application.lifecycle.BasecampReviseCommand;
 import com.moewadeul.basecamp.application.lifecycle.BasecampStatusResult;
 import com.moewadeul.basecamp.application.lifecycle.BasecampTransitionService;
 import com.moewadeul.basecamp.domain.BasecampErrorCode;
-import com.moewadeul.basecamp.domain.BasecampException;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
@@ -264,12 +263,12 @@ class BasecampLifecycleControllerTest {
         return Stream.of(
                 Arguments.of(new BusinessException(CommonErrorCode.TRUST_LEVEL_INSUFFICIENT), HttpStatus.FORBIDDEN),
                 Arguments.of(new BusinessException(CommonErrorCode.NOT_FOUND), HttpStatus.NOT_FOUND),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_OPEN_LIMIT), HttpStatus.BAD_REQUEST),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_OPEN_LIMIT), HttpStatus.BAD_REQUEST),
                 Arguments.of(
-                        new BasecampException(BasecampErrorCode.BASECAMP_SCHEDULE_INVALID), HttpStatus.BAD_REQUEST),
-                Arguments.of(new BasecampException(BasecampErrorCode.BASECAMP_WARNING_SPOT), HttpStatus.BAD_REQUEST),
+                        new BusinessException(BasecampErrorCode.BASECAMP_SCHEDULE_INVALID), HttpStatus.BAD_REQUEST),
+                Arguments.of(new BusinessException(BasecampErrorCode.BASECAMP_WARNING_SPOT), HttpStatus.BAD_REQUEST),
                 Arguments.of(
-                        new BasecampException(BasecampErrorCode.BASECAMP_CAPACITY_INVALID), HttpStatus.BAD_REQUEST));
+                        new BusinessException(BasecampErrorCode.BASECAMP_CAPACITY_INVALID), HttpStatus.BAD_REQUEST));
     }
 
     @Test
@@ -410,9 +409,9 @@ class BasecampLifecycleControllerTest {
         when(basecampTransitionService.close(77L, MEMBER_ID))
                 .thenThrow(new BusinessException(CommonErrorCode.ACCESS_DENIED));
         when(basecampTransitionService.confirm(77L, MEMBER_ID))
-                .thenThrow(new BasecampException(BasecampErrorCode.BASECAMP_NOT_ENOUGH_MEMBERS));
+                .thenThrow(new BusinessException(BasecampErrorCode.BASECAMP_NOT_ENOUGH_MEMBERS));
         when(basecampEditService.revise(eq(77L), eq(MEMBER_ID), any()))
-                .thenThrow(new BasecampException(BasecampErrorCode.BASECAMP_CAPACITY_INVALID));
+                .thenThrow(new BusinessException(BasecampErrorCode.BASECAMP_CAPACITY_INVALID));
 
         // when
         MvcTestResult denied = send("POST", BASECAMP + "/close", verified(), true, null);

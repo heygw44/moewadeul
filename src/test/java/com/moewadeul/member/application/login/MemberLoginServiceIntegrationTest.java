@@ -3,9 +3,9 @@ package com.moewadeul.member.application.login;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +28,7 @@ class MemberLoginServiceIntegrationTest {
     @DisplayName("[F-02] 이메일 형식이 올바르지 않아도 500이 아니라 LOGIN_FAILED로 거부하고 실패를 기록한다")
     void malformedEmailIsRejectedAsLoginFailed() {
         assertThatThrownBy(() -> memberLoginService.login(new LoginCommand("Not-An-Email", PASSWORD, IP)))
-                .isInstanceOf(MemberException.class)
+                .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.LOGIN_FAILED);
 
         Integer failures = jdbc.queryForObject(
@@ -44,7 +44,7 @@ class MemberLoginServiceIntegrationTest {
         String overlong = "x".repeat(ATTEMPTED_EMAIL_MAX_LENGTH + 46);
 
         assertThatThrownBy(() -> memberLoginService.login(new LoginCommand(overlong, PASSWORD, IP)))
-                .isInstanceOf(MemberException.class)
+                .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.LOGIN_FAILED);
 
         Integer recordedLength =

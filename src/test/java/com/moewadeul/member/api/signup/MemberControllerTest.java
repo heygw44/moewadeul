@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
@@ -14,7 +15,6 @@ import com.moewadeul.member.application.signup.MemberSignupService;
 import com.moewadeul.member.application.signup.SignupCommand;
 import com.moewadeul.member.application.signup.SignupResult;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,7 +59,8 @@ class MemberControllerTest {
     @Test
     @DisplayName("[F-01][EV-06] 이메일이 중복이면 409와 오류 코드를 응답한다")
     void duplicatedEmailReturnsConflict() {
-        when(memberSignupService.signUp(any())).thenThrow(new MemberException(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
+        when(memberSignupService.signUp(any()))
+                .thenThrow(new BusinessException(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
 
         MvcTestResult result = post("hiker@example.com", VALID_PASSWORD, "hiker");
 
@@ -71,7 +72,7 @@ class MemberControllerTest {
     @DisplayName("[F-01] 닉네임이 중복이면 409를 응답한다")
     void duplicatedNicknameReturnsConflict() {
         when(memberSignupService.signUp(any()))
-                .thenThrow(new MemberException(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED));
+                .thenThrow(new BusinessException(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED));
 
         MvcTestResult result = post("hiker@example.com", VALID_PASSWORD, "hiker");
 
@@ -82,7 +83,8 @@ class MemberControllerTest {
     @Test
     @DisplayName("[F-01][EV-04] 일회용 이메일이면 400을 응답한다")
     void disposableEmailReturnsBadRequest() {
-        when(memberSignupService.signUp(any())).thenThrow(new MemberException(MemberErrorCode.MEMBER_DISPOSABLE_EMAIL));
+        when(memberSignupService.signUp(any()))
+                .thenThrow(new BusinessException(MemberErrorCode.MEMBER_DISPOSABLE_EMAIL));
 
         MvcTestResult result = post("hiker@example.com", VALID_PASSWORD, "hiker");
 
@@ -93,7 +95,8 @@ class MemberControllerTest {
     @Test
     @DisplayName("[F-01][PW-01] 비밀번호 정책 위반이면 400을 응답한다")
     void passwordPolicyViolationReturnsBadRequest() {
-        when(memberSignupService.signUp(any())).thenThrow(new MemberException(MemberErrorCode.MEMBER_PASSWORD_POLICY));
+        when(memberSignupService.signUp(any()))
+                .thenThrow(new BusinessException(MemberErrorCode.MEMBER_PASSWORD_POLICY));
 
         MvcTestResult result = post("hiker@example.com", "weak", "hiker");
 

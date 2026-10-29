@@ -1,5 +1,6 @@
 package com.moewadeul.member.application.signup;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.member.application.EmailVerificationEvents;
@@ -9,7 +10,6 @@ import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.Nickname;
 import com.moewadeul.member.domain.Password;
@@ -75,7 +75,7 @@ public class MemberSignupService {
 
     private void rejectDisposableDomain(Email email) {
         if (disposableEmailDomainRepository.existsByDomainIn(email.domainCandidates())) {
-            throw new MemberException(MemberErrorCode.MEMBER_DISPOSABLE_EMAIL);
+            throw new BusinessException(MemberErrorCode.MEMBER_DISPOSABLE_EMAIL);
         }
     }
 
@@ -101,7 +101,7 @@ public class MemberSignupService {
         }
     }
 
-    private static final class DuplicateSignupException extends MemberException {
+    private static final class DuplicateSignupException extends BusinessException {
 
         private DuplicateSignupException(MemberErrorCode errorCode) {
             super(errorCode);

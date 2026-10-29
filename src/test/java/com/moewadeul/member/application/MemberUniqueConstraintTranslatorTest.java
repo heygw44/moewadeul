@@ -2,8 +2,8 @@ package com.moewadeul.member.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.member.domain.MemberErrorCode;
-import com.moewadeul.member.domain.MemberException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,7 @@ class MemberUniqueConstraintTranslatorTest {
 
         assertThat(translated)
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
     }
 
@@ -29,7 +29,7 @@ class MemberUniqueConstraintTranslatorTest {
 
         assertThat(translated)
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED));
     }
 
@@ -41,7 +41,7 @@ class MemberUniqueConstraintTranslatorTest {
 
         assertThat(translated)
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED));
     }
 
@@ -53,7 +53,7 @@ class MemberUniqueConstraintTranslatorTest {
 
         assertThat(translated)
                 .isInstanceOfSatisfying(
-                        MemberException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NICKNAME_DUPLICATED));
     }
 

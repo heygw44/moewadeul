@@ -12,7 +12,6 @@ import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramCancelReason;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramException;
 import com.moewadeul.program.domain.ProgramRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -98,7 +97,7 @@ public class ProgramPaymentService {
         try {
             paymentRepository.saveAndFlush(payment);
         } catch (DataIntegrityViolationException e) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.moewadeul.program.domain;
 
+import com.moewadeul.common.error.BusinessException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -129,11 +130,11 @@ public class Program {
             throw new IllegalArgumentException("행사를 고치는 데 필요한 값이 null입니다.");
         }
         if (status == ProgramStatus.CANCELED) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
         int newCapacity = revision.capacity() == null ? capacity : revision.capacity();
         if ((applicationsExist || !now.isBefore(applyOpenAt)) && newCapacity < capacity) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE);
         }
         Program merged = merge(revision);
         requireValid(
@@ -152,7 +153,7 @@ public class Program {
 
     public void cancel(Instant now) {
         if (status == ProgramStatus.CANCELED) {
-            throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
         this.status = ProgramStatus.CANCELED;
         this.updatedAt = now;
@@ -164,8 +165,8 @@ public class Program {
 
     public void requireApplicableAt(Instant now) {
         switch (phaseAt(now)) {
-            case CANCELED -> throw new ProgramException(ProgramErrorCode.PROGRAM_INVALID_STATE);
-            case UPCOMING, CLOSED -> throw new ProgramException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD);
+            case CANCELED -> throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
+            case UPCOMING, CLOSED -> throw new BusinessException(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD);
             case OPEN -> {}
         }
     }

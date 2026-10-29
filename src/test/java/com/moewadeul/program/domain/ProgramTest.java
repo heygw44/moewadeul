@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.web.PatchField;
 import java.time.Duration;
@@ -133,7 +134,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.revise(revision().capacity(19).build(), afterOpen, false))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE));
         assertThat(program.getCapacity()).isEqualTo(20);
     }
@@ -165,7 +166,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.revise(postponeAndShrink, afterOpen, false))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE));
     }
 
@@ -176,7 +177,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.revise(revision().capacity(19).build(), NOW, true))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_CAPACITY_DECREASE));
         assertThat(program.getCapacity()).isEqualTo(20);
         program.revise(revision().capacity(21).build(), NOW, true);
@@ -244,7 +245,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.revise(revision().title("새 제목").build(), NOW, false))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
     }
 
@@ -258,7 +259,7 @@ class ProgramTest {
         assertThat(program.getStatus()).isEqualTo(ProgramStatus.CANCELED);
         assertThatThrownBy(() -> program.cancel(NOW))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
     }
 
@@ -288,7 +289,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.requireApplicableAt(open.minusNanos(1000)))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD));
         assertThatCode(() -> program.requireApplicableAt(open)).doesNotThrowAnyException();
         assertThatCode(() -> program.requireApplicableAt(close.minusNanos(1000)))
@@ -302,7 +303,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.requireApplicableAt(program.getApplyCloseAt()))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD));
     }
 
@@ -314,7 +315,7 @@ class ProgramTest {
 
         assertThatThrownBy(() -> program.requireApplicableAt(program.getApplyOpenAt()))
                 .isInstanceOfSatisfying(
-                        ProgramException.class,
+                        BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_INVALID_STATE));
     }
 

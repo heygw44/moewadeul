@@ -1,5 +1,7 @@
 package com.moewadeul.member.domain;
 
+import com.moewadeul.common.error.BusinessException;
+
 public final class Password {
 
     public static final int MIN_LENGTH = 10;
@@ -44,8 +46,8 @@ public final class Password {
         return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
     }
 
-    private static MemberException policyViolation() {
-        return new MemberException(MemberErrorCode.MEMBER_PASSWORD_POLICY);
+    private static BusinessException policyViolation() {
+        return new BusinessException(MemberErrorCode.MEMBER_PASSWORD_POLICY);
     }
 
     public String value() {
