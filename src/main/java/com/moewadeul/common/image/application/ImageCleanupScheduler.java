@@ -10,7 +10,6 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Component;
 
-// 종류별 켜기와 cron은 moewadeul.<keyPrefix>.image-cleanup.{enabled,cron} 설정이 정한다.
 @Component
 public class ImageCleanupScheduler implements SchedulingConfigurer {
 
