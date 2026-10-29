@@ -180,6 +180,22 @@ class MemberSignupApiIntegrationTest {
         assertThat(memberRepository.count()).isEqualTo(20);
     }
 
+    @Test
+    @DisplayName("[F-01][EV-03] 같은 IP에서 이미 쓰인 이메일로 가입을 20번 시도하면 21번째 같은 요청은 409가 아니라 429 SIGNUP_LIMITED다")
+    void twentyFirstDuplicateEmailSignupFromSameIpIsLimited() {
+        String taken = TestSequence.email();
+        assertThat(post(taken, VALID_PASSWORD, TestSequence.nickname())).hasStatus(HttpStatus.CREATED);
+        for (int attempted = 0; attempted < 19; attempted++) {
+            assertThat(post(taken, VALID_PASSWORD, TestSequence.nickname())).hasStatus(HttpStatus.CONFLICT);
+        }
+
+        MvcTestResult limited = post(taken, VALID_PASSWORD, TestSequence.nickname());
+
+        assertThat(limited).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(limited).bodyJson().extractingPath("$.code").isEqualTo("SIGNUP_LIMITED");
+        assertThat(memberRepository.count()).isEqualTo(1);
+    }
+
     private MvcTestResult post(String email, String password, String nickname) {
         String body =
                 "{\"email\":\"%s\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"%s\",\"ageConfirmed\":true}"

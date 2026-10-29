@@ -3,6 +3,7 @@ package com.moewadeul.member.application.verification;
 import com.moewadeul.member.domain.verification.EmailVerificationPolicy;
 import com.moewadeul.member.infra.verification.EmailVerificationCleanupMapper;
 import com.moewadeul.member.infra.verification.EmailVerificationIpLockMapper;
+import com.moewadeul.member.infra.verification.SignupDuplicateAttemptMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -21,6 +22,7 @@ public class EmailVerificationCleanupService {
 
     private final EmailVerificationCleanupMapper cleanupMapper;
     private final EmailVerificationIpLockMapper ipLockMapper;
+    private final SignupDuplicateAttemptMapper signupDuplicateAttemptMapper;
     private final Clock clock;
 
     public int deleteExpired() {
@@ -34,6 +36,7 @@ public class EmailVerificationCleanupService {
         } while (deleted >= BATCH_SIZE);
         log.info("email verification deleted count={}", deletedTotal);
         deleteIdleIpLockRows(now.minus(IP_LOCK_ROW_IDLE_LIMIT));
+        deleteDuplicateSignupAttempts(now.minus(EmailVerificationPolicy.IP_WINDOW));
         return deletedTotal;
     }
 
@@ -45,5 +48,15 @@ public class EmailVerificationCleanupService {
             deletedTotal += deleted;
         } while (deleted >= BATCH_SIZE);
         log.info("email verification ip lock rows deleted count={}", deletedTotal);
+    }
+
+    private void deleteDuplicateSignupAttempts(Instant cutoff) {
+        int deletedTotal = 0;
+        int deleted;
+        do {
+            deleted = signupDuplicateAttemptMapper.deleteBefore(cutoff, BATCH_SIZE);
+            deletedTotal += deleted;
+        } while (deleted >= BATCH_SIZE);
+        log.info("signup duplicate attempts deleted count={}", deletedTotal);
     }
 }
