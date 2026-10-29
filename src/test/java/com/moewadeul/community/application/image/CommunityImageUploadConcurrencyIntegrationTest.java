@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.RateLimitedException;
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.community.domain.image.CommunityImage;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -27,8 +28,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class CommunityImageUploadConcurrencyIntegrationTest {
 
     private static final int THREADS = 4;
-    private static final CommunityImageUploadCommand COMMAND =
-            new CommunityImageUploadCommand("image/jpeg", 1000L, null);
+    private static final ImageUploadCommand COMMAND = new ImageUploadCommand("image/jpeg", 1000L, null);
 
     @Autowired
     private CommunityImageUploadService uploadService;

@@ -3,13 +3,13 @@
 <mapper namespace="com.moewadeul.community.infra.image.CommunityImageMapper">
 
     <select id="selectByPostId" resultType="com.moewadeul.community.infra.image.CommunityImageRow">
-        SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
+        SELECT id AS image_id, object_key
         FROM community_image
         WHERE post_id = #{postId}
         ORDER BY display_order
     </select>
 
-    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.community.infra.image.CommunityImageRow">
+    <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.UnattachedImageRow">
         SELECT id AS image_id, object_key, thumbnail_object_key AS thumbnail_key
         FROM community_image
         WHERE post_id IS NULL

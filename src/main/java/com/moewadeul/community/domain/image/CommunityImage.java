@@ -1,77 +1,31 @@
 package com.moewadeul.community.domain.image;
 
+import com.moewadeul.common.image.ImageKind;
+import com.moewadeul.common.image.ImageNoun;
+import com.moewadeul.common.image.ThumbnailedImage;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.Map;
-import java.util.Optional;
 import lombok.AccessLevel;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "community_image")
-@Getter
+@AttributeOverride(name = "parentId", column = @Column(name = "post_id"))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class CommunityImage {
-
-    public static final long MAX_SIZE_BYTES = 5L * 1024 * 1024;
-
-    public static final String THUMBNAIL_CONTENT_TYPE = "image/jpeg";
-
-    public static final long MAX_THUMBNAIL_SIZE_BYTES = 256L * 1024;
+public class CommunityImage extends ThumbnailedImage {
 
     public static final int MAX_PER_POST = 5;
 
-    public static final int MAX_UNATTACHED_PER_MEMBER = MAX_PER_POST * 3;
+    public static final ImageKind KIND = new ImageKind("community", ImageNoun.IMAGE, MAX_PER_POST);
 
-    private static final Map<String, String> EXTENSIONS =
-            Map.of("image/jpeg", "jpg", "image/png", "png", "image/webp", "webp");
+    public static final int MAX_UNATTACHED_PER_MEMBER = KIND.maxUnattachedPerMember();
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "member_id")
-    private long memberId;
-
-    @Column(name = "post_id")
-    private Long postId;
-
-    @Column(name = "object_key")
-    private String objectKey;
-
-    @Column(name = "content_type")
-    private String contentType;
-
-    @Column(name = "size_bytes")
-    private int sizeBytes;
-
-    @Column(name = "thumbnail_object_key")
-    private String thumbnailObjectKey;
-
-    @Column(name = "thumbnail_size_bytes")
-    private Integer thumbnailSizeBytes;
-
-    @JdbcTypeCode(SqlTypes.TINYINT)
-    @Column(name = "display_order")
-    private Integer displayOrder;
-
-    @Column(name = "created_at")
-    private Instant createdAt;
-
-    private CommunityImage(long memberId, String objectKey, String contentType, int sizeBytes, Instant now) {
-        this.memberId = memberId;
-        this.objectKey = objectKey;
-        this.contentType = contentType;
-        this.sizeBytes = sizeBytes;
-        this.createdAt = now;
+    private CommunityImage(
+            long memberId, String objectKey, String contentType, long sizeBytes, Instant now, Thumbnail thumbnail) {
+        super(KIND, memberId, objectKey, contentType, sizeBytes, now, thumbnail);
     }
 
     public static CommunityImage issue(
@@ -81,77 +35,11 @@ public class CommunityImage {
 
     public static CommunityImage issue(
             long memberId, String objectKey, String contentType, long sizeBytes, Instant now, Thumbnail thumbnail) {
-        if (objectKey == null || objectKey.isBlank() || now == null) {
-            throw new IllegalArgumentException("이미지를 만드는 데 필요한 값이 비었습니다.");
-        }
-        if (!isAllowedContentType(contentType)) {
-            throw new IllegalArgumentException("허용하지 않는 이미지 형식입니다.");
-        }
-        if (!isAllowedSize(sizeBytes)) {
-            throw new IllegalArgumentException("이미지 크기는 1바이트 이상 " + MAX_SIZE_BYTES + "바이트 이하여야 합니다.");
-        }
-        CommunityImage image = new CommunityImage(memberId, objectKey, contentType, (int) sizeBytes, now);
-        if (thumbnail != null) {
-            image.addThumbnail(thumbnail);
-        }
-        return image;
+        return new CommunityImage(memberId, objectKey, contentType, sizeBytes, now, thumbnail);
     }
 
-    private void addThumbnail(Thumbnail thumbnail) {
-        if (thumbnail.objectKey() == null || thumbnail.objectKey().isBlank()) {
-            throw new IllegalArgumentException("썸네일 키가 비었습니다.");
-        }
-        if (!isAllowedThumbnailSize(thumbnail.sizeBytes())) {
-            throw new IllegalArgumentException("썸네일 크기는 1바이트 이상 " + MAX_THUMBNAIL_SIZE_BYTES + "바이트 이하여야 합니다.");
-        }
-        this.thumbnailObjectKey = thumbnail.objectKey();
-        this.thumbnailSizeBytes = (int) thumbnail.sizeBytes();
+    @Override
+    protected ImageKind kind() {
+        return KIND;
     }
-
-    public static boolean isAllowedContentType(String contentType) {
-        return contentType != null && EXTENSIONS.containsKey(contentType);
-    }
-
-    public static boolean isAllowedSize(long sizeBytes) {
-        return sizeBytes >= 1 && sizeBytes <= MAX_SIZE_BYTES;
-    }
-
-    public static boolean isAllowedThumbnailSize(long sizeBytes) {
-        return sizeBytes >= 1 && sizeBytes <= MAX_THUMBNAIL_SIZE_BYTES;
-    }
-
-    public static Optional<String> extensionOf(String contentType) {
-        return Optional.ofNullable(contentType).map(EXTENSIONS::get);
-    }
-
-    public void attachTo(long postId, int order) {
-        if (order < 0 || order >= MAX_PER_POST) {
-            throw new IllegalArgumentException("이미지 순서는 0 이상 " + MAX_PER_POST + " 미만이어야 합니다.");
-        }
-        this.postId = postId;
-        this.displayOrder = order;
-    }
-
-    public void detach() {
-        this.postId = null;
-        this.displayOrder = null;
-    }
-
-    public boolean isUploadedBy(long memberId) {
-        return this.memberId == memberId;
-    }
-
-    public boolean isAttachedTo(long postId) {
-        return this.postId != null && this.postId == postId;
-    }
-
-    public boolean isAttached() {
-        return postId != null;
-    }
-
-    public boolean hasThumbnail() {
-        return thumbnailObjectKey != null;
-    }
-
-    public record Thumbnail(String objectKey, long sizeBytes) {}
 }

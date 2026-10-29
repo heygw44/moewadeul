@@ -20,7 +20,7 @@ public class CommunityPostWriter {
     private final ActiveSpotChecker activeSpotChecker;
     private final CommunityPostRepository communityPostRepository;
     private final CommunityPostItemReader communityPostItemReader;
-    private final CommunityPostImageAttacher communityPostImageAttacher;
+    private final CommunityImageAttachments communityImageAttachments;
     private final Clock clock;
 
     @Transactional
@@ -34,7 +34,7 @@ public class CommunityPostWriter {
                 CommunityPost.write(memberId, command.title(), command.content(), command.spotId(), clock.instant());
         long postId = communityPostRepository.saveAndFlush(post).getId();
         if (!command.imageIds().isEmpty()) {
-            communityPostImageAttacher.replace(memberId, postId, command.imageIds());
+            communityImageAttachments.replace(memberId, postId, command.imageIds());
         }
         return postId;
     }
@@ -45,7 +45,7 @@ public class CommunityPostWriter {
         Instant now = clock.instant();
         applyChanges(post, command, now);
         if (command.imageIds().present()
-                && communityPostImageAttacher.replace(
+                && communityImageAttachments.replace(
                         memberId, postId, command.imageIds().value())) {
             post.markEdited(now);
         }

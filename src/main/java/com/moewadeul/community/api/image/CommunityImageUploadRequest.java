@@ -1,6 +1,6 @@
 package com.moewadeul.community.api.image;
 
-import com.moewadeul.community.application.image.CommunityImageUploadCommand;
+import com.moewadeul.common.image.ImageUploadCommand;
 import com.moewadeul.community.domain.image.CommunityImage;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -21,7 +21,7 @@ public record CommunityImageUploadRequest(
         @Max(value = CommunityImage.MAX_THUMBNAIL_SIZE_BYTES, message = "썸네일 크기는 256KB 이하여야 해요.")
         Long thumbnailSizeBytes) {
 
-    CommunityImageUploadCommand toCommand() {
-        return new CommunityImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
+    ImageUploadCommand toCommand() {
+        return new ImageUploadCommand(contentType, sizeBytes, thumbnailSizeBytes);
     }
 }
