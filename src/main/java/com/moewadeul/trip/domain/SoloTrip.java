@@ -1,6 +1,7 @@
 package com.moewadeul.trip.domain;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -67,8 +68,10 @@ public class SoloTrip {
         return new SoloTrip(memberId, spotId, schedule.startDate(), schedule.endDate(), now);
     }
 
-    public boolean isRegisteredBy(long memberId) {
-        return this.memberId == memberId;
+    public void requireRegisteredBy(long memberId) {
+        if (this.memberId != memberId) {
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
+        }
     }
 
     private boolean overlaps(Schedule other) {

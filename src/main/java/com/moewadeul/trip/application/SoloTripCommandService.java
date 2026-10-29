@@ -45,9 +45,7 @@ public class SoloTripCommandService {
         SoloTrip trip = soloTripRepository
                 .findById(soloTripId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!trip.isRegisteredBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        trip.requireRegisteredBy(memberId);
         soloTripRepository.delete(trip);
     }
 }

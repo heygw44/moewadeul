@@ -1,9 +1,11 @@
 package com.moewadeul.community.domain.comment;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
@@ -178,14 +180,17 @@ class CommunityCommentTest {
     }
 
     @Test
-    @DisplayName("[F-29] 작성자 ID와 글 ID를 비교한다")
-    void isWrittenByAndBelongsTo() {
+    @DisplayName("[F-29] 작성자가 아니면 requireWrittenBy가 ACCESS_DENIED이고, 글 ID를 비교한다")
+    void requireWrittenByAndBelongsTo() {
         // given
         CommunityComment comment = CommunityComment.write(3L, 7L, null, "댓글", NOW);
 
         // then
-        assertThat(comment.isWrittenBy(7L)).isTrue();
-        assertThat(comment.isWrittenBy(8L)).isFalse();
+        assertThatCode(() -> comment.requireWrittenBy(7L)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> comment.requireWrittenBy(8L))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
         assertThat(comment.belongsTo(3L)).isTrue();
         assertThat(comment.belongsTo(4L)).isFalse();
     }

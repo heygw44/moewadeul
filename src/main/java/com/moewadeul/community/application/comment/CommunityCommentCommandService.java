@@ -67,9 +67,7 @@ public class CommunityCommentCommandService {
                 .filter(CommunityComment::isActive)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         requireActivePost(comment.getPostId());
-        if (!comment.isWrittenBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        comment.requireWrittenBy(memberId);
         return comment;
     }
 

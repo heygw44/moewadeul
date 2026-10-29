@@ -1,6 +1,7 @@
 package com.moewadeul.program.domain;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -86,6 +87,12 @@ public class ProgramApplication {
         this.canceledAt = now;
         this.updatedAt = now;
         return wasConfirmed;
+    }
+
+    public void requireAppliedBy(long memberId) {
+        if (this.memberId != memberId) {
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
+        }
     }
 
     public void cancelByMemberRemoval(ProgramCancelReason reason, Instant now) {

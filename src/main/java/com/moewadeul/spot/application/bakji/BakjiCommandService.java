@@ -114,9 +114,7 @@ public class BakjiCommandService {
         BakjiDetail detail = bakjiDetailRepository
                 .findById(spotId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!detail.isReportedBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        detail.requireReportedBy(memberId);
         return detail;
     }
 

@@ -1,5 +1,7 @@
 package com.moewadeul.review.domain;
 
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -78,8 +80,10 @@ public class SpotReview {
         this.updatedAt = now;
     }
 
-    public boolean isWrittenBy(long memberId) {
-        return this.memberId == memberId;
+    public void requireWrittenBy(long memberId) {
+        if (this.memberId != memberId) {
+            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
+        }
     }
 
     private static void requireValidBody(int rating, String content) {

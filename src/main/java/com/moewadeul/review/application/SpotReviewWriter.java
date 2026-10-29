@@ -75,9 +75,7 @@ class SpotReviewWriter {
         SpotReview review = spotReviewRepository
                 .findById(reviewId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!review.isWrittenBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        review.requireWrittenBy(memberId);
         return review;
     }
 

@@ -84,9 +84,7 @@ class MemoryWriter {
 
     private static Memory requireOwn(Optional<Memory> found, long memberId) {
         Memory memory = found.orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (!memory.isWrittenBy(memberId)) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        memory.requireWrittenBy(memberId);
         return memory;
     }
 

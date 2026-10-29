@@ -1,9 +1,11 @@
 package com.moewadeul.program.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.MutableClock;
 import java.time.Duration;
 import java.time.Instant;
@@ -159,6 +161,19 @@ class ProgramApplicationTest {
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(expected));
         assertThat(application.getStatus()).isEqualTo(status);
+    }
+
+    @Test
+    @DisplayName("[F-16] 신청한 회원이 아니면 requireAppliedBy가 ACCESS_DENIED다")
+    void requireAppliedByRejectsOthers() {
+        ProgramApplication application = application(ProgramApplicationStatus.PENDING_PAYMENT);
+        ReflectionTestUtils.setField(application, "memberId", 7L);
+
+        assertThatCode(() -> application.requireAppliedBy(7L)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> application.requireAppliedBy(8L))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
     private static ProgramApplication application(ProgramApplicationStatus status) {

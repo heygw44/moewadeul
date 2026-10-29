@@ -1,9 +1,11 @@
 package com.moewadeul.community.domain.post;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.community.domain.CommunityErrorCode;
 import java.time.Instant;
@@ -160,14 +162,17 @@ class CommunityPostTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-03] 작성자 ID가 같을 때만 isWrittenBy가 true다")
-    void isWrittenByComparesAuthorId() {
+    @DisplayName("[F-29][CM-03] 작성자가 아니면 requireWrittenBy가 ACCESS_DENIED다")
+    void requireWrittenByRejectsOthers() {
         // given
         CommunityPost post = CommunityPost.write(7L, "제목", "본문", null, NOW);
 
         // then
-        assertThat(post.isWrittenBy(7L)).isTrue();
-        assertThat(post.isWrittenBy(8L)).isFalse();
+        assertThatCode(() -> post.requireWrittenBy(7L)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> post.requireWrittenBy(8L))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.ACCESS_DENIED));
     }
 
     private CommunityPost postIn(CommunityPostStatus status) {

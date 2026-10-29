@@ -81,9 +81,7 @@ public class ProgramPaymentService {
         ProgramApplication application = programApplicationRepository
                 .findByIdForUpdate(applicationId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
-        if (application.getMemberId() != memberId) {
-            throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
-        }
+        application.requireAppliedBy(memberId);
         return application;
     }
 
