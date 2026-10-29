@@ -1,5 +1,6 @@
 package com.moewadeul.trust.infra.report;
 
+import com.moewadeul.trust.domain.report.ReportStatus;
 import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
@@ -9,7 +10,7 @@ import org.apache.ibatis.annotations.Param;
 public interface AdminMemberReportMapper {
 
     List<AdminMemberReportRow> selectList(
-            @Param("status") String status,
+            @Param("status") ReportStatus status,
             @Param("urgent") Boolean urgent,
             @Param("offset") long offset,
             @Param("limit") int limit);

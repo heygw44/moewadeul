@@ -44,7 +44,7 @@ class MemberReportApplier {
                         command.basecampId(),
                         reporterId,
                         command.targetMemberId(),
-                        command.kind().name(),
+                        command.kind(),
                         command.companionReviewId())
                 .orElseThrow(() -> new BusinessException(TrustErrorCode.REPORT_NOT_ELIGIBLE));
         Instant now = clock.instant();
