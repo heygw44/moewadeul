@@ -9,7 +9,7 @@ import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
-import com.moewadeul.trust.domain.identity.IdentityProvider;
+import com.moewadeul.trust.application.identity.IdentityProvider;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,7 +1,7 @@
 package com.moewadeul.trust.infra.identity;
 
+import com.moewadeul.trust.application.identity.IdentityProvider;
 import com.moewadeul.trust.domain.identity.IdentityClaim;
-import com.moewadeul.trust.domain.identity.IdentityProvider;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.VerifiedIdentity;
 import java.nio.charset.StandardCharsets;

@@ -68,6 +68,9 @@ public final class ArchitectureRules {
     private static final Set<String> JOB_RUNNER_ENTRY_METHODS = Set.of("run", "runCountingFailures");
 
     private static final String SPRING_DATA_REPOSITORY = "org.springframework.data.repository.Repository";
+    private static final String JPA_REPOSITORY_SUFFIX = "JpaRepository";
+    private static final String DOMAIN_PORT_SUFFIX = "Repository";
+    private static final List<String> EXTERNAL_ADAPTER_PACKAGES = List.of("storage", "mail");
     private static final List<String> PERSISTENCE_NAME_SUFFIXES = List.of("Repository", "Mapper");
     private static final List<String> TRANSACTIONAL_TYPES =
             List.of("org.springframework.transaction.annotation.Transactional", "jakarta.transaction.Transactional");
@@ -130,6 +133,50 @@ public final class ArchitectureRules {
                     return persistenceReason(scope, dep.getTargetClass());
                 }))
                 .as("api 패키지는 영속 계층을 직접 쓰지 않는다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule applicationJpaRepositoryRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(noDependency(scope, "keep application away from JpaRepository", (source, dep) -> {
+                    if (!APPLICATION.equals(source.layer())) {
+                        return Optional.empty();
+                    }
+                    JavaClass target = dep.getTargetClass();
+                    if (target.getSimpleName().endsWith(JPA_REPOSITORY_SUFFIX)
+                            || target.isAssignableTo(SPRING_DATA_REPOSITORY)) {
+                        return Optional.of("application 은(는) *JpaRepository 를 직접 쓸 수 없다(domain 저장소 포트를 거친다)");
+                    }
+                    return Optional.empty();
+                }))
+                .as("application 패키지는 *JpaRepository를 직접 쓰지 않는다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule domainPortRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(domainPortsAreRepositories(scope))
+                .as("domain 패키지에는 저장소가 아닌 외부 포트를 두지 않는다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule apiExternalAdapterRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(noDependency(scope, "keep api away from external adapters", (source, dep) -> {
+                    if (!API.equals(source.layer())) {
+                        return Optional.empty();
+                    }
+                    String packageName = dep.getTargetClass().getPackageName();
+                    return EXTERNAL_ADAPTER_PACKAGES.stream()
+                            .map(name -> rootPackage + "." + COMMON + "." + name)
+                            .filter(prefix -> packageName.equals(prefix) || packageName.startsWith(prefix + "."))
+                            .findFirst()
+                            .map(prefix -> "api 은(는) " + prefix + " 패키지를 쓸 수 없다(application 결과로 받는다)");
+                }))
+                .as("api 패키지는 common.storage·common.mail 을 직접 쓰지 않는다")
                 .allowEmptyShould(true);
     }
 
@@ -210,6 +257,29 @@ public final class ArchitectureRules {
                             .ifPresent(reason -> events.add(SimpleConditionEvent.violated(
                                     dependency, reason + ": " + dependency.getDescription())));
                 }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> domainPortsAreRepositories(Scope scope) {
+        return new ArchCondition<>("name every domain interface implemented in infra *Repository") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                boolean domainInterface = item.isInterface()
+                        && scope.locate(item).map(l -> DOMAIN.equals(l.layer())).orElse(false);
+                if (!domainInterface || item.getSimpleName().endsWith(DOMAIN_PORT_SUFFIX)) {
+                    return;
+                }
+                item.getAllSubclasses().stream()
+                        .filter(sub -> scope.locate(sub)
+                                .map(l -> INFRA.equals(l.layer()))
+                                .orElse(false))
+                        .findFirst()
+                        .ifPresent(sub -> events.add(SimpleConditionEvent.violated(
+                                item,
+                                "domain 인터페이스 " + item.getName() + " 을(를) infra 의 " + sub.getName()
+                                        + " 이(가) 구현한다. 저장소가 아닌 포트는 application 에 두고,"
+                                        + " 여러 모듈이 쓰면 common 에 둔다")));
             }
         };
     }
