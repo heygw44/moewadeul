@@ -3,7 +3,10 @@ package com.moewadeul.basecamp.api.query;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.moewadeul.basecamp.application.JoinConditionSummary;
 import com.moewadeul.basecamp.application.query.BasecampDetail;
+import com.moewadeul.basecamp.application.query.BasecampSpotType;
+import com.moewadeul.basecamp.domain.BasecampMemberRole;
 import com.moewadeul.basecamp.domain.BasecampRelation;
+import com.moewadeul.basecamp.domain.BasecampStatus;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -73,7 +76,7 @@ public sealed interface BasecampDetailResponse {
             LocalDate endDate,
             int capacity,
             int headcount,
-            String status,
+            BasecampStatus status,
             JoinConditionSummary joinCondition,
             AnonymousLeader leader,
             List<AnonymousMemberEntry> members,
@@ -90,7 +93,7 @@ public sealed interface BasecampDetailResponse {
             LocalDate endDate,
             int capacity,
             int headcount,
-            String status,
+            BasecampStatus status,
             JoinConditionSummary joinCondition,
             LeaderEntry leader,
             List<MemberEntry> members,
@@ -101,7 +104,7 @@ public sealed interface BasecampDetailResponse {
             @JsonInclude(JsonInclude.Include.NON_NULL) List<String> unmetReasons)
             implements BasecampDetailResponse {}
 
-    record SpotResponse(long spotId, String name, String type, double lat, double lng) {
+    record SpotResponse(long spotId, String name, BasecampSpotType type, double lat, double lng) {
 
         static SpotResponse from(BasecampDetail.SpotSummary summary) {
             if (summary == null) {
@@ -113,14 +116,14 @@ public sealed interface BasecampDetailResponse {
 
     record AnonymousLeader(long memberId, String nickname) {}
 
-    record AnonymousMemberEntry(long memberId, String nickname, String role) {}
+    record AnonymousMemberEntry(long memberId, String nickname, BasecampMemberRole role) {}
 
     record LeaderEntry(long memberId, String nickname, int trustLevel) {}
 
     record MemberEntry(
             long memberId,
             String nickname,
-            String role,
+            BasecampMemberRole role,
             String ageGroup,
             boolean ageGroupVerified,
             String gender,

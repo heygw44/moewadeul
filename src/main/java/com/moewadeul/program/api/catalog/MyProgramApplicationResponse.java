@@ -1,15 +1,18 @@
 package com.moewadeul.program.api.catalog;
 
 import com.moewadeul.program.application.catalog.MyProgramApplicationItem;
+import com.moewadeul.program.domain.ProgramApplicationStatus;
+import com.moewadeul.program.domain.ProgramCancelReason;
+import com.moewadeul.program.domain.ProgramPhase;
 import java.time.Instant;
 
 public record MyProgramApplicationResponse(
         long applicationId,
-        String status,
+        ProgramApplicationStatus status,
         Instant paymentDueAt,
         Instant confirmedAt,
         Instant canceledAt,
-        String cancelReason,
+        ProgramCancelReason cancelReason,
         Instant createdAt,
         ProgramResponse program) {
 
@@ -40,5 +43,5 @@ public record MyProgramApplicationResponse(
             Instant startAt,
             Instant endAt,
             int fee,
-            String status) {}
+            ProgramPhase status) {}
 }

@@ -54,7 +54,7 @@ public class BasecampDetailQueryService {
                 basecamp.getEndDate(),
                 basecamp.getCapacity().getValue(),
                 members.size(),
-                basecamp.getStatus().name(),
+                basecamp.getStatus(),
                 toSummary(basecamp.getJoinCondition()),
                 leader,
                 members,
@@ -90,7 +90,7 @@ public class BasecampDetailQueryService {
         return new BasecampDetail.DetailMember(
                 profile.memberId(),
                 profile.nickname(),
-                role.name(),
+                role,
                 profile.ageGroup(),
                 profile.ageGroupVerified(),
                 profile.gender(),

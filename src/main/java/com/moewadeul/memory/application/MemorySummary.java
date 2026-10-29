@@ -1,5 +1,7 @@
 package com.moewadeul.memory.application;
 
+import com.moewadeul.memory.domain.MemoryStatus;
+import com.moewadeul.memory.domain.MemoryVisibility;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -12,8 +14,8 @@ public record MemorySummary(
         LocalDate visitedDate,
         int nights,
         String excerpt,
-        String visibility,
-        String status,
+        MemoryVisibility visibility,
+        MemoryStatus status,
         String thumbnailUrl,
         long imageCount,
         long likeCount,

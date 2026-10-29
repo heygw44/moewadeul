@@ -2,6 +2,8 @@ package com.moewadeul.memory.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.moewadeul.memory.application.MemoryView;
+import com.moewadeul.memory.domain.MemoryStatus;
+import com.moewadeul.memory.domain.MemoryVisibility;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -17,8 +19,8 @@ public record MemoryDetailResponse(
         LocalDate visitedDate,
         int nights,
         @JsonInclude(JsonInclude.Include.NON_NULL) String content,
-        String visibility,
-        @JsonInclude(JsonInclude.Include.NON_NULL) String status,
+        MemoryVisibility visibility,
+        @JsonInclude(JsonInclude.Include.NON_NULL) MemoryStatus status,
         List<Image> images,
         Instant createdAt,
         Instant updatedAt,

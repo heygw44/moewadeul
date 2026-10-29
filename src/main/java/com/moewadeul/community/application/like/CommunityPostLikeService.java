@@ -37,8 +37,7 @@ public class CommunityPostLikeService {
     }
 
     private void lockActivePost(long postId) {
-        String status = communityPostLikeMapper.lockPostStatus(postId);
-        if (!CommunityPostStatus.ACTIVE.name().equals(status)) {
+        if (communityPostLikeMapper.lockPostStatus(postId) != CommunityPostStatus.ACTIVE) {
             throw new BusinessException(CommonErrorCode.NOT_FOUND);
         }
     }

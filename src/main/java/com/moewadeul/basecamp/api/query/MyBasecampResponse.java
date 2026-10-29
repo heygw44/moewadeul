@@ -1,6 +1,9 @@
 package com.moewadeul.basecamp.api.query;
 
+import com.moewadeul.basecamp.application.query.BasecampSpotType;
 import com.moewadeul.basecamp.application.query.MyBasecampItem;
+import com.moewadeul.basecamp.domain.BasecampRelation;
+import com.moewadeul.basecamp.domain.BasecampStatus;
 import java.time.LocalDate;
 
 public record MyBasecampResponse(
@@ -11,8 +14,8 @@ public record MyBasecampResponse(
         LocalDate endDate,
         int capacity,
         int headcount,
-        String status,
-        String myRelation) {
+        BasecampStatus status,
+        BasecampRelation myRelation) {
 
     static MyBasecampResponse from(MyBasecampItem item) {
         return new MyBasecampResponse(
@@ -28,5 +31,5 @@ public record MyBasecampResponse(
                 item.myRelation());
     }
 
-    public record SpotEntry(long spotId, String name, String type) {}
+    public record SpotEntry(long spotId, String name, BasecampSpotType type) {}
 }

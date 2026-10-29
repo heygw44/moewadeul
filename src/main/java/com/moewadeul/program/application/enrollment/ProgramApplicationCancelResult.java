@@ -1,3 +1,5 @@
 package com.moewadeul.program.application.enrollment;
 
-public record ProgramApplicationCancelResult(String status, boolean refunded) {}
+import com.moewadeul.program.domain.ProgramApplicationStatus;
+
+public record ProgramApplicationCancelResult(ProgramApplicationStatus status, boolean refunded) {}

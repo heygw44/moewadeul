@@ -79,7 +79,7 @@ record NormalizedPublicSpot(
                 || !Objects.equals(facilities, storedFacilities)
                 || !Objects.equals(phone, stored.phone())
                 || !Objects.equals(homepage, stored.homepage())
-                || !Objects.equals(operatingStatusName(), stored.operatingStatus())
+                || !Objects.equals(operatingStatus, stored.operatingStatus())
                 || !Objects.equals(closedFrom, stored.closedFrom())
                 || !Objects.equals(closedUntil, stored.closedUntil())
                 || !Objects.equals(sourceDate, stored.sourceDate());
@@ -102,17 +102,10 @@ record NormalizedPublicSpot(
                 facilitiesJson,
                 phone,
                 homepage,
-                operatingStatusName(),
+                operatingStatus,
                 closedFrom,
                 closedUntil,
                 sourceDate);
-    }
-
-    private String operatingStatusName() {
-        if (operatingStatus == null) {
-            return null;
-        }
-        return operatingStatus.name();
     }
 
     private static String requireText(String value, String message) {

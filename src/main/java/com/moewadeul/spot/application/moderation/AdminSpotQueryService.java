@@ -30,8 +30,8 @@ public class AdminSpotQueryService {
     @Transactional(readOnly = true)
     public PageSlice<AdminSpotSummary> list(String status, int page, int size) {
         SpotStatus spotStatus = parseStatus(status);
-        List<AdminSpotRow> rows = adminSpotMapper.selectPage(
-                spotStatus.name(), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+        List<AdminSpotRow> rows =
+                adminSpotMapper.selectPage(spotStatus, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
         PageSlice<AdminSpotRow> slice = PageSlice.of(rows, page, size);
         List<Long> spotIds = slice.content().stream().map(AdminSpotRow::spotId).toList();
         Map<Long, List<AdminSpotSummary.RecentReport>> recentBySpot = readRecentReports(spotIds);
@@ -53,7 +53,8 @@ public class AdminSpotQueryService {
                 .collect(Collectors.groupingBy(
                         AdminSpotRecentReportRow::spotId,
                         Collectors.mapping(
-                                row -> new AdminSpotSummary.RecentReport(row.reason(), row.content(), row.createdAt()),
+                                row -> new AdminSpotSummary.RecentReport(
+                                        row.reason().name(), row.content(), row.createdAt()),
                                 Collectors.toList())));
     }
 
@@ -71,9 +72,9 @@ public class AdminSpotQueryService {
                 : new AdminSpotSummary.Reporter(row.reporterId(), row.reporterNickname());
         return new AdminSpotSummary(
                 row.spotId(),
-                row.type(),
+                row.type().name(),
                 row.name(),
-                row.status(),
+                row.status().name(),
                 row.lat(),
                 row.lng(),
                 row.parkWarning(),

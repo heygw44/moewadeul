@@ -70,7 +70,7 @@
             <arg column="lat" javaType="_double" name="lat"/>
             <arg column="lng" javaType="_double" name="lng"/>
             <arg column="park_warning" javaType="_boolean" name="parkWarning"/>
-            <arg column="operating_status" javaType="string" name="operatingStatus"/>
+            <arg column="operating_status" javaType="com.moewadeul.spot.application.PublicSpotOperatingStatus" name="operatingStatus"/>
             <arg column="closed_from" javaType="java.time.LocalDate" name="closedFrom"/>
             <arg column="closed_until" javaType="java.time.LocalDate" name="closedUntil"/>
         </constructor>

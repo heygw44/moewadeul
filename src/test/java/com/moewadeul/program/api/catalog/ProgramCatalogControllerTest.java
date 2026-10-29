@@ -60,8 +60,8 @@ class ProgramCatalogControllerTest {
     @Test
     @DisplayName("[F-17] 로그인하지 않아도 행사 목록을 조회하고, status와 page를 서비스에 넘긴다")
     void anonymousCanListPrograms() {
-        ProgramSummary summary =
-                new ProgramSummary(9L, "가을 백패킹", "설악산 입구", null, AT, AT, AT, AT, 200, 150, 30000, true, "OPEN");
+        ProgramSummary summary = new ProgramSummary(
+                9L, "가을 백패킹", "설악산 입구", null, AT, AT, AT, AT, 200, 150, 30000, true, ProgramPhase.OPEN);
         when(programQueryService.list(any(ProgramListQuery.class)))
                 .thenReturn(new ProgramPage(new PageSlice<>(List.of(summary), 1, 5, true), AT));
 
@@ -190,13 +190,13 @@ class ProgramCatalogControllerTest {
     void listMineReturnsPage() {
         MyProgramApplicationItem item = new MyProgramApplicationItem(
                 31L,
-                "PENDING_PAYMENT",
+                ProgramApplicationStatus.PENDING_PAYMENT,
                 AT,
                 null,
                 null,
                 null,
                 AT,
-                new MyProgramApplicationItem.Program(4L, "가을 능선 백패킹", "지리산 성삼재", AT, AT, 30000, "OPEN"));
+                new MyProgramApplicationItem.Program(4L, "가을 능선 백패킹", "지리산 성삼재", AT, AT, 30000, ProgramPhase.OPEN));
         when(programQueryService.listMine(4L, new MyProgramApplicationQuery(ProgramApplicationStatus.CONFIRMED, 1, 5)))
                 .thenReturn(new PageSlice<>(List.of(item), 1, 5, true));
 

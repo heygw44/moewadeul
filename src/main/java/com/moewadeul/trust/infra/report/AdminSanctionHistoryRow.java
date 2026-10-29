@@ -1,12 +1,14 @@
 package com.moewadeul.trust.infra.report;
 
+import com.moewadeul.trust.domain.sanction.SanctionStatus;
+import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.time.Instant;
 
 public record AdminSanctionHistoryRow(
         long sanctionId,
-        String type,
+        SanctionType type,
         Integer level,
-        String status,
+        SanctionStatus status,
         String reason,
         Instant startsAt,
         Instant endsAt,

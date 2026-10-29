@@ -38,8 +38,7 @@ public class BasecampApprovalService {
 
         basecamp.approve(applicationId, clock.instant());
         recordDecision(BasecampDecisionEvents.APPROVED_EVENT_TYPE, basecamp, application);
-        return new BasecampApproveResult(
-                basecamp.headcount(), basecamp.getStatus().name());
+        return new BasecampApproveResult(basecamp.headcount(), basecamp.getStatus());
     }
 
     @Transactional
@@ -47,8 +46,7 @@ public class BasecampApprovalService {
         Basecamp basecamp = lockLedBy(basecampId, leaderId);
         BasecampApplication application = basecamp.reject(applicationId, clock.instant());
         recordDecision(BasecampDecisionEvents.REJECTED_EVENT_TYPE, basecamp, application);
-        return new BasecampRejectResult(
-                application.getId(), application.getStatus().name());
+        return new BasecampRejectResult(application.getId(), application.getStatus());
     }
 
     // 베이스캠프 행의 잠금이 이 트랜잭션의 첫 조회여야 한다. MySQL의 반복 가능한 읽기에서는 잠그지 않는 조회가 먼저 일어나면

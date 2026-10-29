@@ -2,6 +2,11 @@ package com.moewadeul.common.architecture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.spot.application.PublicSpotOperatingStatus;
+import com.moewadeul.spot.application.park.ProtectedAreaSource;
+import com.moewadeul.spot.application.park.ProtectedAreaType;
+import com.moewadeul.spot.application.publicspot.PublicSpotSource;
+import com.moewadeul.spot.domain.SpotType;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -76,6 +81,19 @@ class MapperEnumLiteralTest {
             "lock",
             "partition");
     private static final Pattern UPPER_CASE_CODE = Pattern.compile("[A-Z][A-Z0-9_]*");
+
+    // 엔티티 없이 Flyway와 MyBatis로만 쓰는 표는 @Enumerated로 열의 enum을 알 수 없어 여기에 직접 적는다.
+    // spot_cluster_total은 enum 열이 없지만, 문장이 같은 별칭으로 spot_cluster_cell과 번갈아 쓰므로 표로 등록해야 별칭이 풀린다.
+    private static final Map<String, Map<String, Class<? extends Enum<?>>>> NON_ENTITY_ENUM_COLUMNS = Map.of(
+            "public_spot_detail",
+            Map.of("operating_status", PublicSpotOperatingStatus.class, "source", PublicSpotSource.class),
+            "spot_cluster_cell",
+            Map.of("type", SpotType.class),
+            "spot_cluster_total",
+            Map.of(),
+            "protected_area",
+            Map.of("area_type", ProtectedAreaType.class, "source", ProtectedAreaSource.class));
+    private static final Pattern OPTIMIZER_HINT = Pattern.compile("/\\*\\+.*?\\*/");
 
     private static Map<String, Map<String, Class<? extends Enum<?>>>> enumColumnsByTable;
     private static Set<String> entityTables;
@@ -248,7 +266,8 @@ class MapperEnumLiteralTest {
                         .append(' ');
             }
         }
-        return sql.toString().replaceAll("\\s+", " ");
+        String text = sql.toString().replaceAll("\\s+", " ");
+        return OPTIMIZER_HINT.matcher(text).replaceAll(" ");
     }
 
     private static void scanStatement(Report report, String file, String statementId, String sql) {
@@ -336,10 +355,12 @@ class MapperEnumLiteralTest {
         }
         Set<Class<? extends Enum<?>>> enums = new HashSet<>();
         for (String table : candidates) {
-            if (!entityTables.contains(table)) {
-                return Resolution.unresolved("엔티티가 없는 표(Flyway로만 만든 표)");
+            Map<String, Class<? extends Enum<?>>> columns =
+                    entityTables.contains(table) ? enumColumnsByTable.get(table) : NON_ENTITY_ENUM_COLUMNS.get(table);
+            if (columns == null) {
+                return Resolution.unresolved("엔티티도 enum 열 목록도 없는 표(Flyway로만 만든 표)");
             }
-            Class<? extends Enum<?>> enumType = enumColumnsByTable.get(table).get(column);
+            Class<? extends Enum<?>> enumType = columns.get(column);
             if (enumType != null) {
                 enums.add(enumType);
             }

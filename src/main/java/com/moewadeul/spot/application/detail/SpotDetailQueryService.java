@@ -5,10 +5,8 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.common.time.KoreaTime;
 import com.moewadeul.spot.application.ParkWarningTexts;
-import com.moewadeul.spot.application.PublicSpotOperatingStatus;
 import com.moewadeul.spot.application.SpotClosedNow;
 import com.moewadeul.spot.application.SpotParkWarning;
-import com.moewadeul.spot.application.publicspot.PublicSpotSource;
 import com.moewadeul.spot.domain.SpotType;
 import com.moewadeul.spot.infra.detail.SpotConfirmedProgramRow;
 import com.moewadeul.spot.infra.detail.SpotConfirmedStayRow;
@@ -166,14 +164,14 @@ public class SpotDetailQueryService {
         boolean closedNow =
                 SpotClosedNow.isClosedOn(row.type(), row.operatingStatus(), row.closedFrom(), row.closedUntil(), today);
         return new SpotPublicDetail(
-                PublicSpotSource.valueOf(row.source()),
+                row.source(),
                 row.category(),
                 toFacilities(row.facilities()),
                 row.phone(),
                 row.homepage(),
                 row.sourceDate(),
                 row.checkedAt(),
-                toOperatingStatus(row.operatingStatus()),
+                row.operatingStatus(),
                 row.closedFrom(),
                 row.closedUntil(),
                 closedNow);
@@ -197,12 +195,5 @@ public class SpotDetailQueryService {
                 source.get("posblFcltyCl"),
                 source.get("posblFcltyEtc"),
                 source.get("animalCmgCl"));
-    }
-
-    private static PublicSpotOperatingStatus toOperatingStatus(String operatingStatus) {
-        if (operatingStatus == null) {
-            return null;
-        }
-        return PublicSpotOperatingStatus.valueOf(operatingStatus);
     }
 }

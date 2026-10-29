@@ -12,6 +12,7 @@ import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.web.PatchField;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
+import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.infra.moderation.AdminCommunityMapper;
 import com.moewadeul.member.application.profile.MyInfoService;
 import com.moewadeul.member.application.profile.MyInfoUpdateCommand;
@@ -27,6 +28,7 @@ import com.moewadeul.memory.application.report.MemoryReportCommand;
 import com.moewadeul.memory.application.report.MemoryReportService;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryRepository;
+import com.moewadeul.memory.domain.MemoryStatus;
 import com.moewadeul.memory.domain.report.MemoryReportRepository;
 import com.moewadeul.memory.infra.moderation.AdminMemoryMapper;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
@@ -43,6 +45,7 @@ import com.moewadeul.spot.application.bakji.BakjiProblemReportCommand;
 import com.moewadeul.spot.application.moderation.AdminSpotQueryService;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.SpotRepository;
+import com.moewadeul.spot.domain.SpotStatus;
 import com.moewadeul.spot.domain.bakji.BakjiConfirmationRepository;
 import com.moewadeul.spot.domain.bakji.BakjiReportRepository;
 import com.moewadeul.spot.infra.moderation.AdminSpotMapper;
@@ -84,8 +87,8 @@ class EnumInputServicesTest {
         service.list(null, 0, 20);
         service.list("HIDDEN", 0, 20);
 
-        verify(mapper).selectPage("PENDING_REVIEW", 0L, 21);
-        verify(mapper).selectPage("HIDDEN", 0L, 21);
+        verify(mapper).selectPage(SpotStatus.PENDING_REVIEW, 0L, 21);
+        verify(mapper).selectPage(SpotStatus.HIDDEN, 0L, 21);
     }
 
     @ParameterizedTest
@@ -107,7 +110,7 @@ class EnumInputServicesTest {
 
         service.list(null, 0, 20);
 
-        verify(mapper).selectMemories("PENDING_REVIEW", 0L, 21);
+        verify(mapper).selectMemories(MemoryStatus.PENDING_REVIEW, 0L, 21);
     }
 
     @ParameterizedTest
@@ -129,7 +132,7 @@ class EnumInputServicesTest {
 
         new AdminCommunityQueryService(mapper).listPosts(null, 0, 20);
 
-        verify(mapper).selectPosts("PENDING_REVIEW", 0L, 21);
+        verify(mapper).selectPosts(CommunityPostStatus.PENDING_REVIEW, 0L, 21);
     }
 
     @ParameterizedTest

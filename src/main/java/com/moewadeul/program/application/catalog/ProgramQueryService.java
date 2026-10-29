@@ -26,9 +26,8 @@ public class ProgramQueryService {
     @Transactional(readOnly = true)
     public ProgramPage list(ProgramListQuery query) {
         Instant now = clock.instant();
-        String phase = query.phase() == null ? null : query.phase().name();
         List<ProgramListRow> rows = programQueryMapper.selectList(
-                phase, now, PageSlice.offsetOf(query.page(), query.size()), PageSlice.fetchSize(query.size()));
+                query.phase(), now, PageSlice.offsetOf(query.page(), query.size()), PageSlice.fetchSize(query.size()));
         PageSlice<ProgramSummary> slice =
                 PageSlice.of(rows, query.page(), query.size()).map(row -> toSummary(row, now));
         return new ProgramPage(slice, programQueryMapper.selectNextApplyOpenAt(now));
@@ -81,18 +80,18 @@ public class ProgramQueryService {
                 row.remainingSeats(),
                 row.fee(),
                 row.overnight(),
-                phase.name());
+                phase);
     }
 
     private static MyProgramApplicationItem toMyItem(MyProgramApplicationRow row, Instant now) {
         ProgramPhase phase = ProgramPhase.of(row.programStatus(), row.applyOpenAt(), row.applyCloseAt(), now);
         return new MyProgramApplicationItem(
                 row.applicationId(),
-                row.status().name(),
+                row.status(),
                 row.paymentDueAt(),
                 row.confirmedAt(),
                 row.canceledAt(),
-                row.cancelReason() == null ? null : row.cancelReason().name(),
+                row.cancelReason(),
                 row.createdAt(),
                 new MyProgramApplicationItem.Program(
                         row.programId(),
@@ -101,7 +100,7 @@ public class ProgramQueryService {
                         row.startAt(),
                         row.endAt(),
                         row.fee(),
-                        phase.name()));
+                        phase));
     }
 
     private static ProgramDetail toDetail(ProgramDetailRow row, Instant now, ProgramDetail.MyApplication mine) {

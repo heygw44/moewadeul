@@ -1,5 +1,6 @@
 package com.moewadeul.basecamp.infra.query;
 
+import com.moewadeul.basecamp.application.query.BasecampSpotType;
 import com.moewadeul.basecamp.domain.BasecampStatus;
 import com.moewadeul.basecamp.domain.JoinGender;
 import java.time.LocalDate;
@@ -9,7 +10,7 @@ public record BasecampSearchRow(
         String title,
         long spotId,
         String spotName,
-        String spotType,
+        BasecampSpotType spotType,
         double spotLat,
         double spotLng,
         LocalDate startDate,

@@ -1,6 +1,7 @@
 package com.moewadeul.spot.infra.moderation;
 
 import com.moewadeul.common.moderation.ReportReasonCount;
+import com.moewadeul.spot.domain.SpotStatus;
 import java.util.Collection;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -10,7 +11,7 @@ import org.apache.ibatis.annotations.Param;
 public interface AdminSpotMapper {
 
     List<AdminSpotRow> selectPage(
-            @Param("status") String status, @Param("offset") long offset, @Param("limit") int limit);
+            @Param("status") SpotStatus status, @Param("offset") long offset, @Param("limit") int limit);
 
     List<ReportReasonCount> selectReasonCounts(@Param("spotIds") Collection<Long> spotIds);
 

@@ -47,8 +47,7 @@ public class BasecampApplyService {
                 BasecampApplicationEvents.AGGREGATE_TYPE,
                 basecamp.getId(),
                 new BasecampApplicationEvents.Payload(application.getId(), command.memberId(), basecamp.getLeaderId()));
-        return new BasecampApplyResult(
-                application.getId(), application.getStatus().name());
+        return new BasecampApplyResult(application.getId(), application.getStatus());
     }
 
     private static void requireBaseTrustLevel(Applicant applicant) {

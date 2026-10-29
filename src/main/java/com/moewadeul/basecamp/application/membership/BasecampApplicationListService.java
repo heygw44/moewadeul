@@ -42,7 +42,7 @@ public class BasecampApplicationListService {
         MemberTrustProfile profile = memberProfileQueryService.findIncludingWithdrawn(row.applicantId());
         return new BasecampApplicationItem(
                 row.applicationId(),
-                row.status().name(),
+                row.status(),
                 row.message(),
                 row.appliedAt(),
                 new BasecampApplicationItem.Applicant(

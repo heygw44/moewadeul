@@ -34,7 +34,7 @@ public class MyBasecampListService {
                 row.endDate(),
                 row.capacity(),
                 row.headcount(),
-                row.status().name(),
-                row.myRelation().name());
+                row.status(),
+                row.myRelation());
     }
 }

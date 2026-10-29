@@ -11,6 +11,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
+import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
 import java.time.Duration;
 import java.time.Instant;
@@ -62,7 +63,7 @@ class ProgramPaymentServiceIntegrationTest {
 
         // then
         assertThat(result.applicationId()).isEqualTo(applicationId);
-        assertThat(result.status()).isEqualTo("CONFIRMED");
+        assertThat(result.status()).isEqualTo(ProgramApplicationStatus.CONFIRMED);
         assertThat(result.paidAt()).isEqualTo(NOW.plus(Duration.ofMinutes(5)));
         assertThat(fixture.applicationStatus(applicationId)).isEqualTo("CONFIRMED");
         assertThat(jdbc.queryForObject(
@@ -115,7 +116,8 @@ class ProgramPaymentServiceIntegrationTest {
 
         // when, then
         clock.setInstant(due.minusSeconds(1));
-        assertThat(programPaymentService.pay(beforeMember, before).status()).isEqualTo("CONFIRMED");
+        assertThat(programPaymentService.pay(beforeMember, before).status())
+                .isEqualTo(ProgramApplicationStatus.CONFIRMED);
         clock.setInstant(due);
         assertErrorCode(() -> programPaymentService.pay(atMember, at), ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED);
         assertThat(fixture.applicationStatus(at)).isEqualTo("PENDING_PAYMENT");
@@ -173,7 +175,7 @@ class ProgramPaymentServiceIntegrationTest {
         ProgramApplicationCancelResult result = programPaymentService.cancel(memberId, applicationId);
 
         // then
-        assertThat(result.status()).isEqualTo("CANCELED");
+        assertThat(result.status()).isEqualTo(ProgramApplicationStatus.CANCELED);
         assertThat(result.refunded()).isFalse();
         assertThat(fixture.applicationStatus(applicationId)).isEqualTo("CANCELED");
         assertThat(jdbc.queryForObject(
@@ -205,7 +207,7 @@ class ProgramPaymentServiceIntegrationTest {
         ProgramApplicationCancelResult result = programPaymentService.cancel(memberId, applicationId);
 
         // then
-        assertThat(result.status()).isEqualTo("CANCELED");
+        assertThat(result.status()).isEqualTo(ProgramApplicationStatus.CANCELED);
         assertThat(result.refunded()).isTrue();
         assertThat(fixture.paymentStatus(applicationId)).isEqualTo("REFUNDED");
         assertThat(jdbc.queryForObject(
@@ -220,7 +222,8 @@ class ProgramPaymentServiceIntegrationTest {
                 applicationId);
         assertThat(JsonPath.<Boolean>read(payload, "$.refunded")).isTrue();
         assertThat(fixture.activeCount(programId)).isZero();
-        assertThat(programApplyService.apply(other, programId).status()).isEqualTo("PENDING_PAYMENT");
+        assertThat(programApplyService.apply(other, programId).status())
+                .isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
     }
 
     @Test

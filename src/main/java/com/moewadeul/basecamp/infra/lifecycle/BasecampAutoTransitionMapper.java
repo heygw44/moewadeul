@@ -1,5 +1,6 @@
 package com.moewadeul.basecamp.infra.lifecycle;
 
+import com.moewadeul.basecamp.domain.BasecampStatus;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -15,7 +16,7 @@ public interface BasecampAutoTransitionMapper {
     List<Long> selectDueForCompletionIds(
             @Param("today") LocalDate today, @Param("afterId") long afterId, @Param("limit") int limit);
 
-    String selectStatusForUpdate(@Param("id") long id);
+    BasecampStatus selectStatusForUpdate(@Param("id") long id);
 
     int countActiveMembers(@Param("id") long id);
 

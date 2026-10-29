@@ -1,3 +1,5 @@
 package com.moewadeul.basecamp.application.membership;
 
-public record BasecampApproveResult(int headcount, String status) {}
+import com.moewadeul.basecamp.domain.BasecampStatus;
+
+public record BasecampApproveResult(int headcount, BasecampStatus status) {}

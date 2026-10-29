@@ -54,20 +54,20 @@ public class ProtectedAreaLoadService {
     }
 
     private Map<AreaKey, Long> findStoredIds(ProtectedAreaSource source) {
-        return protectedAreaMapper.selectKeysBySource(source.name()).stream()
+        return protectedAreaMapper.selectKeysBySource(source).stream()
                 .collect(Collectors.toMap(row -> new AreaKey(row.areaType(), row.name()), ProtectedAreaKeyRow::id));
     }
 
     private static ProtectedAreaInsertRow toInsertRow(
             ProtectedAreaSource source, LocalDate sourceDate, ProtectedAreaCommand command) {
         return new ProtectedAreaInsertRow(
-                source.name(), command.areaType().name(), command.name(), sourceDate, command.multiPolygonWkt());
+                source, command.areaType(), command.name(), sourceDate, command.multiPolygonWkt());
     }
 
-    private record AreaKey(String areaType, String name) {
+    private record AreaKey(ProtectedAreaType areaType, String name) {
 
         static AreaKey of(ProtectedAreaCommand command) {
-            return new AreaKey(command.areaType().name(), command.name());
+            return new AreaKey(command.areaType(), command.name());
         }
     }
 }

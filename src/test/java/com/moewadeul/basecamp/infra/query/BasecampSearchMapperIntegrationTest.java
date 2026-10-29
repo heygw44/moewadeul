@@ -4,6 +4,7 @@ import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import com.moewadeul.basecamp.application.query.BasecampSpotType;
 import com.moewadeul.basecamp.domain.BasecampApplicationStatus;
 import com.moewadeul.basecamp.domain.BasecampMemberStatus;
 import com.moewadeul.basecamp.domain.BasecampStatus;
@@ -158,7 +159,9 @@ class BasecampSearchMapperIntegrationTest {
 
         // when
         List<BasecampSearchRow> rows = mapper.selectRecruiting(
-                detailCondition(Set.of("BAKJI", "FOREST"), Set.of(), null, false, false), 0, 20);
+                detailCondition(Set.of(BasecampSpotType.BAKJI, BasecampSpotType.FOREST), Set.of(), null, false, false),
+                0,
+                20);
 
         // then
         assertThat(rows).extracting(BasecampSearchRow::basecampId).containsExactly(bakji, forest);
@@ -245,8 +248,8 @@ class BasecampSearchMapperIntegrationTest {
         insertBasecamp(leader, campsite, DAY, 1, null, null, null, false);
 
         // when
-        List<BasecampSearchRow> rows =
-                mapper.selectRecruiting(detailCondition(Set.of("BAKJI"), Set.of(1), 1, false, true), 0, 20);
+        List<BasecampSearchRow> rows = mapper.selectRecruiting(
+                detailCondition(Set.of(BasecampSpotType.BAKJI), Set.of(1), 1, false, true), 0, 20);
 
         // then
         assertThat(rows).extracting(BasecampSearchRow::basecampId).containsExactly(earlier, later);
@@ -314,7 +317,7 @@ class BasecampSearchMapperIntegrationTest {
         assertThat(row.title()).isEqualTo("기존");
         assertThat(row.spotId()).isEqualTo(spotId);
         assertThat(row.spotName()).isEqualTo("능선 끝 평지");
-        assertThat(row.spotType()).isEqualTo("BAKJI");
+        assertThat(row.spotType()).isEqualTo(BasecampSpotType.BAKJI);
         assertThat(row.spotLat()).isEqualTo(37.5);
         assertThat(row.spotLng()).isEqualTo(127.5);
         assertThat(row.startDate()).isEqualTo(DAY);
@@ -406,7 +409,7 @@ class BasecampSearchMapperIntegrationTest {
 
         // when & then
         assertThat(mapper.selectSpotSummary(spotId))
-                .isEqualTo(new SpotSummaryRow(spotId, "능선 끝 평지", "BAKJI", 37.5, 127.25));
+                .isEqualTo(new SpotSummaryRow(spotId, "능선 끝 평지", BasecampSpotType.BAKJI, 37.5, 127.25));
         assertThat(mapper.selectSpotSummary(spotId + 1000)).isNull();
         assertThat(mapper.selectSpotSummary(hiddenSpot)).isNull();
         assertThat(mapper.selectSpotSummary(pendingSpot)).isNull();
@@ -424,7 +427,7 @@ class BasecampSearchMapperIntegrationTest {
     }
 
     private static BasecampSearchCondition detailCondition(
-            Set<String> spotTypes,
+            Set<BasecampSpotType> spotTypes,
             Set<Integer> nights,
             Integer maxTrustLevel,
             boolean noAgeLimit,

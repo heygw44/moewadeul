@@ -24,11 +24,9 @@ public class AdminMemberReportQueryService {
 
     @Transactional(readOnly = true)
     public PageSlice<AdminMemberReportSummary> list(String status, Boolean urgent, int page, int size) {
-        String statusName = status == null
-                ? null
-                : EnumParser.parse(ReportStatus.class, status, STATUS_MESSAGE).name();
+        ReportStatus reportStatus = EnumParser.parseNullable(ReportStatus.class, status, STATUS_MESSAGE);
         List<AdminMemberReportRow> rows = adminMemberReportMapper.selectList(
-                statusName, urgent, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
+                reportStatus, urgent, PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
         return PageSlice.of(rows, page, size).map(AdminMemberReportQueryService::toSummary);
     }
 
@@ -67,10 +65,10 @@ public class AdminMemberReportQueryService {
     private static AdminMemberReportSummary toSummary(AdminMemberReportRow row) {
         return new AdminMemberReportSummary(
                 row.reportId(),
-                row.kind(),
-                row.type(),
+                row.kind().name(),
+                row.type().name(),
                 row.urgent(),
-                row.status(),
+                row.status().name(),
                 row.reporterId(),
                 row.reporterNickname(),
                 row.targetId(),
@@ -82,10 +80,10 @@ public class AdminMemberReportQueryService {
     private static AdminMemberReportSummary toSummary(AdminMemberReportDetailRow row) {
         return new AdminMemberReportSummary(
                 row.reportId(),
-                row.kind(),
-                row.type(),
+                row.kind().name(),
+                row.type().name(),
                 row.urgent(),
-                row.status(),
+                row.status().name(),
                 row.reporterId(),
                 row.reporterNickname(),
                 row.targetId(),
@@ -97,9 +95,9 @@ public class AdminMemberReportQueryService {
     private static AdminMemberReportDetail.SanctionHistory toHistory(AdminSanctionHistoryRow row) {
         return new AdminMemberReportDetail.SanctionHistory(
                 row.sanctionId(),
-                row.type(),
+                row.type().name(),
                 row.level(),
-                row.status(),
+                row.status().name(),
                 row.reason(),
                 row.startsAt(),
                 row.endsAt(),

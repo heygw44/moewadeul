@@ -47,10 +47,7 @@ public class ProgramApplyService {
         claimSeat(claim);
         log.info("program applied programId={} applicationId={} memberId={}", programId, claim.getId(), memberId);
         return new ProgramApplyResult(
-                claim.getId(),
-                ProgramApplicationStatus.PENDING_PAYMENT.name(),
-                claim.getPaymentDueAt(),
-                program.getFee());
+                claim.getId(), ProgramApplicationStatus.PENDING_PAYMENT, claim.getPaymentDueAt(), program.getFee());
     }
 
     private void requireTrustLevel(Program program, long memberId) {

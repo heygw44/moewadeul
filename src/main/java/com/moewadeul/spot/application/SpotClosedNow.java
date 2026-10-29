@@ -8,18 +8,15 @@ public final class SpotClosedNow {
     private SpotClosedNow() {}
 
     public static boolean isClosedOn(
-            SpotType type, String operatingStatus, LocalDate closedFrom, LocalDate closedUntil, LocalDate today) {
+            SpotType type,
+            PublicSpotOperatingStatus operatingStatus,
+            LocalDate closedFrom,
+            LocalDate closedUntil,
+            LocalDate today) {
         if (type == SpotType.BAKJI) {
             return false;
         }
-        SpotClosure closure = new SpotClosure(toOperatingStatus(operatingStatus), closedFrom, closedUntil);
+        SpotClosure closure = new SpotClosure(operatingStatus, closedFrom, closedUntil);
         return closure.isClosedOn(today);
-    }
-
-    private static PublicSpotOperatingStatus toOperatingStatus(String operatingStatus) {
-        if (operatingStatus == null) {
-            return null;
-        }
-        return PublicSpotOperatingStatus.valueOf(operatingStatus);
     }
 }

@@ -49,7 +49,7 @@ public class ProgramPaymentService {
                 applicationId,
                 new ProgramApplicationEvents.ConfirmedPayload(applicationId, memberId, application.getProgramId()));
         log.info("program payment confirmed applicationId={} memberId={}", applicationId, memberId);
-        return new ProgramPayResult(applicationId, ProgramApplicationStatus.CONFIRMED.name(), now);
+        return new ProgramPayResult(applicationId, ProgramApplicationStatus.CONFIRMED, now);
     }
 
     @Transactional
@@ -77,7 +77,7 @@ public class ProgramPaymentService {
                 applicationId,
                 memberId,
                 refunded);
-        return new ProgramApplicationCancelResult(ProgramApplicationStatus.CANCELED.name(), refunded);
+        return new ProgramApplicationCancelResult(ProgramApplicationStatus.CANCELED, refunded);
     }
 
     private ProgramApplication lockOwnApplication(long memberId, long applicationId) {

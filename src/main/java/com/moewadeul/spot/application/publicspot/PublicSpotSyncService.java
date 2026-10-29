@@ -70,7 +70,7 @@ public class PublicSpotSyncService {
         }
         // 잠그지 않는 읽기로 후보를 먼저 찾는다. 없는 외부 ID를 곧바로 잠금 읽기에 넘기면 InnoDB가 없는 키 주변의 틈까지 잠가서
         // 같은 범위에 새 장소를 넣는 트랜잭션을 막는다. 후보가 있을 때만 기본 키로 잠가 읽는다.
-        List<Long> candidateIds = publicSpotMapper.selectRemovalCandidateIds(source.name(), ids);
+        List<Long> candidateIds = publicSpotMapper.selectRemovalCandidateIds(source, ids);
         if (candidateIds.isEmpty()) {
             return 0;
         }
@@ -101,7 +101,7 @@ public class PublicSpotSyncService {
         if (present.isEmpty()) {
             throw new IllegalArgumentException("원천 목록이 비어 있어 빠진 장소를 숨기지 않습니다. source=" + source);
         }
-        List<String> missing = publicSpotMapper.selectLiveExternalIds(source.name()).stream()
+        List<String> missing = publicSpotMapper.selectLiveExternalIds(source).stream()
                 .filter(id -> !present.contains(id.strip()))
                 .toList();
         if (missing.isEmpty()) {
@@ -112,7 +112,7 @@ public class PublicSpotSyncService {
 
     @Transactional(readOnly = true)
     public List<PublicSpotLocation> findLocations(PublicSpotSource source) {
-        return publicSpotMapper.selectLocationsBySource(source.name()).stream()
+        return publicSpotMapper.selectLocationsBySource(source).stream()
                 .map(row -> new PublicSpotLocation(row.externalId(), row.name(), row.latitude(), row.longitude()))
                 .toList();
     }
@@ -146,7 +146,7 @@ public class PublicSpotSyncService {
     }
 
     private Map<String, PublicSpotRow> findStored(PublicSpotSource source, Map<String, NormalizedPublicSpot> spots) {
-        return publicSpotMapper.selectBySourceAndExternalIds(source.name(), spots.keySet()).stream()
+        return publicSpotMapper.selectBySourceAndExternalIds(source, spots.keySet()).stream()
                 .collect(Collectors.toMap(PublicSpotRow::externalId, Function.identity()));
     }
 
@@ -169,7 +169,7 @@ public class PublicSpotSyncService {
             return;
         }
         publicSpotMapper.insertSpots(source.spotType(), inserts, now);
-        publicSpotMapper.insertDetails(source.name(), inserts, now);
+        publicSpotMapper.insertDetails(source, inserts, now);
     }
 
     private void insertSettingsOfNewSpots(Map<PublicSpotInsertRow, Set<PublicSpotSetting>> settingsByInsert) {
