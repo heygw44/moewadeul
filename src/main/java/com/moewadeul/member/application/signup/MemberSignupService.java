@@ -45,8 +45,6 @@ public class MemberSignupService {
         Password password = Password.of(command.password());
         Email email = Email.of(command.email());
         Nickname nickname = new Nickname(command.nickname());
-        // IP 잠금이 이 트랜잭션의 첫 SQL이어야 한다. MySQL은 첫 일반 조회 때 읽기 스냅숏을 정하므로, 이보다 앞서 조회하면
-        // 잠금을 기다리는 동안 같은 IP의 다른 가입이 커밋한 발송 요청을 세지 못한다.
         SendWindow sentByIp = emailSendIpLimiter.lockSendsByIp(command.requestIp());
         Instant now = Instant.now(clock);
         rejectDisposableDomain(email);
