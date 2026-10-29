@@ -51,6 +51,7 @@ import { useIsDesktop, DESKTOP_QUERY } from './useIsDesktop';
 import { useMapContextMenu } from './useMapContextMenu';
 import { useMapMoving } from './useMapMoving';
 import { useMapView } from './useMapView';
+import { usePlacementDraft } from './usePlacementDraft';
 import { useRegionQueryLink } from './useRegionQueryLink';
 import { useSearchPin } from './useSearchPin';
 import { useRegionLabelInView } from './useRegionLabelInView';
@@ -110,8 +111,6 @@ function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData | null {
 
 const SPOT_FOCUS_LEVEL = 7;
 
-const DRAFT_FOCUS_LEVEL = 5;
-
 const CLUSTER_ZOOM_STEP = 2;
 
 const MAP_BUTTON_CLASS =
@@ -156,11 +155,8 @@ export function MapPage({
   const [terrainOn, setTerrainOn] = useState(false);
   const [snap, setSnap] = useState<SheetSnap>(contentOpen ? 'half' : 'peek');
   const [snapOpen, setSnapOpen] = useState(contentOpen);
-  const [draft, setDraft] = useState<LatLng | null>(null);
   const { moveToRegion: pinRegion, clearSearchPin } = useSearchPin(map);
-  const [submitted, setSubmitted] = useState(false);
   const [pickSpots, setPickSpots] = useState<NearbySpot[] | null>(null);
-  const [appliedDraftKey, setAppliedDraftKey] = useState<string | null>(null);
   const [filters, setFilters] = useState<BasecampFilters>(() => readMapScreen().basecampFilters);
   const [spotFilters, setSpotFilters] = useState<SpotFilters>(() => readMapScreen().spotFilters);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -182,6 +178,7 @@ export function MapPage({
       setSpotFocus((previous) => (previous?.key === key ? previous : { key, marker }));
     }
   };
+  const { draft, setDraft, finishPlacing } = usePlacementDraft(map, placing, reporting ? initialDraft : undefined);
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
   const [previewId, setPreviewId] = useState<number | null>(null);
   const desktop = useIsDesktop();
@@ -229,14 +226,6 @@ export function MapPage({
   const mapButtonsRef = useRef<HTMLDivElement>(null);
   const keepOverlay = useCallback(() => overlayRef.current?.contains(document.activeElement) ?? false, []);
   const mapMoving = useMapMoving(map, keepOverlay);
-
-  if (!placing && submitted) setSubmitted(false);
-
-  const initialDraftKey = reporting && initialDraft ? `${initialDraft.lat},${initialDraft.lng}` : null;
-  if (initialDraftKey !== appliedDraftKey) {
-    setAppliedDraftKey(initialDraftKey);
-    if (initialDraft && initialDraftKey !== null) setDraft(initialDraft);
-  }
 
   if (snapOpen !== contentOpen) {
     setSnapOpen(contentOpen);
@@ -286,29 +275,6 @@ export function MapPage({
       offCluster();
     };
   }, [map, placing, basecampMode, basecampId, previewEnabled]);
-
-  useEffect(() => {
-    if (!map || !placing || submitted) return;
-    const offClick = map.onMapClick(setDraft);
-    return () => {
-      offClick();
-      map.showDraft(null);
-      setDraft(null);
-    };
-  }, [map, placing, submitted]);
-
-  useEffect(() => {
-    map?.showDraft(draft);
-  }, [map, draft]);
-
-  const initialLat = reporting ? initialDraft?.lat : undefined;
-  const initialLng = reporting ? initialDraft?.lng : undefined;
-  useEffect(() => {
-    if (!map || initialLat === undefined || initialLng === undefined) return;
-    const { sw, ne } = map.getBounds();
-    const inside = initialLat >= sw.lat && initialLat <= ne.lat && initialLng >= sw.lng && initialLng <= ne.lng;
-    if (!inside) map.setCenter({ lat: initialLat, lng: initialLng }, Math.min(map.getLevel(), DRAFT_FOCUS_LEVEL));
-  }, [map, initialLat, initialLng]);
 
   useEffect(() => {
     if (!map || !previewEnabled) return;
@@ -464,8 +430,7 @@ export function MapPage({
               nextBasecamp={nextAfterReport === 'basecamp'}
               onCancel={() => navigate('/map')}
               onSubmitted={() => {
-                setSubmitted(true);
-                setDraft(null);
+                finishPlacing();
                 area.retry();
               }}
             />
@@ -480,8 +445,7 @@ export function MapPage({
                 focusOn(focusKey, selectedSpotMarker(detail));
               }}
               onSubmitted={() => {
-                setSubmitted(true);
-                setDraft(null);
+                finishPlacing();
                 area.retry();
               }}
             />

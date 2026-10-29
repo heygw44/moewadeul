@@ -19,6 +19,13 @@ vi.mock('../../map/regionSearch', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../map/regionSearch')>()),
   searchRegions: vi.fn(),
 }));
+vi.mock('../spot/BakjiReportPanel', () => ({
+  BakjiReportPanel: ({ draft, onSubmitted }: { draft: unknown; onSubmitted: () => void }) => (
+    <button type="button" onClick={onSubmitted}>
+      {draft ? '위치 있음 제보 보내기' : '위치 없음 제보 보내기'}
+    </button>
+  ),
+}));
 vi.mock('../spot/SpotDetailPanel', () => ({
   SpotDetailPanel: ({ onLoaded }: { onLoaded: (detail: unknown) => void }) => (
     <button
@@ -258,6 +265,20 @@ describe('MapPage', () => {
       await mount({ mode: 'report', initialDraft: { lat: 36.5, lng: 127.5 } });
 
       expect(view.setCenter).not.toHaveBeenCalled();
+    });
+
+    it('제보를 보내면 위치를 비우고, 그 뒤로는 지도를 눌러도 위치를 받지 않는다', async () => {
+      await mount({ mode: 'report' });
+      act(() => view.emit.mapClick({ lat: 37.3, lng: 127.3 }));
+      const submit = () =>
+        [...container.querySelectorAll('button')].find((b) => b.textContent?.endsWith('제보 보내기'));
+      expect(submit()?.textContent).toBe('위치 있음 제보 보내기');
+
+      await act(async () => submit()?.click());
+      act(() => view.emit.mapClick({ lat: 37.4, lng: 127.4 }));
+
+      expect(submit()?.textContent).toBe('위치 없음 제보 보내기');
+      expect(view.showDraft).toHaveBeenLastCalledWith(null);
     });
 
     it('지도를 보기만 하는 화면에서는 제보 위치를 받지 않는다', async () => {
