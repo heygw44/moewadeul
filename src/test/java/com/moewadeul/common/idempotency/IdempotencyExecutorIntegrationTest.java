@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -164,6 +165,21 @@ class IdempotencyExecutorIntegrationTest {
 
         assertThat(calls.get()).isEqualTo(1);
         assertThat(second).isEqualTo(new Result(1, "x"));
+    }
+
+    @Test
+    @DisplayName("[NFR-03] 없는 회원으로 선점하면 외래 키 실패가 그대로 올라오고 IDEMPOTENCY_IN_PROGRESS가 아니다")
+    void foreignKeyFailureIsNotInProgress() {
+        long missingMemberId = insertMember() + 1_000;
+        AtomicInteger calls = new AtomicInteger();
+
+        assertThatThrownBy(() -> run(missingMemberId, "key-1", OPERATION, null, () -> {
+                    calls.incrementAndGet();
+                    return new Result(1, "x");
+                }))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThat(calls.get()).isZero();
+        assertThat(count()).isZero();
     }
 
     @Test
