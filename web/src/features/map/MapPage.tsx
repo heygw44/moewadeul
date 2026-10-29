@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import type { AiInterpretResponse, BasecampDetail, NearbySpot, SpotDetail } from '../../api/types';
@@ -13,7 +13,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/icons';
 import { Notice } from '../../components/Notice';
 import { Sheet } from '../../components/Sheet';
-import { SHEET_SNAP_DVH, sheetTopFromBottom } from '../../components/sheetSnap';
+import { sheetTopFromBottom } from '../../components/sheetSnap';
 import type { SheetSnap } from '../../components/sheetSnap';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
@@ -21,7 +21,7 @@ import { useDocumentTitle } from '../../components/useDocumentTitle';
 import type { RegionCandidate } from '../../map/regionSearch';
 import type { RegionLabel } from '../../map/regionLabel';
 import { radiusBounds } from '../../map/radiusBounds';
-import type { LatLng, MapView, SpotMarkerData } from '../../map/types';
+import type { LatLng, SpotMarkerData } from '../../map/types';
 import { BasecampDetailPanel } from '../basecamp/BasecampDetailPanel';
 import { BasecampFilterDialog } from '../basecamp/BasecampFilterDialog';
 import { BasecampListPanel } from '../basecamp/BasecampListPanel';
@@ -47,13 +47,14 @@ import { NO_SPOT_FILTERS, filtersFromInterpretation, spotFilterChips } from '../
 import type { SpotFilters } from '../spot/spotFilters';
 import { SpotListRow } from '../spot/SpotListRow';
 import { SpotPreviewBoard } from '../spot/SpotPreviewBoard';
-import { useIsDesktop, DESKTOP_QUERY } from './useIsDesktop';
+import { useIsDesktop } from './useIsDesktop';
 import { useMapContextMenu } from './useMapContextMenu';
 import { useMapMoving } from './useMapMoving';
 import { useMapView } from './useMapView';
 import { usePlacementDraft } from './usePlacementDraft';
 import { useRegionQueryLink } from './useRegionQueryLink';
 import { useSearchPin } from './useSearchPin';
+import { useSpotFocus } from './useSpotFocus';
 import { useRegionLabelInView } from './useRegionLabelInView';
 import { useSpotsInView } from '../spot/useSpotsInView';
 import type { SpotsInView } from '../spot/useSpotsInView';
@@ -61,29 +62,6 @@ import { useSpotsNearby } from '../spot/useSpotsNearby';
 import { readMapScreen, rememberMapScreen } from './mapScreenMemory';
 import type { RadiusSearch } from './mapScreenMemory';
 import type { SpotsNearby } from '../spot/useSpotsNearby';
-
-const MIN_OPEN_SPAN_PX = 48;
-
-function openMapSpan(
-  host: HTMLElement,
-  controls: HTMLElement | null,
-  snap: SheetSnap,
-): { top: number; bottom: number } {
-  const rect = host.getBoundingClientRect();
-  if (window.matchMedia(DESKTOP_QUERY).matches) return { top: 0, bottom: rect.height };
-  const sheetTop = window.innerHeight * (1 - SHEET_SNAP_DVH[snap] / 100);
-  const bottom = Math.min(rect.height, sheetTop - rect.top);
-  const top = controls ? Math.max(0, controls.getBoundingClientRect().bottom - rect.top) : 0;
-  if (bottom - top >= MIN_OPEN_SPAN_PX) return { top, bottom };
-  return bottom >= MIN_OPEN_SPAN_PX ? { top: 0, bottom } : { top: 0, bottom: rect.height };
-}
-
-function centerPlacing(map: MapView, position: LatLng, level: number, mapHeight: number, targetY: number): LatLng {
-  if (mapHeight <= 0) return position;
-  const { sw, ne } = map.getBounds();
-  const latPerPx = ((ne.lat - sw.lat) / mapHeight) * 2 ** (level - map.getLevel());
-  return { lat: position.lat - (mapHeight / 2 - targetY) * latPerPx, lng: position.lng };
-}
 
 function selectedSpotMarker(detail: SpotDetail): SpotMarkerData {
   return {
@@ -108,8 +86,6 @@ function basecampSpotMarker(detail: BasecampDetail): SpotMarkerData | null {
     closed: false,
   };
 }
-
-const SPOT_FOCUS_LEVEL = 7;
 
 const CLUSTER_ZOOM_STEP = 2;
 
@@ -170,14 +146,6 @@ export function MapPage({
         : editing
           ? `edit:${editSpotId}`
           : null;
-  const [spotFocus, setSpotFocus] = useState<{ key: string; marker: SpotMarkerData } | null>(null);
-  if (spotFocus !== null && spotFocus.key !== focusKey) setSpotFocus(null);
-  const focusedSpot = spotFocus?.marker ?? null;
-  const focusOn = (key: string | null, marker: SpotMarkerData | null) => {
-    if (key !== null && marker !== null) {
-      setSpotFocus((previous) => (previous?.key === key ? previous : { key, marker }));
-    }
-  };
   const { draft, setDraft, finishPlacing } = usePlacementDraft(map, placing, reporting ? initialDraft : undefined);
   const [spotFilterId, setSpotFilterId] = useState<number | null>(null);
   const [previewId, setPreviewId] = useState<number | null>(null);
@@ -226,6 +194,11 @@ export function MapPage({
   const mapButtonsRef = useRef<HTMLDivElement>(null);
   const keepOverlay = useCallback(() => overlayRef.current?.contains(document.activeElement) ?? false, []);
   const mapMoving = useMapMoving(map, keepOverlay);
+  const { focusedSpot, focusSpot } = useSpotFocus(map, focusKey, editing, {
+    hostRef,
+    controlsRef: mapButtonsRef,
+    snap,
+  });
 
   if (snapOpen !== contentOpen) {
     setSnapOpen(contentOpen);
@@ -235,22 +208,6 @@ export function MapPage({
   useEffect(() => {
     rememberMapScreen({ spotFilters, basecampFilters: filters, radiusSearch, aiSummary });
   }, [spotFilters, filters, radiusSearch, aiSummary]);
-
-  const moveToSpot = useEffectEvent((position: LatLng) => {
-    const host = hostRef.current;
-    if (!map || !host) return;
-    map.relayout();
-    const level = Math.min(map.getLevel(), SPOT_FOCUS_LEVEL);
-    const { top, bottom } = openMapSpan(host, mapButtonsRef.current, snap);
-    map.panTo(centerPlacing(map, position, level, host.getBoundingClientRect().height, (top + bottom) / 2), level);
-  });
-  useEffect(() => {
-    if (map && focusedSpot) moveToSpot(focusedSpot.position);
-  }, [map, focusedSpot]);
-
-  useEffect(() => {
-    map?.showSelectedSpot(editing ? null : focusedSpot);
-  }, [map, focusedSpot, editing]);
 
   useEffect(() => {
     if (!map) return;
@@ -414,7 +371,7 @@ export function MapPage({
               key={basecampId}
               basecampId={basecampId}
               onBack={() => navigate('/basecamps')}
-              onLoaded={(detail) => focusOn(focusKey, basecampSpotMarker(detail))}
+              onLoaded={(detail) => focusSpot(basecampSpotMarker(detail))}
             />
           ) : basecampMode ? (
             <BasecampListPanel
@@ -442,7 +399,7 @@ export function MapPage({
               onCancel={() => navigate(`/spots/${editSpotId}`)}
               onLoaded={(detail) => {
                 setDraft({ lat: detail.lat, lng: detail.lng });
-                focusOn(focusKey, selectedSpotMarker(detail));
+                focusSpot(selectedSpotMarker(detail));
               }}
               onSubmitted={() => {
                 finishPlacing();
@@ -464,7 +421,7 @@ export function MapPage({
               key={spotId}
               spotId={spotId}
               onBack={() => navigate('/map')}
-              onLoaded={(detail) => focusOn(focusKey, selectedSpotMarker(detail))}
+              onLoaded={(detail) => focusSpot(selectedSpotMarker(detail))}
               onBakjiDeleted={area.retry}
             />
           )}
