@@ -67,7 +67,7 @@ class SpotReviewServiceIntegrationTest {
     void writtenReviewAppearsInDetail() {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember("새벽능선");
+        long memberId = memberFixture.save(aMember().nickname("새벽능선")).getId();
 
         // when
         long reviewId = commandService.write(memberId, spotId, write(TODAY.minusDays(1), 4, "물이 가까웠다"));
@@ -254,7 +254,7 @@ class SpotReviewServiceIntegrationTest {
     void reviseChangesRatingAndContent() {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember("새벽능선");
+        long memberId = memberFixture.save(aMember().nickname("새벽능선")).getId();
         long reviewId = commandService.write(memberId, spotId, write(TODAY.minusDays(2), 2, "별로였다"));
         commandService.write(memberFixture.save().getId(), spotId, write(TODAY, 4, "좋다"));
         clock.advance(Duration.ofHours(1));
@@ -451,7 +451,7 @@ class SpotReviewServiceIntegrationTest {
     void withdrawnAuthorShowsAnonymousNickname() {
         // given
         long spotId = saveSpot();
-        long memberId = saveMember("새벽능선");
+        long memberId = memberFixture.save(aMember().nickname("새벽능선")).getId();
         commandService.write(memberId, spotId, write(TODAY, 4, "좋다"));
         jdbc.update("UPDATE member SET nickname = ? WHERE id = ?", "탈퇴회원_" + memberId, memberId);
 
@@ -495,12 +495,6 @@ class SpotReviewServiceIntegrationTest {
                 ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT),
                 MutableClock.DEFAULT_INSTANT);
         return spotRepository.save(spot).getId();
-    }
-
-    private long saveMember(String nickname) {
-        return memberRepository
-                .saveAndFlush(aMember().nickname(nickname).build())
-                .getId();
     }
 
     private void withdraw(long memberId) {

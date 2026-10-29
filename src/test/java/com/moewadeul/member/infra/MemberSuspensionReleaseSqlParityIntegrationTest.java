@@ -1,9 +1,9 @@
 package com.moewadeul.member.infra;
 
-import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberStatus;
@@ -27,6 +27,9 @@ class MemberSuspensionReleaseSqlParityIntegrationTest {
             MutableClock.DEFAULT_INSTANT.plusSeconds(86_400).plusNanos(123_456_000);
 
     private static final String COLUMNS = "status, email_verified_at, suspended_until, updated_at";
+
+    @Autowired
+    private MemberFixture memberFixture;
 
     @Autowired
     private MemberSuspensionMapper mapper;
@@ -79,7 +82,7 @@ class MemberSuspensionReleaseSqlParityIntegrationTest {
     }
 
     private long saveMember(MemberStatus status, boolean emailVerified, SuspendedUntil suspendedUntil) {
-        Member member = memberRepository.saveAndFlush(aMember().build());
+        Member member = memberFixture.save();
         jdbc.update(
                 "UPDATE member SET status = ?, email_verified_at = ?, suspended_until = ? WHERE id = ?",
                 status.name(),
