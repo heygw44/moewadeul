@@ -9,7 +9,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime, formatLocalDate } from '../../lib/datetime';
-import { usePagedList } from '../program/usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 import { REPORT_REASON_OPTIONS } from '../community/communityLabels';
 import { ApproxLocationLabel } from '../memory/ApproxLocationLabel';
 import { nightsLabel } from '../memory/memoryLabels';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { serverTraceId, toUserMessage } from '../../api/errors';
-import type { Page } from '../../api/types';
+import { serverTraceId, toUserMessage } from '../api/errors';
+import type { Page } from '../api/types';
 
 type ListState<T, F> = {
   filter: F;

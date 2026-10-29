@@ -12,7 +12,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
 import { REPORT_KIND_LABELS, REPORT_STATUS_META, REPORT_TYPE_LABELS } from '../report/reportLabels';
-import { usePagedList } from '../program/usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 import { AdminPage } from './AdminGate';
 import { AdminSegments } from './AdminSegments';
 

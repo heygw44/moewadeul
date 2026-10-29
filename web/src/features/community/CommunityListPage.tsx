@@ -15,7 +15,7 @@ import { UnderlineTabs } from '../../components/UnderlineTabs';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatRelativeKst } from '../../lib/datetime';
 import { useSession } from '../member/session';
-import { usePagedList } from '../program/usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 import { LINK_BUTTON_CLASS, parseSpotId, UNVERIFIED_WRITE_REASON } from './communityLabels';
 
 type ListTab = 'all' | 'popular';

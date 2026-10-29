@@ -18,7 +18,7 @@ import { withNext } from '../member/nextPath';
 import { useSession } from '../member/session';
 import { APPLICATION_FILTERS, APPLICATION_STATUS_META, CANCEL_REASON_LABELS, countdownText } from './programLabels';
 import { useNow } from './useNow';
-import { usePagedList } from './usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 
 type ApplicationFilter = ProgramApplicationStatus | 'ALL';
 

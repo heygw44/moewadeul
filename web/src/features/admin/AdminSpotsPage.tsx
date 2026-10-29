@@ -9,7 +9,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
-import { usePagedList } from '../program/usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 import { LocationLabel } from '../spot/LocationLabel';
 import { REPORT_REASON_LABELS, SPOT_TYPE_META } from '../spot/spotLabels';
 import { AdminPage } from './AdminGate';

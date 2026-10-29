@@ -16,7 +16,7 @@ import { formatKstDateTime, kstDateBlock } from '../../lib/datetime';
 import { useSession } from '../member/session';
 import { feeText, PROGRAM_FILTERS, PROGRAM_STATUS_META, seatsText } from './programLabels';
 import { ProgramAside } from './ProgramAside';
-import { usePagedList } from './usePagedList';
+import { usePagedList } from '../../components/usePagedList';
 
 type ProgramFilter = ProgramListStatus | 'ALL';
 
