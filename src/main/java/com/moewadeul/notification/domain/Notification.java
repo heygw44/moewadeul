@@ -100,8 +100,4 @@ public class Notification {
             this.readAt = now;
         }
     }
-
-    public boolean isRead() {
-        return readAt != null;
-    }
 }

@@ -1,7 +1,6 @@
 package com.moewadeul.spot.application.detail;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.common.time.KoreaTime;
@@ -46,9 +45,7 @@ public class SpotDetailQueryService {
 
     @Transactional(readOnly = true)
     public SpotDetail findDetail(long spotId) {
-        SpotDetailRow row = spotDetailMapper
-                .selectActiveDetail(spotId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        SpotDetailRow row = spotDetailMapper.selectActiveDetail(spotId).orElseThrow(BusinessException::notFound);
         LocalDate today = KoreaTime.today(clock);
         return new SpotDetail(
                 row.spotId(),

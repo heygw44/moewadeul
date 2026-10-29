@@ -1,7 +1,6 @@
 package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.trust.domain.report.ReportStatus;
@@ -32,9 +31,8 @@ public class AdminMemberReportQueryService {
 
     @Transactional(readOnly = true)
     public AdminMemberReportDetail detail(long reportId) {
-        AdminMemberReportDetailRow row = adminMemberReportMapper
-                .selectDetail(reportId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        AdminMemberReportDetailRow row =
+                adminMemberReportMapper.selectDetail(reportId).orElseThrow(BusinessException::notFound);
         List<AdminMemberReportDetail.SanctionHistory> history =
                 adminMemberReportMapper.selectSanctionHistory(row.targetId()).stream()
                         .map(AdminMemberReportQueryService::toHistory)

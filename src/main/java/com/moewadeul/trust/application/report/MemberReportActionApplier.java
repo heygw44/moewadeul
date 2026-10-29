@@ -39,9 +39,8 @@ class MemberReportActionApplier {
 
     @Transactional
     MemberReportActionResult apply(MemberReportActionCommand command, SanctionType sanctionType) {
-        MemberReport report = memberReportRepository
-                .findByIdForUpdate(command.reportId())
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        MemberReport report =
+                memberReportRepository.findByIdForUpdate(command.reportId()).orElseThrow(BusinessException::notFound);
         report.requireInReview();
         requireConsistentRequest(report, command, sanctionType);
         Instant now = clock.instant();

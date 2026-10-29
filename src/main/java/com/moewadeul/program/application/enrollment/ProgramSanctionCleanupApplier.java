@@ -1,7 +1,6 @@
 package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplication;
@@ -37,9 +36,8 @@ class ProgramSanctionCleanupApplier {
         Instant now = clock.instant();
         application.cancelByMemberRemoval(reason, now);
         outboxEventRecorder.recordAll(application.pullEvents());
-        Program program = programRepository
-                .findById(application.getProgramId())
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        Program program =
+                programRepository.findById(application.getProgramId()).orElseThrow(BusinessException::notFound);
         seatReleaseRecorder.record(program, now);
         log.info(
                 "program application canceled reason={} applicationId={} memberId={}", reason, applicationId, memberId);

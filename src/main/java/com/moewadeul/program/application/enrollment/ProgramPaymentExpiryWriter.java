@@ -1,7 +1,6 @@
 package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.program.domain.Program;
@@ -35,9 +34,7 @@ class ProgramPaymentExpiryWriter {
                 ProgramEvents.APPLICATION_AGGREGATE_TYPE,
                 target.applicationId(),
                 new ProgramEvents.ApplicationPayload(target.applicationId(), target.memberId(), target.programId()));
-        Program program = programRepository
-                .findById(target.programId())
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        Program program = programRepository.findById(target.programId()).orElseThrow(BusinessException::notFound);
         seatReleaseRecorder.record(program, now);
         log.info("program application expired applicationId={} memberId={}", target.applicationId(), target.memberId());
         return true;

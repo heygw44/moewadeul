@@ -3,7 +3,6 @@ package com.moewadeul.community.application.moderation;
 import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.moderation.AdminModeration;
 import com.moewadeul.common.moderation.Moderatable;
 import com.moewadeul.common.moderation.ModerationResult;
@@ -81,7 +80,7 @@ public class CommunityModerationService {
 
         @Override
         public T lock(long id) {
-            return lockAlive.apply(id).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+            return lockAlive.apply(id).orElseThrow(BusinessException::notFound);
         }
 
         @Override

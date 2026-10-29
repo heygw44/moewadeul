@@ -59,7 +59,7 @@ class SpotReviewWriter {
         return spotReviewMapper
                 .selectById(reviewId)
                 .map(row -> SpotReviewItem.from(row, images))
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
     }
 
     @Transactional
@@ -75,9 +75,7 @@ class SpotReviewWriter {
     }
 
     private SpotReview loadOwnReview(long memberId, long reviewId) {
-        SpotReview review = spotReviewRepository
-                .findById(reviewId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        SpotReview review = spotReviewRepository.findById(reviewId).orElseThrow(BusinessException::notFound);
         review.requireWrittenBy(memberId);
         return review;
     }

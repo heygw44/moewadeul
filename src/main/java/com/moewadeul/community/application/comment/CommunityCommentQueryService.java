@@ -1,7 +1,6 @@
 package com.moewadeul.community.application.comment;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.domain.post.CommunityPostRepository;
@@ -34,7 +33,7 @@ public class CommunityCommentQueryService {
         communityPostRepository
                 .findById(postId)
                 .filter(CommunityPost::isActive)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
     }
 
     private List<CommunityCommentItem> toItems(List<CommunityCommentRow> parents) {

@@ -41,9 +41,11 @@ public class BakjiDetail {
     private String description;
 
     @Column(name = "has_water")
+    @Getter(AccessLevel.NONE)
     private boolean hasWater;
 
     @Column(name = "has_toilet")
+    @Getter(AccessLevel.NONE)
     private boolean hasToilet;
 
     @Enumerated(EnumType.STRING)
@@ -83,6 +85,14 @@ public class BakjiDetail {
             throw new IllegalArgumentException("박지가 아닌 장소에는 박지 상세를 붙일 수 없습니다.");
         }
         return new BakjiDetail(spot, reporterId, content, now);
+    }
+
+    public boolean hasWater() {
+        return hasWater;
+    }
+
+    public boolean hasToilet() {
+        return hasToilet;
     }
 
     public void requireReportedBy(long memberId) {

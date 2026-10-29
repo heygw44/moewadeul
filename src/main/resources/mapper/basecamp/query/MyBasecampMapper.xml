@@ -2,10 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.basecamp.infra.query.MyBasecampMapper">
 
-    <sql id="headcount">
-        (SELECT COUNT(*) FROM basecamp_member m WHERE m.basecamp_id = b.id AND m.status = 'ACTIVE')
-    </sql>
-
     <select id="selectMine" resultType="com.moewadeul.basecamp.infra.query.MyBasecampRow">
         SELECT b.id AS basecamp_id,
                b.title AS title,
@@ -15,7 +11,7 @@
                b.start_date AS start_date,
                b.end_date AS end_date,
                b.capacity AS capacity,
-               <include refid="headcount"/> AS headcount,
+               <include refid="com.moewadeul.basecamp.infra.query.BasecampSql.headcount"/> AS headcount,
                b.status AS status,
                mine.relation AS my_relation
         FROM (

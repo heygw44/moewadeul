@@ -53,7 +53,7 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
         String extension = AttachableImage.extensionOf(command.contentType())
                 .orElseThrow(() -> new InvalidFieldException("contentType", messages.unsupportedType()));
         if (!AttachableImage.isAllowedSize(command.sizeBytes())) {
-            throw new InvalidFieldException("sizeBytes", messages.sizeOutOfRange());
+            throw new InvalidFieldException("sizeBytes", messages.sizeOutOfRange(AttachableImage.MAX_SIZE_BYTES));
         }
         if (command.hasThumbnail() && !ThumbnailedImage.isAllowedThumbnailSize(command.thumbnailSizeBytes())) {
             throw new InvalidFieldException("thumbnailSizeBytes", "썸네일 크기는 1바이트 이상 256KB 이하여야 해요.");

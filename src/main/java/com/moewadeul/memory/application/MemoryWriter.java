@@ -1,7 +1,6 @@
 package com.moewadeul.memory.application;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.memory.domain.Memory;
 import com.moewadeul.memory.domain.MemoryDetails;
 import com.moewadeul.memory.domain.MemoryRepository;
@@ -53,9 +52,7 @@ class MemoryWriter {
                     memberId, memoryId, command.imageIds().value());
         }
         memoryRepository.flush();
-        return memoryViewReader
-                .read(memoryId, memberId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return memoryViewReader.read(memoryId, memberId).orElseThrow(BusinessException::notFound);
     }
 
     @Transactional
@@ -82,7 +79,7 @@ class MemoryWriter {
     }
 
     private static Memory requireOwn(Optional<Memory> found, long memberId) {
-        Memory memory = found.orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        Memory memory = found.orElseThrow(BusinessException::notFound);
         memory.requireWrittenBy(memberId);
         return memory;
     }

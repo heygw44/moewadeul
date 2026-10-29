@@ -1,7 +1,6 @@
 package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramRepository;
@@ -41,8 +40,6 @@ public class ProgramVacancyAlertService {
     }
 
     private Program findProgram(long programId) {
-        return programRepository
-                .findById(programId)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        return programRepository.findById(programId).orElseThrow(BusinessException::notFound);
     }
 }

@@ -1,7 +1,6 @@
 package com.moewadeul.basecamp.domain;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.event.BasecampEvents;
 import com.moewadeul.common.outbox.OutboxEventDraft;
 import com.moewadeul.common.schedule.CampingSchedule;
@@ -246,6 +245,31 @@ public class Basecamp {
         markCanceled(reason, now);
     }
 
+    public boolean departDayBefore(Instant now) {
+        if (!BEFORE_CONFIRM.contains(status)
+                || startDate.isAfter(KoreaTime.dateOf(now).plusDays(1))) {
+            return false;
+        }
+        if (headcount() < MIN_CONFIRM_HEADCOUNT) {
+            markCanceled(CancelReason.NOT_ENOUGH_MEMBERS, now);
+        } else {
+            markConfirmed(now);
+        }
+        return true;
+    }
+
+    public boolean complete(LocalDate today, Instant now) {
+        if (status != BasecampStatus.CONFIRMED || !endDate.isBefore(today)) {
+            return false;
+        }
+        this.status = BasecampStatus.COMPLETED;
+        this.completedAt = now;
+        expirePendingApplications(now);
+        touch(now);
+        raiseMembers(BasecampEvents.COMPLETED, activeMemberIds());
+        return true;
+    }
+
     public void checkApplicable(long applicantId) {
         requireStatus(RECRUITING_ONLY);
         requireNotBlockedByMembership(applicantId);
@@ -269,7 +293,7 @@ public class Basecamp {
 
     public void cancelApplication(long applicantId, Instant now) {
         requireStatus(BEFORE_CONFIRM);
-        BasecampApplication application = findApplicationOf(applicantId).orElseThrow(Basecamp::notFound);
+        BasecampApplication application = findApplicationOf(applicantId).orElseThrow(BusinessException::notFound);
         requirePending(application);
         application.cancel(now);
     }
@@ -409,7 +433,8 @@ public class Basecamp {
         this.cancelReason = reason;
         expirePendingApplications(now);
         touch(now);
-        raiseMembers(BasecampEvents.CANCELED, activeMembersExceptLeader());
+        List<Long> recipients = reason.notifiesLeader() ? activeMemberIds() : activeMembersExceptLeader();
+        raiseMembers(BasecampEvents.CANCELED, recipients);
     }
 
     private void raise(String eventType, Supplier<Object> payload) {
@@ -506,7 +531,7 @@ public class Basecamp {
     }
 
     private BasecampMember requireActiveMember(long memberId) {
-        return findMember(memberId).filter(BasecampMember::isActive).orElseThrow(Basecamp::notFound);
+        return findMember(memberId).filter(BasecampMember::isActive).orElseThrow(BusinessException::notFound);
     }
 
     private Optional<BasecampApplication> findApplicationOf(long applicantId) {
@@ -519,7 +544,7 @@ public class Basecamp {
         return applications.stream()
                 .filter(application -> Objects.equals(application.getId(), applicationId))
                 .findFirst()
-                .orElseThrow(Basecamp::notFound);
+                .orElseThrow(BusinessException::notFound);
     }
 
     private static void requirePending(BasecampApplication application) {
@@ -532,10 +557,6 @@ public class Basecamp {
         if (!allowed.contains(status)) {
             throw new BusinessException(BasecampErrorCode.BASECAMP_INVALID_STATE);
         }
-    }
-
-    private static BusinessException notFound() {
-        return new BusinessException(CommonErrorCode.NOT_FOUND);
     }
 
     private void touch(Instant now) {

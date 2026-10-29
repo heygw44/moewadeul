@@ -1,7 +1,6 @@
 package com.moewadeul.memory.application;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.memory.domain.ApproximateLocation;
 import com.moewadeul.memory.domain.Memory;
@@ -27,7 +26,7 @@ public class MemoryQueryService {
         return memoryViewReader
                 .read(memoryId, viewerId)
                 .filter(view -> view.viewedByAuthor() || Memory.isVisibleToOthers(view.visibility(), view.status()))
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+                .orElseThrow(BusinessException::notFound);
     }
 
     @Transactional(readOnly = true)
@@ -47,7 +46,7 @@ public class MemoryQueryService {
     @Transactional(readOnly = true)
     public List<PublicMemorySummary> listPublicOf(long memberId) {
         if (!memoryMapper.existsActiveMember(memberId)) {
-            throw new BusinessException(CommonErrorCode.NOT_FOUND);
+            throw BusinessException.notFound();
         }
         return memoryMapper.selectByMember(memberId, MemoryVisibility.PUBLIC).stream()
                 .map(this::toPublicSummary)
