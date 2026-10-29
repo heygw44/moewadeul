@@ -1,5 +1,6 @@
 package com.moewadeul.program.application.enrollment;
 
+import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.program.infra.enrollment.ExpiryTarget;
 import com.moewadeul.program.infra.enrollment.ProgramPaymentExpiryMapper;
 import java.time.Clock;
@@ -21,6 +22,7 @@ public class ProgramPaymentExpiryService {
     private final Clock clock;
 
     public Result run() {
+        OutsideTransaction.require("신청마다 따로 커밋해야 한 건의 실패가 나머지 만료를 되돌리지 않는다.");
         Instant now = clock.instant();
         int expired = 0;
         int failed = 0;

@@ -27,7 +27,7 @@ public class ProgramApplyService {
     private final ProgramRepository programRepository;
     private final ProgramApplicationMapper programApplicationMapper;
     private final ProgramPaymentExpiryMapper expiryMapper;
-    private final ProgramPaymentExpiryApplier expiryApplier;
+    private final ProgramPaymentExpiryWriter expiryWriter;
     private final TrustSummaryService trustSummaryService;
     private final Clock clock;
 
@@ -60,7 +60,7 @@ public class ProgramApplyService {
     private void expireOwnOverdueApplication(long programId, long memberId, Instant now) {
         ExpiryTarget overdue = expiryMapper.selectOverdueByMember(programId, memberId, now);
         if (overdue != null) {
-            expiryApplier.expire(overdue, now);
+            expiryWriter.expire(overdue, now);
         }
     }
 

@@ -25,6 +25,7 @@ class ArchitectureRulesTest {
         API_PERSISTENCE(ArchitectureRules::apiPersistenceRule),
         TRANSACTIONAL_PLACEMENT(ArchitectureRules::transactionalPlacementRule),
         APPLIER_VISIBILITY(ArchitectureRules::applierVisibilityRule),
+        APPLIER_CALLER(ArchitectureRules::applierCallerRule),
         SCHEDULED_JOB_RUNNER(ArchitectureRules::scheduledJobsRunThroughRunnerRule),
         APPLICATION_JPA_REPOSITORY(ArchitectureRules::applicationJpaRepositoryRule),
         DOMAIN_PORT(ArchitectureRules::domainPortRule),
@@ -156,36 +157,48 @@ class ArchitectureRulesTest {
     }
 
     @Test
-    @DisplayName("[ADR-009] application이 *JpaRepository나 Spring Data 리포지토리를 쓰면 R8 위반이고, domain 저장소 포트는 허용한다")
+    @DisplayName("[ADR-005] *Service 가 아닌 클래스가 *Applier 를 부르면 R8 위반이다")
+    void applierCallerRuleRejectsNonServiceCaller() {
+        assertOnlyRuleFails(Rule.APPLIER_CALLER, "violation.r8.caller", "member.application.MemberCleanupJob");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] OutsideTransaction 가드 없이 *Applier 를 부르는 *Service 는 R8 위반이다")
+    void applierCallerRuleRejectsUnguardedService() {
+        assertOnlyRuleFails(Rule.APPLIER_CALLER, "violation.r8.unguarded", "member.application.MemberService");
+    }
+
+    @Test
+    @DisplayName("[ADR-009] application이 *JpaRepository나 Spring Data 리포지토리를 쓰면 R9 위반이고, domain 저장소 포트는 허용한다")
     void applicationJpaRepositoryRuleRejectsJpaRepositoryDependency() {
         assertOnlyRuleFails(
                 Rule.APPLICATION_JPA_REPOSITORY,
-                "violation.r8.jpa",
+                "violation.r9.jpa",
                 "member.application.MemberService",
                 "member.infra.MemberJpaRepository",
                 "member.application.ProfileService",
                 "member.infra.ProfileStore");
-        assertThatThrownBy(() -> Rule.APPLICATION_JPA_REPOSITORY.check("violation.r8.jpa"))
+        assertThatThrownBy(() -> Rule.APPLICATION_JPA_REPOSITORY.check("violation.r9.jpa"))
                 .hasMessageNotContaining("MemberFinder");
     }
 
     @Test
-    @DisplayName("[ADR-009] infra가 구현하는 domain 인터페이스의 이름이 Repository로 끝나지 않으면 R9 위반이다")
+    @DisplayName("[ADR-009] infra가 구현하는 domain 인터페이스의 이름이 Repository로 끝나지 않으면 R10 위반이다")
     void domainPortRuleRejectsNonRepositoryPort() {
         assertOnlyRuleFails(
                 Rule.DOMAIN_PORT,
-                "violation.r9.port",
+                "violation.r10.port",
                 "member.domain.MemberGateway",
                 "member.infra.MemberGatewayAdapter");
-        assertThatThrownBy(() -> Rule.DOMAIN_PORT.check("violation.r9.port")).hasMessageNotContaining("MemberPolicy");
+        assertThatThrownBy(() -> Rule.DOMAIN_PORT.check("violation.r10.port")).hasMessageNotContaining("MemberPolicy");
     }
 
     @Test
-    @DisplayName("[ADR-005] api가 common.storage·common.mail 을 쓰면 R10 위반이다")
+    @DisplayName("[ADR-005] api가 common.storage·common.mail 을 쓰면 R11 위반이다")
     void apiExternalAdapterRuleRejectsStorageAndMailDependency() {
         assertOnlyRuleFails(
                 Rule.API_EXTERNAL_ADAPTER,
-                "violation.r10.adapter",
+                "violation.r11.adapter",
                 "member.api.MemberController",
                 "common.storage.ImageStorage",
                 "member.api.NoticeController",

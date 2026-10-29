@@ -2,6 +2,7 @@ package com.moewadeul.basecamp.application.lifecycle;
 
 import com.moewadeul.basecamp.domain.RemovalCause;
 import com.moewadeul.basecamp.infra.lifecycle.BasecampSanctionCleanupMapper;
+import com.moewadeul.common.transaction.OutsideTransaction;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class BasecampSanctionCleanupService {
     private final BasecampSanctionCleanupApplier applier;
 
     public void cleanUp(long memberId, RemovalCause cause) {
+        OutsideTransaction.require("베이스캠프마다 따로 커밋해야 한 곳의 실패가 나머지 정리를 되돌리지 않는다.");
         List<Long> basecampIds = cleanupMapper.selectInProgressBasecampIds(memberId);
         List<Long> failedBasecampIds = new ArrayList<>();
         for (long basecampId : basecampIds) {

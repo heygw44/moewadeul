@@ -37,7 +37,7 @@ class EmailVerificationServiceIntegrationTest {
     private EmailVerificationService emailVerificationService;
 
     @Autowired
-    private EmailVerificationActivator emailVerificationActivator;
+    private EmailVerificationApplier emailVerificationApplier;
 
     @Autowired
     private MemberJpaRepository memberRepository;
@@ -157,7 +157,7 @@ class EmailVerificationServiceIntegrationTest {
         clock.advance(Duration.ofMinutes(10));
 
         // when & then
-        assertThatThrownBy(() -> emailVerificationActivator.activate(verificationId, member.getId(), clock.instant()))
+        assertThatThrownBy(() -> emailVerificationApplier.activate(verificationId, member.getId(), clock.instant()))
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.EMAIL_ALREADY_VERIFIED);
         assertThat(jdbc.queryForObject(
                         "SELECT verified_at IS NULL FROM email_verification WHERE id = ?",
