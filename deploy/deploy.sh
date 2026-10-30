@@ -21,8 +21,6 @@ readonly LAST_COMPOSE_FILE="$DEPLOY_DIR/last-successful-compose.yml"
 readonly CADDYFILE="$DEPLOY_DIR/caddy/Caddyfile"
 readonly LAST_CADDYFILE="$DEPLOY_DIR/last-successful-Caddyfile"
 readonly WEB_DIR="$DEPLOY_DIR/web"
-# web/releases에 남겨 둘 화면 파일 묶음 수다. 되돌리기는 직전 태그만 쓰지만, 수동으로 옛 태그를 배포할 때 다시 꺼내는 시간을 줄인다.
-readonly WEB_RELEASES_KEPT=3
 readonly SERVER_COMPOSE_COMMAND="cd $DEPLOY_DIR && docker compose -f docker-compose.prod.yml"
 readonly REGION=ap-northeast-2
 readonly PARAM_PREFIX=/moewadeul/prod
@@ -137,7 +135,6 @@ write_env() {
     {
         echo "# deploy.sh가 배포할 때마다 새로 쓴다. 직접 고치지 않는다."
         echo "APP_IMAGE='$APP_REPO:$tag'"
-        # 지금 compose 파일은 쓰지 않지만, 이 변경 이전의 보관된 compose 파일로 되돌릴 때 필요하다.
         echo "CADDY_IMAGE='$CADDY_REPO:$tag'"
         for key in "${!server_env[@]}"; do
             printf "%s='%s'\n" "$key" "${server_env[$key]}"
@@ -164,8 +161,7 @@ check_image_architecture() {
     done
 }
 
-# 화면 파일이 든 태그별 이미지는 compose 서비스가 아니라서 따로 받는다. caddy 서비스의 고정 이미지는 받지 않는다.
-# 업스트림은 같은 태그를 다시 빌드하기도 해서, 받으면 그날 배포가 Caddy를 다시 만든다. 서버에 없을 때만 compose up이 받는다.
+# caddy 서비스 이미지는 받지 않는다. 업스트림은 같은 태그를 다시 빌드하기도 해서, 받으면 그날 배포가 Caddy를 다시 만든다. 서버에 없을 때만 compose up이 받는다.
 pull_images() {
     local tag="$1"
     compose pull --quiet app && docker pull --quiet "$CADDY_REPO:$tag" > /dev/null
@@ -207,11 +203,8 @@ wait_caddy() {
     log "caddy 응답 확인 통과"
 }
 
-# 태그별 caddy 이미지(scratch)에서 /srv를 꺼내 web/releases/<태그>에 두고, web/current가 그 폴더를 가리키게 한다.
 # 이미지에 실행할 명령이 없어서 docker create에 아무 명령(true)이나 넘긴다. create는 컨테이너를 만들기만 하고 실행하지 않는다.
-# 꺼내는 도중에 멈춰도 반쯤 찬 폴더가 releases/<태그>로 남지 않게 .tmp에 받은 뒤 이름을 바꾼다.
 # current는 상대 경로 링크다. 컨테이너에서는 web이 /srv에 마운트되므로 /srv/current가 /srv/releases/<태그>로 풀린다.
-# 같은 태그로 다시 실행해도(되돌리기) 결과가 같다.
 publish_web() {
     local tag="$1" release="$WEB_DIR/releases/$1" id
     mkdir -p "$WEB_DIR/releases" || return 1
@@ -226,28 +219,24 @@ publish_web() {
         docker rm "$id" > /dev/null 2>&1 || warn "화면 파일을 꺼내려고 만든 컨테이너 $id 를 지우지 못했다"
         mv "$release.tmp" "$release" || return 1
     fi
-    # 폴더의 수정 시각을 지금으로 맞춘다. docker cp는 이미지 안의 시각을 그대로 가져오므로, 이미 있는 옛 태그를 다시 배포해도 정리에서 가장 오래된 것으로 밀리지 않게 한다.
-    touch "$release"
     if ! { ln -sfn "releases/$tag" "$WEB_DIR/current.tmp" && mv -T "$WEB_DIR/current.tmp" "$WEB_DIR/current"; }; then
         log "web/current를 $tag 로 바꾸지 못했다"
         return 1
     fi
-    prune_web_releases || warn "오래된 화면 파일을 지우지 못했다. 배포는 계속한다"
+    prune_web_releases "$tag" || warn "오래된 화면 파일을 지우지 못했다. 배포는 계속한다"
     log "화면 파일 전환: $tag"
 }
 
-# 최근에 만든 WEB_RELEASES_KEPT개만 남기고, current가 가리키는 폴더는 지우지 않는다. 태그는 [A-Za-z0-9._-]만 쓰므로 이름을 그대로 반복해도 안전하다.
 prune_web_releases() {
-    local current old
-    current="$(readlink "$WEB_DIR/current")" || return 1
-    # shellcheck disable=SC2012
-    for old in $(ls -1t "$WEB_DIR/releases" | tail -n +$((WEB_RELEASES_KEPT + 1))); do
-        [[ "releases/$old" == "$current" ]] && continue
-        rm -rf "${WEB_DIR:?}/releases/$old" || return 1
+    local keep="$1" previous="" dir
+    [[ -f "$LAST_TAG_FILE" ]] && previous="$(<"$LAST_TAG_FILE")"
+    for dir in "$WEB_DIR"/releases/*; do
+        [[ -e "$dir" ]] || continue
+        case "${dir##*/}" in "$keep" | "$previous") continue ;; esac
+        rm -rf "$dir" || return 1
     done
 }
 
-# Caddy는 새 설정이 잘못되면 옛 설정을 그대로 쓴다. 그래서 reload 실패는 배포 실패로 보고, 되돌리기가 옛 Caddyfile을 복원한다.
 reload_caddy() {
     compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile > /dev/null || {
         log "caddy reload에 실패했다. Caddyfile이 잘못됐으면 옛 설정이 그대로 쓰인다"
@@ -272,8 +261,6 @@ start_mysql_without_recreate() {
 }
 
 # if 조건 안에서 부르면 set -e가 꺼지므로, 단계마다 &&로 이어 앞 단계가 실패하면 바로 실패를 돌려준다.
-# 앱이 다시 뜨는 동안 caddy가 요청을 붙잡고 기다리므로(Caddyfile의 lb_try_duration), caddy는 새 앱이 정상이 된 뒤에 바꾼다.
-# 화면 파일도 새 앱이 정상이 된 뒤에 바꾼다(새 API가 먼저, 그다음 화면). up caddy는 caddy 정의 자체가 바뀐 때만 컨테이너를 다시 만든다.
 start() {
     local tag="$1"
     write_env "$tag" && start_mysql_without_recreate \
@@ -404,7 +391,7 @@ main() {
     log "배포 시작: $tag (직전에 성공한 태그: ${previous:-없음})"
 
     write_env "$tag"
-    # 앱과 화면 파일 이미지만 받는다. MySQL 이미지(mysql:8.4)는 배포할 때마다 받지 않는다. 받으면 업스트림에 8.4.x 패치가 나온 날
+    # MySQL 이미지(mysql:8.4)는 배포할 때마다 받지 않는다. 받으면 업스트림에 8.4.x 패치가 나온 날
     # 앱 배포가 DB 컨테이너를 새 버전으로 다시 만들고, 배포를 되돌려도 MySQL 버전은 돌아가지 않는다. MySQL을 올릴 때는 서버에서 직접 받는다.
     if ! pull_images "$tag" || ! check_image_architecture "$tag"; then
         log "이미지를 받지 못했거나 아키텍처가 맞지 않는다. 실행 중인 컨테이너는 그대로 둔다"
