@@ -2,7 +2,9 @@ package com.moewadeul.member.application.password;
 
 import static com.moewadeul.member.application.MemberGuards.memberNotFound;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.member.domain.Member;
+import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.infra.password.PasswordResetTokenMapper;
 import java.time.Clock;
@@ -23,6 +25,9 @@ class PasswordChangeApplier {
     void apply(long memberId, String newPasswordHash) {
         Instant now = Instant.now(clock);
         Member member = memberRepository.findByIdForUpdate(memberId).orElseThrow(() -> memberNotFound(memberId));
+        if (member.isWithdrawn()) {
+            throw new BusinessException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH);
+        }
         member.changePassword(newPasswordHash, now);
         passwordResetTokenMapper.invalidateUnusedTokens(memberId, now);
     }
