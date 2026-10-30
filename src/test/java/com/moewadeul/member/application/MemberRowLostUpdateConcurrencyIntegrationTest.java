@@ -58,6 +58,7 @@ class MemberRowLostUpdateConcurrencyIntegrationTest {
     private static final long MIDDLE_WAIT_SECONDS = 2;
     private static final String OLD_PASSWORD = "Old-pass12";
     private static final String NEW_PASSWORD = "Newer-pass1";
+    private static final String RESET_PASSWORD = "Reset-pass1";
     private static final Instant BASE = Instant.parse("2026-10-01T00:00:00Z");
     private static final Set<String> MEMBER_READ =
             Set.of("MemberRepository.findById", "MemberRepository.findByIdForUpdate");
@@ -183,6 +184,32 @@ class MemberRowLostUpdateConcurrencyIntegrationTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH));
+    }
+
+    @Test
+    @DisplayName("[PW-07][PW-02] 비밀번호 변경이 현재 비밀번호를 확인한 뒤 재설정이 커밋되면, 변경은 거절되고 재설정한 비밀번호가 남는다")
+    void passwordChangeAfterResetKeepsResetPassword() throws Exception {
+        Member member = activeMember();
+        String rawToken = ResetToken.generate(new SecureRandom()).value();
+        tokenRepository.save(PasswordResetToken.issue(member.getId(), ResetToken.hash(rawToken), clock.instant()));
+        pauseOutsideTransactionAfter(MEMBER_READ);
+
+        Future<?> change = executor.submit(() -> passwordChangeService.change(
+                new PasswordChangeCommand(member.getId(), OLD_PASSWORD, NEW_PASSWORD, "203.0.113.7", "none")));
+        awaitPaused();
+        Throwable failure = runInMiddle(
+                () -> {
+                    passwordResetConfirmService.confirm(rawToken, RESET_PASSWORD);
+                    return null;
+                },
+                change);
+
+        assertThat(failure)
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH));
+        assertThat(passwordEncoder.matches(RESET_PASSWORD, columnOf(member.getId(), "password_hash")))
+                .isTrue();
     }
 
     private Member activeMember() {
