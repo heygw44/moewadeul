@@ -3,21 +3,34 @@ package com.moewadeul.spot.infra.map;
 import static com.moewadeul.common.testsupport.SpotFixture.aSpot;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.member.domain.MemberStatus;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.testcontainers.mysql.MySQLContainer;
 
 @IntegrationTest
 class SpotClusterCellTriggerIntegrationTest {
@@ -38,6 +51,12 @@ class SpotClusterCellTriggerIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private DataSource dataSource;
+
+    @Autowired
+    private MySQLContainer mysql;
 
     @Test
     @DisplayName("[F-03] 장소를 넣으면 트리거가 8단계 격자 칸마다 장소 수와 위도·경도 합을 더한다")
@@ -133,6 +152,151 @@ class SpotClusterCellTriggerIntegrationTest {
 
         // then
         assertTablesMatchSpots();
+    }
+
+    @Test
+    @DisplayName("[F-03] 유형이나 경고만 바뀌면 필터 없는 집계(spot_cluster_total)는 그대로이고 필터 집계(spot_cluster_cell)만 칸 사이를 옮긴다")
+    void typeOrParkWarningOnlyChangeKeepsTotalAndMovesCell() {
+        // given
+        long spotId =
+                spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.5665, 126.978));
+        List<Map<String, Object>> totalBefore = jdbcTemplate.queryForList(ACTUAL_TOTAL);
+
+        // when
+        jdbcTemplate.update("UPDATE spot SET park_warning = TRUE WHERE id = ?", spotId);
+
+        // then
+        assertThat(jdbcTemplate.queryForList(ACTUAL_TOTAL)).containsExactlyInAnyOrderElementsOf(totalBefore);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM spot_cluster_cell WHERE park_warning = TRUE AND grid_level = 0",
+                        Integer.class))
+                .isEqualTo(1);
+        assertTablesMatchSpots();
+
+        // when
+        jdbcTemplate.update("UPDATE spot SET type = 'FOREST' WHERE id = ?", spotId);
+
+        // then
+        assertThat(jdbcTemplate.queryForList(ACTUAL_TOTAL)).containsExactlyInAnyOrderElementsOf(totalBefore);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM spot_cluster_cell WHERE type = 'FOREST' AND grid_level = 0",
+                        Integer.class))
+                .isEqualTo(1);
+        assertTablesMatchSpots();
+    }
+
+    @Test
+    @DisplayName("[F-03] 다른 트랜잭션이 경고만 바꾸고 커밋하지 않았어도, 같은 칸에 다른 유형의 장소를 넣는 INSERT는 기다리지 않는다")
+    void insertIsNotBlockedByUncommittedParkWarningOnlyUpdate() throws Exception {
+        // given
+        long spotId =
+                spotFixture.insert(aSpot().type("CAMPSITE").status("ACTIVE").at(37.5665, 126.978));
+        try (Connection rejudge = dataSource.getConnection();
+                Connection sync = dataSource.getConnection()) {
+            rejudge.setAutoCommit(false);
+            try (PreparedStatement update =
+                    rejudge.prepareStatement("UPDATE spot SET park_warning = TRUE WHERE id = ?")) {
+                update.setLong(1, spotId);
+                update.executeUpdate();
+            }
+            execute(sync, "SET SESSION innodb_lock_wait_timeout = 2");
+
+            // when & then
+            try {
+                assertThatCode(() -> insertSpot(sync, "FOREST", 37.5665, 126.978))
+                        .doesNotThrowAnyException();
+            } finally {
+                execute(sync, "SET SESSION innodb_lock_wait_timeout = DEFAULT");
+                rejudge.rollback();
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("[F-03] 박지 제보 둘이 장소와 상세를 번갈아 넣어도 교착 없이 둘 다 커밋된다")
+    void concurrentBakjiReportsCommitWithoutDeadlock() throws Exception {
+        // given
+        long reporterId =
+                memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try (Connection first = dataSource.getConnection();
+                Connection second = dataSource.getConnection();
+                Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword())) {
+            first.setAutoCommit(false);
+            second.setAutoCommit(false);
+            execute(first, "SET SESSION innodb_lock_wait_timeout = 5");
+            execute(second, "SET SESSION innodb_lock_wait_timeout = 5");
+            long firstSpotId = insertSpot(first, "BAKJI", 37.5665, 126.978);
+            long secondSpotId = insertSpot(second, "BAKJI", 35.1796, 129.0756);
+
+            // when
+            Future<?> firstDetail = executor.submit(() -> insertBakjiDetail(first, firstSpotId, reporterId));
+            awaitLockWaitOrDone(monitor, firstDetail);
+            Future<?> secondDetail = executor.submit(() -> insertBakjiDetail(second, secondSpotId, reporterId));
+
+            // then
+            try {
+                assertThatCode(() -> firstDetail.get(10, TimeUnit.SECONDS)).doesNotThrowAnyException();
+                assertThatCode(() -> secondDetail.get(10, TimeUnit.SECONDS)).doesNotThrowAnyException();
+                first.commit();
+                second.commit();
+            } finally {
+                execute(first, "SET SESSION innodb_lock_wait_timeout = DEFAULT");
+                execute(second, "SET SESSION innodb_lock_wait_timeout = DEFAULT");
+                first.rollback();
+                second.rollback();
+                executor.shutdownNow();
+            }
+        }
+        assertTablesMatchSpots();
+    }
+
+    private long insertSpot(Connection connection, String type, double latitude, double longitude) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "INSERT INTO spot (type, name, location, weather_nx, weather_ny, park_warning, status, created_at,"
+                        + " updated_at) VALUES (?, ?, ST_GeomFromText(?, 4326), 60, 127, FALSE, 'ACTIVE', NOW(6),"
+                        + " NOW(6))",
+                Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, type);
+            statement.setString(2, type + latitude);
+            statement.setString(3, "POINT(" + latitude + " " + longitude + ")");
+            statement.executeUpdate();
+            try (ResultSet keys = statement.getGeneratedKeys()) {
+                keys.next();
+                return keys.getLong(1);
+            }
+        }
+    }
+
+    private int insertBakjiDetail(Connection connection, long spotId, long reporterId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "INSERT INTO bakji_detail (spot_id, reporter_id, has_water, has_toilet, created_at, updated_at)"
+                        + " VALUES (?, ?, TRUE, FALSE, NOW(6), NOW(6))")) {
+            statement.setLong(1, spotId);
+            statement.setLong(2, reporterId);
+            return statement.executeUpdate();
+        }
+    }
+
+    private static void execute(Connection connection, String sql) throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+        }
+    }
+
+    private static void awaitLockWaitOrDone(Connection monitor, Future<?> future) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (!future.isDone() && System.nanoTime() < deadline) {
+            try (Statement statement = monitor.createStatement();
+                    ResultSet waits =
+                            statement.executeQuery("SELECT COUNT(*) FROM performance_schema.data_lock_waits")) {
+                waits.next();
+                if (waits.getInt(1) > 0) {
+                    return;
+                }
+            }
+            Thread.sleep(20);
+        }
     }
 
     private void assertTablesMatchSpots() {

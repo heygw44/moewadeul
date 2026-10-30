@@ -90,17 +90,17 @@ class ProgramVacancyAlertConcurrencyIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20][PG-07] 취소가 알림 대상을 정하기 전에 알림 신청이 끝나도, 신청자는 빈자리 알림을 받는다")
-    void subscribeCommitsBeforeCancelPicksTargets() throws Exception {
-        pauseAfter(Set.of("ProgramRepository.findById"));
+    @DisplayName("[F-20][PG-07] 취소가 행사 행을 잠근 채 알림 대상을 정하기 전에 알림 신청이 들어와도, 신청은 통보 없이 남지 않는다")
+    void subscribeDuringCancelIsNotStranded() throws Exception {
+        pauseAfter(Set.of("ProgramRepository.findByIdForUpdate"));
         Future<?> cancel = executor.submit(() -> paymentService.cancel(holderId, holderApplicationId));
         awaitPaused();
 
-        boolean created = vacancyAlertService.subscribe(subscriberId, programId);
+        Future<Boolean> subscribe = executor.submit(() -> vacancyAlertService.subscribe(subscriberId, programId));
         resume.countDown();
         cancel.get(60, TimeUnit.SECONDS);
+        subscribeOutcome(subscribe);
 
-        assertThat(created).isTrue();
         assertAlertNotStranded();
     }
 

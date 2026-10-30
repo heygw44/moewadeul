@@ -22,6 +22,10 @@ public interface ProgramApplicationJpaRepository
     Optional<ProgramApplication> findByIdForUpdate(@Param("id") Long id);
 
     @Override
+    @Query("select a.programId from ProgramApplication a where a.id = :id")
+    Optional<Long> findProgramId(@Param("id") long id);
+
+    @Override
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select a from ProgramApplication a

@@ -128,7 +128,9 @@ class ProgramPaymentConcurrencyIntegrationTest {
             assertThat(fixture.outboxCount("PROGRAM_APPLICATION_CONFIRMED", applicationId))
                     .isEqualTo(1);
         } else {
-            assertThat(outcomes.failures()).hasSize(1);
+            assertThat(outcomes.failures())
+                    .hasSize(1)
+                    .allSatisfy(failure -> assertErrorCode(failure, ProgramErrorCode.PROGRAM_INVALID_STATE));
             assertThat(fixture.outboxCount("PROGRAM_APPLICATION_CONFIRMED", applicationId))
                     .isZero();
         }
