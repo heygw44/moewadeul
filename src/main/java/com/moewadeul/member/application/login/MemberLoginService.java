@@ -29,6 +29,7 @@ public class MemberLoginService {
     private final PasswordEncoder passwordEncoder;
     private final MemberSuspensionService memberSuspensionService;
     private final MemberSessions memberSessions;
+    private final LoginIpFailureLimiter ipFailureLimiter;
     private final Clock clock;
 
     private final String timingDecoyPasswordHash;
@@ -39,17 +40,20 @@ public class MemberLoginService {
             PasswordEncoder passwordEncoder,
             MemberSuspensionService memberSuspensionService,
             MemberSessions memberSessions,
+            LoginIpFailureLimiter ipFailureLimiter,
             Clock clock) {
         this.memberRepository = memberRepository;
         this.loginAttemptService = loginAttemptService;
         this.passwordEncoder = passwordEncoder;
         this.memberSuspensionService = memberSuspensionService;
         this.memberSessions = memberSessions;
+        this.ipFailureLimiter = ipFailureLimiter;
         this.clock = clock;
         this.timingDecoyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     public LoginResult login(LoginCommand command) {
+        ipFailureLimiter.rejectIfExhausted(command.ip());
         String attemptedEmail = normalizeEmail(command.email());
         Member found = findLoginableMember(attemptedEmail);
         Long memberId = found != null ? found.getId() : null;
@@ -112,6 +116,7 @@ public class MemberLoginService {
         boolean authenticated = passwordEncoder.matches(command.password(), passwordHash) && member != null;
         loginAttemptService.recordAttemptUnderEmailLock(memberId, attemptedEmail, command.ip(), authenticated);
         if (!authenticated) {
+            ipFailureLimiter.recordFailure(command.ip());
             throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
         }
         return member;

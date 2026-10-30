@@ -1,6 +1,7 @@
 package com.moewadeul.common.testsupport;
 
 import com.moewadeul.common.mail.TestMailSenderConfig;
+import com.moewadeul.member.application.login.LoginIpFailureLimiterResetExtension;
 import com.moewadeul.outbox.application.RecordingOutboxEventHandler;
 import com.moewadeul.weather.application.WeatherCacheResetExtension;
 import java.lang.annotation.Documented;
@@ -38,7 +39,8 @@ import org.springframework.test.context.ActiveProfiles;
     ClockResetExtension.class,
     WireMockResetExtension.class,
     ImageStorageResetExtension.class,
-    WeatherCacheResetExtension.class
+    WeatherCacheResetExtension.class,
+    LoginIpFailureLimiterResetExtension.class
 })
 public @interface IntegrationTest {
 
