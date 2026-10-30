@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 public class MemberSessionCleanup {
 
     public static final String EVENT_TYPE = "MEMBER_SESSION_CLEANUP";
-    static final String AGGREGATE_TYPE = "MEMBER";
+    public static final String AGGREGATE_TYPE = "MEMBER";
 
     private final OutboxEventRecorder outboxEventRecorder;
     private final MemberSessions memberSessions;
@@ -31,5 +31,5 @@ public class MemberSessionCleanup {
         }
     }
 
-    record Payload(long memberId) {}
+    public record Payload(long memberId) {}
 }
