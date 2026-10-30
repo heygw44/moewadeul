@@ -164,10 +164,8 @@ app_restart_count() {
     docker inspect -f '{{.RestartCount}}' "$id" 2> /dev/null
 }
 
-# 앱의 상태 확인 주소가 200을 줄 때까지 기다린 뒤, caddy가 HTTP 요청에 응답하는지 본다.
-# caddy는 80번 요청에 HTTPS로 넘기는 응답(308)을 준다. 인증서 발급은 Let's Encrypt 상황에 따라 늦어질 수 있어서 HTTPS는 확인하지 않는다.
-wait_healthy() {
-    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) code restarts
+wait_app_healthy() {
+    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) restarts
     until curl -fsS -o /dev/null --max-time 5 "$HEALTH_URL" 2>/dev/null; do
         if restarts="$(app_restart_count)" && ((restarts > MAX_APP_RESTARTS)); then
             log "앱이 시작하다 ${restarts}번 다시 시작했다"
@@ -180,6 +178,11 @@ wait_healthy() {
         sleep 5
     done
     log "앱 상태 확인 통과"
+}
+
+# caddy는 80번 요청에 HTTPS로 넘기는 응답(308)을 준다. 인증서 발급은 Let's Encrypt 상황에 따라 늦어질 수 있어서 HTTPS는 확인하지 않는다.
+wait_caddy() {
+    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) code
     until code="$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' \
         -H "Host: ${server_env[SITE_ADDRESS]}" http://127.0.0.1/)" && [[ "$code" =~ ^[23] ]]; do
         if ((SECONDS >= deadline)); then
@@ -208,9 +211,12 @@ start_mysql_without_recreate() {
 }
 
 # if 조건 안에서 부르면 set -e가 꺼지므로, 단계마다 &&로 이어 앞 단계가 실패하면 바로 실패를 돌려준다.
+# 앱이 다시 뜨는 동안 caddy가 요청을 붙잡고 기다리므로(Caddyfile의 lb_try_duration), caddy는 새 앱이 정상이 된 뒤에 바꾼다.
 start() {
     local tag="$1"
-    write_env "$tag" && start_mysql_without_recreate && compose up -d --no-deps --remove-orphans app caddy && wait_healthy
+    write_env "$tag" && start_mysql_without_recreate \
+        && compose up -d --no-deps --remove-orphans app && wait_app_healthy \
+        && compose up -d --no-deps caddy && wait_caddy
 }
 
 # 배포는 app·caddy·mysql·alloy만 올리므로 compose 파일에 새로 생긴 서비스는 만들어지지 않는다.
