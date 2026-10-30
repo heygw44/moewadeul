@@ -32,6 +32,7 @@ readonly HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-240}"
 # 시작하다 죽는 앱은 restart 정책으로 계속 다시 뜬다. 상태 확인 주소만 보면 그동안 제한 시간을 다 기다리고, 옛 앱은 이미 내려가 있어 502가 이어진다.
 # 다시 시작한 횟수가 이보다 많으면 기다리지 않고 실패로 본다.
 readonly MAX_APP_RESTARTS="${MAX_APP_RESTARTS:-2}"
+readonly BACKUP_WAIT_SECONDS="${BACKUP_WAIT_SECONDS:-1800}"
 
 # Parameter Store 이름(접두사 뒤) → .env 변수 이름
 declare -rA SECRET_PARAMS=(
@@ -161,10 +162,10 @@ check_image_architecture() {
     done
 }
 
-# caddy 서비스 이미지는 받지 않는다. 업스트림은 같은 태그를 다시 빌드하기도 해서, 받으면 그날 배포가 Caddy를 다시 만든다. 서버에 없을 때만 compose up이 받는다.
+# caddy 서비스 이미지는 서버에 없을 때만 받는다. 업스트림은 같은 태그를 다시 빌드하기도 해서, 매번 받으면 그날 배포가 Caddy를 다시 만든다.
 pull_images() {
     local tag="$1"
-    compose pull --quiet app && docker pull --quiet "$CADDY_REPO:$tag" > /dev/null
+    compose pull --quiet app && compose pull --quiet --policy missing caddy && docker pull --quiet "$CADDY_REPO:$tag" > /dev/null
 }
 
 app_restart_count() {
@@ -187,6 +188,28 @@ wait_app_healthy() {
         sleep 5
     done
     log "앱 상태 확인 통과"
+}
+
+# 백업 덤프(--single-transaction)가 여는 트랜잭션 뒤에서 Flyway DDL이 메타데이터 잠금을 기다리지 않게, 백업 서비스가 끝난 뒤에 배포한다.
+wait_backup_idle() {
+    command -v systemctl > /dev/null || return 0
+    local deadline=$((SECONDS + BACKUP_WAIT_SECONDS)) state waited=0
+    while true; do
+        state="$(systemctl show moewadeul-backup.service -p ActiveState --value 2> /dev/null || true)"
+        case "$state" in
+            activating | active | deactivating | reloading) ;;
+            *) return 0 ;;
+        esac
+        if ((waited == 0)); then
+            log "백업이 도는 중이라 끝날 때까지 기다린다"
+            waited=1
+        fi
+        if ((SECONDS >= deadline)); then
+            log "백업이 ${BACKUP_WAIT_SECONDS}초 안에 끝나지 않았다"
+            return 1
+        fi
+        sleep 10
+    done
 }
 
 # caddy는 80번 요청에 HTTPS로 넘기는 응답(308)을 준다. 인증서 발급은 Let's Encrypt 상황에 따라 늦어질 수 있어서 HTTPS는 확인하지 않는다.
@@ -219,6 +242,7 @@ publish_web() {
         docker rm "$id" > /dev/null 2>&1 || warn "화면 파일을 꺼내려고 만든 컨테이너 $id 를 지우지 못했다"
         mv "$release.tmp" "$release" || return 1
     fi
+    [[ -f "$release/index.html" ]] || { log "$tag 화면 파일에 index.html이 없다"; return 1; }
     if ! { ln -sfn "releases/$tag" "$WEB_DIR/current.tmp" && mv -T "$WEB_DIR/current.tmp" "$WEB_DIR/current"; }; then
         log "web/current를 $tag 로 바꾸지 못했다"
         return 1
@@ -237,11 +261,15 @@ prune_web_releases() {
     done
 }
 
+# Caddy를 막 다시 만든 직후(첫 배포 등)에는 관리 API가 아직 열리지 않아 reload가 실패할 수 있어 몇 번 다시 시도한다.
 reload_caddy() {
-    compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile > /dev/null || {
-        log "caddy reload에 실패했다. Caddyfile이 잘못됐으면 옛 설정이 그대로 쓰인다"
-        return 1
-    }
+    local attempt
+    for attempt in 1 2 3 4 5; do
+        compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile > /dev/null && return 0
+        ((attempt < 5)) && sleep 2
+    done
+    log "caddy reload에 실패했다. Caddyfile이 잘못됐으면 옛 설정이 그대로 쓰인다"
+    return 1
 }
 
 definition_changed() {
@@ -389,6 +417,11 @@ main() {
     local previous=""
     [[ -f "$LAST_TAG_FILE" ]] && previous="$(<"$LAST_TAG_FILE")"
     log "배포 시작: $tag (직전에 성공한 태그: ${previous:-없음})"
+
+    if ! wait_backup_idle; then
+        log "배포하지 않는다. 실행 중인 컨테이너는 그대로 둔다"
+        exit 1
+    fi
 
     write_env "$tag"
     # MySQL 이미지(mysql:8.4)는 배포할 때마다 받지 않는다. 받으면 업스트림에 8.4.x 패치가 나온 날
