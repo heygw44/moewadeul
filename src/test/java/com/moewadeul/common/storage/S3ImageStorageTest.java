@@ -232,18 +232,19 @@ class S3ImageStorageTest {
 
     @Test
     @DisplayName("[F-33] 지울 키가 없으면 S3를 부르지 않는다")
-    void deleteAllWithNoKeysDoesNotCallS3() {
+    void deleteWithNoKeysDoesNotCallS3() {
         // given
         S3Client s3Client = mock(S3Client.class);
 
         // when & then
-        assertThat(storageWith(s3Client, 10).deleteAll(List.of())).isEmpty();
+        assertThat(storageWith(s3Client, 10).deleteReturningFailedKeys(List.of()))
+                .isEmpty();
         verifyNoInteractions(s3Client);
     }
 
     @Test
     @DisplayName("[F-33] 키가 1,000개를 넘으면 1,000개씩 나눠 지우고, 모두 지웠으면 빈 집합을 돌려준다")
-    void deleteAllSplitsIntoChunksOfThousand() {
+    void deleteSplitsIntoChunksOfThousand() {
         // given
         S3Client s3Client = mock(S3Client.class);
         when(s3Client.deleteObjects(any(DeleteObjectsRequest.class)))
@@ -253,7 +254,7 @@ class S3ImageStorageTest {
                 .toList();
 
         // when
-        Set<String> failed = storageWith(s3Client, 10).deleteAll(keys);
+        Set<String> failed = storageWith(s3Client, 10).deleteReturningFailedKeys(keys);
 
         // then
         ArgumentCaptor<DeleteObjectsRequest> requests = ArgumentCaptor.forClass(DeleteObjectsRequest.class);
@@ -274,7 +275,7 @@ class S3ImageStorageTest {
 
     @Test
     @DisplayName("[F-33] S3가 키별 오류를 돌려주면 그 키만 지우지 못한 것으로 돌려준다")
-    void deleteAllReturnsKeysWithPerKeyErrors() {
+    void deleteReturnsKeysWithPerKeyErrors() {
         // given
         S3Client s3Client = mock(S3Client.class);
         when(s3Client.deleteObjects(any(DeleteObjectsRequest.class)))
@@ -283,12 +284,13 @@ class S3ImageStorageTest {
                         .build());
 
         // when & then
-        assertThat(storageWith(s3Client, 10).deleteAll(List.of("a", "b", "c"))).containsExactly("b");
+        assertThat(storageWith(s3Client, 10).deleteReturningFailedKeys(List.of("a", "b", "c")))
+                .containsExactly("b");
     }
 
     @Test
     @DisplayName("[F-33] 한 묶음을 부르다 예외가 나면 그 묶음의 키 전부를 지우지 못한 것으로 보고 다음 묶음을 계속 지운다")
-    void deleteAllFailsWholeChunkOnExceptionAndContinues() {
+    void deleteFailsWholeChunkOnExceptionAndContinues() {
         // given
         S3Client s3Client = mock(S3Client.class);
         when(s3Client.deleteObjects(any(DeleteObjectsRequest.class)))
@@ -297,7 +299,7 @@ class S3ImageStorageTest {
         List<String> keys = IntStream.range(0, 1_200).mapToObj(i -> "k" + i).toList();
 
         // when
-        Set<String> failed = storageWith(s3Client, 10).deleteAll(keys);
+        Set<String> failed = storageWith(s3Client, 10).deleteReturningFailedKeys(keys);
 
         // then
         assertThat(failed).containsExactlyInAnyOrderElementsOf(keys.subList(0, 1_000));

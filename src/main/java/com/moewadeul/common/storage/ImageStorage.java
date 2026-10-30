@@ -14,8 +14,7 @@ public interface ImageStorage {
 
     String presignView(String key);
 
-    /** 지우지 못한 키를 돌려준다. 비어 있으면 모두 지운 것이다. */
-    Set<String> deleteAll(Collection<String> keys);
+    Set<String> deleteReturningFailedKeys(Collection<String> keys);
 
     record PresignedUpload(String url, Map<String, String> headers, Instant expiresAt) {}
 }

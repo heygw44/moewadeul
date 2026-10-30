@@ -56,19 +56,19 @@ public abstract class ImageCleanup {
                 }
             }
             batchDeleted = deleted.size();
-            storageFailures += failedImageIds(deleted).size();
+            storageFailures += deleteObjectsReturningFailedIds(deleted).size();
             deletedRows += batchDeleted;
         } while (batchRead == BATCH_SIZE && batchDeleted > 0);
         log.info("{} image cleanup deletedRows={} storageFailures={}", keyPrefix, deletedRows, storageFailures);
         return new Result(deletedRows, storageFailures);
     }
 
-    protected Set<Long> failedImageIds(List<UnattachedImageRow> rows) {
+    protected Set<Long> deleteObjectsReturningFailedIds(List<UnattachedImageRow> rows) {
         List<String> keys = rows.stream().flatMap(ImageCleanup::keysOf).toList();
         if (keys.isEmpty()) {
             return Set.of();
         }
-        Set<String> failedKeys = imageStorage.deleteAll(keys);
+        Set<String> failedKeys = imageStorage.deleteReturningFailedKeys(keys);
         Set<Long> failedIds = rows.stream()
                 .filter(row -> keysOf(row).anyMatch(failedKeys::contains))
                 .map(UnattachedImageRow::imageId)

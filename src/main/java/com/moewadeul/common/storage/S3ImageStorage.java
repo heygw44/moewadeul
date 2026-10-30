@@ -171,7 +171,7 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
     }
 
     @Override
-    public Set<String> deleteAll(Collection<String> keys) {
+    public Set<String> deleteReturningFailedKeys(Collection<String> keys) {
         Set<String> failed = new HashSet<>();
         List<String> distinct = List.copyOf(new LinkedHashSet<>(keys));
         for (int from = 0; from < distinct.size(); from += DELETE_CHUNK_SIZE) {

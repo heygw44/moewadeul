@@ -38,7 +38,7 @@ public class TestImageStorage implements ImageStorage {
     }
 
     @Override
-    public Set<String> deleteAll(Collection<String> keys) {
+    public Set<String> deleteReturningFailedKeys(Collection<String> keys) {
         batchCalls.incrementAndGet();
         Set<String> failed = new LinkedHashSet<>();
         for (String key : keys) {

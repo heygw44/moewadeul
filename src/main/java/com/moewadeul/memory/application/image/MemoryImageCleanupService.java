@@ -31,7 +31,7 @@ public class MemoryImageCleanupService extends ImageCleanup {
         List<UnattachedImageRow> batch;
         do {
             batch = memoryImageMapper.selectUnattachedByMember(memberId, lastImageId, BATCH_SIZE);
-            Set<Long> failed = failedImageIds(batch);
+            Set<Long> failed = deleteObjectsReturningFailedIds(batch);
             storageFailures += failed.size();
             for (UnattachedImageRow row : batch) {
                 if (!failed.contains(row.imageId())) {

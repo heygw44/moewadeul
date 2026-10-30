@@ -46,7 +46,7 @@ public class LocalFakeImageStorage implements ImageStorage {
     }
 
     @Override
-    public Set<String> deleteAll(Collection<String> keys) {
+    public Set<String> deleteReturningFailedKeys(Collection<String> keys) {
         keys.forEach(sizes::remove);
         return Set.of();
     }
