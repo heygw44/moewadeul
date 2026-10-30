@@ -33,7 +33,7 @@ class SecurityProbeController {
             @RequestParam(defaultValue = "false") boolean emailVerified,
             HttpServletRequest request,
             HttpServletResponse response) {
-        loginSessionManager.login(new LoginMember(memberId, role, emailVerified), request, response);
+        loginSessionManager.login(new LoginMember(memberId, role, emailVerified), null, request, response);
         return ResponseEntity.noContent().build();
     }
 

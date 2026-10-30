@@ -47,35 +47,53 @@ class MemberSessionsIntegrationTest {
     }
 
     @Test
-    @DisplayName("기준 시각보다 먼저 로그인한 세션과 로그인 시각이 없는 세션만 지우고, 기준 시각과 같거나 뒤인 세션은 남긴다")
-    void invalidateLoggedInBefore_deletesOnlySessionsLoggedInBeforeCutoff() {
+    @DisplayName("회원의 현재 비밀번호 변경 시각과 다른 값을 적은 세션과 값이 없는 세션만 지우고, 같은 값의 세션은 남긴다")
+    void invalidateNotLoggedInWith_deletesOnlySessionsWithAnotherPasswordSnapshot() {
         // given
-        Instant cutoff = Instant.parse("2026-10-05T03:00:00Z");
-        String before = saveSession(OTHER_MEMBER_ID, cutoff.minusMillis(1));
+        Instant changedAt = Instant.parse("2026-10-05T03:00:00Z");
+        String older =
+                saveSession(OTHER_MEMBER_ID, LoginSessionManager.passwordChangedAtSnapshot(changedAt.minusMillis(1)));
+        String neverChanged = saveSession(OTHER_MEMBER_ID, LoginSessionManager.passwordChangedAtSnapshot(null));
         String untouched = saveSession(OTHER_MEMBER_ID, null);
-        String atCutoff = saveSession(OTHER_MEMBER_ID, cutoff);
-        String after = saveSession(OTHER_MEMBER_ID, cutoff.plusSeconds(1));
+        String current = saveSession(OTHER_MEMBER_ID, LoginSessionManager.passwordChangedAtSnapshot(changedAt));
 
         // when
-        memberSessions.invalidateLoggedInBefore(OTHER_MEMBER_ID, cutoff);
+        memberSessions.invalidateNotLoggedInWith(OTHER_MEMBER_ID, changedAt);
 
         // then
         assertThat(sessionRepository.findByPrincipalName(String.valueOf(OTHER_MEMBER_ID)))
-                .containsOnlyKeys(atCutoff, after)
-                .doesNotContainKeys(before, untouched);
+                .containsOnlyKeys(current)
+                .doesNotContainKeys(older, neverChanged, untouched);
         memberSessions.invalidateAll(OTHER_MEMBER_ID);
     }
 
-    private String saveSession(long memberId, Instant loggedInAt) {
-        return saveSession(sessionRepository, memberId, loggedInAt);
+    @Test
+    @DisplayName("비밀번호를 바꾼 적 없는 회원은 null을 적은 세션만 남기고, 속성이 없는 세션은 지운다")
+    void invalidateNotLoggedInWith_nullPasswordChangedAt_keepsOnlyNullSnapshot() {
+        // given
+        String neverChanged = saveSession(OTHER_MEMBER_ID, LoginSessionManager.passwordChangedAtSnapshot(null));
+        String untouched = saveSession(OTHER_MEMBER_ID, null);
+
+        // when
+        memberSessions.invalidateNotLoggedInWith(OTHER_MEMBER_ID, null);
+
+        // then
+        assertThat(sessionRepository.findByPrincipalName(String.valueOf(OTHER_MEMBER_ID)))
+                .containsOnlyKeys(neverChanged)
+                .doesNotContainKeys(untouched);
+        memberSessions.invalidateAll(OTHER_MEMBER_ID);
+    }
+
+    private String saveSession(long memberId, String passwordSnapshot) {
+        return saveSession(sessionRepository, memberId, passwordSnapshot);
     }
 
     private static <S extends Session> String saveSession(
-            FindByIndexNameSessionRepository<S> repository, long memberId, Instant loggedInAt) {
+            FindByIndexNameSessionRepository<S> repository, long memberId, String passwordSnapshot) {
         S session = repository.createSession();
         session.setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, String.valueOf(memberId));
-        if (loggedInAt != null) {
-            session.setAttribute(LoginSessionManager.LOGIN_INSTANT_ATTRIBUTE, loggedInAt);
+        if (passwordSnapshot != null) {
+            session.setAttribute(LoginSessionManager.PASSWORD_CHANGED_AT_ATTRIBUTE, passwordSnapshot);
         }
         repository.save(session);
         return session.getId();

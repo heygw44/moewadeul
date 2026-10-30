@@ -38,6 +38,7 @@ class AuthController {
         LoginResult result = memberLoginService.login(request.toCommand(httpRequest.getRemoteAddr()));
         loginSessionManager.login(
                 new LoginMember(result.memberId(), result.role().name(), result.emailVerified()),
+                result.passwordChangedAt(),
                 httpRequest,
                 httpResponse);
         discardSessionIfMemberChanged(result, httpRequest, httpResponse);

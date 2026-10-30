@@ -7,6 +7,7 @@ import com.moewadeul.member.application.password.PasswordChangeService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -42,13 +43,13 @@ class MyPasswordController {
             @Valid @RequestBody PasswordChangeRequest request,
             HttpServletRequest httpRequest) {
         String currentSessionId = httpRequest.getSession(false).getId();
-        passwordChangeService.change(new PasswordChangeCommand(
+        Instant passwordChangedAt = passwordChangeService.change(new PasswordChangeCommand(
                 loginMember.memberId(),
                 request.currentPassword(),
                 request.newPassword(),
                 httpRequest.getRemoteAddr(),
                 currentSessionId));
         loginSessionManager.changeSessionId(httpRequest);
-        loginSessionManager.stampLoginInstant(httpRequest);
+        loginSessionManager.recordPasswordChangedAt(httpRequest, passwordChangedAt);
     }
 }

@@ -29,16 +29,13 @@ public class MemberSessions {
                 .forEach(sessionRepository::deleteById);
     }
 
-    public void invalidateLoggedInBefore(long memberId, Instant cutoff) {
+    public void invalidateNotLoggedInWith(long memberId, Instant passwordChangedAt) {
         OutsideTransaction.require(SESSION_CONNECTION);
+        String current = LoginSessionManager.passwordChangedAtSnapshot(passwordChangedAt);
         sessionRepository.findByPrincipalName(String.valueOf(memberId)).entrySet().stream()
-                .filter(entry -> !isLoggedInAtOrAfter(entry.getValue(), cutoff))
+                .filter(entry -> !current.equals(
+                        entry.getValue().getAttribute(LoginSessionManager.PASSWORD_CHANGED_AT_ATTRIBUTE)))
                 .forEach(entry -> sessionRepository.deleteById(entry.getKey()));
-    }
-
-    private static boolean isLoggedInAtOrAfter(Session session, Instant cutoff) {
-        Object loggedInAt = session.getAttribute(LoginSessionManager.LOGIN_INSTANT_ATTRIBUTE);
-        return loggedInAt instanceof Instant instant && !instant.isBefore(cutoff);
     }
 
     public void invalidate(String sessionId) {

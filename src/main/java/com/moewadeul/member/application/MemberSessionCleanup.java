@@ -14,7 +14,7 @@ public class MemberSessionCleanup {
     public static final String EVENT_TYPE = "MEMBER_SESSION_CLEANUP";
     public static final String AGGREGATE_TYPE = "MEMBER";
 
-    // 비밀번호 변경의 현재 세션 로그인 시각 갱신은 응답이 커밋될 때 저장되므로, 그전에 이벤트가 처리되지 않게 미룬다.
+    // 비밀번호 변경이 현재 세션에 적는 바뀐 시각은 응답이 커밋될 때 저장되므로, 그전에 이벤트가 처리되지 않게 미룬다.
     public static final Duration OUTBOX_DELAY = Duration.ofSeconds(30);
 
     private final OutboxEventRecorder outboxEventRecorder;

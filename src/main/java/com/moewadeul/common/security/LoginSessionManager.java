@@ -2,7 +2,6 @@ package com.moewadeul.common.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +21,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoginSessionManager {
 
-    // ChangeSessionIdAuthenticationStrategy는 로그인해도 세션 생성 시각을 그대로 두어서, 로그인 시각은 따로 적는다.
-    public static final String LOGIN_INSTANT_ATTRIBUTE = LoginSessionManager.class.getName() + ".LOGIN_INSTANT";
+    // null(비밀번호를 바꾼 적 없음)과 속성이 없는 세션을 구분하려고 문자열로 적는다.
+    public static final String PASSWORD_CHANGED_AT_ATTRIBUTE =
+            LoginSessionManager.class.getName() + ".PASSWORD_CHANGED_AT";
 
     private static final String ROLE_PREFIX = "ROLE_";
 
@@ -32,24 +32,27 @@ public class LoginSessionManager {
             SecurityContextHolder.getContextHolderStrategy();
     private final SessionAuthenticationStrategy sessionFixationStrategy = new ChangeSessionIdAuthenticationStrategy();
     private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
-    private final Clock clock;
 
-    public LoginSessionManager(SecurityContextRepository securityContextRepository, Clock clock) {
+    public LoginSessionManager(SecurityContextRepository securityContextRepository) {
         this.securityContextRepository = securityContextRepository;
-        this.clock = clock;
     }
 
-    public void login(LoginMember member, HttpServletRequest request, HttpServletResponse response) {
+    public static String passwordChangedAtSnapshot(Instant passwordChangedAt) {
+        return String.valueOf(passwordChangedAt);
+    }
+
+    public void login(
+            LoginMember member, Instant passwordChangedAt, HttpServletRequest request, HttpServletResponse response) {
         Authentication authentication = authenticationOf(member);
 
         sessionFixationStrategy.onAuthentication(authentication, request, response);
 
         storeContext(authentication, request, response);
-        stampLoginInstant(request);
+        recordPasswordChangedAt(request, passwordChangedAt);
     }
 
-    public void stampLoginInstant(HttpServletRequest request) {
-        request.getSession().setAttribute(LOGIN_INSTANT_ATTRIBUTE, Instant.now(clock));
+    public void recordPasswordChangedAt(HttpServletRequest request, Instant passwordChangedAt) {
+        request.getSession().setAttribute(PASSWORD_CHANGED_AT_ATTRIBUTE, passwordChangedAtSnapshot(passwordChangedAt));
     }
 
     public void markEmailVerified(HttpServletRequest request, HttpServletResponse response) {
