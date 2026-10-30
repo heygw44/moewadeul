@@ -12,9 +12,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.publicdata.application.SyncJobRunService;
+import com.moewadeul.publicdata.application.SyncJobStoppedException;
 import com.moewadeul.publicdata.infra.gocamping.GoCampingApiException;
+import com.moewadeul.publicdata.infra.gocamping.GoCampingClient;
+import com.moewadeul.publicdata.infra.gocamping.GoCampingProperties;
+import com.moewadeul.spot.application.publicspot.PublicSpotSyncService;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -46,6 +52,21 @@ class GoCampingSyncServiceIntegrationTest {
 
     @Autowired
     private GoCampingSyncService goCampingSyncService;
+
+    @Autowired
+    private SyncJobRunService syncJobRunService;
+
+    @Autowired
+    private GoCampingClient goCampingClient;
+
+    @Autowired
+    private PublicSpotSyncService publicSpotSyncService;
+
+    @Autowired
+    private GoCampingProperties goCampingProperties;
+
+    @Autowired
+    private GoCampingSyncProperties goCampingSyncProperties;
 
     @Autowired
     private WireMockServer wireMock;
@@ -245,6 +266,49 @@ class GoCampingSyncServiceIntegrationTest {
         assertThat(requestCount(1)).isEqualTo(2);
         assertThat(runs.get(2).progressCursor()).isEqualTo("1");
         assertThat(runs.get(2).processedCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[F-06][NFR-06] 종료 신호를 받으면 받은 페이지의 진행 위치를 남기고 실패로 끝나고, 다음 실행은 다음 페이지부터 이어서 받는다")
+    void syncStopsAfterRecordingPageWhenShutdownRequestedThenResumes() {
+        // given
+        stubAllPages();
+        ShutdownSignal shutdown = new ShutdownSignal();
+        shutdown.request();
+        GoCampingSyncService stopping = new GoCampingSyncService(
+                syncJobRunService,
+                goCampingClient,
+                publicSpotSyncService,
+                goCampingProperties,
+                goCampingSyncProperties,
+                shutdown);
+
+        // when
+        assertThatThrownBy(stopping::sync).isInstanceOf(SyncJobStoppedException.class);
+
+        // then
+        assertThat(runs()).singleElement().satisfies(run -> {
+            assertThat(run.status()).isEqualTo("FAILED");
+            assertThat(run.progressCursor()).isEqualTo("1");
+            assertThat(run.processedCount()).isEqualTo(2);
+            assertThat(run.errorMessage()).contains("종료 중");
+            assertThat(run.finished()).isTrue();
+        });
+        assertThat(requestCount(1)).isEqualTo(1);
+        assertThat(requestCount(2)).isZero();
+
+        // when
+        clock.advance(Duration.ofSeconds(1));
+        Optional<GoCampingSyncResult> resumed = goCampingSyncService.sync();
+
+        // then
+        assertThat(resumed).isPresent();
+        assertThat(runs()).hasSize(2);
+        assertThat(runs().get(1).status()).isEqualTo("COMPLETED");
+        assertThat(runs().get(1).progressCursor()).isEqualTo(String.valueOf(PAGE_COUNT));
+        assertThat(requestCount(1)).isEqualTo(1);
+        assertThat(requestCount(2)).isEqualTo(1);
+        assertThat(countRows("spot")).isEqualTo(LIVE_COUNT);
     }
 
     @Test

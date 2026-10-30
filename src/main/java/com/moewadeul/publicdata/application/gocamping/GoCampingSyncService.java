@@ -1,9 +1,11 @@
 package com.moewadeul.publicdata.application.gocamping;
 
+import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.publicdata.application.SyncJob;
 import com.moewadeul.publicdata.application.SyncJobRunService;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
+import com.moewadeul.publicdata.application.SyncJobStoppedException;
 import com.moewadeul.publicdata.domain.SyncJobType;
 import com.moewadeul.publicdata.infra.gocamping.GoCampingClient;
 import com.moewadeul.publicdata.infra.gocamping.GoCampingItem;
@@ -34,6 +36,7 @@ public class GoCampingSyncService implements SyncJob<GoCampingSyncResult> {
     private final PublicSpotSyncService publicSpotSyncService;
     private final GoCampingProperties goCampingProperties;
     private final GoCampingSyncProperties syncProperties;
+    private final ShutdownSignal shutdownSignal;
 
     public Optional<GoCampingSyncResult> sync() {
         return syncJobRunService
@@ -90,6 +93,10 @@ public class GoCampingSyncService implements SyncJob<GoCampingSyncResult> {
             result = afterPage;
             if ((long) pageNo * pageSize >= page.totalCount()) {
                 return result;
+            }
+            // 실행기는 종료를 30초만 기다리고 그 뒤에 DB 풀이 닫히므로, 실패 기록은 그 전에 남겨야 한다.
+            if (shutdownSignal.isRequested()) {
+                throw new SyncJobStoppedException();
             }
             pageNo++;
         }
