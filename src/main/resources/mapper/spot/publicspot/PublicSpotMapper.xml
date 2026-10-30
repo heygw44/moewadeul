@@ -97,7 +97,7 @@
             s.location = ST_SRID(POINT(changed.longitude, changed.latitude), 4326),
             s.weather_nx = changed.weather_nx,
             s.weather_ny = changed.weather_ny,
-            s.updated_at = #{now},
+            s.updated_at = IF(s.status = 'ACTIVE', #{now}, s.updated_at),
             s.version = s.version + 1
     </update>
 
