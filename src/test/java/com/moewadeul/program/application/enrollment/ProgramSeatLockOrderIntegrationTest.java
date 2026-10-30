@@ -41,10 +41,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.mysql.MySQLContainer;
 
-// 자리를 쥐는지 바꾸는 전이(결제, 취소)가 신청과 같은 순서로 행사 행부터 잠그는지 확인한다.
-// 전이가 잠금과 시각 읽기를 마치고 반영하기 전에 멈춰 선 틈에 신청을 끼워 넣는다.
-// 결제는 root가 쥔 payment 중복 행에서, 취소는 root가 건 outbox_event 표 잠금에서 기다린다.
-// payment 표에 LOCK TABLES를 걸면 FK 때문에 신청 표를 읽는 문장까지 메타데이터 잠금에서 멈추므로 쓰지 않는다.
+// payment 표에 LOCK TABLES를 걸면 FK 때문에 신청 표를 읽는 문장까지 메타데이터 잠금에서 멈추므로 결제는 중복 행으로 멈춘다.
 @IntegrationTest
 class ProgramSeatLockOrderIntegrationTest {
 
@@ -58,7 +55,6 @@ class ProgramSeatLockOrderIntegrationTest {
     private static final Instant AFTER_DUE = PAYMENT_DUE_AT.plusSeconds(1);
     private static final long WAIT_MILLIS = 5_000;
 
-    // 신청의 자리 세기 하위 쿼리가 타는 인덱스.
     enum SeatCountPlan {
         OPTIMIZER_CHOICE(null),
         STATUS_INDEX(ProgramSeatLockOrderIntegrationTest.STATUS_INDEX),
@@ -237,7 +233,6 @@ class ProgramSeatLockOrderIntegrationTest {
         return cleanup;
     }
 
-    // 이 행사의 만료·취소 신청이 많으면 옵티마이저가 (program_id, status)를 고른다.
     private void saveHistory(long programId) {
         long memberId = fixture.saveMember();
         LocalDateTime at = LocalDateTime.ofInstant(MutableClock.DEFAULT_INSTANT, ZoneOffset.UTC);
@@ -270,7 +265,7 @@ class ProgramSeatLockOrderIntegrationTest {
         return DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword());
     }
 
-    // 결제 INSERT가 이 행의 UNIQUE 키 잠금에서 기다리게 한다. FK 검사를 끄면 신청 행에 공유 잠금을 걸지 않는다.
+    // FK 검사를 끄지 않으면 이 INSERT가 신청 행에 공유 잠금을 걸어 결제의 신청 행 잠금과 엉킨다.
     private void holdPaymentRow(Connection holder, long applicationId) throws SQLException {
         holder.setAutoCommit(false);
         execute(holder, "SET foreign_key_checks = 0");
@@ -292,7 +287,6 @@ class ProgramSeatLockOrderIntegrationTest {
         }
     }
 
-    // 신청이 데이터베이스에 닿아 기다리는 모습을 확인한다. 기다릴 일이 없는 계획이면 신청이 끝나는 것을 기다린다.
     private void awaitLockWaitsOrDone(Connection monitor, int expected, Future<?> action)
             throws SQLException, InterruptedException {
         long deadline = deadline();
