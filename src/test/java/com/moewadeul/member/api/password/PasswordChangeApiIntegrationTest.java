@@ -4,16 +4,19 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import jakarta.servlet.http.Cookie;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +57,9 @@ class PasswordChangeApiIntegrationTest {
 
     @MockitoSpyBean
     private MemberSessions memberSessions;
+
+    @MockitoSpyBean
+    private MemberSessionCleanup memberSessionCleanup;
 
     @Test
     @DisplayName("[F-32][PW-07] 이메일 인증 전인 회원이 바꾸면 204이고, 예전 비밀번호는 401 LOGIN_FAILED, 새 비밀번호는 200이다")
@@ -114,11 +120,43 @@ class PasswordChangeApiIntegrationTest {
         assertThat(sessionCount(member)).isEqualTo(2);
         assertThat(getWithSession(another)).hasStatus(HttpStatus.OK);
 
+        clock.advance(Duration.ofSeconds(31));
         outboxPublisher.publishPending();
 
         assertThat(sessionCount(member)).isEqualTo(1);
         assertThat(getWithSession(renewed)).hasStatus(HttpStatus.OK);
         assertThat(getWithSession(another)).hasStatus(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("[F-32][PW-07] 변경이 커밋된 직후 outbox 처리기가 돌아도 요청한 세션은 지워지지 않고, 30초가 지나 처리해도 그대로다")
+    void keepsTheCurrentSessionWhenTheOutboxRunsBeforeTheResponseIsCommitted() {
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Cookie current = login(member);
+        Cookie another = login(member);
+        clock.advance(Duration.ofSeconds(1));
+        AtomicInteger processedBeforeResponse = new AtomicInteger(-1);
+        doAnswer(invocation -> {
+                    processedBeforeResponse.set(outboxPublisher.publishPending());
+                    return invocation.callRealMethod();
+                })
+                .when(memberSessionCleanup)
+                .invalidateOthersAfterCommit(anyLong(), anyString());
+
+        MvcTestResult result = change(current, OLD_PASSWORD, NEW_PASSWORD);
+
+        assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
+        Cookie renewed = result.getResponse().getCookie(SESSION_COOKIE);
+        assertThat(renewed).isNotNull();
+        assertThat(getWithSession(renewed)).hasStatus(HttpStatus.OK);
+        assertThat(getWithSession(another)).hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(processedBeforeResponse).hasValue(0);
+
+        clock.advance(Duration.ofSeconds(31));
+
+        assertThat(outboxPublisher.publishPending()).isEqualTo(1);
+        assertThat(getWithSession(renewed)).hasStatus(HttpStatus.OK);
+        assertThat(sessionCount(member)).isEqualTo(1);
     }
 
     @Test
