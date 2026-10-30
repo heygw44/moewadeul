@@ -384,6 +384,36 @@ class GoCampingSyncServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-06] 숨긴 장소의 이름이 원천에서 바뀌어도 이름은 갱신하지만 수정 시각은 숨긴 시각 그대로 두고, 공개 중인 장소는 수정 시각도 바꾼다")
+    void syncKeepsUpdatedAtOfHiddenSpotWhenSourceRenamesIt() {
+        // given
+        stubAllPages();
+        goCampingSyncService.sync();
+        clock.advance(Duration.ofDays(1));
+        jdbcTemplate.update(
+                "UPDATE spot SET status = 'HIDDEN', updated_at = ? WHERE id = (SELECT spot_id FROM public_spot_detail"
+                        + " WHERE external_id = '2931')",
+                clock.instant());
+        String hiddenUpdatedAt = spotUpdatedAt("2931");
+        String activeUpdatedAt = spotUpdatedAt("146");
+
+        // when
+        stubAllPages(Map.of(
+                "2931", Map.of("facltNm", "청양동강리 새 이름 캠핑장"),
+                "146", Map.of("facltNm", "강변사리 새 이름 캠핑장")));
+        clock.advance(Duration.ofDays(1));
+        GoCampingSyncResult result = goCampingSyncService.sync().orElseThrow();
+
+        // then
+        assertThat(result.updated()).isEqualTo(2);
+        assertThat(spotName("2931")).isEqualTo("청양동강리 새 이름 캠핑장");
+        assertThat(spotStatus("2931")).isEqualTo("HIDDEN");
+        assertThat(spotUpdatedAt("2931")).isEqualTo(hiddenUpdatedAt);
+        assertThat(spotName("146")).isEqualTo("강변사리 새 이름 캠핑장");
+        assertThat(spotUpdatedAt("146")).isNotEqualTo(activeUpdatedAt);
+    }
+
+    @Test
     @DisplayName("[F-06] 오래 갱신되지 않은 RUNNING 기록은 실패로 처리하고, 그 기록의 진행 위치 다음 페이지부터 이어서 받는다")
     void syncFailsStaleRunningRunAndResumesFromItsCursor() {
         // given
@@ -485,6 +515,21 @@ class GoCampingSyncServiceIntegrationTest {
     private String spotStatus(String externalId) {
         return jdbcTemplate.queryForObject(
                 "SELECT s.status FROM spot s JOIN public_spot_detail d ON d.spot_id = s.id WHERE d.external_id = ?",
+                String.class,
+                externalId);
+    }
+
+    private String spotName(String externalId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT s.name FROM spot s JOIN public_spot_detail d ON d.spot_id = s.id WHERE d.external_id = ?",
+                String.class,
+                externalId);
+    }
+
+    private String spotUpdatedAt(String externalId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT CAST(s.updated_at AS CHAR) FROM spot s JOIN public_spot_detail d ON d.spot_id = s.id"
+                        + " WHERE d.external_id = ?",
                 String.class,
                 externalId);
     }
