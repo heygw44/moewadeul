@@ -62,6 +62,19 @@ public interface ProgramApplicationJpaRepository
     @Modifying(flushAutomatically = true)
     @Query("""
             update ProgramApplication a
+            set a.paymentDueAt = :startAt,
+                a.updatedAt = :now
+            where a.programId = :programId
+              and a.status = com.moewadeul.program.domain.ProgramApplicationStatus.PENDING_PAYMENT
+              and a.paymentDueAt > :startAt
+            """)
+    int capPendingPaymentDueAt(
+            @Param("programId") long programId, @Param("startAt") Instant startAt, @Param("now") Instant now);
+
+    @Override
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            update ProgramApplication a
             set a.reviewRequestedAt = :now,
                 a.updatedAt = :now
             where a.memberId = :memberId

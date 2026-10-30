@@ -15,6 +15,8 @@ public interface ProgramApplicationRepository {
 
     List<Long> findPendingPaymentIdsByMember(long memberId);
 
+    int capPendingPaymentDueAt(long programId, Instant startAt, Instant now);
+
     int requestReviewForConfirmed(long memberId, Instant now);
 
     boolean existsByProgramId(long programId);

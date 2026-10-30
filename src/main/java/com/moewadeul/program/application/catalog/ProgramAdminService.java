@@ -74,6 +74,7 @@ public class ProgramAdminService {
         Instant now = clock.instant();
         ProgramChange change = revise(program, command, now, applicationsExist);
         programRepository.saveAndFlush(program);
+        programApplicationRepository.capPendingPaymentDueAt(programId, program.getStartAt(), now);
         if (change.isCapacityChanged() && change.capacityAfter() > change.capacityBefore()) {
             seatReleaseRecorder.record(program, now);
         }
