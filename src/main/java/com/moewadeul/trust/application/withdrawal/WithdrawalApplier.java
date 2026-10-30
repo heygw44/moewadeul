@@ -23,8 +23,10 @@ class WithdrawalApplier {
     private final Clock clock;
 
     @Transactional
-    void apply(long memberId) {
-        memberWithdrawalService.lockAndWithdraw(memberId);
+    boolean apply(long memberId) {
+        if (!memberWithdrawalService.lockAndWithdraw(memberId)) {
+            return false;
+        }
         Instant now = clock.instant();
         identityVerificationRepository.findByMemberId(memberId).ifPresent(identity -> {
             boolean retainsCi = sanctionRepository.existsCiRetentionSanction(memberId);
@@ -33,6 +35,7 @@ class WithdrawalApplier {
         recordCleanup(TrustEvents.WITHDRAWAL_BASECAMP_CLEANUP, memberId);
         recordCleanup(TrustEvents.WITHDRAWAL_PROGRAM_CLEANUP, memberId);
         recordCleanup(TrustEvents.WITHDRAWAL_MEMORY_CLEANUP, memberId);
+        return true;
     }
 
     private void recordCleanup(String eventType, long memberId) {

@@ -18,9 +18,11 @@ public class WithdrawalService {
 
     public void withdraw(long memberId, String password, String ip) {
         OutsideTransaction.require("탈퇴가 커밋된 뒤에 세션을 지워야 한다.");
-        memberWithdrawalService.verifyPassword(memberId, password, ip);
-        withdrawalApplier.apply(memberId);
+        memberWithdrawalService.verifyPasswordUnlessWithdrawn(memberId, password, ip);
+        boolean withdrawn = withdrawalApplier.apply(memberId);
         memberSessions.invalidateAll(memberId);
-        log.info("member withdrawn memberId={}", memberId);
+        if (withdrawn) {
+            log.info("member withdrawn memberId={}", memberId);
+        }
     }
 }
