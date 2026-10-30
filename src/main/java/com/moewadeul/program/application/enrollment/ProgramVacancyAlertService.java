@@ -23,15 +23,15 @@ public class ProgramVacancyAlertService {
     private final ProgramApplicationRepository applicationRepository;
     private final Clock clock;
 
-    // 취소의 잠금 읽기에 막혔다가 들어간 신청은 취소가 커밋된 뒤에야 INSERT되므로, 행을 넣은 뒤 자리를 다시 세어야 한다.
     // READ COMMITTED여야 이 재조회가 트랜잭션 처음의 스냅숏이 아니라 최신 커밋을 본다.
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public boolean subscribe(long memberId, long programId) {
         Program program = findProgram(programId);
         Instant now = clock.instant();
-        program.requireVacancyAlertAcceptableAt(now, applicationRepository.countSeatHolders(programId, now));
+        requireFull(program, now);
         boolean created = vacancyAlertRepository.subscribe(programId, memberId, now) == 1;
-        program.requireVacancyAlertAcceptableAt(now, applicationRepository.countSeatHolders(programId, now));
+        // 자리 반환의 잠금 읽기에 막혔던 INSERT는 반환이 커밋된 뒤에 들어가므로, 그 반환을 놓치지 않게 다시 센다.
+        requireFull(program, now);
         log.info("program vacancy alert subscribed programId={} memberId={} created={}", programId, memberId, created);
         return created;
     }
@@ -41,6 +41,10 @@ public class ProgramVacancyAlertService {
         findProgram(programId);
         vacancyAlertRepository.unsubscribe(programId, memberId);
         log.info("program vacancy alert unsubscribed programId={} memberId={}", programId, memberId);
+    }
+
+    private void requireFull(Program program, Instant now) {
+        program.requireVacancyAlertAcceptableAt(now, applicationRepository.countSeatHolders(program.getId(), now));
     }
 
     private Program findProgram(long programId) {

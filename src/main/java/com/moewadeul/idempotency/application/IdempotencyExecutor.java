@@ -53,12 +53,11 @@ public class IdempotencyExecutor {
         return execute(request, successStatus, responseType, () -> {}, action);
     }
 
-    // beforeTransaction은 선점 뒤 트랜잭션 밖에서 돌고, 던지면 선점을 풀고 끝낸다. 저장소처럼 바깥 시스템을 기다리는 검사를 둔다.
     public <T> T execute(
             IdempotentRequest request,
             HttpStatus successStatus,
             Class<T> responseType,
-            Runnable beforeTransaction,
+            Runnable precheckOutsideTransaction,
             Supplier<T> action) {
         OutsideTransaction.require("멱등성 기록은 작업과 따로 커밋해야 한다.");
         String key = validateKey(request.key());
@@ -76,7 +75,7 @@ public class IdempotencyExecutor {
             }
         }
 
-        return runAndComplete(record, successStatus, request.memberId(), beforeTransaction, action);
+        return runAndComplete(record, successStatus, request.memberId(), precheckOutsideTransaction, action);
     }
 
     private String validateKey(String key) {
@@ -142,15 +141,14 @@ public class IdempotencyExecutor {
         }
     }
 
-    // 완료 기록이 실패하면 작업도 함께 되돌아가야 한다. 작업만 커밋되면 같은 키는 24시간 "처리 중"으로 남고 새 키는 자원을 한 번 더 만든다.
     private <T> T runAndComplete(
             IdempotencyRecord record,
             HttpStatus successStatus,
             long memberId,
-            Runnable beforeTransaction,
+            Runnable precheckOutsideTransaction,
             Supplier<T> action) {
         try {
-            beforeTransaction.run();
+            precheckOutsideTransaction.run();
             return transactionTemplate.execute(status -> {
                 T result = action.get();
                 recordCompletion(record, successStatus, result, memberId);

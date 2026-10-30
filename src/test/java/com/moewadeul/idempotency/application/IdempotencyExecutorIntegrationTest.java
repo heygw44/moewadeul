@@ -143,7 +143,7 @@ class IdempotencyExecutorIntegrationTest {
 
     @Test
     @DisplayName("[NFR-03] 트랜잭션 전 검사는 선점 뒤 한 번만 돌고 같은 키 재전송에서는 돌지 않는다")
-    void beforeTransactionStepRunsOnlyForTheFirstRequest() {
+    void precheckOutsideTransactionRunsOnlyForTheFirstRequest() {
         long memberId = memberFixture.save().getId();
         AtomicInteger checks = new AtomicInteger();
 
@@ -244,13 +244,13 @@ class IdempotencyExecutorIntegrationTest {
             String key,
             String operation,
             Object payload,
-            Runnable beforeTransaction,
+            Runnable precheckOutsideTransaction,
             Supplier<Result> action) {
         return executor.execute(
                 new IdempotentRequest(memberId, key, operation, payload),
                 HttpStatus.CREATED,
                 Result.class,
-                beforeTransaction,
+                precheckOutsideTransaction,
                 action);
     }
 
