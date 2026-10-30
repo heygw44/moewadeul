@@ -17,6 +17,8 @@ readonly COMPOSE_FILE="$DEPLOY_DIR/docker-compose.prod.yml"
 readonly ENV_FILE="$DEPLOY_DIR/.env"
 readonly SERVER_ENV_FILE="$DEPLOY_DIR/server.env"
 readonly LAST_TAG_FILE="$DEPLOY_DIR/last-successful-tag"
+readonly LAST_COMPOSE_FILE="$DEPLOY_DIR/last-successful-compose.yml"
+readonly SERVER_COMPOSE_COMMAND="cd $DEPLOY_DIR && docker compose -f docker-compose.prod.yml"
 readonly REGION=ap-northeast-2
 readonly PARAM_PREFIX=/moewadeul/prod
 readonly APP_REPO=ghcr.io/heygw44/moewadeul-app
@@ -55,6 +57,11 @@ declare -A server_env=()
 
 log() {
     echo "[deploy $(date -u +%H:%M:%S)] $*"
+}
+
+# 배포 워크플로가 이 출력을 그대로 찍으므로, 줄 맨 앞의 ::warning::이 GitHub Actions 경고 주석이 된다.
+warn() {
+    echo "::warning::[deploy $(date -u +%H:%M:%S)] $*"
 }
 
 compose() {
@@ -184,10 +191,43 @@ wait_healthy() {
     log "caddy 응답 확인 통과"
 }
 
+definition_changed() {
+    local service="$1" id expected actual
+    id="$(compose ps -q "$service" 2> /dev/null)" && [[ -n "$id" ]] || return 1
+    expected="$(compose config --hash "$service" 2> /dev/null | cut -d' ' -f2)" || return 1
+    actual="$(docker inspect -f '{{index .Config.Labels "com.docker.compose.config-hash"}}' "$id" 2> /dev/null)" || return 1
+    [[ -n "$expected" && "$expected" != "$actual" ]]
+}
+
+# 앱을 --no-deps로 올리면 compose가 depends_on의 service_healthy를 보지 않으므로 MySQL이 정상이 될 때까지 여기서 기다린다.
+start_mysql_without_recreate() {
+    compose up -d --no-recreate --wait mysql || return 1
+    if definition_changed mysql; then
+        warn "mysql 정의가 실행 중인 컨테이너와 달라도 배포는 적용하지 않았다. 이 정의는 이번 배포에서 검증되지 않았다. 백업을 확인한 뒤 서버에서 '$SERVER_COMPOSE_COMMAND up -d mysql'로 적용한다"
+    fi
+}
+
 # if 조건 안에서 부르면 set -e가 꺼지므로, 단계마다 &&로 이어 앞 단계가 실패하면 바로 실패를 돌려준다.
 start() {
     local tag="$1"
-    write_env "$tag" && compose up -d --remove-orphans && wait_healthy
+    write_env "$tag" && start_mysql_without_recreate && compose up -d --no-deps --remove-orphans app caddy && wait_healthy
+}
+
+# 배포는 app·caddy·mysql·alloy만 올리므로 compose 파일에 새로 생긴 서비스는 만들어지지 않는다.
+warn_services_not_running() {
+    local running service
+    running="$(compose ps --services 2> /dev/null)" || return 0
+    for service in $(compose config --services 2> /dev/null); do
+        if ! grep -qx "$service" <<< "$running"; then
+            warn "compose 파일의 $service 서비스가 실행 중이 아니다. 이 정의는 이번 배포에서 검증되지 않았다. 서버에서 '$SERVER_COMPOSE_COMMAND up -d $service'로 띄운다"
+        fi
+    done
+}
+
+apply_alloy_definition() {
+    if ! compose up -d --no-deps alloy > /dev/null 2>&1; then
+        warn "Alloy 정의를 적용하지 못했다. 서비스는 정상이고 지표·로그 수집만 빠질 수 있다"
+    fi
 }
 
 # Alloy의 MySQL 수집기가 쓰는 계정을 만들고 비밀번호를 Parameter Store 값에 맞춘다. 배포할 때마다 실행해도 결과가 같다.
@@ -305,8 +345,13 @@ main() {
 
     prepare_mysql_slow_log
     if start "$tag"; then
+        if ! { cp "$COMPOSE_FILE" "$LAST_COMPOSE_FILE.tmp" && mv "$LAST_COMPOSE_FILE.tmp" "$LAST_COMPOSE_FILE"; }; then
+            warn "compose 파일을 보관하지 못했다. 다음 배포가 실패하면 보관된 옛 파일로 되돌린다"
+        fi
         echo "$tag" > "$LAST_TAG_FILE"
         ensure_exporter_user
+        apply_alloy_definition
+        warn_services_not_running
         sync_alloy_config
         install_backup_timer
         # 사흘 넘게 쓰지 않은 이미지를 지워 디스크를 확보한다. 되돌릴 이미지가 지워져도 GHCR에서 다시 받는다.
@@ -323,6 +368,13 @@ main() {
     fi
 
     log "배포 실패. 직전에 성공한 태그 $previous 로 되돌린다"
+    if [[ ! -f "$LAST_COMPOSE_FILE" ]]; then
+        log "저장된 compose 파일이 없어 새 compose 파일 그대로 되돌린다"
+    elif cp "$LAST_COMPOSE_FILE" "$COMPOSE_FILE"; then
+        log "직전에 성공한 compose 파일로 되돌렸다"
+    else
+        warn "직전에 성공한 compose 파일을 복사하지 못해 새 compose 파일 그대로 되돌린다"
+    fi
     if start "$previous"; then
         log "되돌리기 성공: $previous"
         exit 2
