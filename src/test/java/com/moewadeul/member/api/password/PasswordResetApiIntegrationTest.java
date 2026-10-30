@@ -2,6 +2,8 @@ package com.moewadeul.member.api.password;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.mail.MailMessage;
@@ -10,6 +12,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.application.password.PasswordResetMails;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.password.PasswordResetPolicy;
@@ -31,6 +34,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -67,6 +71,9 @@ class PasswordResetApiIntegrationTest {
 
     @Autowired
     private MutableClock clock;
+
+    @MockitoSpyBean
+    private MemberSessions memberSessions;
 
     @BeforeEach
     void resetMailSender() {
@@ -132,6 +139,27 @@ class PasswordResetApiIntegrationTest {
         assertThat(getWithSession(second)).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(sessionCount(other)).isEqualTo(1);
         assertThat(getWithSession(otherSession).getResponse().getStatus()).isNotEqualTo(401);
+    }
+
+    @Test
+    @DisplayName("[PW-02] 세션 삭제가 한 번 실패해도 확인은 204이고, outbox 처리기가 옛 세션을 마저 지운다")
+    void outboxFinishesSessionDeletionWhenFirstAttemptFails() {
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Cookie session = login(member);
+        doThrow(new IllegalStateException("session store down"))
+                .doCallRealMethod()
+                .when(memberSessions)
+                .invalidateAll(anyLong());
+
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(issueToken(member), NEW_PASSWORD), null);
+
+        assertThat(confirm).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(getWithSession(session).getResponse().getStatus()).isNotEqualTo(401);
+
+        publisher.publishPending();
+
+        assertThat(sessionCount(member)).isZero();
+        assertThat(getWithSession(session)).hasStatus(HttpStatus.UNAUTHORIZED);
     }
 
     @Test

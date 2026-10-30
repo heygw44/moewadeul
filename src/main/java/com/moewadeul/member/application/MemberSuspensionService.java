@@ -15,6 +15,7 @@ public class MemberSuspensionService {
 
     private final MemberRepository memberRepository;
     private final MemberSuspensionMapper memberSuspensionMapper;
+    private final MemberSessionCleanup memberSessionCleanup;
     private final Clock clock;
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -34,11 +35,13 @@ public class MemberSuspensionService {
     @Transactional(propagation = Propagation.MANDATORY)
     public void suspendTemporarily(LockedMember member, Instant until) {
         member.member().suspendTemporarily(until, Instant.now(clock));
+        memberSessionCleanup.recordInTransaction(member.id());
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void suspendPermanently(LockedMember member) {
         member.member().suspendPermanently(Instant.now(clock));
+        memberSessionCleanup.recordInTransaction(member.id());
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
