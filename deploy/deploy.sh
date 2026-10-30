@@ -164,10 +164,11 @@ check_image_architecture() {
     done
 }
 
-# compose의 caddy 서비스는 업스트림 이미지로 고정돼 있어서, 화면 파일이 든 태그별 이미지는 따로 받는다.
+# 화면 파일이 든 태그별 이미지는 compose 서비스가 아니라서 따로 받는다. caddy 서비스의 고정 이미지는 받지 않는다.
+# 업스트림은 같은 태그를 다시 빌드하기도 해서, 받으면 그날 배포가 Caddy를 다시 만든다. 서버에 없을 때만 compose up이 받는다.
 pull_images() {
     local tag="$1"
-    compose pull --quiet app caddy && docker pull --quiet "$CADDY_REPO:$tag" > /dev/null
+    compose pull --quiet app && docker pull --quiet "$CADDY_REPO:$tag" > /dev/null
 }
 
 app_restart_count() {
@@ -403,7 +404,7 @@ main() {
     log "배포 시작: $tag (직전에 성공한 태그: ${previous:-없음})"
 
     write_env "$tag"
-    # app과 caddy만 받는다. MySQL 이미지(mysql:8.4)는 배포할 때마다 받지 않는다. 받으면 업스트림에 8.4.x 패치가 나온 날
+    # 앱과 화면 파일 이미지만 받는다. MySQL 이미지(mysql:8.4)는 배포할 때마다 받지 않는다. 받으면 업스트림에 8.4.x 패치가 나온 날
     # 앱 배포가 DB 컨테이너를 새 버전으로 다시 만들고, 배포를 되돌려도 MySQL 버전은 돌아가지 않는다. MySQL을 올릴 때는 서버에서 직접 받는다.
     if ! pull_images "$tag" || ! check_image_architecture "$tag"; then
         log "이미지를 받지 못했거나 아키텍처가 맞지 않는다. 실행 중인 컨테이너는 그대로 둔다"
