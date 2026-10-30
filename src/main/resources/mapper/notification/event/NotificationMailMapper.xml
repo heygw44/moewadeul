@@ -65,6 +65,7 @@
             email_next_attempt_at = NULL
         WHERE id = #{id}
           AND email_status = 'PENDING'
+          AND email_next_attempt_at = #{leaseUntil}
     </update>
 
     <!-- MySQL은 SET 절을 왼쪽에서 오른쪽으로 평가하고 앞에서 바꾼 값을 뒤에서 읽는다.
@@ -74,11 +75,13 @@
         SET email_status = CASE WHEN
                 <include refid="com.moewadeul.common.retry.RetryPolicySql.exhausted">
                     <property name="attemptCount" value="email_attempt_count"/>
+                    <property name="createdAt" value="created_at"/>
                 </include>
                 THEN 'FAILED' ELSE email_status END,
             email_next_attempt_at = CASE WHEN
                 <include refid="com.moewadeul.common.retry.RetryPolicySql.exhausted">
                     <property name="attemptCount" value="email_attempt_count"/>
+                    <property name="createdAt" value="created_at"/>
                 </include>
                 THEN NULL
                 ELSE
@@ -89,6 +92,7 @@
             email_attempt_count = email_attempt_count + 1
         WHERE id = #{id}
           AND email_status = 'PENDING'
+          AND email_next_attempt_at = #{leaseUntil}
     </update>
 
     <select id="selectDeliverableMemberIds" resultType="long">

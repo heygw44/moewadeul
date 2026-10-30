@@ -84,6 +84,13 @@ class NotificationMailSchedulerTest {
 
     private static NotificationMailProperties properties(int batchSize, Duration lease) {
         return new NotificationMailProperties(
-                true, Duration.ofSeconds(1), batchSize, lease, Duration.ofSeconds(30), Duration.ofMinutes(10), 10);
+                true,
+                Duration.ofSeconds(1),
+                batchSize,
+                lease,
+                Duration.ofSeconds(30),
+                Duration.ofMinutes(10),
+                10,
+                Duration.ofDays(1));
     }
 }

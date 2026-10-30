@@ -27,6 +27,6 @@ public class OutboxEventCleanupScheduler {
 
     @Scheduled(cron = "${moewadeul.outbox.cleanup.cron:0 0 5 * * *}", zone = KoreaTime.ZONE_ID)
     public void cleanUp() {
-        jobRunner.run(JOB_NAME, cleaner::deletePublished);
+        jobRunner.run(JOB_NAME, cleaner::deleteExpired);
     }
 }

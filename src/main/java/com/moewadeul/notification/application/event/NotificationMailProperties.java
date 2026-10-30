@@ -16,26 +16,24 @@ public record NotificationMailProperties(
         @DefaultValue("10m") Duration lease,
         @DefaultValue("30s") Duration retryDelay,
         @DefaultValue("10m") Duration retryMaxDelay,
-        @DefaultValue("10") int maxAttempts) {
+        @DefaultValue("10") int maxAttempts,
+        @DefaultValue("1d") Duration transientRetryWindow) {
 
     static final String DEFAULT_POLL_DELAY = "1s";
 
     public NotificationMailProperties {
         requirePositive(batchSize, "batchSize");
         requirePositive(pollDelay, "pollDelay");
-        RetryPolicy.requireValid("moewadeul.notification.mail", lease, retryDelay, retryMaxDelay, maxAttempts);
+        RetryPolicy.requireValid(
+                "moewadeul.notification.mail", lease, retryDelay, retryMaxDelay, maxAttempts, transientRetryWindow);
     }
 
     public RetryPolicy retryPolicy() {
-        return new RetryPolicy(lease, retryDelay, retryMaxDelay, maxAttempts);
+        return new RetryPolicy(lease, retryDelay, retryMaxDelay, maxAttempts, transientRetryWindow);
     }
 
     void requireLeaseOutlastsBatch(Duration sendTimeout) {
-        Duration worstBatch = sendTimeout.multipliedBy(batchSize);
-        if (lease.compareTo(worstBatch) <= 0) {
-            throw new IllegalStateException("moewadeul.notification.mail.lease(" + lease
-                    + ") must be longer than batchSize x moewadeul.mail.send-timeout(" + worstBatch + ")");
-        }
+        RetryPolicy.requireLeaseOutlastsBatch("moewadeul.notification.mail", lease, batchSize, sendTimeout);
     }
 
     private static void requirePositive(int value, String name) {

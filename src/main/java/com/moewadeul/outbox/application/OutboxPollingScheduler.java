@@ -1,5 +1,6 @@
 package com.moewadeul.outbox.application;
 
+import com.moewadeul.common.mail.MailProperties;
 import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,7 +21,12 @@ public class OutboxPollingScheduler {
     private final OutboxPublisher publisher;
     private final ScheduledJobRunner jobRunner;
 
-    public OutboxPollingScheduler(OutboxPublisher publisher, ScheduledJobRunner jobRunner) {
+    public OutboxPollingScheduler(
+            OutboxPublisher publisher,
+            ScheduledJobRunner jobRunner,
+            OutboxProperties properties,
+            MailProperties mailProperties) {
+        properties.requireLeaseOutlastsBatch(mailProperties.sendTimeout());
         this.publisher = publisher;
         this.jobRunner = jobRunner;
         jobRunner.register(JOB_NAME);

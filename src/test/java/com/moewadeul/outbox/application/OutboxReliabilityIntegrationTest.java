@@ -9,6 +9,7 @@ import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.outbox.infra.OutboxEventMapper;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -46,6 +47,9 @@ class OutboxReliabilityIntegrationTest {
 
     @Autowired
     private OutboxEventRecorder recorder;
+
+    @Autowired
+    private OutboxEventMapper eventMapper;
 
     @Autowired
     private OutboxProperties properties;
@@ -147,6 +151,7 @@ class OutboxReliabilityIntegrationTest {
         Map<String, Object> failed = findEvent(eventId);
         assertThat(failed.get("status")).isEqualTo("FAILED");
         assertThat(failed.get("attempt_count")).isEqualTo(maxAttempts);
+        assertThat(failed.get("locked_until")).isNull();
         assertThat(afterLimit).isZero();
         assertThat(handler.callCount()).isEqualTo(maxAttempts);
     }
@@ -200,6 +205,29 @@ class OutboxReliabilityIntegrationTest {
         assertThat(afterRecovery).isEqualTo(1);
         assertThat(findEvent(eventId).get("status")).isEqualTo("PUBLISHED");
         assertThat(handler.callCount()).isEqualTo(failures + 1);
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 일시적인 실패도 이벤트를 만든 지 일시 실패 재시도 기간(1일)이 지났으면 FAILED로 굳히고, 기간 안의 이벤트는 PENDING으로 둔다")
+    void transientFailureBecomesFailedOnlyAfterRetryWindow() {
+        // given
+        long older = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
+        clock.advance(Duration.ofSeconds(1));
+        long younger = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(1);
+        clock.advance(properties.transientRetryWindow().minusSeconds(1));
+        handler.failNextCallsTransiently(2);
+
+        // when
+        int processed = publisher.publishPending();
+
+        // then
+        assertThat(processed).isEqualTo(2);
+        Map<String, Object> expired = findEvent(older);
+        assertThat(expired.get("status")).isEqualTo("FAILED");
+        assertThat(expired.get("locked_until")).isNull();
+        Map<String, Object> retrying = findEvent(younger);
+        assertThat(retrying.get("status")).isEqualTo("PENDING");
+        assertThat(retrying.get("locked_until")).isNotNull();
     }
 
     @Test
@@ -362,6 +390,49 @@ class OutboxReliabilityIntegrationTest {
         // then
         assertThat(releasedBySecond).isEqualTo(2);
         assertThat(store.claim(clock.instant()).messages()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 임대가 끝난 뒤 다른 발행기가 다시 집은 이벤트에, 처음 집은 발행기가 발행 완료를 써도 PENDING으로 남고 다시 집은 발행기의 임대가 유지된다")
+    void staleLeaseHolderCannotMarkPublished() {
+        // given
+        long eventId = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
+        OutboxEventStore.Claim first = store.claim(clock.instant());
+        clock.advance(properties.lease().plusSeconds(1));
+        OutboxEventStore.Claim second = store.claim(clock.instant());
+
+        // when
+        int updated = eventMapper.markPublished(eventId, first.leaseUntil(), clock.instant());
+
+        // then
+        assertThat(updated).isZero();
+        Map<String, Object> event = findEvent(eventId);
+        assertThat(event.get("status")).isEqualTo("PENDING");
+        assertThat(event.get("attempt_count")).isEqualTo(0);
+        assertThat(event.get("published_at")).isNull();
+        assertThat(lockedUntil(eventId)).isEqualTo(second.leaseUntil());
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 임대가 끝난 뒤 다른 발행기가 다시 집은 이벤트에, 처음 집은 발행기가 실패를 써도 시도 횟수와 임대가 바뀌지 않는다")
+    void staleLeaseHolderCannotMarkFailedAttempt() {
+        // given
+        long eventId = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
+        OutboxEventStore.Claim first = store.claim(clock.instant());
+        clock.advance(properties.lease().plusSeconds(1));
+        OutboxEventStore.Claim second = store.claim(clock.instant());
+
+        // when
+        int updated = eventMapper.markFailedAttempt(
+                eventId, first.leaseUntil(), "늦게 도착한 실패", false, properties.retryPolicy(), clock.instant());
+
+        // then
+        assertThat(updated).isZero();
+        Map<String, Object> event = findEvent(eventId);
+        assertThat(event.get("status")).isEqualTo("PENDING");
+        assertThat(event.get("attempt_count")).isEqualTo(0);
+        assertThat(event.get("last_error")).isNull();
+        assertThat(lockedUntil(eventId)).isEqualTo(second.leaseUntil());
     }
 
     private List<Long> recordEvents(int count, String eventType) {

@@ -7,6 +7,7 @@ import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.common.web.WebProperties;
 import com.moewadeul.notification.infra.event.NotificationMailRow;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -43,7 +44,7 @@ class NotificationMailer {
         List<NotificationMailRow> targets = claim.targets();
         int handled = 0;
         while (handled < targets.size() && !shutdownSignal.isRequested()) {
-            sendOne(targets.get(handled));
+            sendOne(claim.leaseUntil(), targets.get(handled));
             handled++;
         }
         if (handled < targets.size()) {
@@ -64,7 +65,7 @@ class NotificationMailer {
                 released);
     }
 
-    private void sendOne(NotificationMailRow target) {
+    private void sendOne(Instant leaseUntil, NotificationMailRow target) {
         try {
             mailSender.send(NotificationMailFactory.create(target, webProperties.baseUrl()));
         } catch (RuntimeException e) {
@@ -73,9 +74,9 @@ class NotificationMailer {
                     "notification mail failed notificationId={} transient={}",
                     target.notificationId(),
                     transientFailure);
-            store.markFailedAttempt(target.notificationId(), transientFailure);
+            store.markFailedAttempt(target.notificationId(), leaseUntil, transientFailure);
             return;
         }
-        store.markSent(target.notificationId());
+        store.markSent(target.notificationId(), leaseUntil);
     }
 }

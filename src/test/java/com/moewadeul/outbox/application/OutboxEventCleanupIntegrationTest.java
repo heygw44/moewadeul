@@ -37,7 +37,7 @@ class OutboxEventCleanupIntegrationTest {
         long exact = insertEvent("PUBLISHED", cutoff);
         long newer = insertEvent("PUBLISHED", cutoff.plus(ONE_SECOND));
 
-        int deleted = cleaner.deletePublished();
+        int deleted = cleaner.deleteExpired();
 
         assertThat(deleted).isEqualTo(1);
         assertThat(exists(older)).isFalse();
@@ -46,19 +46,50 @@ class OutboxEventCleanupIntegrationTest {
     }
 
     @Test
-    @DisplayName("[NFR-04] 오래된 PENDING 이벤트와 FAILED 이벤트는 지우지 않는다")
-    void keepsOldPendingAndFailedEvents() {
-        Instant old = clock.instant().minus(Duration.ofDays(30));
+    @DisplayName("[NFR-04] 오래된 PENDING 이벤트와 보관 기간 안의 FAILED 이벤트는 지우지 않는다")
+    void keepsOldPendingAndRecentFailedEvents() {
+        Instant old = clock.instant().minus(Duration.ofDays(60));
         long pending = insertEvent("PENDING", null, old);
-        long failed = insertEvent("FAILED", null, old);
+        long failed = insertEvent("FAILED", null, clock.instant().minus(Duration.ofDays(29)));
         long published = insertEvent("PUBLISHED", old);
 
-        int deleted = cleaner.deletePublished();
+        int deleted = cleaner.deleteExpired();
 
         assertThat(deleted).isEqualTo(1);
         assertThat(exists(pending)).isTrue();
         assertThat(exists(failed)).isTrue();
         assertThat(exists(published)).isFalse();
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 실패로 굳은 지 30일보다 1초 더 지난 FAILED 이벤트는 지우고, 정확히 30일 된 이벤트와 그보다 새 이벤트는 남긴다")
+    void deletesOnlyFailedEventsOlderThanFailedRetention() {
+        Instant cutoff = clock.instant().minus(OutboxEventCleaner.FAILED_RETENTION);
+        long older = insertEvent("FAILED", null, cutoff.minus(ONE_SECOND));
+        long exact = insertEvent("FAILED", null, cutoff);
+        long newer = insertEvent("FAILED", null, cutoff.plus(ONE_SECOND));
+
+        int deleted = cleaner.deleteExpired();
+
+        assertThat(deleted).isEqualTo(1);
+        assertThat(exists(older)).isFalse();
+        assertThat(exists(exact)).isTrue();
+        assertThat(exists(newer)).isTrue();
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 발행 보관 기간(7일)이 지난 PUBLISHED 이벤트와 실패 보관 기간(30일)이 지난 FAILED 이벤트를 함께 지우고 합계를 돌려준다")
+    void deletesExpiredPublishedAndFailedTogether() {
+        long published = insertEvent("PUBLISHED", clock.instant().minus(Duration.ofDays(8)));
+        long failed = insertEvent("FAILED", null, clock.instant().minus(Duration.ofDays(31)));
+        long recentFailed = insertEvent("FAILED", null, clock.instant().minus(Duration.ofDays(8)));
+
+        int deleted = cleaner.deleteExpired();
+
+        assertThat(deleted).isEqualTo(2);
+        assertThat(exists(published)).isFalse();
+        assertThat(exists(failed)).isFalse();
+        assertThat(exists(recentFailed)).isTrue();
     }
 
     @Test
@@ -71,7 +102,7 @@ class OutboxEventCleanupIntegrationTest {
         }
         long recent = insertEvent("PUBLISHED", clock.instant());
 
-        int deleted = cleaner.deletePublished();
+        int deleted = cleaner.deleteExpired();
 
         assertThat(deleted).isEqualTo(total);
         assertThat(exists(recent)).isTrue();

@@ -18,10 +18,11 @@ public interface OutboxEventMapper {
 
     List<OutboxMessageRow> selectByIds(@Param("ids") List<Long> ids);
 
-    int markPublished(@Param("id") long id, @Param("now") Instant now);
+    int markPublished(@Param("id") long id, @Param("leaseUntil") Instant leaseUntil, @Param("now") Instant now);
 
     int markFailedAttempt(
             @Param("id") long id,
+            @Param("leaseUntil") Instant leaseUntil,
             @Param("error") String error,
             @Param("transientFailure") boolean transientFailure,
             @Param("retry") RetryPolicy retry,
