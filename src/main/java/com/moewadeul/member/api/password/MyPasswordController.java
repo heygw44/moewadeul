@@ -49,5 +49,6 @@ class MyPasswordController {
                 httpRequest.getRemoteAddr(),
                 currentSessionId));
         loginSessionManager.changeSessionId(httpRequest);
+        loginSessionManager.stampLoginInstant(httpRequest);
     }
 }

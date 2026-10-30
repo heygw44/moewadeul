@@ -65,6 +65,7 @@ class MyPasswordControllerTest {
         assertThat(command.currentSessionId()).isEqualTo(SESSION_ID);
         assertThat(command.toString()).doesNotContain("Current-pass1", "Changed-pass1", SESSION_ID);
         verify(loginSessionManager).changeSessionId(any());
+        verify(loginSessionManager).stampLoginInstant(any());
     }
 
     @Test

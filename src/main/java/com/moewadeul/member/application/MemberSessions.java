@@ -1,6 +1,8 @@
 package com.moewadeul.member.application;
 
+import com.moewadeul.common.security.LoginSessionManager;
 import com.moewadeul.common.transaction.OutsideTransaction;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
@@ -25,6 +27,18 @@ public class MemberSessions {
         sessionRepository.findByPrincipalName(String.valueOf(memberId)).keySet().stream()
                 .filter(sessionId -> !sessionId.equals(keptSessionId))
                 .forEach(sessionRepository::deleteById);
+    }
+
+    public void invalidateLoggedInBefore(long memberId, Instant cutoff) {
+        OutsideTransaction.require(SESSION_CONNECTION);
+        sessionRepository.findByPrincipalName(String.valueOf(memberId)).entrySet().stream()
+                .filter(entry -> !isLoggedInAtOrAfter(entry.getValue(), cutoff))
+                .forEach(entry -> sessionRepository.deleteById(entry.getKey()));
+    }
+
+    private static boolean isLoggedInAtOrAfter(Session session, Instant cutoff) {
+        Object loggedInAt = session.getAttribute(LoginSessionManager.LOGIN_INSTANT_ATTRIBUTE);
+        return loggedInAt instanceof Instant instant && !instant.isBefore(cutoff);
     }
 
     public void invalidate(String sessionId) {

@@ -21,6 +21,6 @@ class MemberSessionCleanupHandler implements OutboxEventHandler {
     @Override
     public void handle(OutboxMessage message) {
         OutsideTransaction.require("세션 삭제는 트랜잭션 안에서 부르면 커넥션을 하나 더 잡는다.");
-        memberSessions.invalidateAll(message.aggregateId());
+        memberSessions.invalidateLoggedInBefore(message.aggregateId(), message.occurredAt());
     }
 }

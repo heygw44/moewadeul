@@ -24,11 +24,23 @@ public class MemberSessionCleanup {
         try {
             memberSessions.invalidateAll(memberId);
         } catch (RuntimeException e) {
-            log.warn(
-                    "member session deletion failed, outbox event will retry memberId={} errorType={}",
-                    memberId,
-                    e.getClass().getSimpleName());
+            warnOutboxWillRetry(memberId, e);
         }
+    }
+
+    public void invalidateOthersAfterCommit(long memberId, String keptSessionId) {
+        try {
+            memberSessions.invalidateAllExcept(memberId, keptSessionId);
+        } catch (RuntimeException e) {
+            warnOutboxWillRetry(memberId, e);
+        }
+    }
+
+    private static void warnOutboxWillRetry(long memberId, RuntimeException e) {
+        log.warn(
+                "member session deletion failed, outbox event will retry memberId={} errorType={}",
+                memberId,
+                e.getClass().getSimpleName());
     }
 
     public record Payload(long memberId) {}

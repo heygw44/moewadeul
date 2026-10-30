@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
@@ -16,6 +17,7 @@ import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.application.report.MemberReportService;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import jakarta.servlet.http.Cookie;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -57,6 +59,9 @@ class MemberSessionCleanupOutboxIntegrationTest {
     @Autowired
     private OutboxPublisher outboxPublisher;
 
+    @Autowired
+    private MutableClock clock;
+
     @MockitoSpyBean
     private MemberSessions memberSessions;
 
@@ -81,6 +86,7 @@ class MemberSessionCleanupOutboxIntegrationTest {
         Cookie session = api.login(target);
         long reportId = api.insertReport("NO_SHOW", "IN_REVIEW", BASE);
         failFirstSessionDeletion();
+        clock.advance(Duration.ofSeconds(1));
 
         MvcTestResult response = api.post(REPORTS + "/" + reportId + "/action", ACTION);
 
@@ -100,6 +106,7 @@ class MemberSessionCleanupOutboxIntegrationTest {
         long target = api.targetId;
         Cookie session = api.login(target);
         failFirstSessionDeletion();
+        clock.advance(Duration.ofSeconds(1));
 
         api.withdraw(target);
 

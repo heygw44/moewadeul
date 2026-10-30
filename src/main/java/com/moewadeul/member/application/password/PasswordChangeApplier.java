@@ -3,6 +3,7 @@ package com.moewadeul.member.application.password;
 import static com.moewadeul.member.application.MemberGuards.memberNotFound;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
@@ -20,6 +21,7 @@ class PasswordChangeApplier {
 
     private final MemberRepository memberRepository;
     private final PasswordResetTokenMapper passwordResetTokenMapper;
+    private final MemberSessionCleanup memberSessionCleanup;
     private final Clock clock;
 
     @Transactional
@@ -31,5 +33,6 @@ class PasswordChangeApplier {
         }
         member.changePassword(newPasswordHash, now);
         passwordResetTokenMapper.invalidateUnusedTokens(memberId, now);
+        memberSessionCleanup.recordInTransaction(memberId);
     }
 }

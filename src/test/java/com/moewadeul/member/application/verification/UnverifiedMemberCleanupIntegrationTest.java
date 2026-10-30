@@ -195,6 +195,7 @@ class UnverifiedMemberCleanupIntegrationTest {
         String email = TestSequence.email();
         Member expired = saveMember(email, sevenDaysAgo().minus(ONE_SECOND));
         login(email);
+        clock.advance(ONE_SECOND);
         doThrow(new IllegalStateException("session store down"))
                 .doCallRealMethod()
                 .when(memberSessions)

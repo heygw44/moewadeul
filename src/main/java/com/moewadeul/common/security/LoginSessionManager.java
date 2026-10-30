@@ -2,6 +2,8 @@ package com.moewadeul.common.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +22,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoginSessionManager {
 
+    // ChangeSessionIdAuthenticationStrategy는 로그인해도 세션 생성 시각을 그대로 두어서, 로그인 시각은 따로 적는다.
+    public static final String LOGIN_INSTANT_ATTRIBUTE = LoginSessionManager.class.getName() + ".LOGIN_INSTANT";
+
     private static final String ROLE_PREFIX = "ROLE_";
 
     private final SecurityContextRepository securityContextRepository;
@@ -27,9 +32,11 @@ public class LoginSessionManager {
             SecurityContextHolder.getContextHolderStrategy();
     private final SessionAuthenticationStrategy sessionFixationStrategy = new ChangeSessionIdAuthenticationStrategy();
     private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
+    private final Clock clock;
 
-    public LoginSessionManager(SecurityContextRepository securityContextRepository) {
+    public LoginSessionManager(SecurityContextRepository securityContextRepository, Clock clock) {
         this.securityContextRepository = securityContextRepository;
+        this.clock = clock;
     }
 
     public void login(LoginMember member, HttpServletRequest request, HttpServletResponse response) {
@@ -38,6 +45,11 @@ public class LoginSessionManager {
         sessionFixationStrategy.onAuthentication(authentication, request, response);
 
         storeContext(authentication, request, response);
+        stampLoginInstant(request);
+    }
+
+    public void stampLoginInstant(HttpServletRequest request) {
+        request.getSession().setAttribute(LOGIN_INSTANT_ATTRIBUTE, Instant.now(clock));
     }
 
     public void markEmailVerified(HttpServletRequest request, HttpServletResponse response) {
