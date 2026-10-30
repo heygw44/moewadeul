@@ -26,8 +26,8 @@ public class UnverifiedMemberCleanupService {
         int deletedTotal = 0;
         List<Long> expiredIds = unverifiedMemberMapper.selectExpiredIds(cutoff, BATCH_SIZE);
         while (!expiredIds.isEmpty()) {
-            deleteSessionsOf(expiredIds);
             int deleted = unverifiedMemberMapper.deleteExpiredByIds(expiredIds, cutoff);
+            deleteSessionsOf(expiredIds);
             deletedTotal += deleted;
             if (deleted == 0 || expiredIds.size() < BATCH_SIZE) {
                 break;

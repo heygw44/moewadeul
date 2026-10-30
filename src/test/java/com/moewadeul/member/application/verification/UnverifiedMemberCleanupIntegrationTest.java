@@ -8,6 +8,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.verification.UnverifiedMemberPolicy;
@@ -49,6 +50,9 @@ class UnverifiedMemberCleanupIntegrationTest {
 
     @Autowired
     private UnverifiedMemberMapper unverifiedMemberMapper;
+
+    @Autowired
+    private MemberSessions memberSessions;
 
     @Autowired
     private MockMvcTester mvc;
@@ -152,6 +156,30 @@ class UnverifiedMemberCleanupIntegrationTest {
         assertThat(sessionCount(expired.getId())).isZero();
         assertThat(sessionCount(recent.getId())).isEqualTo(1);
         assertThat(count("SPRING_SESSION")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-05] 삭제 대상을 고른 뒤 지우기 전에 로그인해 생긴 세션도 회원과 함께 사라진다")
+    void deletesSessionCreatedBetweenSelectionAndDeletion() {
+        String email = TestSequence.email();
+        Member expired = saveMember(email, sevenDaysAgo().minus(ONE_SECOND));
+        UnverifiedMemberMapper loginBeforeDelete = new UnverifiedMemberMapper() {
+            @Override
+            public List<Long> selectExpiredIds(Instant cutoff, int limit) {
+                return unverifiedMemberMapper.selectExpiredIds(cutoff, limit);
+            }
+
+            @Override
+            public int deleteExpiredByIds(List<Long> ids, Instant cutoff) {
+                login(email);
+                return unverifiedMemberMapper.deleteExpiredByIds(ids, cutoff);
+            }
+        };
+
+        new UnverifiedMemberCleanupService(loginBeforeDelete, memberSessions, clock).deleteExpiredUnverifiedMembers();
+
+        assertThat(count("member WHERE id = ?", expired.getId())).isZero();
+        assertThat(sessionCount(expired.getId())).isZero();
     }
 
     @Test
