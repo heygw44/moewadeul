@@ -2,11 +2,16 @@ package com.moewadeul.member.api.password;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.domain.Member;
+import com.moewadeul.outbox.application.OutboxPublisher;
 import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +22,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -42,6 +48,12 @@ class PasswordChangeApiIntegrationTest {
 
     @Autowired
     private MutableClock clock;
+
+    @Autowired
+    private OutboxPublisher outboxPublisher;
+
+    @MockitoSpyBean
+    private MemberSessions memberSessions;
 
     @Test
     @DisplayName("[F-32][PW-07] 이메일 인증 전인 회원이 바꾸면 204이고, 예전 비밀번호는 401 LOGIN_FAILED, 새 비밀번호는 200이다")
@@ -80,6 +92,33 @@ class PasswordChangeApiIntegrationTest {
         assertThat(getWithSession(another)).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(sessionCount(other)).isEqualTo(1);
         assertThat(getWithSession(otherSession)).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("[F-32][PW-07] 다른 세션 삭제가 한 번 실패해도 변경은 204이고, outbox 처리기가 다른 세션을 지우며 요청한 세션은 남긴다")
+    void outboxFinishesDeletingOtherSessionsAndKeepsTheCurrentOne() {
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Cookie current = login(member);
+        Cookie another = login(member);
+        doThrow(new IllegalStateException("session store down"))
+                .doCallRealMethod()
+                .when(memberSessions)
+                .invalidateAllExcept(anyLong(), anyString());
+        clock.advance(Duration.ofSeconds(1));
+
+        MvcTestResult result = change(current, OLD_PASSWORD, NEW_PASSWORD);
+
+        assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
+        Cookie renewed = result.getResponse().getCookie(SESSION_COOKIE);
+        assertThat(renewed).isNotNull();
+        assertThat(sessionCount(member)).isEqualTo(2);
+        assertThat(getWithSession(another)).hasStatus(HttpStatus.OK);
+
+        outboxPublisher.publishPending();
+
+        assertThat(sessionCount(member)).isEqualTo(1);
+        assertThat(getWithSession(renewed)).hasStatus(HttpStatus.OK);
+        assertThat(getWithSession(another)).hasStatus(HttpStatus.UNAUTHORIZED);
     }
 
     @Test

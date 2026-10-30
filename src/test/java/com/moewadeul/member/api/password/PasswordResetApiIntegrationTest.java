@@ -146,10 +146,8 @@ class PasswordResetApiIntegrationTest {
     void outboxFinishesSessionDeletionWhenFirstAttemptFails() {
         Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         Cookie session = login(member);
-        doThrow(new IllegalStateException("session store down"))
-                .doCallRealMethod()
-                .when(memberSessions)
-                .invalidateAll(anyLong());
+        failFirstSessionDeletion();
+        clock.advance(Duration.ofSeconds(1));
 
         MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(issueToken(member), NEW_PASSWORD), null);
 
@@ -160,6 +158,28 @@ class PasswordResetApiIntegrationTest {
 
         assertThat(sessionCount(member)).isZero();
         assertThat(getWithSession(session)).hasStatus(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("[PW-02] 세션 삭제가 한 번 실패한 뒤 새 비밀번호로 다시 로그인하면, outbox 처리기는 옛 세션만 지우고 새 세션은 남긴다")
+    void outboxKeepsSessionLoggedInAfterTheReset() {
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Cookie oldSession = login(member);
+        failFirstSessionDeletion();
+        clock.advance(Duration.ofSeconds(1));
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(issueToken(member), NEW_PASSWORD), null);
+        assertThat(confirm).hasStatus(HttpStatus.NO_CONTENT);
+        clock.advance(Duration.ofSeconds(1));
+        MvcTestResult relogin = loginRequest(member.getEmail(), NEW_PASSWORD);
+        assertThat(relogin).hasStatus(HttpStatus.OK);
+        Cookie newSession = relogin.getResponse().getCookie(SESSION_COOKIE);
+        assertThat(newSession).isNotNull();
+
+        publisher.publishPending();
+
+        assertThat(sessionCount(member)).isEqualTo(1);
+        assertThat(getWithSession(oldSession)).hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(getWithSession(newSession)).hasStatus(HttpStatus.OK);
     }
 
     @Test
@@ -458,6 +478,13 @@ class PasswordResetApiIntegrationTest {
         assertThat(row.get("status")).isEqualTo("WITHDRAWN");
         assertThat(row.get("password_hash")).isNull();
         assertThat(row.get("password_changed_at")).isNull();
+    }
+
+    private void failFirstSessionDeletion() {
+        doThrow(new IllegalStateException("session store down"))
+                .doCallRealMethod()
+                .when(memberSessions)
+                .invalidateAll(anyLong());
     }
 
     private String issueToken(Member member) {
