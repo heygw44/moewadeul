@@ -27,12 +27,11 @@ public class MemberWithdrawalService {
     private final PasswordResetTokenMapper passwordResetTokenMapper;
     private final Clock clock;
 
-    public void verifyPassword(long memberId, String password, String ip) {
+    public void verifyPasswordUnlessWithdrawn(long memberId, String password, String ip) {
         OutsideTransaction.require("트랜잭션 안이면 틀린 비밀번호 기록이 예외와 함께 롤백되어 로그인 잠금이 걸리지 않는다.");
         Member member = memberRepository
                 .findById(memberId)
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
-        // 이미 탈퇴했으면 비밀번호 해시가 지워져 확인할 수 없고, 요청한 결과도 이미 이뤄졌다.
         if (member.isWithdrawn()) {
             return;
         }

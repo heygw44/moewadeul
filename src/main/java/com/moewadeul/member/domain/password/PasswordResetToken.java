@@ -59,9 +59,7 @@ public class PasswordResetToken {
         return new PasswordResetToken(memberId, tokenHash, now);
     }
 
-    // 메일 서버 장애가 길면 재시도가 유효 시간보다 늦게 나갈 수 있다. 그래서 다시 보낸 시각부터 다시 센다.
-    // 이미 썼거나 새 요청으로 끊긴 토큰은 살리지 않는다.
-    public boolean renewIfUnused(Instant now) {
+    public boolean restartValidityIfUnused(Instant now) {
         if (usedAt != null) {
             return false;
         }
