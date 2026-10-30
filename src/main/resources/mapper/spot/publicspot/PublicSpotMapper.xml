@@ -79,7 +79,6 @@
         FOR UPDATE
     </select>
 
-    <!-- 관리자 목록은 숨김·검토 대기 장소의 updated_at을 상태가 바뀐 시각으로 읽는다. 그래서 ACTIVE가 아닌 장소는 데이터만 갱신하고 updated_at은 그대로 둔다. -->
     <update id="updateSpots">
         UPDATE spot s
         JOIN (

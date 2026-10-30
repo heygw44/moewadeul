@@ -94,7 +94,6 @@ public class GoCampingSyncService implements SyncJob<GoCampingSyncResult> {
             if ((long) pageNo * pageSize >= page.totalCount()) {
                 return result;
             }
-            // 실행기는 종료를 30초만 기다리고 그 뒤에 DB 풀이 닫히므로, 실패 기록은 그 전에 남겨야 한다.
             if (shutdownSignal.isRequested()) {
                 throw new SyncJobStoppedException();
             }

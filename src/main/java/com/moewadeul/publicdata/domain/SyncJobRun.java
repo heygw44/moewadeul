@@ -112,12 +112,15 @@ public class SyncJobRun {
         return isRunning() && updatedAt.plus(staleAfter).isBefore(now);
     }
 
-    // 이어받은 위치를 그대로 둔 채 한 묶음도 끝내지 못한 실행은 그 위치를 다시 이어받으면 같은 곳에서 계속 실패한다.
     public Optional<String> resumeCursor() {
-        if (!isFailed() || processedCount == 0) {
+        if (!isFailed() || !madeProgress()) {
             return Optional.empty();
         }
         return Optional.ofNullable(progressCursor);
+    }
+
+    private boolean madeProgress() {
+        return processedCount > 0;
     }
 
     public boolean isRunning() {
