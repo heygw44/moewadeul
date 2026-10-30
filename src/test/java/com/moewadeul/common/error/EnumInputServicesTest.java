@@ -293,7 +293,7 @@ class EnumInputServicesTest {
 
     private static MyInfoService myInfoService(Member member) {
         MemberRepository memberRepository = mock(MemberRepository.class);
-        when(memberRepository.findById(anyLong())).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdForUpdate(anyLong())).thenReturn(Optional.of(member));
         return new MyInfoService(memberRepository, CLOCK);
     }
 
