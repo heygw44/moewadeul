@@ -17,7 +17,7 @@ class GoCampingSyncServiceTest {
     private final SyncJobRunService syncJobRunService = mock(SyncJobRunService.class);
     private final GoCampingClient goCampingClient = mock(GoCampingClient.class);
     private final GoCampingSyncService service =
-            new GoCampingSyncService(syncJobRunService, goCampingClient, null, null, null);
+            new GoCampingSyncService(syncJobRunService, goCampingClient, null, null, null, null);
 
     @AfterEach
     void clearTransaction() {

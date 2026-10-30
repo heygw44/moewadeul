@@ -3,8 +3,10 @@ package com.moewadeul.member.api.password;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 import com.moewadeul.common.error.GlobalExceptionHandler;
@@ -14,6 +16,7 @@ import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
 import com.moewadeul.member.application.password.PasswordChangeCommand;
 import com.moewadeul.member.application.password.PasswordChangeService;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,6 +56,9 @@ class MyPasswordControllerTest {
     @Test
     @DisplayName("[F-32][PW-07] 이메일 인증 전인 회원이 올바른 요청을 보내면 204이고, 현재 세션 ID를 넘겨 서비스를 부른 뒤 세션 ID를 재발급한다")
     void changesPassword() {
+        Instant changedAt = Instant.parse("2026-10-05T03:00:00.123456Z");
+        when(passwordChangeService.change(any())).thenReturn(changedAt);
+
         MvcTestResult result = put(VALID_BODY, login());
 
         assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
@@ -65,6 +71,7 @@ class MyPasswordControllerTest {
         assertThat(command.currentSessionId()).isEqualTo(SESSION_ID);
         assertThat(command.toString()).doesNotContain("Current-pass1", "Changed-pass1", SESSION_ID);
         verify(loginSessionManager).changeSessionId(any());
+        verify(loginSessionManager).recordPasswordChangedAt(any(), eq(changedAt));
     }
 
     @Test

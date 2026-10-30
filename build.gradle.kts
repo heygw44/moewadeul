@@ -80,6 +80,8 @@ val integrationTest by tasks.registering(Test::class) {
     }
     // 우리는 UTC가 아닌 JVM에서도 시각이 UTC로 저장되는지 확인하려고, 일부러 한국 표준시(KST)로 JVM을 띄운다.
     jvmArgs("-Duser.timezone=Asia/Seoul")
+    // 캐시된 스프링 컨텍스트가 늘면 기본 512MB 힙에서 KmaClientIntegrationTest가 OOM이나 시간 초과로 끝났다(#839).
+    maxHeapSize = "1g"
     shouldRunAfter(tasks.test)
 }
 

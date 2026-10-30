@@ -142,6 +142,44 @@ class IdempotencyExecutorIntegrationTest {
     }
 
     @Test
+    @DisplayName("[NFR-03] 트랜잭션 전 검사는 선점 뒤 한 번만 돌고 같은 키 재전송에서는 돌지 않는다")
+    void precheckOutsideTransactionRunsOnlyForTheFirstRequest() {
+        long memberId = memberFixture.save().getId();
+        AtomicInteger checks = new AtomicInteger();
+
+        run(memberId, "key-1", OPERATION, null, checks::incrementAndGet, () -> new Result(1, "x"));
+        run(memberId, "key-1", OPERATION, null, checks::incrementAndGet, () -> new Result(2, "y"));
+
+        assertThat(checks.get()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[NFR-03] 트랜잭션 전 검사가 실패하면 action 없이 선점 행을 지우고, 같은 키로 다시 보내면 다시 실행한다")
+    void failedBeforeTransactionStepReleasesClaim() {
+        long memberId = memberFixture.save().getId();
+        BusinessException failure = new BusinessException(CommonErrorCode.INVALID_INPUT);
+        AtomicInteger calls = new AtomicInteger();
+
+        assertThatThrownBy(() -> run(
+                        memberId,
+                        "key-1",
+                        OPERATION,
+                        null,
+                        () -> {
+                            throw failure;
+                        },
+                        () -> new Result(calls.incrementAndGet(), "x")))
+                .isSameAs(failure);
+        assertThat(calls.get()).isZero();
+        assertThat(count()).isZero();
+
+        Result retried = run(memberId, "key-1", OPERATION, null, () -> new Result(calls.incrementAndGet(), "x"));
+
+        assertThat(retried).isEqualTo(new Result(1, "x"));
+        assertThat(count()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("[NFR-03] 키가 없으면 IDEMPOTENCY_KEY_REQUIRED, 형식이 틀리면 INVALID_INPUT")
     void rejectsMissingAndMalformedKey() {
         long memberId = memberFixture.save().getId();
@@ -199,6 +237,21 @@ class IdempotencyExecutorIntegrationTest {
     private Result run(long memberId, String key, String operation, Object payload, Supplier<Result> action) {
         return executor.execute(
                 new IdempotentRequest(memberId, key, operation, payload), HttpStatus.CREATED, Result.class, action);
+    }
+
+    private Result run(
+            long memberId,
+            String key,
+            String operation,
+            Object payload,
+            Runnable precheckOutsideTransaction,
+            Supplier<Result> action) {
+        return executor.execute(
+                new IdempotentRequest(memberId, key, operation, payload),
+                HttpStatus.CREATED,
+                Result.class,
+                precheckOutsideTransaction,
+                action);
     }
 
     private int count() {

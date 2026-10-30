@@ -12,9 +12,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.publicdata.application.SyncJobRunService;
+import com.moewadeul.publicdata.application.SyncJobStoppedException;
 import com.moewadeul.publicdata.infra.gocamping.GoCampingApiException;
+import com.moewadeul.publicdata.infra.gocamping.GoCampingClient;
+import com.moewadeul.publicdata.infra.gocamping.GoCampingProperties;
+import com.moewadeul.spot.application.publicspot.PublicSpotSyncService;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -46,6 +52,21 @@ class GoCampingSyncServiceIntegrationTest {
 
     @Autowired
     private GoCampingSyncService goCampingSyncService;
+
+    @Autowired
+    private SyncJobRunService syncJobRunService;
+
+    @Autowired
+    private GoCampingClient goCampingClient;
+
+    @Autowired
+    private PublicSpotSyncService publicSpotSyncService;
+
+    @Autowired
+    private GoCampingProperties goCampingProperties;
+
+    @Autowired
+    private GoCampingSyncProperties goCampingSyncProperties;
 
     @Autowired
     private WireMockServer wireMock;
@@ -219,6 +240,78 @@ class GoCampingSyncServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-06][NFR-06] 이어받은 실행이 한 페이지도 끝내지 못하고 실패하면 진행 기록이 없으므로, 다음 실행은 처음 페이지부터 다시 받는다")
+    void syncRestartsFromFirstPageWhenResumedRunFailedWithoutProgress() {
+        // given
+        stubPage(1);
+        stubPage(3);
+        stubPage(4);
+        wireMock.stubFor(get(urlPathEqualTo(BASED_SYNC_LIST_PATH))
+                .withQueryParam("pageNo", equalTo("2"))
+                .willReturn(aResponse().withStatus(500)));
+
+        // when
+        assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+        clock.advance(Duration.ofHours(1));
+        assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+        clock.advance(Duration.ofHours(1));
+        assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+
+        // then
+        List<RunRow> runs = runs();
+        assertThat(runs).hasSize(3).allSatisfy(run -> assertThat(run.status()).isEqualTo("FAILED"));
+        assertThat(runs.get(0).processedCount()).isEqualTo(2);
+        assertThat(runs.get(1).progressCursor()).isEqualTo("1");
+        assertThat(runs.get(1).processedCount()).isZero();
+        assertThat(requestCount(1)).isEqualTo(2);
+        assertThat(runs.get(2).progressCursor()).isEqualTo("1");
+        assertThat(runs.get(2).processedCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[F-06][NFR-06] 종료 신호를 받으면 받은 페이지의 진행 위치를 남기고 실패로 끝나고, 다음 실행은 다음 페이지부터 이어서 받는다")
+    void syncStopsAfterRecordingPageWhenShutdownRequestedThenResumes() {
+        // given
+        stubAllPages();
+        ShutdownSignal shutdown = new ShutdownSignal();
+        shutdown.request();
+        GoCampingSyncService stopping = new GoCampingSyncService(
+                syncJobRunService,
+                goCampingClient,
+                publicSpotSyncService,
+                goCampingProperties,
+                goCampingSyncProperties,
+                shutdown);
+
+        // when
+        assertThatThrownBy(stopping::sync).isInstanceOf(SyncJobStoppedException.class);
+
+        // then
+        assertThat(runs()).singleElement().satisfies(run -> {
+            assertThat(run.status()).isEqualTo("FAILED");
+            assertThat(run.progressCursor()).isEqualTo("1");
+            assertThat(run.processedCount()).isEqualTo(2);
+            assertThat(run.errorMessage()).contains("종료 중");
+            assertThat(run.finished()).isTrue();
+        });
+        assertThat(requestCount(1)).isEqualTo(1);
+        assertThat(requestCount(2)).isZero();
+
+        // when
+        clock.advance(Duration.ofSeconds(1));
+        Optional<GoCampingSyncResult> resumed = goCampingSyncService.sync();
+
+        // then
+        assertThat(resumed).isPresent();
+        assertThat(runs()).hasSize(2);
+        assertThat(runs().get(1).status()).isEqualTo("COMPLETED");
+        assertThat(runs().get(1).progressCursor()).isEqualTo(String.valueOf(PAGE_COUNT));
+        assertThat(requestCount(1)).isEqualTo(1);
+        assertThat(requestCount(2)).isEqualTo(1);
+        assertThat(countRows("spot")).isEqualTo(LIVE_COUNT);
+    }
+
+    @Test
     @DisplayName("[F-06] 원천 수정일(modifiedtime)을 상세의 기준일로 저장하고, 수정일만 바뀐 항목은 그 행만 갱신한다")
     void syncStoresModifiedTimeAsSourceDateAndUpdatesOnlyChangedRow() {
         // given
@@ -355,6 +448,36 @@ class GoCampingSyncServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-06] 숨긴 장소의 이름이 원천에서 바뀌어도 이름은 갱신하지만 수정 시각은 숨긴 시각 그대로 두고, 공개 중인 장소는 수정 시각도 바꾼다")
+    void syncKeepsUpdatedAtOfHiddenSpotWhenSourceRenamesIt() {
+        // given
+        stubAllPages();
+        goCampingSyncService.sync();
+        clock.advance(Duration.ofDays(1));
+        jdbcTemplate.update(
+                "UPDATE spot SET status = 'HIDDEN', updated_at = ? WHERE id = (SELECT spot_id FROM public_spot_detail"
+                        + " WHERE external_id = '2931')",
+                clock.instant());
+        String hiddenUpdatedAt = spotUpdatedAt("2931");
+        String activeUpdatedAt = spotUpdatedAt("146");
+
+        // when
+        stubAllPages(Map.of(
+                "2931", Map.of("facltNm", "청양동강리 새 이름 캠핑장"),
+                "146", Map.of("facltNm", "강변사리 새 이름 캠핑장")));
+        clock.advance(Duration.ofDays(1));
+        GoCampingSyncResult result = goCampingSyncService.sync().orElseThrow();
+
+        // then
+        assertThat(result.updated()).isEqualTo(2);
+        assertThat(spotName("2931")).isEqualTo("청양동강리 새 이름 캠핑장");
+        assertThat(spotStatus("2931")).isEqualTo("HIDDEN");
+        assertThat(spotUpdatedAt("2931")).isEqualTo(hiddenUpdatedAt);
+        assertThat(spotName("146")).isEqualTo("강변사리 새 이름 캠핑장");
+        assertThat(spotUpdatedAt("146")).isNotEqualTo(activeUpdatedAt);
+    }
+
+    @Test
     @DisplayName("[F-06] 오래 갱신되지 않은 RUNNING 기록은 실패로 처리하고, 그 기록의 진행 위치 다음 페이지부터 이어서 받는다")
     void syncFailsStaleRunningRunAndResumesFromItsCursor() {
         // given
@@ -456,6 +579,21 @@ class GoCampingSyncServiceIntegrationTest {
     private String spotStatus(String externalId) {
         return jdbcTemplate.queryForObject(
                 "SELECT s.status FROM spot s JOIN public_spot_detail d ON d.spot_id = s.id WHERE d.external_id = ?",
+                String.class,
+                externalId);
+    }
+
+    private String spotName(String externalId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT s.name FROM spot s JOIN public_spot_detail d ON d.spot_id = s.id WHERE d.external_id = ?",
+                String.class,
+                externalId);
+    }
+
+    private String spotUpdatedAt(String externalId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT CAST(s.updated_at AS CHAR) FROM spot s JOIN public_spot_detail d ON d.spot_id = s.id"
+                        + " WHERE d.external_id = ?",
                 String.class,
                 externalId);
     }

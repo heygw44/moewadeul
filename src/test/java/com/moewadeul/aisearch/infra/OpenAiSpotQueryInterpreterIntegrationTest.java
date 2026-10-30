@@ -21,6 +21,8 @@ import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -153,7 +155,7 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-27] 응답이 읽기 시간 안에 오지 않으면 실패하고 다시 보내지 않는다")
+    @DisplayName("[F-27][AI-05] 응답이 읽기 시간 안에 오지 않으면 다시 보내지 않고 실패하며, 보낸 요청 본문의 바이트 수와 최대 출력 토큰을 사용량으로 담는다")
     void failsOnReadTimeoutWithoutRetry() {
         // given
         OpenAiProperties shortTimeout = new OpenAiProperties(
@@ -171,8 +173,39 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
         SpotQueryInterpretationException e =
                 catchThrowableOfType(SpotQueryInterpretationException.class, () -> slow.interpret(SENTENCE));
         assertThat(e.getMessage()).doesNotContain(SENTENCE);
-        assertThat(e.usage()).isEmpty();
+        int sentBytes = onlyRequest().getBody().length;
+        assertThat(sentBytes).isPositive();
+        assertThat(e.usage()).contains(new TokenUsage(sentBytes, 300));
         assertThat(requestCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-27][AI-05] 연결 자체가 되지 않으면 요청이 OpenAI에 닿지 않았으니 사용량 없이 실패한다")
+    void failsWithoutUsageWhenConnectionIsRefused() throws IOException {
+        // given
+        int closedPort;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            closedPort = socket.getLocalPort();
+        }
+        OpenAiProperties unreachable = new OpenAiProperties(
+                "http://localhost:" + closedPort + "/openai/v1",
+                "test-openai-key",
+                "gpt-4.1-mini",
+                Duration.ofSeconds(1),
+                Duration.ofSeconds(1),
+                300);
+        OpenAiSpotQueryInterpreter refused = new OpenAiSpotQueryInterpreter(
+                unreachable, new ExternalApiProperties(10, Duration.ZERO), jsonMapper, metrics);
+
+        // when
+        SpotQueryInterpretationException e =
+                catchThrowableOfType(SpotQueryInterpretationException.class, () -> refused.interpret(SENTENCE));
+
+        // then
+        assertThat(e).isNotNull();
+        assertThat(e.getMessage()).doesNotContain(SENTENCE);
+        assertThat(e.usage()).isEmpty();
+        assertThat(requestCount()).isZero();
     }
 
     @Test

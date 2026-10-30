@@ -25,6 +25,7 @@ public class MemberWithdrawalService {
     private final LoginAttemptService loginAttemptService;
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetTokenMapper passwordResetTokenMapper;
+    private final MemberSessionCleanup memberSessionCleanup;
     private final Clock clock;
 
     public void verifyPasswordUnlessWithdrawn(long memberId, String password, String ip) {
@@ -64,6 +65,7 @@ public class MemberWithdrawalService {
         Instant now = clock.instant();
         member.withdraw(now);
         passwordResetTokenMapper.invalidateUnusedTokens(memberId, now);
+        memberSessionCleanup.recordInTransaction(memberId);
         return true;
     }
 

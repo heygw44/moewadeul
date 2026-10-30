@@ -1,8 +1,10 @@
 package com.moewadeul.publicdata.application.rejudge;
 
+import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.publicdata.application.SyncJob;
 import com.moewadeul.publicdata.application.SyncJobRunService;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
+import com.moewadeul.publicdata.application.SyncJobStoppedException;
 import com.moewadeul.publicdata.domain.SyncJobType;
 import com.moewadeul.spot.application.park.BakjiRejudgeChunk;
 import com.moewadeul.spot.application.park.BakjiRejudgeCounts;
@@ -24,6 +26,7 @@ public class BakjiRejudgeService implements SyncJob<BakjiRejudgeResult> {
     private final ParkAreaJudgeService parkAreaJudgeService;
     private final BakjiRejudgeProperties properties;
     private final Clock clock;
+    private final ShutdownSignal shutdownSignal;
 
     public Optional<BakjiRejudgeResult> rejudge() {
         return syncJobRunService
@@ -98,6 +101,9 @@ public class BakjiRejudgeService implements SyncJob<BakjiRejudgeResult> {
             afterId = chunk.lastId();
             syncJobRunService.recordProgress(
                     runId, String.valueOf(afterId), chunk.counts().judged(), 0);
+            if (shutdownSignal.isRequested()) {
+                throw new SyncJobStoppedException();
+            }
         }
     }
 

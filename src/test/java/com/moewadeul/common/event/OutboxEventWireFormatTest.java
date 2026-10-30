@@ -3,6 +3,7 @@ package com.moewadeul.common.event;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.member.application.EmailVerificationEvents;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.application.password.PasswordResetEvents;
 import java.time.Instant;
 import java.util.List;
@@ -113,6 +114,14 @@ class OutboxEventWireFormatTest {
                         new EmailVerificationEvents.Payload("203.0.113.7"),
                         "{\"requestIp\":\"203.0.113.7\"}",
                         "{\"requestIp\": \"203.0.113.7\"}"),
+                new Wire(
+                        "MEMBER_SESSION_CLEANUP",
+                        MemberSessionCleanup.EVENT_TYPE,
+                        "MEMBER",
+                        MemberSessionCleanup.AGGREGATE_TYPE,
+                        new MemberSessionCleanup.Payload(7L),
+                        "{\"memberId\":7}",
+                        "{\"memberId\": 7}"),
                 new Wire(
                         "PASSWORD_RESET_REQUESTED",
                         PasswordResetEvents.EVENT_TYPE,

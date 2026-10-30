@@ -23,5 +23,10 @@ public interface CommunityPostJpaRepository extends JpaRepository<CommunityPost,
     Optional<CommunityPost> findByIdForUpdate(@Param("id") long id);
 
     @Override
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("SELECT p FROM CommunityPost p WHERE p.id = :id")
+    Optional<CommunityPost> findByIdForShare(@Param("id") long id);
+
+    @Override
     void flush();
 }

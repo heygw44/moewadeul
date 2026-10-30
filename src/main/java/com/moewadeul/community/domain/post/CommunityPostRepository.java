@@ -10,5 +10,7 @@ public interface CommunityPostRepository {
 
     Optional<CommunityPost> findByIdForUpdate(long id);
 
+    Optional<CommunityPost> findByIdForShare(long id);
+
     void flush();
 }

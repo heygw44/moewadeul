@@ -2,6 +2,8 @@ package com.moewadeul.member.api.password;
 
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.mail.MailMessage;
@@ -11,7 +13,10 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.application.MemberSessionCleanup;
+import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.application.password.PasswordResetMails;
+import com.moewadeul.member.application.verification.UnverifiedMemberDeleter;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.password.PasswordResetPolicy;
 import com.moewadeul.member.domain.password.PasswordResetToken;
@@ -22,6 +27,7 @@ import jakarta.servlet.http.Cookie;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +38,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -68,6 +75,16 @@ class PasswordResetApiIntegrationTest {
 
     @Autowired
     private MutableClock clock;
+
+    // 이 spy 세 개를 같은 이름으로 모두 선언해야 세션 삭제를 가로채는 테스트끼리 스프링 컨텍스트를 하나로 공유한다.
+    @MockitoSpyBean
+    private MemberSessions memberSessions;
+
+    @MockitoSpyBean
+    private MemberSessionCleanup memberSessionCleanup;
+
+    @MockitoSpyBean
+    private UnverifiedMemberDeleter unverifiedMemberDeleter;
 
     @BeforeEach
     void resetMailSender() {
@@ -133,6 +150,70 @@ class PasswordResetApiIntegrationTest {
         assertThat(getWithSession(second)).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(sessionCount(other)).isEqualTo(1);
         assertThat(getWithSession(otherSession).getResponse().getStatus()).isNotEqualTo(401);
+    }
+
+    @Test
+    @DisplayName("[PW-02] 세션 삭제가 한 번 실패해도 확인은 204이고, outbox 처리기가 옛 세션을 마저 지운다")
+    void outboxFinishesSessionDeletionWhenFirstAttemptFails() {
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Cookie session = login(member);
+        failFirstSessionDeletion();
+        clock.advance(Duration.ofSeconds(1));
+
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(issueToken(member), NEW_PASSWORD), null);
+
+        assertThat(confirm).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(getWithSession(session).getResponse().getStatus()).isNotEqualTo(401);
+
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
+        publisher.publishPending();
+
+        assertThat(sessionCount(member)).isZero();
+        assertThat(getWithSession(session)).hasStatus(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("[PW-02] 세션 삭제가 한 번 실패한 뒤 새 비밀번호로 다시 로그인하면, outbox 처리기는 옛 세션만 지우고 새 세션은 남긴다")
+    void outboxKeepsSessionLoggedInAfterTheReset() {
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Cookie oldSession = login(member);
+        failFirstSessionDeletion();
+        clock.advance(Duration.ofSeconds(1));
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(issueToken(member), NEW_PASSWORD), null);
+        assertThat(confirm).hasStatus(HttpStatus.NO_CONTENT);
+        clock.advance(Duration.ofSeconds(1));
+        MvcTestResult relogin = loginRequest(member.getEmail(), NEW_PASSWORD);
+        assertThat(relogin).hasStatus(HttpStatus.OK);
+        Cookie newSession = relogin.getResponse().getCookie(SESSION_COOKIE);
+        assertThat(newSession).isNotNull();
+
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
+        publisher.publishPending();
+
+        assertThat(sessionCount(member)).isEqualTo(1);
+        assertThat(getWithSession(oldSession)).hasStatus(HttpStatus.UNAUTHORIZED);
+        assertThat(getWithSession(newSession)).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("[PW-02] 옛 비밀번호 상태로 로그인한 세션은 로그인 시각이 이벤트 기록 시각보다 늦어도 outbox 처리기가 지운다")
+    void outboxDeletesOldPasswordSessionEvenWhenItsLoginIsLaterThanTheEvent() {
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Instant start = clock.instant();
+        clock.advance(Duration.ofSeconds(10));
+        Cookie oldSession = login(member);
+        clock.setInstant(start);
+        failFirstSessionDeletion();
+        clock.advance(Duration.ofSeconds(1));
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(issueToken(member), NEW_PASSWORD), null);
+        assertThat(confirm).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(getWithSession(oldSession).getResponse().getStatus()).isNotEqualTo(401);
+
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
+        publisher.publishPending();
+
+        assertThat(sessionCount(member)).isZero();
+        assertThat(getWithSession(oldSession)).hasStatus(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
@@ -431,6 +512,13 @@ class PasswordResetApiIntegrationTest {
         assertThat(row.get("status")).isEqualTo("WITHDRAWN");
         assertThat(row.get("password_hash")).isNull();
         assertThat(row.get("password_changed_at")).isNull();
+    }
+
+    private void failFirstSessionDeletion() {
+        doThrow(new IllegalStateException("session store down"))
+                .doCallRealMethod()
+                .when(memberSessions)
+                .invalidateAll(anyLong());
     }
 
     private String issueToken(Member member) {

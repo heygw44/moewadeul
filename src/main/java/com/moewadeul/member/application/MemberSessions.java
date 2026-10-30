@@ -1,6 +1,8 @@
 package com.moewadeul.member.application;
 
+import com.moewadeul.common.security.LoginSessionManager;
 import com.moewadeul.common.transaction.OutsideTransaction;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
@@ -25,6 +27,15 @@ public class MemberSessions {
         sessionRepository.findByPrincipalName(String.valueOf(memberId)).keySet().stream()
                 .filter(sessionId -> !sessionId.equals(keptSessionId))
                 .forEach(sessionRepository::deleteById);
+    }
+
+    public void invalidateNotLoggedInWith(long memberId, Instant passwordChangedAt) {
+        OutsideTransaction.require(SESSION_CONNECTION);
+        String current = LoginSessionManager.passwordChangedAtSnapshot(passwordChangedAt);
+        sessionRepository.findByPrincipalName(String.valueOf(memberId)).entrySet().stream()
+                .filter(entry -> !current.equals(
+                        entry.getValue().getAttribute(LoginSessionManager.PASSWORD_CHANGED_AT_ATTRIBUTE)))
+                .forEach(entry -> sessionRepository.deleteById(entry.getKey()));
     }
 
     public void invalidate(String sessionId) {
