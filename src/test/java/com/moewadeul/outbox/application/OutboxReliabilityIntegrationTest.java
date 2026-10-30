@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -80,7 +81,7 @@ class OutboxReliabilityIntegrationTest {
                     throw new IllegalStateException("원래 작업 실패");
                 }))
                 .isInstanceOf(IllegalStateException.class);
-        int processed = publisher.publishPending();
+        int processed = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(countEvents()).isZero();
@@ -96,7 +97,7 @@ class OutboxReliabilityIntegrationTest {
         handler.failNextCalls(1);
 
         // when
-        int firstRun = publisher.publishPending();
+        int firstRun = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(firstRun).isEqualTo(1);
@@ -107,7 +108,7 @@ class OutboxReliabilityIntegrationTest {
                 .isEqualTo("IllegalStateException: " + RecordingOutboxEventHandler.FAILURE_MESSAGE);
 
         // when
-        int beforeRetryDelay = publisher.publishPending();
+        int beforeRetryDelay = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(beforeRetryDelay).isZero();
@@ -115,7 +116,7 @@ class OutboxReliabilityIntegrationTest {
 
         // when
         clock.advance(properties.retryDelay());
-        int afterRetryDelay = publisher.publishPending();
+        int afterRetryDelay = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(afterRetryDelay).isEqualTo(1);
@@ -135,7 +136,7 @@ class OutboxReliabilityIntegrationTest {
 
         // when
         for (int attempt = 1; attempt < maxAttempts; attempt++) {
-            publisher.publishPending();
+            publisher.publishPending(OutboxLane.DEFAULT);
             clock.advance(properties.retryMaxDelay());
         }
 
@@ -143,9 +144,9 @@ class OutboxReliabilityIntegrationTest {
         assertThat(findEvent(eventId).get("status")).isEqualTo("PENDING");
 
         // when
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         clock.advance(properties.retryMaxDelay());
-        int afterLimit = publisher.publishPending();
+        int afterLimit = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         Map<String, Object> failed = findEvent(eventId);
@@ -167,7 +168,7 @@ class OutboxReliabilityIntegrationTest {
 
         // when
         for (int attempt = 0; attempt < failures; attempt++) {
-            publisher.publishPending();
+            publisher.publishPending(OutboxLane.DEFAULT);
             Duration delay = Duration.between(clock.instant(), lockedUntil(eventId));
             delays.add(delay);
             clock.advance(delay);
@@ -189,7 +190,7 @@ class OutboxReliabilityIntegrationTest {
 
         // when
         for (int attempt = 0; attempt < failures; attempt++) {
-            publisher.publishPending();
+            publisher.publishPending(OutboxLane.DEFAULT);
             clock.advance(properties.retryMaxDelay());
         }
 
@@ -199,7 +200,7 @@ class OutboxReliabilityIntegrationTest {
         assertThat(afterOutage.get("attempt_count")).isEqualTo(failures);
 
         // when
-        int afterRecovery = publisher.publishPending();
+        int afterRecovery = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(afterRecovery).isEqualTo(1);
@@ -218,7 +219,7 @@ class OutboxReliabilityIntegrationTest {
         handler.failNextCallsTransiently(2);
 
         // when
-        int processed = publisher.publishPending();
+        int processed = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(processed).isEqualTo(2);
@@ -237,7 +238,7 @@ class OutboxReliabilityIntegrationTest {
         long eventId = recordEvents(1, UNKNOWN_EVENT_TYPE).get(0);
 
         // when
-        int processed = publisher.publishPending();
+        int processed = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(processed).isEqualTo(1);
@@ -264,7 +265,7 @@ class OutboxReliabilityIntegrationTest {
                 results.add(executor.submit(() -> {
                     ready.countDown();
                     start.await();
-                    return publisher.publishPending();
+                    return publisher.publishPending(OutboxLane.DEFAULT);
                 }));
             }
             ready.await(THREAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -289,11 +290,12 @@ class OutboxReliabilityIntegrationTest {
     void leasedEventIsClaimedAgainOnlyAfterLeaseExpires() {
         // given
         long eventId = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
-        assertThat(store.claim(clock.instant()).messages()).hasSize(1);
+        assertThat(store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of()).messages())
+                .hasSize(1);
 
         // when
         clock.advance(properties.lease().minusSeconds(1));
-        int beforeExpiry = publisher.publishPending();
+        int beforeExpiry = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(beforeExpiry).isZero();
@@ -301,7 +303,7 @@ class OutboxReliabilityIntegrationTest {
 
         // when
         clock.advance(Duration.ofSeconds(1));
-        int afterExpiry = publisher.publishPending();
+        int afterExpiry = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(afterExpiry).isEqualTo(1);
@@ -331,7 +333,7 @@ class OutboxReliabilityIntegrationTest {
         OutboxPublisher stoppingPublisher = new OutboxPublisher(store, clock, List.of(shutdownStartingHandler), signal);
 
         // when
-        int processed = stoppingPublisher.publishPending();
+        int processed = stoppingPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(processed).isEqualTo(1);
@@ -341,7 +343,7 @@ class OutboxReliabilityIntegrationTest {
         assertThat(findEvent(eventIds.get(2)).get("locked_until")).isNull();
 
         // when
-        int afterRestart = publisher.publishPending();
+        int afterRestart = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(afterRestart).isEqualTo(2);
@@ -358,7 +360,7 @@ class OutboxReliabilityIntegrationTest {
         OutboxPublisher stoppedPublisher = new OutboxPublisher(store, clock, List.of(handler), signal);
 
         // when
-        int processed = stoppedPublisher.publishPending();
+        int processed = stoppedPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(processed).isZero();
@@ -372,9 +374,9 @@ class OutboxReliabilityIntegrationTest {
     void releaseLeaseKeepsEventsThatAnotherPublisherClaimedAgain() {
         // given
         List<Long> eventIds = recordEvents(2, RecordingOutboxEventHandler.EVENT_TYPE);
-        OutboxEventStore.Claim first = store.claim(clock.instant());
+        OutboxEventStore.Claim first = store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of());
         clock.advance(properties.lease().plusSeconds(1));
-        OutboxEventStore.Claim second = store.claim(clock.instant());
+        OutboxEventStore.Claim second = store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of());
 
         // when
         int releasedByFirst = store.releaseLease(first.leaseUntil(), eventIds);
@@ -382,14 +384,16 @@ class OutboxReliabilityIntegrationTest {
         // then
         assertThat(releasedByFirst).isZero();
         assertThat(lockedUntil(eventIds.get(0))).isEqualTo(second.leaseUntil());
-        assertThat(store.claim(clock.instant()).messages()).isEmpty();
+        assertThat(store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of()).messages())
+                .isEmpty();
 
         // when
         int releasedBySecond = store.releaseLease(second.leaseUntil(), eventIds);
 
         // then
         assertThat(releasedBySecond).isEqualTo(2);
-        assertThat(store.claim(clock.instant()).messages()).hasSize(2);
+        assertThat(store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of()).messages())
+                .hasSize(2);
     }
 
     @Test
@@ -397,9 +401,9 @@ class OutboxReliabilityIntegrationTest {
     void staleLeaseHolderCannotMarkPublished() {
         // given
         long eventId = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
-        OutboxEventStore.Claim first = store.claim(clock.instant());
+        OutboxEventStore.Claim first = store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of());
         clock.advance(properties.lease().plusSeconds(1));
-        OutboxEventStore.Claim second = store.claim(clock.instant());
+        OutboxEventStore.Claim second = store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of());
 
         // when
         int updated = eventMapper.markPublished(eventId, first.leaseUntil(), clock.instant());
@@ -418,9 +422,9 @@ class OutboxReliabilityIntegrationTest {
     void staleLeaseHolderCannotMarkFailedAttempt() {
         // given
         long eventId = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
-        OutboxEventStore.Claim first = store.claim(clock.instant());
+        OutboxEventStore.Claim first = store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of());
         clock.advance(properties.lease().plusSeconds(1));
-        OutboxEventStore.Claim second = store.claim(clock.instant());
+        OutboxEventStore.Claim second = store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of());
 
         // when
         int updated = eventMapper.markFailedAttempt(

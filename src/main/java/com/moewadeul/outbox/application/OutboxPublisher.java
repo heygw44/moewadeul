@@ -2,6 +2,7 @@ package com.moewadeul.outbox.application;
 
 import com.moewadeul.common.mail.MailDeliveryException;
 import com.moewadeul.common.outbox.OutboxEventHandler;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.common.scheduling.ShutdownSignal;
 import java.time.Clock;
@@ -10,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +25,7 @@ public class OutboxPublisher {
     private final OutboxEventStore store;
     private final Clock clock;
     private final Map<String, OutboxEventHandler> handlersByEventType;
+    private final Set<String> mailEventTypes;
     private final ShutdownSignal shutdownSignal;
 
     public OutboxPublisher(
@@ -29,14 +33,18 @@ public class OutboxPublisher {
         this.store = store;
         this.clock = clock;
         this.handlersByEventType = indexByEventType(handlers);
+        this.mailEventTypes = handlersByEventType.entrySet().stream()
+                .filter(entry -> entry.getValue().lane() == OutboxLane.MAIL)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toUnmodifiableSet());
         this.shutdownSignal = shutdownSignal;
     }
 
-    public int publishPending() {
+    public int publishPending(OutboxLane lane) {
         if (shutdownSignal.isRequested()) {
             return 0;
         }
-        OutboxEventStore.Claim claim = store.claim(clock.instant());
+        OutboxEventStore.Claim claim = store.claim(clock.instant(), lane, mailEventTypes);
         List<OutboxMessage> messages = claim.messages();
         int processed = 0;
         while (processed < messages.size() && !shutdownSignal.isRequested()) {

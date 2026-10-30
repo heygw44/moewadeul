@@ -7,6 +7,23 @@
         FROM outbox_event
         WHERE status = 'PENDING'
           AND (locked_until IS NULL OR locked_until &lt;= #{now})
+        <choose>
+            <when test="mailLane and mailEventTypes.isEmpty()">
+                AND 1 = 0
+            </when>
+            <when test="mailLane">
+                AND event_type IN
+                <foreach collection="mailEventTypes" item="type" open="(" separator="," close=")">
+                    #{type}
+                </foreach>
+            </when>
+            <when test="!mailEventTypes.isEmpty()">
+                AND event_type NOT IN
+                <foreach collection="mailEventTypes" item="type" open="(" separator="," close=")">
+                    #{type}
+                </foreach>
+            </when>
+        </choose>
         ORDER BY id
         LIMIT #{limit}
         FOR UPDATE SKIP LOCKED

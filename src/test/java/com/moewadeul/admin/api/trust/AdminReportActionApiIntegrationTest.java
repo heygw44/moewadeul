@@ -7,6 +7,7 @@ import static com.moewadeul.admin.api.trust.AdminReportApiFixture.body;
 import static com.moewadeul.admin.api.trust.AdminReportApiFixture.json;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -180,7 +181,7 @@ class AdminReportActionApiIntegrationTest {
         assertThat(api.count("admin_audit_log WHERE action = 'REPORT_ACTION'")).isEqualTo(1);
         assertThat(allAuditDetails()).doesNotContain(SECRET_REASON, SECRET_NOTE);
 
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(basecampStatus(ledBasecamp)).isEqualTo("CANCELED");
     }

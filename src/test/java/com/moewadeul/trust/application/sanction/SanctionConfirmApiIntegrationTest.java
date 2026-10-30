@@ -4,6 +4,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -93,7 +94,7 @@ class SanctionConfirmApiIntegrationTest {
         assertThat(login).bodyJson().extractingPath("$.code").isEqualTo("MEMBER_SUSPENDED");
         assertThat(basecampStatus(ledBasecamp)).isEqualTo("RECRUITING");
 
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(jdbc.queryForObject(
                         "SELECT CONCAT(status, ':', cancel_reason) FROM basecamp WHERE id = ?",
@@ -129,7 +130,7 @@ class SanctionConfirmApiIntegrationTest {
         long ledBasecamp = ledBasecamp(targetId);
 
         sanctionFixture.confirm(targetId, adminId, SanctionType.WARNING, "욕설");
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(mvc.get().uri("/api/me").cookie(session).exchange()).hasStatus(HttpStatus.OK);
         assertThat(basecampStatus(ledBasecamp)).isEqualTo("RECRUITING");

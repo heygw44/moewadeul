@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -81,7 +82,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
 
         // when
         withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(count("memory WHERE member_id = ?", member)).isZero();
@@ -191,7 +192,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
         withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
 
         // when
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         Map<String, Object> event = cleanupEvent(member);
@@ -203,7 +204,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
         // when
         storage.allowDeleteOf(key);
         clock.advance(Duration.ofHours(1));
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(cleanupEvent(member).get("status")).isEqualTo("PUBLISHED");

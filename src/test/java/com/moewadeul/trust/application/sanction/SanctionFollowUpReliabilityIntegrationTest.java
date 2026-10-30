@@ -7,6 +7,7 @@ import static org.mockito.Mockito.reset;
 import com.moewadeul.basecamp.application.lifecycle.BasecampSanctionCleanupService;
 import com.moewadeul.basecamp.domain.RemovalCause;
 import com.moewadeul.common.event.TrustEvents;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -72,7 +73,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
                 .cleanUp(targetId, RemovalCause.SANCTION);
 
         sanctionFixture.confirm(targetId, adminId, SanctionType.PERMANENT, "금전 요구");
-        int processed = outboxPublisher.publishPending();
+        int processed = outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(processed).isEqualTo(4);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sanction WHERE member_id = ?", Integer.class, targetId))
@@ -87,7 +88,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
 
         reset(cleanupService);
         clock.advance(outboxProperties.retryDelay());
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(jdbc.queryForObject(
                         "SELECT status FROM outbox_event WHERE event_type = ?",
@@ -109,7 +110,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
                 .cleanUp(targetId, ProgramCancelReason.SANCTIONED);
 
         sanctionFixture.confirm(targetId, adminId, SanctionType.PERMANENT, "금전 요구");
-        int processed = outboxPublisher.publishPending();
+        int processed = outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(processed).isEqualTo(4);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sanction WHERE member_id = ?", Integer.class, targetId))
@@ -124,7 +125,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
 
         reset(programCleanupService);
         clock.advance(outboxProperties.retryDelay());
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(jdbc.queryForObject(
                         "SELECT status FROM outbox_event WHERE event_type = ?",

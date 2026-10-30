@@ -3,6 +3,7 @@ package com.moewadeul.program.application.enrollment;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -126,7 +127,7 @@ class ProgramSeatReleaseBurstIntegrationTest {
     }
 
     private void publishAll() {
-        while (publisher.publishPending() > 0) {}
+        while (publisher.publishPending(OutboxLane.DEFAULT) > 0) {}
     }
 
     private int seatReleasedNotificationCount() {

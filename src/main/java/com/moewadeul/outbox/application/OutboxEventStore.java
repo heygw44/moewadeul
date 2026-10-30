@@ -1,11 +1,13 @@
 package com.moewadeul.outbox.application;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.outbox.infra.OutboxEventMapper;
 import com.moewadeul.outbox.infra.OutboxMessageRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,8 +23,9 @@ public class OutboxEventStore {
     private final Clock clock;
 
     @Transactional
-    public Claim claim(Instant now) {
-        List<Long> ids = mapper.selectClaimableIds(now, properties.batchSize());
+    public Claim claim(Instant now, OutboxLane lane, Set<String> mailEventTypes) {
+        List<Long> ids =
+                mapper.selectClaimableIds(now, properties.batchSize(), lane == OutboxLane.MAIL, mailEventTypes);
         Instant leaseUntil = properties.retryPolicy().leaseUntil(now);
         if (ids.isEmpty()) {
             return new Claim(leaseUntil, List.of());

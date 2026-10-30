@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.basecamp.domain.RemovalCause;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -60,7 +61,7 @@ class WithdrawalBasecampCleanupIntegrationTest {
 
         withdrawalService.withdraw(leader, PASSWORD, REQUEST_IP);
         assertThat(basecampStatus(basecamp)).isEqualTo("RECRUITING");
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(jdbc.queryForObject(
                         "SELECT CONCAT(status, ':', cancel_reason) FROM basecamp WHERE id = ?", String.class, basecamp))
@@ -81,7 +82,7 @@ class WithdrawalBasecampCleanupIntegrationTest {
         fixture.insertMember(autoClosed, member, "MEMBER", "ACTIVE");
 
         withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(memberRow(confirmed, member)).isEqualTo("LEFT:0");
         assertThat(memberRow(autoClosed, member)).isEqualTo("LEFT:0");
@@ -99,7 +100,7 @@ class WithdrawalBasecampCleanupIntegrationTest {
         long unrelated = fixture.saveBasecamp("RECRUITING", null);
 
         withdrawalService.withdraw(applicant, PASSWORD, REQUEST_IP);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(jdbc.queryForObject(
                         "SELECT status FROM basecamp_application WHERE basecamp_id = ? AND applicant_id = ?",
@@ -122,7 +123,7 @@ class WithdrawalBasecampCleanupIntegrationTest {
         fixture.insertMember(joined, member, "MEMBER", "ACTIVE");
         withdrawalService.withdraw(leader, PASSWORD, REQUEST_IP);
         withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
         int eventsBefore = count("outbox_event WHERE event_type LIKE 'BASECAMP_%'");
         Object updatedAtBefore =
                 jdbc.queryForObject("SELECT updated_at FROM basecamp WHERE id = ?", Object.class, ledBasecamp);

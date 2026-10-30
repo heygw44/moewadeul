@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.mail.MailMessage;
 import com.moewadeul.common.mail.TestMailSender;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -103,7 +104,7 @@ class PasswordResetApiIntegrationTest {
         Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
 
         assertThat(postJson(REQUEST_PATH, emailBody(member.getEmail()), null)).hasStatus(HttpStatus.NO_CONTENT);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
         String token = tokenFromMail();
         MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(token, NEW_PASSWORD), null);
 
@@ -320,7 +321,7 @@ class PasswordResetApiIntegrationTest {
     void secretsAreNotLeaked() {
         Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
         postJson(REQUEST_PATH, emailBody(member.getEmail()), null);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
         String token = tokenFromMail();
 
         MvcTestResult weak = postJson(CONFIRM_PATH, confirmBody(token, "Weak-1"), null);
