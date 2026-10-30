@@ -1,4 +1,5 @@
-# 운영용 caddy 이미지다. 프론트엔드 빌드 결과를 이미지에 넣어서, 앱과 프론트엔드를 같은 커밋 SHA 태그로 함께 배포한다.
+# 프론트엔드 빌드 결과(/srv)만 담는 운반용 이미지다. 실행하지 않는다. 앱과 프론트엔드를 같은 커밋 SHA 태그로 함께 배포하려고 이미지로 묶는다.
+# deploy.sh가 이 이미지에서 /srv를 서버의 /opt/moewadeul/web/releases/<태그>로 꺼내 쓴다. 실행되는 Caddy는 업스트림 이미지다(docker-compose.prod.yml).
 # 빌드 컨텍스트는 저장소 루트다(docker build -f deploy/caddy/Dockerfile .).
 
 FROM node:24-alpine AS web
@@ -12,6 +13,5 @@ ARG VITE_KAKAO_JS_KEY
 ENV VITE_KAKAO_JS_KEY=${VITE_KAKAO_JS_KEY}
 RUN npm run build
 
-FROM caddy:2-alpine
-COPY deploy/caddy/Caddyfile /etc/caddy/Caddyfile
+FROM scratch
 COPY --from=web /web/dist /srv

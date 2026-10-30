@@ -17,7 +17,7 @@
 	}
 
 	handle {
-		root * /srv
+		root * /srv/current
 		# Vite는 파일 이름에 내용 해시를 붙인다. 그래서 assets 아래 파일은 브라우저가 오래 저장해도 된다.
 		@assets path /assets/*
 		header @assets Cache-Control "public, max-age=31536000, immutable"
