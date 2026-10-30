@@ -2,19 +2,21 @@ package com.moewadeul.common.testsupport;
 
 import com.moewadeul.common.storage.ImageStorage;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestImageStorage implements ImageStorage {
 
-    public static final String DELETE_FAILURE_MESSAGE = "simulated storage delete failure";
-
     private final Map<String, Long> objects = new ConcurrentHashMap<>();
     private final Set<String> failingDeletes = ConcurrentHashMap.newKeySet();
+    private final AtomicInteger batchCalls = new AtomicInteger();
     private final List<String> deletedKeys = new CopyOnWriteArrayList<>();
 
     @Override
@@ -36,12 +38,18 @@ public class TestImageStorage implements ImageStorage {
     }
 
     @Override
-    public void delete(String key) {
-        if (failingDeletes.contains(key)) {
-            throw new IllegalStateException(DELETE_FAILURE_MESSAGE);
+    public Set<String> deleteAll(Collection<String> keys) {
+        batchCalls.incrementAndGet();
+        Set<String> failed = new LinkedHashSet<>();
+        for (String key : keys) {
+            if (failingDeletes.contains(key)) {
+                failed.add(key);
+                continue;
+            }
+            objects.remove(key);
+            deletedKeys.add(key);
         }
-        objects.remove(key);
-        deletedKeys.add(key);
+        return failed;
     }
 
     public void markUploaded(String key, long sizeBytes) {
@@ -60,6 +68,10 @@ public class TestImageStorage implements ImageStorage {
         return List.copyOf(deletedKeys);
     }
 
+    public int deleteBatchCalls() {
+        return batchCalls.get();
+    }
+
     public boolean hasObject(String key) {
         return objects.containsKey(key);
     }
@@ -68,5 +80,6 @@ public class TestImageStorage implements ImageStorage {
         objects.clear();
         failingDeletes.clear();
         deletedKeys.clear();
+        batchCalls.set(0);
     }
 }

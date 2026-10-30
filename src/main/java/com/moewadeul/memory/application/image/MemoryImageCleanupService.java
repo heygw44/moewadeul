@@ -8,6 +8,7 @@ import com.moewadeul.memory.domain.image.MemoryImage;
 import com.moewadeul.memory.infra.image.MemoryImageMapper;
 import java.time.Clock;
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -30,12 +31,12 @@ public class MemoryImageCleanupService extends ImageCleanup {
         List<UnattachedImageRow> batch;
         do {
             batch = memoryImageMapper.selectUnattachedByMember(memberId, lastImageId, BATCH_SIZE);
+            Set<Long> failed = failedImageIds(batch);
+            storageFailures += failed.size();
             for (UnattachedImageRow row : batch) {
-                if (!deleteObjects(row)) {
-                    storageFailures++;
-                    continue;
+                if (!failed.contains(row.imageId())) {
+                    deletedRows += memoryImageMapper.deleteIfUnattached(row.imageId());
                 }
-                deletedRows += memoryImageMapper.deleteIfUnattached(row.imageId());
             }
             if (!batch.isEmpty()) {
                 lastImageId = batch.get(batch.size() - 1).imageId();

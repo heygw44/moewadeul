@@ -8,7 +8,11 @@ import com.moewadeul.common.transaction.OutsideTransaction;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,42 +49,38 @@ public abstract class ImageCleanup {
         do {
             List<UnattachedImageRow> batch = imageMapper.selectUnattachedCreatedBefore(createdBefore, BATCH_SIZE);
             batchRead = batch.size();
-            batchDeleted = 0;
+            List<UnattachedImageRow> deleted = new ArrayList<>();
             for (UnattachedImageRow row : batch) {
-                if (imageMapper.deleteIfUnattached(row.imageId()) == 0) {
-                    continue;
-                }
-                batchDeleted++;
-                if (!deleteObjects(row)) {
-                    storageFailures++;
+                if (imageMapper.deleteIfUnattached(row.imageId()) != 0) {
+                    deleted.add(row);
                 }
             }
+            batchDeleted = deleted.size();
+            storageFailures += failedImageIds(deleted).size();
             deletedRows += batchDeleted;
         } while (batchRead == BATCH_SIZE && batchDeleted > 0);
         log.info("{} image cleanup deletedRows={} storageFailures={}", keyPrefix, deletedRows, storageFailures);
         return new Result(deletedRows, storageFailures);
     }
 
-    protected boolean deleteObjects(UnattachedImageRow row) {
-        boolean deleted = deleteObject(row.imageId(), row.objectKey());
-        if (row.thumbnailKey() == null) {
-            return deleted;
+    protected Set<Long> failedImageIds(List<UnattachedImageRow> rows) {
+        List<String> keys = rows.stream().flatMap(ImageCleanup::keysOf).toList();
+        if (keys.isEmpty()) {
+            return Set.of();
         }
-        return deleteObject(row.imageId(), row.thumbnailKey()) && deleted;
+        Set<String> failedKeys = imageStorage.deleteAll(keys);
+        Set<Long> failedIds = rows.stream()
+                .filter(row -> keysOf(row).anyMatch(failedKeys::contains))
+                .map(UnattachedImageRow::imageId)
+                .collect(Collectors.toSet());
+        if (!failedIds.isEmpty()) {
+            log.warn("{} image object delete failed images={} keys={}", keyPrefix, failedIds.size(), failedKeys.size());
+        }
+        return failedIds;
     }
 
-    private boolean deleteObject(long imageId, String objectKey) {
-        try {
-            imageStorage.delete(objectKey);
-            return true;
-        } catch (RuntimeException e) {
-            log.warn(
-                    "{} image object delete failed imageId={} cause={}",
-                    keyPrefix,
-                    imageId,
-                    e.getClass().getSimpleName());
-            return false;
-        }
+    private static Stream<String> keysOf(UnattachedImageRow row) {
+        return row.thumbnailKey() == null ? Stream.of(row.objectKey()) : Stream.of(row.objectKey(), row.thumbnailKey());
     }
 
     public record Result(int deletedRows, int storageFailures) {}

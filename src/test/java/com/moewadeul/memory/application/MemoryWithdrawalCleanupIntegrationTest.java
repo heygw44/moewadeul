@@ -99,6 +99,28 @@ class MemoryWithdrawalCleanupIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-33][PV-10] 사진이 한 쪽(100행)을 넘어도 모두 지워지고, 저장소 삭제는 한 쪽에 한 번씩만 부른다")
+    void deletesImagesBeyondOnePageWithOneStorageCallPerPage() {
+        // given
+        long member = memberFixture.saveWithPassword(PASSWORD).getId();
+        String lastKey = null;
+        for (int i = 0; i < 101; i++) {
+            long image = uploaded(member);
+            commandService.write(member, write(List.of(image)));
+            lastKey = keyOf(image);
+        }
+
+        // when
+        cleanupService.cleanUp(member);
+
+        // then
+        assertThat(count("memory_image WHERE member_id = ?", member)).isZero();
+        assertThat(storage.deletedKeys()).hasSize(202);
+        assertThat(storage.hasObject(lastKey)).isFalse();
+        assertThat(storage.deleteBatchCalls()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("[F-33][PV-10] 사진 객체를 지우지 못하면 그 사진 행을 남기고 예외를 던지며, 다른 사진은 계속 지우고, 저장소가 돌아온 뒤 다시 정리하면 객체와 행이 모두 지워진다")
     void failedObjectDeleteKeepsRowUntilRetrySucceeds() {
         // given
