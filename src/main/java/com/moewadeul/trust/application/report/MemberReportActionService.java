@@ -2,7 +2,7 @@ package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.transaction.OutsideTransaction;
-import com.moewadeul.member.application.MemberSessions;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.util.EnumSet;
 import java.util.Set;
@@ -20,13 +20,13 @@ public class MemberReportActionService {
     private static final String SANCTION_TYPE_MESSAGE = "관리자가 내릴 수 없는 제재 종류예요.";
 
     private final MemberReportActionApplier memberReportActionApplier;
-    private final MemberSessions memberSessions;
+    private final MemberSessionCleanup memberSessionCleanup;
 
     public MemberReportActionResult act(MemberReportActionCommand command) {
         OutsideTransaction.require("제재·신고 처리가 커밋된 뒤에 세션을 지워야 하고, 세션 삭제는 트랜잭션 안에서 부르면 커넥션을 하나 더 잡는다.");
         MemberReportActionResult result = memberReportActionApplier.apply(command, parseSanctionType(command));
         if (result.suspended()) {
-            memberSessions.invalidateAll(result.targetMemberId());
+            memberSessionCleanup.invalidateAfterCommit(result.targetMemberId());
         }
         log.info(
                 "member report actioned reportId={} adminId={} sanctionId={}",

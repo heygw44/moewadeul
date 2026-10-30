@@ -108,6 +108,14 @@ public class Member {
         return status == MemberStatus.WITHDRAWN;
     }
 
+    public boolean isSuspended() {
+        return status == MemberStatus.SUSPENDED;
+    }
+
+    public boolean canHoldLoginSession() {
+        return !isWithdrawn() && !isSuspended();
+    }
+
     public boolean canAuthenticateWithPassword() {
         return !isWithdrawn() && passwordHash != null;
     }

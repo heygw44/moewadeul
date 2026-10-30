@@ -14,8 +14,11 @@ public class MemoryCommandService {
     private final MemoryWriter memoryWriter;
     private final MemoryImageAttachments memoryImageAttachments;
 
-    public long write(long memberId, MemoryWriteCommand command) {
+    public void precheckWrite(long memberId, MemoryWriteCommand command) {
         memoryImageAttachments.precheck(memberId, null, command.imageIds());
+    }
+
+    public long write(long memberId, MemoryWriteCommand command) {
         return memoryWriter.write(memberId, command);
     }
 

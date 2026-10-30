@@ -9,7 +9,6 @@ import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
-import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.MemberSuspendedException;
 import java.time.Clock;
 import java.time.Duration;
@@ -127,7 +126,7 @@ public class MemberLoginService {
     }
 
     private void rejectIfSuspended(Member member) {
-        if (member.getStatus() == MemberStatus.SUSPENDED) {
+        if (member.isSuspended()) {
             throw new MemberSuspendedException(member.getSuspendedUntil());
         }
     }

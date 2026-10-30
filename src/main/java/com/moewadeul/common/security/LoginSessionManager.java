@@ -2,6 +2,7 @@ package com.moewadeul.common.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +21,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoginSessionManager {
 
+    // null(비밀번호를 바꾼 적 없음)과 속성이 없는 세션을 구분하려고 문자열로 적는다.
+    public static final String PASSWORD_CHANGED_AT_ATTRIBUTE =
+            LoginSessionManager.class.getName() + ".PASSWORD_CHANGED_AT";
+
     private static final String ROLE_PREFIX = "ROLE_";
 
     private final SecurityContextRepository securityContextRepository;
@@ -32,12 +37,22 @@ public class LoginSessionManager {
         this.securityContextRepository = securityContextRepository;
     }
 
-    public void login(LoginMember member, HttpServletRequest request, HttpServletResponse response) {
+    public static String passwordChangedAtSnapshot(Instant passwordChangedAt) {
+        return String.valueOf(passwordChangedAt);
+    }
+
+    public void login(
+            LoginMember member, Instant passwordChangedAt, HttpServletRequest request, HttpServletResponse response) {
         Authentication authentication = authenticationOf(member);
 
         sessionFixationStrategy.onAuthentication(authentication, request, response);
 
         storeContext(authentication, request, response);
+        recordPasswordChangedAt(request, passwordChangedAt);
+    }
+
+    public void recordPasswordChangedAt(HttpServletRequest request, Instant passwordChangedAt) {
+        request.getSession().setAttribute(PASSWORD_CHANGED_AT_ATTRIBUTE, passwordChangedAtSnapshot(passwordChangedAt));
     }
 
     public void markEmailVerified(HttpServletRequest request, HttpServletResponse response) {

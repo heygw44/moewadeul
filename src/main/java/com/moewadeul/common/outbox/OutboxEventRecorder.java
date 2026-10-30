@@ -2,6 +2,7 @@ package com.moewadeul.common.outbox;
 
 import com.moewadeul.common.transaction.InsideTransaction;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +19,16 @@ public class OutboxEventRecorder {
     private final Clock clock;
 
     public void record(String eventType, String aggregateType, long aggregateId, Object payload) {
+        recordDeferred(eventType, aggregateType, aggregateId, payload, Duration.ZERO);
+    }
+
+    public void recordDeferred(
+            String eventType, String aggregateType, long aggregateId, Object payload, Duration delay) {
         InsideTransaction.require("outbox 이벤트는 원래 작업과 같은 트랜잭션에서 기록해야 한다.");
-        String payloadJson = toJson(payload);
+        Instant now = Instant.now(clock);
+        Instant lockedUntil = delay.isZero() ? null : now.plus(delay);
         outboxEventRepository.save(
-                OutboxEvent.pending(eventType, aggregateType, aggregateId, payloadJson, Instant.now(clock)));
+                OutboxEvent.pendingUntil(eventType, aggregateType, aggregateId, toJson(payload), now, lockedUntil));
     }
 
     public void recordAll(List<OutboxEventDraft> events) {
