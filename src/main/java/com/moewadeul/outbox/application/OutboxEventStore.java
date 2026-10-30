@@ -1,11 +1,13 @@
 package com.moewadeul.outbox.application;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.outbox.infra.OutboxEventMapper;
 import com.moewadeul.outbox.infra.OutboxMessageRow;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,8 +23,9 @@ public class OutboxEventStore {
     private final Clock clock;
 
     @Transactional
-    public Claim claim(Instant now) {
-        List<Long> ids = mapper.selectClaimableIds(now, properties.batchSize());
+    public Claim claim(Instant now, OutboxLane lane, Set<String> mailEventTypes) {
+        List<Long> ids =
+                mapper.selectClaimableIds(now, properties.batchSize(), lane == OutboxLane.MAIL, mailEventTypes);
         Instant leaseUntil = properties.retryPolicy().leaseUntil(now);
         if (ids.isEmpty()) {
             return new Claim(leaseUntil, List.of());
@@ -41,19 +44,19 @@ public class OutboxEventStore {
     }
 
     @Transactional
-    public void markPublished(long eventId) {
-        int updated = mapper.markPublished(eventId, clock.instant());
+    public void markPublished(long eventId, Instant leaseUntil) {
+        int updated = mapper.markPublished(eventId, leaseUntil, clock.instant());
         if (updated == 0) {
-            log.warn("outbox event was not pending when marking published eventId={}", eventId);
+            log.warn("outbox event was not pending or its lease was lost when marking published eventId={}", eventId);
         }
     }
 
     @Transactional
-    public void markFailedAttempt(long eventId, String error, boolean transientFailure) {
-        int updated =
-                mapper.markFailedAttempt(eventId, error, transientFailure, properties.retryPolicy(), clock.instant());
+    public void markFailedAttempt(long eventId, Instant leaseUntil, String error, boolean transientFailure) {
+        int updated = mapper.markFailedAttempt(
+                eventId, leaseUntil, error, transientFailure, properties.retryPolicy(), clock.instant());
         if (updated == 0) {
-            log.warn("outbox event was not pending when marking failed eventId={}", eventId);
+            log.warn("outbox event was not pending or its lease was lost when marking failed eventId={}", eventId);
         }
     }
 

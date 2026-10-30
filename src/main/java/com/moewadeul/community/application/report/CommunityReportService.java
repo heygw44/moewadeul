@@ -44,7 +44,7 @@ public class CommunityReportService {
                 .filter(CommunityComment::isActive)
                 .orElseThrow(BusinessException::notFound);
         communityPostRepository
-                .findById(comment.getPostId())
+                .findByIdForShare(comment.getPostId())
                 .filter(CommunityPost::isActive)
                 .orElseThrow(BusinessException::notFound);
         long unreviewedReportCount = saveReport(CommunityReportTargetType.COMMENT, comment.getId(), memberId, command);

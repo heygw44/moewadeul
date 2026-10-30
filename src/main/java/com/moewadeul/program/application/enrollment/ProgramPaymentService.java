@@ -3,14 +3,13 @@ package com.moewadeul.program.application.enrollment;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.program.application.enrollment.ProgramApplicationLocker.LockedApplication;
 import com.moewadeul.program.domain.Payment;
 import com.moewadeul.program.domain.PaymentRepository;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplication;
-import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import com.moewadeul.program.domain.ProgramRepository;
 import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +25,7 @@ public class ProgramPaymentService {
 
     private static final String PAYMENT_UNIQUE_CONSTRAINT = "uk_payment_program_application";
 
-    private final ProgramApplicationRepository programApplicationRepository;
-    private final ProgramRepository programRepository;
+    private final ProgramApplicationLocker applicationLocker;
     private final PaymentRepository paymentRepository;
     private final OutboxEventRecorder outboxEventRecorder;
     private final ProgramSeatReleaseRecorder seatReleaseRecorder;
@@ -35,10 +33,11 @@ public class ProgramPaymentService {
 
     @Transactional
     public ProgramPayResult pay(long memberId, long applicationId) {
-        ProgramApplication application = lockOwnApplication(memberId, applicationId);
+        LockedApplication locked = lockOwnApplication(memberId, applicationId);
+        ProgramApplication application = locked.application();
         Instant now = clock.instant();
         application.confirmPayment(now);
-        Program program = findProgram(application.getProgramId());
+        Program program = locked.program();
         savePayment(Payment.paid(applicationId, program.getFee(), now));
         outboxEventRecorder.recordAll(application.pullEvents());
         log.info("program payment confirmed applicationId={} memberId={}", applicationId, memberId);
@@ -47,9 +46,10 @@ public class ProgramPaymentService {
 
     @Transactional
     public ProgramApplicationCancelResult cancel(long memberId, long applicationId) {
-        ProgramApplication application = lockOwnApplication(memberId, applicationId);
+        LockedApplication locked = lockOwnApplication(memberId, applicationId);
+        ProgramApplication application = locked.application();
         Instant now = clock.instant();
-        Program program = findProgram(application.getProgramId());
+        Program program = locked.program();
         boolean refunded = application.cancelByMember(now, program.refundDeadline());
         if (refunded) {
             refundPayment(applicationId, now);
@@ -64,15 +64,10 @@ public class ProgramPaymentService {
         return new ProgramApplicationCancelResult(ProgramApplicationStatus.CANCELED, refunded);
     }
 
-    private ProgramApplication lockOwnApplication(long memberId, long applicationId) {
-        ProgramApplication application =
-                programApplicationRepository.findByIdForUpdate(applicationId).orElseThrow(BusinessException::notFound);
-        application.requireAppliedBy(memberId);
-        return application;
-    }
-
-    private Program findProgram(long programId) {
-        return programRepository.findById(programId).orElseThrow(BusinessException::notFound);
+    private LockedApplication lockOwnApplication(long memberId, long applicationId) {
+        LockedApplication locked = applicationLocker.lock(applicationId).orElseThrow(BusinessException::notFound);
+        locked.application().requireAppliedBy(memberId);
+        return locked;
     }
 
     private void savePayment(Payment payment) {
@@ -85,7 +80,7 @@ public class ProgramPaymentService {
 
     private void refundPayment(long applicationId, Instant now) {
         Payment payment = paymentRepository
-                .findByProgramApplicationId(applicationId)
+                .findByProgramApplicationIdForUpdate(applicationId)
                 .orElseThrow(() -> new IllegalStateException("확정된 신청에 결제가 없습니다. applicationId=" + applicationId));
         payment.refund(now);
     }

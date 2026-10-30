@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -109,6 +110,17 @@ public class SyncJobRun {
 
     public boolean isStale(Instant now, Duration staleAfter) {
         return isRunning() && updatedAt.plus(staleAfter).isBefore(now);
+    }
+
+    public Optional<String> resumeCursor() {
+        if (!isFailed() || !madeProgress()) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(progressCursor);
+    }
+
+    private boolean madeProgress() {
+        return processedCount > 0;
     }
 
     public boolean isRunning() {

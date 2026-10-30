@@ -3,14 +3,17 @@ package com.moewadeul.program.application.enrollment;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.domain.ProgramCancelReason;
-import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
-import com.moewadeul.trust.application.sanction.SanctionConfirmService;
+import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionService;
+import com.moewadeul.trust.application.report.MemberReportFixture;
+import com.moewadeul.trust.application.sanction.SanctionFixture;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -29,7 +32,7 @@ class ProgramSanctionCleanupIntegrationTest {
     private ProgramSanctionCleanupService cleanupService;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
 
     @Autowired
     private OutboxPublisher outboxPublisher;
@@ -44,10 +47,16 @@ class ProgramSanctionCleanupIntegrationTest {
     private MutableClock clock;
 
     private ProgramApplyFixture fixture;
+    private SanctionFixture sanctionFixture;
 
     @BeforeEach
     void setUp() {
         fixture = new ProgramApplyFixture(jdbc, memberRepository);
+        sanctionFixture = new SanctionFixture(
+                new CompanionReviewFixture(jdbc, memberRepository),
+                new MemberReportFixture(jdbc),
+                memberReportActionService,
+                clock);
     }
 
     @Test
@@ -145,11 +154,10 @@ class ProgramSanctionCleanupIntegrationTest {
         long pending = fixture.saveApplication(programId, target, "PENDING_PAYMENT");
 
         // when
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(target, null, SanctionType.PERMANENT, "금전 요구", admin));
+        sanctionFixture.confirm(target, admin, SanctionType.PERMANENT, "금전 요구");
         assertThat(fixture.applicationStatus(pending)).isEqualTo("PENDING_PAYMENT");
-        outboxPublisher.publishPending();
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(fixture.applicationStatus(pending)).isEqualTo("CANCELED");

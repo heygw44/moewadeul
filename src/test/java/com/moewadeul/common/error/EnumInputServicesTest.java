@@ -33,6 +33,7 @@ import com.moewadeul.memory.infra.moderation.AdminMemoryMapper;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
 import com.moewadeul.program.application.catalog.ProgramApplicantQuery;
 import com.moewadeul.program.application.catalog.ProgramQueryService;
+import com.moewadeul.program.application.enrollment.ProgramSeatReleaseRecorder;
 import com.moewadeul.program.domain.PaymentRepository;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
@@ -288,12 +289,13 @@ class EnumInputServicesTest {
                 mock(ActiveSpotChecker.class),
                 mock(AdminAuditRecorder.class),
                 mock(OutboxEventRecorder.class),
+                mock(ProgramSeatReleaseRecorder.class),
                 CLOCK);
     }
 
     private static MyInfoService myInfoService(Member member) {
         MemberRepository memberRepository = mock(MemberRepository.class);
-        when(memberRepository.findById(anyLong())).thenReturn(Optional.of(member));
+        when(memberRepository.findByIdForUpdate(anyLong())).thenReturn(Optional.of(member));
         return new MyInfoService(memberRepository, CLOCK);
     }
 

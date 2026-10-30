@@ -62,7 +62,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   BASECAMP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안에서, 일정은 1~3박으로 골라 주세요.',
   BASECAMP_WARNING_SPOT: '공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.',
   BASECAMP_CONDITION_NOT_MET: '이 베이스캠프의 합류 조건에 맞지 않아요. 다른 베이스캠프를 찾아 주세요.',
-  BASECAMP_DATE_CONFLICT: '같은 날짜에 이미 합류한 다른 베이스캠프가 있어서 함께할 수 없어요.',
+  BASECAMP_DATE_CONFLICT: '같은 날짜에 이미 함께하는 다른 베이스캠프가 있어요.',
   BASECAMP_REAPPLY_NOT_ALLOWED: '이 베이스캠프에는 다시 합류 신청할 수 없어요. 다른 베이스캠프를 찾아 주세요.',
   BASECAMP_PENDING_LIMIT:
     '답을 기다리는 합류 신청이 너무 많아요. 내 베이스캠프에서 신청을 취소한 뒤 다시 신청해 주세요.',

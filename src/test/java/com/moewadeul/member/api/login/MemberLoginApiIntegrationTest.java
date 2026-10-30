@@ -3,6 +3,10 @@ package com.moewadeul.member.api.login;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -27,8 +31,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @IntegrationTest
 @AutoConfigureMockMvc
@@ -52,6 +59,9 @@ class MemberLoginApiIntegrationTest {
 
     @Autowired
     private MutableClock clock;
+
+    @MockitoSpyBean
+    private PasswordEncoder passwordEncoder;
 
     @Test
     @DisplayName("[F-02] 올바른 이메일과 비밀번호로 로그인하면 200과 SESSION 쿠키를 응답하고 성공을 기록한다")
@@ -350,6 +360,63 @@ class MemberLoginApiIntegrationTest {
         assertThat(count("login_history")).isZero();
     }
 
+    @Test
+    @DisplayName("[F-02] 한 IP에서 없는 이메일로 20번 실패하면 21번째는 올바른 비밀번호여도 429 LOGIN_LOCKED와 Retry-After를 응답한다")
+    void ipFailureBudgetBlocksRotatingEmails() {
+        Member member = saveMember(TestSequence.email());
+        for (int i = 0; i < LoginLockout.IP_FAILURE_CAPACITY; i++) {
+            assertThat(loginFrom(TestSequence.email(), PASSWORD, "198.51.100.1"))
+                    .hasStatus(HttpStatus.UNAUTHORIZED);
+        }
+        clearInvocations(passwordEncoder);
+
+        MvcTestResult blocked = loginFrom(member.getEmail(), PASSWORD, "198.51.100.1");
+
+        assertThat(blocked).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(blocked).bodyJson().extractingPath("$.code").isEqualTo("LOGIN_LOCKED");
+        assertThat(blocked.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isEqualTo("3");
+        assertThat(blocked.getResponse().getCookie(SESSION_COOKIE)).isNull();
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("[F-02] 실패 한도를 다 쓴 IP와 다른 IP에서는 로그인할 수 있고, 3초가 지나면 그 IP도 다시 시도할 수 있다")
+    void ipFailureBudgetIsPerIpAndRefills() {
+        Member member = saveMember(TestSequence.email());
+        for (int i = 0; i < LoginLockout.IP_FAILURE_CAPACITY; i++) {
+            loginFrom(TestSequence.email(), PASSWORD, "198.51.100.1");
+        }
+
+        assertThat(loginFrom(member.getEmail(), PASSWORD, "198.51.100.2")).hasStatus(HttpStatus.OK);
+        assertThat(loginFrom(member.getEmail(), PASSWORD, "198.51.100.1")).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        clock.advance(Duration.ofSeconds(3));
+        assertThat(loginFrom(member.getEmail(), PASSWORD, "198.51.100.1")).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("[F-02] 로그인에 성공하는 것은 IP의 실패 한도를 쓰지 않는다")
+    void successfulLoginsDoNotConsumeIpFailureBudget() {
+        Member member = saveMember(TestSequence.email());
+        for (int i = 0; i < LoginLockout.IP_FAILURE_CAPACITY + 5; i++) {
+            assertThat(loginFrom(member.getEmail(), PASSWORD, "198.51.100.1")).hasStatus(HttpStatus.OK);
+        }
+
+        assertThat(loginFrom(TestSequence.email(), PASSWORD, "198.51.100.1")).hasStatus(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("[F-02] 이메일별 잠금으로 거절된 요청은 IP의 실패 한도를 쓰지 않는다")
+    void emailLockoutRejectionDoesNotConsumeIpFailureBudget() {
+        String email = TestSequence.email();
+        saveMember(email);
+        failLogin(email, LoginLockout.MAX_FAILURES);
+        for (int i = 0; i < LoginLockout.IP_FAILURE_CAPACITY; i++) {
+            assertThat(login(email, PASSWORD)).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        }
+
+        assertThat(login(TestSequence.email(), PASSWORD)).hasStatus(HttpStatus.UNAUTHORIZED);
+    }
+
     private Member saveMember(String email) {
         return memberFixture.saveWithPassword(aMember().email(email), PASSWORD);
     }
@@ -362,6 +429,17 @@ class MemberLoginApiIntegrationTest {
 
     private MvcTestResult login(String email, String password) {
         return loginRequest(email, password).exchange();
+    }
+
+    private MvcTestResult loginFrom(String email, String password, String remoteAddress) {
+        return loginRequest(email, password).with(remoteAddress(remoteAddress)).exchange();
+    }
+
+    private static RequestPostProcessor remoteAddress(String remoteAddress) {
+        return request -> {
+            request.setRemoteAddr(remoteAddress);
+            return request;
+        };
     }
 
     private MvcTestResult loginWithSession(String email, String password, Cookie session) {

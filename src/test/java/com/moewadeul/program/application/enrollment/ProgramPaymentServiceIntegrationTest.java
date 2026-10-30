@@ -7,14 +7,18 @@ import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.ErrorCode;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
+import com.moewadeul.program.application.catalog.ProgramAdminService;
+import com.moewadeul.program.application.catalog.ProgramReviseCommand;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,6 +35,9 @@ class ProgramPaymentServiceIntegrationTest {
 
     @Autowired
     private ProgramApplyService programApplyService;
+
+    @Autowired
+    private ProgramAdminService programAdminService;
 
     @Autowired
     private MemberJpaRepository memberRepository;
@@ -122,6 +129,50 @@ class ProgramPaymentServiceIntegrationTest {
         assertErrorCode(() -> programPaymentService.pay(atMember, at), ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED);
         assertThat(fixture.applicationStatus(at)).isEqualTo("PENDING_PAYMENT");
         assertThat(fixture.paymentCount(at)).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-19][PG-04] 행사 시작을 앞당기면 새 시작 시각을 넘는 결제 대기 기한이 시작 시각으로 당겨져, 새 시작 시각부터 결제를 거부한다")
+    void earlierStartCutsPendingPaymentDue() {
+        // given
+        long programId = fixture.saveProgram(5, false);
+        Instant oldStart = NOW.plus(Duration.ofDays(7));
+        Instant newStart = oldStart.minus(Duration.ofHours(2));
+        long beforeMember = fixture.saveMember();
+        long atMember = fixture.saveMember();
+        long afterMember = fixture.saveMember();
+        long earlyMember = fixture.saveMember();
+        long before = fixture.saveApplication(programId, beforeMember, "PENDING_PAYMENT", oldStart);
+        long at = fixture.saveApplication(programId, atMember, "PENDING_PAYMENT", oldStart);
+        long after = fixture.saveApplication(programId, afterMember, "PENDING_PAYMENT", oldStart);
+        long early =
+                fixture.saveApplication(programId, earlyMember, "PENDING_PAYMENT", NOW.plus(Duration.ofMinutes(15)));
+
+        // when
+        programAdminService.revise(fixture.saveMember(), programId, startAtRevision(newStart));
+
+        // then
+        assertThat(paymentDueAt(early)).isEqualTo(LocalDateTime.of(2026, 10, 5, 3, 15));
+        assertThat(paymentDueAt(after)).isEqualTo(LocalDateTime.of(2026, 10, 12, 1, 0));
+        clock.setInstant(newStart.minusSeconds(1));
+        assertThat(programPaymentService.pay(beforeMember, before).status())
+                .isEqualTo(ProgramApplicationStatus.CONFIRMED);
+        clock.setInstant(newStart);
+        assertErrorCode(() -> programPaymentService.pay(atMember, at), ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED);
+        clock.setInstant(newStart.plus(Duration.ofHours(1)));
+        assertErrorCode(() -> programPaymentService.pay(afterMember, after), ProgramErrorCode.PROGRAM_PAYMENT_EXPIRED);
+        assertThat(fixture.paymentCount(at)).isZero();
+        assertThat(fixture.paymentCount(after)).isZero();
+    }
+
+    private static ProgramReviseCommand startAtRevision(Instant startAt) {
+        return new ProgramReviseCommand(
+                null, null, PatchField.absent(), null, startAt, null, null, null, null, null, null, null);
+    }
+
+    private LocalDateTime paymentDueAt(long applicationId) {
+        return jdbc.queryForObject(
+                "SELECT payment_due_at FROM program_application WHERE id = ?", LocalDateTime.class, applicationId);
     }
 
     @Test

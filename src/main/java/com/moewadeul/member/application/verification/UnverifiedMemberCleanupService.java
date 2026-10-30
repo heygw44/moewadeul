@@ -1,6 +1,6 @@
 package com.moewadeul.member.application.verification;
 
-import com.moewadeul.member.application.MemberSessions;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.domain.verification.UnverifiedMemberPolicy;
 import com.moewadeul.member.infra.verification.UnverifiedMemberMapper;
 import java.time.Clock;
@@ -18,7 +18,8 @@ public class UnverifiedMemberCleanupService {
     static final int BATCH_SIZE = 500;
 
     private final UnverifiedMemberMapper unverifiedMemberMapper;
-    private final MemberSessions memberSessions;
+    private final UnverifiedMemberDeleter unverifiedMemberDeleter;
+    private final MemberSessionCleanup memberSessionCleanup;
     private final Clock clock;
 
     public int deleteExpiredUnverifiedMembers() {
@@ -26,8 +27,8 @@ public class UnverifiedMemberCleanupService {
         int deletedTotal = 0;
         List<Long> expiredIds = unverifiedMemberMapper.selectExpiredIds(cutoff, BATCH_SIZE);
         while (!expiredIds.isEmpty()) {
+            int deleted = unverifiedMemberDeleter.delete(expiredIds, cutoff);
             deleteSessionsOf(expiredIds);
-            int deleted = unverifiedMemberMapper.deleteExpiredByIds(expiredIds, cutoff);
             deletedTotal += deleted;
             if (deleted == 0 || expiredIds.size() < BATCH_SIZE) {
                 break;
@@ -39,6 +40,6 @@ public class UnverifiedMemberCleanupService {
     }
 
     private void deleteSessionsOf(List<Long> memberIds) {
-        memberIds.forEach(memberSessions::invalidateAll);
+        memberIds.forEach(memberSessionCleanup::invalidateAfterCommit);
     }
 }

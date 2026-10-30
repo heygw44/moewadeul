@@ -8,8 +8,16 @@ import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.external.ExternalCallLimit;
 import java.time.Duration;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -18,11 +26,14 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -35,7 +46,9 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
         havingValue = ImageStorageProperties.STORAGE_S3)
 public class S3ImageStorage implements ImageStorage, DisposableBean {
 
+    private static final Logger log = LoggerFactory.getLogger(S3ImageStorage.class);
     private static final int MAX_ATTEMPTS = 2;
+    private static final int DELETE_CHUNK_SIZE = 1_000;
     private static final long VIEW_URL_CACHE_MAX_SIZE = 10_000;
     private static final String CONTENT_TYPE = "Content-Type";
     private static final String CONTENT_LENGTH = "Content-Length";
@@ -158,11 +171,40 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
     }
 
     @Override
-    public void delete(String key) {
-        s3Client.deleteObject(DeleteObjectRequest.builder()
-                .bucket(properties.bucket())
-                .key(key)
-                .build());
+    public Set<String> deleteReturningFailedKeys(Collection<String> keys) {
+        Set<String> failed = new HashSet<>();
+        List<String> distinct = List.copyOf(new LinkedHashSet<>(keys));
+        for (int from = 0; from < distinct.size(); from += DELETE_CHUNK_SIZE) {
+            int to = Math.min(from + DELETE_CHUNK_SIZE, distinct.size());
+            failed.addAll(deleteChunk(distinct.subList(from, to)));
+        }
+        return failed;
+    }
+
+    private Set<String> deleteChunk(List<String> chunk) {
+        try {
+            List<ObjectIdentifier> objects = chunk.stream()
+                    .map(key -> ObjectIdentifier.builder().key(key).build())
+                    .toList();
+            return s3Client
+                    .deleteObjects(DeleteObjectsRequest.builder()
+                            .bucket(properties.bucket())
+                            .delete(Delete.builder()
+                                    .objects(objects)
+                                    .quiet(true)
+                                    .build())
+                            .build())
+                    .errors()
+                    .stream()
+                    .map(S3Error::key)
+                    .collect(Collectors.toSet());
+        } catch (RuntimeException e) {
+            log.warn(
+                    "image object batch delete failed cause={} chunkSize={}",
+                    e.getClass().getSimpleName(),
+                    chunk.size());
+            return Set.copyOf(chunk);
+        }
     }
 
     @Override

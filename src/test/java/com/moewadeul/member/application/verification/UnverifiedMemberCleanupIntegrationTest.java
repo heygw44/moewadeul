@@ -3,15 +3,24 @@ package com.moewadeul.member.application.verification;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.application.MemberSessionCleanup;
+import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.verification.UnverifiedMemberPolicy;
 import com.moewadeul.member.infra.verification.UnverifiedMemberMapper;
+import com.moewadeul.outbox.application.OutboxPublisher;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -29,6 +38,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -48,7 +58,7 @@ class UnverifiedMemberCleanupIntegrationTest {
     private UnverifiedMemberCleanupService cleanupService;
 
     @Autowired
-    private UnverifiedMemberMapper unverifiedMemberMapper;
+    private OutboxPublisher outboxPublisher;
 
     @Autowired
     private MockMvcTester mvc;
@@ -61,6 +71,19 @@ class UnverifiedMemberCleanupIntegrationTest {
 
     @Autowired
     private MutableClock clock;
+
+    @Autowired
+    private UnverifiedMemberMapper unverifiedMemberMapper;
+
+    // 이 spy 세 개를 같은 이름으로 모두 선언해야 세션 삭제를 가로채는 테스트끼리 스프링 컨텍스트를 하나로 공유한다.
+    @MockitoSpyBean
+    private MemberSessions memberSessions;
+
+    @MockitoSpyBean
+    private MemberSessionCleanup memberSessionCleanup;
+
+    @MockitoSpyBean
+    private UnverifiedMemberDeleter unverifiedMemberDeleter;
 
     private String passwordHash;
 
@@ -152,6 +175,47 @@ class UnverifiedMemberCleanupIntegrationTest {
         assertThat(sessionCount(expired.getId())).isZero();
         assertThat(sessionCount(recent.getId())).isEqualTo(1);
         assertThat(count("SPRING_SESSION")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-05] 삭제 대상을 고른 뒤 지우기 전에 로그인해 생긴 세션도 회원과 함께 사라진다")
+    void deletesSessionCreatedBetweenSelectionAndDeletion() {
+        String email = TestSequence.email();
+        Member expired = saveMember(email, sevenDaysAgo().minus(ONE_SECOND));
+        doAnswer(invocation -> {
+                    login(email);
+                    return invocation.callRealMethod();
+                })
+                .when(unverifiedMemberDeleter)
+                .delete(anyList(), any());
+
+        cleanupService.deleteExpiredUnverifiedMembers();
+
+        assertThat(count("member WHERE id = ?", expired.getId())).isZero();
+        assertThat(sessionCount(expired.getId())).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-01][EV-05] 세션 삭제가 한 번 실패해도 회원 삭제는 끝나고, outbox 처리기가 세션을 마저 지운다")
+    void outboxFinishesSessionDeletionWhenFirstAttemptFails() {
+        String email = TestSequence.email();
+        Member expired = saveMember(email, sevenDaysAgo().minus(ONE_SECOND));
+        login(email);
+        clock.advance(ONE_SECOND);
+        doThrow(new IllegalStateException("session store down"))
+                .doCallRealMethod()
+                .when(memberSessions)
+                .invalidateAll(anyLong());
+
+        cleanupService.deleteExpiredUnverifiedMembers();
+
+        assertThat(count("member WHERE id = ?", expired.getId())).isZero();
+        assertThat(sessionCount(expired.getId())).isEqualTo(1);
+
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
+
+        assertThat(sessionCount(expired.getId())).isZero();
     }
 
     @Test

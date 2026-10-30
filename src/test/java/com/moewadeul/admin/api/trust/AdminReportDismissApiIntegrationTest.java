@@ -10,12 +10,12 @@ import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionService;
 import com.moewadeul.trust.application.report.MemberReportCommand;
 import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.application.report.MemberReportService;
-import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
-import com.moewadeul.trust.application.sanction.SanctionConfirmService;
 import com.moewadeul.trust.application.sanction.SanctionExpiryService;
+import com.moewadeul.trust.application.sanction.SanctionFixture;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import com.moewadeul.trust.domain.report.ReportKind;
 import com.moewadeul.trust.domain.report.ReportType;
@@ -59,7 +59,7 @@ class AdminReportDismissApiIntegrationTest {
     private MemberReportService memberReportService;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
 
     @Autowired
     private SanctionExpiryService sanctionExpiryService;
@@ -69,6 +69,7 @@ class AdminReportDismissApiIntegrationTest {
 
     private CompanionReviewFixture fixture;
     private AdminReportApiFixture api;
+    private SanctionFixture sanctionFixture;
 
     @BeforeEach
     void setUp() {
@@ -76,6 +77,7 @@ class AdminReportDismissApiIntegrationTest {
         MemberReportFixture reportFixture = new MemberReportFixture(jdbc);
         api = new AdminReportApiFixture(
                 mvc, passwordEncoder, jdbc, fixture, reportFixture, memberReportService, withdrawalService);
+        sanctionFixture = new SanctionFixture(fixture, reportFixture, memberReportActionService, clock);
     }
 
     @Test
@@ -87,8 +89,7 @@ class AdminReportDismissApiIntegrationTest {
         api.post(REPORTS + "/" + dismissedReport + "/dismiss", null);
         long actionedReport = api.urgentReport(dismissedTarget);
         api.post(REPORTS + "/" + actionedReport + "/start-review", null);
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(dismissedTarget, null, SanctionType.WARNING, "욕설", api.adminId));
+        sanctionFixture.confirm(dismissedTarget, api.adminId, SanctionType.WARNING, "욕설");
 
         MvcTestResult dismissedDetail = api.get(REPORTS + "/" + dismissedReport);
         MvcTestResult actionedDetail = api.get(REPORTS + "/" + actionedReport);
@@ -161,8 +162,7 @@ class AdminReportDismissApiIntegrationTest {
         assertThat(jdbc.queryForObject(
                         "SELECT detail FROM admin_audit_log WHERE action = 'REPORT_DISMISS'", String.class))
                 .contains("liftedSanctionId");
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(api.targetId, null, SanctionType.WARNING, "경고", api.adminId));
+        sanctionFixture.confirm(api.targetId, api.adminId, SanctionType.WARNING, "경고");
         assertThat(jdbc.queryForObject("SELECT level FROM sanction WHERE type = 'WARNING'", Integer.class))
                 .isEqualTo(1);
     }
@@ -200,8 +200,7 @@ class AdminReportDismissApiIntegrationTest {
     @Test
     @DisplayName("[SN-05] 확정된 영구 정지가 남은 회원은 긴급 신고를 기각해도 정지를 유지한다")
     void dismissKeepsConfirmedSuspension() {
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(api.targetId, null, SanctionType.PERMANENT, "심각한 위반", api.adminId));
+        sanctionFixture.confirm(api.targetId, api.adminId, SanctionType.PERMANENT, "심각한 위반");
         long reportId = api.urgentReport(api.targetId);
         api.post(REPORTS + "/" + reportId + "/start-review", null);
 
@@ -215,8 +214,7 @@ class AdminReportDismissApiIntegrationTest {
     @Test
     @DisplayName("[SN-05] 긴급이 아닌 신고를 기각하면 대상 회원의 상태를 건드리지 않는다")
     void dismissNonUrgentReportLeavesMemberAlone() {
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(api.targetId, null, SanctionType.PERMANENT, "반복", api.adminId));
+        sanctionFixture.confirm(api.targetId, api.adminId, SanctionType.PERMANENT, "반복");
         String statusBefore = api.memberStatus(api.targetId);
         long reportId = api.insertReport("NO_SHOW", "IN_REVIEW", BASE);
 

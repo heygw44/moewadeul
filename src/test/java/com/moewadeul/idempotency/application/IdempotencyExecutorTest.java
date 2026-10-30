@@ -21,13 +21,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.PlatformTransactionManager;
 import tools.jackson.databind.json.JsonMapper;
 
 class IdempotencyExecutorTest {
 
     private final IdempotencyRecordRepository repository = mock(IdempotencyRecordRepository.class);
-    private final IdempotencyExecutor executor =
-            new IdempotencyExecutor(repository, JsonMapper.builder().build(), MutableClock.atDefaultInstant());
+    private final IdempotencyExecutor executor = new IdempotencyExecutor(
+            repository,
+            JsonMapper.builder().build(),
+            MutableClock.atDefaultInstant(),
+            mock(PlatformTransactionManager.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"", " ", "   "})

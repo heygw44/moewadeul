@@ -3,11 +3,13 @@ package com.moewadeul.program.application.enrollment;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
+import com.moewadeul.program.application.catalog.ProgramReviseCommand;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -257,6 +259,45 @@ class ProgramSeatReleaseIntegrationTest {
         assertThat(fixture.applicationStatus(cancelApplicationId)).isEqualTo("CANCELED");
         assertThat(fixture.seatReleasedPayloads(programId)).isEmpty();
         assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-17][PG-07] 정원이 찬 행사의 정원을 늘리면 알림 신청자를 대상으로 하는 이벤트가 1건 생기고 알림 시각이 적힌다")
+    void capacityIncreaseRecordsSeatReleased() {
+        // given
+        long programId = fixture.saveProgram(2, false);
+        fixture.fillSeats(programId, 2);
+        long waiting = fixture.saveMember();
+        fixture.saveVacancyAlert(programId, waiting);
+
+        // when
+        programAdminService.revise(fixture.saveMember(), programId, reviseCommand(3, null));
+
+        // then
+        assertSeatReleased(programId, List.of(waiting));
+        assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isEqualTo(LocalDateTime.of(2026, 10, 5, 3, 0));
+    }
+
+    @Test
+    @DisplayName("[F-17][PG-07] 정원이 아닌 항목만 고치면 정원이 차 있어도 이벤트가 없다")
+    void nonCapacityRevisionRecordsNothing() {
+        // given
+        long programId = fixture.saveProgram(2, false);
+        fixture.fillSeats(programId, 2);
+        long waiting = fixture.saveMember();
+        fixture.saveVacancyAlert(programId, waiting);
+
+        // when
+        programAdminService.revise(fixture.saveMember(), programId, reviseCommand(null, "새 제목"));
+
+        // then
+        assertThat(fixture.seatReleasedPayloads(programId)).isEmpty();
+        assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isNull();
+    }
+
+    private static ProgramReviseCommand reviseCommand(Integer capacity, String title) {
+        return new ProgramReviseCommand(
+                title, null, PatchField.absent(), null, null, null, capacity, null, null, null, null, null);
     }
 
     private void assertSeatReleased(long programId, List<Long> expectedMemberIds) {

@@ -10,8 +10,6 @@ public interface ProgramVacancyAlertRepository {
 
     void unsubscribe(long programId, long memberId);
 
-    List<Long> findAlertTargets(long programId, Instant notifiedBefore);
-
     List<Long> lockAlertTargets(long programId, Instant notifiedBefore);
 
     void markNotified(long programId, Collection<Long> memberIds, Instant now);

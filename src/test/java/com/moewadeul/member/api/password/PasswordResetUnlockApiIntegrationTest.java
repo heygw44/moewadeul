@@ -4,6 +4,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.mail.TestMailSender;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -93,7 +94,7 @@ class PasswordResetUnlockApiIntegrationTest {
         failLogin(member, 5);
         clock.advance(Duration.ofSeconds(1));
         requestService.request(member.getEmail(), REQUEST_IP);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
         assertThat(mailSender.sent()).hasSize(1);
         String token = PasswordResetMails.extractToken(mailSender.sent().get(0));
 

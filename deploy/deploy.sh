@@ -17,6 +17,11 @@ readonly COMPOSE_FILE="$DEPLOY_DIR/docker-compose.prod.yml"
 readonly ENV_FILE="$DEPLOY_DIR/.env"
 readonly SERVER_ENV_FILE="$DEPLOY_DIR/server.env"
 readonly LAST_TAG_FILE="$DEPLOY_DIR/last-successful-tag"
+readonly LAST_COMPOSE_FILE="$DEPLOY_DIR/last-successful-compose.yml"
+readonly CADDYFILE="$DEPLOY_DIR/caddy/Caddyfile"
+readonly LAST_CADDYFILE="$DEPLOY_DIR/last-successful-Caddyfile"
+readonly WEB_DIR="$DEPLOY_DIR/web"
+readonly SERVER_COMPOSE_COMMAND="cd $DEPLOY_DIR && docker compose -f docker-compose.prod.yml"
 readonly REGION=ap-northeast-2
 readonly PARAM_PREFIX=/moewadeul/prod
 readonly APP_REPO=ghcr.io/heygw44/moewadeul-app
@@ -27,6 +32,7 @@ readonly HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-240}"
 # 시작하다 죽는 앱은 restart 정책으로 계속 다시 뜬다. 상태 확인 주소만 보면 그동안 제한 시간을 다 기다리고, 옛 앱은 이미 내려가 있어 502가 이어진다.
 # 다시 시작한 횟수가 이보다 많으면 기다리지 않고 실패로 본다.
 readonly MAX_APP_RESTARTS="${MAX_APP_RESTARTS:-2}"
+readonly BACKUP_WAIT_SECONDS="${BACKUP_WAIT_SECONDS:-900}"
 
 # Parameter Store 이름(접두사 뒤) → .env 변수 이름
 declare -rA SECRET_PARAMS=(
@@ -55,6 +61,11 @@ declare -A server_env=()
 
 log() {
     echo "[deploy $(date -u +%H:%M:%S)] $*"
+}
+
+# 배포 워크플로가 이 출력을 그대로 찍으므로, 줄 맨 앞의 ::warning::이 GitHub Actions 경고 주석이 된다.
+warn() {
+    echo "::warning::[deploy $(date -u +%H:%M:%S)] $*"
 }
 
 compose() {
@@ -151,16 +162,20 @@ check_image_architecture() {
     done
 }
 
+# caddy 서비스 이미지는 서버에 없을 때만 받는다. 업스트림은 같은 태그를 다시 빌드하기도 해서, 매번 받으면 그날 배포가 Caddy를 다시 만든다.
+pull_images() {
+    local tag="$1"
+    compose pull --quiet app && compose pull --quiet --policy missing caddy && docker pull --quiet "$CADDY_REPO:$tag" > /dev/null
+}
+
 app_restart_count() {
     local id
     id="$(compose ps -a -q app 2> /dev/null)" && [[ -n "$id" ]] || return 1
     docker inspect -f '{{.RestartCount}}' "$id" 2> /dev/null
 }
 
-# 앱의 상태 확인 주소가 200을 줄 때까지 기다린 뒤, caddy가 HTTP 요청에 응답하는지 본다.
-# caddy는 80번 요청에 HTTPS로 넘기는 응답(308)을 준다. 인증서 발급은 Let's Encrypt 상황에 따라 늦어질 수 있어서 HTTPS는 확인하지 않는다.
-wait_healthy() {
-    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) code restarts
+wait_app_healthy() {
+    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) restarts
     until curl -fsS -o /dev/null --max-time 5 "$HEALTH_URL" 2>/dev/null; do
         if restarts="$(app_restart_count)" && ((restarts > MAX_APP_RESTARTS)); then
             log "앱이 시작하다 ${restarts}번 다시 시작했다"
@@ -173,6 +188,33 @@ wait_healthy() {
         sleep 5
     done
     log "앱 상태 확인 통과"
+}
+
+# 백업 덤프(--single-transaction)가 여는 트랜잭션 뒤에서 Flyway DDL이 메타데이터 잠금을 기다리지 않게, 백업 서비스가 끝난 뒤에 배포한다.
+wait_backup_idle() {
+    command -v systemctl > /dev/null || return 0
+    local deadline=$((SECONDS + BACKUP_WAIT_SECONDS)) state waited=0
+    while true; do
+        state="$(systemctl show moewadeul-backup.service -p ActiveState --value 2> /dev/null || true)"
+        case "$state" in
+            activating | active | deactivating | reloading) ;;
+            *) return 0 ;;
+        esac
+        if ((waited == 0)); then
+            log "백업이 도는 중이라 끝날 때까지 기다린다"
+            waited=1
+        fi
+        if ((SECONDS >= deadline)); then
+            log "백업이 ${BACKUP_WAIT_SECONDS}초 안에 끝나지 않았다"
+            return 1
+        fi
+        sleep 10
+    done
+}
+
+# caddy는 80번 요청에 HTTPS로 넘기는 응답(308)을 준다. 인증서 발급은 Let's Encrypt 상황에 따라 늦어질 수 있어서 HTTPS는 확인하지 않는다.
+wait_caddy() {
+    local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) code
     until code="$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' \
         -H "Host: ${server_env[SITE_ADDRESS]}" http://127.0.0.1/)" && [[ "$code" =~ ^[23] ]]; do
         if ((SECONDS >= deadline)); then
@@ -184,10 +226,92 @@ wait_healthy() {
     log "caddy 응답 확인 통과"
 }
 
+# 이미지에 실행할 명령이 없어서 docker create에 아무 명령(true)이나 넘긴다. create는 컨테이너를 만들기만 하고 실행하지 않는다.
+# current는 상대 경로 링크다. 컨테이너에서는 web이 /srv에 마운트되므로 /srv/current가 /srv/releases/<태그>로 풀린다.
+publish_web() {
+    local tag="$1" release="$WEB_DIR/releases/$1" id
+    mkdir -p "$WEB_DIR/releases" || return 1
+    if [[ ! -d "$release" ]]; then
+        rm -rf "$release.tmp"
+        id="$(docker create "$CADDY_REPO:$tag" true)" || { log "화면 파일을 꺼낼 컨테이너를 만들지 못했다"; return 1; }
+        if ! docker cp "$id:/srv" "$release.tmp" > /dev/null; then
+            docker rm "$id" > /dev/null 2>&1 || true
+            log "$CADDY_REPO:$tag 에서 화면 파일을 꺼내지 못했다"
+            return 1
+        fi
+        docker rm "$id" > /dev/null 2>&1 || warn "화면 파일을 꺼내려고 만든 컨테이너 $id 를 지우지 못했다"
+        mv "$release.tmp" "$release" || return 1
+    fi
+    [[ -f "$release/index.html" ]] || { log "$tag 화면 파일에 index.html이 없다"; return 1; }
+    if ! { ln -sfn "releases/$tag" "$WEB_DIR/current.tmp" && mv -T "$WEB_DIR/current.tmp" "$WEB_DIR/current"; }; then
+        log "web/current를 $tag 로 바꾸지 못했다"
+        return 1
+    fi
+    prune_web_releases "$tag" || warn "오래된 화면 파일을 지우지 못했다. 배포는 계속한다"
+    log "화면 파일 전환: $tag"
+}
+
+prune_web_releases() {
+    local keep="$1" previous="" dir
+    [[ -f "$LAST_TAG_FILE" ]] && previous="$(<"$LAST_TAG_FILE")"
+    for dir in "$WEB_DIR"/releases/*; do
+        [[ -e "$dir" ]] || continue
+        case "${dir##*/}" in "$keep" | "$previous") continue ;; esac
+        rm -rf "$dir" || return 1
+    done
+}
+
+# Caddy를 막 다시 만든 직후(첫 배포 등)에는 관리 API가 아직 열리지 않아 reload가 실패할 수 있어 몇 번 다시 시도한다.
+reload_caddy() {
+    local attempt
+    for attempt in 1 2 3 4 5; do
+        compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile > /dev/null && return 0
+        ((attempt < 5)) && sleep 2
+    done
+    log "caddy reload에 실패했다. Caddyfile이 잘못됐으면 옛 설정이 그대로 쓰인다"
+    return 1
+}
+
+definition_changed() {
+    local service="$1" id expected actual
+    id="$(compose ps -q "$service" 2> /dev/null)" && [[ -n "$id" ]] || return 1
+    expected="$(compose config --hash "$service" 2> /dev/null | cut -d' ' -f2)" || return 1
+    actual="$(docker inspect -f '{{index .Config.Labels "com.docker.compose.config-hash"}}' "$id" 2> /dev/null)" || return 1
+    [[ -n "$expected" && "$expected" != "$actual" ]]
+}
+
+# 앱을 --no-deps로 올리면 compose가 depends_on의 service_healthy를 보지 않으므로 MySQL이 정상이 될 때까지 여기서 기다린다.
+start_mysql_without_recreate() {
+    compose up -d --no-recreate --wait mysql || return 1
+    if definition_changed mysql; then
+        warn "mysql 정의가 실행 중인 컨테이너와 달라도 배포는 적용하지 않았다. 이 정의는 이번 배포에서 검증되지 않았다. 백업을 확인한 뒤 서버에서 '$SERVER_COMPOSE_COMMAND up -d mysql'로 적용한다"
+    fi
+}
+
 # if 조건 안에서 부르면 set -e가 꺼지므로, 단계마다 &&로 이어 앞 단계가 실패하면 바로 실패를 돌려준다.
 start() {
     local tag="$1"
-    write_env "$tag" && compose up -d --remove-orphans && wait_healthy
+    write_env "$tag" && start_mysql_without_recreate \
+        && compose up -d --no-deps --remove-orphans app && wait_app_healthy \
+        && publish_web "$tag" \
+        && compose up -d --no-deps caddy && reload_caddy && wait_caddy
+}
+
+# 배포는 app·caddy·mysql·alloy만 올리므로 compose 파일에 새로 생긴 서비스는 만들어지지 않는다.
+warn_services_not_running() {
+    local running service
+    running="$(compose ps --services 2> /dev/null)" || return 0
+    for service in $(compose config --services 2> /dev/null); do
+        if ! grep -qx "$service" <<< "$running"; then
+            warn "compose 파일의 $service 서비스가 실행 중이 아니다. 이 정의는 이번 배포에서 검증되지 않았다. 서버에서 '$SERVER_COMPOSE_COMMAND up -d $service'로 띄운다"
+        fi
+    done
+}
+
+apply_alloy_definition() {
+    if ! compose up -d --no-deps alloy > /dev/null 2>&1; then
+        warn "Alloy 정의를 적용하지 못했다. 서비스는 정상이고 지표·로그 수집만 빠질 수 있다"
+    fi
 }
 
 # Alloy의 MySQL 수집기가 쓰는 계정을 만들고 비밀번호를 Parameter Store 값에 맞춘다. 배포할 때마다 실행해도 결과가 같다.
@@ -294,10 +418,15 @@ main() {
     [[ -f "$LAST_TAG_FILE" ]] && previous="$(<"$LAST_TAG_FILE")"
     log "배포 시작: $tag (직전에 성공한 태그: ${previous:-없음})"
 
+    if ! wait_backup_idle; then
+        log "배포하지 않는다. 실행 중인 컨테이너는 그대로 둔다"
+        exit 1
+    fi
+
     write_env "$tag"
-    # app과 caddy만 받는다. MySQL 이미지(mysql:8.4)는 배포할 때마다 받지 않는다. 받으면 업스트림에 8.4.x 패치가 나온 날
+    # MySQL 이미지(mysql:8.4)는 배포할 때마다 받지 않는다. 받으면 업스트림에 8.4.x 패치가 나온 날
     # 앱 배포가 DB 컨테이너를 새 버전으로 다시 만들고, 배포를 되돌려도 MySQL 버전은 돌아가지 않는다. MySQL을 올릴 때는 서버에서 직접 받는다.
-    if ! compose pull --quiet app caddy || ! check_image_architecture "$tag"; then
+    if ! pull_images "$tag" || ! check_image_architecture "$tag"; then
         log "이미지를 받지 못했거나 아키텍처가 맞지 않는다. 실행 중인 컨테이너는 그대로 둔다"
         [[ -n "$previous" ]] && write_env "$previous"
         exit 1
@@ -305,8 +434,16 @@ main() {
 
     prepare_mysql_slow_log
     if start "$tag"; then
+        if ! { cp "$COMPOSE_FILE" "$LAST_COMPOSE_FILE.tmp" && mv "$LAST_COMPOSE_FILE.tmp" "$LAST_COMPOSE_FILE"; }; then
+            warn "compose 파일을 보관하지 못했다. 다음 배포가 실패하면 보관된 옛 파일로 되돌린다"
+        fi
+        if ! { cp "$CADDYFILE" "$LAST_CADDYFILE.tmp" && mv "$LAST_CADDYFILE.tmp" "$LAST_CADDYFILE"; }; then
+            warn "Caddyfile을 보관하지 못했다. 다음 배포가 실패하면 보관된 옛 파일로 되돌린다"
+        fi
         echo "$tag" > "$LAST_TAG_FILE"
         ensure_exporter_user
+        apply_alloy_definition
+        warn_services_not_running
         sync_alloy_config
         install_backup_timer
         # 사흘 넘게 쓰지 않은 이미지를 지워 디스크를 확보한다. 되돌릴 이미지가 지워져도 GHCR에서 다시 받는다.
@@ -323,6 +460,20 @@ main() {
     fi
 
     log "배포 실패. 직전에 성공한 태그 $previous 로 되돌린다"
+    if [[ ! -f "$LAST_COMPOSE_FILE" ]]; then
+        log "저장된 compose 파일이 없어 새 compose 파일 그대로 되돌린다"
+    elif cp "$LAST_COMPOSE_FILE" "$COMPOSE_FILE"; then
+        log "직전에 성공한 compose 파일로 되돌렸다"
+    else
+        warn "직전에 성공한 compose 파일을 복사하지 못해 새 compose 파일 그대로 되돌린다"
+    fi
+    if [[ ! -f "$LAST_CADDYFILE" ]]; then
+        log "저장된 Caddyfile이 없어 새 Caddyfile 그대로 되돌린다"
+    elif cp "$LAST_CADDYFILE" "$CADDYFILE"; then
+        log "직전에 성공한 Caddyfile로 되돌렸다"
+    else
+        warn "직전에 성공한 Caddyfile을 복사하지 못해 새 Caddyfile 그대로 되돌린다"
+    fi
     if start "$previous"; then
         log "되돌리기 성공: $previous"
         exit 2

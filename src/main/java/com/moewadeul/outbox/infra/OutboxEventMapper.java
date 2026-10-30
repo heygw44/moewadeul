@@ -3,13 +3,18 @@ package com.moewadeul.outbox.infra;
 import com.moewadeul.common.retry.RetryPolicy;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface OutboxEventMapper {
 
-    List<Long> selectClaimableIds(@Param("now") Instant now, @Param("limit") int limit);
+    List<Long> selectClaimableIds(
+            @Param("now") Instant now,
+            @Param("limit") int limit,
+            @Param("mailLane") boolean mailLane,
+            @Param("mailEventTypes") Set<String> mailEventTypes);
 
     int lease(@Param("ids") List<Long> ids, @Param("lockedUntil") Instant lockedUntil, @Param("now") Instant now);
 
@@ -18,10 +23,11 @@ public interface OutboxEventMapper {
 
     List<OutboxMessageRow> selectByIds(@Param("ids") List<Long> ids);
 
-    int markPublished(@Param("id") long id, @Param("now") Instant now);
+    int markPublished(@Param("id") long id, @Param("leaseUntil") Instant leaseUntil, @Param("now") Instant now);
 
     int markFailedAttempt(
             @Param("id") long id,
+            @Param("leaseUntil") Instant leaseUntil,
             @Param("error") String error,
             @Param("transientFailure") boolean transientFailure,
             @Param("retry") RetryPolicy retry,

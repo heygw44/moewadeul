@@ -172,7 +172,7 @@ class BasecampOpenApiIntegrationTest {
         // when
         MvcTestResult warning = open(session, warningSpot, "\"capacity\":4");
         MvcTestResult clean = open(session, cleanSpot, "\"capacity\":4");
-        MvcTestResult camp = open(session, campsite, "\"capacity\":4");
+        MvcTestResult camp = send(session, bodyWith(campsite, "2026-10-25", "2026-10-27", "\"capacity\":4"));
 
         // then
         assertThat(warning).hasStatus(HttpStatus.BAD_REQUEST);
@@ -241,6 +241,85 @@ class BasecampOpenApiIntegrationTest {
 
         // then
         assertThat(result).hasStatus(HttpStatus.CREATED);
+    }
+
+    @Test
+    @DisplayName(
+            "[F-12][BC-06] 같은 기간에 진행 중인 남의 베이스캠프의 ACTIVE 멤버가 열면 409 BASECAMP_DATE_CONFLICT이고, 종료일과 출발일이 하루만 겹쳐도 같다")
+    void memberOfOverlappingBasecampCannotOpen() {
+        // given
+        long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
+        Member leader = memberFixture.saveWithPassword(VALID_PASSWORD);
+        Member other = memberFixture.saveWithPassword(VALID_PASSWORD);
+        Cookie session = identityVerifiedSession(leader, "FEMALE");
+        long othersBasecamp = insertBasecamp(other, spotId, "RECRUITING", "2026-10-22", "2026-10-24");
+        insertBasecampMember(othersBasecamp, leader, "MEMBER", "ACTIVE");
+
+        // when
+        MvcTestResult result = open(session, spotId, "\"capacity\":4");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.CONFLICT);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("BASECAMP_DATE_CONFLICT");
+        assertThat(countBasecamps()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-12][BC-06] 기간이 겹치지 않거나, 겹쳐도 끝났거나 이미 나온 베이스캠프뿐이면 열린다")
+    void nonOverlappingOrInactiveBasecampsDoNotBlockOpen() {
+        // given
+        long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
+        Member leader = memberFixture.saveWithPassword(VALID_PASSWORD);
+        Member other = memberFixture.saveWithPassword(VALID_PASSWORD);
+        Cookie session = identityVerifiedSession(leader, "FEMALE");
+        long afterwards = insertBasecamp(other, spotId, "RECRUITING", "2026-10-23", "2026-10-24");
+        insertBasecampMember(afterwards, leader, "MEMBER", "ACTIVE");
+        long completed = insertBasecamp(other, spotId, "COMPLETED", "2026-10-20", "2026-10-22");
+        insertBasecampMember(completed, leader, "MEMBER", "ACTIVE");
+        long left = insertBasecamp(other, spotId, "RECRUITING", "2026-10-20", "2026-10-22");
+        insertBasecampMember(left, leader, "MEMBER", "LEFT");
+
+        // when
+        MvcTestResult result = open(session, spotId, "\"capacity\":4");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.CREATED);
+    }
+
+    @Test
+    @DisplayName("[F-12][BC-06] 리더가 이미 연 베이스캠프와 기간이 겹치게 또 열면 409 BASECAMP_DATE_CONFLICT이고, 겹치지 않으면 열린다")
+    void leaderCannotOpenOverlappingOwnBasecamp() {
+        // given
+        long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE");
+        MvcTestResult first = open(session, spotId, "\"capacity\":4");
+
+        // when
+        MvcTestResult overlapping = send(session, bodyWith(spotId, "2026-10-21", "2026-10-23", "\"capacity\":4"));
+        MvcTestResult separate = send(session, bodyWith(spotId, "2026-10-23", "2026-10-25", "\"capacity\":4"));
+
+        // then
+        assertThat(first).hasStatus(HttpStatus.CREATED);
+        assertThat(overlapping).hasStatus(HttpStatus.CONFLICT);
+        assertThat(overlapping).bodyJson().extractingPath("$.code").isEqualTo("BASECAMP_DATE_CONFLICT");
+        assertThat(separate).hasStatus(HttpStatus.CREATED);
+        assertThat(countBasecamps()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[F-12][BC-03][BC-06] 날짜가 틀린 요청은 겹치는 베이스캠프가 있어도 BASECAMP_SCHEDULE_INVALID가 먼저다")
+    void invalidScheduleIsReportedBeforeDateConflict() {
+        // given
+        long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
+        Cookie session = identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE");
+        open(session, spotId, "\"capacity\":4");
+
+        // when
+        MvcTestResult result = send(session, bodyWith(spotId, "2026-10-21", "2026-10-26", "\"capacity\":4"));
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("BASECAMP_SCHEDULE_INVALID");
     }
 
     @Test
@@ -362,12 +441,29 @@ class BasecampOpenApiIntegrationTest {
     }
 
     private void insertBasecamp(Member leader, long spotId, String status) {
+        insertBasecamp(leader, spotId, status, "2026-10-20", "2026-10-22");
+    }
+
+    private long insertBasecamp(Member leader, long spotId, String status, String startDate, String endDate) {
         jdbc.update(
                 "INSERT INTO basecamp (leader_id, spot_id, title, description, start_date, end_date, capacity, status,"
-                        + " created_at, updated_at) VALUES (?, ?, '기존', '기존', '2026-10-20', '2026-10-22', 4, ?,"
+                        + " created_at, updated_at) VALUES (?, ?, '기존', '기존', ?, ?, 4, ?,"
                         + " '2026-10-05 03:00:00', '2026-10-05 03:00:00')",
                 leader.getId(),
                 spotId,
+                startDate,
+                endDate,
+                status);
+        return jdbc.queryForObject("SELECT MAX(id) FROM basecamp", Long.class);
+    }
+
+    private void insertBasecampMember(long basecampId, Member member, String role, String status) {
+        jdbc.update(
+                "INSERT INTO basecamp_member (basecamp_id, member_id, role, status, joined_at, created_at, updated_at)"
+                        + " VALUES (?, ?, ?, ?, '2026-10-05 03:00:00', '2026-10-05 03:00:00', '2026-10-05 03:00:00')",
+                basecampId,
+                member.getId(),
+                role,
                 status);
     }
 

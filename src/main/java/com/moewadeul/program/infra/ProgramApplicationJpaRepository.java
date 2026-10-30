@@ -22,6 +22,10 @@ public interface ProgramApplicationJpaRepository
     Optional<ProgramApplication> findByIdForUpdate(@Param("id") Long id);
 
     @Override
+    @Query("select a.programId from ProgramApplication a where a.id = :id")
+    Optional<Long> findProgramId(@Param("id") long id);
+
+    @Override
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select a from ProgramApplication a
@@ -57,6 +61,19 @@ public interface ProgramApplicationJpaRepository
             order by a.id
             """)
     List<Long> findPendingPaymentIdsByMember(@Param("memberId") long memberId);
+
+    @Override
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            update ProgramApplication a
+            set a.paymentDueAt = :startAt,
+                a.updatedAt = :now
+            where a.programId = :programId
+              and a.status = com.moewadeul.program.domain.ProgramApplicationStatus.PENDING_PAYMENT
+              and a.paymentDueAt > :startAt
+            """)
+    int capPendingPaymentDueAt(
+            @Param("programId") long programId, @Param("startAt") Instant startAt, @Param("now") Instant now);
 
     @Override
     @Modifying(flushAutomatically = true)

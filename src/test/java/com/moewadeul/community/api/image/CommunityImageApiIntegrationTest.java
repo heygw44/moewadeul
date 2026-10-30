@@ -456,8 +456,8 @@ class CommunityImageApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-06] 글을 지워도 붙은 이미지는 글에 붙은 채 남는다")
-    void deletingPostLeavesImagesAttached() {
+    @DisplayName("[F-29][CM-06] 작성자가 글을 지우면 붙은 이미지가 글에서 떨어져 정리 대상이 된다")
+    void deletingPostDetachesImages() {
         // given
         long image = uploadedImage(session, SIZE);
         long postId = postIdOf(writePost(session, List.of(image)));
@@ -467,7 +467,8 @@ class CommunityImageApiIntegrationTest {
 
         // then
         assertThat(deleted).hasStatus(HttpStatus.NO_CONTENT);
-        assertThat(postIdOfImage(image)).isEqualTo(postId);
+        assertThat(postIdOfImage(image)).isNull();
+        assertThat(orderOfImage(image)).isNull();
     }
 
     private void assertImageIdsRejected(MvcTestResult result, String reason) {

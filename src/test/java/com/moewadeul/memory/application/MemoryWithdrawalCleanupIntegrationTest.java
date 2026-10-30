@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -81,7 +82,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
 
         // when
         withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(count("memory WHERE member_id = ?", member)).isZero();
@@ -96,6 +97,28 @@ class MemoryWithdrawalCleanupIntegrationTest {
                         String.class,
                         member))
                 .isEqualTo("PUBLISHED");
+    }
+
+    @Test
+    @DisplayName("[F-33][PV-10] 사진이 한 쪽(100행)을 넘어도 모두 지워지고, 저장소 삭제는 한 쪽에 한 번씩만 부른다")
+    void deletesImagesBeyondOnePageWithOneStorageCallPerPage() {
+        // given
+        long member = memberFixture.saveWithPassword(PASSWORD).getId();
+        String lastKey = null;
+        for (int i = 0; i < 101; i++) {
+            long image = uploaded(member);
+            commandService.write(member, write(List.of(image)));
+            lastKey = keyOf(image);
+        }
+
+        // when
+        cleanupService.cleanUp(member);
+
+        // then
+        assertThat(count("memory_image WHERE member_id = ?", member)).isZero();
+        assertThat(storage.deletedKeys()).hasSize(202);
+        assertThat(storage.hasObject(lastKey)).isFalse();
+        assertThat(storage.deleteBatchCalls()).isEqualTo(2);
     }
 
     @Test
@@ -169,7 +192,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
         withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
 
         // when
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         Map<String, Object> event = cleanupEvent(member);
@@ -181,7 +204,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
         // when
         storage.allowDeleteOf(key);
         clock.advance(Duration.ofHours(1));
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(cleanupEvent(member).get("status")).isEqualTo("PUBLISHED");

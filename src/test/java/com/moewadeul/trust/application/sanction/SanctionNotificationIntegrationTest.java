@@ -2,11 +2,15 @@ package com.moewadeul.trust.application.sanction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionService;
+import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +24,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class SanctionNotificationIntegrationTest {
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
+
+    @Autowired
+    private MutableClock clock;
 
     @Autowired
     private OutboxPublisher outboxPublisher;
@@ -31,12 +38,14 @@ class SanctionNotificationIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    private SanctionFixture sanctionFixture;
     private long adminId;
     private long targetId;
 
     @BeforeEach
     void setUp() {
         CompanionReviewFixture fixture = new CompanionReviewFixture(jdbc, memberRepository);
+        sanctionFixture = new SanctionFixture(fixture, new MemberReportFixture(jdbc), memberReportActionService, clock);
         adminId = fixture.saveVerifiedMember(TestSequence.nickname());
         targetId = fixture.saveVerifiedMember(TestSequence.nickname());
     }
@@ -46,11 +55,11 @@ class SanctionNotificationIntegrationTest {
     void warningNotifiesSanctionedMember() {
         // when
         confirm(SanctionType.WARNING);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
-        List<Map<String, Object>> notifications =
-                jdbc.queryForList("SELECT member_id, type, title, body, link FROM notification");
+        List<Map<String, Object>> notifications = jdbc.queryForList(
+                "SELECT member_id, type, title, body, link FROM notification WHERE type = 'SANCTION_CONFIRMED'");
         assertThat(notifications).hasSize(1);
         assertThat(notifications.get(0))
                 .containsEntry("member_id", targetId)
@@ -68,14 +77,15 @@ class SanctionNotificationIntegrationTest {
         confirm(SanctionType.SUSPEND_7D);
 
         // when
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
-        List<String> bodies = jdbc.queryForList("SELECT body FROM notification ORDER BY id", String.class);
+        List<String> bodies = jdbc.queryForList(
+                "SELECT body FROM notification WHERE type = 'SANCTION_CONFIRMED' ORDER BY id", String.class);
         assertThat(bodies).containsExactly("경고를 받았어요.", "2026-10-12 12:00까지 이용이 정지돼요.");
     }
 
     private void confirm(SanctionType type) {
-        sanctionConfirmService.confirm(new SanctionConfirmCommand(targetId, null, type, "욕설", adminId));
+        sanctionFixture.confirm(targetId, adminId, type, "욕설");
     }
 }

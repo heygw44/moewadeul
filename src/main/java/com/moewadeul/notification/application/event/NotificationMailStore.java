@@ -56,18 +56,22 @@ class NotificationMailStore {
     }
 
     @Transactional
-    void markSent(long notificationId) {
-        if (mailMapper.markSent(notificationId, clock.instant()) == 0) {
-            log.warn("notification mail was not pending when marking sent notificationId={}", notificationId);
+    void markSent(long notificationId, Instant leaseUntil) {
+        if (mailMapper.markSent(notificationId, leaseUntil, clock.instant()) == 0) {
+            log.warn(
+                    "notification mail was not pending or its lease was lost when marking sent notificationId={}",
+                    notificationId);
         }
     }
 
     @Transactional
-    void markFailedAttempt(long notificationId, boolean transientFailure) {
+    void markFailedAttempt(long notificationId, Instant leaseUntil, boolean transientFailure) {
         int updated = mailMapper.markFailedAttempt(
-                notificationId, transientFailure, properties.retryPolicy(), clock.instant());
+                notificationId, leaseUntil, transientFailure, properties.retryPolicy(), clock.instant());
         if (updated == 0) {
-            log.warn("notification mail was not pending when marking failed notificationId={}", notificationId);
+            log.warn(
+                    "notification mail was not pending or its lease was lost when marking failed notificationId={}",
+                    notificationId);
         }
     }
 

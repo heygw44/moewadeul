@@ -41,6 +41,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @WebMvcTest(CommunityCommentController.class)
 @Import({
@@ -77,6 +78,9 @@ class CommunityCommentControllerTest {
 
     @MockitoBean
     private IdempotencyRecordRepository idempotencyRecordRepository;
+
+    @MockitoBean
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("[F-29][CM-04] 로그인하지 않은 사용자도 댓글 목록을 조회하면 댓글 아래에 답글이 묶여 나오고, 답글에 답한 답글에만 replyTo가 있다")

@@ -30,12 +30,10 @@ public class ProgramSeatReleaseRecorder {
         }
         long programId = program.getId();
         Instant notifiedBefore = now.minus(RENOTIFY_INTERVAL);
-        if (vacancyAlertRepository.findAlertTargets(programId, notifiedBefore).isEmpty()) {
-            return;
-        }
         if (applicationRepository.countSeatHolders(programId, now) >= program.getCapacity()) {
             return;
         }
+        // 대상이 없어도 잠금 읽기를 건너뛰지 않는다. 비어 있는 범위의 잠금이 동시에 들어오는 알림 신청의 INSERT를 커밋까지 막는다.
         List<Long> targets = vacancyAlertRepository.lockAlertTargets(programId, notifiedBefore);
         if (targets.isEmpty()) {
             return;

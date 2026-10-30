@@ -3,9 +3,11 @@ package com.moewadeul.publicdata.application.rejudge;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.publicdata.application.SyncJobRunService;
+import com.moewadeul.publicdata.application.SyncJobStoppedException;
 import com.moewadeul.publicdata.application.park.ParkBoundaryLoadService;
 import com.moewadeul.publicdata.domain.SyncJobType;
 import com.moewadeul.spot.application.park.BakjiRejudgeChunk;
@@ -227,6 +229,47 @@ class BakjiRejudgeServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-06] 종료 신호를 받으면 재판정은 지금 묶음의 진행 위치를 남기고 실패로 끝나, 다음 재판정을 막지 않는다")
+    void rejudgeStopsAfterRecordingProgressWhenShutdownRequested() throws IOException {
+        // given
+        parkBoundaryLoadService.load(fixture(FIXTURE)).orElseThrow();
+        long bukhansanId = idOf("북한산");
+        long first = insertBakji("첫 묶음 박지 1", 37.65, 126.95);
+        long firstChunkLast = insertBakji("첫 묶음 박지 2", 37.65, 126.95);
+        long second = insertBakji("둘째 묶음 박지", 37.65, 126.95);
+        ShutdownSignal shutdown = new ShutdownSignal();
+        shutdown.request();
+
+        // when
+        assertThatThrownBy(() -> serviceWithChunkSize(2, (afterId, limit) -> {}, shutdown)
+                        .rejudge())
+                .isInstanceOf(SyncJobStoppedException.class);
+
+        // then
+        Map<String, Object> run = jdbcTemplate.queryForMap(
+                "SELECT status, processed_count, progress_cursor, error_message, finished_at FROM sync_job_run"
+                        + " WHERE job_type = 'BAKJI_REJUDGE'");
+        assertThat(run.get("status")).isEqualTo("FAILED");
+        assertThat(((Number) run.get("processed_count")).intValue()).isEqualTo(2);
+        assertThat(run.get("progress_cursor")).isEqualTo(String.valueOf(firstChunkLast));
+        assertThat((String) run.get("error_message")).contains("종료 중");
+        assertThat(run.get("finished_at")).isNotNull();
+        assertWarned(first, bukhansanId);
+        assertWarned(firstChunkLast, bukhansanId);
+        assertThat(judgement(second).get("area_checked_at")).isNull();
+
+        // when
+        BakjiRejudgeResult next = bakjiRejudgeService.rejudge().orElseThrow();
+
+        // then
+        assertThat(next.judgedCount()).isEqualTo(3);
+        assertWarned(second, bukhansanId);
+        assertThat(jdbcTemplate.queryForList(
+                        "SELECT status FROM sync_job_run WHERE job_type = 'BAKJI_REJUDGE' ORDER BY id", String.class))
+                .containsExactly("FAILED", "COMPLETED");
+    }
+
+    @Test
     @DisplayName("[F-06] 재판정이 도는 사이에 공원 경계 적재가 끝나면 재판정을 마친 뒤 처음부터 다시 판정해, 앞 묶음에서 옛 경계로 판정한 박지에도 경고를 붙인다")
     void rejudgeRepeatsWhenBoundaryLoadFinishesWhileRunning() throws IOException {
         // given
@@ -279,6 +322,11 @@ class BakjiRejudgeServiceIntegrationTest {
     }
 
     private BakjiRejudgeService serviceWithChunkSize(int chunkSize, BiConsumer<Long, Integer> beforeChunk) {
+        return serviceWithChunkSize(chunkSize, beforeChunk, new ShutdownSignal());
+    }
+
+    private BakjiRejudgeService serviceWithChunkSize(
+            int chunkSize, BiConsumer<Long, Integer> beforeChunk, ShutdownSignal shutdownSignal) {
         ParkAreaJudgeService hooked = new ParkAreaJudgeService(parkAreaJudgeMapper, clock) {
             @Override
             public BakjiRejudgeChunk rejudgeBakjiChunk(long afterId, int limit, Instant now) {
@@ -287,7 +335,11 @@ class BakjiRejudgeServiceIntegrationTest {
             }
         };
         return new BakjiRejudgeService(
-                syncJobRunService, hooked, new BakjiRejudgeProperties(Duration.ofMinutes(30), chunkSize), clock);
+                syncJobRunService,
+                hooked,
+                new BakjiRejudgeProperties(Duration.ofMinutes(30), chunkSize),
+                clock,
+                shutdownSignal);
     }
 
     private Long lockNowait(ExecutorService other, long spotId) {

@@ -7,12 +7,17 @@
 
 	# API만 앱으로 넘긴다. /actuator는 넘기지 않으므로 상태 확인 주소가 밖으로 드러나지 않는다.
 	# Caddy는 클라이언트가 보낸 X-Forwarded-For를 버리고 실제 접속 IP로 새로 채운다. 그래서 앱은 이 헤더를 믿어도 된다.
+	# 앱이 다시 뜨는 동안 앱에 연결하지 못한 요청은 메서드와 상관없이 lb_try_duration 동안 다시 보낸다.
+	# 연결된 뒤에 실패한 요청은 GET만 다시 보낸다(lb_retry_match 기본값). 그래서 POST가 두 번 처리되지 않는다.
 	handle /api/* {
-		reverse_proxy app:8080
+		reverse_proxy app:8080 {
+			lb_try_duration 30s
+			lb_try_interval 250ms
+		}
 	}
 
 	handle {
-		root * /srv
+		root * /srv/current
 		# Vite는 파일 이름에 내용 해시를 붙인다. 그래서 assets 아래 파일은 브라우저가 오래 저장해도 된다.
 		@assets path /assets/*
 		header @assets Cache-Control "public, max-age=31536000, immutable"

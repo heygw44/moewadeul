@@ -9,8 +9,12 @@ import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionResult;
+import com.moewadeul.trust.application.report.MemberReportActionService;
+import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -23,10 +27,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
-class SanctionConfirmServiceIntegrationTest {
+class SanctionConfirmIntegrationTest {
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
 
     @Autowired
     private MemberJpaRepository memberRepository;
@@ -37,13 +41,14 @@ class SanctionConfirmServiceIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
 
-    private CompanionReviewFixture fixture;
+    private SanctionFixture sanctionFixture;
     private long adminId;
     private long targetId;
 
     @BeforeEach
     void setUp() {
-        fixture = new CompanionReviewFixture(jdbc, memberRepository);
+        CompanionReviewFixture fixture = new CompanionReviewFixture(jdbc, memberRepository);
+        sanctionFixture = new SanctionFixture(fixture, new MemberReportFixture(jdbc), memberReportActionService, clock);
         adminId = fixture.saveVerifiedMember(TestSequence.nickname());
         targetId = fixture.saveVerifiedMember(TestSequence.nickname());
     }
@@ -53,16 +58,17 @@ class SanctionConfirmServiceIntegrationTest {
     void sevenDaySuspensionRecordsSanctionSuspensionAndEvent() {
         confirm(SanctionType.WARNING);
 
-        SanctionConfirmResult result = confirm(SanctionType.SUSPEND_7D);
+        MemberReportActionResult result = confirm(SanctionType.SUSPEND_7D);
 
         assertThat(result.suspended()).isTrue();
         Map<String, Object> sanction = jdbc.queryForMap(
-                "SELECT type, level, status, ends_at, created_by, reason FROM sanction WHERE id = ?",
+                "SELECT type, level, status, ends_at, created_by, reason, report_id FROM sanction WHERE id = ?",
                 result.sanctionId());
         assertThat(sanction.get("type")).isEqualTo("SUSPEND_7D");
         assertThat(((Number) sanction.get("level")).intValue()).isEqualTo(2);
         assertThat(sanction.get("status")).isEqualTo("ACTIVE");
         assertThat(sanction.get("created_by")).isEqualTo(adminId);
+        assertThat(sanction.get("report_id")).isEqualTo(result.reportId());
         assertThat(sanction.get("ends_at"))
                 .isEqualTo(LocalDateTime.ofInstant(clock.instant().plus(Duration.ofDays(7)), ZoneOffset.UTC));
         Map<String, Object> member =
@@ -75,7 +81,9 @@ class SanctionConfirmServiceIntegrationTest {
         assertThat(event.get("status")).isEqualTo("PENDING");
         assertThat(event.get("aggregate_type")).isEqualTo("MEMBER");
         assertThat(event.get("aggregate_id")).isEqualTo(targetId);
-        assertThat(count("outbox_event")).isEqualTo(4);
+        assertThat(count("outbox_event")).isEqualTo(7);
+        assertThat(countEvents(MemberSessionCleanup.EVENT_TYPE)).isEqualTo(1);
+        assertThat(countEvents(TrustEvents.REPORT_RESOLVED)).isEqualTo(2);
         assertThat(countEvents(TrustEvents.SANCTION_BASECAMP_CLEANUP)).isEqualTo(1);
         assertThat(countEvents(TrustEvents.SANCTION_PROGRAM_CLEANUP)).isEqualTo(1);
         Map<String, Object> programEvent = jdbc.queryForMap(
@@ -90,14 +98,15 @@ class SanctionConfirmServiceIntegrationTest {
     @Test
     @DisplayName("[SN-10] 경고는 제재 기록과 제재 알림 이벤트만 남기고 회원 상태는 그대로이며 베이스캠프 정리 이벤트는 없다")
     void warningOnlyRecordsSanction() {
-        SanctionConfirmResult result = confirm(SanctionType.WARNING);
+        MemberReportActionResult result = confirm(SanctionType.WARNING);
 
         assertThat(result.suspended()).isFalse();
         assertThat(jdbc.queryForObject("SELECT ends_at FROM sanction", LocalDateTime.class))
                 .isNull();
         assertThat(jdbc.queryForObject("SELECT status FROM member WHERE id = ?", String.class, targetId))
                 .isEqualTo("UNVERIFIED");
-        assertThat(count("outbox_event")).isEqualTo(1);
+        assertThat(count("outbox_event")).isEqualTo(2);
+        assertThat(countEvents(TrustEvents.REPORT_RESOLVED)).isEqualTo(1);
         assertThat(countEvents(TrustEvents.SANCTION_BASECAMP_CLEANUP)).isZero();
         assertThat(countEvents(TrustEvents.SANCTION_PROGRAM_CLEANUP)).isZero();
         assertThat(countEvents(TrustEvents.SANCTION_CONFIRMED)).isEqualTo(1);
@@ -184,8 +193,8 @@ class SanctionConfirmServiceIntegrationTest {
                 .isEqualTo(LocalDateTime.ofInstant(clock.instant().plus(Duration.ofDays(20)), ZoneOffset.UTC));
     }
 
-    private SanctionConfirmResult confirm(SanctionType type) {
-        return sanctionConfirmService.confirm(new SanctionConfirmCommand(targetId, null, type, "반복 위반", adminId));
+    private MemberReportActionResult confirm(SanctionType type) {
+        return sanctionFixture.confirm(targetId, adminId, type, "반복 위반");
     }
 
     private void insertSanction(String type, Integer level, String status) {

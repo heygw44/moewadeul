@@ -6,7 +6,7 @@ name: moewadeul
 
 services:
   caddy:
-    image: ${CADDY_IMAGE:?}
+    image: caddy:2.11.7-alpine
     restart: unless-stopped
     ports:
       - "80:80"
@@ -17,6 +17,9 @@ services:
       # 인증서와 계정 키를 볼륨에 둔다. 컨테이너를 새로 만들 때마다 인증서를 다시 받으면 Let's Encrypt 발급 한도에 걸린다.
       - caddy-data:/data
       - caddy-config:/config
+      # 파일 하나가 아니라 폴더를 마운트한다. 배포 워크플로가 mv로 바꿔 넣은 새 Caddyfile이 컨테이너에서도 보인다(deploy.sh의 Alloy 설명 참고).
+      - ./caddy:/etc/caddy:ro
+      - ./web:/srv:ro
     depends_on:
       - app
     # 행사 신청이 열리는 순간처럼 요청 2,000개가 동시에 앱 응답을 기다리면 Caddy는 약 200MB를 쓴다(연결 하나에 약 0.1MB).

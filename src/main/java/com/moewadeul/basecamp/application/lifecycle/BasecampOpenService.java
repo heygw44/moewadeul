@@ -8,8 +8,10 @@ import com.moewadeul.basecamp.domain.BasecampRepository;
 import com.moewadeul.basecamp.domain.Capacity;
 import com.moewadeul.basecamp.domain.JoinCondition;
 import com.moewadeul.basecamp.infra.BasecampLockMapper;
+import com.moewadeul.basecamp.infra.query.BasecampSearchMapper;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import com.moewadeul.common.schedule.CampingSchedule;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import com.moewadeul.trust.application.profile.TrustDetail;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
@@ -29,6 +31,7 @@ public class BasecampOpenService {
     private final ActiveSpotChecker activeSpotChecker;
     private final BasecampRepository basecampRepository;
     private final BasecampLockMapper basecampLockMapper;
+    private final BasecampSearchMapper basecampSearchMapper;
     private final Clock clock;
 
     @Transactional
@@ -52,7 +55,11 @@ public class BasecampOpenService {
                 command.endDate(),
                 capacity,
                 joinCondition);
-        Basecamp basecamp = basecampRepository.saveAndFlush(open(leaderId, command.spotId(), details, now));
+        Basecamp opened = open(leaderId, command.spotId(), details, now);
+        BasecampOpenPolicy.requireNoDateConflict(
+                new CampingSchedule(command.startDate(), command.endDate()),
+                basecampSearchMapper.selectInProgressSchedules(leaderId));
+        Basecamp basecamp = basecampRepository.saveAndFlush(opened);
         return new BasecampOpenResult(basecamp.getId(), basecamp.getStatus());
     }
 

@@ -9,7 +9,6 @@ import com.moewadeul.member.domain.Email;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
-import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.MemberSuspendedException;
 import java.time.Clock;
 import java.time.Duration;
@@ -30,6 +29,7 @@ public class MemberLoginService {
     private final PasswordEncoder passwordEncoder;
     private final MemberSuspensionService memberSuspensionService;
     private final MemberSessions memberSessions;
+    private final LoginIpFailureLimiter ipFailureLimiter;
     private final Clock clock;
 
     private final String timingDecoyPasswordHash;
@@ -40,32 +40,45 @@ public class MemberLoginService {
             PasswordEncoder passwordEncoder,
             MemberSuspensionService memberSuspensionService,
             MemberSessions memberSessions,
+            LoginIpFailureLimiter ipFailureLimiter,
             Clock clock) {
         this.memberRepository = memberRepository;
         this.loginAttemptService = loginAttemptService;
         this.passwordEncoder = passwordEncoder;
         this.memberSuspensionService = memberSuspensionService;
         this.memberSessions = memberSessions;
+        this.ipFailureLimiter = ipFailureLimiter;
         this.clock = clock;
         this.timingDecoyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     public LoginResult login(LoginCommand command) {
-        String attemptedEmail = normalizeEmail(command.email());
-        Member found = findLoginableMember(attemptedEmail);
-        Long memberId = found != null ? found.getId() : null;
-        rejectIfLocked(memberId, attemptedEmail);
-        Member authenticated = authenticate(found, memberId, attemptedEmail, command);
-        Member member = releaseIfSuspensionEnded(authenticated);
-        rejectIfSuspended(member);
-        loginAttemptService.recordSuccess(member.getId(), attemptedEmail, command.ip());
-        return new LoginResult(
-                member.getId(),
-                member.getNickname(),
-                member.getStatus(),
-                member.isEmailVerified(),
-                member.getRole(),
-                member.getPasswordChangedAt());
+        ipFailureLimiter.reserve(command.ip());
+        boolean failedCredentialCheck = false;
+        try {
+            String attemptedEmail = normalizeEmail(command.email());
+            Member found = findLoginableMember(attemptedEmail);
+            Long memberId = found != null ? found.getId() : null;
+            rejectIfLocked(memberId, attemptedEmail);
+            // 이 시점부터 BCrypt가 돈다. 인증에 성공하기 전까지 던지는 예외는 모두 실패한 자격 확인으로 센다.
+            failedCredentialCheck = true;
+            Member authenticated = authenticate(found, memberId, attemptedEmail, command);
+            failedCredentialCheck = false;
+            Member member = releaseIfSuspensionEnded(authenticated);
+            rejectIfSuspended(member);
+            loginAttemptService.recordSuccess(member.getId(), attemptedEmail, command.ip());
+            return new LoginResult(
+                    member.getId(),
+                    member.getNickname(),
+                    member.getStatus(),
+                    member.isEmailVerified(),
+                    member.getRole(),
+                    member.getPasswordChangedAt());
+        } finally {
+            if (!failedCredentialCheck) {
+                ipFailureLimiter.refund(command.ip());
+            }
+        }
     }
 
     public void ensureStillLoginable(LoginResult loggedIn) {
@@ -127,7 +140,7 @@ public class MemberLoginService {
     }
 
     private void rejectIfSuspended(Member member) {
-        if (member.getStatus() == MemberStatus.SUSPENDED) {
+        if (member.isSuspended()) {
             throw new MemberSuspendedException(member.getSuspendedUntil());
         }
     }

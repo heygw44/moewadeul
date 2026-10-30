@@ -189,7 +189,8 @@ public class Program {
     }
 
     public Instant paymentDueAt(Instant now) {
-        return now.plus(Duration.ofMinutes(paymentDeadlineMinutes));
+        Instant due = now.plus(Duration.ofMinutes(paymentDeadlineMinutes));
+        return due.isBefore(startAt) ? due : startAt;
     }
 
     public Instant refundDeadline() {

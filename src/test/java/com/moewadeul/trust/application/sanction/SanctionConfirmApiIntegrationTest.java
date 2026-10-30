@@ -4,11 +4,15 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionService;
+import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
@@ -35,7 +39,10 @@ class SanctionConfirmApiIntegrationTest {
     private MockMvcTester mvc;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
+
+    @Autowired
+    private MutableClock clock;
 
     @Autowired
     private OutboxPublisher outboxPublisher;
@@ -50,12 +57,14 @@ class SanctionConfirmApiIntegrationTest {
     private JdbcTemplate jdbc;
 
     private CompanionReviewFixture fixture;
+    private SanctionFixture sanctionFixture;
     private long adminId;
     private long targetId;
 
     @BeforeEach
     void setUp() {
         fixture = new CompanionReviewFixture(jdbc, memberRepository);
+        sanctionFixture = new SanctionFixture(fixture, new MemberReportFixture(jdbc), memberReportActionService, clock);
         adminId = fixture.saveVerifiedMember(TestSequence.nickname());
         targetId = fixture.saveVerifiedMember(TestSequence.nickname());
     }
@@ -75,8 +84,7 @@ class SanctionConfirmApiIntegrationTest {
         fixture.insertApplication(appliedBasecamp, targetId, "PENDING");
         long unrelatedBasecamp = fixture.saveBasecamp("RECRUITING", null);
 
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(targetId, null, SanctionType.PERMANENT, "금전 요구", adminId));
+        sanctionFixture.confirm(targetId, adminId, SanctionType.PERMANENT, "금전 요구");
 
         assertThat(sessionCount(targetId)).isZero();
         assertThat(mvc.get().uri("/api/me").cookie(session).exchange()).hasStatus(HttpStatus.UNAUTHORIZED);
@@ -86,7 +94,7 @@ class SanctionConfirmApiIntegrationTest {
         assertThat(login).bodyJson().extractingPath("$.code").isEqualTo("MEMBER_SUSPENDED");
         assertThat(basecampStatus(ledBasecamp)).isEqualTo("RECRUITING");
 
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(jdbc.queryForObject(
                         "SELECT CONCAT(status, ':', cancel_reason) FROM basecamp WHERE id = ?",
@@ -121,8 +129,8 @@ class SanctionConfirmApiIntegrationTest {
         Cookie session = login(targetId);
         long ledBasecamp = ledBasecamp(targetId);
 
-        sanctionConfirmService.confirm(new SanctionConfirmCommand(targetId, null, SanctionType.WARNING, "욕설", adminId));
-        outboxPublisher.publishPending();
+        sanctionFixture.confirm(targetId, adminId, SanctionType.WARNING, "욕설");
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(mvc.get().uri("/api/me").cookie(session).exchange()).hasStatus(HttpStatus.OK);
         assertThat(basecampStatus(ledBasecamp)).isEqualTo("RECRUITING");

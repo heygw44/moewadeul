@@ -13,6 +13,8 @@ import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.MemberSuspendedException;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionService;
+import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +34,7 @@ class SanctionExpiryIntegrationTest {
     private SanctionExpiryService sanctionExpiryService;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
 
     @Autowired
     private MemberLoginService memberLoginService;
@@ -50,11 +52,13 @@ class SanctionExpiryIntegrationTest {
     private JdbcTemplate jdbc;
 
     private CompanionReviewFixture fixture;
+    private SanctionFixture sanctionFixture;
     private long adminId;
 
     @BeforeEach
     void setUp() {
         fixture = new CompanionReviewFixture(jdbc, memberRepository);
+        sanctionFixture = new SanctionFixture(fixture, new MemberReportFixture(jdbc), memberReportActionService, clock);
         adminId = fixture.saveVerifiedMember(TestSequence.nickname());
     }
 
@@ -144,7 +148,7 @@ class SanctionExpiryIntegrationTest {
     }
 
     private void confirm(long memberId, SanctionType type) {
-        sanctionConfirmService.confirm(new SanctionConfirmCommand(memberId, null, type, "반복 위반", adminId));
+        sanctionFixture.confirm(memberId, adminId, type, "반복 위반");
     }
 
     private String sanctionStatus(long memberId, String type) {

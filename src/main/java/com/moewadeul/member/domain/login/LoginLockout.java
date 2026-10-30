@@ -14,6 +14,9 @@ public final class LoginLockout {
     public static final int MAX_FAILURES = 5;
     public static final Duration WINDOW = Duration.ofMinutes(10);
 
+    public static final int IP_FAILURE_CAPACITY = 20;
+    public static final Duration IP_FAILURE_WINDOW = Duration.ofMinutes(1);
+
     private LoginLockout() {}
 
     public static Instant windowStart(Instant now) {

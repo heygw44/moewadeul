@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.mail.MailMessage;
 import com.moewadeul.common.mail.TestMailSender;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -93,7 +94,7 @@ class PasswordResetRequestFlowIntegrationTest {
         assertThat(mailSender.sent()).isEmpty();
 
         // when
-        int processed = publisher.publishPending();
+        int processed = publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(processed).isEqualTo(1);
@@ -123,7 +124,7 @@ class PasswordResetRequestFlowIntegrationTest {
         assertThatCode(() -> requestService.request("unknown@example.com", CLIENT_IP))
                 .doesNotThrowAnyException();
         assertThat(countRows("outbox_event")).isZero();
-        assertThat(publisher.publishPending()).isZero();
+        assertThat(publisher.publishPending(OutboxLane.MAIL)).isZero();
         assertThat(countRows("password_reset_token")).isZero();
         assertThat(mailSender.sent()).isEmpty();
         assertThatCode(() -> requestService.request(member.getEmail(), CLIENT_IP))
@@ -140,7 +141,7 @@ class PasswordResetRequestFlowIntegrationTest {
 
         // when
         requestService.request("MIXED@example.COM", CLIENT_IP);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(mailSender.sent()).hasSize(1);
@@ -169,7 +170,7 @@ class PasswordResetRequestFlowIntegrationTest {
         requestService.request(unverified.getEmail(), CLIENT_IP);
         requestService.request(active.getEmail(), CLIENT_IP);
         requestService.request(suspended.getEmail(), CLIENT_IP);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(mailSender.sent())
@@ -187,7 +188,7 @@ class PasswordResetRequestFlowIntegrationTest {
         setStatus(member, "WITHDRAWN");
 
         // when
-        int processed = publisher.publishPending();
+        int processed = publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(processed).isEqualTo(1);
@@ -208,7 +209,7 @@ class PasswordResetRequestFlowIntegrationTest {
                     throw new IllegalStateException("요청 이후 단계 실패");
                 }))
                 .isInstanceOf(IllegalStateException.class);
-        int processed = publisher.publishPending();
+        int processed = publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(countRows("outbox_event")).isZero();
@@ -225,7 +226,7 @@ class PasswordResetRequestFlowIntegrationTest {
         requestService.request(member.getEmail(), CLIENT_IP);
 
         // when
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         String token = PasswordResetMails.extractToken(mailSender.sent().get(0));
@@ -245,7 +246,7 @@ class PasswordResetRequestFlowIntegrationTest {
         mailSender.failNextSends(1);
 
         // when
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         Map<String, Object> afterFailure = findOnlyEvent();
@@ -254,9 +255,9 @@ class PasswordResetRequestFlowIntegrationTest {
         assertThat(mailSender.sent()).isEmpty();
 
         // when
-        assertThat(publisher.publishPending()).isZero();
+        assertThat(publisher.publishPending(OutboxLane.MAIL)).isZero();
         clock.advance(outboxProperties.retryDelay());
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(findOnlyEvent().get("status")).isEqualTo("PUBLISHED");
@@ -314,12 +315,12 @@ class PasswordResetRequestFlowIntegrationTest {
         // given
         Member member = newMember("again@example.com");
         requestService.request(member.getEmail(), CLIENT_IP);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
         clock.advance(PasswordResetRequestPolicy.EMAIL.minInterval());
         requestService.request(member.getEmail(), CLIENT_IP);
 
         // when
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         List<MailMessage> mails = mailSender.sent();
@@ -331,6 +332,45 @@ class PasswordResetRequestFlowIntegrationTest {
         assertThatThrownBy(() -> confirmService.confirm(earlier, NEW_PASSWORD))
                 .hasFieldOrPropertyWithValue("errorCode", MemberErrorCode.PASSWORD_RESET_TOKEN_INVALID);
         assertThatCode(() -> confirmService.confirm(later, NEW_PASSWORD)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-02] 새 요청으로 끊긴 토큰의 옛 이벤트를 다시 처리하면 메일을 보내지 않고 새 링크만 쓸 수 있다")
+    void staleEventAfterNewRequestSendsNothing() {
+        // given
+        Member member = newMember("stale@example.com");
+        requestService.request(member.getEmail(), CLIENT_IP);
+        OutboxMessage earlier = toMessage(findOnlyEvent());
+        handler.handle(earlier);
+        clock.advance(PasswordResetRequestPolicy.EMAIL.minInterval());
+        requestService.request(member.getEmail(), CLIENT_IP);
+        handler.handle(toMessage(jdbc.queryForMap("SELECT * FROM outbox_event WHERE id <> ?", earlier.eventId())));
+
+        // when
+        handler.handle(earlier);
+
+        // then
+        List<MailMessage> mails = mailSender.sent();
+        assertThat(mails).hasSize(2);
+        assertThatCode(() -> confirmService.confirm(PasswordResetMails.extractToken(mails.get(1)), NEW_PASSWORD))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-02] 이미 재설정에 쓴 토큰의 이벤트를 다시 처리하면 메일을 보내지 않는다")
+    void usedTokenEventSendsNothing() {
+        // given
+        Member member = newMember("used@example.com");
+        requestService.request(member.getEmail(), CLIENT_IP);
+        OutboxMessage message = toMessage(findOnlyEvent());
+        handler.handle(message);
+        confirmService.confirm(PasswordResetMails.extractToken(mailSender.sent().get(0)), NEW_PASSWORD);
+
+        // when
+        handler.handle(message);
+
+        // then
+        assertThat(mailSender.sent()).hasSize(1);
     }
 
     private Member newMember(String email) {

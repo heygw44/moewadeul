@@ -40,9 +40,7 @@ class SyncJobRunStartApplier {
             }
             failStaleRun(running, now);
         }
-        String resumeCursor = latest.filter(SyncJobRun::isFailed)
-                .map(SyncJobRun::getProgressCursor)
-                .orElse(null);
+        String resumeCursor = latest.flatMap(SyncJobRun::resumeCursor).orElse(null);
         SyncJobRun started = syncJobRunRepository.save(SyncJobRun.start(jobType, resumeCursor, now));
         if (adminId != null) {
             adminAuditRecorder.record(

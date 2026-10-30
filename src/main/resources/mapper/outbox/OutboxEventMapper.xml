@@ -7,6 +7,23 @@
         FROM outbox_event
         WHERE status = 'PENDING'
           AND (locked_until IS NULL OR locked_until &lt;= #{now})
+        <choose>
+            <when test="mailLane and mailEventTypes.isEmpty()">
+                AND 1 = 0
+            </when>
+            <when test="mailLane">
+                AND event_type IN
+                <foreach collection="mailEventTypes" item="type" open="(" separator="," close=")">
+                    #{type}
+                </foreach>
+            </when>
+            <when test="!mailEventTypes.isEmpty()">
+                AND event_type NOT IN
+                <foreach collection="mailEventTypes" item="type" open="(" separator="," close=")">
+                    #{type}
+                </foreach>
+            </when>
+        </choose>
         ORDER BY id
         LIMIT #{limit}
         FOR UPDATE SKIP LOCKED
@@ -52,6 +69,7 @@
             updated_at = #{now}
         WHERE id = #{id}
           AND status = 'PENDING'
+          AND locked_until = #{leaseUntil}
     </update>
 
     <!-- MySQL은 SET 절을 왼쪽에서 오른쪽으로 평가하고 앞에서 바꾼 값을 뒤에서 읽는다.
@@ -61,17 +79,26 @@
         SET status = CASE WHEN
                 <include refid="com.moewadeul.common.retry.RetryPolicySql.exhausted">
                     <property name="attemptCount" value="attempt_count"/>
+                    <property name="createdAt" value="created_at"/>
                 </include>
                 THEN 'FAILED' ELSE status END,
-            locked_until =
-                <include refid="com.moewadeul.common.retry.RetryPolicySql.nextAttemptAt">
+            locked_until = CASE WHEN
+                <include refid="com.moewadeul.common.retry.RetryPolicySql.exhausted">
                     <property name="attemptCount" value="attempt_count"/>
-                </include>,
+                    <property name="createdAt" value="created_at"/>
+                </include>
+                THEN NULL
+                ELSE
+                    <include refid="com.moewadeul.common.retry.RetryPolicySql.nextAttemptAt">
+                        <property name="attemptCount" value="attempt_count"/>
+                    </include>
+                END,
             attempt_count = attempt_count + 1,
             last_error = #{error},
             updated_at = #{now}
         WHERE id = #{id}
           AND status = 'PENDING'
+          AND locked_until = #{leaseUntil}
     </update>
 
     <select id="selectBacklog" resultType="com.moewadeul.outbox.infra.OutboxBacklogRow">
