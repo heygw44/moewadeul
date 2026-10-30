@@ -50,6 +50,9 @@ public abstract class AttachableImage {
     @Column(name = "created_at")
     private Instant createdAt;
 
+    @Column(name = "ever_attached")
+    private boolean everAttached;
+
     protected AttachableImage(long memberId, String objectKey, String contentType, long sizeBytes, Instant now) {
         ImageMessages messages = kind().messages();
         if (objectKey == null || objectKey.isBlank() || now == null) {
@@ -89,6 +92,7 @@ public abstract class AttachableImage {
         }
         this.parentId = parentId;
         this.displayOrder = order;
+        this.everAttached = true;
     }
 
     public void detach() {

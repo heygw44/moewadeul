@@ -14,6 +14,7 @@
         FROM ${table}
         WHERE member_id = #{memberId}
           AND ${parentColumn} IS NULL
+          AND ever_attached = FALSE
           AND created_at &gt; #{createdAfter}
         ORDER BY created_at
         LIMIT #{limit}

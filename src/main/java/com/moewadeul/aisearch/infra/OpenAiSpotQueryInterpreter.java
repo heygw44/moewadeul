@@ -11,7 +11,11 @@ import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.external.ExternalCallLimit;
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
+import java.nio.channels.UnresolvedAddressException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -101,17 +105,39 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
     }
 
     private RawResponse send(String query) {
+        byte[] body = jsonMapper.writeValueAsBytes(requestBody(query));
         try {
             return restClient
                     .post()
                     .uri(CHAT_COMPLETIONS_PATH)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(requestBody(query))
+                    .body(body)
                     .exchange((request, response) -> read(response));
         } catch (ResourceAccessException e) {
-            throw fail("시간 초과 또는 I/O 오류 " + e.getMostSpecificCause().getClass().getSimpleName(), e);
+            String reason =
+                    "시간 초과 또는 I/O 오류 " + e.getMostSpecificCause().getClass().getSimpleName();
+            if (neverReachedOpenAi(e)) {
+                throw fail(reason, e);
+            }
+            throw fail(reason, e, upperBoundUsage(body));
         }
+    }
+
+    private TokenUsage upperBoundUsage(byte[] requestBody) {
+        return new TokenUsage(requestBody.length, properties.maxOutputTokens());
+    }
+
+    private static boolean neverReachedOpenAi(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConnectException
+                    || cause instanceof HttpConnectTimeoutException
+                    || cause instanceof UnknownHostException
+                    || cause instanceof UnresolvedAddressException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static RawResponse read(ClientHttpResponse response) throws IOException {
@@ -269,6 +295,10 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
 
     private static SpotQueryInterpretationException fail(String reason, Throwable cause) {
         return new SpotQueryInterpretationException("AI 검색 해석 실패: " + reason, cause);
+    }
+
+    private static SpotQueryInterpretationException fail(String reason, Throwable cause, TokenUsage usage) {
+        return new SpotQueryInterpretationException("AI 검색 해석 실패: " + reason, cause, usage);
     }
 
     private static RestClient createRestClient(OpenAiProperties properties) {
