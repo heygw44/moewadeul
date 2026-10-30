@@ -36,7 +36,8 @@ public class PasswordChangeService {
         if (passwordEncoder.matches(newPassword.value(), member.getPasswordHash())) {
             throw new BusinessException(MemberErrorCode.MEMBER_PASSWORD_UNCHANGED);
         }
-        passwordChangeApplier.apply(member.getId(), passwordEncoder.encode(newPassword.value()));
+        passwordChangeApplier.apply(
+                member.getId(), member.getPasswordHash(), passwordEncoder.encode(newPassword.value()));
         memberSessions.invalidateAllExcept(member.getId(), command.currentSessionId());
         log.info("password changed memberId={}", member.getId());
     }

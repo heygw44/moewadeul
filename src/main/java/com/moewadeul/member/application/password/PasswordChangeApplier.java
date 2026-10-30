@@ -9,6 +9,7 @@ import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.infra.password.PasswordResetTokenMapper;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +23,10 @@ class PasswordChangeApplier {
     private final Clock clock;
 
     @Transactional
-    void apply(long memberId, String newPasswordHash) {
+    void apply(long memberId, String verifiedPasswordHash, String newPasswordHash) {
         Instant now = Instant.now(clock);
         Member member = memberRepository.findByIdForUpdate(memberId).orElseThrow(() -> memberNotFound(memberId));
-        if (member.isWithdrawn()) {
+        if (!Objects.equals(member.getPasswordHash(), verifiedPasswordHash)) {
             throw new BusinessException(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH);
         }
         member.changePassword(newPasswordHash, now);
