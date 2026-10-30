@@ -12,8 +12,9 @@ import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
 import com.moewadeul.trust.application.identity.CiRetentionCleanupService;
 import com.moewadeul.trust.application.profile.MemberProfileQueryService;
-import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
-import com.moewadeul.trust.application.sanction.SanctionConfirmService;
+import com.moewadeul.trust.application.report.MemberReportActionService;
+import com.moewadeul.trust.application.report.MemberReportFixture;
+import com.moewadeul.trust.application.sanction.SanctionFixture;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import jakarta.servlet.http.Cookie;
 import java.time.Duration;
@@ -54,7 +55,7 @@ class WithdrawalApiIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
 
     @Autowired
     private CiRetentionCleanupService ciRetentionCleanupService;
@@ -69,10 +70,12 @@ class WithdrawalApiIntegrationTest {
     private MutableClock clock;
 
     private CompanionReviewFixture fixture;
+    private SanctionFixture sanctionFixture;
 
     @BeforeEach
     void setUp() {
         fixture = new CompanionReviewFixture(jdbc, memberRepository);
+        sanctionFixture = new SanctionFixture(fixture, new MemberReportFixture(jdbc), memberReportActionService, clock);
     }
 
     @Test
@@ -192,8 +195,7 @@ class WithdrawalApiIntegrationTest {
         verifyIdentity(endedEarlySession, "key-" + TestSequence.next());
         verifyIdentity(revokedSession, "key-" + TestSequence.next());
         for (Member member : List.of(sanctioned, endedEarly, revoked)) {
-            sanctionConfirmService.confirm(
-                    new SanctionConfirmCommand(member.getId(), null, SanctionType.WARNING, "욕설", adminId));
+            sanctionFixture.confirm(member.getId(), adminId, SanctionType.WARNING, "욕설");
         }
         liftSanctionOf(endedEarly, "ENDED_EARLY");
         liftSanctionOf(revoked, "REVOKED");
@@ -247,8 +249,7 @@ class WithdrawalApiIntegrationTest {
         Instant withdrawnAt = clock.instant();
         clock.advance(Duration.ofDays(10));
 
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(member.getId(), null, SanctionType.PERMANENT, "금전 요구", adminId));
+        sanctionFixture.confirm(member.getId(), adminId, SanctionType.PERMANENT, "금전 요구");
 
         assertThat(retainedUntil(member))
                 .isEqualTo(LocalDateTime.ofInstant(withdrawnAt.plus(Duration.ofDays(365)), ZoneOffset.UTC));
@@ -267,8 +268,7 @@ class WithdrawalApiIntegrationTest {
         Member member = saveActiveMember();
         verifyIdentity(login(member), "key-" + TestSequence.next());
 
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(member.getId(), null, SanctionType.WARNING, "욕설", adminId));
+        sanctionFixture.confirm(member.getId(), adminId, SanctionType.WARNING, "욕설");
 
         assertThat(retainedUntil(member)).isNull();
     }
@@ -325,8 +325,7 @@ class WithdrawalApiIntegrationTest {
                 reporterId,
                 member.getId(),
                 basecampId);
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(member.getId(), null, SanctionType.WARNING, "욕설", adminId));
+        sanctionFixture.confirm(member.getId(), adminId, SanctionType.WARNING, "욕설");
         long spotId = insertBakji(member.getId());
         insertSpotReview(spotId, member.getId());
         fixture.insertReview(basecampId, member.getId(), reporterId, true, clock.instant());

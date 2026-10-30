@@ -12,11 +12,11 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionService;
 import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.application.report.MemberReportService;
 import com.moewadeul.trust.application.report.ReportContentCleanupService;
-import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
-import com.moewadeul.trust.application.sanction.SanctionConfirmService;
+import com.moewadeul.trust.application.sanction.SanctionFixture;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import jakarta.servlet.http.Cookie;
@@ -58,7 +58,7 @@ class AdminReportQueryApiIntegrationTest {
     private MemberReportService memberReportService;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
 
     @Autowired
     private ReportContentCleanupService reportContentCleanupService;
@@ -69,6 +69,7 @@ class AdminReportQueryApiIntegrationTest {
     private CompanionReviewFixture fixture;
     private MemberReportFixture reportFixture;
     private AdminReportApiFixture api;
+    private SanctionFixture sanctionFixture;
 
     @BeforeEach
     void setUp() {
@@ -76,6 +77,7 @@ class AdminReportQueryApiIntegrationTest {
         reportFixture = new MemberReportFixture(jdbc);
         api = new AdminReportApiFixture(
                 mvc, passwordEncoder, jdbc, fixture, reportFixture, memberReportService, withdrawalService);
+        sanctionFixture = new SanctionFixture(fixture, reportFixture, memberReportActionService, clock);
     }
 
     @Test
@@ -158,8 +160,7 @@ class AdminReportQueryApiIntegrationTest {
                 "UPDATE member_report SET handled_at = ?, result_note = '메모' WHERE id = ?",
                 LocalDateTime.ofInstant(BASE, ZoneOffset.UTC),
                 reportId);
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(api.targetId, null, SanctionType.WARNING, "욕설", api.adminId));
+        sanctionFixture.confirm(api.targetId, api.adminId, SanctionType.WARNING, "욕설");
         jdbc.update(
                 "UPDATE sanction SET starts_at = ? WHERE member_id = ?",
                 LocalDateTime.ofInstant(BASE, ZoneOffset.UTC),

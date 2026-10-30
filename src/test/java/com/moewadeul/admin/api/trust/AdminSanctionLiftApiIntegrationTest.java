@@ -4,12 +4,13 @@ import static com.moewadeul.admin.api.trust.AdminReportApiFixture.SANCTIONS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionService;
 import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.application.report.MemberReportService;
-import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
-import com.moewadeul.trust.application.sanction.SanctionConfirmService;
+import com.moewadeul.trust.application.sanction.SanctionFixture;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.time.Instant;
@@ -45,12 +46,16 @@ class AdminSanctionLiftApiIntegrationTest {
     private MemberReportService memberReportService;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
+
+    @Autowired
+    private MutableClock clock;
 
     @Autowired
     private WithdrawalService withdrawalService;
 
     private AdminReportApiFixture api;
+    private SanctionFixture sanctionFixture;
 
     @BeforeEach
     void setUp() {
@@ -58,13 +63,13 @@ class AdminSanctionLiftApiIntegrationTest {
         MemberReportFixture reportFixture = new MemberReportFixture(jdbc);
         api = new AdminReportApiFixture(
                 mvc, passwordEncoder, jdbc, fixture, reportFixture, memberReportService, withdrawalService);
+        sanctionFixture = new SanctionFixture(fixture, reportFixture, memberReportActionService, clock);
     }
 
     @Test
     @DisplayName("[SN-15] 7일 정지를 처분 취소하면 로그인할 수 있고 다음 제재 단계는 해제 전 단계로 돌아간다")
     void revokeSuspensionAllowsLoginAndRestoresNextLevel() {
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(api.targetId, null, SanctionType.WARNING, "경고", api.adminId));
+        confirm(SanctionType.WARNING);
         long sanctionId = confirm(SanctionType.SUSPEND_7D);
         assertThat(api.loginRequest(api.targetId)).hasStatus(HttpStatus.FORBIDDEN);
 
@@ -208,8 +213,6 @@ class AdminSanctionLiftApiIntegrationTest {
     }
 
     private long confirm(SanctionType type) {
-        return sanctionConfirmService
-                .confirm(new SanctionConfirmCommand(api.targetId, null, type, "사유", api.adminId))
-                .sanctionId();
+        return sanctionFixture.confirm(api.targetId, api.adminId, type, "사유").sanctionId();
     }
 }

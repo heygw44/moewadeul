@@ -5,9 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionResult;
+import com.moewadeul.trust.application.report.MemberReportActionService;
+import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +33,10 @@ class SanctionConfirmConcurrencyIntegrationTest {
     private static final long TIMEOUT_SECONDS = 30;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
+
+    @Autowired
+    private MutableClock clock;
 
     @Autowired
     private MemberJpaRepository memberRepository;
@@ -42,13 +49,16 @@ class SanctionConfirmConcurrencyIntegrationTest {
     void sameLevelIsNotConfirmedTwice() throws Exception {
         // given
         CompanionReviewFixture fixture = new CompanionReviewFixture(jdbc, memberRepository);
+        SanctionFixture sanctionFixture =
+                new SanctionFixture(fixture, new MemberReportFixture(jdbc), memberReportActionService, clock);
         long adminId = fixture.saveVerifiedMember(TestSequence.nickname());
         long targetId = fixture.saveVerifiedMember(TestSequence.nickname());
-        SanctionConfirmCommand command =
-                new SanctionConfirmCommand(targetId, null, SanctionType.WARNING, "반복 위반", adminId);
+        long firstReportId = sanctionFixture.receiveReport(targetId);
+        long secondReportId = sanctionFixture.receiveReport(targetId);
 
         // when
-        List<Throwable> failures = runTwice(command);
+        List<Throwable> failures =
+                runTwice(sanctionFixture, adminId, SanctionType.WARNING, firstReportId, secondReportId);
 
         // then
         assertThat(failures).hasSize(1);
@@ -65,15 +75,17 @@ class SanctionConfirmConcurrencyIntegrationTest {
     void concurrentSuspensionsAreSerialized() throws Exception {
         // given
         CompanionReviewFixture fixture = new CompanionReviewFixture(jdbc, memberRepository);
+        SanctionFixture sanctionFixture =
+                new SanctionFixture(fixture, new MemberReportFixture(jdbc), memberReportActionService, clock);
         long adminId = fixture.saveVerifiedMember(TestSequence.nickname());
         long targetId = fixture.saveVerifiedMember(TestSequence.nickname());
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(targetId, null, SanctionType.WARNING, "첫 경고", adminId));
-        SanctionConfirmCommand command =
-                new SanctionConfirmCommand(targetId, null, SanctionType.SUSPEND_7D, "반복 위반", adminId);
+        sanctionFixture.confirm(targetId, adminId, SanctionType.WARNING, "첫 경고");
+        long firstReportId = sanctionFixture.receiveReport(targetId);
+        long secondReportId = sanctionFixture.receiveReport(targetId);
 
         // when
-        List<Throwable> failures = runTwice(command);
+        List<Throwable> failures =
+                runTwice(sanctionFixture, adminId, SanctionType.SUSPEND_7D, firstReportId, secondReportId);
 
         // then
         assertThat(failures).hasSize(1);
@@ -86,23 +98,25 @@ class SanctionConfirmConcurrencyIntegrationTest {
                 .isEqualTo("SUSPENDED");
     }
 
-    private List<Throwable> runTwice(SanctionConfirmCommand command) throws Exception {
+    private List<Throwable> runTwice(
+            SanctionFixture sanctionFixture, long adminId, SanctionType type, long firstReportId, long secondReportId)
+            throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         try {
-            List<Future<SanctionConfirmResult>> futures = new ArrayList<>();
-            for (int i = 0; i < 2; i++) {
+            List<Future<MemberReportActionResult>> futures = new ArrayList<>();
+            for (long reportId : new long[] {firstReportId, secondReportId}) {
                 futures.add(executor.submit(() -> {
                     ready.countDown();
                     start.await();
-                    return sanctionConfirmService.confirm(command);
+                    return sanctionFixture.confirmReport(reportId, adminId, type, "반복 위반");
                 }));
             }
             assertThat(ready.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
             start.countDown();
             List<Throwable> failures = new ArrayList<>();
-            for (Future<SanctionConfirmResult> future : futures) {
+            for (Future<MemberReportActionResult> future : futures) {
                 try {
                     future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 } catch (ExecutionException e) {

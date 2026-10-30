@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
-import com.moewadeul.trust.application.sanction.SanctionConfirmCommand;
-import com.moewadeul.trust.application.sanction.SanctionConfirmService;
+import com.moewadeul.trust.application.sanction.SanctionFixture;
 import com.moewadeul.trust.application.sanction.SanctionLiftService;
 import com.moewadeul.trust.domain.report.ReportKind;
 import com.moewadeul.trust.domain.report.ReportType;
@@ -51,7 +51,7 @@ class MemberReportResolveConcurrencyIntegrationTest {
     private SanctionLiftService sanctionLiftService;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MutableClock clock;
 
     @Autowired
     private MemberJpaRepository memberRepository;
@@ -60,12 +60,14 @@ class MemberReportResolveConcurrencyIntegrationTest {
     private JdbcTemplate jdbc;
 
     private CompanionReviewFixture fixture;
+    private SanctionFixture sanctionFixture;
     private long adminId;
     private long targetId;
 
     @BeforeEach
     void setUp() {
         fixture = new CompanionReviewFixture(jdbc, memberRepository);
+        sanctionFixture = new SanctionFixture(fixture, new MemberReportFixture(jdbc), actionService, clock);
         adminId = fixture.saveVerifiedMember(TestSequence.nickname());
         targetId = fixture.saveVerifiedMember(TestSequence.nickname());
     }
@@ -127,8 +129,8 @@ class MemberReportResolveConcurrencyIntegrationTest {
     @RepeatedTest(5)
     @DisplayName("[F-21][SN-15] 같은 제재를 동시에 해제하면 하나만 성공하고 다른 하나는 SANCTION_INVALID_STATE이며 감사 로그는 1건이다")
     void onlyOneLiftSucceeds() throws Exception {
-        long sanctionId = sanctionConfirmService
-                .confirm(new SanctionConfirmCommand(targetId, null, SanctionType.PERMANENT, "심각한 위반", adminId))
+        long sanctionId = sanctionFixture
+                .confirm(targetId, adminId, SanctionType.PERMANENT, "심각한 위반")
                 .sanctionId();
 
         List<Outcome> outcomes = runConcurrently(List.of(

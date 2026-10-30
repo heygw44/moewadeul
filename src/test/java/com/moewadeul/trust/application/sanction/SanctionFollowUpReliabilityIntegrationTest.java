@@ -16,6 +16,8 @@ import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.program.application.enrollment.ProgramSanctionCleanupService;
 import com.moewadeul.program.domain.ProgramCancelReason;
 import com.moewadeul.trust.application.CompanionReviewFixture;
+import com.moewadeul.trust.application.report.MemberReportActionService;
+import com.moewadeul.trust.application.report.MemberReportFixture;
 import com.moewadeul.trust.domain.sanction.SanctionType;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -35,7 +37,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
     private ProgramSanctionCleanupService programCleanupService;
 
     @Autowired
-    private SanctionConfirmService sanctionConfirmService;
+    private MemberReportActionService memberReportActionService;
 
     @Autowired
     private OutboxPublisher outboxPublisher;
@@ -63,15 +65,16 @@ class SanctionFollowUpReliabilityIntegrationTest {
         CompanionReviewFixture fixture = new CompanionReviewFixture(jdbc, memberRepository);
         long adminId = fixture.saveVerifiedMember(TestSequence.nickname());
         long targetId = fixture.saveVerifiedMember(TestSequence.nickname());
+        SanctionFixture sanctionFixture =
+                new SanctionFixture(fixture, new MemberReportFixture(jdbc), memberReportActionService, clock);
         doThrow(new IllegalStateException("simulated cleanup failure"))
                 .when(cleanupService)
                 .cleanUp(targetId, RemovalCause.SANCTION);
 
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(targetId, null, SanctionType.PERMANENT, "금전 요구", adminId));
+        sanctionFixture.confirm(targetId, adminId, SanctionType.PERMANENT, "금전 요구");
         int processed = outboxPublisher.publishPending();
 
-        assertThat(processed).isEqualTo(3);
+        assertThat(processed).isEqualTo(4);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sanction WHERE member_id = ?", Integer.class, targetId))
                 .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT status FROM member WHERE id = ?", String.class, targetId))
@@ -99,15 +102,16 @@ class SanctionFollowUpReliabilityIntegrationTest {
         CompanionReviewFixture fixture = new CompanionReviewFixture(jdbc, memberRepository);
         long adminId = fixture.saveVerifiedMember(TestSequence.nickname());
         long targetId = fixture.saveVerifiedMember(TestSequence.nickname());
+        SanctionFixture sanctionFixture =
+                new SanctionFixture(fixture, new MemberReportFixture(jdbc), memberReportActionService, clock);
         doThrow(new IllegalStateException("simulated program cleanup failure"))
                 .when(programCleanupService)
                 .cleanUp(targetId, ProgramCancelReason.SANCTIONED);
 
-        sanctionConfirmService.confirm(
-                new SanctionConfirmCommand(targetId, null, SanctionType.PERMANENT, "금전 요구", adminId));
+        sanctionFixture.confirm(targetId, adminId, SanctionType.PERMANENT, "금전 요구");
         int processed = outboxPublisher.publishPending();
 
-        assertThat(processed).isEqualTo(3);
+        assertThat(processed).isEqualTo(4);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sanction WHERE member_id = ?", Integer.class, targetId))
                 .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT status FROM member WHERE id = ?", String.class, targetId))
