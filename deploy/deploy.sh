@@ -32,7 +32,7 @@ readonly HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-240}"
 # 시작하다 죽는 앱은 restart 정책으로 계속 다시 뜬다. 상태 확인 주소만 보면 그동안 제한 시간을 다 기다리고, 옛 앱은 이미 내려가 있어 502가 이어진다.
 # 다시 시작한 횟수가 이보다 많으면 기다리지 않고 실패로 본다.
 readonly MAX_APP_RESTARTS="${MAX_APP_RESTARTS:-2}"
-readonly BACKUP_WAIT_SECONDS="${BACKUP_WAIT_SECONDS:-1800}"
+readonly BACKUP_WAIT_SECONDS="${BACKUP_WAIT_SECONDS:-900}"
 
 # Parameter Store 이름(접두사 뒤) → .env 변수 이름
 declare -rA SECRET_PARAMS=(
