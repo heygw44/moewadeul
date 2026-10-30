@@ -13,6 +13,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberStatus;
@@ -206,6 +207,7 @@ class UnverifiedMemberCleanupIntegrationTest {
         assertThat(count("member WHERE id = ?", expired.getId())).isZero();
         assertThat(sessionCount(expired.getId())).isEqualTo(1);
 
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
         outboxPublisher.publishPending();
 
         assertThat(sessionCount(expired.getId())).isZero();

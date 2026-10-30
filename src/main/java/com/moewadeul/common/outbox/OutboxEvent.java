@@ -60,26 +60,43 @@ public class OutboxEvent {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    private OutboxEvent(String eventType, String aggregateType, long aggregateId, String payload, Instant now) {
+    private OutboxEvent(
+            String eventType,
+            String aggregateType,
+            long aggregateId,
+            String payload,
+            Instant now,
+            Instant lockedUntil) {
         this.eventType = eventType;
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
         this.payload = payload;
         this.status = OutboxEventStatus.PENDING;
         this.attemptCount = 0;
+        this.lockedUntil = lockedUntil;
         this.createdAt = now;
         this.updatedAt = now;
     }
 
     public static OutboxEvent pending(
             String eventType, String aggregateType, long aggregateId, String payloadJson, Instant now) {
+        return pendingUntil(eventType, aggregateType, aggregateId, payloadJson, now, null);
+    }
+
+    public static OutboxEvent pendingUntil(
+            String eventType,
+            String aggregateType,
+            long aggregateId,
+            String payloadJson,
+            Instant now,
+            Instant lockedUntil) {
         requireText(eventType, "eventType");
         requireText(aggregateType, "aggregateType");
         requireText(payloadJson, "payloadJson");
         if (now == null) {
             throw new IllegalArgumentException("이벤트를 기록한 시각이 null입니다.");
         }
-        return new OutboxEvent(eventType, aggregateType, aggregateId, payloadJson, now);
+        return new OutboxEvent(eventType, aggregateType, aggregateId, payloadJson, now, lockedUntil);
     }
 
     private static void requireText(String value, String name) {

@@ -74,7 +74,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
         sanctionFixture.confirm(targetId, adminId, SanctionType.PERMANENT, "금전 요구");
         int processed = outboxPublisher.publishPending();
 
-        assertThat(processed).isEqualTo(5);
+        assertThat(processed).isEqualTo(4);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sanction WHERE member_id = ?", Integer.class, targetId))
                 .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT status FROM member WHERE id = ?", String.class, targetId))
@@ -111,7 +111,7 @@ class SanctionFollowUpReliabilityIntegrationTest {
         sanctionFixture.confirm(targetId, adminId, SanctionType.PERMANENT, "금전 요구");
         int processed = outboxPublisher.publishPending();
 
-        assertThat(processed).isEqualTo(5);
+        assertThat(processed).isEqualTo(4);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM sanction WHERE member_id = ?", Integer.class, targetId))
                 .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT status FROM member WHERE id = ?", String.class, targetId))

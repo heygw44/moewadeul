@@ -9,6 +9,7 @@ import static org.mockito.Mockito.doThrow;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
@@ -95,6 +96,7 @@ class MemberSessionCleanupOutboxIntegrationTest {
         assertThat(api.sanctionStatuses(target)).containsExactly("ACTIVE");
         assertThat(sessionRows(target)).isEqualTo(1);
 
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
         outboxPublisher.publishPending();
 
         assertOldSessionRejected(target, session);
@@ -113,6 +115,7 @@ class MemberSessionCleanupOutboxIntegrationTest {
         assertThat(api.memberStatus(target)).isEqualTo("WITHDRAWN");
         assertThat(sessionRows(target)).isEqualTo(1);
 
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
         outboxPublisher.publishPending();
 
         assertOldSessionRejected(target, session);

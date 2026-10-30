@@ -1,6 +1,7 @@
 package com.moewadeul.member.application;
 
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -13,11 +14,14 @@ public class MemberSessionCleanup {
     public static final String EVENT_TYPE = "MEMBER_SESSION_CLEANUP";
     public static final String AGGREGATE_TYPE = "MEMBER";
 
+    // 비밀번호 변경의 현재 세션 로그인 시각 갱신은 응답이 커밋될 때 저장되므로, 그전에 이벤트가 처리되지 않게 미룬다.
+    public static final Duration OUTBOX_DELAY = Duration.ofSeconds(30);
+
     private final OutboxEventRecorder outboxEventRecorder;
     private final MemberSessions memberSessions;
 
     public void recordInTransaction(long memberId) {
-        outboxEventRecorder.record(EVENT_TYPE, AGGREGATE_TYPE, memberId, new Payload(memberId));
+        outboxEventRecorder.recordDeferred(EVENT_TYPE, AGGREGATE_TYPE, memberId, new Payload(memberId), OUTBOX_DELAY);
     }
 
     public void invalidateAfterCommit(long memberId) {

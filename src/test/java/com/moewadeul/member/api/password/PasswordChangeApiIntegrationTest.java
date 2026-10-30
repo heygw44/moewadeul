@@ -120,7 +120,7 @@ class PasswordChangeApiIntegrationTest {
         assertThat(sessionCount(member)).isEqualTo(2);
         assertThat(getWithSession(another)).hasStatus(HttpStatus.OK);
 
-        clock.advance(Duration.ofSeconds(31));
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
         outboxPublisher.publishPending();
 
         assertThat(sessionCount(member)).isEqualTo(1);
@@ -152,7 +152,7 @@ class PasswordChangeApiIntegrationTest {
         assertThat(getWithSession(another)).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(processedBeforeResponse).hasValue(0);
 
-        clock.advance(Duration.ofSeconds(31));
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
 
         assertThat(outboxPublisher.publishPending()).isEqualTo(1);
         assertThat(getWithSession(renewed)).hasStatus(HttpStatus.OK);

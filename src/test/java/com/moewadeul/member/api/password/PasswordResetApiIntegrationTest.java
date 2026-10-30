@@ -12,6 +12,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.application.password.PasswordResetMails;
 import com.moewadeul.member.domain.Member;
@@ -154,6 +155,7 @@ class PasswordResetApiIntegrationTest {
         assertThat(confirm).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(getWithSession(session).getResponse().getStatus()).isNotEqualTo(401);
 
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
         publisher.publishPending();
 
         assertThat(sessionCount(member)).isZero();
@@ -175,6 +177,7 @@ class PasswordResetApiIntegrationTest {
         Cookie newSession = relogin.getResponse().getCookie(SESSION_COOKIE);
         assertThat(newSession).isNotNull();
 
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
         publisher.publishPending();
 
         assertThat(sessionCount(member)).isEqualTo(1);
