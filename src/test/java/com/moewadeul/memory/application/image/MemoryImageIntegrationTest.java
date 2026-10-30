@@ -1,6 +1,7 @@
 package com.moewadeul.memory.application.image;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.CommonErrorCode;
@@ -292,6 +293,22 @@ class MemoryImageIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory_image WHERE id = ?", Integer.class, image))
                 .isZero();
         assertThat(storage.deletedKeys()).containsExactly(key);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 사진을 붙인 기록들을 지워 떨어진 사진이 30장이어도 다음 업로드 URL 발급은 막히지 않는다")
+    void detachedImagesDoNotCountTowardUploadLimit() {
+        // given
+        int perMemory = MemoryImage.KIND.maxPerParent();
+        int memories = MemoryImage.KIND.maxUnattachedPerMember() / perMemory;
+        for (int i = 0; i < memories; i++) {
+            long memoryId = createMemory(memberId, write(uploadedImages(perMemory)));
+            commandService.delete(memberId, memoryId);
+        }
+
+        // when & then
+        assertThatCode(() -> uploadService.issue(memberId, command("image/jpeg", SIZE)))
+                .doesNotThrowAnyException();
     }
 
     @Test

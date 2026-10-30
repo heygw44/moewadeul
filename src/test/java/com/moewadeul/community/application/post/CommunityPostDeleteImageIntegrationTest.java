@@ -1,6 +1,7 @@
 package com.moewadeul.community.application.post;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -10,6 +11,7 @@ import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.community.application.image.CommunityImageCleanupService;
 import com.moewadeul.community.application.image.CommunityImageUploadService;
 import com.moewadeul.community.application.moderation.CommunityModerationService;
+import com.moewadeul.community.domain.image.CommunityImage;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,6 +75,24 @@ class CommunityPostDeleteImageIntegrationTest {
         clock.advance(CommunityImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
         cleanupService.deleteExpiredRowsThenObjects();
         assertThat(unattachedImageIds()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-06] 작성자가 사진을 붙인 글들을 지워 떨어진 이미지가 15장이어도 다음 업로드 URL 발급은 막히지 않는다")
+    void detachedImagesDoNotCountTowardUploadLimit() {
+        // given
+        int perPost = CommunityImage.KIND.maxPerParent();
+        int posts = CommunityImage.KIND.maxUnattachedPerMember() / perPost;
+        for (int i = 0; i < posts; i++) {
+            long postId = postCommandService.write(
+                    authorId, new CommunityPostWriteCommand("제목", "본문", null, uploadedImages(perPost)));
+            postCommandService.delete(authorId, postId);
+        }
+        assertThat(unattachedImageIds()).hasSize(CommunityImage.KIND.maxUnattachedPerMember());
+
+        // when & then
+        assertThatCode(() -> uploadService.issue(authorId, new ImageUploadCommand("image/jpeg", IMAGE_SIZE, null)))
+                .doesNotThrowAnyException();
     }
 
     @Test
