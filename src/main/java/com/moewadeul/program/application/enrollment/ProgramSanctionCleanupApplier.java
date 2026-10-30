@@ -1,13 +1,11 @@
 package com.moewadeul.program.application.enrollment;
 
-import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
-import com.moewadeul.program.domain.Program;
+import com.moewadeul.program.application.enrollment.ProgramApplicationLocker.LockedApplication;
 import com.moewadeul.program.domain.ProgramApplication;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramCancelReason;
-import com.moewadeul.program.domain.ProgramRepository;
 import java.time.Clock;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -21,24 +19,22 @@ import org.springframework.transaction.annotation.Transactional;
 class ProgramSanctionCleanupApplier {
 
     private final ProgramApplicationRepository applicationRepository;
-    private final ProgramRepository programRepository;
+    private final ProgramApplicationLocker applicationLocker;
     private final ProgramSeatReleaseRecorder seatReleaseRecorder;
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
 
     @Transactional
     boolean cancelPending(long applicationId, long memberId, ProgramCancelReason reason) {
-        ProgramApplication application =
-                applicationRepository.findByIdForUpdate(applicationId).orElse(null);
-        if (application == null || application.getStatus() != ProgramApplicationStatus.PENDING_PAYMENT) {
+        LockedApplication locked = applicationLocker.lock(applicationId).orElse(null);
+        if (locked == null || locked.application().getStatus() != ProgramApplicationStatus.PENDING_PAYMENT) {
             return false;
         }
+        ProgramApplication application = locked.application();
         Instant now = clock.instant();
         application.cancelByMemberRemoval(reason, now);
         outboxEventRecorder.recordAll(application.pullEvents());
-        Program program =
-                programRepository.findById(application.getProgramId()).orElseThrow(BusinessException::notFound);
-        seatReleaseRecorder.record(program, now);
+        seatReleaseRecorder.record(locked.program(), now);
         log.info(
                 "program application canceled reason={} applicationId={} memberId={}", reason, applicationId, memberId);
         return true;

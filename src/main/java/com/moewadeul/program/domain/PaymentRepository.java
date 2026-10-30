@@ -8,7 +8,7 @@ public interface PaymentRepository {
 
     Payment saveAndFlush(Payment payment);
 
-    Optional<Payment> findByProgramApplicationId(long programApplicationId);
+    Optional<Payment> findByProgramApplicationIdForUpdate(long programApplicationId);
 
     List<Long> findPaidApplicationIdsByProgram(long programId);
 

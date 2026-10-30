@@ -26,6 +26,8 @@ class ProgramPaymentExpiryWriter {
 
     @Transactional(propagation = Propagation.MANDATORY)
     boolean expire(ExpiryTarget target, Instant now) {
+        Program program =
+                programRepository.findByIdForUpdate(target.programId()).orElseThrow(BusinessException::notFound);
         if (expiryMapper.expireIfDue(target.applicationId(), now) == 0) {
             return false;
         }
@@ -34,7 +36,6 @@ class ProgramPaymentExpiryWriter {
                 ProgramEvents.APPLICATION_AGGREGATE_TYPE,
                 target.applicationId(),
                 new ProgramEvents.ApplicationPayload(target.applicationId(), target.memberId(), target.programId()));
-        Program program = programRepository.findById(target.programId()).orElseThrow(BusinessException::notFound);
         seatReleaseRecorder.record(program, now);
         log.info("program application expired applicationId={} memberId={}", target.applicationId(), target.memberId());
         return true;
