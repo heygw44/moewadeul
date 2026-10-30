@@ -120,9 +120,12 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
             if (neverReachedOpenAi(e)) {
                 throw fail(reason, e);
             }
-            // 토큰 하나는 바이트를 하나 이상 덮으므로 본문 바이트 수가 입력 토큰 수의 상한이다.
-            throw fail(reason, e, new TokenUsage(body.length, properties.maxOutputTokens()));
+            throw fail(reason, e, upperBoundUsage(body));
         }
+    }
+
+    private TokenUsage upperBoundUsage(byte[] requestBody) {
+        return new TokenUsage(requestBody.length, properties.maxOutputTokens());
     }
 
     private static boolean neverReachedOpenAi(Throwable error) {
