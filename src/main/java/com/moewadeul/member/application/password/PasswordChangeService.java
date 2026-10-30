@@ -4,12 +4,13 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.application.LoginAttemptService;
-import com.moewadeul.member.application.MemberSessions;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.Password;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +26,9 @@ public class PasswordChangeService {
     private final LoginAttemptService loginAttemptService;
     private final PasswordEncoder passwordEncoder;
     private final PasswordChangeApplier passwordChangeApplier;
-    private final MemberSessions memberSessions;
+    private final MemberSessionCleanup memberSessionCleanup;
 
-    public void change(PasswordChangeCommand command) {
+    public Instant change(PasswordChangeCommand command) {
         OutsideTransaction.require("트랜잭션 안이면 틀린 비밀번호 기록이 예외와 함께 롤백되고, 세션은 변경이 커밋된 뒤에 지워야 한다.");
         Member member = findChangeableMember(command.memberId());
         rejectIfLocked(member);
@@ -36,9 +37,11 @@ public class PasswordChangeService {
         if (passwordEncoder.matches(newPassword.value(), member.getPasswordHash())) {
             throw new BusinessException(MemberErrorCode.MEMBER_PASSWORD_UNCHANGED);
         }
-        passwordChangeApplier.apply(member.getId(), newPassword);
-        memberSessions.invalidateAllExcept(member.getId(), command.currentSessionId());
+        Instant passwordChangedAt = passwordChangeApplier.apply(
+                member.getId(), member.getPasswordHash(), passwordEncoder.encode(newPassword.value()));
+        memberSessionCleanup.invalidateOthersAfterCommit(member.getId(), command.currentSessionId());
         log.info("password changed memberId={}", member.getId());
+        return passwordChangedAt;
     }
 
     private Member findChangeableMember(long memberId) {

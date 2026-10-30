@@ -8,6 +8,7 @@ import com.moewadeul.community.domain.post.CommunityPostRepository;
 import com.moewadeul.spot.application.ActiveSpotChecker;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -56,7 +57,9 @@ public class CommunityPostWriter {
 
     @Transactional
     public void delete(long memberId, long postId) {
-        lockOwnActivePost(memberId, postId).delete(clock.instant());
+        CommunityPost post = lockOwnActivePost(memberId, postId);
+        communityImageAttachments.replace(memberId, postId, List.of());
+        post.delete(clock.instant());
     }
 
     @Transactional(readOnly = true)

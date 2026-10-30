@@ -4,6 +4,7 @@ import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.web.PageResponse;
 import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostQueryService;
+import com.moewadeul.community.application.post.CommunityPostWriteCommand;
 import com.moewadeul.idempotency.application.IdempotencyExecutor;
 import com.moewadeul.idempotency.application.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -91,12 +92,13 @@ class CommunityPostController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody CommunityPostCreateRequest request) {
         long memberId = loginMember.memberId();
+        CommunityPostWriteCommand command = request.toCommand();
         return idempotencyExecutor.execute(
                 new IdempotentRequest(memberId, idempotencyKey, "POST /api/community/posts", request),
                 HttpStatus.CREATED,
                 CommunityPostCreatedResponse.class,
-                () -> new CommunityPostCreatedResponse(
-                        communityPostCommandService.write(memberId, request.toCommand())));
+                () -> communityPostCommandService.precheckWrite(memberId, command),
+                () -> new CommunityPostCreatedResponse(communityPostCommandService.write(memberId, command)));
     }
 
     @Operation(

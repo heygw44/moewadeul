@@ -1,6 +1,7 @@
 package com.moewadeul.memory.application.image;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.CommonErrorCode;
@@ -131,11 +132,11 @@ class MemoryImageIntegrationTest {
         storage.markUploaded(thumbnailKeyOf(complete), THUMBNAIL_SIZE);
 
         // when
-        long memoryId = commandService.write(memberId, write(List.of(complete)));
+        long memoryId = createMemory(memberId, write(List.of(complete)));
 
         // then
-        assertInvalid(() -> commandService.write(memberId, write(List.of(missing))), "imageIds", UNUSABLE);
-        assertInvalid(() -> commandService.write(memberId, write(List.of(wrongSize))), "imageIds", UNUSABLE);
+        assertInvalid(() -> createMemory(memberId, write(List.of(missing))), "imageIds", UNUSABLE);
+        assertInvalid(() -> createMemory(memberId, write(List.of(wrongSize))), "imageIds", UNUSABLE);
         assertThat(memoryIdOf(complete)).isEqualTo(memoryId);
     }
 
@@ -182,7 +183,7 @@ class MemoryImageIntegrationTest {
         // given
         List<Long> attached = uploadedImages(MemoryImage.MAX_PER_MEMORY);
         uploadedImages(MemoryImage.KIND.maxUnattachedPerMember() - MemoryImage.MAX_PER_MEMORY);
-        commandService.write(memberId, write(attached));
+        createMemory(memberId, write(attached));
         long otherMemberId = memberFixture.save().getId();
         for (int i = 0; i < MemoryImage.KIND.maxUnattachedPerMember(); i++) {
             uploadService.issue(otherMemberId, command("image/jpeg", SIZE));
@@ -205,20 +206,19 @@ class MemoryImageIntegrationTest {
         long notUploaded =
                 uploadService.issue(memberId, command("image/png", SIZE)).imageId();
         long attached = uploaded(memberId);
-        commandService.write(memberId, write(List.of(attached)));
+        createMemory(memberId, write(List.of(attached)));
 
         // when
-        long memoryId = commandService.write(memberId, write(ten));
+        long memoryId = createMemory(memberId, write(ten));
 
         // then
         assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM memory_image WHERE memory_id = ?", Integer.class, memoryId))
                 .isEqualTo(10);
-        assertInvalid(() -> commandService.write(memberId, write(eleven)), "imageIds", "사진은 10장까지 붙일 수 있어요.");
-        assertInvalid(
-                () -> commandService.write(memberId, write(List.of(mine, mine))), "imageIds", "같은 사진을 두 번 붙일 수 없어요.");
-        assertInvalid(() -> commandService.write(memberId, write(List.of(notUploaded))), "imageIds", UNUSABLE);
-        assertInvalid(() -> commandService.write(memberId, write(List.of(attached))), "imageIds", UNUSABLE);
+        assertInvalid(() -> createMemory(memberId, write(eleven)), "imageIds", "사진은 10장까지 붙일 수 있어요.");
+        assertInvalid(() -> createMemory(memberId, write(List.of(mine, mine))), "imageIds", "같은 사진을 두 번 붙일 수 없어요.");
+        assertInvalid(() -> createMemory(memberId, write(List.of(notUploaded))), "imageIds", UNUSABLE);
+        assertInvalid(() -> createMemory(memberId, write(List.of(attached))), "imageIds", UNUSABLE);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory", Integer.class))
                 .isEqualTo(2);
     }
@@ -229,7 +229,7 @@ class MemoryImageIntegrationTest {
         // given
         long others = uploaded(memberFixture.save().getId());
         long mine = uploaded(memberId);
-        long memoryId = commandService.write(memberId, write(List.of()));
+        long memoryId = createMemory(memberId, write(List.of()));
 
         // when, then
         assertInvalid(
@@ -257,7 +257,7 @@ class MemoryImageIntegrationTest {
         long kept = uploaded(memberId);
         long removed = uploaded(memberId);
         long added = uploaded(memberId);
-        long memoryId = commandService.write(memberId, write(List.of(kept, removed)));
+        long memoryId = createMemory(memberId, write(List.of(kept, removed)));
 
         // when
         MemoryView replaced = commandService.revise(memberId, memoryId, imagesOnly(List.of(added, kept)));
@@ -278,7 +278,7 @@ class MemoryImageIntegrationTest {
     void deletedMemoryImagesAreCleanedUp() {
         // given
         long image = uploaded(memberId);
-        long memoryId = commandService.write(memberId, write(List.of(image)));
+        long memoryId = createMemory(memberId, write(List.of(image)));
         String key = keyOf(image);
 
         // when
@@ -293,6 +293,22 @@ class MemoryImageIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory_image WHERE id = ?", Integer.class, image))
                 .isZero();
         assertThat(storage.deletedKeys()).containsExactly(key);
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 사진을 붙인 기록들을 지워 떨어진 사진이 30장이어도 다음 업로드 URL 발급은 막히지 않는다")
+    void detachedImagesDoNotCountTowardUploadLimit() {
+        // given
+        int perMemory = MemoryImage.KIND.maxPerParent();
+        int memories = MemoryImage.KIND.maxUnattachedPerMember() / perMemory;
+        for (int i = 0; i < memories; i++) {
+            long memoryId = createMemory(memberId, write(uploadedImages(perMemory)));
+            commandService.delete(memberId, memoryId);
+        }
+
+        // when & then
+        assertThatCode(() -> uploadService.issue(memberId, command("image/jpeg", SIZE)))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -340,7 +356,7 @@ class MemoryImageIntegrationTest {
         // given
         long attached = uploaded(memberId);
         long unattached = uploaded(memberId);
-        commandService.write(memberId, write(List.of(attached)));
+        createMemory(memberId, write(List.of(attached)));
         clock.advance(Duration.ofDays(3));
 
         // when
@@ -365,6 +381,11 @@ class MemoryImageIntegrationTest {
         return uploadService
                 .issue(memberId, withThumbnail("image/jpeg", SIZE, THUMBNAIL_SIZE))
                 .imageId();
+    }
+
+    private long createMemory(long memberId, MemoryWriteCommand command) {
+        commandService.precheckWrite(memberId, command);
+        return commandService.write(memberId, command);
     }
 
     private static MemoryWriteCommand write(List<Long> imageIds) {

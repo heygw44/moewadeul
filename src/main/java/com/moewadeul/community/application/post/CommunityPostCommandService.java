@@ -14,8 +14,11 @@ public class CommunityPostCommandService {
     private final CommunityPostWriter communityPostWriter;
     private final CommunityImageAttachments communityImageAttachments;
 
-    public long write(long memberId, CommunityPostWriteCommand command) {
+    public void precheckWrite(long memberId, CommunityPostWriteCommand command) {
         communityImageAttachments.precheck(memberId, null, command.imageIds());
+    }
+
+    public long write(long memberId, CommunityPostWriteCommand command) {
         return communityPostWriter.write(memberId, command);
     }
 

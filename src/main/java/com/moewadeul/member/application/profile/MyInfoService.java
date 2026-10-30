@@ -35,7 +35,7 @@ public class MyInfoService {
 
     @Transactional
     public MyInfo update(long memberId, MyInfoUpdateCommand command) {
-        Member member = loadMember(memberId);
+        Member member = memberRepository.findByIdForUpdate(memberId).orElseThrow(BusinessException::notFound);
         Instant now = Instant.now(clock);
         if (command.nickname().present()) {
             changeNickname(member, command.nickname().value(), now);

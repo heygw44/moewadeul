@@ -53,6 +53,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @WebMvcTest(CommunityPostController.class)
 @Import({
@@ -100,6 +101,9 @@ class CommunityPostControllerTest {
 
     @MockitoBean
     private IdempotencyRecordRepository idempotencyRecordRepository;
+
+    @MockitoBean
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName(

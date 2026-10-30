@@ -9,6 +9,7 @@ import com.moewadeul.common.event.TrustEvents;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.trust.application.CompanionReviewFixture;
 import com.moewadeul.trust.application.report.MemberReportActionResult;
@@ -80,7 +81,8 @@ class SanctionConfirmIntegrationTest {
         assertThat(event.get("status")).isEqualTo("PENDING");
         assertThat(event.get("aggregate_type")).isEqualTo("MEMBER");
         assertThat(event.get("aggregate_id")).isEqualTo(targetId);
-        assertThat(count("outbox_event")).isEqualTo(6);
+        assertThat(count("outbox_event")).isEqualTo(7);
+        assertThat(countEvents(MemberSessionCleanup.EVENT_TYPE)).isEqualTo(1);
         assertThat(countEvents(TrustEvents.REPORT_RESOLVED)).isEqualTo(2);
         assertThat(countEvents(TrustEvents.SANCTION_BASECAMP_CLEANUP)).isEqualTo(1);
         assertThat(countEvents(TrustEvents.SANCTION_PROGRAM_CLEANUP)).isEqualTo(1);

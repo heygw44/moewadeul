@@ -71,7 +71,7 @@ public class CommunityCommentCommandService {
 
     private void requireActivePost(long postId) {
         communityPostRepository
-                .findById(postId)
+                .findByIdForShare(postId)
                 .filter(CommunityPost::isActive)
                 .orElseThrow(BusinessException::notFound);
     }
