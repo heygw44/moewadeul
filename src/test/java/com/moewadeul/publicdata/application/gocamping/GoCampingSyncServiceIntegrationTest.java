@@ -219,6 +219,35 @@ class GoCampingSyncServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-06][NFR-06] 이어받은 실행이 한 페이지도 끝내지 못하고 실패하면 진행 기록이 없으므로, 다음 실행은 처음 페이지부터 다시 받는다")
+    void syncRestartsFromFirstPageWhenResumedRunFailedWithoutProgress() {
+        // given
+        stubPage(1);
+        stubPage(3);
+        stubPage(4);
+        wireMock.stubFor(get(urlPathEqualTo(BASED_SYNC_LIST_PATH))
+                .withQueryParam("pageNo", equalTo("2"))
+                .willReturn(aResponse().withStatus(500)));
+
+        // when
+        assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+        clock.advance(Duration.ofHours(1));
+        assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+        clock.advance(Duration.ofHours(1));
+        assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+
+        // then
+        List<RunRow> runs = runs();
+        assertThat(runs).hasSize(3).allSatisfy(run -> assertThat(run.status()).isEqualTo("FAILED"));
+        assertThat(runs.get(0).processedCount()).isEqualTo(2);
+        assertThat(runs.get(1).progressCursor()).isEqualTo("1");
+        assertThat(runs.get(1).processedCount()).isZero();
+        assertThat(requestCount(1)).isEqualTo(2);
+        assertThat(runs.get(2).progressCursor()).isEqualTo("1");
+        assertThat(runs.get(2).processedCount()).isEqualTo(2);
+    }
+
+    @Test
     @DisplayName("[F-06] 원천 수정일(modifiedtime)을 상세의 기준일로 저장하고, 수정일만 바뀐 항목은 그 행만 갱신한다")
     void syncStoresModifiedTimeAsSourceDateAndUpdatesOnlyChangedRow() {
         // given
