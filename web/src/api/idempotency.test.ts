@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { ApiError } from './client';
 import { createIdempotentRunner } from './idempotency';
 
-function sender(...outcomes: Array<'ok' | 'network' | 'timeout' | 'business'>) {
+function sender(...outcomes: Array<'ok' | 'network' | 'timeout' | 'inProgress' | 'business'>) {
   const keys: string[] = [];
   const send = async (key: string) => {
     keys.push(key);
     const outcome = outcomes[keys.length - 1];
     if (outcome === 'network') throw new ApiError(0, 'NETWORK_ERROR', null);
     if (outcome === 'timeout') throw new ApiError(0, 'REQUEST_TIMEOUT', null);
+    if (outcome === 'inProgress') throw new ApiError(409, 'IDEMPOTENCY_IN_PROGRESS', null);
     if (outcome === 'business') throw new ApiError(409, 'SOLO_TRIP_OVERLAP', null);
     return { id: keys.length };
   };
@@ -32,6 +33,16 @@ describe('createIdempotentRunner', () => {
     const { keys, send } = sender('timeout', 'ok');
 
     await expect(runner.run({ title: '가' }, send)).rejects.toMatchObject({ code: 'REQUEST_TIMEOUT' });
+    await runner.run({ title: '가' }, send);
+
+    expect(keys[1]).toBe(keys[0]);
+  });
+
+  it('서버가 아직 처리 중이라고 답한 뒤 같은 내용으로 다시 보내면 같은 키를 쓴다', async () => {
+    const runner = createIdempotentRunner();
+    const { keys, send } = sender('inProgress', 'ok');
+
+    await expect(runner.run({ title: '가' }, send)).rejects.toMatchObject({ code: 'IDEMPOTENCY_IN_PROGRESS' });
     await runner.run({ title: '가' }, send);
 
     expect(keys[1]).toBe(keys[0]);
