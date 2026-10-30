@@ -376,6 +376,17 @@ class ProgramTest {
         assertThat(program.paymentDueAt(NOW)).isEqualTo(NOW.plus(Duration.ofMinutes(45)));
     }
 
+    @Test
+    @DisplayName("[F-18][PG-04] 결제 기한이 행사 시작을 넘으면 행사 시작 시각으로 자른다")
+    void paymentDueAtIsCutAtStart() {
+        Program program = create(detail("제목", "설명", "장소", 20, 30000, 1440));
+        Instant nearStart = program.getStartAt().minus(Duration.ofMinutes(10));
+
+        assertThat(program.paymentDueAt(nearStart)).isEqualTo(program.getStartAt());
+        assertThat(program.paymentDueAt(program.getStartAt().minus(Duration.ofMinutes(1440))))
+                .isEqualTo(program.getStartAt());
+    }
+
     private static Program create(ProgramDetails details) {
         return Program.create(ADMIN_ID, details, NOW);
     }

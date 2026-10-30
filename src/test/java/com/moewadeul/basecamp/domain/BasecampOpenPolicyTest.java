@@ -6,9 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.schedule.CampingSchedule;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class BasecampOpenPolicyTest {
@@ -99,5 +101,35 @@ class BasecampOpenPolicyTest {
         assertThatThrownBy(() -> BasecampOpenPolicy.requireUnderOpenLimit(openCount))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(BasecampErrorCode.BASECAMP_OPEN_LIMIT.message());
+    }
+
+    @ParameterizedTest(name = "{0} ~ {1}")
+    @CsvSource({"2026-10-20, 2026-10-22", "2026-10-22, 2026-10-24", "2026-10-18, 2026-10-20", "2026-10-21, 2026-10-21"})
+    @DisplayName("[F-12][BC-06] 진행 중인 베이스캠프와 하루라도 날짜가 겹치면 BASECAMP_DATE_CONFLICT로 거부한다")
+    void sharedDateIsRejected(LocalDate start, LocalDate end) {
+        // given
+        List<BasecampSchedule> inProgress = List.of(new BasecampSchedule(1L, start, end));
+
+        // when & then
+        assertThatThrownBy(() -> BasecampOpenPolicy.requireNoDateConflict(
+                        new CampingSchedule(LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 22)), inProgress))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(BasecampErrorCode.BASECAMP_DATE_CONFLICT.message());
+    }
+
+    @Test
+    @DisplayName("[F-12][BC-06] 진행 중인 베이스캠프가 없거나 날짜가 겹치지 않으면 통과한다")
+    void separateDatesAreAccepted() {
+        // given
+        CampingSchedule schedule = new CampingSchedule(LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 22));
+        List<BasecampSchedule> inProgress = List.of(
+                new BasecampSchedule(1L, LocalDate.of(2026, 10, 23), LocalDate.of(2026, 10, 24)),
+                new BasecampSchedule(2L, LocalDate.of(2026, 10, 17), LocalDate.of(2026, 10, 19)));
+
+        // when & then
+        assertThatCode(() -> BasecampOpenPolicy.requireNoDateConflict(schedule, inProgress))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> BasecampOpenPolicy.requireNoDateConflict(schedule, List.of()))
+                .doesNotThrowAnyException();
     }
 }

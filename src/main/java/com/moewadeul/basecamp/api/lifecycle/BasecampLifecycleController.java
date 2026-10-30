@@ -42,7 +42,8 @@ class BasecampLifecycleController {
                     + "신뢰 단계가 1 미만이면 403 TRUST_LEVEL_INSUFFICIENT로 응답한다. "
                     + "장소가 없거나 지도에 보이는(ACTIVE) 상태가 아니면 404 NOT_FOUND로 응답한다. "
                     + "공원 경계 경고가 붙은 박지이면 400 BASECAMP_WARNING_SPOT으로 응답한다. "
-                    + "모집 중이거나 마감된 베이스캠프를 이미 3개 열었으면 400 BASECAMP_OPEN_LIMIT로 응답한다.")
+                    + "모집 중이거나 마감된 베이스캠프를 이미 3개 열었으면 400 BASECAMP_OPEN_LIMIT로 응답한다. "
+                    + "같은 기간에 진행 중인(모집 중·마감·확정) 다른 베이스캠프의 ACTIVE 멤버이면 409 BASECAMP_DATE_CONFLICT로 응답한다.")
     @PostMapping("/api/basecamps")
     @ResponseStatus(HttpStatus.CREATED)
     BasecampOpenResponse open(
