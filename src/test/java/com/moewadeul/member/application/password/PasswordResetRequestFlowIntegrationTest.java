@@ -333,6 +333,45 @@ class PasswordResetRequestFlowIntegrationTest {
         assertThatCode(() -> confirmService.confirm(later, NEW_PASSWORD)).doesNotThrowAnyException();
     }
 
+    @Test
+    @DisplayName("[F-02][PW-02] 새 요청으로 끊긴 토큰의 옛 이벤트를 다시 처리하면 메일을 보내지 않고 새 링크만 쓸 수 있다")
+    void staleEventAfterNewRequestSendsNothing() {
+        // given
+        Member member = newMember("stale@example.com");
+        requestService.request(member.getEmail(), CLIENT_IP);
+        OutboxMessage earlier = toMessage(findOnlyEvent());
+        handler.handle(earlier);
+        clock.advance(PasswordResetRequestPolicy.EMAIL.minInterval());
+        requestService.request(member.getEmail(), CLIENT_IP);
+        handler.handle(toMessage(jdbc.queryForMap("SELECT * FROM outbox_event WHERE id <> ?", earlier.eventId())));
+
+        // when
+        handler.handle(earlier);
+
+        // then
+        List<MailMessage> mails = mailSender.sent();
+        assertThat(mails).hasSize(2);
+        assertThatCode(() -> confirmService.confirm(PasswordResetMails.extractToken(mails.get(1)), NEW_PASSWORD))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-02] 이미 재설정에 쓴 토큰의 이벤트를 다시 처리하면 메일을 보내지 않는다")
+    void usedTokenEventSendsNothing() {
+        // given
+        Member member = newMember("used@example.com");
+        requestService.request(member.getEmail(), CLIENT_IP);
+        OutboxMessage message = toMessage(findOnlyEvent());
+        handler.handle(message);
+        confirmService.confirm(PasswordResetMails.extractToken(mailSender.sent().get(0)), NEW_PASSWORD);
+
+        // when
+        handler.handle(message);
+
+        // then
+        assertThat(mailSender.sent()).hasSize(1);
+    }
+
     private Member newMember(String email) {
         return memberRepository.saveAndFlush(
                 MemberBuilder.aMember().email(email).now(clock.instant()).build());

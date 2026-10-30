@@ -87,22 +87,23 @@ public class PasswordResetRequestService {
         return memberRepository
                 .findById(memberId)
                 .filter(PasswordResetRequestService::isTarget)
-                .map(member -> issue(member, outboxEventId));
+                .flatMap(member -> issue(member, outboxEventId));
     }
 
     // 살아 있는 링크는 마지막으로 보낸 요청의 것 하나만 둔다.
-    private IssuedPasswordReset issue(Member member, long outboxEventId) {
+    private Optional<IssuedPasswordReset> issue(Member member, long outboxEventId) {
         ResetToken token = ResetToken.fromSeed(
                 mailSecretDeriver.derive(MailSecretDeriver.Purpose.PASSWORD_RESET, outboxEventId, member.getId()));
         String tokenHash = ResetToken.hash(token.value());
         Instant now = Instant.now(clock);
-        passwordResetTokenRepository
-                .findByTokenHash(tokenHash)
-                .ifPresentOrElse(resent -> resent.renewIfUnused(now), () -> {
-                    passwordResetTokenMapper.invalidateUnusedTokens(member.getId(), now);
-                    passwordResetTokenRepository.save(PasswordResetToken.issue(member.getId(), tokenHash, now));
-                });
-        return new IssuedPasswordReset(member.getEmail(), token.value());
+        Optional<PasswordResetToken> resent = passwordResetTokenRepository.findByTokenHash(tokenHash);
+        if (resent.isEmpty()) {
+            passwordResetTokenMapper.invalidateUnusedTokens(member.getId(), now);
+            passwordResetTokenRepository.save(PasswordResetToken.issue(member.getId(), tokenHash, now));
+        } else if (!resent.get().renewIfUnused(now)) {
+            return Optional.empty();
+        }
+        return Optional.of(new IssuedPasswordReset(member.getEmail(), token.value()));
     }
 
     private static boolean isTarget(Member member) {
