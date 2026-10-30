@@ -2,7 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.common.retry.RetryPolicySql">
 
-    <!-- 일시 실패는 시도 횟수로 세지 않지만, 만든 지 transientRetryWindow가 지난 행은 계속 재시도하지 않고 FAILED로 굳힌다. -->
     <sql id="exhausted">((NOT #{transientFailure} AND ${attemptCount} + 1 &gt;= #{retry.maxAttempts})
         OR (#{transientFailure}
             AND ${createdAt} &lt;= DATE_SUB(#{now}, INTERVAL #{retry.transientRetryWindowMillis} * 1000 MICROSECOND)))</sql>
