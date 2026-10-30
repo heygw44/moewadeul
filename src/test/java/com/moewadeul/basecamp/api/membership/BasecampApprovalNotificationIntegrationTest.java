@@ -4,6 +4,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.basecamp.api.BasecampApiFixture;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
@@ -76,7 +77,7 @@ class BasecampApprovalNotificationIntegrationTest {
                 .with(csrf())
                 .cookie(leaderSession)
                 .exchange();
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(approved).hasStatus(HttpStatus.OK);

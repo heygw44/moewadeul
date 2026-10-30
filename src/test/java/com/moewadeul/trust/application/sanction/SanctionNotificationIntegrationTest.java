@@ -2,6 +2,7 @@ package com.moewadeul.trust.application.sanction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -54,7 +55,7 @@ class SanctionNotificationIntegrationTest {
     void warningNotifiesSanctionedMember() {
         // when
         confirm(SanctionType.WARNING);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         List<Map<String, Object>> notifications = jdbc.queryForList(
@@ -76,7 +77,7 @@ class SanctionNotificationIntegrationTest {
         confirm(SanctionType.SUSPEND_7D);
 
         // when
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         List<String> bodies = jdbc.queryForList(

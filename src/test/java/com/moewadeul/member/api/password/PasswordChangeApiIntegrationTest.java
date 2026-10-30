@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -126,7 +127,7 @@ class PasswordChangeApiIntegrationTest {
         assertThat(getWithSession(another)).hasStatus(HttpStatus.OK);
 
         clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(sessionCount(member)).isEqualTo(1);
         assertThat(getWithSession(renewed)).hasStatus(HttpStatus.OK);
@@ -142,7 +143,7 @@ class PasswordChangeApiIntegrationTest {
         clock.advance(Duration.ofSeconds(1));
         AtomicInteger processedBeforeResponse = new AtomicInteger(-1);
         doAnswer(invocation -> {
-                    processedBeforeResponse.set(outboxPublisher.publishPending());
+                    processedBeforeResponse.set(outboxPublisher.publishPending(OutboxLane.DEFAULT));
                     return invocation.callRealMethod();
                 })
                 .when(memberSessionCleanup)
@@ -159,7 +160,7 @@ class PasswordChangeApiIntegrationTest {
 
         clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
 
-        assertThat(outboxPublisher.publishPending()).isEqualTo(1);
+        assertThat(outboxPublisher.publishPending(OutboxLane.DEFAULT)).isEqualTo(1);
         assertThat(getWithSession(renewed)).hasStatus(HttpStatus.OK);
         assertThat(sessionCount(member)).isEqualTo(1);
     }

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.error.BusinessException;
@@ -17,25 +18,33 @@ import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
@@ -219,6 +228,82 @@ class S3ImageStorageTest {
             release.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("[F-33] 지울 키가 없으면 S3를 부르지 않는다")
+    void deleteWithNoKeysDoesNotCallS3() {
+        // given
+        S3Client s3Client = mock(S3Client.class);
+
+        // when & then
+        assertThat(storageWith(s3Client, 10).deleteReturningFailedKeys(List.of()))
+                .isEmpty();
+        verifyNoInteractions(s3Client);
+    }
+
+    @Test
+    @DisplayName("[F-33] 키가 1,000개를 넘으면 1,000개씩 나눠 지우고, 모두 지웠으면 빈 집합을 돌려준다")
+    void deleteSplitsIntoChunksOfThousand() {
+        // given
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.deleteObjects(any(DeleteObjectsRequest.class)))
+                .thenReturn(DeleteObjectsResponse.builder().build());
+        List<String> keys = IntStream.range(0, 2_500)
+                .mapToObj(i -> "memory/1/" + i + ".jpg")
+                .toList();
+
+        // when
+        Set<String> failed = storageWith(s3Client, 10).deleteReturningFailedKeys(keys);
+
+        // then
+        ArgumentCaptor<DeleteObjectsRequest> requests = ArgumentCaptor.forClass(DeleteObjectsRequest.class);
+        verify(s3Client, times(3)).deleteObjects(requests.capture());
+        assertThat(failed).isEmpty();
+        assertThat(requests.getAllValues())
+                .extracting(r -> r.delete().objects().size())
+                .containsExactly(1_000, 1_000, 500);
+        assertThat(requests.getAllValues()).allSatisfy(r -> {
+            assertThat(r.bucket()).isEqualTo(BUCKET);
+            assertThat(r.delete().quiet()).isTrue();
+        });
+        assertThat(requests.getAllValues().stream()
+                        .flatMap(r -> r.delete().objects().stream())
+                        .map(ObjectIdentifier::key))
+                .containsExactlyElementsOf(keys);
+    }
+
+    @Test
+    @DisplayName("[F-33] S3가 키별 오류를 돌려주면 그 키만 지우지 못한 것으로 돌려준다")
+    void deleteReturnsKeysWithPerKeyErrors() {
+        // given
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.deleteObjects(any(DeleteObjectsRequest.class)))
+                .thenReturn(DeleteObjectsResponse.builder()
+                        .errors(S3Error.builder().key("b").code("InternalError").build())
+                        .build());
+
+        // when & then
+        assertThat(storageWith(s3Client, 10).deleteReturningFailedKeys(List.of("a", "b", "c")))
+                .containsExactly("b");
+    }
+
+    @Test
+    @DisplayName("[F-33] 한 묶음을 부르다 예외가 나면 그 묶음의 키 전부를 지우지 못한 것으로 보고 다음 묶음을 계속 지운다")
+    void deleteFailsWholeChunkOnExceptionAndContinues() {
+        // given
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.deleteObjects(any(DeleteObjectsRequest.class)))
+                .thenThrow(ApiCallTimeoutException.builder().message("timeout").build())
+                .thenReturn(DeleteObjectsResponse.builder().build());
+        List<String> keys = IntStream.range(0, 1_200).mapToObj(i -> "k" + i).toList();
+
+        // when
+        Set<String> failed = storageWith(s3Client, 10).deleteReturningFailedKeys(keys);
+
+        // then
+        assertThat(failed).containsExactlyInAnyOrderElementsOf(keys.subList(0, 1_000));
+        verify(s3Client, times(2)).deleteObjects(any(DeleteObjectsRequest.class));
     }
 
     private S3ImageStorage storageWith(S3Client s3Client, int maxConcurrentCalls) {

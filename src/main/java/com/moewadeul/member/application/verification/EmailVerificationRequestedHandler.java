@@ -2,6 +2,7 @@ package com.moewadeul.member.application.verification;
 
 import com.moewadeul.common.mail.MailSender;
 import com.moewadeul.common.outbox.OutboxEventHandler;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.application.EmailVerificationEvents;
@@ -23,6 +24,11 @@ class EmailVerificationRequestedHandler implements OutboxEventHandler {
     @Override
     public Set<String> eventTypes() {
         return Set.of(EmailVerificationEvents.EVENT_TYPE);
+    }
+
+    @Override
+    public OutboxLane lane() {
+        return OutboxLane.MAIL;
     }
 
     @Override

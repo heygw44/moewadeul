@@ -7,6 +7,7 @@ import com.moewadeul.common.mail.MailMessage;
 import com.moewadeul.common.mail.MailSender;
 import com.moewadeul.common.mail.TestMailSender;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.scheduling.ShutdownSignal;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -201,7 +202,7 @@ class NotificationMailIntegrationTest {
         recordConfirmed(3L, List.of(first.getId(), second.getId()));
 
         // when
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(eventStatus()).isEqualTo("PUBLISHED");
@@ -264,7 +265,7 @@ class NotificationMailIntegrationTest {
         // given
         Member applicant = saveActiveMember();
         recordApproved(applicant.getId(), 3L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         mailSender.failNextSends(properties.maxAttempts());
 
         // when
@@ -289,7 +290,7 @@ class NotificationMailIntegrationTest {
         int failures = properties.maxAttempts() - 1;
         Member applicant = saveActiveMember();
         recordApproved(applicant.getId(), 3L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         mailSender.failNextSends(failures);
         List<Duration> delays = new ArrayList<>();
 
@@ -314,7 +315,7 @@ class NotificationMailIntegrationTest {
         int failures = properties.maxAttempts() + 2;
         Member applicant = saveActiveMember();
         recordApproved(applicant.getId(), 3L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         mailSender.failNextSendsTransiently(failures);
 
         // when
@@ -341,10 +342,10 @@ class NotificationMailIntegrationTest {
     void transientFailureBecomesFailedOnlyAfterRetryWindow() {
         // given
         recordApproved(saveActiveMember().getId(), 3L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         clock.advance(Duration.ofSeconds(1));
         recordApproved(saveActiveMember().getId(), 4L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         clock.advance(properties.transientRetryWindow().minusSeconds(1));
         mailSender.failNextSendsTransiently(2);
 
@@ -390,7 +391,7 @@ class NotificationMailIntegrationTest {
         // given
         Member applicant = saveActiveMember();
         recordApproved(applicant.getId(), 3L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         long notificationId = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
         jdbcTemplate.update(
                 "UPDATE notification SET email_next_attempt_at = ? WHERE id = ?",
@@ -417,7 +418,7 @@ class NotificationMailIntegrationTest {
             memberIds.add(saveActiveMember().getId());
         }
         recordConfirmed(3L, memberIds);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         ShutdownSignal signal = new ShutdownSignal();
         List<MailMessage> sentByStoppingMailer = new ArrayList<>();
         MailSender shutdownStartingSender = message -> {
@@ -453,7 +454,7 @@ class NotificationMailIntegrationTest {
     void doesNotClaimMailsAfterShutdownStarted() {
         // given
         recordApproved(saveActiveMember().getId(), 3L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         ShutdownSignal signal = new ShutdownSignal();
         signal.request();
         NotificationMailer stoppedMailer = new NotificationMailer(mailStore, mailSender, clock, webProperties, signal);
@@ -474,7 +475,7 @@ class NotificationMailIntegrationTest {
     void releaseLeaseKeepsMailsThatAnotherSenderClaimedAgain() {
         // given
         recordApproved(saveActiveMember().getId(), 3L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         long notificationId = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
         NotificationMailStore.Claim first = mailStore.claim(clock.instant());
         clock.advance(properties.lease().plusSeconds(1));
@@ -500,7 +501,7 @@ class NotificationMailIntegrationTest {
     void staleLeaseHolderCannotMarkSent() {
         // given
         recordApproved(saveActiveMember().getId(), 3L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         long notificationId = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
         NotificationMailStore.Claim first = mailStore.claim(clock.instant());
         clock.advance(properties.lease().plusSeconds(1));
@@ -521,7 +522,7 @@ class NotificationMailIntegrationTest {
     void staleLeaseHolderCannotMarkFailedAttempt() {
         // given
         recordApproved(saveActiveMember().getId(), 3L);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         long notificationId = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
         NotificationMailStore.Claim first = mailStore.claim(clock.instant());
         clock.advance(properties.lease().plusSeconds(1));
@@ -556,7 +557,7 @@ class NotificationMailIntegrationTest {
         record(SEAT_RELEASED, 7L, Map.of("programId", 7L, "memberIds", memberIds));
 
         // when
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         for (int i = 0; i < 5; i++) {
             mailer.sendDue();
         }
@@ -582,7 +583,7 @@ class NotificationMailIntegrationTest {
             memberIds.add(saveActiveMember().getId());
         }
         recordConfirmed(3L, memberIds);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
         Callable<Integer> drain = () -> {
@@ -622,7 +623,7 @@ class NotificationMailIntegrationTest {
         insertSentNotifications(
                 memberIds.get(0), NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW - remaining, Duration.ofHours(1));
         recordConfirmed(3L, memberIds);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
 
         // when
         int handled = drain();
@@ -650,7 +651,7 @@ class NotificationMailIntegrationTest {
         insertSentNotifications(
                 memberIds.get(0), NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW - 3, Duration.ofHours(1));
         recordConfirmed(3L, memberIds);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         drain();
         mailSender.reset();
 
@@ -682,7 +683,7 @@ class NotificationMailIntegrationTest {
                 NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW,
                 NotificationEventTypes.EMAIL_LIMIT_WINDOW.plusMinutes(1));
         recordConfirmed(3L, memberIds);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
 
         // when
         int handled = drain();
@@ -764,7 +765,7 @@ class NotificationMailIntegrationTest {
     }
 
     private void publishAndSend() {
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
         mailer.sendDue();
     }
 

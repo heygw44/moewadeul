@@ -3,6 +3,7 @@ package com.moewadeul.program.application.enrollment;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -155,8 +156,8 @@ class ProgramSanctionCleanupIntegrationTest {
         // when
         sanctionFixture.confirm(target, admin, SanctionType.PERMANENT, "금전 요구");
         assertThat(fixture.applicationStatus(pending)).isEqualTo("PENDING_PAYMENT");
-        outboxPublisher.publishPending();
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(fixture.applicationStatus(pending)).isEqualTo("CANCELED");

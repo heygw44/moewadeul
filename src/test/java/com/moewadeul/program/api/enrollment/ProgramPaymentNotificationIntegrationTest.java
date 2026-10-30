@@ -4,6 +4,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
@@ -85,7 +86,7 @@ class ProgramPaymentNotificationIntegrationTest {
                 .with(csrf())
                 .cookie(session)
                 .exchange();
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(paid).hasStatus(HttpStatus.OK);
@@ -114,7 +115,7 @@ class ProgramPaymentNotificationIntegrationTest {
                 .with(csrf())
                 .cookie(session)
                 .exchange();
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(canceled).hasStatus(HttpStatus.OK);
@@ -136,7 +137,7 @@ class ProgramPaymentNotificationIntegrationTest {
 
         // when
         paymentExpiryService.run();
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         MvcTestResult inbox =
@@ -166,7 +167,7 @@ class ProgramPaymentNotificationIntegrationTest {
                 .with(csrf())
                 .cookie(session)
                 .exchange();
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(canceled).hasStatus(HttpStatus.OK);

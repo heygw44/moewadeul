@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -212,7 +213,7 @@ class UnverifiedMemberCleanupIntegrationTest {
         assertThat(sessionCount(expired.getId())).isEqualTo(1);
 
         clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(sessionCount(expired.getId())).isZero();
     }

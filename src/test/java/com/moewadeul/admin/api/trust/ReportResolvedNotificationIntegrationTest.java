@@ -3,6 +3,7 @@ package com.moewadeul.admin.api.trust;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
@@ -72,7 +73,7 @@ class ReportResolvedNotificationIntegrationTest {
     void dismissNotifiesReporterWithoutSanction() {
         // when
         MvcTestResult dismissed = post(REPORTS + "/" + reportId + "/dismiss", null);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(dismissed).hasStatus(HttpStatus.OK);
@@ -93,7 +94,7 @@ class ReportResolvedNotificationIntegrationTest {
         // when
         MvcTestResult actioned =
                 post(REPORTS + "/" + reportId + "/action", "{\"sanction\":{\"type\":\"WARNING\",\"reason\":\"사유\"}}");
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(actioned).hasStatus(HttpStatus.OK);

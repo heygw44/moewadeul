@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.mail.MailMessage;
 import com.moewadeul.common.mail.TestMailSender;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -87,7 +88,7 @@ class EmailVerificationFlowIntegrationTest {
         assertThat(mailSender.sent()).isEmpty();
 
         // when
-        int processed = publisher.publishPending();
+        int processed = publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(processed).isEqualTo(1);
@@ -107,7 +108,7 @@ class EmailVerificationFlowIntegrationTest {
     void codeFromMailVerifiesMember() {
         // given
         SignupResult signedUp = signUp(TestSequence.email());
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
         String code = VerificationMails.extractCode(mailSender.sent().get(0));
 
         // when
@@ -127,7 +128,7 @@ class EmailVerificationFlowIntegrationTest {
                     throw new IllegalStateException("가입 이후 단계 실패");
                 }))
                 .isInstanceOf(IllegalStateException.class);
-        int processed = publisher.publishPending();
+        int processed = publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(countRows("member")).isZero();
@@ -148,7 +149,7 @@ class EmailVerificationFlowIntegrationTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_EMAIL_DUPLICATED));
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(countRows("outbox_event")).isEqualTo(1);
@@ -163,7 +164,7 @@ class EmailVerificationFlowIntegrationTest {
         mailSender.failNextSends(1);
 
         // when
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         Map<String, Object> afterFailure = findOnlyEvent();
@@ -172,9 +173,9 @@ class EmailVerificationFlowIntegrationTest {
         assertThat(mailSender.sent()).isEmpty();
 
         // when
-        assertThat(publisher.publishPending()).isZero();
+        assertThat(publisher.publishPending(OutboxLane.MAIL)).isZero();
         clock.advance(outboxProperties.retryDelay());
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(findOnlyEvent().get("status")).isEqualTo("PUBLISHED");
@@ -191,12 +192,12 @@ class EmailVerificationFlowIntegrationTest {
         SignupResult signedUp = signUp(TestSequence.email());
         mailSender.failNextSends(6);
         for (int attempt = 0; attempt < 6; attempt++) {
-            publisher.publishPending();
+            publisher.publishPending(OutboxLane.MAIL);
             clock.advance(outboxProperties.retryMaxDelay());
         }
 
         // when
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(findOnlyEvent().get("status")).isEqualTo("PUBLISHED");
@@ -243,7 +244,7 @@ class EmailVerificationFlowIntegrationTest {
                 signedUp.memberId());
 
         // when
-        int processed = publisher.publishPending();
+        int processed = publisher.publishPending(OutboxLane.MAIL);
 
         // then
         assertThat(processed).isEqualTo(1);

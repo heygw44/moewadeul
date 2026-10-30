@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import com.moewadeul.common.mail.MailProperties;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.scheduling.ScheduledJobMetrics;
 import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -39,7 +40,7 @@ class OutboxPollingSchedulerTest {
     @DisplayName("[NFR-09] 아웃박스 발행이 예외로 끝나면 스케줄러는 예외를 삼키고 작업 실패 수를 1 올린다")
     void countsFailure() {
         OutboxPublisher publisher = mock(OutboxPublisher.class);
-        doThrow(new IllegalStateException("DB 연결 실패")).when(publisher).publishPending();
+        doThrow(new IllegalStateException("DB 연결 실패")).when(publisher).publishPending(OutboxLane.DEFAULT);
 
         new OutboxPollingScheduler(
                         publisher,
@@ -54,6 +55,31 @@ class OutboxPollingSchedulerTest {
                         .counter()
                         .count())
                 .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[NFR-09] 메일 줄 발행이 예외로 끝나면 메일 줄 작업 실패 수만 1 올리고 기본 줄 작업은 영향이 없다")
+    void countsMailLaneFailureSeparately() {
+        OutboxPublisher publisher = mock(OutboxPublisher.class);
+        doThrow(new IllegalStateException("SMTP 장애")).when(publisher).publishPending(OutboxLane.MAIL);
+
+        OutboxPollingScheduler scheduler = new OutboxPollingScheduler(
+                publisher, new ScheduledJobRunner(metrics), properties(25, Duration.ofMinutes(10)), mailProperties());
+        scheduler.pollMail();
+        scheduler.poll();
+
+        assertThat(meterRegistry
+                        .get("moewadeul.scheduled.job.failures")
+                        .tag("job", "outbox-mail-polling")
+                        .counter()
+                        .count())
+                .isEqualTo(1);
+        assertThat(meterRegistry
+                        .get("moewadeul.scheduled.job.failures")
+                        .tag("job", "outbox-polling")
+                        .counter()
+                        .count())
+                .isZero();
     }
 
     private OutboxPollingScheduler scheduler(OutboxProperties properties) {

@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.application.MemberSessionCleanup;
@@ -105,7 +106,7 @@ class MemberSessionCleanupOutboxIntegrationTest {
         assertThat(sessionRows(target)).isEqualTo(1);
 
         clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertOldSessionRejected(target, session);
     }
@@ -124,7 +125,7 @@ class MemberSessionCleanupOutboxIntegrationTest {
         assertThat(sessionRows(target)).isEqualTo(1);
 
         clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
-        outboxPublisher.publishPending();
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
 
         assertOldSessionRejected(target, session);
     }

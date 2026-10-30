@@ -1,8 +1,10 @@
 package com.moewadeul.common.storage;
 
 import java.time.Clock;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -44,7 +46,8 @@ public class LocalFakeImageStorage implements ImageStorage {
     }
 
     @Override
-    public void delete(String key) {
-        sizes.remove(key);
+    public Set<String> deleteReturningFailedKeys(Collection<String> keys) {
+        keys.forEach(sizes::remove);
+        return Set.of();
     }
 }

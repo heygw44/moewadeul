@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.outbox.OutboxLane;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
@@ -83,11 +84,11 @@ class NotificationReliabilityIntegrationTest {
         long eventId = recordApproved(applicantId, 3L);
 
         // when
-        int first = publisher.publishPending();
+        int first = publisher.publishPending(OutboxLane.DEFAULT);
         jdbcTemplate.update(
                 "UPDATE outbox_event SET status = 'PENDING', published_at = NULL, locked_until = NULL WHERE id = ?",
                 eventId);
-        int second = publisher.publishPending();
+        int second = publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(first).isEqualTo(1);
@@ -121,7 +122,7 @@ class NotificationReliabilityIntegrationTest {
                 results.add(executor.submit(() -> {
                     ready.countDown();
                     start.await();
-                    return publisher.publishPending();
+                    return publisher.publishPending(OutboxLane.DEFAULT);
                 }));
             }
             ready.await(THREAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -154,7 +155,7 @@ class NotificationReliabilityIntegrationTest {
                     throw new IllegalStateException("원래 작업 실패");
                 }))
                 .isInstanceOf(IllegalStateException.class);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
 
         // then
         assertThat(countNotifications()).isZero();
