@@ -3,6 +3,10 @@ package com.moewadeul.member.api.login;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
@@ -27,6 +31,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -53,6 +59,9 @@ class MemberLoginApiIntegrationTest {
 
     @Autowired
     private MutableClock clock;
+
+    @MockitoSpyBean
+    private PasswordEncoder passwordEncoder;
 
     @Test
     @DisplayName("[F-02] 올바른 이메일과 비밀번호로 로그인하면 200과 SESSION 쿠키를 응답하고 성공을 기록한다")
@@ -359,7 +368,7 @@ class MemberLoginApiIntegrationTest {
             assertThat(loginFrom(TestSequence.email(), PASSWORD, "198.51.100.1"))
                     .hasStatus(HttpStatus.UNAUTHORIZED);
         }
-        int historyBefore = count("login_history");
+        clearInvocations(passwordEncoder);
 
         MvcTestResult blocked = loginFrom(member.getEmail(), PASSWORD, "198.51.100.1");
 
@@ -367,7 +376,7 @@ class MemberLoginApiIntegrationTest {
         assertThat(blocked).bodyJson().extractingPath("$.code").isEqualTo("LOGIN_LOCKED");
         assertThat(blocked.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isEqualTo("3");
         assertThat(blocked.getResponse().getCookie(SESSION_COOKIE)).isNull();
-        assertThat(count("login_history")).isEqualTo(historyBefore);
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
     }
 
     @Test

@@ -53,22 +53,32 @@ public class MemberLoginService {
     }
 
     public LoginResult login(LoginCommand command) {
-        ipFailureLimiter.rejectIfExhausted(command.ip());
-        String attemptedEmail = normalizeEmail(command.email());
-        Member found = findLoginableMember(attemptedEmail);
-        Long memberId = found != null ? found.getId() : null;
-        rejectIfLocked(memberId, attemptedEmail);
-        Member authenticated = authenticate(found, memberId, attemptedEmail, command);
-        Member member = releaseIfSuspensionEnded(authenticated);
-        rejectIfSuspended(member);
-        loginAttemptService.recordSuccess(member.getId(), attemptedEmail, command.ip());
-        return new LoginResult(
-                member.getId(),
-                member.getNickname(),
-                member.getStatus(),
-                member.isEmailVerified(),
-                member.getRole(),
-                member.getPasswordChangedAt());
+        ipFailureLimiter.reserve(command.ip());
+        boolean failedCredentialCheck = false;
+        try {
+            String attemptedEmail = normalizeEmail(command.email());
+            Member found = findLoginableMember(attemptedEmail);
+            Long memberId = found != null ? found.getId() : null;
+            rejectIfLocked(memberId, attemptedEmail);
+            // 이 시점부터 BCrypt가 돈다. 인증에 성공하기 전까지 던지는 예외는 모두 실패한 자격 확인으로 센다.
+            failedCredentialCheck = true;
+            Member authenticated = authenticate(found, memberId, attemptedEmail, command);
+            failedCredentialCheck = false;
+            Member member = releaseIfSuspensionEnded(authenticated);
+            rejectIfSuspended(member);
+            loginAttemptService.recordSuccess(member.getId(), attemptedEmail, command.ip());
+            return new LoginResult(
+                    member.getId(),
+                    member.getNickname(),
+                    member.getStatus(),
+                    member.isEmailVerified(),
+                    member.getRole(),
+                    member.getPasswordChangedAt());
+        } finally {
+            if (!failedCredentialCheck) {
+                ipFailureLimiter.refund(command.ip());
+            }
+        }
     }
 
     public void ensureStillLoginable(LoginResult loggedIn) {
@@ -116,7 +126,6 @@ public class MemberLoginService {
         boolean authenticated = passwordEncoder.matches(command.password(), passwordHash) && member != null;
         loginAttemptService.recordAttemptUnderEmailLock(memberId, attemptedEmail, command.ip(), authenticated);
         if (!authenticated) {
-            ipFailureLimiter.recordFailure(command.ip());
             throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
         }
         return member;

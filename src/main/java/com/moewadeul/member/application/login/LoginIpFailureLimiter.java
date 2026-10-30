@@ -37,27 +37,27 @@ public class LoginIpFailureLimiter {
                 .build();
     }
 
-    public void rejectIfExhausted(String ip) {
-        requireRequestIp(ip);
-        Instant fullAgain = fullAgainAt.getIfPresent(ip);
-        if (fullAgain == null) {
-            return;
-        }
-        Duration untilToken = Duration.between(clock.instant(), fullAgain)
-                .minus(LoginLockout.IP_FAILURE_WINDOW.minus(REFILL_INTERVAL));
-        if (untilToken.isPositive()) {
-            throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, untilToken);
-        }
-    }
-
-    public void recordFailure(String ip) {
+    /** 시도를 시작할 때 토큰을 먼저 하나 쓴다. 실패 기록을 BCrypt 뒤로 미루면 그 사이에 몰린 요청이 모두 통과한다. */
+    public void reserve(String ip) {
         requireRequestIp(ip);
         Instant now = clock.instant();
-        Instant fullest = now.plus(LoginLockout.IP_FAILURE_WINDOW);
         fullAgainAt.asMap().compute(ip, (key, fullAgain) -> {
             Instant base = fullAgain == null || fullAgain.isBefore(now) ? now : fullAgain;
-            Instant next = base.plus(REFILL_INTERVAL);
-            return next.isAfter(fullest) ? fullest : next;
+            Duration untilToken =
+                    Duration.between(now, base).minus(LoginLockout.IP_FAILURE_WINDOW.minus(REFILL_INTERVAL));
+            if (untilToken.isPositive()) {
+                throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, untilToken);
+            }
+            return base.plus(REFILL_INTERVAL);
+        });
+    }
+
+    public void refund(String ip) {
+        requireRequestIp(ip);
+        Instant now = clock.instant();
+        fullAgainAt.asMap().computeIfPresent(ip, (key, fullAgain) -> {
+            Instant restored = fullAgain.minus(REFILL_INTERVAL);
+            return restored.isAfter(now) ? restored : null;
         });
     }
 
