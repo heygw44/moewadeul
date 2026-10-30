@@ -12,6 +12,7 @@ import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.application.MemberSessions;
+import com.moewadeul.member.application.verification.UnverifiedMemberDeleter;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import jakarta.servlet.http.Cookie;
@@ -55,11 +56,15 @@ class PasswordChangeApiIntegrationTest {
     @Autowired
     private OutboxPublisher outboxPublisher;
 
+    // 이 spy 세 개를 같은 이름으로 모두 선언해야 세션 삭제를 가로채는 테스트끼리 스프링 컨텍스트를 하나로 공유한다.
     @MockitoSpyBean
     private MemberSessions memberSessions;
 
     @MockitoSpyBean
     private MemberSessionCleanup memberSessionCleanup;
+
+    @MockitoSpyBean
+    private UnverifiedMemberDeleter unverifiedMemberDeleter;
 
     @Test
     @DisplayName("[F-32][PW-07] 이메일 인증 전인 회원이 바꾸면 204이고, 예전 비밀번호는 401 LOGIN_FAILED, 새 비밀번호는 200이다")

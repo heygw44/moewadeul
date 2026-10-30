@@ -11,6 +11,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.application.MemberSessionCleanup;
 import com.moewadeul.member.application.MemberSessions;
+import com.moewadeul.member.application.verification.UnverifiedMemberDeleter;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.CompanionReviewFixture;
@@ -63,8 +64,15 @@ class MemberSessionCleanupOutboxIntegrationTest {
     @Autowired
     private MutableClock clock;
 
+    // 이 spy 세 개를 같은 이름으로 모두 선언해야 세션 삭제를 가로채는 테스트끼리 스프링 컨텍스트를 하나로 공유한다.
     @MockitoSpyBean
     private MemberSessions memberSessions;
+
+    @MockitoSpyBean
+    private MemberSessionCleanup memberSessionCleanup;
+
+    @MockitoSpyBean
+    private UnverifiedMemberDeleter unverifiedMemberDeleter;
 
     private AdminReportApiFixture api;
 

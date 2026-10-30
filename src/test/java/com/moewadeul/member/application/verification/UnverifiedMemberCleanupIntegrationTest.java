@@ -57,15 +57,6 @@ class UnverifiedMemberCleanupIntegrationTest {
     private UnverifiedMemberCleanupService cleanupService;
 
     @Autowired
-    private UnverifiedMemberMapper unverifiedMemberMapper;
-
-    @MockitoSpyBean
-    private UnverifiedMemberDeleter unverifiedMemberDeleter;
-
-    @MockitoSpyBean
-    private MemberSessions memberSessions;
-
-    @Autowired
     private OutboxPublisher outboxPublisher;
 
     @Autowired
@@ -79,6 +70,19 @@ class UnverifiedMemberCleanupIntegrationTest {
 
     @Autowired
     private MutableClock clock;
+
+    @Autowired
+    private UnverifiedMemberMapper unverifiedMemberMapper;
+
+    // 이 spy 세 개를 같은 이름으로 모두 선언해야 세션 삭제를 가로채는 테스트끼리 스프링 컨텍스트를 하나로 공유한다.
+    @MockitoSpyBean
+    private MemberSessions memberSessions;
+
+    @MockitoSpyBean
+    private MemberSessionCleanup memberSessionCleanup;
+
+    @MockitoSpyBean
+    private UnverifiedMemberDeleter unverifiedMemberDeleter;
 
     private String passwordHash;
 

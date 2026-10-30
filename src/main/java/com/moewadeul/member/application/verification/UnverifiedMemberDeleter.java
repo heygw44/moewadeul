@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-class UnverifiedMemberDeleter {
+public class UnverifiedMemberDeleter {
 
     private final UnverifiedMemberMapper unverifiedMemberMapper;
     private final MemberSessionCleanup memberSessionCleanup;
