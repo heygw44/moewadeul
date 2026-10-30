@@ -40,6 +40,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @WebMvcTest(ProgramApplicationController.class)
 @Import({
@@ -62,6 +63,9 @@ class ProgramApplicationControllerTest {
 
     @MockitoBean
     private IdempotencyRecordRepository idempotencyRecordRepository;
+
+    @MockitoBean
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("[F-19] 인증 회원이 결제하면 200과 신청 ID, 상태, 결제 시각을 응답하고 로그인한 회원 ID로 서비스를 부른다")

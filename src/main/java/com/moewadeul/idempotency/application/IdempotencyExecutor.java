@@ -16,17 +16,17 @@ import java.util.HexFormat;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class IdempotencyExecutor {
 
     private static final String PRIMARY_KEY = "PRIMARY";
@@ -35,9 +35,31 @@ public class IdempotencyExecutor {
     private final IdempotencyRecordRepository recordRepository;
     private final JsonMapper jsonMapper;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
+
+    public IdempotencyExecutor(
+            IdempotencyRecordRepository recordRepository,
+            JsonMapper jsonMapper,
+            Clock clock,
+            PlatformTransactionManager transactionManager) {
+        this.recordRepository = recordRepository;
+        this.jsonMapper = jsonMapper;
+        this.clock = clock;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
 
     public <T> T execute(
             IdempotentRequest request, HttpStatus successStatus, Class<T> responseType, Supplier<T> action) {
+        return execute(request, successStatus, responseType, () -> {}, action);
+    }
+
+    // beforeTransaction은 선점 뒤 트랜잭션 밖에서 돌고, 던지면 선점을 풀고 끝낸다. 저장소처럼 바깥 시스템을 기다리는 검사를 둔다.
+    public <T> T execute(
+            IdempotentRequest request,
+            HttpStatus successStatus,
+            Class<T> responseType,
+            Runnable beforeTransaction,
+            Supplier<T> action) {
         OutsideTransaction.require("멱등성 기록은 작업과 따로 커밋해야 한다.");
         String key = validateKey(request.key());
         String requestHash = hash(request);
@@ -54,9 +76,7 @@ public class IdempotencyExecutor {
             }
         }
 
-        T result = runAction(record, action);
-        recordCompletion(record, successStatus, result, request.memberId());
-        return result;
+        return runAndComplete(record, successStatus, request.memberId(), beforeTransaction, action);
     }
 
     private String validateKey(String key) {
@@ -122,9 +142,20 @@ public class IdempotencyExecutor {
         }
     }
 
-    private <T> T runAction(IdempotencyRecord record, Supplier<T> action) {
+    // 완료 기록이 실패하면 작업도 함께 되돌아가야 한다. 작업만 커밋되면 같은 키는 24시간 "처리 중"으로 남고 새 키는 자원을 한 번 더 만든다.
+    private <T> T runAndComplete(
+            IdempotencyRecord record,
+            HttpStatus successStatus,
+            long memberId,
+            Runnable beforeTransaction,
+            Supplier<T> action) {
         try {
-            return action.get();
+            beforeTransaction.run();
+            return transactionTemplate.execute(status -> {
+                T result = action.get();
+                recordCompletion(record, successStatus, result, memberId);
+                return result;
+            });
         } catch (RuntimeException e) {
             releaseClaim(record, e);
             throw e;
@@ -148,6 +179,7 @@ public class IdempotencyExecutor {
                     "idempotency completion record failed memberId={} errorType={}",
                     memberId,
                     e.getClass().getName());
+            throw e;
         }
     }
 }

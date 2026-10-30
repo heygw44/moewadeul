@@ -53,6 +53,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @WebMvcTest(BasecampLifecycleController.class)
 @Import({
@@ -84,6 +85,9 @@ class BasecampLifecycleControllerTest {
 
     @MockitoBean
     private IdempotencyRecordRepository idempotencyRecordRepository;
+
+    @MockitoBean
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("[F-12] 베이스캠프를 열면 201과 basecampId·status를 응답하고, 요청 값과 로그인한 회원의 ID를 서비스에 넘긴다")

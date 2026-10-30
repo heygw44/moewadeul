@@ -24,6 +24,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,6 +46,9 @@ class IdempotencyKeyWebTest {
 
     @MockitoBean
     private IdempotencyRecordRepository repository;
+
+    @MockitoBean
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("[NFR-03] Idempotency-Key 헤더가 없으면 400과 IDEMPOTENCY_KEY_REQUIRED로 응답한다")

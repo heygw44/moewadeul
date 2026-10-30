@@ -6,6 +6,7 @@ import com.moewadeul.idempotency.application.IdempotencyExecutor;
 import com.moewadeul.idempotency.application.IdempotentRequest;
 import com.moewadeul.memory.application.MemoryCommandService;
 import com.moewadeul.memory.application.MemoryQueryService;
+import com.moewadeul.memory.application.MemoryWriteCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -54,11 +55,13 @@ class MemoryController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody MemoryCreateRequest request) {
         long memberId = loginMember.memberId();
+        MemoryWriteCommand command = request.toCommand();
         return idempotencyExecutor.execute(
                 new IdempotentRequest(memberId, idempotencyKey, "POST /api/memories", request),
                 HttpStatus.CREATED,
                 MemoryCreatedResponse.class,
-                () -> new MemoryCreatedResponse(memoryCommandService.write(memberId, request.toCommand())));
+                () -> memoryCommandService.precheckWrite(memberId, command),
+                () -> new MemoryCreatedResponse(memoryCommandService.write(memberId, command)));
     }
 
     @Operation(
