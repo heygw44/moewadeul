@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -109,6 +110,14 @@ public class SyncJobRun {
 
     public boolean isStale(Instant now, Duration staleAfter) {
         return isRunning() && updatedAt.plus(staleAfter).isBefore(now);
+    }
+
+    // 이어받은 위치를 그대로 둔 채 한 묶음도 끝내지 못한 실행은 그 위치를 다시 이어받으면 같은 곳에서 계속 실패한다.
+    public Optional<String> resumeCursor() {
+        if (!isFailed() || processedCount == 0) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(progressCursor);
     }
 
     public boolean isRunning() {

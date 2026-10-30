@@ -80,6 +80,44 @@ class SyncJobRunTest {
     }
 
     @Test
+    @DisplayName("[F-06] 진행을 기록한 채 실패한 기록은 그 위치부터 이어받을 수 있다")
+    void failedRunWithProgressResumesFromItsCursor() {
+        // given
+        SyncJobRun run = SyncJobRun.start(SyncJobType.GOCAMPING, null, NOW);
+        run.recordProgress("3", 300, 0, NOW.plusSeconds(10));
+        run.fail("오류", NOW.plusSeconds(20));
+
+        // when, then
+        assertThat(run.resumeCursor()).contains("3");
+    }
+
+    @Test
+    @DisplayName("[F-06] 이어받은 위치를 그대로 둔 채 한 페이지도 끝내지 못하고 실패한 기록은 이어받지 않는다")
+    void failedRunWithoutProgressDoesNotResume() {
+        // given
+        SyncJobRun run = SyncJobRun.start(SyncJobType.GOCAMPING, "1", NOW);
+        run.fail("오류", NOW.plusSeconds(20));
+
+        // when, then
+        assertThat(run.resumeCursor()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("[F-06] 완료했거나 아직 실행 중인 기록은 이어받을 위치가 없다")
+    void completedOrRunningRunHasNoResumeCursor() {
+        // given
+        SyncJobRun completed = SyncJobRun.start(SyncJobType.GOCAMPING, null, NOW);
+        completed.recordProgress("4", 400, 0, NOW.plusSeconds(10));
+        completed.complete(NOW.plusSeconds(20));
+        SyncJobRun running = SyncJobRun.start(SyncJobType.GOCAMPING, null, NOW);
+        running.recordProgress("1", 100, 0, NOW.plusSeconds(10));
+
+        // when, then
+        assertThat(completed.resumeCursor()).isEmpty();
+        assertThat(running.resumeCursor()).isEmpty();
+    }
+
+    @Test
     @DisplayName("[F-06] 2000자보다 긴 오류 메시지는 2000자로 잘라 저장한다")
     void failTruncatesLongMessage() {
         // given
