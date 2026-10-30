@@ -41,19 +41,19 @@ public class OutboxEventStore {
     }
 
     @Transactional
-    public void markPublished(long eventId) {
-        int updated = mapper.markPublished(eventId, clock.instant());
+    public void markPublished(long eventId, Instant leaseUntil) {
+        int updated = mapper.markPublished(eventId, leaseUntil, clock.instant());
         if (updated == 0) {
-            log.warn("outbox event was not pending when marking published eventId={}", eventId);
+            log.warn("outbox event was not pending or its lease was lost when marking published eventId={}", eventId);
         }
     }
 
     @Transactional
-    public void markFailedAttempt(long eventId, String error, boolean transientFailure) {
-        int updated =
-                mapper.markFailedAttempt(eventId, error, transientFailure, properties.retryPolicy(), clock.instant());
+    public void markFailedAttempt(long eventId, Instant leaseUntil, String error, boolean transientFailure) {
+        int updated = mapper.markFailedAttempt(
+                eventId, leaseUntil, error, transientFailure, properties.retryPolicy(), clock.instant());
         if (updated == 0) {
-            log.warn("outbox event was not pending when marking failed eventId={}", eventId);
+            log.warn("outbox event was not pending or its lease was lost when marking failed eventId={}", eventId);
         }
     }
 

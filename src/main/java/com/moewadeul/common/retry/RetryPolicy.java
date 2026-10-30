@@ -4,18 +4,33 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-public record RetryPolicy(Duration lease, Duration retryDelay, Duration retryMaxDelay, int maxAttempts) {
+public record RetryPolicy(
+        Duration lease, Duration retryDelay, Duration retryMaxDelay, int maxAttempts, Duration transientRetryWindow) {
 
     public static void requireValid(
-            String prefix, Duration lease, Duration retryDelay, Duration retryMaxDelay, int maxAttempts) {
+            String prefix,
+            Duration lease,
+            Duration retryDelay,
+            Duration retryMaxDelay,
+            int maxAttempts,
+            Duration transientRetryWindow) {
         requirePositive(prefix, lease, "lease");
         requirePositive(prefix, retryDelay, "retryDelay");
         requirePositive(prefix, retryMaxDelay, "retryMaxDelay");
+        requirePositive(prefix, transientRetryWindow, "transientRetryWindow");
         if (maxAttempts <= 0) {
             throw new IllegalArgumentException(prefix + ".maxAttempts must be positive");
         }
         if (retryMaxDelay.compareTo(retryDelay) < 0) {
             throw new IllegalArgumentException(prefix + ".retryMaxDelay must not be shorter than retryDelay");
+        }
+    }
+
+    public static void requireLeaseOutlastsBatch(String prefix, Duration lease, int batchSize, Duration sendTimeout) {
+        Duration worstBatch = sendTimeout.multipliedBy(batchSize);
+        if (lease.compareTo(worstBatch) <= 0) {
+            throw new IllegalStateException(prefix + ".lease(" + lease
+                    + ") must be longer than batchSize x moewadeul.mail.send-timeout(" + worstBatch + ")");
         }
     }
 
@@ -30,6 +45,10 @@ public record RetryPolicy(Duration lease, Duration retryDelay, Duration retryMax
 
     public long retryMaxDelayMillis() {
         return retryMaxDelay.toMillis();
+    }
+
+    public long transientRetryWindowMillis() {
+        return transientRetryWindow.toMillis();
     }
 
     private static void requirePositive(String prefix, Duration value, String name) {

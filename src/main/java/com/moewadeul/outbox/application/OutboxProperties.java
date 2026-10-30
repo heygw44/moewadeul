@@ -9,22 +9,28 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record OutboxProperties(
         @DefaultValue("true") boolean publisherEnabled,
         @DefaultValue(OutboxProperties.DEFAULT_POLL_DELAY) Duration pollDelay,
-        @DefaultValue("50") int batchSize,
-        @DefaultValue("5m") Duration lease,
+        @DefaultValue("25") int batchSize,
+        @DefaultValue("10m") Duration lease,
         @DefaultValue("30s") Duration retryDelay,
         @DefaultValue("10m") Duration retryMaxDelay,
-        @DefaultValue("10") int maxAttempts) {
+        @DefaultValue("10") int maxAttempts,
+        @DefaultValue("1d") Duration transientRetryWindow) {
 
     static final String DEFAULT_POLL_DELAY = "1s";
 
     public OutboxProperties {
         requirePositive(batchSize, "batchSize");
         requirePositive(pollDelay, "pollDelay");
-        RetryPolicy.requireValid("moewadeul.outbox", lease, retryDelay, retryMaxDelay, maxAttempts);
+        RetryPolicy.requireValid(
+                "moewadeul.outbox", lease, retryDelay, retryMaxDelay, maxAttempts, transientRetryWindow);
     }
 
     public RetryPolicy retryPolicy() {
-        return new RetryPolicy(lease, retryDelay, retryMaxDelay, maxAttempts);
+        return new RetryPolicy(lease, retryDelay, retryMaxDelay, maxAttempts, transientRetryWindow);
+    }
+
+    void requireLeaseOutlastsBatch(Duration sendTimeout) {
+        RetryPolicy.requireLeaseOutlastsBatch("moewadeul.outbox", lease, batchSize, sendTimeout);
     }
 
     private static void requirePositive(int value, String name) {

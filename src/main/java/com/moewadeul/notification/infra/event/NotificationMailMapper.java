@@ -21,10 +21,11 @@ public interface NotificationMailMapper {
 
     int markSkipped(@Param("ids") Collection<Long> ids);
 
-    int markSent(@Param("id") long id, @Param("now") Instant now);
+    int markSent(@Param("id") long id, @Param("leaseUntil") Instant leaseUntil, @Param("now") Instant now);
 
     int markFailedAttempt(
             @Param("id") long id,
+            @Param("leaseUntil") Instant leaseUntil,
             @Param("transientFailure") boolean transientFailure,
             @Param("retry") RetryPolicy retry,
             @Param("now") Instant now);

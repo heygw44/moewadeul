@@ -14,6 +14,7 @@ import com.moewadeul.common.web.WebProperties;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.notification.application.NotificationEventTypes;
+import com.moewadeul.notification.infra.event.NotificationMailMapper;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -57,6 +58,9 @@ class NotificationMailIntegrationTest {
 
     @Autowired
     private NotificationMailStore mailStore;
+
+    @Autowired
+    private NotificationMailMapper mailMapper;
 
     @Autowired
     private WebProperties webProperties;
@@ -333,6 +337,35 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-20] 일시적인 실패도 알림을 만든 지 일시 실패 재시도 기간(1일)이 지났으면 FAILED로 굳히고, 기간 안의 알림은 PENDING으로 둔다")
+    void transientFailureBecomesFailedOnlyAfterRetryWindow() {
+        // given
+        recordApproved(saveActiveMember().getId(), 3L);
+        publisher.publishPending();
+        clock.advance(Duration.ofSeconds(1));
+        recordApproved(saveActiveMember().getId(), 4L);
+        publisher.publishPending();
+        clock.advance(properties.transientRetryWindow().minusSeconds(1));
+        mailSender.failNextSendsTransiently(2);
+
+        // when
+        int handled = mailer.sendDue();
+
+        // then
+        assertThat(handled).isEqualTo(2);
+        assertThat(countByEmailStatus("FAILED")).isEqualTo(1);
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT email_next_attempt_at IS NULL FROM notification WHERE email_status = 'FAILED'",
+                        Boolean.class))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT email_next_attempt_at IS NOT NULL FROM notification WHERE email_status = 'PENDING'",
+                        Boolean.class))
+                .isTrue();
+    }
+
+    @Test
     @DisplayName("[F-20] 재시도 사이에 회원이 이메일을 끄면 남은 메일은 보내지 않고 SKIPPED로 둔다")
     void settingChangedBetweenRetriesIsRespected() {
         // given
@@ -460,6 +493,50 @@ class NotificationMailIntegrationTest {
         // then
         assertThat(releasedBySecond).isEqualTo(1);
         assertThat(mailStore.claim(clock.instant()).targets()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("[F-20][NFR-04] 임대가 끝난 뒤 다른 발송 작업이 다시 집은 메일에, 처음 집은 발송 작업이 발송 완료를 써도 PENDING으로 남고 다시 집은 작업의 임대가 유지된다")
+    void staleLeaseHolderCannotMarkSent() {
+        // given
+        recordApproved(saveActiveMember().getId(), 3L);
+        publisher.publishPending();
+        long notificationId = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
+        NotificationMailStore.Claim first = mailStore.claim(clock.instant());
+        clock.advance(properties.lease().plusSeconds(1));
+        NotificationMailStore.Claim second = mailStore.claim(clock.instant());
+
+        // when
+        int updated = mailMapper.markSent(notificationId, first.leaseUntil(), clock.instant());
+
+        // then
+        assertThat(updated).isZero();
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(1);
+        assertThat(countSentNotifications()).isZero();
+        assertThat(nextAttemptAt()).isEqualTo(second.leaseUntil());
+    }
+
+    @Test
+    @DisplayName("[F-20][NFR-04] 임대가 끝난 뒤 다른 발송 작업이 다시 집은 메일에, 처음 집은 발송 작업이 실패를 써도 시도 횟수와 임대가 바뀌지 않는다")
+    void staleLeaseHolderCannotMarkFailedAttempt() {
+        // given
+        recordApproved(saveActiveMember().getId(), 3L);
+        publisher.publishPending();
+        long notificationId = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
+        NotificationMailStore.Claim first = mailStore.claim(clock.instant());
+        clock.advance(properties.lease().plusSeconds(1));
+        NotificationMailStore.Claim second = mailStore.claim(clock.instant());
+
+        // when
+        int updated = mailMapper.markFailedAttempt(
+                notificationId, first.leaseUntil(), false, properties.retryPolicy(), clock.instant());
+
+        // then
+        assertThat(updated).isZero();
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT email_attempt_count FROM notification", Integer.class))
+                .isZero();
+        assertThat(nextAttemptAt()).isEqualTo(second.leaseUntil());
     }
 
     @Test

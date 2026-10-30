@@ -8,4 +8,6 @@ import org.apache.ibatis.annotations.Param;
 public interface OutboxEventCleanupMapper {
 
     int deletePublishedBefore(@Param("cutoff") Instant cutoff, @Param("limit") int limit);
+
+    int deleteFailedBefore(@Param("cutoff") Instant cutoff, @Param("limit") int limit);
 }

@@ -5,6 +5,7 @@ import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxMessage;
 import com.moewadeul.common.scheduling.ShutdownSignal;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +40,7 @@ public class OutboxPublisher {
         List<OutboxMessage> messages = claim.messages();
         int processed = 0;
         while (processed < messages.size() && !shutdownSignal.isRequested()) {
-            publish(messages.get(processed));
+            publish(claim.leaseUntil(), messages.get(processed));
             processed++;
         }
         if (processed < messages.size()) {
@@ -63,10 +64,10 @@ public class OutboxPublisher {
                 released);
     }
 
-    private void publish(OutboxMessage message) {
+    private void publish(Instant leaseUntil, OutboxMessage message) {
         Optional<Failure> failure = handle(message);
         if (failure.isEmpty()) {
-            store.markPublished(message.eventId());
+            store.markPublished(message.eventId(), leaseUntil);
             return;
         }
         log.warn(
@@ -75,7 +76,10 @@ public class OutboxPublisher {
                 message.eventType(),
                 failure.get().transientFailure());
         store.markFailedAttempt(
-                message.eventId(), failure.get().error(), failure.get().transientFailure());
+                message.eventId(),
+                leaseUntil,
+                failure.get().error(),
+                failure.get().transientFailure());
     }
 
     private Optional<Failure> handle(OutboxMessage message) {
