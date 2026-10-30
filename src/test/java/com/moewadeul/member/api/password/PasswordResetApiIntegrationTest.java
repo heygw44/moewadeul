@@ -26,6 +26,7 @@ import jakarta.servlet.http.Cookie;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -191,6 +192,27 @@ class PasswordResetApiIntegrationTest {
         assertThat(sessionCount(member)).isEqualTo(1);
         assertThat(getWithSession(oldSession)).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(getWithSession(newSession)).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("[PW-02] 옛 비밀번호 상태로 로그인한 세션은 로그인 시각이 이벤트 기록 시각보다 늦어도 outbox 처리기가 지운다")
+    void outboxDeletesOldPasswordSessionEvenWhenItsLoginIsLaterThanTheEvent() {
+        Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
+        Instant start = clock.instant();
+        clock.advance(Duration.ofSeconds(10));
+        Cookie oldSession = login(member);
+        clock.setInstant(start);
+        failFirstSessionDeletion();
+        clock.advance(Duration.ofSeconds(1));
+        MvcTestResult confirm = postJson(CONFIRM_PATH, confirmBody(issueToken(member), NEW_PASSWORD), null);
+        assertThat(confirm).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(getWithSession(oldSession).getResponse().getStatus()).isNotEqualTo(401);
+
+        clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
+        publisher.publishPending();
+
+        assertThat(sessionCount(member)).isZero();
+        assertThat(getWithSession(oldSession)).hasStatus(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
