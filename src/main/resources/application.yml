@@ -9,6 +9,9 @@ spring:
         # Connector/J가 JVM 기본 시간대가 아니라 UTC로 변환해야 MyBatis가 쓴 Instant가 밀리지 않는다.
         connectionTimeZone: UTC
         sessionVariables: innodb_lock_wait_timeout=5
+  flyway:
+    # 메타데이터 잠금 대기를 5초로 줄인다. 기본값(1년)이면 열린 트랜잭션 뒤에서 DDL이 기다리는 동안 그 표의 모든 쿼리가 줄을 서서 앱 전체가 멈춘다.
+    init-sqls: SET SESSION lock_wait_timeout=5
   task:
     scheduling:
       pool:
