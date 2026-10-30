@@ -3,6 +3,7 @@ package com.moewadeul.member.application;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
@@ -13,6 +14,7 @@ import com.moewadeul.member.application.password.PasswordResetConfirmService;
 import com.moewadeul.member.application.profile.MyInfoService;
 import com.moewadeul.member.application.profile.MyInfoUpdateCommand;
 import com.moewadeul.member.domain.Member;
+import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.password.PasswordResetToken;
@@ -23,6 +25,7 @@ import com.moewadeul.trust.application.CompanionReviewFixture;
 import com.moewadeul.trust.application.report.MemberReportActionCommand;
 import com.moewadeul.trust.application.report.MemberReportActionService;
 import com.moewadeul.trust.application.report.MemberReportFixture;
+import com.moewadeul.trust.application.withdrawal.WithdrawalService;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.security.SecureRandom;
@@ -79,6 +82,9 @@ class MemberRowLostUpdateConcurrencyIntegrationTest {
 
     @Autowired
     private MemberReportActionService reportActionService;
+
+    @Autowired
+    private WithdrawalService withdrawalService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -155,6 +161,30 @@ class MemberRowLostUpdateConcurrencyIntegrationTest {
         assertThat(columnOf(member.getId(), "nickname")).isEqualTo(nickname);
     }
 
+    @Test
+    @DisplayName("[PW-07][F-01] 비밀번호 변경이 회원을 읽은 뒤 탈퇴가 커밋되면, 탈퇴한 회원 행에 비밀번호가 되살아나지 않는다")
+    void passwordChangeAfterWithdrawalLeavesNoPassword() throws Exception {
+        Member member = activeMember();
+        pauseOutsideTransactionAfter(MEMBER_READ);
+
+        Future<?> change = executor.submit(() -> passwordChangeService.change(
+                new PasswordChangeCommand(member.getId(), OLD_PASSWORD, NEW_PASSWORD, "203.0.113.7", "none")));
+        awaitPaused();
+        Throwable failure = runInMiddle(
+                () -> {
+                    withdrawalService.withdraw(member.getId(), OLD_PASSWORD, "203.0.113.8");
+                    return null;
+                },
+                change);
+
+        assertThat(columnOf(member.getId(), "status")).isEqualTo("WITHDRAWN");
+        assertThat(columnOf(member.getId(), "password_hash")).isNull();
+        assertThat(failure)
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_CURRENT_PASSWORD_MISMATCH));
+    }
+
     private Member activeMember() {
         return memberFixture.saveWithPassword(
                 aMember().status(MemberStatus.ACTIVE).emailVerifiedAt(BASE), OLD_PASSWORD);
@@ -178,10 +208,27 @@ class MemberRowLostUpdateConcurrencyIntegrationTest {
         PauseHooks.action = this::pauseOnceInsideTransaction;
     }
 
+    private void pauseOutsideTransactionAfter(Set<String> calls) {
+        pauseArmed.set(true);
+        PauseHooks.afterCalls = calls;
+        PauseHooks.action = this::pauseOnceOutsideTransaction;
+    }
+
     private void pauseOnceInsideTransaction() {
         if (!TransactionSynchronizationManager.isActualTransactionActive() || !pauseArmed.compareAndSet(true, false)) {
             return;
         }
+        blockUntilResumed();
+    }
+
+    private void pauseOnceOutsideTransaction() {
+        if (TransactionSynchronizationManager.isActualTransactionActive() || !pauseArmed.compareAndSet(true, false)) {
+            return;
+        }
+        blockUntilResumed();
+    }
+
+    private void blockUntilResumed() {
         paused.countDown();
         try {
             assertThat(resume.await(60, TimeUnit.SECONDS)).isTrue();
