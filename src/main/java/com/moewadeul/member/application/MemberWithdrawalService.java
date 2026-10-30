@@ -29,20 +29,22 @@ public class MemberWithdrawalService {
 
     public void verifyPassword(long memberId, String password, String ip) {
         OutsideTransaction.require("트랜잭션 안이면 틀린 비밀번호 기록이 예외와 함께 롤백되어 로그인 잠금이 걸리지 않는다.");
-        Member member = findWithdrawableMember(memberId);
+        Member member = memberRepository
+                .findById(memberId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
+        // 이미 탈퇴했으면 비밀번호 해시가 지워져 확인할 수 없고, 요청한 결과도 이미 이뤄졌다.
+        if (member.isWithdrawn()) {
+            return;
+        }
+        if (!member.canAuthenticateWithPassword()) {
+            throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
+        }
         rejectIfLocked(member);
         boolean matched = passwordEncoder.matches(password, member.getPasswordHash());
         loginAttemptService.recordAttemptUnderEmailLock(member.getId(), member.getEmail(), ip, matched);
         if (!matched) {
             throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
         }
-    }
-
-    private Member findWithdrawableMember(long memberId) {
-        return memberRepository
-                .findById(memberId)
-                .filter(Member::canAuthenticateWithPassword)
-                .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
     }
 
     private void rejectIfLocked(Member member) {
@@ -53,14 +55,17 @@ public class MemberWithdrawalService {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void lockAndWithdraw(long memberId) {
-        Member member = memberRepository.findByIdForUpdate(memberId).orElse(null);
-        if (member == null || member.isWithdrawn()) {
-            throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
+    public boolean lockAndWithdraw(long memberId) {
+        Member member = memberRepository
+                .findByIdForUpdate(memberId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
+        if (member.isWithdrawn()) {
+            return false;
         }
         Instant now = clock.instant();
         member.withdraw(now);
         passwordResetTokenMapper.invalidateUnusedTokens(memberId, now);
+        return true;
     }
 
     @Transactional(readOnly = true)
