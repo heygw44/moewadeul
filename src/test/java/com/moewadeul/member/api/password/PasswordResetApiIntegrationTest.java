@@ -166,7 +166,7 @@ class PasswordResetApiIntegrationTest {
         assertThat(getWithSession(session).getResponse().getStatus()).isNotEqualTo(401);
 
         clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(sessionCount(member)).isZero();
         assertThat(getWithSession(session)).hasStatus(HttpStatus.UNAUTHORIZED);
@@ -188,7 +188,7 @@ class PasswordResetApiIntegrationTest {
         assertThat(newSession).isNotNull();
 
         clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(sessionCount(member)).isEqualTo(1);
         assertThat(getWithSession(oldSession)).hasStatus(HttpStatus.UNAUTHORIZED);
@@ -210,7 +210,7 @@ class PasswordResetApiIntegrationTest {
         assertThat(getWithSession(oldSession).getResponse().getStatus()).isNotEqualTo(401);
 
         clock.advance(MemberSessionCleanup.OUTBOX_DELAY);
-        publisher.publishPending();
+        publisher.publishPending(OutboxLane.DEFAULT);
 
         assertThat(sessionCount(member)).isZero();
         assertThat(getWithSession(oldSession)).hasStatus(HttpStatus.UNAUTHORIZED);
