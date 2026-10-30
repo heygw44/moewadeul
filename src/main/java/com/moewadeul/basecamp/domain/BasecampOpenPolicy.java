@@ -4,6 +4,7 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.schedule.CampingSchedule;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 public final class BasecampOpenPolicy {
@@ -26,6 +27,12 @@ public final class BasecampOpenPolicy {
     public static void requireUnderOpenLimit(long openCount) {
         if (openCount >= MAX_OPEN_PER_LEADER) {
             throw new BusinessException(BasecampErrorCode.BASECAMP_OPEN_LIMIT);
+        }
+    }
+
+    public static void requireNoDateConflict(CampingSchedule schedule, List<BasecampSchedule> inProgress) {
+        if (inProgress.stream().anyMatch(other -> schedule.sharesDateWith(other.schedule()))) {
+            throw new BusinessException(BasecampErrorCode.BASECAMP_DATE_CONFLICT);
         }
     }
 }

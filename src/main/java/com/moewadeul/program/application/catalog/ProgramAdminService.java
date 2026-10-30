@@ -9,6 +9,7 @@ import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.program.application.enrollment.ProgramSeatReleaseRecorder;
 import com.moewadeul.program.domain.PaymentRepository;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplication;
@@ -45,6 +46,7 @@ public class ProgramAdminService {
     private final ActiveSpotChecker activeSpotChecker;
     private final AdminAuditRecorder adminAuditRecorder;
     private final OutboxEventRecorder outboxEventRecorder;
+    private final ProgramSeatReleaseRecorder seatReleaseRecorder;
     private final Clock clock;
 
     @Transactional
@@ -69,8 +71,12 @@ public class ProgramAdminService {
             requireVisibleSpot(command.spotId().value());
         }
         boolean applicationsExist = programApplicationRepository.existsByProgramId(programId);
-        ProgramChange change = revise(program, command, clock.instant(), applicationsExist);
+        Instant now = clock.instant();
+        ProgramChange change = revise(program, command, now, applicationsExist);
         programRepository.saveAndFlush(program);
+        if (change.isCapacityChanged() && change.capacityAfter() > change.capacityBefore()) {
+            seatReleaseRecorder.record(program, now);
+        }
         adminAuditRecorder.record(
                 adminId,
                 AdminAuditAction.PROGRAM_UPDATE,
