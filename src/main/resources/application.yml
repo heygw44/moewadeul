@@ -17,6 +17,13 @@ spring:
     datatype:
       enum:
         fail-on-numbers-for-enums: true
+    # Caddy를 거치지 않는 요청(앱 포트 직접 접근, 로컬)에도 Caddy와 같은 1MB 상한을 둔다(#863).
+    # 문자열 상한은 가장 긴 정상 값(커뮤니티 글 10,000자)의 10배다. 1MB 문서 상한만 두면 99만 자 문자열 50건 동시 요청에 힙이 248MB까지 찼다.
+    factory:
+      constraints:
+        read:
+          max-document-length: 1000000
+          max-string-length: 100000
   jpa:
     open-in-view: false
     hibernate:
