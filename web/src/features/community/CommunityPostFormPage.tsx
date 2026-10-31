@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { createPost, getPost, requestImageUpload, updatePost } from '../../api/community';
 import { ApiError } from '../../api/client';
@@ -218,6 +218,9 @@ function PostForm(props: PostFormProps) {
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
+  const controllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => controllerRef.current?.abort(), []);
   useDraftCapture<PostDraft>(pathname + search, memberId, {
     title,
     content,
@@ -263,6 +266,9 @@ function PostForm(props: PostFormProps) {
     if (Object.keys(errors).length > 0) return;
 
     const imageIds = uploads.imageIds;
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
     setSubmitting(true);
     try {
       if (props.mode === 'create') {
@@ -272,7 +278,8 @@ function PostForm(props: PostFormProps) {
           spotId: spot?.spotId,
           imageIds,
         };
-        const created = await idempotentRunner.run(request, (key) => createPost(request, key));
+        const created = await idempotentRunner.run(request, (key) => createPost(request, key, controller.signal));
+        if (controller.signal.aborted) return;
         navigate(`/community/${created.postId}`);
         return;
       }
@@ -285,9 +292,11 @@ function PostForm(props: PostFormProps) {
       if (imageIds.length !== savedIds.length || imageIds.some((id, index) => id !== savedIds[index])) {
         changes.imageIds = imageIds;
       }
-      if (Object.keys(changes).length > 0) await updatePost(post.postId, changes);
+      if (Object.keys(changes).length > 0) await updatePost(post.postId, changes, controller.signal);
+      if (controller.signal.aborted) return;
       navigate(`/community/${post.postId}`);
     } catch (error) {
+      if (controller.signal.aborted) return;
       setSubmitting(false);
       handleError(error);
     }
