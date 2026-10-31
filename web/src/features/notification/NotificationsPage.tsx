@@ -19,6 +19,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { usePagedList } from '../../components/usePagedList';
 import { formatRelativeKst } from '../../lib/datetime';
+import { GatedButton } from '../../app/session/GatedButton';
 import { safeInternalPath } from '../../app/session/nextPath';
 import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { NOTIFICATION_LABELS, NOTIFICATION_TYPES } from './notificationLabels';
@@ -276,9 +277,14 @@ function EmailSettingsCard() {
             </div>
           )}
           <div>
-            <Button loading={saving} onClick={() => void save()}>
+            <GatedButton
+              variant="primary"
+              loading={saving}
+              unverifiedReason="이메일 인증을 마치면 저장할 수 있어요"
+              onClick={() => void save()}
+            >
               저장
-            </Button>
+            </GatedButton>
           </div>
         </>
       )}
