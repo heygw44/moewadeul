@@ -17,8 +17,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class SyncJobLauncher {
 
-    private static final String REJECTED_MESSAGE = "작업 실행기에 빈 스레드가 없어 작업을 시작하지 못했습니다.";
-
     private final SyncJobRunService syncJobRunService;
     private final Map<SyncJobType, SyncJob<?>> jobs = new EnumMap<>(SyncJobType.class);
     private final ThreadPoolTaskExecutor syncJobExecutor;
@@ -56,7 +54,7 @@ public class SyncJobLauncher {
             syncJobExecutor.execute(() -> runJob(jobType, start, job));
         } catch (TaskRejectedException e) {
             log.warn("sync job rejected jobType={} runId={}", jobType, start.runId());
-            syncJobRunService.fail(start.runId(), REJECTED_MESSAGE);
+            syncJobRunService.reject(start.runId());
             throw e;
         }
     }

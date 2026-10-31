@@ -39,8 +39,10 @@ public class BakjiFeedbackService {
 
     @Transactional
     public long confirm(long memberId, long spotId) {
-        Spot spot =
-                spotRepository.findById(spotId).filter(Spot::isActiveBakji).orElseThrow(BusinessException::notFound);
+        Spot spot = spotRepository
+                .findByIdForUpdate(spotId)
+                .filter(Spot::isActiveBakji)
+                .orElseThrow(BusinessException::notFound);
         if (bakjiConfirmationRepository.existsBySpotIdAndMemberId(spot.getId(), memberId)) {
             throw alreadyConfirmed();
         }

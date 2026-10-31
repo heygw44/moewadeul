@@ -7,6 +7,7 @@ import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.properties.CanBeAnnotated;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -67,6 +68,22 @@ public final class ArchitectureRules {
     private static final String SCHEDULES = "org.springframework.scheduling.annotation.Schedules";
     private static final String SCHEDULED_JOB_RUNNER = "com.moewadeul.common.scheduling.ScheduledJobRunner";
     private static final Set<String> JOB_RUNNER_ENTRY_METHODS = Set.of("run", "runCountingFailures");
+    private static final String SCHEDULED_TASK_REGISTRAR =
+            "org.springframework.scheduling.config.ScheduledTaskRegistrar";
+
+    private static final String CLOCK = "java.time.Clock";
+    private static final Set<String> TIME_TYPES_WITH_NOW = Set.of(
+            "java.time.Instant",
+            "java.time.LocalDate",
+            "java.time.LocalDateTime",
+            "java.time.LocalTime",
+            "java.time.OffsetDateTime",
+            "java.time.OffsetTime",
+            "java.time.ZonedDateTime",
+            "java.time.Year",
+            "java.time.YearMonth",
+            "java.time.MonthDay");
+    private static final String CLOCK_CONFIG = "common.time.ClockConfig";
 
     private static final String SERVICE_SUFFIX = "Service";
     private static final String OUTSIDE_TRANSACTION = "com.moewadeul.common.transaction.OutsideTransaction";
@@ -217,6 +234,25 @@ public final class ArchitectureRules {
                 .allowEmptyShould(true);
     }
 
+    public static ArchRule scheduledTaskRegistrarUsesRunnerRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .should(registrarTasksUseJobRunner())
+                .as("ScheduledTaskRegistrar 로 작업을 등록하는 클래스는 ScheduledJobRunner 를 거쳐 실패 수를 센다")
+                .allowEmptyShould(true);
+    }
+
+    public static ArchRule noImplicitSystemClockRule(String rootPackage) {
+        Scope scope = new Scope(rootPackage);
+        return scope.moduleClasses()
+                .and(DescribedPredicate.describe(
+                        "are not ClockConfig",
+                        javaClass -> !javaClass.getName().equals(rootPackage + "." + CLOCK_CONFIG)))
+                .should(notReadSystemClock())
+                .as("운영 코드는 주입받은 Clock 으로만 시각을 읽는다(ClockConfig 만 시스템 시계를 만든다)")
+                .allowEmptyShould(true);
+    }
+
     private static boolean isAllowedDirection(String source, String target) {
         if (source.equals(target) || COMMON.equals(target)) {
             return true;
@@ -310,6 +346,50 @@ public final class ArchitectureRules {
                                 method,
                                 "@Scheduled 메서드가 ScheduledJobRunner 를 거치지 않아 실패가 moewadeul.scheduled.job.failures 에 잡히지 않는다: "
                                         + method.getFullName()));
+                    }
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> registrarTasksUseJobRunner() {
+        return new ArchCondition<>(
+                "call ScheduledJobRunner from every class registering tasks on ScheduledTaskRegistrar") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                boolean registers = item.getMethodCallsFromSelf().stream()
+                        .anyMatch(call -> call.getTargetOwner().getName().equals(SCHEDULED_TASK_REGISTRAR)
+                                && call.getName().startsWith("add")
+                                && call.getName().endsWith("Task"));
+                boolean viaRunner = item.getMethodCallsFromSelf().stream()
+                        .anyMatch(call -> call.getTargetOwner().getName().equals(SCHEDULED_JOB_RUNNER)
+                                && JOB_RUNNER_ENTRY_METHODS.contains(call.getName()));
+                if (registers && !viaRunner) {
+                    events.add(SimpleConditionEvent.violated(
+                            item,
+                            "ScheduledTaskRegistrar 로 등록한 작업이 ScheduledJobRunner 를 거치지 않아 실패가 moewadeul.scheduled.job.failures 에 잡히지 않는다: "
+                                    + item.getName()));
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> notReadSystemClock() {
+        return new ArchCondition<>("not read the system clock directly") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                for (JavaMethodCall call : item.getMethodCallsFromSelf()) {
+                    String owner = call.getTargetOwner().getName();
+                    boolean implicitNow = call.getName().equals("now")
+                            && TIME_TYPES_WITH_NOW.contains(owner)
+                            && !call.getTarget().getRawParameterTypes().stream()
+                                    .anyMatch(type -> type.getName().equals(CLOCK));
+                    boolean systemClock = owner.equals(CLOCK) && call.getName().startsWith("system");
+                    if (implicitNow || systemClock) {
+                        events.add(SimpleConditionEvent.violated(
+                                call,
+                                "주입받은 Clock 을 쓰지 않고 시스템 시계를 직접 읽는다(MutableClock 으로 옮길 수 없다): "
+                                        + call.getDescription()));
                     }
                 }
             }

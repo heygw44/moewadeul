@@ -85,4 +85,16 @@ class ArchitectureTest {
     void scheduledMethodsRunThroughJobRunner() {
         ArchitectureRules.scheduledJobsRunThroughRunnerRule(ROOT_PACKAGE).check(productionClasses);
     }
+
+    @Test
+    @DisplayName("[ADR-012] ScheduledTaskRegistrar 로 작업을 등록하는 클래스는 ScheduledJobRunner를 거친다")
+    void registrarTasksRunThroughJobRunner() {
+        ArchitectureRules.scheduledTaskRegistrarUsesRunnerRule(ROOT_PACKAGE).check(productionClasses);
+    }
+
+    @Test
+    @DisplayName("[ADR-005] 운영 코드는 ClockConfig 밖에서 시스템 시계를 직접 읽지 않는다")
+    void productionCodeDoesNotReadSystemClock() {
+        ArchitectureRules.noImplicitSystemClockRule(ROOT_PACKAGE).check(productionClasses);
+    }
 }
