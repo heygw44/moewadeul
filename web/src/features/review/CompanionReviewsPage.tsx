@@ -5,7 +5,12 @@ import {
   fetchPendingCompanionReviews,
   fetchReceivedCompanionReviews,
 } from '../../api/companionReviews';
-import type { PendingCompanionReview, PendingCompanionTarget, RevealedReceivedCompanionReview } from '../../api/types';
+import type {
+  PendingCompanionReview,
+  PendingCompanionTarget,
+  ReceivedCompanionReview,
+  RevealedReceivedCompanionReview,
+} from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
@@ -28,6 +33,8 @@ import { companionTagLabel, NEGATIVE_COMPANION_TAGS, POSITIVE_COMPANION_TAGS } f
 import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { MemberReportDialog } from '../report/MemberReportDialog';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+
+const itemKey = (item: ReceivedCompanionReview) => (item.revealed ? item.reviewId : null);
 
 const COMMENT_MAX = 300;
 
@@ -299,7 +306,7 @@ function fetchReceivedPage(_filter: string, page: number, signal?: AbortSignal) 
 }
 
 function ReceivedTab() {
-  const { current: state, loadingMore, loadMore, retry } = usePagedList(true, '', fetchReceivedPage);
+  const { current: state, loadingMore, loadMore, retry } = usePagedList(true, '', fetchReceivedPage, itemKey);
   const [reportTarget, setReportTarget] = useState<RevealedReceivedCompanionReview | null>(null);
   const showSkeleton = useDelayedFlag(state === null);
 
