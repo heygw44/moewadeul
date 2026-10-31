@@ -37,6 +37,7 @@ class ProgramCatalogController {
             description = "행사 하나의 정보를 돌려준다. 로그인하지 않아도 조회할 수 있다. 목록 항목에 description과 paymentDeadlineMinutes가 더해진다. "
                     + "로그인한 회원에게 이 행사의 신청이 있으면 가장 최근 신청을 myApplication(applicationId, status, paymentDueAt)으로 담고, "
                     + "비로그인이거나 신청이 없으면 이 필드를 뺀다. "
+                    + "로그인한 회원에게는 이 행사의 빈자리 알림을 신청했는지를 vacancyAlertSubscribed(true·false)로 알려 주고, 비로그인이면 이 필드를 뺀다. "
                     + "취소된 행사도 status가 CANCELED인 상세로 돌려준다. 행사가 없으면 404 NOT_FOUND이다.")
     @GetMapping("/api/programs/{programId}")
     ProgramDetailResponse detail(@PathVariable long programId, @AuthenticationPrincipal LoginMember loginMember) {

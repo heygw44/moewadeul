@@ -29,6 +29,9 @@ class ProgramSeatReleaseIntegrationTest {
     private ProgramPaymentService programPaymentService;
 
     @Autowired
+    private ProgramApplyService applyService;
+
+    @Autowired
     private ProgramPaymentExpiryService expiryService;
 
     @Autowired
@@ -116,6 +119,39 @@ class ProgramSeatReleaseIntegrationTest {
         assertThat(fixture.applicationStatus(expiringApplicationId)).isEqualTo("EXPIRED");
         assertThat(fixture.seatReleasedPayloads(programId)).isEmpty();
         assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isNull();
+    }
+
+    @Test
+    @DisplayName(
+            "[F-20][PG-05][PG-07] 기한이 지난 자기 신청을 둔 회원이 다시 신청하면 같은 트랜잭션에서 그 자리를 다시 가져가므로 알림 신청자에게 이벤트가 없고 알림 시각도 그대로다")
+    void reapplyAfterOverdueRecordsNothing() {
+        // given
+        long programId = fixture.saveProgram(2, false);
+        long reapplicant = fixture.saveMember();
+        long holder = fixture.saveMember();
+        long waiting = fixture.saveMember();
+        fixture.saveApplication(programId, holder, "CONFIRMED");
+        long overdueApplicationId =
+                fixture.saveApplication(programId, reapplicant, "PENDING_PAYMENT", NOW.minus(Duration.ofMinutes(1)));
+        fixture.saveVacancyAlert(programId, waiting);
+
+        // when
+        applyService.apply(reapplicant, programId);
+
+        // then
+        assertThat(fixture.applicationStatus(overdueApplicationId)).isEqualTo("EXPIRED");
+        assertThat(fixture.activeCount(programId)).isEqualTo(2);
+        assertThat(fixture.seatReleasedPayloads(programId))
+                .as("정원이 다시 찬 행사에 빈자리 알림이 나갔다")
+                .isEmpty();
+        assertThat(fixture.vacancyAlertNotifiedAt(programId, waiting)).isNull();
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM program_application WHERE program_id = ? AND member_id = ?"
+                                + " AND status = 'PENDING_PAYMENT'",
+                        Integer.class,
+                        programId,
+                        reapplicant))
+                .isEqualTo(1);
     }
 
     @Test

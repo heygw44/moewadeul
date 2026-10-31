@@ -18,7 +18,8 @@ public record ProgramDetail(
         int paymentDeadlineMinutes,
         boolean overnight,
         String status,
-        MyApplication myApplication) {
+        MyApplication myApplication,
+        Boolean vacancyAlertSubscribed) {
 
     public record MyApplication(long applicationId, String status, Instant paymentDueAt) {}
 }

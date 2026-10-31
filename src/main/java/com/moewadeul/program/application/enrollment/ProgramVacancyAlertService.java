@@ -1,6 +1,7 @@
 package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.transaction.ReadCommittedTransaction;
 import com.moewadeul.program.domain.Program;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramRepository;
@@ -23,9 +24,9 @@ public class ProgramVacancyAlertService {
     private final ProgramApplicationRepository applicationRepository;
     private final Clock clock;
 
-    // READ COMMITTED여야 이 재조회가 트랜잭션 처음의 스냅숏이 아니라 최신 커밋을 본다.
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public boolean subscribe(long memberId, long programId) {
+        ReadCommittedTransaction.require("알림 신청 뒤 자리를 다시 세는 읽기가 트랜잭션 처음의 낡은 스냅숏이 아니라 최신 커밋을 봐야 한다.");
         Program program = findProgram(programId);
         Instant now = clock.instant();
         requireFull(program, now);
@@ -41,6 +42,12 @@ public class ProgramVacancyAlertService {
         findProgram(programId);
         vacancyAlertRepository.unsubscribe(programId, memberId);
         log.info("program vacancy alert unsubscribed programId={} memberId={}", programId, memberId);
+    }
+
+    @Transactional
+    public void unsubscribeAll(long memberId) {
+        vacancyAlertRepository.deleteByMember(memberId);
+        log.info("program vacancy alerts unsubscribed all memberId={}", memberId);
     }
 
     private void requireFull(Program program, Instant now) {

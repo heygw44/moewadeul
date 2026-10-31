@@ -22,6 +22,8 @@ public interface ProgramQueryMapper {
 
     MyApplicationRow selectLatestApplication(@Param("programId") long programId, @Param("memberId") long memberId);
 
+    boolean existsVacancyAlert(@Param("programId") long programId, @Param("memberId") long memberId);
+
     List<ProgramApplicantRow> selectApplicants(
             @Param("programId") long programId,
             @Param("status") ProgramApplicationStatus status,

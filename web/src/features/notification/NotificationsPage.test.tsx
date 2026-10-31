@@ -2,8 +2,13 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchNotifications, fetchNotificationSettings, markAllNotificationsRead } from '../../api/notifications';
-import type { NotificationItem, Page } from '../../api/types';
+import {
+  fetchNotifications,
+  fetchNotificationSettings,
+  markAllNotificationsRead,
+  updateNotificationSettings,
+} from '../../api/notifications';
+import type { NotificationItem, NotificationSetting, Page } from '../../api/types';
 import { NotificationsPage } from './NotificationsPage';
 
 vi.mock('../../api/notifications', async (importOriginal) => ({
@@ -11,6 +16,7 @@ vi.mock('../../api/notifications', async (importOriginal) => ({
   fetchNotifications: vi.fn(),
   fetchNotificationSettings: vi.fn(),
   markAllNotificationsRead: vi.fn(),
+  updateNotificationSettings: vi.fn(),
 }));
 
 vi.mock('./unreadCount', async (importOriginal) => ({
@@ -103,5 +109,26 @@ describe('알림 화면', () => {
 
   it('이메일 인증을 마친 회원은 알림 설정을 저장할 수 있다', () => {
     expect(button('저장')?.disabled).toBe(false);
+  });
+
+  it('빈자리 알림 이메일 수신을 끄고 저장하면 서버로 꺼짐이 가고, 다시 열어도 꺼져 있다', async () => {
+    const seatReleased = () =>
+      [...container.querySelectorAll('label')]
+        .find((label) => label.textContent?.includes('빈자리 알림을 신청한 행사에 자리가 났을 때'))
+        ?.querySelector('input');
+    let stored: NotificationSetting[] = [{ type: 'PROGRAM_SEAT_RELEASED', emailEnabled: true }];
+    vi.mocked(fetchNotificationSettings).mockImplementation(async () => stored);
+    vi.mocked(updateNotificationSettings).mockImplementation(async (items) => (stored = items));
+    await act(async () => root.render(<NotificationsPage key="settings" />));
+    expect(seatReleased()?.checked).toBe(true);
+
+    await act(async () => seatReleased()?.click());
+    await act(async () => button('저장')?.click());
+
+    const sent = vi.mocked(updateNotificationSettings).mock.calls[0]?.[0];
+    expect(sent).toContainEqual({ type: 'PROGRAM_SEAT_RELEASED', emailEnabled: false });
+
+    await act(async () => root.render(<NotificationsPage key="reopened" />));
+    expect(seatReleased()?.checked).toBe(false);
   });
 });

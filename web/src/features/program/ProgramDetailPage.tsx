@@ -245,7 +245,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   const [error, setError] = useState<{ kind: Exclude<Busy, null>; apiError: ApiError } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [soldOutDetail, setSoldOutDetail] = useState<ProgramDetail | null>(null);
-  const [alertOn, setAlertOn] = useState(false);
+  const [alertToggle, setAlertToggle] = useState<{ detail: ProgramDetail; on: boolean } | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [applyRunner] = useState(createIdempotentRunner);
   const [payRunner] = useState(createIdempotentRunner);
@@ -310,14 +310,14 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   const subscribe = () =>
     run('alert', async () => {
       await subscribeVacancyAlert(detail.programId);
-      setAlertOn(true);
+      setAlertToggle({ detail, on: true });
       setNotice('빈자리 알림을 신청했어요. 자리가 나면 알림이 가요.');
     });
 
   const unsubscribe = () =>
     run('alert', async () => {
       await unsubscribeVacancyAlert(detail.programId);
-      setAlertOn(false);
+      setAlertToggle({ detail, on: false });
       setNotice('빈자리 알림을 껐어요.');
     });
 
@@ -326,6 +326,7 @@ function ActionArea({ detail, onChanged }: { detail: ProgramDetail; onChanged: (
   const authenticated = session.status === 'authenticated';
   const active = pending || confirmed;
   const noSeats = detail.remainingSeats === 0 || soldOutDetail === detail;
+  const alertOn = alertToggle?.detail === detail ? alertToggle.on : detail.vacancyAlertSubscribed === true;
   const canAlert = authenticated && !active && detail.status === 'OPEN' && (noSeats || alertOn);
   const refundDeadlineMs = Date.parse(detail.startAt) - REFUND_BEFORE_START_HOURS * HOUR_MS;
   const refundClosed = now > refundDeadlineMs;
