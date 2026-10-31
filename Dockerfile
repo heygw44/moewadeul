@@ -15,6 +15,17 @@ COPY --from=extract /work/extracted/dependencies/ ./
 COPY --from=extract /work/extracted/spring-boot-loader/ ./
 COPY --from=extract /work/extracted/snapshot-dependencies/ ./
 COPY --from=extract /work/extracted/application/ ./
+# 기동 시간을 줄이려고 빌드 때 앱을 한 번 띄워 Java AOT 캐시를 만든다. 로컬 운영 조건(CPU 2개, 768MB)에서 기동이 약 30% 줄었다(#852).
+RUN SPRING_PROFILES_ACTIVE=prod \
+    DB_URL=jdbc:mysql://127.0.0.1:3306/moewadeul DB_USERNAME=training DB_PASSWORD=training \
+    SPRING_FLYWAY_ENABLED=false SPRING_JPA_HIBERNATE_DDL_AUTO=none \
+    SPRING_JPA_PROPERTIES_HIBERNATE_BOOT_ALLOW_JDBC_METADATA_ACCESS=false \
+    SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect \
+    CI_HMAC_KEY=training-run-only-not-a-real-key-0000000000000000 \
+    MAIL_SECRET_HMAC_KEY=training-run-only-not-a-real-key-0000000000000000 \
+    UPLOAD_BUCKET=training OPENAI_API_KEY=training PUBLICDATA_SERVICE_KEY=training \
+    MAIL_USERNAME=training MAIL_APP_PASSWORD=training \
+    java -XX:AOTCacheOutput=app.aot -Dspring.context.exit=onRefresh -jar app.jar
 USER app
 EXPOSE 8080
 # 컨테이너 메모리 한도의 40%까지만 힙으로 쓴다. 한도 768MB면 힙 최대는 약 308MB다.
@@ -22,4 +33,5 @@ EXPOSE 8080
 # 75%(약 576MB)로 두면 힙이 다 자랐을 때 합이 한도를 넘는다. 부하 중 힙 사용은 약 320MB에서 멈췄다.
 # 힙이 모자라면 JVM을 끝낸다. 끝내지 않으면 OutOfMemoryError로 Tomcat의 연결 수락 스레드가 죽은 채 프로세스만 남는다.
 # 그러면 앱은 요청을 받지 않는데 컨테이너는 Up이라 Docker가 다시 띄우지 않는다. JVM이 끝나면 compose의 restart 설정대로 다시 뜬다.
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=40", "-XX:+ExitOnOutOfMemoryError", "-jar", "app.jar"]
+# 캐시를 쓰면 메타스페이스가 약 100MB 줄고 힙 확보분이 약 80MB 는다. 지도 조회 부하에서 힙 밖 메모리는 캐시가 없을 때와 같아서 40% 설정을 그대로 둔다(#852).
+ENTRYPOINT ["java", "-XX:AOTCache=app.aot", "-XX:MaxRAMPercentage=40", "-XX:+ExitOnOutOfMemoryError", "-jar", "app.jar"]
