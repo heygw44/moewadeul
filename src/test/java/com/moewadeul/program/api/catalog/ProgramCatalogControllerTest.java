@@ -152,6 +152,28 @@ class ProgramCatalogControllerTest {
         assertThat(result).bodyJson().extractingPath("$.programId").isEqualTo(9);
         assertThat(result).bodyJson().extractingPath("$.description").isEqualTo("설명");
         assertThat(result).bodyJson().doesNotHavePath("$.myApplication");
+        assertThat(result).bodyJson().doesNotHavePath("$.vacancyAlertSubscribed");
+    }
+
+    @Test
+    @DisplayName("[F-17][PG-07] 로그인한 회원의 상세 응답에는 빈자리 알림 신청 여부가 true나 false로 담긴다")
+    void memberDetailIncludesVacancyAlertSubscribed() {
+        when(programQueryService.detail(eq(9L), eq(4L))).thenReturn(detail(null, true));
+        when(programQueryService.detail(eq(9L), eq(5L))).thenReturn(detail(null, false));
+
+        MvcTestResult subscribed =
+                mvc.get().uri("/api/programs/9").with(member(4L)).exchange();
+        MvcTestResult notSubscribed =
+                mvc.get().uri("/api/programs/9").with(member(5L)).exchange();
+
+        assertThat(subscribed)
+                .bodyJson()
+                .extractingPath("$.vacancyAlertSubscribed")
+                .isEqualTo(true);
+        assertThat(notSubscribed)
+                .bodyJson()
+                .extractingPath("$.vacancyAlertSubscribed")
+                .isEqualTo(false);
     }
 
     @Test
@@ -250,8 +272,28 @@ class ProgramCatalogControllerTest {
     }
 
     private static ProgramDetail detail(ProgramDetail.MyApplication mine) {
+        return detail(mine, null);
+    }
+
+    private static ProgramDetail detail(ProgramDetail.MyApplication mine, Boolean vacancyAlertSubscribed) {
         return new ProgramDetail(
-                9L, "가을 백패킹", "설명", "설악산 입구", null, AT, AT, AT, AT, 200, 150, 30000, 15, true, "OPEN", mine);
+                9L,
+                "가을 백패킹",
+                "설명",
+                "설악산 입구",
+                null,
+                AT,
+                AT,
+                AT,
+                AT,
+                200,
+                150,
+                30000,
+                15,
+                true,
+                "OPEN",
+                mine,
+                vacancyAlertSubscribed);
     }
 
     private static RequestPostProcessor member(long memberId) {

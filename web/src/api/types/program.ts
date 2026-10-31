@@ -34,6 +34,7 @@ export interface ProgramDetail extends ProgramSummary {
   description: string;
   paymentDeadlineMinutes: number;
   myApplication?: ProgramMyApplication;
+  vacancyAlertSubscribed?: boolean;
 }
 
 export interface ProgramApplyResponse {

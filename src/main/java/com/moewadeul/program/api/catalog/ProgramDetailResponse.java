@@ -20,7 +20,8 @@ public record ProgramDetailResponse(
         int paymentDeadlineMinutes,
         boolean overnight,
         String status,
-        @JsonInclude(JsonInclude.Include.NON_NULL) MyApplicationResponse myApplication) {
+        @JsonInclude(JsonInclude.Include.NON_NULL) MyApplicationResponse myApplication,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Boolean vacancyAlertSubscribed) {
 
     static ProgramDetailResponse from(ProgramDetail detail) {
         ProgramDetail.MyApplication mine = detail.myApplication();
@@ -43,7 +44,8 @@ public record ProgramDetailResponse(
                 detail.paymentDeadlineMinutes(),
                 detail.overnight(),
                 detail.status(),
-                myApplication);
+                myApplication,
+                detail.vacancyAlertSubscribed());
     }
 
     public record MyApplicationResponse(long applicationId, String status, Instant paymentDueAt) {}
