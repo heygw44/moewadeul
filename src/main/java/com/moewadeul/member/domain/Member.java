@@ -252,7 +252,7 @@ public class Member {
         if (length < NICKNAME_MIN_LENGTH || length > NICKNAME_MAX_LENGTH) {
             return false;
         }
-        // DB 콜레이션은 전각·조합형으로 쓴 탈퇴회원_N과 NFKC도 못 바꾸는 숫자 변형까지 같은 값으로 보므로, 숫자는 보지 않고 접두사로 막는다.
+        // 흔한 사칭(전각·조합형으로 쓴 탈퇴회원_)을 막는다. 이를 비켜 간 닉네임 때문에 탈퇴가 막히는 일은 V65의 UNIQUE가 막는다.
         if (Normalizer.normalize(nickname, Normalizer.Form.NFKC).startsWith(WITHDRAWN_NICKNAME_PREFIX)) {
             return false;
         }
