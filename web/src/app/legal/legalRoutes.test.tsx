@@ -39,7 +39,7 @@ describe('법정 고지 페이지', () => {
         </SessionProvider>,
       );
     });
-    // 지연 로딩한 화면은 act 밖에서 커밋되고 제목 effect는 다음 태스크에 돈다. 짧게 폴링해 그 사이를 매번 밟는다.
+    // 지연 로딩한 화면은 act 밖에서 커밋되고 제목 effect는 다음 태스크에 돈다. 짧게 폴링해야 그 틈에 제목을 읽는 단언이 매번 드러난다.
     await vi.waitFor(() => expect(container.querySelector('h1')).not.toBeNull(), { interval: 1 });
   }
 
@@ -50,7 +50,7 @@ describe('법정 고지 페이지', () => {
     expect(container.textContent).toContain('2026년 10월 29일');
     expect(container.textContent).toContain('개인정보 보호책임자');
     expect(container.textContent).toContain('moewadeul@gmail.com');
-    expect(document.title).toBe('개인정보 처리방침 · 뫼와들');
+    await vi.waitFor(() => expect(document.title).toBe('개인정보 처리방침 · 뫼와들'));
   });
 
   it('/privacy의 목차 링크가 각 조항을 가리킨다', async () => {
@@ -69,6 +69,6 @@ describe('법정 고지 페이지', () => {
 
     expect(container.querySelector('h1')?.textContent).toBe('이용약관');
     expect(container.textContent).toContain('2026년 10월 29일');
-    expect(document.title).toBe('이용약관 · 뫼와들');
+    await vi.waitFor(() => expect(document.title).toBe('이용약관 · 뫼와들'));
   });
 });
