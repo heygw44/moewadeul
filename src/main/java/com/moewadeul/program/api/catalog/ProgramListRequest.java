@@ -28,7 +28,7 @@ public record ProgramListRequest(
             EnumSet.of(ProgramPhase.UPCOMING, ProgramPhase.OPEN, ProgramPhase.CLOSED);
 
     @Schema(hidden = true)
-    @AssertTrue(message = "status는 UPCOMING, OPEN, CLOSED 중 하나여야 해요.")
+    @AssertTrue(message = "행사 상태는 신청 예정, 신청 받는 중, 마감 중 하나여야 해요.")
     public boolean isStatusValid() {
         return status == null || listedPhase().isPresent();
     }

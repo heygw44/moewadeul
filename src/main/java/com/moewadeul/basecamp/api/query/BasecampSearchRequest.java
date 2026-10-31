@@ -62,7 +62,7 @@ public record BasecampSearchRequest(
         @Max(value = PageSlice.MAX_SIZE, message = "페이지 크기는 " + PageSlice.MAX_SIZE + " 이하여야 해요.")
         Integer size) {
 
-    @AssertTrue(message = "지역은 swLat, swLng, neLat, neLng 네 개나 lat, lng, radiusKm 세 개 중 한 묶음만 모두 보내 주세요.")
+    @AssertTrue(message = "지도 영역이나 중심 위치와 반경 중 한 가지 조건을 빠짐없이 채워 주세요.")
     public boolean isRegionSpecified() {
         return (hasFullArea() && hasNoRadius()) || (hasNoArea() && hasFullRadius());
     }
@@ -77,7 +77,7 @@ public record BasecampSearchRequest(
         return !hasFullArea() || swLng < neLng;
     }
 
-    @AssertTrue(message = "출발일 범위의 시작(fromDate)은 끝(toDate)보다 늦을 수 없어요.")
+    @AssertTrue(message = "출발일 범위의 시작은 끝보다 늦을 수 없어요.")
     public boolean isDateRangeOrdered() {
         return fromDate == null || toDate == null || !fromDate.isAfter(toDate);
     }

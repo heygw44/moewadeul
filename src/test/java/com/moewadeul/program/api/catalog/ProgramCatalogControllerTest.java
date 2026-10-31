@@ -121,7 +121,7 @@ class ProgramCatalogControllerTest {
         assertThat(result)
                 .bodyJson()
                 .extractingPath("$.fieldErrors[0].reason")
-                .isEqualTo("status는 UPCOMING, OPEN, CLOSED 중 하나여야 해요.");
+                .isEqualTo("행사 상태는 신청 예정, 신청 받는 중, 마감 중 하나여야 해요.");
     }
 
     @Test
@@ -138,7 +138,7 @@ class ProgramCatalogControllerTest {
         assertThat(result)
                 .bodyJson()
                 .extractingPath("$.fieldErrors[0].reason")
-                .isEqualTo("status는 PENDING_PAYMENT, CONFIRMED, CANCELED, EXPIRED 중 하나여야 해요.");
+                .isEqualTo("신청 상태는 결제 대기, 확정, 취소, 만료 중 하나여야 해요.");
     }
 
     @Test

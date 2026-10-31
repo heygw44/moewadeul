@@ -24,7 +24,7 @@ public record MemoryCreateRequest(
         @DecimalMax(value = "180", message = "경도는 180 이하여야 해요.")
         Double lng,
 
-        @Schema(description = "방문일(한국 날짜). 오늘보다 뒤일 수 없다.", example = "2026-10-05") @NotNull(message = "방문일을 입력해야 합니다.")
+        @Schema(description = "방문일(한국 날짜). 오늘보다 뒤일 수 없다.", example = "2026-10-05") @NotNull(message = "다녀온 날을 골라 주세요.")
         LocalDate visitedDate,
 
         @NotNull(message = "박 수를 입력해 주세요.")
@@ -39,7 +39,7 @@ public record MemoryCreateRequest(
         @Schema(
                 description = "공개 범위. PRIVATE(기본) 또는 PUBLIC",
                 allowableValues = {"PRIVATE", "PUBLIC"})
-        @Pattern(regexp = "PRIVATE|PUBLIC", message = "공개 범위는 PRIVATE나 PUBLIC이어야 해요.")
+        @Pattern(regexp = "PRIVATE|PUBLIC", message = "공개 범위는 나만 보기나 공개여야 해요.")
         String visibility,
 
         @Schema(description = "연결할 장소 ID(선택). 지도에 보이는 장소여야 한다.")

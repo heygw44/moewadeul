@@ -56,7 +56,7 @@ export function BakjiEditPanel({
   } else if (session.status === 'anonymous' || session.me === null) {
     body = (
       <EmptyState
-        title="로그인하면 제보한 박지를 고칠 수 있어요"
+        title="로그인하면 제보한 박지를 수정할 수 있어요"
         action={
           <Link to={withNext('/login', `${location.pathname}${location.search}`)} className={PRIMARY_LINK_CLASS}>
             로그인
@@ -144,7 +144,7 @@ function EditLoader({
   }, [editable]);
 
   if (result) {
-    return <BakjiResultView title="박지 정보를 고쳤어요" linkLabel="고친 박지 보기" result={result} />;
+    return <BakjiResultView title="박지 정보를 수정했어요" linkLabel="수정한 박지 보기" result={result} />;
   }
   if (current === null || notMine) return showSkeleton ? <FormSkeleton /> : null;
   if (editable !== null && editable.bakji !== null) {
@@ -274,7 +274,7 @@ function EditForm({
 
       {formError && (
         <div role="alert">
-          <ErrorNotice title="고치지 못했어요" error={formError.cause} />
+          <ErrorNotice title="수정하지 못했어요" error={formError.cause} />
         </div>
       )}
 

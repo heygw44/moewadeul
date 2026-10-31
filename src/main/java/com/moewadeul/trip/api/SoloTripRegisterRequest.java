@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 public record SoloTripRegisterRequest(
-        @Schema(description = "장소 ID", example = "101") @NotNull(message = "장소를 골라야 합니다.")
+        @Schema(description = "장소 ID", example = "101") @NotNull(message = "장소를 골라 주세요.")
         Long spotId,
 
         @Schema(description = "출발일(한국 날짜). 내일부터 60일 안", example = "2026-11-07")

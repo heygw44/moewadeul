@@ -56,9 +56,13 @@ class NotificationTemplatesTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"NO_CONTACT, 연락 두절", "CONDITION_MISMATCH, 일정이나 조건이 안 맞음", "INAPPROPRIATE_BEHAVIOR, 부적절한 언행", "OTHER, 기타"
+    @CsvSource({
+        "NO_CONTACT, 연락이 닿지 않아",
+        "CONDITION_MISMATCH, 일정이나 조건이 맞지 않아",
+        "INAPPROPRIATE_BEHAVIOR, 부적절한 행동 때문에",
+        "OTHER, 기타 이유로"
     })
-    @DisplayName("[F-20][BC-07] 강퇴 알림 본문에는 사유 이름에 맞는 한글 사유와 재신청 불가 안내가 들어간다")
+    @DisplayName("[F-20][BC-07] 내보내기 알림 본문에는 사유 이름에 맞는 한글 사유와 재신청 불가 안내가 들어간다")
     void kickedBodyContainsReasonLabel(String reason, String label) {
         // given
         BasecampEvents.KickedPayload payload = new BasecampEvents.KickedPayload(BASECAMP_ID, 7L, reason);
@@ -71,8 +75,8 @@ class NotificationTemplatesTest {
         NotificationDraft draft = drafts.get(0);
         assertThat(draft.memberId()).isEqualTo(7L);
         assertThat(draft.type()).isEqualTo("BASECAMP_KICKED");
-        assertThat(draft.title()).isEqualTo("베이스캠프에서 제외됨");
-        assertThat(draft.body()).contains("사유: " + label + ".").contains("같은 베이스캠프에는 다시 신청할 수 없어요.");
+        assertThat(draft.title()).isEqualTo("베이스캠프 내보내기");
+        assertThat(draft.body()).contains("캠프 리더가 " + label + " 베이스캠프에서 내보냈어요.").contains("같은 베이스캠프에는 다시 신청할 수 없어요.");
         assertThat(draft.link()).isEqualTo("/basecamps/30");
     }
 

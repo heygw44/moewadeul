@@ -69,7 +69,7 @@ export function JudgeMap() {
         preserveAspectRatio="xMidYMid slice"
         role="application"
         tabIndex={0}
-        aria-label="예시 지도. 화살표 키나 누르기로 박지 핀을 옮겨요"
+        aria-label="예시 지도. 화살표 키를 누르거나 지도를 눌러 박지 핀을 옮길 수 있어요"
         aria-describedby={hintId}
         onClick={(event) => moveTo(event.clientX, event.clientY)}
         onKeyDown={handleKeyDown}
@@ -123,7 +123,7 @@ export function JudgeMap() {
       </p>
 
       <div className="absolute inset-x-3 bottom-3 rounded-row bg-surface p-4 text-[0.9375rem] shadow-raise sm:inset-x-4 sm:bottom-4">
-        <p className="text-[1.0625rem] font-bold">이름 없는 박지 · 사용자 제보</p>
+        <p className="text-[1.0625rem] font-bold">이름 없는 박지 · 회원 제보</p>
         <p className="text-[0.9375rem] text-ink-muted">경계 자료: 예시 공원 경계 · 2026-06-30 기준</p>
         <p
           aria-live="polite"
@@ -133,7 +133,7 @@ export function JudgeMap() {
         </p>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <span className="text-[0.9375rem] text-ink-muted">
-            {warned ? '경고 박지는 베이스캠프를 열 수 없어요' : '이 자리로 베이스캠프를 열 수 있어요'}
+            {warned ? '경고가 붙은 박지로는 베이스캠프를 열 수 없어요' : '이 자리로 베이스캠프를 열 수 있어요'}
           </span>
           <span
             aria-hidden="true"

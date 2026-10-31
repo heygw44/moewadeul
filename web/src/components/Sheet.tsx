@@ -147,7 +147,7 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
     >
       <button
         type="button"
-        aria-label={`시트 크기 바꾸기, 지금 ${SNAP_LABELS[snap]}`}
+        aria-label={`패널 크기 바꾸기, 지금 ${SNAP_LABELS[snap]}`}
         onClick={handleClick}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

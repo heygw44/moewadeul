@@ -73,6 +73,6 @@ describe('댓글 화면: 답글 저장이 실패했을 때', () => {
 
     const alert = container.querySelector('form[aria-label="답글"] [role="alert"]');
     expect(alert?.textContent).toContain('답글을 달 수 없는 댓글이에요.');
-    expect(alert?.textContent).not.toContain('표시된 칸을 고쳐 주세요');
+    expect(alert?.textContent).not.toContain('표시된 칸을 수정해 주세요');
   });
 });

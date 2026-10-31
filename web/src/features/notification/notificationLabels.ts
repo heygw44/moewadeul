@@ -4,7 +4,7 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   BASECAMP_APPLIED: '내 베이스캠프에 합류 신청이 왔을 때',
   BASECAMP_APPROVED: '합류 신청이 승인됐을 때',
   BASECAMP_REJECTED: '합류 신청이 거절됐을 때',
-  BASECAMP_KICKED: '베이스캠프에서 내보내졌을 때',
+  BASECAMP_KICKED: '캠프 리더가 나를 베이스캠프에서 내보냈을 때',
   BASECAMP_CONFIRMED: '베이스캠프가 확정됐을 때',
   BASECAMP_CANCELED: '베이스캠프가 취소됐을 때',
   BASECAMP_COMPLETED: '베이스캠프가 끝나 동행 후기를 쓸 수 있게 됐을 때',

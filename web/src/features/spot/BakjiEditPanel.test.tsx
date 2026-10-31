@@ -55,7 +55,7 @@ function spotDetail(reporterId: number) {
 const SUBMISSION = {
   spotId: SPOT_ID,
   parkWarning: { warned: false },
-  guide: '박지 정보를 고쳤어요.',
+  guide: '박지 정보를 수정했어요.',
   duplicateCandidates: [],
 };
 
@@ -168,7 +168,7 @@ describe('박지 수정 화면', () => {
     await save();
 
     expect(patchBodies).toEqual([{ name: '소나무 박지', description: null, signalLevel: null }]);
-    expect(container.textContent).toContain('박지 정보를 고쳤어요');
+    expect(container.textContent).toContain('박지 정보를 수정했어요');
   });
 
   it('F-07: 위치를 옮기면 위도와 경도를 함께 보낸다', async () => {

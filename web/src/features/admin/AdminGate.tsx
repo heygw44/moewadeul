@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { to: '/admin/reports', label: '신고 처리' },
   { to: '/admin/spots', label: '박지 검토' },
   { to: '/admin/memories', label: '기록 검토' },
-  { to: '/admin/sync-jobs', label: '데이터 적재' },
+  { to: '/admin/sync-jobs', label: '데이터 불러오기' },
 ] as const;
 
 export function AdminPage({ title, current, children }: { title: string; current: string; children: ReactNode }) {
@@ -39,7 +39,7 @@ export function AdminPage({ title, current, children }: { title: string; current
   return (
     <PageLayout
       title={title}
-      description="모든 조치는 감사 로그에 남아요."
+      description="모든 조치는 기록으로 남아요."
       wide
       tabs={
         <UnderlineNav label="관리자 메뉴">

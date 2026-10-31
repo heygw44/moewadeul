@@ -84,7 +84,7 @@ export function BakjiFeedback({ spotId, onConfirmed }: BakjiFeedbackProps) {
       )}
       {reported && (
         <p role="status" className="text-sm text-ink">
-          신고를 접수했어요. 신고가 쌓이면 관리자가 검토하는 동안 지도에 보이지 않아요.
+          신고를 접수했어요. 신고가 쌓이면 관리자가 검토하는 동안 이 박지가 지도에 보이지 않아요.
         </p>
       )}
 
