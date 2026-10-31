@@ -63,8 +63,8 @@ class MemberWithdrawTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"탈퇴회원_1", "탈퇴회원_12", "탈퇴회원_0123456789"})
-    @DisplayName("[PV-02] 탈퇴회원_ 뒤에 숫자만 오는 닉네임은 가입과 닉네임 변경에서 입력 오류다")
+    @ValueSource(strings = {"탈퇴회원_1", "탈퇴회원_12", "탈퇴회원_0123456789", "탈퇴회원_", "탈퇴회원_abc", "탈퇴회원_1a"})
+    @DisplayName("[PV-02] 탈퇴회원_로 시작하는 닉네임은 가입과 닉네임 변경에서 입력 오류다")
     void reservedNicknameIsRejected(String nickname) {
         Member member = savedMember(1L);
 
@@ -74,8 +74,25 @@ class MemberWithdrawTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"탈퇴회원", "탈퇴회원_", "탈퇴회원_a", "탈퇴회원_1a", "내탈퇴회원_1", "탈퇴회원 1"})
-    @DisplayName("[PV-02] 숫자만 이어지지 않는 비슷한 닉네임은 쓸 수 있다")
+    @ValueSource(
+            strings = {
+                "탈퇴회원_１２３",
+                "\u1110\u1161\u11af\u1110\u116c\u1112\u116c\u110b\u116f\u11ab_123",
+                "탈퇴회원＿123",
+                "탈퇴회원_〡〢〣"
+            })
+    @DisplayName("[PV-02] 전각·조합형·호환 문자로 쓴 탈퇴회원_ 닉네임도 가입과 닉네임 변경에서 입력 오류다")
+    void reservedNicknameWrittenWithLookalikeCharactersIsRejected(String nickname) {
+        Member member = savedMember(1L);
+
+        assertThat(Member.isValidNickname(nickname)).isFalse();
+        assertInvalidInput(() -> Member.register(Email.of("a@example.com"), HASH, nickname, NOW));
+        assertInvalidInput(() -> member.changeNickname(nickname, LATER));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"탈퇴회원", "내탈퇴회원_1", "탈퇴회원 1", "탈퇴회원1", "탈퇴한산악인"})
+    @DisplayName("[PV-02] 탈퇴회원_로 시작하지 않는 비슷한 닉네임은 쓸 수 있다")
     void similarNicknameIsAllowed(String nickname) {
         assertThat(Member.isValidNickname(nickname)).isTrue();
     }
