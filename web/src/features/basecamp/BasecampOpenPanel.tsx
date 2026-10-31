@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import type { FormEvent, ReactNode } from 'react';
 import { openBasecamp } from '../../api/basecamps';
@@ -22,6 +22,7 @@ import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { PanelBackBar } from '../../components/PanelBackBar';
 import { addDaysToLocalDate, todayKst } from '../../lib/datetime';
+import { useSaveOutlivingScreen } from '../../app/saveNotice/saveNotices';
 import { withNext } from '../../app/session/nextPath';
 import { useSession } from '../../app/session/session';
 import { ParkWarningNotice } from '../../components/ParkWarningNotice';
@@ -198,9 +199,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
   const [formError, setFormError] = useState<{ message: string; traceId?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
-  const controllerRef = useRef<AbortController | null>(null);
-
-  useEffect(() => () => controllerRef.current?.abort(), []);
+  const awaitWhileOnScreen = useSaveOutlivingScreen();
 
   const endMin = startDate === '' ? undefined : addDaysToLocalDate(startDate, MIN_NIGHTS);
   const endMax = startDate === '' ? undefined : addDaysToLocalDate(startDate, MAX_NIGHTS);
@@ -251,16 +250,22 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
     };
     if (hasCondition) request.joinCondition = joinCondition;
 
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
     setSubmitting(true);
     try {
-      const response = await idempotentRunner.run(request, (key) => openBasecamp(request, key, controller.signal));
-      if (controller.signal.aborted) return;
+      const response = await awaitWhileOnScreen(
+        idempotentRunner.run(request, (key) => openBasecamp(request, key)),
+        {
+          pending: '베이스캠프를 여는 중이에요.',
+          done: ({ basecampId }) => ({
+            title: '베이스캠프를 열었어요.',
+            link: { to: `/basecamps/${basecampId}`, label: '베이스캠프 보기' },
+          }),
+          failed: '베이스캠프를 열지 못했어요.',
+          checkAt: { to: '/me/basecamps', label: '내 베이스캠프 보기' },
+        },
+      );
       navigate(`/basecamps/${response.basecampId}`);
     } catch (error) {
-      if (controller.signal.aborted) return;
       setSubmitting(false);
       handleError(error);
     }

@@ -46,20 +46,12 @@ export function getPost(postId: number, signal?: AbortSignal): Promise<Community
   return apiFetch<CommunityPostDetail>(`/api/community/posts/${postId}`, { signal });
 }
 
-export function createPost(
-  req: CommunityPostCreateRequest,
-  idempotencyKey: string,
-  signal?: AbortSignal,
-): Promise<{ postId: number }> {
-  return apiFetch<{ postId: number }>('/api/community/posts', { method: 'POST', body: req, idempotencyKey, signal });
+export function createPost(req: CommunityPostCreateRequest, idempotencyKey: string): Promise<{ postId: number }> {
+  return apiFetch<{ postId: number }>('/api/community/posts', { method: 'POST', body: req, idempotencyKey });
 }
 
-export function updatePost(
-  postId: number,
-  req: CommunityPostUpdateRequest,
-  signal?: AbortSignal,
-): Promise<CommunityPostDetail> {
-  return apiFetch<CommunityPostDetail>(`/api/community/posts/${postId}`, { method: 'PATCH', body: req, signal });
+export function updatePost(postId: number, req: CommunityPostUpdateRequest): Promise<CommunityPostDetail> {
+  return apiFetch<CommunityPostDetail>(`/api/community/posts/${postId}`, { method: 'PATCH', body: req });
 }
 
 export function deletePost(postId: number): Promise<void> {

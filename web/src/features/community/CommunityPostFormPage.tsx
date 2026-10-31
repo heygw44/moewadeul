@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { createPost, getPost, requestImageUpload, updatePost } from '../../api/community';
 import { ApiError } from '../../api/client';
@@ -20,6 +20,7 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { restorableImages, useImageUploads } from '../../components/useImageUploads';
 import type { UploadImageItem } from '../../components/useImageUploads';
+import { useSaveOutlivingScreen } from '../../app/saveNotice/saveNotices';
 import { useDraftCapture, useRestoredDraft } from '../../app/session/formDraft';
 import { useSession } from '../../app/session/session';
 import { useRequireAuth } from '../../app/session/useRequireAuth';
@@ -218,9 +219,8 @@ function PostForm(props: PostFormProps) {
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
-  const controllerRef = useRef<AbortController | null>(null);
+  const awaitWhileOnScreen = useSaveOutlivingScreen();
 
-  useEffect(() => () => controllerRef.current?.abort(), []);
   useDraftCapture<PostDraft>(pathname + search, memberId, {
     title,
     content,
@@ -266,9 +266,6 @@ function PostForm(props: PostFormProps) {
     if (Object.keys(errors).length > 0) return;
 
     const imageIds = uploads.imageIds;
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
     setSubmitting(true);
     try {
       if (props.mode === 'create') {
@@ -278,8 +275,15 @@ function PostForm(props: PostFormProps) {
           spotId: spot?.spotId,
           imageIds,
         };
-        const created = await idempotentRunner.run(request, (key) => createPost(request, key, controller.signal));
-        if (controller.signal.aborted) return;
+        const created = await awaitWhileOnScreen(
+          idempotentRunner.run(request, (key) => createPost(request, key)),
+          {
+            pending: '글을 올리는 중이에요.',
+            done: ({ postId }) => ({ title: '글을 올렸어요.', link: { to: `/community/${postId}`, label: '글 보기' } }),
+            failed: '글을 올리지 못했어요.',
+            checkAt: { to: '/community', label: '커뮤니티 보기' },
+          },
+        );
         navigate(`/community/${created.postId}`);
         return;
       }
@@ -292,11 +296,17 @@ function PostForm(props: PostFormProps) {
       if (imageIds.length !== savedIds.length || imageIds.some((id, index) => id !== savedIds[index])) {
         changes.imageIds = imageIds;
       }
-      if (Object.keys(changes).length > 0) await updatePost(post.postId, changes, controller.signal);
-      if (controller.signal.aborted) return;
+      if (Object.keys(changes).length > 0) {
+        const postLink = { to: `/community/${post.postId}`, label: '글 보기' };
+        await awaitWhileOnScreen(updatePost(post.postId, changes), {
+          pending: '글을 고치는 중이에요.',
+          done: () => ({ title: '글을 고쳤어요.', link: postLink }),
+          failed: '글을 고치지 못했어요.',
+          checkAt: postLink,
+        });
+      }
       navigate(`/community/${post.postId}`);
     } catch (error) {
-      if (controller.signal.aborted) return;
       setSubmitting(false);
       handleError(error);
     }
