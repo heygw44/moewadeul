@@ -12,9 +12,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.util.Set;
-import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,14 +31,11 @@ public class Member {
 
     public static final String WITHDRAWN_NICKNAME_PREFIX = "탈퇴회원_";
 
-    private static final Pattern WITHDRAWN_NICKNAME_PATTERN =
-            Pattern.compile("^" + Pattern.quote(WITHDRAWN_NICKNAME_PREFIX) + "[0-9]+$");
-
     // 글자(Lo) 범주라서 범주 검사로는 걸러지지 않지만 화면에는 아무것도 그리지 않는 한글 채움 문자다.
     private static final Set<Integer> BLANK_LETTERS = Set.of(0x115F, 0x1160, 0x3164, 0xFFA0);
 
     public static final String NICKNAME_RULE_MESSAGE = "닉네임은 " + NICKNAME_MIN_LENGTH + "~" + NICKNAME_MAX_LENGTH
-            + "자여야 합니다. 앞뒤 공백, 연속 공백, 보이지 않는 문자는 쓸 수 없고, '" + WITHDRAWN_NICKNAME_PREFIX + "숫자' 형태도 쓸 수 없습니다.";
+            + "자여야 합니다. 앞뒤 공백, 연속 공백, 보이지 않는 문자는 쓸 수 없고, '" + WITHDRAWN_NICKNAME_PREFIX + "'로 시작하는 닉네임도 쓸 수 없습니다.";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -255,7 +252,8 @@ public class Member {
         if (length < NICKNAME_MIN_LENGTH || length > NICKNAME_MAX_LENGTH) {
             return false;
         }
-        if (WITHDRAWN_NICKNAME_PATTERN.matcher(nickname).matches()) {
+        // DB 콜레이션은 전각·조합형으로 쓴 탈퇴회원_N과 NFKC도 못 바꾸는 숫자 변형까지 같은 값으로 보므로, 숫자는 보지 않고 접두사로 막는다.
+        if (Normalizer.normalize(nickname, Normalizer.Form.NFKC).startsWith(WITHDRAWN_NICKNAME_PREFIX)) {
             return false;
         }
         boolean misplacedSpace = nickname.startsWith(" ") || nickname.endsWith(" ") || nickname.contains("  ");
