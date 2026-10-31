@@ -26,6 +26,11 @@ public interface ProgramVacancyAlertJpaRepository
     @Query("delete from ProgramVacancyAlert v where v.programId = :programId and v.memberId = :memberId")
     void unsubscribe(@Param("programId") long programId, @Param("memberId") long memberId);
 
+    @Override
+    @Modifying
+    @Query("delete from ProgramVacancyAlert v where v.memberId = :memberId")
+    void deleteByMember(@Param("memberId") long memberId);
+
     // 잠금 읽기는 다른 트랜잭션이 잠근 행의 커밋을 기다린 뒤 최신 알림 시각으로 조건을 본다.
     // 바깥 SELECT의 FOR UPDATE는 하위 쿼리의 신청 행을 잠그지 않는다.
     @Override

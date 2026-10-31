@@ -44,6 +44,12 @@ public class ProgramVacancyAlertService {
         log.info("program vacancy alert unsubscribed programId={} memberId={}", programId, memberId);
     }
 
+    @Transactional
+    public void unsubscribeAll(long memberId) {
+        vacancyAlertRepository.deleteByMember(memberId);
+        log.info("program vacancy alerts unsubscribed all memberId={}", memberId);
+    }
+
     private void requireFull(Program program, Instant now) {
         program.requireVacancyAlertAcceptableAt(now, applicationRepository.countSeatHolders(program.getId(), now));
     }
