@@ -15,13 +15,18 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 @IntegrationTest
 @AutoConfigureMockMvc
 class RequestBodyLimitIntegrationTest {
 
-    private static final int MAX_STRING_LENGTH = 100_000;
-    private static final int MAX_DOCUMENT_LENGTH = 1_000_000;
+    private static final int MAX_STRING_LENGTH = RequestBodyLimitConfig.MAX_STRING_LENGTH;
+    private static final int MAX_DOCUMENT_LENGTH = RequestBodyLimitConfig.MAX_DOCUMENT_LENGTH;
+
+    @Autowired
+    private JsonMapper jsonMapper;
 
     @Autowired
     private MockMvcTester mvc;
@@ -63,6 +68,26 @@ class RequestBodyLimitIntegrationTest {
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
         assertThat(loginHistoryCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("요청 본문 상한은 공유 JsonMapper에 걸리지 않아, 외부 응답처럼 1MB를 넘는 JSON도 읽는다")
+    void sharedMapperReadsJsonOverRequestLimits() {
+        String value = "A".repeat(MAX_DOCUMENT_LENGTH + 1);
+
+        JsonNode node = jsonMapper.readTree("{\"value\":\"%s\"}".formatted(value));
+
+        assertThat(node.get("value").asString()).hasSize(value.length());
+    }
+
+    @Test
+    @DisplayName("같은 크기의 요청 본문은 400 INVALID_INPUT으로 끝난다")
+    void requestBodyOfSameSizeIsRejected() {
+        MvcTestResult result = login("{\"email\":\"%s\",\"password\":\"%s\"}"
+                .formatted(TestSequence.email(), "A".repeat(MAX_DOCUMENT_LENGTH + 1)));
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
     }
 
     private MvcTestResult login(String body) {
