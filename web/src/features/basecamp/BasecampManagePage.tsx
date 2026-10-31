@@ -37,6 +37,8 @@ import { trustLevelBadge } from '../member/memberLabels';
 import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText, profileSummary } from './basecampLabels';
 
+const itemKey = (item: BasecampApplicationItem) => item.applicationId;
+
 const CONTACT_MAX = 255;
 const MIN_CONFIRM_HEADCOUNT = 2;
 
@@ -90,7 +92,7 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const detail = current && 'detail' in current ? current.detail : null;
   const isLeader = detail?.myRelation === 'LEADER';
 
-  const applications = usePagedList(isLeader, basecampId, fetchBasecampApplications);
+  const applications = usePagedList(isLeader, basecampId, fetchBasecampApplications, itemKey);
 
   const reload = () => {
     setAttempt((value) => value + 1);

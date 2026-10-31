@@ -19,6 +19,8 @@ import { useSession } from '../../app/session/session';
 import { usePagedList } from '../../components/usePagedList';
 import { LINK_BUTTON_CLASS, parseSpotId, UNVERIFIED_WRITE_REASON } from './communityLabels';
 
+const itemKey = (item: CommunityPostSummary) => item.postId;
+
 type ListTab = 'all' | 'popular';
 type ListQuery = {
   spotId: number | null;
@@ -82,7 +84,7 @@ export function CommunityListPage() {
     searchType: query.searchType,
     keyword: query.keyword ?? undefined,
   };
-  const posts = usePagedList(true, filter, listPosts);
+  const posts = usePagedList(true, filter, listPosts, itemKey);
   const { current } = posts;
   const showSkeleton = useDelayedFlag(current === null);
   const firstPageFailed = current !== null && current.error !== null && current.items.length === 0;

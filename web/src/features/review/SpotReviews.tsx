@@ -28,6 +28,8 @@ import { formatKstDateTime, formatLocalDate, todayKst } from '../../lib/datetime
 import { useSession } from '../../app/session/session';
 import { GatedButton } from '../../app/session/GatedButton';
 
+const itemKey = (item: SpotReview) => item.reviewId;
+
 const CONTENT_MAX = 2000;
 const MAX_RATING = 5;
 const MAX_IMAGES = 3;
@@ -46,7 +48,7 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
   const session = useSession();
   const myMemberId = session.status === 'authenticated' ? (session.me?.memberId ?? null) : null;
   const [rating, setRating] = useState(initialRating);
-  const { current: list, loadingMore, loadMore, retry, reload } = usePagedList(true, spotId, fetchSpotReviews);
+  const { current: list, loadingMore, loadMore, retry, reload } = usePagedList(true, spotId, fetchSpotReviews, itemKey);
   const [writing, setWriting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<SpotReview | null>(null);

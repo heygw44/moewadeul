@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchSyncJobRuns, startSyncJob } from '../../api/admin';
 import { serverNow } from '../../api/client';
+import { toUserMessage } from '../../api/errors';
 import type { SyncJobRun, SyncJobStatus, SyncJobType } from '../../api/types';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
@@ -14,7 +15,6 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { formatKstDateTime } from '../../lib/datetime';
 import { AdminPage } from './AdminGate';
 import { AdminSegments } from './AdminSegments';
-import { adminErrorMessage } from './adminErrors';
 
 const ALL_JOBS = 'ALL';
 
@@ -59,7 +59,7 @@ type HistoryState = {
 type Failure = { message: string; error: unknown };
 
 function toFailure(error: unknown): Failure {
-  return { message: adminErrorMessage(error), error };
+  return { message: toUserMessage(error), error };
 }
 
 async function loadCards(signal: AbortSignal): Promise<CardsState> {
