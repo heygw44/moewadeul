@@ -11,7 +11,8 @@ export type NotificationType =
   | 'SANCTION_CONFIRMED'
   | 'PROGRAM_APPLICATION_CONFIRMED'
   | 'PROGRAM_APPLICATION_CANCELED'
-  | 'PROGRAM_APPLICATION_EXPIRED';
+  | 'PROGRAM_APPLICATION_EXPIRED'
+  | 'PROGRAM_SEAT_RELEASED';
 
 export interface NotificationItem {
   notificationId: number;

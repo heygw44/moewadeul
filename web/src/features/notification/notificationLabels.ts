@@ -1,21 +1,5 @@
 import type { NotificationType } from '../../api/types';
 
-export const NOTIFICATION_TYPES: readonly NotificationType[] = [
-  'BASECAMP_APPLIED',
-  'BASECAMP_APPROVED',
-  'BASECAMP_REJECTED',
-  'BASECAMP_KICKED',
-  'BASECAMP_CONFIRMED',
-  'BASECAMP_CANCELED',
-  'BASECAMP_COMPLETED',
-  'BASECAMP_MEMBER_CHANGED',
-  'MEMBER_REPORT_RESOLVED',
-  'SANCTION_CONFIRMED',
-  'PROGRAM_APPLICATION_CONFIRMED',
-  'PROGRAM_APPLICATION_CANCELED',
-  'PROGRAM_APPLICATION_EXPIRED',
-];
-
 export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   BASECAMP_APPLIED: '내 베이스캠프에 합류 신청이 왔을 때',
   BASECAMP_APPROVED: '합류 신청이 승인됐을 때',
@@ -30,4 +14,7 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   PROGRAM_APPLICATION_CONFIRMED: '결제를 마쳐 행사 신청이 확정됐을 때',
   PROGRAM_APPLICATION_CANCELED: '행사 신청이 취소됐을 때',
   PROGRAM_APPLICATION_EXPIRED: '결제 기한이 지나 행사 신청이 만료됐을 때',
+  PROGRAM_SEAT_RELEASED: '빈자리 알림을 신청한 행사에 자리가 났을 때',
 };
+
+export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_LABELS) as NotificationType[];
