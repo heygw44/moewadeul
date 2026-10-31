@@ -40,11 +40,6 @@ jobs:
           ./gradlew bootJar --console=plain
           scripts/boot-prod-context.sh build/libs/*.jar
 
-      # 임시(#886 비교용): 이미지 빌드(푸시 없음) 비용을 잰다
-      - name: tmp image build
-        if: ${{ !cancelled() }}
-        run: docker build -f Dockerfile -t moewadeul-app:ci .
-
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:

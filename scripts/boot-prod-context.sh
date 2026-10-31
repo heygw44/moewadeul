@@ -1,6 +1,4 @@
 #!/bin/sh
-# 운영 프로필로 컨텍스트만 띄웠다가 바로 끝낸다. DB·Redis·외부 API 없이 돈다.
-# Dockerfile의 AOT 학습 실행과 CI check가 같이 쓴다. 테스트 프로필이 끄는 조건부 빈의 기동 실패를 PR에서 잡으려는 것이다(#886).
 set -eu
 
 jar="$1"
