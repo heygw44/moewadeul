@@ -131,9 +131,21 @@ describe('저장 알림 트레이', () => {
 
   it('저장 중에 화면을 떠난 뒤 로그인이 풀려 끝나면 알림을 남기지 않는다', async () => {
     await startSaveAndLeave();
+    await act(async () => notifySignedOut());
     await act(async () => settleSave.reject(new ApiError(401, 'AUTHENTICATION_REQUIRED', null)));
 
     expect(tray()?.textContent).toBe('');
+  });
+
+  it('저장 중에 화면에 머문 채 로그아웃한 뒤 화면이 닫히면 저장이 끝나도 다음 회원에게 알림이 보이지 않는다', async () => {
+    await renderScreen(true);
+    await act(async () => container.querySelector('button')?.click());
+    await act(async () => notifySignedOut());
+    await renderScreen(false);
+    await act(async () => settleSave.resolve(5));
+
+    expect(tray()?.textContent).toBe('');
+    expect(outcome).toEqual([]);
   });
 
   it('로그아웃하면 앞 회원의 저장 알림이 남지 않는다', async () => {

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
-import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import { isOutcomeUnknown } from '../../api/idempotency';
 import { onSignedOut } from '../session/signedOut';
@@ -45,7 +44,12 @@ export function dismissSaveNotice(id: number): void {
   publish(notices.filter((existing) => existing.id !== id));
 }
 
-onSignedOut(() => publish([]));
+let signedOutCount = 0;
+
+onSignedOut(() => {
+  signedOutCount += 1;
+  publish([]);
+});
 
 export function useSaveNotices(): readonly SaveNotice[] {
   return useSyncExternalStore(subscribe, getSnapshot);
@@ -58,7 +62,7 @@ export type SaveCopy<T> = {
   checkAt: SaveNoticeLink;
 };
 
-type InFlight = { pendingTitle: string; noticeId: number | null };
+type InFlight = { pendingTitle: string; signedOutCount: number; noticeId: number | null };
 
 function failedNotice<T>(error: unknown, copy: SaveCopy<T>): SaveNoticeBody {
   if (isOutcomeUnknown(error)) {
@@ -81,18 +85,21 @@ export function useSaveOutlivingScreen(): <T>(save: Promise<T>, copy: SaveCopy<T
     const saves = inFlight.current;
     return () => {
       mounted.current = false;
-      for (const entry of saves) entry.noticeId = addSaveNotice({ state: 'pending', title: entry.pendingTitle });
+      for (const entry of saves) {
+        if (entry.signedOutCount === signedOutCount) {
+          entry.noticeId = addSaveNotice({ state: 'pending', title: entry.pendingTitle });
+        }
+      }
     };
   }, []);
 
   return useCallback(<T>(save: Promise<T>, copy: SaveCopy<T>): Promise<T> => {
-    const entry: InFlight = { pendingTitle: copy.pending, noticeId: null };
+    const entry: InFlight = { pendingTitle: copy.pending, signedOutCount, noticeId: null };
     inFlight.current.add(entry);
 
-    function settleAfterLeaving(next: SaveNoticeBody | null) {
-      if (entry.noticeId === null) return;
-      if (next === null) dismissSaveNotice(entry.noticeId);
-      else replaceSaveNotice(entry.noticeId, next);
+    function settleAfterLeaving(next: SaveNoticeBody) {
+      if (entry.noticeId === null || entry.signedOutCount !== signedOutCount) return;
+      replaceSaveNotice(entry.noticeId, next);
     }
 
     return new Promise<T>((resolve, reject) => {
@@ -108,8 +115,7 @@ export function useSaveOutlivingScreen(): <T>(save: Promise<T>, copy: SaveCopy<T
             reject(error);
             return;
           }
-          const needsLogin = error instanceof ApiError && error.code === 'AUTHENTICATION_REQUIRED';
-          settleAfterLeaving(needsLogin ? null : failedNotice(error, copy));
+          settleAfterLeaving(failedNotice(error, copy));
         },
       );
     });

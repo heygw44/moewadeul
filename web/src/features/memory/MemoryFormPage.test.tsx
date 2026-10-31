@@ -145,4 +145,13 @@ describe('기록 남기기 화면: 저장할 때', () => {
 
     expect(tray()?.textContent).toBe('');
   });
+
+  it('저장하는 중에 폼에 머문 채 로그아웃하면 저장이 끝나도 로그아웃 화면에 기록 알림이 남지 않는다', async () => {
+    await act(async () => submitButton()?.click());
+    await act(async () => notifySignedOut());
+    await act(async () => navigate('/'));
+    await act(async () => finishSave());
+
+    expect(tray()?.textContent).toBe('');
+  });
 });
