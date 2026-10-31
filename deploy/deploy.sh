@@ -4,6 +4,8 @@
 # 사용법: deploy.sh <이미지 태그(커밋 SHA)>
 # 종료 코드: 0 성공 / 1 실패(되돌릴 태그가 없거나 되돌리기도 실패) / 2 실패했지만 직전에 성공한 태그로 되돌림
 #
+# 호출자가 /run/lock/moewadeul.lock 잠금을 fd 9로 잡고 실행한다(배포 워크플로의 SSM 명령).
+#
 # 이 스크립트의 출력은 GitHub Actions 로그에 그대로 남고, 공개 저장소라 누구나 볼 수 있다.
 # 그래서 비밀값을 출력하지 않고, 실패해도 앱 로그를 출력하지 않는다. Spring은 설정 바인딩에 실패하면
 # 오류 메시지에 설정 값을 그대로 찍을 수 있다. 앱 로그는 서버에서 docker compose logs app으로 본다.
@@ -32,7 +34,6 @@ readonly HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-240}"
 # 시작하다 죽는 앱은 restart 정책으로 계속 다시 뜬다. 상태 확인 주소만 보면 그동안 제한 시간을 다 기다리고, 옛 앱은 이미 내려가 있어 502가 이어진다.
 # 다시 시작한 횟수가 이보다 많으면 기다리지 않고 실패로 본다.
 readonly MAX_APP_RESTARTS="${MAX_APP_RESTARTS:-2}"
-readonly BACKUP_WAIT_SECONDS="${BACKUP_WAIT_SECONDS:-900}"
 
 # Parameter Store 이름(접두사 뒤) → .env 변수 이름
 declare -rA SECRET_PARAMS=(
@@ -49,12 +50,19 @@ declare -rA SECRET_PARAMS=(
 readonly EXPORTER_USER=moewadeul_exporter
 readonly BACKUP_DIR="$DEPLOY_DIR/backup"
 readonly ALLOY_CONFIG_FILE="$DEPLOY_DIR/alloy/config.alloy"
+readonly LAST_ALLOY_CONFIG_FILE="$DEPLOY_DIR/last-successful-config.alloy"
 readonly ALLOY_CONTAINER_CONFIG=/etc/alloy/config.alloy
 readonly BACKUP_METRICS_FILE="$DEPLOY_DIR/metrics/backup.prom"
 readonly SYSTEMD_DIR=/etc/systemd/system
 readonly MYSQL_SLOW_LOG_DIR="$DEPLOY_DIR/mysql-log"
 readonly MYSQL_UID=999
 readonly LOGROTATE_FILE=/etc/logrotate.d/moewadeul-mysql-slow
+
+declare -rA LAST_SUCCESSFUL_FILES=(
+    ["$COMPOSE_FILE"]="$LAST_COMPOSE_FILE"
+    ["$CADDYFILE"]="$LAST_CADDYFILE"
+    ["$ALLOY_CONFIG_FILE"]="$LAST_ALLOY_CONFIG_FILE"
+)
 
 declare -A secrets=()
 declare -A server_env=()
@@ -82,11 +90,46 @@ require_safe_value() {
     fi
 }
 
+save_last_successful_files() {
+    local file saved
+    for file in "${!LAST_SUCCESSFUL_FILES[@]}"; do
+        saved="${LAST_SUCCESSFUL_FILES[$file]}"
+        if ! { cp "$file" "$saved.tmp" && mv "$saved.tmp" "$saved"; }; then
+            warn "배포 파일을 보관하지 못했다: $file. 다음 배포가 실패하면 보관된 옛 파일로 되돌린다"
+        fi
+    done
+}
+
+restore_last_successful_files() {
+    local file saved
+    for file in "${!LAST_SUCCESSFUL_FILES[@]}"; do
+        saved="${LAST_SUCCESSFUL_FILES[$file]}"
+        if [[ ! -f "$saved" ]]; then
+            log "보관된 파일이 없어 새 파일 그대로 둔다: $file"
+        elif cp "$saved" "$file"; then
+            log "직전에 성공한 파일로 되돌렸다: $file"
+        else
+            warn "직전에 성공한 파일을 복사하지 못해 새 파일 그대로 둔다: $file"
+        fi
+    done
+}
+
 check_architecture() {
     local arch
     arch="$(uname -m)"
     if [[ "$arch" != "aarch64" ]]; then
         log "서버 아키텍처가 ${arch}다. 이미지는 arm64로만 빌드한다"
+        exit 1
+    fi
+}
+
+# backup.sh가 덮어쓰기를 막으려고 put-object --if-none-match를 쓴다. 이 옵션이 없는 CLI면 백업이 매일 실패하고
+# 알림은 26시간 뒤에야 오므로, 서버 파일을 바꾸기 전에 배포를 멈춘다.
+check_backup_cli() {
+    local skeleton
+    skeleton="$(aws s3api put-object --generate-cli-skeleton input 2>/dev/null)" || skeleton=""
+    if [[ "$skeleton" != *'"IfNoneMatch"'* ]]; then
+        log "서버의 AWS CLI가 put-object --if-none-match를 모른다. CLI를 올린 뒤 다시 배포한다"
         exit 1
     fi
 }
@@ -188,28 +231,6 @@ wait_app_healthy() {
         sleep 5
     done
     log "앱 상태 확인 통과"
-}
-
-# 백업 덤프(--single-transaction)가 여는 트랜잭션 뒤에서 Flyway DDL이 메타데이터 잠금을 기다리지 않게, 백업 서비스가 끝난 뒤에 배포한다.
-wait_backup_idle() {
-    command -v systemctl > /dev/null || return 0
-    local deadline=$((SECONDS + BACKUP_WAIT_SECONDS)) state waited=0
-    while true; do
-        state="$(systemctl show moewadeul-backup.service -p ActiveState --value 2> /dev/null || true)"
-        case "$state" in
-            activating | active | deactivating | reloading) ;;
-            *) return 0 ;;
-        esac
-        if ((waited == 0)); then
-            log "백업이 도는 중이라 끝날 때까지 기다린다"
-            waited=1
-        fi
-        if ((SECONDS >= deadline)); then
-            log "백업이 ${BACKUP_WAIT_SECONDS}초 안에 끝나지 않았다"
-            return 1
-        fi
-        sleep 10
-    done
 }
 
 # caddy는 80번 요청에 HTTPS로 넘기는 응답(308)을 준다. 인증서 발급은 Let's Encrypt 상황에 따라 늦어질 수 있어서 HTTPS는 확인하지 않는다.
@@ -321,17 +342,20 @@ apply_alloy_definition() {
 # 그래서 이 계정의 비밀번호는 Alloy 컨테이너와 서버 안에서만 쓰고, MySQL 포트는 밖에 열지 않는다.
 # root 비밀번호는 명령 인자가 아니라 MYSQL_PWD 환경 변수로, SQL은 표준 입력으로 넘겨서 프로세스 목록에 남지 않게 한다.
 # 실패해도 서비스는 정상이고 MySQL 지표만 빠지므로, 배포를 실패로 만들지 않고 로그만 남긴다.
+# mysql의 오류 메시지는 비밀번호가 든 SQL 문장을 되풀이할 수 있고 이 로그는 공개된다. 그래서 표준 오류는 변수로 받고 오류 번호만 남긴다.
 ensure_exporter_user() {
-    if MYSQL_PWD="${secrets[DB_ROOT_PASSWORD]}" compose exec -T -e MYSQL_PWD mysql mysql -uroot --batch > /dev/null <<SQL
+    local errors codes
+    if errors="$(MYSQL_PWD="${secrets[DB_ROOT_PASSWORD]}" compose exec -T -e MYSQL_PWD mysql mysql -uroot --batch 2>&1 > /dev/null <<SQL
 CREATE USER IF NOT EXISTS '$EXPORTER_USER'@'%' IDENTIFIED BY '${secrets[MYSQL_EXPORTER_PASSWORD]}' WITH MAX_USER_CONNECTIONS 3;
 ALTER USER '$EXPORTER_USER'@'%' IDENTIFIED BY '${secrets[MYSQL_EXPORTER_PASSWORD]}' WITH MAX_USER_CONNECTIONS 3;
 GRANT PROCESS, REPLICATION CLIENT ON *.* TO '$EXPORTER_USER'@'%';
 GRANT SELECT ON performance_schema.* TO '$EXPORTER_USER'@'%';
 SQL
-    then
+)"; then
         log "MySQL 수집용 계정 확인 완료"
     else
-        log "MySQL 수집용 계정을 맞추지 못했다. 서비스는 정상이고 MySQL 지표만 빠진다"
+        codes="$(grep -o '^ERROR [0-9]* ([0-9A-Z]*)' <<< "$errors" | head -n 1 || true)"
+        log "MySQL 수집용 계정을 맞추지 못했다(${codes:-오류 번호 없음}). 서비스는 정상이고 MySQL 지표만 빠진다"
     fi
 }
 
@@ -410,7 +434,14 @@ main() {
         exit 1
     fi
 
+    if ! flock -n 9 2>/dev/null; then
+        log "배포 워크플로가 잡은 잠금 없이 실행했다. 서버 파일을 바꾸지 않고 끝낸다"
+        exit 1
+    fi
+    trap '(($? == 0)) || restore_last_successful_files' EXIT
+
     check_architecture
+    check_backup_cli
     load_server_env
     load_secrets
 
@@ -418,28 +449,18 @@ main() {
     [[ -f "$LAST_TAG_FILE" ]] && previous="$(<"$LAST_TAG_FILE")"
     log "배포 시작: $tag (직전에 성공한 태그: ${previous:-없음})"
 
-    if ! wait_backup_idle; then
-        log "배포하지 않는다. 실행 중인 컨테이너는 그대로 둔다"
-        exit 1
-    fi
-
     write_env "$tag"
     # MySQL 이미지(mysql:8.4)는 배포할 때마다 받지 않는다. 받으면 업스트림에 8.4.x 패치가 나온 날
     # 앱 배포가 DB 컨테이너를 새 버전으로 다시 만들고, 배포를 되돌려도 MySQL 버전은 돌아가지 않는다. MySQL을 올릴 때는 서버에서 직접 받는다.
     if ! pull_images "$tag" || ! check_image_architecture "$tag"; then
-        log "이미지를 받지 못했거나 아키텍처가 맞지 않는다. 실행 중인 컨테이너는 그대로 둔다"
+        log "이미지를 받지 못했거나 아키텍처가 맞지 않는다. 실행 중인 컨테이너는 그대로 두고 배포 파일을 직전에 성공한 것으로 되돌린다"
         [[ -n "$previous" ]] && write_env "$previous"
         exit 1
     fi
 
     prepare_mysql_slow_log
     if start "$tag"; then
-        if ! { cp "$COMPOSE_FILE" "$LAST_COMPOSE_FILE.tmp" && mv "$LAST_COMPOSE_FILE.tmp" "$LAST_COMPOSE_FILE"; }; then
-            warn "compose 파일을 보관하지 못했다. 다음 배포가 실패하면 보관된 옛 파일로 되돌린다"
-        fi
-        if ! { cp "$CADDYFILE" "$LAST_CADDYFILE.tmp" && mv "$LAST_CADDYFILE.tmp" "$LAST_CADDYFILE"; }; then
-            warn "Caddyfile을 보관하지 못했다. 다음 배포가 실패하면 보관된 옛 파일로 되돌린다"
-        fi
+        save_last_successful_files
         echo "$tag" > "$LAST_TAG_FILE"
         ensure_exporter_user
         apply_alloy_definition
@@ -460,20 +481,8 @@ main() {
     fi
 
     log "배포 실패. 직전에 성공한 태그 $previous 로 되돌린다"
-    if [[ ! -f "$LAST_COMPOSE_FILE" ]]; then
-        log "저장된 compose 파일이 없어 새 compose 파일 그대로 되돌린다"
-    elif cp "$LAST_COMPOSE_FILE" "$COMPOSE_FILE"; then
-        log "직전에 성공한 compose 파일로 되돌렸다"
-    else
-        warn "직전에 성공한 compose 파일을 복사하지 못해 새 compose 파일 그대로 되돌린다"
-    fi
-    if [[ ! -f "$LAST_CADDYFILE" ]]; then
-        log "저장된 Caddyfile이 없어 새 Caddyfile 그대로 되돌린다"
-    elif cp "$LAST_CADDYFILE" "$CADDYFILE"; then
-        log "직전에 성공한 Caddyfile로 되돌렸다"
-    else
-        warn "직전에 성공한 Caddyfile을 복사하지 못해 새 Caddyfile 그대로 되돌린다"
-    fi
+    restore_last_successful_files
+    trap - EXIT
     if start "$previous"; then
         log "되돌리기 성공: $previous"
         exit 2
