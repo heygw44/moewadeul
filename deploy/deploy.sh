@@ -4,8 +4,7 @@
 # 사용법: deploy.sh <이미지 태그(커밋 SHA)>
 # 종료 코드: 0 성공 / 1 실패(되돌릴 태그가 없거나 되돌리기도 실패) / 2 실패했지만 직전에 성공한 태그로 되돌림
 #
-# 호출자가 /run/lock/moewadeul.lock 잠금을 fd 9로 잡고 실행한다(배포 워크플로의 SSM 명령). 서버를 바꾸는 배포와 백업이 겹치지 않게 하는 잠금이다.
-# 잠금은 deploy.sh가 아니라 호출자가 잡는다. 그래야 워크플로가 deploy.sh와 compose 파일을 바꿔 넣기 전부터 다른 배포·백업을 막는다.
+# 호출자가 /run/lock/moewadeul.lock 잠금을 fd 9로 잡고 실행한다(배포 워크플로의 SSM 명령).
 #
 # 이 스크립트의 출력은 GitHub Actions 로그에 그대로 남고, 공개 저장소라 누구나 볼 수 있다.
 # 그래서 비밀값을 출력하지 않고, 실패해도 앱 로그를 출력하지 않는다. Spring은 설정 바인딩에 실패하면
@@ -59,7 +58,6 @@ readonly MYSQL_SLOW_LOG_DIR="$DEPLOY_DIR/mysql-log"
 readonly MYSQL_UID=999
 readonly LOGROTATE_FILE=/etc/logrotate.d/moewadeul-mysql-slow
 
-# 워크플로가 배포 전에 mv로 바꿔 넣는 파일 → 직전에 성공한 배포가 남긴 보관 파일
 declare -rA LAST_SUCCESSFUL_FILES=(
     ["$COMPOSE_FILE"]="$LAST_COMPOSE_FILE"
     ["$CADDYFILE"]="$LAST_CADDYFILE"
@@ -92,7 +90,6 @@ require_safe_value() {
     fi
 }
 
-# 배포가 성공하면 워크플로가 바꿔 넣은 파일을 보관한다. 임시 파일에 복사한 뒤 이름을 바꿔서, 복사하다 멈춰도 반쪽 보관 파일이 남지 않게 한다.
 save_last_successful_files() {
     local file saved
     for file in "${!LAST_SUCCESSFUL_FILES[@]}"; do
@@ -103,7 +100,6 @@ save_last_successful_files() {
     done
 }
 
-# 보관 파일로 덮어써서 직전에 성공한 상태로 되돌린다. 여러 번 불러도 결과가 같다.
 restore_last_successful_files() {
     local file saved
     for file in "${!LAST_SUCCESSFUL_FILES[@]}"; do
@@ -431,8 +427,6 @@ main() {
         log "배포 워크플로가 잡은 잠금 없이 실행했다. 서버 파일을 바꾸지 않고 끝낸다"
         exit 1
     fi
-    # 워크플로가 deploy.sh보다 먼저 파일을 바꿔 넣으므로, 이른 단계(아키텍처, server.env, 비밀값, 이미지 받기)에서 실패해도 새 파일이 검증 없이 남는다.
-    # 성공한 배포(종료 코드 0)만 새 파일을 그대로 둔다.
     trap '(($? == 0)) || restore_last_successful_files' EXIT
 
     check_architecture
