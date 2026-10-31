@@ -79,7 +79,7 @@ public class LoginSessionManager {
                 request, response, securityContextHolderStrategy.getContext().getAuthentication());
     }
 
-    public static Authentication authenticationOf(LoginMember member) {
+    private static Authentication authenticationOf(LoginMember member) {
         List<GrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + member.role()));
         if (member.emailVerified()) {

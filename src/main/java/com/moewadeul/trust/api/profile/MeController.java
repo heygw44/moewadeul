@@ -43,11 +43,18 @@ class MeController {
 
     @Operation(
             summary = "내 정보 조회",
-            description = "로그인한 회원의 계정 정보, 자기 신고 연령대·성별, 본인확인 여부와 신뢰 단계를 돌려준다. " + "이메일 인증 전인 회원도 부를 수 있다.")
+            description = "로그인한 회원의 계정 정보, 자기 신고 연령대·성별, 본인확인 여부와 신뢰 단계를 돌려준다. "
+                    + "이메일 인증 전인 회원도 부를 수 있다. 다른 기기에서 인증을 마쳤으면 이 요청이 현재 세션에 인증 권한을 준다.")
     @GetMapping
-    MeResponse find(@AuthenticationPrincipal LoginMember loginMember) {
-        long memberId = loginMember.memberId();
-        return toResponse(myInfoService.find(memberId));
+    MeResponse find(
+            @AuthenticationPrincipal LoginMember loginMember,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        MyInfo info = myInfoService.find(loginMember.memberId());
+        if (info.emailVerified() && !loginMember.emailVerified()) {
+            loginSessionManager.markEmailVerified(httpRequest, httpResponse);
+        }
+        return toResponse(info);
     }
 
     @Operation(

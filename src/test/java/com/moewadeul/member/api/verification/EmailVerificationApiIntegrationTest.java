@@ -91,8 +91,8 @@ class EmailVerificationApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01][TR-03] 인증 전에 다른 기기에서 만든 세션도 다시 로그인하지 않고 이메일 인증이 필요한 경로를 쓸 수 있다")
-    void otherSessionOfSameMemberGainsVerifiedAuthorityWithoutNewLogin() {
+    @DisplayName("[F-01][TR-03] 다른 기기에서 인증한 뒤 이 세션이 내 정보를 조회하면 다시 로그인하지 않고 이메일 인증이 필요한 경로를 쓸 수 있다")
+    void otherSessionGainsVerifiedAuthorityOnMeLookupWithoutNewLogin() {
         Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
         Cookie otherSession = login(member);
         Cookie verifyingSession = login(member);
@@ -100,9 +100,12 @@ class EmailVerificationApiIntegrationTest {
 
         assertThat(postJson(VERIFY_PATH, codeBody(issueCode(member)), verifyingSession))
                 .hasStatus(HttpStatus.OK);
+        assertThat(postJson(VERIFIED_ONLY_PATH, "{}", otherSession)).hasStatus(HttpStatus.FORBIDDEN);
 
-        MvcTestResult afterVerification = postJson(VERIFIED_ONLY_PATH, "{}", otherSession);
-        assertThat(afterVerification.getResponse().getStatus()).isNotIn(401, 403);
+        assertThat(mvc.get().uri(ME_PATH).cookie(otherSession).exchange()).hasStatus(HttpStatus.OK);
+
+        MvcTestResult afterLookup = postJson(VERIFIED_ONLY_PATH, "{}", otherSession);
+        assertThat(afterLookup.getResponse().getStatus()).isNotIn(401, 403);
     }
 
     @Test

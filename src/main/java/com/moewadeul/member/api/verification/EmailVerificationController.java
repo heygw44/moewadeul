@@ -2,14 +2,12 @@ package com.moewadeul.member.api.verification;
 
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.LoginSessionManager;
-import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.application.verification.EmailVerificationService;
 import com.moewadeul.member.application.verification.VerificationResult;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,29 +16,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/me/email-verification")
 class EmailVerificationController {
 
     private final EmailVerificationService emailVerificationService;
     private final LoginSessionManager loginSessionManager;
-    private final MemberSessions memberSessions;
 
     EmailVerificationController(
-            EmailVerificationService emailVerificationService,
-            LoginSessionManager loginSessionManager,
-            MemberSessions memberSessions) {
+            EmailVerificationService emailVerificationService, LoginSessionManager loginSessionManager) {
         this.emailVerificationService = emailVerificationService;
         this.loginSessionManager = loginSessionManager;
-        this.memberSessions = memberSessions;
     }
 
     @Operation(
             summary = "이메일 인증 코드 확인",
-            description =
-                    "메일로 받은 6자리 코드를 확인한다. 성공하면 회원이 ACTIVE가 되고 현재 세션은 물론 같은 회원의 다른 세션도 이메일 인증이 필요한 API를 바로 쓸 수 있다. "
-                            + "코드를 5번 틀리면 그 코드는 무효가 되어 재발송으로 새 코드를 받아야 한다.")
+            description = "메일로 받은 6자리 코드를 확인한다. 성공하면 회원이 ACTIVE가 되고 현재 세션이 이메일 인증이 필요한 API를 바로 쓸 수 있다. "
+                    + "코드를 5번 틀리면 그 코드는 무효가 되어 재발송으로 새 코드를 받아야 한다.")
     @PostMapping
     EmailVerificationResponse verify(
             @AuthenticationPrincipal LoginMember loginMember,
@@ -49,19 +41,7 @@ class EmailVerificationController {
             HttpServletResponse httpResponse) {
         VerificationResult result = emailVerificationService.verify(loginMember.memberId(), request.code());
         loginSessionManager.markEmailVerified(httpRequest, httpResponse);
-        tryMarkOtherSessionsVerified(loginMember.memberId());
         return EmailVerificationResponse.from(result);
-    }
-
-    private void tryMarkOtherSessionsVerified(long memberId) {
-        try {
-            memberSessions.markEmailVerified(memberId);
-        } catch (RuntimeException e) {
-            log.warn(
-                    "marking other sessions email-verified failed memberId={} errorType={}",
-                    memberId,
-                    e.getClass().getSimpleName());
-        }
     }
 
     @Operation(

@@ -1,13 +1,9 @@
 package com.moewadeul.member.application;
 
-import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.LoginSessionManager;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextImpl;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 import org.springframework.stereotype.Component;
@@ -45,27 +41,5 @@ public class MemberSessions {
     public void invalidate(String sessionId) {
         OutsideTransaction.require(SESSION_CONNECTION);
         sessionRepository.deleteById(sessionId);
-    }
-
-    public void markEmailVerified(long memberId) {
-        OutsideTransaction.require(SESSION_CONNECTION);
-        markEmailVerified(sessionRepository, memberId);
-    }
-
-    private static <S extends Session> void markEmailVerified(
-            FindByIndexNameSessionRepository<S> repository, long memberId) {
-        repository.findByPrincipalName(String.valueOf(memberId)).values().forEach(session -> {
-            if (session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)
-                            instanceof SecurityContext context
-                    && context.getAuthentication() != null
-                    && context.getAuthentication().getPrincipal() instanceof LoginMember member
-                    && !member.emailVerified()) {
-                LoginMember verified = new LoginMember(member.memberId(), member.role(), true);
-                session.setAttribute(
-                        HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                        new SecurityContextImpl(LoginSessionManager.authenticationOf(verified)));
-                repository.save(session);
-            }
-        });
     }
 }
