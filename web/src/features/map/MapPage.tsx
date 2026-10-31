@@ -48,7 +48,7 @@ import type { SpotFilters } from '../spot/spotFilters';
 import { SpotListRow } from '../spot/SpotListRow';
 import { SpotPreviewBoard } from '../spot/SpotPreviewBoard';
 import { useIsDesktop } from './useIsDesktop';
-import { useMapContextMenu } from './useMapContextMenu';
+import { useMapContextMenu, visibleMapHeight } from './useMapContextMenu';
 import { useMapMoving } from './useMapMoving';
 import { useMapView } from './useMapView';
 import { usePlacementDraft } from './usePlacementDraft';
@@ -152,6 +152,7 @@ export function MapPage({
   const desktop = useIsDesktop();
   const browsing = mode === 'browse';
   const { contextMenu, closeContextMenu } = useMapContextMenu(map, browsing || basecampMode, hostRef, focusKey);
+  const placeAtMapCenter = map ? () => setDraft(map.getVisibleCenter(visibleMapHeight(hostRef.current))) : undefined;
   const previewEnabled = browsing && desktop && spotId === undefined;
   if (!previewEnabled && previewId !== null) setPreviewId(null);
   if (!browsing && (radiusSearch !== null || aiSummary !== null)) {
@@ -385,6 +386,7 @@ export function MapPage({
             <BakjiReportPanel
               draft={draft}
               nextBasecamp={nextAfterReport === 'basecamp'}
+              onUseMapCenter={placeAtMapCenter}
               onCancel={() => navigate('/map')}
               onSubmitted={() => {
                 finishPlacing();
@@ -396,6 +398,7 @@ export function MapPage({
               key={editSpotId}
               spotId={editSpotId}
               draft={draft}
+              onUseMapCenter={placeAtMapCenter}
               onCancel={() => navigate(`/spots/${editSpotId}`)}
               onLoaded={(detail) => {
                 setDraft({ lat: detail.lat, lng: detail.lng });
@@ -432,6 +435,9 @@ export function MapPage({
           className="absolute inset-0 z-0 [--sheet-top:var(--mobile-sheet-top)] lg:relative lg:mr-4 lg:mb-4 lg:flex-1 lg:overflow-hidden lg:rounded-media lg:[--sheet-top:0px]"
         >
           <div ref={hostRef} role="region" aria-label="지도" className="absolute inset-0" />
+          <p id="map-keyboard-hint" className="sr-only">
+            방향키로 지도를 옮기고 +, - 키로 넓히거나 좁혀요.
+          </p>
           {!mapFailure && (
             <>
               <svg

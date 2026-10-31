@@ -1,4 +1,4 @@
-import { createContext, Suspense, useContext, useSyncExternalStore } from 'react';
+import { createContext, Suspense, useContext, useEffect, useRef, useSyncExternalStore } from 'react';
 import type { AnchorHTMLAttributes, FocusEvent, MouseEvent, PointerEvent, ReactNode } from 'react';
 import { RouteBoundary } from './RouteBoundary';
 import { RouteFallback } from './RouteFallback';
@@ -141,6 +141,37 @@ export function Link({ to, replace, onClick, onPointerEnter, onFocus, target, ..
   );
 }
 
+const ROUTE_FOCUS_TARGETS = ['[data-route-focus]', 'h1', 'main'];
+
+function isTextEntry(element: Element | null) {
+  return (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement
+  );
+}
+
+function focusNewScreen() {
+  if (isTextEntry(document.activeElement)) return;
+  for (const selector of ROUTE_FOCUS_TARGETS) {
+    const target = document.querySelector<HTMLElement>(selector);
+    if (!target) continue;
+    if (!target.hasAttribute('tabindex')) target.tabIndex = -1;
+    target.focus({ preventScroll: true });
+    return;
+  }
+}
+
+function RouteFocus({ pathname }: { pathname: string }) {
+  const previous = useRef(pathname);
+  useEffect(() => {
+    if (previous.current === pathname) return;
+    previous.current = pathname;
+    focusNewScreen();
+  }, [pathname]);
+  return null;
+}
+
 export function Router({ routes, fallback }: { routes: RouteDef[]; fallback: ReactNode }) {
   const { pathname } = useLocation();
   let content = fallback;
@@ -154,7 +185,10 @@ export function Router({ routes, fallback }: { routes: RouteDef[]; fallback: Rea
   return (
     <RoutesContext value={routes}>
       <RouteBoundary resetKey={pathname}>
-        <Suspense fallback={<RouteFallback />}>{content}</Suspense>
+        <Suspense fallback={<RouteFallback />}>
+          {content}
+          <RouteFocus pathname={pathname} />
+        </Suspense>
       </RouteBoundary>
     </RoutesContext>
   );

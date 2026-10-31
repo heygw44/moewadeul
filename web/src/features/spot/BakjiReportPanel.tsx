@@ -29,6 +29,7 @@ type BakjiReportPanelProps = {
   onCancel: () => void;
   onSubmitted: (response: BakjiSubmissionResponse) => void;
   nextBasecamp?: boolean;
+  onUseMapCenter?: () => void;
 };
 
 const EMPTY_VALUES: BakjiFormValues = {
@@ -40,7 +41,13 @@ const EMPTY_VALUES: BakjiFormValues = {
   groundType: 'UNKNOWN',
 };
 
-export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = false }: BakjiReportPanelProps) {
+export function BakjiReportPanel({
+  draft,
+  onCancel,
+  onSubmitted,
+  nextBasecamp = false,
+  onUseMapCenter,
+}: BakjiReportPanelProps) {
   const session = useSession();
   const location = useLocation();
   const showSessionSkeleton = useDelayedFlag(session.status === 'loading');
@@ -88,6 +95,7 @@ export function BakjiReportPanel({ draft, onCancel, onSubmitted, nextBasecamp = 
         draft={draft}
         unverified={session.me.status === 'UNVERIFIED'}
         nextBasecamp={nextBasecamp}
+        onUseMapCenter={onUseMapCenter}
         onSubmitted={(response) => {
           onSubmitted(response);
           if (nextBasecamp && !response.parkWarning.warned) {
@@ -112,11 +120,13 @@ function ReportForm({
   draft,
   unverified,
   nextBasecamp,
+  onUseMapCenter,
   onSubmitted,
 }: {
   draft: LatLng | null;
   unverified: boolean;
   nextBasecamp: boolean;
+  onUseMapCenter?: () => void;
   onSubmitted: (response: BakjiSubmissionResponse) => void;
 }) {
   const [values, setValues] = useState(EMPTY_VALUES);
@@ -199,6 +209,7 @@ function ReportForm({
         onChange={setValues}
         fieldErrors={fieldErrors}
         groundOptions={GROUND_OPTIONS}
+        onUseMapCenter={onUseMapCenter}
       />
 
       <Button type="submit" fullWidth loading={submitting} disabled={unverified}>
