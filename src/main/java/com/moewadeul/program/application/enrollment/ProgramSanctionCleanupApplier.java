@@ -1,6 +1,7 @@
 package com.moewadeul.program.application.enrollment;
 
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.transaction.ReadCommittedTransaction;
 import com.moewadeul.program.application.enrollment.ProgramApplicationLocker.LockedApplication;
 import com.moewadeul.program.domain.ProgramApplication;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
@@ -27,6 +28,7 @@ class ProgramSanctionCleanupApplier {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     boolean cancelPending(long applicationId, long memberId, ProgramCancelReason reason) {
+        ReadCommittedTransaction.require("행사 행을 잠근 뒤 자리를 다시 세는 읽기가 트랜잭션 처음의 낡은 스냅숏이 아니라 최신 커밋을 봐야 한다.");
         LockedApplication locked = applicationLocker.lock(applicationId).orElse(null);
         if (locked == null || locked.application().getStatus() != ProgramApplicationStatus.PENDING_PAYMENT) {
             return false;

@@ -3,6 +3,7 @@ package com.moewadeul.program.application.enrollment;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
+import com.moewadeul.common.transaction.ReadCommittedTransaction;
 import com.moewadeul.program.application.enrollment.ProgramApplicationLocker.LockedApplication;
 import com.moewadeul.program.domain.Payment;
 import com.moewadeul.program.domain.PaymentRepository;
@@ -47,6 +48,7 @@ public class ProgramPaymentService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ProgramApplicationCancelResult cancel(long memberId, long applicationId) {
+        ReadCommittedTransaction.require("행사 행을 잠근 뒤 자리를 다시 세는 읽기가 트랜잭션 처음의 낡은 스냅숏이 아니라 최신 커밋을 봐야 한다.");
         LockedApplication locked = lockOwnApplication(memberId, applicationId);
         ProgramApplication application = locked.application();
         Instant now = clock.instant();
