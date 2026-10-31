@@ -55,3 +55,17 @@ updates:
       docker:
         applies-to: version-updates
         patterns: ["*"]
+
+  # 운영 compose 파일이 Caddy와 Alloy 실행 이미지를 버전으로 고정한다. 배포는 이 이미지를 서버에 없을 때만 받으므로 여기서 올리지 않으면 패치가 들어오지 않는다.
+  # mysql은 배포를 되돌려도 버전이 돌아가지 않으므로 사람이 백업을 확인하고 올린다(#574, docs/10 12.4절).
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    target-branch: develop
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: mysql
+    groups:
+      docker-compose:
+        applies-to: version-updates
+        patterns: ["*"]
