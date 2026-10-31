@@ -24,9 +24,9 @@ class CommunityViewCountFlusherTest {
         buffer.add(1L, 1);
         buffer.add(2L, 1);
 
-        int posts = flusher.flush();
+        int failed = flusher.flush();
 
-        assertThat(posts).isEqualTo(2);
+        assertThat(failed).isZero();
         verify(mapper).addViewCount(1L, 2L);
         verify(mapper).addViewCount(2L, 1L);
         assertThat(buffer.drain()).isEmpty();
@@ -39,8 +39,9 @@ class CommunityViewCountFlusherTest {
         buffer.add(1L, 2);
         buffer.add(2L, 1);
 
-        flusher.flush();
+        int failed = flusher.flush();
 
+        assertThat(failed).isEqualTo(1);
         verify(mapper).addViewCount(2L, 1L);
         assertThat(buffer.drain()).containsEntry(1L, 2L).doesNotContainKey(2L);
     }

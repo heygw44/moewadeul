@@ -28,6 +28,6 @@ class CommunityViewCountFlushScheduler {
 
     @Scheduled(fixedDelayString = "${moewadeul.community.view-count.flush-delay:" + DEFAULT_FLUSH_DELAY + "}")
     void flush() {
-        jobRunner.run(JOB_NAME, flusher::flush);
+        jobRunner.runCountingFailures(JOB_NAME, flusher::flush);
     }
 }
