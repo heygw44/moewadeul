@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
@@ -241,6 +241,9 @@ function MemoryForm(props: MemoryFormProps) {
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
+  const controllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => controllerRef.current?.abort(), []);
   useDraftCapture<MemoryDraft>(pathname + search, memberId, {
     visitedDate,
     nights,
@@ -289,6 +292,9 @@ function MemoryForm(props: MemoryFormProps) {
 
     const trimmed = content.trim();
     const imageIds = uploads.imageIds;
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
     setSubmitting(true);
     try {
       if (props.mode === 'create') {
@@ -303,7 +309,8 @@ function MemoryForm(props: MemoryFormProps) {
           spotId: spot?.spotId,
           imageIds,
         };
-        const created = await idempotentRunner.run(request, (key) => createMemory(request, key));
+        const created = await idempotentRunner.run(request, (key) => createMemory(request, key, controller.signal));
+        if (controller.signal.aborted) return;
         navigate(`/memories/${created.memoryId}`);
         return;
       }
@@ -316,9 +323,11 @@ function MemoryForm(props: MemoryFormProps) {
         spot,
         imageIds,
       });
-      if (Object.keys(changes).length > 0) await updateMemory(memory.memoryId, changes);
+      if (Object.keys(changes).length > 0) await updateMemory(memory.memoryId, changes, controller.signal);
+      if (controller.signal.aborted) return;
       navigate(`/memories/${memory.memoryId}`);
     } catch (error) {
+      if (controller.signal.aborted) return;
       setSubmitting(false);
       handleError(error);
     }

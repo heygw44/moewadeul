@@ -34,10 +34,26 @@ function useValueStable<V extends FilterValue>(value: V): V {
   return stable;
 }
 
+function newItems<T>(known: T[], incoming: T[], itemKey: (item: T) => string | number | null): T[] {
+  const seen = new Set<string | number>();
+  for (const item of known) {
+    const key = itemKey(item);
+    if (key !== null) seen.add(key);
+  }
+  return incoming.filter((item) => {
+    const key = itemKey(item);
+    if (key === null) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function usePagedList<T, F extends FilterValue>(
   enabled: boolean,
   nextFilter: F,
   fetcher: Fetcher<T, F>,
+  itemKey: (item: T) => string | number | null,
 ): PagedList<T, F> {
   const filter = useValueStable(nextFilter);
   const [state, setState] = useState<ListState<T, F> | null>(null);
@@ -45,8 +61,10 @@ export function usePagedList<T, F extends FilterValue>(
   const [loadingMore, setLoadingMore] = useState(false);
   const generationRef = useRef(0);
   const fetcherRef = useRef(fetcher);
+  const itemKeyRef = useRef(itemKey);
   useEffect(() => {
     fetcherRef.current = fetcher;
+    itemKeyRef.current = itemKey;
   });
 
   useEffect(() => {
@@ -105,7 +123,7 @@ export function usePagedList<T, F extends FilterValue>(
         previous !== null && previous.filter === filter
           ? {
               ...previous,
-              items: [...previous.items, ...next.content],
+              items: [...previous.items, ...newItems(previous.items, next.content, itemKeyRef.current)],
               page: next.page,
               hasNext: next.hasNext,
               error: null,

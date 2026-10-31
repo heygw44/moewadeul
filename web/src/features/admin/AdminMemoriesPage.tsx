@@ -15,7 +15,8 @@ import { ApproxLocationLabel } from '../memory/ApproxLocationLabel';
 import { nightsLabel } from '../memory/memoryLabels';
 import { AdminPage } from './AdminGate';
 import { AdminSegments } from './AdminSegments';
-import { adminErrorMessage } from './adminErrors';
+
+const itemKey = (item: AdminMemorySummary) => item.memoryId;
 
 const TABS: ReadonlyArray<{ status: AdminMemoryStatus; label: string }> = [
   { status: 'PENDING_REVIEW', label: '검토 대기' },
@@ -47,7 +48,7 @@ export function AdminMemoriesPage() {
 
 function MemoryReview() {
   const [tab, setTab] = useState<AdminMemoryStatus>('PENDING_REVIEW');
-  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, fetchMemories);
+  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, fetchMemories, itemKey);
   const showSkeleton = useDelayedFlag(current === null);
 
   return (
@@ -183,7 +184,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
       )}
       {error !== null && (
         <div role="alert">
-          <ErrorNotice title="상태를 바꾸지 못했어요" error={error} message={adminErrorMessage(error)} />
+          <ErrorNotice title="상태를 바꾸지 못했어요" error={error} />
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">

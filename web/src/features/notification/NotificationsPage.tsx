@@ -25,6 +25,8 @@ import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { NOTIFICATION_LABELS, NOTIFICATION_TYPES } from './notificationLabels';
 import { refreshUnreadCount } from './unreadCount';
 
+const itemKey = (item: NotificationItem) => item.notificationId;
+
 export function NotificationsPage() {
   const session = useRequireAuth();
   const showSkeleton = useDelayedFlag(session.status === 'loading');
@@ -43,7 +45,7 @@ function fetchPage(_filter: string, page: number, signal?: AbortSignal) {
 }
 
 function NotificationList() {
-  const { current: state, loadingMore, loadMore, updateItems, retry } = usePagedList(true, '', fetchPage);
+  const { current: state, loadingMore, loadMore, updateItems, retry } = usePagedList(true, '', fetchPage, itemKey);
   const [markingAll, setMarkingAll] = useState(false);
   const [actionError, setActionError] = useState<{ cause: unknown } | null>(null);
   const showSkeleton = useDelayedFlag(state === null);
