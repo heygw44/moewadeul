@@ -42,12 +42,8 @@ export function fetchBasecampDetail(basecampId: number, signal?: AbortSignal): P
   return apiFetch<BasecampDetail>(`/api/basecamps/${basecampId}`, { signal });
 }
 
-export function openBasecamp(
-  body: BasecampOpenRequest,
-  idempotencyKey: string,
-  signal?: AbortSignal,
-): Promise<BasecampOpenResponse> {
-  return apiFetch<BasecampOpenResponse>('/api/basecamps', { method: 'POST', body, idempotencyKey, signal });
+export function openBasecamp(body: BasecampOpenRequest, idempotencyKey: string): Promise<BasecampOpenResponse> {
+  return apiFetch<BasecampOpenResponse>('/api/basecamps', { method: 'POST', body, idempotencyKey });
 }
 
 export function applyToBasecamp(

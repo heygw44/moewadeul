@@ -13,20 +13,16 @@ import type {
   Page,
 } from './types';
 
-export function createMemory(
-  req: MemoryCreateRequest,
-  idempotencyKey: string,
-  signal?: AbortSignal,
-): Promise<{ memoryId: number }> {
-  return apiFetch<{ memoryId: number }>('/api/memories', { method: 'POST', body: req, idempotencyKey, signal });
+export function createMemory(req: MemoryCreateRequest, idempotencyKey: string): Promise<{ memoryId: number }> {
+  return apiFetch<{ memoryId: number }>('/api/memories', { method: 'POST', body: req, idempotencyKey });
 }
 
 export function getMemory(memoryId: number, signal?: AbortSignal): Promise<MemoryDetail> {
   return apiFetch<MemoryDetail>(`/api/memories/${memoryId}`, { signal });
 }
 
-export function updateMemory(memoryId: number, req: MemoryUpdateRequest, signal?: AbortSignal): Promise<MemoryDetail> {
-  return apiFetch<MemoryDetail>(`/api/memories/${memoryId}`, { method: 'PATCH', body: req, signal });
+export function updateMemory(memoryId: number, req: MemoryUpdateRequest): Promise<MemoryDetail> {
+  return apiFetch<MemoryDetail>(`/api/memories/${memoryId}`, { method: 'PATCH', body: req });
 }
 
 export function deleteMemory(memoryId: number): Promise<void> {
