@@ -4,7 +4,7 @@ import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { navigate, useLocation } from '../../app/router';
 import { SaveNoticeTray } from '../../app/saveNotice/SaveNoticeTray';
-import { resetSaveNoticesForTest } from '../../app/saveNotice/saveNotices';
+import { notifySignedOut } from '../../app/session/signedOut';
 import { SessionProvider } from '../../app/session/session';
 import { addDaysToLocalDate, todayKst } from '../../lib/datetime';
 import { BasecampOpenPanel } from './BasecampOpenPanel';
@@ -74,7 +74,7 @@ describe('베이스캠프 열기 패널: 저장할 때', () => {
     container = document.createElement('div');
     document.body.append(container);
     root = createRoot(container);
-    resetSaveNoticesForTest();
+    notifySignedOut();
     saveResponse = () => json(201, { basecampId: 12 });
     const gate = new Promise<void>((resolve) => {
       finishSave = resolve;
@@ -140,8 +140,9 @@ describe('베이스캠프 열기 패널: 저장할 때', () => {
     await saveAndLeave();
     await act(async () => finishSave());
 
-    expect(tray()?.textContent).toContain('베이스캠프를 열지 못했어요.');
-    expect(tray()?.textContent).toContain('저장됐는지 확인하지 못했어요. 다시 저장하기 전에 먼저 확인해 주세요.');
+    expect(tray()?.textContent).toContain('저장됐는지 확인하지 못했어요.');
+    expect(tray()?.textContent).toContain('다시 저장하기 전에 먼저 확인해 주세요.');
+    expect(tray()?.textContent).not.toContain('베이스캠프를 열지 못했어요.');
     expect(tray()?.querySelector('a')?.getAttribute('href')).toBe('/me/basecamps');
   });
 

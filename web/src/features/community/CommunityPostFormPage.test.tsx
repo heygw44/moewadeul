@@ -5,7 +5,7 @@ import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { navigate, useLocation } from '../../app/router';
 import { SaveNoticeTray } from '../../app/saveNotice/SaveNoticeTray';
-import { resetSaveNoticesForTest } from '../../app/saveNotice/saveNotices';
+import { notifySignedOut } from '../../app/session/signedOut';
 import { SessionProvider } from '../../app/session/session';
 import { CommunityPostFormPage } from './CommunityPostFormPage';
 
@@ -105,7 +105,7 @@ describe('글쓰기 화면: 저장할 때', () => {
     postStatus = 401;
     postGate = null;
     postFailure = null;
-    resetSaveNoticesForTest();
+    notifySignedOut();
     window.history.replaceState(null, '', FORM_PATH);
     URL.createObjectURL = vi.fn(() => 'blob:preview');
     URL.revokeObjectURL = vi.fn();
@@ -220,8 +220,9 @@ describe('글쓰기 화면: 저장할 때', () => {
     const finishSave = await saveAndLeave();
     await act(async () => finishSave());
 
-    expect(tray()?.textContent).toContain('글을 올리지 못했어요.');
-    expect(tray()?.textContent).toContain('저장됐는지 확인하지 못했어요. 다시 저장하기 전에 먼저 확인해 주세요.');
+    expect(tray()?.textContent).toContain('저장됐는지 확인하지 못했어요.');
+    expect(tray()?.textContent).toContain('다시 저장하기 전에 먼저 확인해 주세요.');
+    expect(tray()?.textContent).not.toContain('글을 올리지 못했어요.');
     expect(tray()?.querySelector('a')?.getAttribute('href')).toBe('/community');
   });
 

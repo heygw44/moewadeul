@@ -4,7 +4,8 @@ import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError } from '../../api/client';
 import { SaveNoticeTray } from './SaveNoticeTray';
-import { resetSaveNoticesForTest, useSaveOutlivingScreen } from './saveNotices';
+import { notifySignedOut } from '../session/signedOut';
+import { useSaveOutlivingScreen } from './saveNotices';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -66,7 +67,7 @@ describe('저장 알림 트레이', () => {
     document.body.append(container);
     root = createRoot(container);
     outcome = [];
-    resetSaveNoticesForTest();
+    notifySignedOut();
   });
 
   afterEach(async () => {
@@ -113,8 +114,9 @@ describe('저장 알림 트레이', () => {
     await startSaveAndLeave();
     await act(async () => settleSave.reject(new ApiError(0, 'NETWORK_ERROR', null)));
 
-    expect(tray()?.textContent).toContain('글을 올리지 못했어요.');
-    expect(tray()?.textContent).toContain('저장됐는지 확인하지 못했어요. 다시 저장하기 전에 먼저 확인해 주세요.');
+    expect(tray()?.textContent).toContain('저장됐는지 확인하지 못했어요.');
+    expect(tray()?.textContent).toContain('다시 저장하기 전에 먼저 확인해 주세요.');
+    expect(tray()?.textContent).not.toContain('글을 올리지 못했어요.');
     expect(tray()?.querySelector('a')?.getAttribute('href')).toBe('/community');
   });
 
@@ -130,6 +132,15 @@ describe('저장 알림 트레이', () => {
   it('저장 중에 화면을 떠난 뒤 로그인이 풀려 끝나면 알림을 남기지 않는다', async () => {
     await startSaveAndLeave();
     await act(async () => settleSave.reject(new ApiError(401, 'AUTHENTICATION_REQUIRED', null)));
+
+    expect(tray()?.textContent).toBe('');
+  });
+
+  it('로그아웃하면 앞 회원의 저장 알림이 남지 않는다', async () => {
+    await startSaveAndLeave();
+    await act(async () => settleSave.resolve(5));
+
+    await act(async () => notifySignedOut());
 
     expect(tray()?.textContent).toBe('');
   });

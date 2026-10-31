@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import { isOutcomeUnknown } from '../../api/idempotency';
+import { onSignedOut } from '../session/signedOut';
 
 export type SaveNoticeLink = { to: string; label: string };
 
@@ -44,9 +45,7 @@ export function dismissSaveNotice(id: number): void {
   publish(notices.filter((existing) => existing.id !== id));
 }
 
-export function resetSaveNoticesForTest(): void {
-  publish([]);
-}
+onSignedOut(() => publish([]));
 
 export function useSaveNotices(): readonly SaveNotice[] {
   return useSyncExternalStore(subscribe, getSnapshot);
@@ -61,11 +60,14 @@ export type SaveCopy<T> = {
 
 type InFlight = { pendingTitle: string; noticeId: number | null };
 
-const OUTCOME_UNKNOWN_BODY = '저장됐는지 확인하지 못했어요. 다시 저장하기 전에 먼저 확인해 주세요.';
-
 function failedNotice<T>(error: unknown, copy: SaveCopy<T>): SaveNoticeBody {
   if (isOutcomeUnknown(error)) {
-    return { state: 'failed', title: copy.failed, body: OUTCOME_UNKNOWN_BODY, link: copy.checkAt };
+    return {
+      state: 'failed',
+      title: '저장됐는지 확인하지 못했어요.',
+      body: '다시 저장하기 전에 먼저 확인해 주세요.',
+      link: copy.checkAt,
+    };
   }
   return { state: 'failed', title: copy.failed, body: toUserMessage(error) };
 }
