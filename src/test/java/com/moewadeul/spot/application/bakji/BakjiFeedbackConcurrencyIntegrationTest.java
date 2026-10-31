@@ -5,14 +5,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.LockWaits;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.spot.application.moderation.SpotModerationService;
 import com.moewadeul.spot.domain.GeoPoint;
 import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import com.moewadeul.spot.infra.SpotJpaRepository;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,6 +38,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.testcontainers.mysql.MySQLContainer;
 
 @IntegrationTest
 class BakjiFeedbackConcurrencyIntegrationTest {
@@ -56,7 +62,13 @@ class BakjiFeedbackConcurrencyIntegrationTest {
     private JdbcTemplate jdbc;
 
     @Autowired
+    private SpotModerationService spotModerationService;
+
+    @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private MySQLContainer mysql;
 
     @RepeatedTest(5)
     @DisplayName("[F-08] 신고 3건인 박지에 서로 다른 회원 2명이 동시에 신고하면 둘 다 저장하고 박지가 PENDING_REVIEW가 된다")
@@ -148,6 +160,46 @@ class BakjiFeedbackConcurrencyIntegrationTest {
         assertThat(jdbc.queryForObject(
                         "SELECT COUNT(*) FROM bakji_confirmation WHERE spot_id = ?", Integer.class, spotId))
                 .isEqualTo(1);
+    }
+
+    @RepeatedTest(5)
+    @DisplayName("[F-08][F-21] 관리자가 박지를 숨기는 트랜잭션이 끝나기 전에 들어온 확인은 숨김이 커밋된 뒤 404로 거절되고 확인 행을 남기지 않는다")
+    void confirmArrivingWhileBakjiIsBeingHiddenIsRejected() throws Exception {
+        // given
+        long spotId = saveBakji();
+        long memberId = memberFixture.save().getId();
+        long adminId = memberFixture.save().getId();
+        CountDownLatch hidden = new CountDownLatch(1);
+        CountDownLatch commit = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword())) {
+            Future<?> hide = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                spotModerationService.hide(spotId, adminId);
+                hidden.countDown();
+                awaitQuietly(commit);
+            }));
+            assertThat(hidden.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // when
+            Future<Long> confirm = executor.submit(() -> bakjiFeedbackService.confirm(memberId, spotId));
+            LockWaits.await(monitor, 1, "숨김 트랜잭션이 잡은 박지 행 잠금을 확인이 기다린다");
+            commit.countDown();
+            hide.get(10, TimeUnit.SECONDS);
+
+            // then
+            assertThatThrownBy(() -> confirm.get(10, TimeUnit.SECONDS))
+                    .cause()
+                    .isInstanceOfSatisfying(
+                            BusinessException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.NOT_FOUND));
+            assertThat(jdbc.queryForObject(
+                            "SELECT COUNT(*) FROM bakji_confirmation WHERE spot_id = ?", Integer.class, spotId))
+                    .isZero();
+        } finally {
+            commit.countDown();
+            executor.shutdown();
+            assertThat(executor.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+        }
     }
 
     @Test
