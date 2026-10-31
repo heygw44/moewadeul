@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.LockWaits;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
@@ -116,10 +117,10 @@ class ProgramSeatLockOrderIntegrationTest {
 
             // when
             Future<Object> pay = executor.submit(() -> programPaymentService.pay(payerId, applicationId));
-            awaitLockWaits(monitor, 1);
+            LockWaits.await(monitor, 1, "결제가 신청 행 잠금을 기다림");
             clock.setInstant(AFTER_DUE);
             Future<Object> apply = executor.submit(() -> programApplyService.apply(applicantId, programId));
-            awaitLockWaitsOrDone(monitor, 2, apply);
+            LockWaits.awaitOrDone(monitor, 2, apply);
             holder.rollback();
 
             // then
@@ -156,7 +157,7 @@ class ProgramSeatLockOrderIntegrationTest {
             Future<Object> cancel = executor.submit(() -> programPaymentService.cancel(holderId, applicationId));
             awaitWaitingForMetadataLock(monitor, "insert into outbox_event%");
             Future<Object> apply = executor.submit(() -> programApplyService.apply(applicantId, programId));
-            awaitLockWaitsOrDone(monitor, 1, apply);
+            LockWaits.awaitOrDone(monitor, 1, apply);
             execute(locker, "UNLOCK TABLES");
 
             // then
@@ -193,9 +194,9 @@ class ProgramSeatLockOrderIntegrationTest {
 
             // when
             Future<Object> pay = executor.submit(() -> programPaymentService.pay(memberId, applicationId));
-            awaitLockWaits(monitor, 1);
+            LockWaits.await(monitor, 1, "결제가 신청 행 잠금을 기다림");
             Future<Object> cancel = executor.submit(() -> programPaymentService.cancel(memberId, applicationId));
-            awaitLockWaitsOrDone(monitor, 2, cancel);
+            LockWaits.awaitOrDone(monitor, 2, cancel);
             holder.rollback();
 
             // then
@@ -277,24 +278,6 @@ class ProgramSeatLockOrderIntegrationTest {
                         + ", 30000, 'PAID', NOW(6), NOW(6), NOW(6))");
     }
 
-    private void awaitLockWaits(Connection monitor, int expected) throws SQLException, InterruptedException {
-        long deadline = deadline();
-        while (lockWaits(monitor) < expected) {
-            assertThat(System.nanoTime())
-                    .as("행 잠금 대기 " + expected + "건을 기다리다 시간이 지났다")
-                    .isLessThan(deadline);
-            Thread.sleep(20);
-        }
-    }
-
-    private void awaitLockWaitsOrDone(Connection monitor, int expected, Future<?> action)
-            throws SQLException, InterruptedException {
-        long deadline = deadline();
-        while (!action.isDone() && lockWaits(monitor) < expected && System.nanoTime() < deadline) {
-            Thread.sleep(20);
-        }
-    }
-
     private void awaitWaitingForMetadataLock(Connection monitor, String statementPattern)
             throws SQLException, InterruptedException {
         long deadline = deadline();
@@ -318,15 +301,6 @@ class ProgramSeatLockOrderIntegrationTest {
 
     private static long deadline() {
         return System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(WAIT_MILLIS);
-    }
-
-    private int lockWaits(Connection monitor) throws SQLException {
-        try (Statement statement = monitor.createStatement();
-                ResultSet rows = statement.executeQuery(
-                        "SELECT COUNT(DISTINCT REQUESTING_ENGINE_TRANSACTION_ID) FROM performance_schema.data_lock_waits")) {
-            rows.next();
-            return rows.getInt(1);
-        }
     }
 
     private void execute(Connection connection, String sql) throws SQLException {

@@ -7,11 +7,15 @@ import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.LockWaits;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostWriteCommand;
 import com.moewadeul.community.application.report.CommunityReportCommand;
 import com.moewadeul.community.application.report.CommunityReportService;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -24,6 +28,7 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.testcontainers.mysql.MySQLContainer;
 
 @IntegrationTest
 class CommunityCommentPostLockIntegrationTest {
@@ -49,6 +54,9 @@ class CommunityCommentPostLockIntegrationTest {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    @Autowired
+    private MySQLContainer mysql;
+
     @RepeatedTest(5)
     @DisplayName("[F-29][CM-04] 관리자가 글을 숨기거나 작성자가 글을 지우는 트랜잭션이 끝나기 전에 들어온 댓글 작성은 커밋 뒤 404로 거절되고 댓글 행을 남기지 않는다")
     void commentWriteArrivingWhilePostIsGoneIsRejected() throws Exception {
@@ -62,7 +70,7 @@ class CommunityCommentPostLockIntegrationTest {
             try (PostHold hold = new PostHold(postId, status)) {
                 result = hold.submit(() ->
                         commentCommandService.write(memberId, postId, new CommunityCommentWriteCommand("댓글", null)));
-                hold.assertWaitingForPostRow(result);
+                hold.awaitWaitingForPostRow();
             }
 
             // then
@@ -85,7 +93,7 @@ class CommunityCommentPostLockIntegrationTest {
             Future<?> result = null;
             try (PostHold hold = new PostHold(postId, status)) {
                 result = hold.submit(() -> commentCommandService.revise(memberId, commentId, "고친 댓글"));
-                hold.assertWaitingForPostRow(result);
+                hold.awaitWaitingForPostRow();
             }
 
             // then
@@ -111,7 +119,7 @@ class CommunityCommentPostLockIntegrationTest {
                     commentCommandService.delete(memberId, commentId);
                     return null;
                 });
-                hold.assertWaitingForPostRow(result);
+                hold.awaitWaitingForPostRow();
             }
 
             // then
@@ -138,7 +146,7 @@ class CommunityCommentPostLockIntegrationTest {
                     reportService.reportComment(reporterId, commentId, REPORT);
                     return null;
                 });
-                hold.assertWaitingForPostRow(result);
+                hold.awaitWaitingForPostRow();
             }
 
             // then
@@ -198,9 +206,10 @@ class CommunityCommentPostLockIntegrationTest {
             return executor.submit(action);
         }
 
-        void assertWaitingForPostRow(Future<?> result) throws InterruptedException {
-            Thread.sleep(500);
-            assertThat(result).as("글 상태를 바꾸는 트랜잭션이 잡은 글 행 잠금을 기다린다").isNotDone();
+        void awaitWaitingForPostRow() throws SQLException, InterruptedException {
+            try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword())) {
+                LockWaits.await(monitor, 1, "글 상태를 바꾸는 트랜잭션이 잡은 글 행 잠금을 기다린다");
+            }
         }
 
         @Override

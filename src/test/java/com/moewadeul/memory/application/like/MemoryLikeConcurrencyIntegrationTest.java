@@ -7,10 +7,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.LockWaits;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.memory.application.MemoryCommandService;
 import com.moewadeul.memory.application.MemoryWriteCommand;
 import com.moewadeul.memory.infra.like.MemoryLikeMapper;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,6 +31,7 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.testcontainers.mysql.MySQLContainer;
 
 @IntegrationTest
 class MemoryLikeConcurrencyIntegrationTest {
@@ -52,6 +56,9 @@ class MemoryLikeConcurrencyIntegrationTest {
 
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private MySQLContainer mysql;
 
     @RepeatedTest(5)
     @DisplayName("[F-33][MM-09] 서로 다른 회원 20명이 같은 기록에 동시에 좋아요를 누르면 예외 없이 20건이 저장되고 좋아요 수도 20이다")
@@ -95,7 +102,7 @@ class MemoryLikeConcurrencyIntegrationTest {
         CountDownLatch hidden = new CountDownLatch(1);
         CountDownLatch commit = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        try {
+        try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword())) {
             Future<?> hide = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
                 jdbc.update("UPDATE memory SET status = 'HIDDEN' WHERE id = ?", memoryId);
                 hidden.countDown();
@@ -105,8 +112,7 @@ class MemoryLikeConcurrencyIntegrationTest {
 
             // when
             Future<MemoryLikeResult> like = executor.submit(() -> likeService.like(memberId, memoryId));
-            Thread.sleep(500);
-            assertThat(like).as("숨김 트랜잭션이 잡은 기록 행 잠금을 기다린다").isNotDone();
+            LockWaits.await(monitor, 1, "숨김 트랜잭션이 잡은 기록 행 잠금을 좋아요가 기다린다");
             commit.countDown();
             hide.get(10, TimeUnit.SECONDS);
 

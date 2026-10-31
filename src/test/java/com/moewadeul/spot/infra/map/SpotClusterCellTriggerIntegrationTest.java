@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.within;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.LockWaits;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.member.domain.MemberStatus;
@@ -231,7 +232,7 @@ class SpotClusterCellTriggerIntegrationTest {
 
             // when
             Future<?> firstDetail = executor.submit(() -> insertBakjiDetail(first, firstSpotId, reporterId));
-            awaitLockWaitOrDone(monitor, firstDetail);
+            LockWaits.awaitOrDone(monitor, 1, firstDetail);
             Future<?> secondDetail = executor.submit(() -> insertBakjiDetail(second, secondSpotId, reporterId));
 
             // then
@@ -281,21 +282,6 @@ class SpotClusterCellTriggerIntegrationTest {
     private static void execute(Connection connection, String sql) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);
-        }
-    }
-
-    private static void awaitLockWaitOrDone(Connection monitor, Future<?> future) throws Exception {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-        while (!future.isDone() && System.nanoTime() < deadline) {
-            try (Statement statement = monitor.createStatement();
-                    ResultSet waits =
-                            statement.executeQuery("SELECT COUNT(*) FROM performance_schema.data_lock_waits")) {
-                waits.next();
-                if (waits.getInt(1) > 0) {
-                    return;
-                }
-            }
-            Thread.sleep(20);
         }
     }
 
