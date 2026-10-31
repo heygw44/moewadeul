@@ -20,6 +20,8 @@ import { APPLICATION_FILTERS, APPLICATION_STATUS_META, CANCEL_REASON_LABELS, cou
 import { useNow } from './useNow';
 import { usePagedList } from '../../components/usePagedList';
 
+const itemKey = (item: MyProgramApplicationItem) => item.applicationId;
+
 type ApplicationFilter = ProgramApplicationStatus | 'ALL';
 
 function fetchApplications(filter: ApplicationFilter, page: number, signal?: AbortSignal) {
@@ -30,7 +32,7 @@ export function MyProgramApplicationsPage() {
   const session = useRequireAuth();
   const [filter, setFilter] = useState<ApplicationFilter>('ALL');
   const authenticated = session.status === 'authenticated';
-  const { current, loadingMore, loadMore, retry } = usePagedList(authenticated, filter, fetchApplications);
+  const { current, loadingMore, loadMore, retry } = usePagedList(authenticated, filter, fetchApplications, itemKey);
   const showSkeleton = useDelayedFlag(session.status === 'loading' || (authenticated && current === null));
   const hasPending = current?.items.some((item) => item.status === 'PENDING_PAYMENT') ?? false;
   const now = useNow(hasPending);

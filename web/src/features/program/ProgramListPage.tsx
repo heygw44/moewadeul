@@ -20,6 +20,8 @@ import { feeText, PROGRAM_FILTERS, PROGRAM_STATUS_META, seatsText } from './prog
 import { ProgramAside } from './ProgramAside';
 import { usePagedList } from '../../components/usePagedList';
 
+const itemKey = (item: ProgramSummary) => item.programId;
+
 type ProgramFilter = ProgramListStatus | 'ALL';
 
 function fetchPrograms(filter: ProgramFilter, page: number, signal?: AbortSignal) {
@@ -28,7 +30,7 @@ function fetchPrograms(filter: ProgramFilter, page: number, signal?: AbortSignal
 
 export function ProgramListPage() {
   const [filter, setFilter] = useState<ProgramFilter>('ALL');
-  const { current, loadingMore, loadMore, retry } = usePagedList(true, filter, fetchPrograms);
+  const { current, loadingMore, loadMore, retry } = usePagedList(true, filter, fetchPrograms, itemKey);
   const showSkeleton = useDelayedFlag(current === null);
   const session = useSession();
   const signedIn = session.status === 'authenticated' && session.me !== null;

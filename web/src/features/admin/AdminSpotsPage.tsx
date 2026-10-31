@@ -14,7 +14,8 @@ import { LocationLabel } from '../../components/LocationLabel';
 import { REPORT_REASON_LABELS, SPOT_TYPE_META } from '../../lib/spotLabels';
 import { AdminPage } from './AdminGate';
 import { AdminSegments } from './AdminSegments';
-import { adminErrorMessage } from './adminErrors';
+
+const itemKey = (item: AdminSpotSummary) => item.spotId;
 
 const TABS: ReadonlyArray<{ status: AdminSpotStatus; label: string }> = [
   { status: 'PENDING_REVIEW', label: '검토 대기' },
@@ -37,7 +38,7 @@ export function AdminSpotsPage() {
 
 function SpotReview() {
   const [tab, setTab] = useState<AdminSpotStatus>('PENDING_REVIEW');
-  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, fetchSpots);
+  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, fetchSpots, itemKey);
   const showSkeleton = useDelayedFlag(current === null);
 
   return (
@@ -158,7 +159,7 @@ function SpotCard({ item, tab, onDone }: { item: AdminSpotSummary; tab: AdminSpo
       )}
       {error !== null && (
         <div role="alert">
-          <ErrorNotice title="상태를 바꾸지 못했어요" error={error} message={adminErrorMessage(error)} />
+          <ErrorNotice title="상태를 바꾸지 못했어요" error={error} />
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">

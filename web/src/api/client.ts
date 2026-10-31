@@ -4,21 +4,27 @@ import type { ErrorBody, FieldErrorItem } from './types';
 const GENERIC_ERROR_MESSAGE = '예상하지 못한 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.';
 const CSRF_COOKIE = 'XSRF-TOKEN';
 
+function resolveMessage(code: string, body: ErrorBody | null): string {
+  const serverMessage = body?.message;
+  if (code === 'INVALID_INPUT' && !body?.fieldErrors?.length && serverMessage) {
+    return serverMessage;
+  }
+  return errorMessage(code) ?? serverMessage ?? GENERIC_ERROR_MESSAGE;
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
-  readonly serverMessage: string;
   readonly traceId?: string;
   readonly fieldErrors: FieldErrorItem[];
   readonly retryAfterSeconds?: number;
   readonly body: ErrorBody | null;
 
   constructor(status: number, code: string, body: ErrorBody | null, retryAfterSeconds?: number) {
-    super(errorMessage(code) ?? body?.message ?? GENERIC_ERROR_MESSAGE);
+    super(resolveMessage(code, body));
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
-    this.serverMessage = body?.message ?? '';
     this.traceId = body?.traceId;
     this.fieldErrors = body?.fieldErrors ?? [];
     this.retryAfterSeconds = retryAfterSeconds;

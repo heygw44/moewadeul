@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { actionReport, dismissReport, fetchAdminMemberReport, liftSanction, startReportReview } from '../../api/admin';
 import { ApiError } from '../../api/client';
+import { toUserMessage } from '../../api/errors';
 import type {
   AdminReportDetail,
   AdminSanctionHistoryItem,
@@ -31,7 +32,6 @@ import {
 } from '../report/reportLabels';
 import { BASECAMP_STATUS_META } from '../basecamp/basecampLabels';
 import { AdminPage } from './AdminGate';
-import { adminErrorMessage } from './adminErrors';
 import { buttonClassName } from '../../components/buttonClass';
 
 const REASON_MAX = 500;
@@ -58,7 +58,7 @@ const LIFT_REASONS: ReadonlyArray<ChoiceOption<SanctionLiftReason> & { descripti
 type Failure = { message: string; error: unknown };
 
 function toFailure(error: unknown): Failure {
-  return { message: adminErrorMessage(error), error };
+  return { message: toUserMessage(error), error };
 }
 
 type DetailState =

@@ -22,9 +22,10 @@ describe('usePagedList', () => {
   let latest: Result;
   let pending: Map<string, Deferred[]>;
   let fetcher: (filter: string, pageNumber: number) => Promise<Page<number>>;
+  let keyOf: (item: number) => number | null;
 
   function Probe({ filter }: { filter: string }) {
-    latest = usePagedList(true, filter, fetcher);
+    latest = usePagedList(true, filter, fetcher, keyOf);
     return null;
   }
 
@@ -44,6 +45,7 @@ describe('usePagedList', () => {
     container = document.createElement('div');
     root = createRoot(container);
     pending = new Map();
+    keyOf = (item) => item;
     fetcher = vi.fn(
       (filter: string, pageNumber: number) =>
         new Promise<Page<number>>((resolve, reject) => {
@@ -193,7 +195,7 @@ describe('usePagedList', () => {
     let objectLatest: PagedList<number, { q: string }> | undefined;
     const objectFetcher = vi.fn((filter: { q: string }, pageNumber: number) => fetcher(filter.q, pageNumber));
     function ObjectProbe({ q }: { q: string }) {
-      objectLatest = usePagedList(true, { q }, objectFetcher);
+      objectLatest = usePagedList(true, { q }, objectFetcher, keyOf);
       return null;
     }
 
@@ -208,5 +210,38 @@ describe('usePagedList', () => {
 
     expect(objectFetcher).toHaveBeenCalledTimes(2);
     expect(objectLatest?.current).toBeNull();
+  });
+
+  it('다음 쪽이 앞 쪽과 겹치면 이미 받은 항목은 빼고 순서를 지킨 채 이어 붙인다', async () => {
+    await mount('A');
+    await settle('A:0', page([1, 2, 3, 4], 0, true));
+
+    await act(async () => void latest.loadMore());
+    await settle('A:1', page([3, 4, 5, 6], 1, false));
+
+    expect(latest.current?.items).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(latest.current?.page).toBe(1);
+    expect(latest.current?.hasNext).toBe(false);
+  });
+
+  it('다음 쪽 안에서 같은 항목이 두 번 와도 한 번만 붙인다', async () => {
+    await mount('A');
+    await settle('A:0', page([1, 2], 0, true));
+
+    await act(async () => void latest.loadMore());
+    await settle('A:1', page([3, 3, 4], 1, false));
+
+    expect(latest.current?.items).toEqual([1, 2, 3, 4]);
+  });
+
+  it('키가 null인 항목은 겹쳐 보여도 거르지 않고 모두 붙인다', async () => {
+    keyOf = (item) => (item < 0 ? null : item);
+    await mount('A');
+    await settle('A:0', page([1, -1], 0, true));
+
+    await act(async () => void latest.loadMore());
+    await settle('A:1', page([-1, 2, 1], 1, false));
+
+    expect(latest.current?.items).toEqual([1, -1, -1, 2]);
   });
 });

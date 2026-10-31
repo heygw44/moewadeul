@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useLocation } from '../../app/router';
+import { navigate, useLocation } from '../../app/router';
 import { SessionProvider } from '../../app/session/session';
 import { CommunityPostFormPage } from './CommunityPostFormPage';
 
@@ -43,11 +43,12 @@ function FormRoute() {
   return pathname === FORM_PATH ? <CommunityPostFormPage mode="create" /> : <p>로그인 화면</p>;
 }
 
-describe('글쓰기 화면: 세션이 끊긴 채 저장했을 때', () => {
+describe('글쓰기 화면: 저장할 때', () => {
   let container: HTMLDivElement;
   let root: Root;
   let currentMemberId: number;
   let postStatus: number;
+  let postGate: Promise<void> | null;
 
   const input = (label: string) =>
     [...container.querySelectorAll('label')].find((element) => element.textContent === label)?.control as
@@ -97,6 +98,7 @@ describe('글쓰기 화면: 세션이 끊긴 채 저장했을 때', () => {
     document.body.appendChild(container);
     currentMemberId = 1;
     postStatus = 401;
+    postGate = null;
     window.history.replaceState(null, '', FORM_PATH);
     URL.createObjectURL = vi.fn(() => 'blob:preview');
     URL.revokeObjectURL = vi.fn();
@@ -109,6 +111,7 @@ describe('글쓰기 화면: 세션이 끊긴 채 저장했을 때', () => {
         }
         if (url === 'https://storage.test/put') return new Response(null, { status: 200 });
         if (url === '/api/community/posts' && init?.method === 'POST') {
+          if (postGate) await postGate;
           return postStatus === 401
             ? json(401, { code: 'AUTHENTICATION_REQUIRED', message: 'x', traceId: 't' })
             : json(201, { postId: 5 });
@@ -169,5 +172,22 @@ describe('글쓰기 화면: 세션이 끊긴 채 저장했을 때', () => {
     window.history.replaceState(null, '', FORM_PATH);
     await mountForm();
     expect(input('제목').value).toBe('');
+  });
+
+  it('저장하는 중에 다른 화면으로 가면 저장이 끝나도 저장한 글로 끌려가지 않는다', async () => {
+    let finishSave: () => void = () => undefined;
+    postGate = new Promise<void>((resolve) => {
+      finishSave = resolve;
+    });
+    postStatus = 201;
+    await mountForm();
+    await type(input('제목'), '지리산 종주 후기');
+    await type(input('내용'), '비가 와서 대피소에서 잤어요.');
+    await submit();
+
+    await act(async () => navigate('/community'));
+    await act(async () => finishSave());
+
+    expect(window.location.pathname).toBe('/community');
   });
 });

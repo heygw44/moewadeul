@@ -281,10 +281,6 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
       if (others.length > 0) setFormError({ message: others.join(' ') });
       return;
     }
-    if (error instanceof ApiError && error.code === 'INVALID_INPUT' && error.serverMessage !== '') {
-      setFormError({ message: error.serverMessage });
-      return;
-    }
     setFormError({ message: toUserMessage(error), traceId: serverTraceId(error) });
   }
 

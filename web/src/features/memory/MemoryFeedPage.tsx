@@ -15,13 +15,18 @@ import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useViewerEpoch } from '../../app/session/useViewerEpoch';
 import { usePagedList } from '../../components/usePagedList';
 
+const itemKey = (item: MemoryFeedItem) => item.memoryId;
+
 const FEED_PAGE_SIZE = 24;
 const FEED_GRID_CLASS = 'grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
 
 export function MemoryFeedPage() {
   const viewerEpoch = useViewerEpoch();
-  const feed = usePagedList<MemoryFeedItem, number>(true, viewerEpoch, (_filter, page, signal) =>
-    fetchMemoryFeed(page, FEED_PAGE_SIZE, signal),
+  const feed = usePagedList<MemoryFeedItem, number>(
+    true,
+    viewerEpoch,
+    (_filter, page, signal) => fetchMemoryFeed(page, FEED_PAGE_SIZE, signal),
+    itemKey,
   );
   const { current } = feed;
   const showSkeleton = useDelayedFlag(current === null);
