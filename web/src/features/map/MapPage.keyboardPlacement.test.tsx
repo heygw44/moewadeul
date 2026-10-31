@@ -106,6 +106,30 @@ describe('박지 제보 위치를 키보드로 찍기', () => {
     expect(container.textContent).toContain('지도를 다시 누르거나 버튼을 다시 누르면 위치가 바뀌어요.');
   });
 
+  it('휴대폰에서 시트가 지도를 다 덮으면 가운데 버튼을 숨긴다', async () => {
+    const sheetToggle = () =>
+      [...container.querySelectorAll('button')].find((element) =>
+        element.getAttribute('aria-label')?.startsWith('시트 크기 바꾸기'),
+      );
+    expect(sheetToggle()?.getAttribute('aria-label')).toBe('시트 크기 바꾸기, 지금 절반');
+
+    await act(async () => sheetToggle()?.click());
+
+    expect(sheetToggle()?.getAttribute('aria-label')).toBe('시트 크기 바꾸기, 지금 전체');
+    expect(button('지도 가운데를 위치로 쓰기')).toBeUndefined();
+    expect(container.textContent).toContain('지도를 눌러 박지 위치를 찍어 주세요');
+
+    await act(async () => sheetToggle()?.click());
+
+    expect(button('지도 가운데를 위치로 쓰기')).toBeDefined();
+  });
+
+  it('지도 칸 하나만 지도라는 이름으로 읽힌다', () => {
+    const labelled = container.querySelectorAll('[aria-label="지도"]');
+    expect(labelled).toHaveLength(1);
+    expect(labelled[0]?.getAttribute('role')).toBe('application');
+  });
+
   it('버튼으로 찍은 위치를 제보에 실어 보낸다', async () => {
     const field = (label: string) =>
       [...container.querySelectorAll('label')].find((element) => element.textContent === label)
