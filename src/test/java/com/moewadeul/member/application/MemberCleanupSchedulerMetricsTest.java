@@ -8,6 +8,8 @@ import com.moewadeul.common.scheduling.ScheduledJobMetrics;
 import com.moewadeul.common.scheduling.ScheduledJobRunner;
 import com.moewadeul.member.application.password.PasswordResetThrottleCleanupScheduler;
 import com.moewadeul.member.application.password.PasswordResetThrottleCleanupService;
+import com.moewadeul.member.application.password.PasswordResetTokenCleanupScheduler;
+import com.moewadeul.member.application.password.PasswordResetTokenCleanupService;
 import com.moewadeul.member.application.verification.UnverifiedMemberCleanupScheduler;
 import com.moewadeul.member.application.verification.UnverifiedMemberCleanupService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -39,6 +41,17 @@ class MemberCleanupSchedulerMetricsTest {
         new PasswordResetThrottleCleanupScheduler(service, new ScheduledJobRunner(metrics)).cleanUp();
 
         assertThat(failures("password-reset-throttle-cleanup")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[NFR-09] 재설정 토큰 정리가 예외로 끝나면 스케줄러는 예외를 삼키고 작업 실패 수를 1 올린다")
+    void countsPasswordResetTokenCleanupFailure() {
+        PasswordResetTokenCleanupService service = mock(PasswordResetTokenCleanupService.class);
+        doThrow(new IllegalStateException("DB 연결 실패")).when(service).deleteExpiredTokens();
+
+        new PasswordResetTokenCleanupScheduler(service, new ScheduledJobRunner(metrics)).cleanUp();
+
+        assertThat(failures("password-reset-token-cleanup")).isEqualTo(1);
     }
 
     private double failures(String job) {

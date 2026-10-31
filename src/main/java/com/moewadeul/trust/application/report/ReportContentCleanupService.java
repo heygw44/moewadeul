@@ -1,6 +1,7 @@
 package com.moewadeul.trust.application.report;
 
 import com.moewadeul.common.batch.BatchDeletion;
+import com.moewadeul.common.moderation.ReportContentCleanup;
 import com.moewadeul.trust.infra.report.ReportContentCleanupMapper;
 import java.time.Clock;
 import java.time.Instant;
@@ -15,7 +16,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ReportContentCleanupService {
 
-    static final Period RETENTION = Period.ofYears(1);
+    static final Period RETENTION = ReportContentCleanup.RETENTION;
 
     static final int BATCH_SIZE = 1000;
 
