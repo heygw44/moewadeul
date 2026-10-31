@@ -28,7 +28,6 @@ class AlertRuleMetricNamesIntegrationTest {
 
     private static final Path ALERT_RULES = Path.of("deploy/grafana/alert-rules.json");
 
-    // 앱이 아니라 서버의 수집 에이전트가 올리는 지표다. 생산자 파일에 이름이 실제로 남아 있는지도 함께 확인한다.
     private static final Map<String, Path> EXTERNAL_PRODUCERS =
             Map.of("moewadeul_backup_last_success_timestamp_seconds", Path.of("deploy/backup/backup.sh"));
 
@@ -90,10 +89,13 @@ class AlertRuleMetricNamesIntegrationTest {
                 .allSatisfy(expr -> assertThat(expr).contains("by (exported_job)"));
     }
 
-    // 외부 API 타이머와 HTTP 요청 지표는 처음 호출될 때 만들어지므로, 실제 코드 경로로 한 번씩 거치게 한다.
-    private List<String> scrapeLines() throws IOException {
+    private void createLazyMeters() {
         mvc.get().uri("/actuator/health").exchange();
         externalApiMetrics.record("scrape-check", "probe", () -> "ok");
+    }
+
+    private List<String> scrapeLines() throws IOException {
+        createLazyMeters();
         String body =
                 mvc.get().uri("/actuator/prometheus").exchange().getResponse().getContentAsString();
         return body.lines().toList();

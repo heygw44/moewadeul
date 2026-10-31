@@ -117,10 +117,10 @@ class ProgramSeatLockOrderIntegrationTest {
 
             // when
             Future<Object> pay = executor.submit(() -> programPaymentService.pay(payerId, applicationId));
-            LockWaits.await(monitor, 1, "결제가 신청 행 잠금을 기다림");
+            LockWaits.await(mysql, 1, "결제가 신청 행 잠금을 기다림");
             clock.setInstant(AFTER_DUE);
             Future<Object> apply = executor.submit(() -> programApplyService.apply(applicantId, programId));
-            LockWaits.awaitOrDone(monitor, 2, apply);
+            LockWaits.waitUntilBlockedOrDone(mysql, 2, apply);
             holder.rollback();
 
             // then
@@ -157,7 +157,7 @@ class ProgramSeatLockOrderIntegrationTest {
             Future<Object> cancel = executor.submit(() -> programPaymentService.cancel(holderId, applicationId));
             awaitWaitingForMetadataLock(monitor, "insert into outbox_event%");
             Future<Object> apply = executor.submit(() -> programApplyService.apply(applicantId, programId));
-            LockWaits.awaitOrDone(monitor, 1, apply);
+            LockWaits.waitUntilBlockedOrDone(mysql, 1, apply);
             execute(locker, "UNLOCK TABLES");
 
             // then
@@ -188,15 +188,14 @@ class ProgramSeatLockOrderIntegrationTest {
         long memberId = fixture.saveMember();
         long applicationId = fixture.saveApplication(programId, memberId, "PENDING_PAYMENT");
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        try (Connection monitor = openRootConnection();
-                Connection holder = openRootConnection()) {
+        try (Connection holder = openRootConnection()) {
             holdPaymentRow(holder, applicationId);
 
             // when
             Future<Object> pay = executor.submit(() -> programPaymentService.pay(memberId, applicationId));
-            LockWaits.await(monitor, 1, "결제가 신청 행 잠금을 기다림");
+            LockWaits.await(mysql, 1, "결제가 신청 행 잠금을 기다림");
             Future<Object> cancel = executor.submit(() -> programPaymentService.cancel(memberId, applicationId));
-            LockWaits.awaitOrDone(monitor, 2, cancel);
+            LockWaits.waitUntilBlockedOrDone(mysql, 2, cancel);
             holder.rollback();
 
             // then

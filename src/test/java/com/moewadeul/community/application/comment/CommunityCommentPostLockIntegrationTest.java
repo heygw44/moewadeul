@@ -13,8 +13,6 @@ import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostWriteCommand;
 import com.moewadeul.community.application.report.CommunityReportCommand;
 import com.moewadeul.community.application.report.CommunityReportService;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -207,9 +205,7 @@ class CommunityCommentPostLockIntegrationTest {
         }
 
         void awaitWaitingForPostRow() throws SQLException, InterruptedException {
-            try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword())) {
-                LockWaits.await(monitor, 1, "글 상태를 바꾸는 트랜잭션이 잡은 글 행 잠금을 기다린다");
-            }
+            LockWaits.await(mysql, 1, "글 상태를 바꾸는 트랜잭션이 잡은 글 행 잠금을 기다린다");
         }
 
         @Override

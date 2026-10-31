@@ -374,7 +374,6 @@ public final class ArchitectureRules {
         };
     }
 
-    // now(ZoneId) 도 시스템 시계를 읽으므로 Clock 을 받는 now(Clock) 말고는 모두 막는다.
     private static ArchCondition<JavaClass> notReadSystemClock() {
         return new ArchCondition<>("not read the system clock directly") {
             @Override

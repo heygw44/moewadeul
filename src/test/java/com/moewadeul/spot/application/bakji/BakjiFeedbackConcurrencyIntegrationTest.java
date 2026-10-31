@@ -16,8 +16,6 @@ import com.moewadeul.spot.domain.ParkAreaJudgement;
 import com.moewadeul.spot.domain.Spot;
 import com.moewadeul.spot.domain.SpotErrorCode;
 import com.moewadeul.spot.infra.SpotJpaRepository;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -172,7 +170,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
         CountDownLatch hidden = new CountDownLatch(1);
         CountDownLatch commit = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword())) {
+        try {
             Future<?> hide = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
                 spotModerationService.hide(spotId, adminId);
                 hidden.countDown();
@@ -182,7 +180,7 @@ class BakjiFeedbackConcurrencyIntegrationTest {
 
             // when
             Future<Long> confirm = executor.submit(() -> bakjiFeedbackService.confirm(memberId, spotId));
-            LockWaits.await(monitor, 1, "숨김 트랜잭션이 잡은 박지 행 잠금을 확인이 기다린다");
+            LockWaits.await(mysql, 1, "숨김 트랜잭션이 잡은 박지 행 잠금을 확인이 기다린다");
             commit.countDown();
             hide.get(10, TimeUnit.SECONDS);
 

@@ -12,8 +12,6 @@ import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.memory.application.MemoryCommandService;
 import com.moewadeul.memory.application.MemoryWriteCommand;
 import com.moewadeul.memory.infra.like.MemoryLikeMapper;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -102,7 +100,7 @@ class MemoryLikeConcurrencyIntegrationTest {
         CountDownLatch hidden = new CountDownLatch(1);
         CountDownLatch commit = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword())) {
+        try {
             Future<?> hide = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
                 jdbc.update("UPDATE memory SET status = 'HIDDEN' WHERE id = ?", memoryId);
                 hidden.countDown();
@@ -112,7 +110,7 @@ class MemoryLikeConcurrencyIntegrationTest {
 
             // when
             Future<MemoryLikeResult> like = executor.submit(() -> likeService.like(memberId, memoryId));
-            LockWaits.await(monitor, 1, "숨김 트랜잭션이 잡은 기록 행 잠금을 좋아요가 기다린다");
+            LockWaits.await(mysql, 1, "숨김 트랜잭션이 잡은 기록 행 잠금을 좋아요가 기다린다");
             commit.countDown();
             hide.get(10, TimeUnit.SECONDS);
 

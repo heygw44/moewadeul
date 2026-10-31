@@ -12,7 +12,6 @@ import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.SpotFixture;
 import com.moewadeul.member.domain.MemberStatus;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -221,8 +220,7 @@ class SpotClusterCellTriggerIntegrationTest {
                 memberFixture.save(aMember().status(MemberStatus.ACTIVE)).getId();
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try (Connection first = dataSource.getConnection();
-                Connection second = dataSource.getConnection();
-                Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword())) {
+                Connection second = dataSource.getConnection()) {
             first.setAutoCommit(false);
             second.setAutoCommit(false);
             execute(first, "SET SESSION innodb_lock_wait_timeout = 5");
@@ -232,7 +230,7 @@ class SpotClusterCellTriggerIntegrationTest {
 
             // when
             Future<?> firstDetail = executor.submit(() -> insertBakjiDetail(first, firstSpotId, reporterId));
-            LockWaits.awaitOrDone(monitor, 1, firstDetail);
+            LockWaits.waitUntilBlockedOrDone(mysql, 1, firstDetail);
             Future<?> secondDetail = executor.submit(() -> insertBakjiDetail(second, secondSpotId, reporterId));
 
             // then

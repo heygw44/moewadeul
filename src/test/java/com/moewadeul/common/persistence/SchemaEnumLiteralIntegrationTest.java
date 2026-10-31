@@ -14,7 +14,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
@@ -22,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-// MapperEnumLiteralTest는 매퍼 XML만 훑는다. DB가 직접 계산하는 생성 컬럼과 트리거의 상태 문자열은 여기서 최종 스키마로 대조한다.
 @IntegrationTest
 class SchemaEnumLiteralIntegrationTest {
 
@@ -34,16 +32,16 @@ class SchemaEnumLiteralIntegrationTest {
             Pattern.CASE_INSENSITIVE);
     private static final Pattern CHARSET_INTRODUCER = Pattern.compile("_[a-z0-9]+(?=\\\\?')");
 
-    // 키는 "<생성 컬럼이 속한 표 또는 트리거가 걸린 표>:<비교 왼쪽 식>"이다.
-    // 트리거의 v_status는 spot.status를 SELECT ... INTO로 담은 변수다.
-    private static final Map<String, Class<? extends Enum<?>>> ENUM_BY_COMPARED_EXPRESSION = Map.of(
-            "member:status", MemberStatus.class,
-            "program_application:status", ProgramApplicationStatus.class,
-            "public_spot_detail:operating_status", PublicSpotOperatingStatus.class,
-            "sync_job_run:status", SyncJobStatus.class,
-            "spot:new.status", SpotStatus.class,
-            "spot:old.status", SpotStatus.class,
-            "bakji_detail:v_status", SpotStatus.class);
+    private static final Map<ComparedExpression, Class<? extends Enum<?>>> ENUM_BY_COMPARED_EXPRESSION = Map.of(
+            new ComparedExpression("member", "status"), MemberStatus.class,
+            new ComparedExpression("program_application", "status"), ProgramApplicationStatus.class,
+            new ComparedExpression("public_spot_detail", "operating_status"), PublicSpotOperatingStatus.class,
+            new ComparedExpression("sync_job_run", "status"), SyncJobStatus.class,
+            new ComparedExpression("spot", "new.status"), SpotStatus.class,
+            new ComparedExpression("spot", "old.status"), SpotStatus.class,
+            new ComparedExpression("bakji_detail", "v_status"), SpotStatus.class);
+
+    private record ComparedExpression(String table, String comparedExpression) {}
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -52,7 +50,7 @@ class SchemaEnumLiteralIntegrationTest {
     @DisplayName("[NFR-09] 생성 컬럼과 트리거가 상태 열과 비교하는 문자열은 모두 소유 enum의 상수다")
     void generatedColumnAndTriggerLiteralsAreEnumConstants() {
         List<String> problems = new ArrayList<>();
-        Set<String> usedKeys = new HashSet<>();
+        Set<ComparedExpression> usedKeys = new HashSet<>();
 
         for (Map<String, Object> column : jdbcTemplate.queryForList("""
                 SELECT TABLE_NAME, COLUMN_NAME, GENERATION_EXPRESSION FROM information_schema.COLUMNS
@@ -77,7 +75,7 @@ class SchemaEnumLiteralIntegrationTest {
                     usedKeys);
         }
 
-        Set<String> unusedMappings = new TreeSet<>(ENUM_BY_COMPARED_EXPRESSION.keySet());
+        Set<ComparedExpression> unusedMappings = new HashSet<>(ENUM_BY_COMPARED_EXPRESSION.keySet());
         unusedMappings.removeAll(usedKeys);
         assertThat(problems)
                 .as("enum 상수 이름을 바꿨다면 생성 컬럼·트리거도 새 마이그레이션으로 다시 정의해야 한다. 새 비교는 위 표에 등록한다.")
@@ -85,7 +83,8 @@ class SchemaEnumLiteralIntegrationTest {
         assertThat(unusedMappings).as("스키마에서 더는 쓰이지 않는 대응 항목").isEmpty();
     }
 
-    private static void scan(String source, String table, String rawSql, List<String> problems, Set<String> usedKeys) {
+    private static void scan(
+            String source, String table, String rawSql, List<String> problems, Set<ComparedExpression> usedKeys) {
         String sql = normalize(rawSql);
         Set<Integer> classified = new HashSet<>();
 
@@ -127,11 +126,12 @@ class SchemaEnumLiteralIntegrationTest {
             String comparedExpression,
             String literal,
             List<String> problems,
-            Set<String> usedKeys) {
-        String key = table + ":" + comparedExpression.toLowerCase();
+            Set<ComparedExpression> usedKeys) {
+        ComparedExpression key = new ComparedExpression(table, comparedExpression.toLowerCase());
         Class<? extends Enum<?>> enumType = ENUM_BY_COMPARED_EXPRESSION.get(key);
         if (enumType == null) {
-            problems.add("%s: '%s' 와 비교하는 %s 이(가) 대응 표에 없다(키 %s)".formatted(source, literal, comparedExpression, key));
+            problems.add(
+                    "%s: '%s' 와 비교하는 %s 이(가) 대응 표에 없다(표 %s)".formatted(source, literal, comparedExpression, table));
             return;
         }
         usedKeys.add(key);

@@ -79,13 +79,12 @@ class ProgramSeatReleaseSnapshotIntegrationTest {
 
     private void assertNoSeatReleasedWhenSeatTakenDuringWait(Runnable cancel) throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        try (Connection monitor = openRootConnection();
-                Connection seatTaker = openRootConnection()) {
+        try (Connection seatTaker = openRootConnection()) {
             seatTaker.setAutoCommit(false);
             execute(seatTaker, "SELECT id FROM program WHERE id = " + programId + " FOR UPDATE");
 
             Future<?> canceling = executor.submit(cancel);
-            LockWaits.await(monitor, 1, "행사 행");
+            LockWaits.await(mysql, 1, "행사 행");
             execute(
                     seatTaker,
                     "INSERT INTO program_application (program_id, member_id, status, payment_due_at, created_at,"
