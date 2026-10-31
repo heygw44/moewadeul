@@ -176,7 +176,7 @@ export function SignupPage() {
           type="text"
           name="nickname"
           autoComplete="nickname"
-          hint="2~20자로 정해 주세요. 앞뒤 공백이나 두 칸 이어진 공백은 쓸 수 없어요."
+          hint="2~20자로 정해 주세요. 앞뒤 공백과 연속된 공백은 쓸 수 없어요."
           value={nickname}
           onChange={(event) => setNickname(event.target.value)}
           error={fieldErrors.nickname}

@@ -4,14 +4,14 @@ const REQUEST_BROKEN = '요청을 처리하지 못했어요. 화면을 새로고
 const STATE_CHANGED = '상태가 바뀌어 지금은 할 수 없어요. 화면을 새로고침해 주세요.';
 
 const ERROR_MESSAGES: Record<string, string> = {
-  INVALID_INPUT: '입력한 내용에 맞지 않는 곳이 있어요. 표시된 칸을 고쳐 주세요.',
+  INVALID_INPUT: '입력한 내용에 맞지 않는 곳이 있어요. 표시된 칸을 수정해 주세요.',
   AUTHENTICATION_REQUIRED: '로그인한 뒤 다시 시도해 주세요.',
   ACCESS_DENIED: '이 기능을 쓸 권한이 없어요. 이전 화면으로 돌아가 주세요.',
   NOT_FOUND: '찾는 내용이 없거나 삭제됐어요. 목록에서 다시 골라 주세요.',
   TOO_MANY_REQUESTS: '요청이 너무 많아요. 잠시 뒤 다시 시도해 주세요.',
   METHOD_NOT_ALLOWED: REQUEST_BROKEN,
   UNSUPPORTED_MEDIA_TYPE: REQUEST_BROKEN,
-  INTERNAL_ERROR: '서버에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.',
+  INTERNAL_ERROR: '일시적인 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.',
   IMAGE_STORAGE_UNAVAILABLE: '지금은 사진을 확인할 수 없어요. 잠시 뒤 다시 시도해 주세요.',
   IDEMPOTENCY_KEY_REQUIRED: REQUEST_BROKEN,
   IDEMPOTENCY_KEY_REUSED: REQUEST_BROKEN,
@@ -63,7 +63,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   BASECAMP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안에서, 일정은 1~3박으로 골라 주세요.',
   BASECAMP_WARNING_SPOT: '공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.',
   BASECAMP_CONDITION_NOT_MET: '이 베이스캠프의 합류 조건에 맞지 않아요. 다른 베이스캠프를 찾아 주세요.',
-  BASECAMP_DATE_CONFLICT: '같은 날짜에 이미 함께하는 다른 베이스캠프가 있어요.',
+  BASECAMP_DATE_CONFLICT:
+    '같은 날짜에 이미 함께하는 다른 베이스캠프가 있어요. 날짜가 겹치지 않는 베이스캠프를 골라 주세요.',
   BASECAMP_REAPPLY_NOT_ALLOWED: '이 베이스캠프에는 다시 합류 신청할 수 없어요. 다른 베이스캠프를 찾아 주세요.',
   BASECAMP_PENDING_LIMIT: '이 베이스캠프에 답을 기다리는 신청이 가득 찼어요. 다른 베이스캠프를 찾아 주세요.',
   BASECAMP_ALREADY_APPLIED: '이미 합류 신청했거나 멤버인 베이스캠프예요. 내 베이스캠프에서 볼 수 있어요.',
@@ -84,17 +85,17 @@ const ERROR_MESSAGES: Record<string, string> = {
   COMMUNITY_ALREADY_REPORTED: '이미 신고한 글이나 댓글이에요. 처리 결과를 기다려 주세요.',
   MEMORY_ALREADY_REPORTED: '이미 신고한 기록이에요. 처리 결과를 기다려 주세요.',
   SOLO_TRIP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안에서, 일정은 1~3박으로 골라 주세요.',
-  SOLO_TRIP_LIMIT: '앞으로 갈 혼자 가는 일정은 3개까지 등록할 수 있어요. 내 정보에서 필요 없는 일정을 삭제해 주세요.',
+  SOLO_TRIP_LIMIT: '출발 전인 혼자 가는 일정은 3개까지 등록할 수 있어요. 내 정보에서 필요 없는 일정을 삭제해 주세요.',
   SOLO_TRIP_OVERLAP: '등록한 다른 일정과 날짜가 겹쳐요. 다른 날짜를 골라 주세요.',
 
   COMMUNITY_INVALID_STATE: STATE_CHANGED,
   MEMORY_INVALID_STATE: STATE_CHANGED,
   IMAGE_UPLOAD_FAILED: '사진을 올리지 못했어요. 다시 올려 주세요.',
 
-  SYNC_JOB_ALREADY_RUNNING: '같은 동기화가 이미 돌고 있어요. 끝난 뒤 다시 실행해 주세요.',
+  SYNC_JOB_ALREADY_RUNNING: '같은 작업이 이미 실행 중이에요. 끝난 뒤 다시 실행해 주세요.',
 
-  NETWORK_ERROR: '인터넷에 연결하지 못했어요. 연결 상태를 본 뒤 다시 시도해 주세요.',
-  REQUEST_TIMEOUT: '응답이 오지 않아요. 연결 상태를 본 뒤 다시 시도해 주세요.',
+  NETWORK_ERROR: '인터넷에 연결하지 못했어요. 연결 상태를 확인한 뒤 다시 시도해 주세요.',
+  REQUEST_TIMEOUT: '응답이 오지 않아요. 연결 상태를 확인한 뒤 다시 시도해 주세요.',
 };
 
 const UNEXPECTED_ERROR_MESSAGE = '예상하지 못한 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.';

@@ -43,7 +43,7 @@ export function SpotPreviewBoard({ spotId, onClose }: SpotPreviewBoardProps) {
 
   return (
     <section
-      aria-label="고른 장소의 근거"
+      aria-label="고른 장소 정보"
       className="pointer-events-auto w-[22.5rem] overflow-hidden rounded-sheet bg-surface shadow-raise"
     >
       <div className="flex items-start gap-2 pt-4 pr-2 pb-3 pl-5 text-ink">
@@ -58,12 +58,12 @@ export function SpotPreviewBoard({ spotId, onClose }: SpotPreviewBoardProps) {
               </p>
             </>
           ) : (
-            <h2 className="text-[1.375rem] font-extrabold tracking-[-0.025em]">장소 근거</h2>
+            <h2 className="text-[1.375rem] font-extrabold tracking-[-0.025em]">장소 정보</h2>
           )}
         </div>
         <button
           type="button"
-          aria-label="근거 판 닫기"
+          aria-label="장소 정보 닫기"
           onClick={onClose}
           className="flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-fill hover:text-ink"
         >

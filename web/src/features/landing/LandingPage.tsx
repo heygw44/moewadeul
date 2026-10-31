@@ -5,7 +5,7 @@ import { AnnouncementBar } from '../program/AnnouncementBar';
 import { LandingStage } from './LandingStage';
 
 export function LandingPage() {
-  useDocumentTitle('뫼와들 · 잘 수 있는 박지와 믿을 수 있는 동행');
+  useDocumentTitle('뫼와들 · 잘 곳과 함께 갈 사람을 한 번에 찾아요');
 
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">

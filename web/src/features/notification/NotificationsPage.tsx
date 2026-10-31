@@ -121,7 +121,7 @@ function NotificationList() {
             {state.error ? (
               <ErrorNotice title="알림을 불러오지 못했어요" error={state.error} traceId={state.traceId ?? undefined} />
             ) : (
-              <ErrorNotice title="읽음으로 바꾸지 못했어요" error={actionError?.cause} />
+              <ErrorNotice title="읽음 처리하지 못했어요" error={actionError?.cause} />
             )}
             {state.error && state.items.length === 0 && (
               <div>

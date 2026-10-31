@@ -481,7 +481,7 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
         <div className="flex flex-wrap gap-2">
           {LEAVABLE_STATUSES.includes(detail.status) && (
             <Button variant="secondary" onClick={() => setDialog('leave')}>
-              탈퇴
+              나가기
             </Button>
           )}
           {detail.status === 'COMPLETED' && (
@@ -572,14 +572,14 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
         </Dialog>
       )}
       {dialog === 'leave' && (
-        <Dialog title="베이스캠프 탈퇴" onClose={() => !submitting && setDialog(null)}>
+        <Dialog title="베이스캠프 나가기" onClose={() => !submitting && setDialog(null)}>
           <div className="flex flex-col gap-4">
-            <p className="text-base text-ink">탈퇴하면 이 베이스캠프에 다시 신청할 수 없어요.</p>
+            <p className="text-base text-ink">나가면 이 베이스캠프에 다시 신청할 수 없어요.</p>
             {isLateLeave(detail) && (
               <Notice tone="warning" title="출발이 얼마 남지 않았어요">
                 <p>
-                  출발 48시간 안에 탈퇴하면 임박 탈퇴로 기록돼요. 임박 탈퇴가 180일 안에 3번 쌓이면 신뢰 단계 2에서
-                  빠져요.
+                  출발 48시간 안에 나가면 출발 직전 나가기로 기록돼요. 출발 직전 나가기가 180일 안에 3번 쌓이면 신뢰
+                  단계 2에서 빠져요.
                 </p>
               </Notice>
             )}
@@ -591,10 +591,10 @@ function ActionArea({ detail, onChanged }: { detail: BasecampDetail; onChanged: 
                 variant="danger"
                 loading={submitting}
                 onClick={() =>
-                  run(() => leaveBasecamp(detail.basecampId), '베이스캠프에서 탈퇴했어요.', '탈퇴하지 못했어요')
+                  run(() => leaveBasecamp(detail.basecampId), '베이스캠프에서 나왔어요.', '나가지 못했어요')
                 }
               >
-                탈퇴
+                나가기
               </Button>
             </div>
           </div>

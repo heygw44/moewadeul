@@ -123,7 +123,7 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
   } else {
     body = (
       <>
-        <p className="text-sm text-ink-muted">위치는 정확한 곳 대신 약 1km 범위의 대략 위치만 보여요.</p>
+        <p className="text-sm text-ink-muted">정확한 위치 대신 약 1km 범위의 대략적인 위치만 보여요.</p>
         <MemoryMapGrid items={items} />
       </>
     );

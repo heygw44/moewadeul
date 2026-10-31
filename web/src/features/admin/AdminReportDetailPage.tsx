@@ -49,10 +49,10 @@ const SANCTION_OPTIONS = [
 const LIFT_REASONS: ReadonlyArray<ChoiceOption<SanctionLiftReason> & { description: string }> = [
   {
     value: 'END_EARLY',
-    label: '조기 종료',
-    description: '기간만 일찍 끝내요. 제재 이력에는 남아 다음 제재 단계와 신뢰 회원 판정에 반영돼요.',
+    label: '일찍 해제',
+    description: '기간만 일찍 끝내요. 제재 이력에는 남아 다음 제재 단계와 신뢰 단계에 반영돼요.',
   },
-  { value: 'REVOKE', label: '처분 취소', description: '제재가 잘못 내려졌어요. 제재 이력에서 빠져요.' },
+  { value: 'REVOKE', label: '제재 취소', description: '제재가 잘못 내려졌어요. 제재 이력에서 빠져요.' },
 ];
 
 type Failure = { message: string; error: unknown };

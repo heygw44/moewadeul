@@ -25,15 +25,15 @@ const JOB_LABELS: Record<SyncJobType, string> = {
   FOREST: '국립 자연휴양림',
   FOREST_STANDARD: '공립·사립 휴양림',
   PARK_BOUNDARY: '공원 경계',
-  BAKJI_REJUDGE: '박지 재판정',
+  BAKJI_REJUDGE: '박지 경고 다시 확인',
 };
 
 const JOB_DESCRIPTIONS: Record<SyncJobType, string> = {
   GOCAMPING: '고캠핑 API에서 바뀐 야영장을 받아 반영해요.',
-  FOREST: '서버에 둔 국립자연휴양림 파일을 다시 읽어 적재해요.',
-  FOREST_STANDARD: '서버에 둔 전국휴양림표준데이터 파일을 다시 읽어 적재해요. 국립 휴양림을 먼저 적재해 두어야 해요.',
-  PARK_BOUNDARY: '서버에 둔 공원 경계 파일을 다시 읽어 적재해요. 성공하면 박지 재판정이 이어서 실행돼요.',
-  BAKJI_REJUDGE: '지금 적재된 공원 경계로 모든 박지의 공원 경고를 다시 판정해요.',
+  FOREST: '서버에 있는 국립자연휴양림 파일을 다시 불러와요.',
+  FOREST_STANDARD: '서버에 있는 전국휴양림표준데이터 파일을 다시 불러와요. 국립 휴양림을 먼저 불러와야 해요.',
+  PARK_BOUNDARY: '서버에 있는 공원 경계 파일을 다시 불러와요. 성공하면 박지 경고 다시 확인이 이어서 실행돼요.',
+  BAKJI_REJUDGE: '지금 불러온 공원 경계로 모든 박지의 공원 경고를 다시 확인해요.',
 };
 
 const STATUS_META: Record<SyncJobStatus, { label: string; tone: StatusTone }> = {
@@ -80,7 +80,7 @@ async function loadCards(signal: AbortSignal): Promise<CardsState> {
 
 export function AdminSyncJobsPage() {
   return (
-    <AdminPage title="데이터 적재" current="/admin/sync-jobs">
+    <AdminPage title="데이터 불러오기" current="/admin/sync-jobs">
       <SyncJobs />
     </AdminPage>
   );
@@ -210,10 +210,10 @@ function SyncJobs() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold text-ink">작업별 상태</h2>
           <Button variant="secondary" onClick={reload}>
-            새로 고침
+            새로고침
           </Button>
         </div>
-        {anyRunning && <p className="text-sm text-ink-muted">실행 중인 작업이 있어서 10초마다 새로 읽어요.</p>}
+        {anyRunning && <p className="text-sm text-ink-muted">실행 중인 작업이 있어서 10초마다 새로고침해요.</p>}
         {cardsError && (
           <div role="alert" className="flex flex-col gap-3">
             <ErrorNotice title="작업 상태를 불러오지 못했어요" error={cardsError.error} message={cardsError.message} />
@@ -228,7 +228,7 @@ function SyncJobs() {
         )}
         {cards === null && !cardsError && showCardSkeleton && <Skeleton className="h-40 w-full" />}
         {staleSince !== null && (
-          <Notice tone="warning" title="고캠핑 동기화가 2일 넘게 성공하지 못했어요">
+          <Notice tone="warning" title="고캠핑 데이터를 2일 넘게 불러오지 못했어요">
             <p>{staleSince}</p>
           </Notice>
         )}
@@ -376,7 +376,9 @@ function JobCard({
       {latest?.status === 'FAILED' && latest.errorMessage && (
         <p className="break-words rounded-row bg-surface px-4 py-2.5 text-sm text-danger">{latest.errorMessage}</p>
       )}
-      {jobType === 'PARK_BOUNDARY' && <p className="text-sm text-ink-muted">성공하면 박지 재판정이 이어서 실행돼요</p>}
+      {jobType === 'PARK_BOUNDARY' && (
+        <p className="text-sm text-ink-muted">성공하면 박지 경고 다시 확인이 이어서 실행돼요</p>
+      )}
       {error && (
         <div role="alert">
           <ErrorNotice title="작업을 실행하지 못했어요" error={error.error} message={error.message} />
@@ -397,7 +399,7 @@ function JobCard({
         <Dialog title={`${label} 작업을 실행할까요?`} onClose={() => !busy && setConfirm(false)}>
           <div className="flex flex-col gap-4">
             <p className="text-base text-ink">
-              {JOB_DESCRIPTIONS[jobType]} 작업은 서버에서 따로 실행되고, 결과는 이 화면에서 확인해요.
+              {JOB_DESCRIPTIONS[jobType]} 작업은 따로 실행되고, 결과는 이 화면에서 확인해요.
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={busy} onClick={() => setConfirm(false)}>

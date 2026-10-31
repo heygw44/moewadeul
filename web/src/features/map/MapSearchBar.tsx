@@ -20,7 +20,7 @@ const AI_MAX_LENGTH = 100;
 
 const AI_LENGTH_MESSAGE = `${AI_MIN_LENGTH}자 이상 ${AI_MAX_LENGTH}자 이하로 입력해 주세요.`;
 const AI_PLACEHOLDER = '예: 강원도 계곡 옆 박지';
-const AI_NOTICE = '입력한 문장은 해석을 위해 OpenAI로 보내져요. 하루 20번까지 쓸 수 있어요.';
+const AI_NOTICE = '입력한 문장은 OpenAI가 분석해요. 하루 20번까지 쓸 수 있어요.';
 const GUIDE_BOX_CLASS = 'rounded-sheet bg-surface px-4 py-3 text-sm text-ink shadow-raise';
 const GUIDE_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2 hover:text-accent-deep';
