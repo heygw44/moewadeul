@@ -120,7 +120,7 @@ services:
 
   # 지표·로그 수집 에이전트. 설정은 deploy/alloy/config.alloy이고, 배포 워크플로가 이 파일 옆 alloy/ 폴더에 받아 둔다.
   alloy:
-    image: grafana/alloy:v1.20.1
+    image: grafana/alloy:v1.21.2
     restart: unless-stopped
     command:
       - run
