@@ -29,7 +29,9 @@ class ArchitectureRulesTest {
         SCHEDULED_JOB_RUNNER(ArchitectureRules::scheduledJobsRunThroughRunnerRule),
         APPLICATION_JPA_REPOSITORY(ArchitectureRules::applicationJpaRepositoryRule),
         DOMAIN_PORT(ArchitectureRules::domainPortRule),
-        API_EXTERNAL_ADAPTER(ArchitectureRules::apiExternalAdapterRule);
+        API_EXTERNAL_ADAPTER(ArchitectureRules::apiExternalAdapterRule),
+        SCHEDULED_TASK_REGISTRAR(ArchitectureRules::scheduledTaskRegistrarUsesRunnerRule),
+        NO_IMPLICIT_SYSTEM_CLOCK(ArchitectureRules::noImplicitSystemClockRule);
 
         private final Function<String, ArchRule> factory;
 
@@ -237,6 +239,26 @@ class ArchitectureRulesTest {
                 "common.storage.ImageStorage",
                 "member.api.NoticeController",
                 "common.mail.MailSender");
+    }
+
+    @Test
+    @DisplayName("[ADR-012] ScheduledJobRunner 를 거치지 않거나 register 만 부르고 ScheduledTaskRegistrar 에 작업을 등록하면 R12 위반이다")
+    void scheduledTaskRegistrarRuleRejectsRegistrarBypassingRunner() {
+        assertOnlyRuleFails(
+                Rule.SCHEDULED_TASK_REGISTRAR,
+                "violation.r12.registrar",
+                "member.application.MemberTaskRegistrar",
+                "member.application.MemberRegisterOnlyRegistrar");
+    }
+
+    @Test
+    @DisplayName("[ADR-005] ClockConfig 밖에서 now()·now(ZoneId)·Clock.system*을 부르면 R13 위반이다")
+    void noImplicitSystemClockRuleRejectsDirectSystemClockRead() {
+        assertOnlyRuleFails(
+                Rule.NO_IMPLICIT_SYSTEM_CLOCK,
+                "violation.r13.now",
+                "member.application.MemberExpiryService",
+                "member.application.MemberClockFactory");
     }
 
     private static void assertOnlyRuleFails(Rule failing, String subRoot, String... expectedFixtures) {

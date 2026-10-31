@@ -80,7 +80,7 @@ class SyncJobRunTest {
     }
 
     @Test
-    @DisplayName("[F-06] 진행을 기록한 채 실패한 기록은 그 위치부터 이어받을 수 있다")
+    @DisplayName("[F-06] 진행을 기록한 채 실패한 기록은 그 위치 다음부터 이어받는다")
     void failedRunWithProgressResumesFromItsCursor() {
         // given
         SyncJobRun run = SyncJobRun.start(SyncJobType.GOCAMPING, null, NOW);
@@ -88,23 +88,46 @@ class SyncJobRunTest {
         run.fail("오류", NOW.plusSeconds(20));
 
         // when, then
-        assertThat(run.resumeCursor()).contains("3");
+        assertThat(run.resumePoint()).contains(new ResumePoint("3", false));
     }
 
     @Test
-    @DisplayName("[F-06] 이어받은 위치를 그대로 둔 채 한 페이지도 끝내지 못하고 실패한 기록은 이어받지 않는다")
-    void failedRunWithoutProgressDoesNotResume() {
+    @DisplayName("[F-06] 이어받은 위치를 그대로 둔 채 한 단위도 끝내지 못하고 실패한 기록은 다음 단위를 건너뛰며 이어받는다")
+    void failedRunWithoutProgressButWithCursorResumesAndSkipsNext() {
         // given
         SyncJobRun run = SyncJobRun.start(SyncJobType.GOCAMPING, "1", NOW);
         run.fail("오류", NOW.plusSeconds(20));
 
         // when, then
-        assertThat(run.resumeCursor()).isEmpty();
+        assertThat(run.resumePoint()).contains(new ResumePoint("1", true));
+    }
+
+    @Test
+    @DisplayName("[F-06] 실행기가 거절해 한 단위도 시도하지 못한 기록은 다음 단위를 건너뛰지 않고 같은 위치에서 이어받는다")
+    void rejectedRunResumesWithoutSkippingNext() {
+        // given
+        SyncJobRun run = SyncJobRun.start(SyncJobType.GOCAMPING, "1", NOW);
+        run.reject(NOW.plusSeconds(1));
+
+        // when, then
+        assertThat(run.isFailed()).isTrue();
+        assertThat(run.resumePoint()).contains(new ResumePoint("1", false));
+    }
+
+    @Test
+    @DisplayName("[F-06] 이어받은 위치도 진행도 없이 실패한 기록은 이어받지 않고 처음부터 시작한다")
+    void failedRunWithoutProgressAndCursorStartsFresh() {
+        // given
+        SyncJobRun run = SyncJobRun.start(SyncJobType.GOCAMPING, null, NOW);
+        run.fail("오류", NOW.plusSeconds(20));
+
+        // when, then
+        assertThat(run.resumePoint()).isEmpty();
     }
 
     @Test
     @DisplayName("[F-06] 완료했거나 아직 실행 중인 기록은 이어받을 위치가 없다")
-    void completedOrRunningRunHasNoResumeCursor() {
+    void completedOrRunningRunHasNoResumePoint() {
         // given
         SyncJobRun completed = SyncJobRun.start(SyncJobType.GOCAMPING, null, NOW);
         completed.recordProgress("4", 400, 0, NOW.plusSeconds(10));
@@ -113,8 +136,8 @@ class SyncJobRunTest {
         running.recordProgress("1", 100, 0, NOW.plusSeconds(10));
 
         // when, then
-        assertThat(completed.resumeCursor()).isEmpty();
-        assertThat(running.resumeCursor()).isEmpty();
+        assertThat(completed.resumePoint()).isEmpty();
+        assertThat(running.resumePoint()).isEmpty();
     }
 
     @Test
