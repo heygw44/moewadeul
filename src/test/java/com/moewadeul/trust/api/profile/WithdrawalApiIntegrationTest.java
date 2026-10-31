@@ -117,6 +117,20 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-01][PV-02] 콜레이션이 무시하는 글자를 끼워 탈퇴회원_{id}와 같게 보이는 닉네임이 이미 있어도 탈퇴하면 닉네임이 탈퇴회원_{id}가 된다")
+    void withdrawalSucceedsWhenCollationEqualNicknameIsTaken() {
+        Member member = saveActiveMember();
+        Member squatter = saveActiveMember();
+        jdbc.update("UPDATE member SET nickname = ? WHERE id = ?", "탈́퇴회원_" + member.getId(), squatter.getId());
+        Cookie session = login(member);
+
+        MvcTestResult result = withdraw(session, PASSWORD);
+
+        assertThat(result).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(column(member, "nickname")).isEqualTo("탈퇴회원_" + member.getId());
+    }
+
+    @Test
     @DisplayName("[F-01][PV-01] 탈퇴한 뒤 예전 이메일과 비밀번호로 로그인하면 401 LOGIN_FAILED이고, 같은 이메일로 다시 가입할 수 있다")
     void oldCredentialsFailAndEmailCanBeReused() {
         Member member = saveActiveMember();
