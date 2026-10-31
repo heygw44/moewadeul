@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moewadeul.community.infra.report.CommunityReportContentCleanupMapper">
+
+    <update id="clearContentProcessedBefore">
+        UPDATE community_report r
+        SET r.content = NULL
+        WHERE r.content IS NOT NULL
+          AND (
+                r.reviewed_at &lt;= #{cutoff}
+                OR (
+                    r.reviewed_at IS NULL
+                    AND (
+                        (r.target_type = 'POST' AND EXISTS (
+                            SELECT 1
+                            FROM community_post t
+                            WHERE t.id = r.target_id
+                              AND t.status = 'HIDDEN'
+                              AND t.updated_at &lt;= #{cutoff}
+                        ))
+                        OR (r.target_type = 'COMMENT' AND EXISTS (
+                            SELECT 1
+                            FROM community_comment t
+                            WHERE t.id = r.target_id
+                              AND t.status = 'HIDDEN'
+                              AND t.updated_at &lt;= #{cutoff}
+                        ))
+                    )
+                )
+              )
+        LIMIT #{limit}
+    </update>
+</mapper>

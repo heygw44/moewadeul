@@ -21,6 +21,8 @@ moewadeul:
       enabled: false
     reset-throttle-cleanup:
       enabled: false
+    reset-token-cleanup:
+      enabled: false
     login-history-cleanup:
       enabled: false
     email-verification-cleanup:
@@ -38,6 +40,9 @@ moewadeul:
       enabled: false
   aisearch:
     usage-cleanup:
+      enabled: false
+  moderation:
+    report-content-cleanup:
       enabled: false
   trust:
     sanction-expiry:
