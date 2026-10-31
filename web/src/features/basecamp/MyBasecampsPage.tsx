@@ -19,6 +19,8 @@ import { formatLocalDate } from '../../lib/datetime';
 import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { BASECAMP_STATUS_META, headcountText } from './basecampLabels';
 
+const itemKey = (item: MyBasecampItem) => `${item.basecampId}-${item.myRelation}`;
+
 type RelationFilter = MyBasecampRelation | 'ALL';
 
 const FILTERS: ReadonlyArray<{ value: RelationFilter; label: string }> = [
@@ -42,7 +44,7 @@ export function MyBasecampsPage() {
   const session = useRequireAuth();
   const [filter, setFilter] = useState<RelationFilter>('ALL');
   const authenticated = session.status === 'authenticated';
-  const { current, loadingMore, loadMore, retry } = usePagedList(authenticated, filter, fetchPage);
+  const { current, loadingMore, loadMore, retry } = usePagedList(authenticated, filter, fetchPage, itemKey);
 
   useDocumentTitle('내 베이스캠프 · 뫼와들');
 

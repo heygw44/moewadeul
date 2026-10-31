@@ -160,4 +160,13 @@ describe('빈자리 알림', () => {
     expect(button('빈자리 알림 받기')).toBeUndefined();
     expect(button('신청하기')).toBeDefined();
   });
+
+  it('서버가 이미 빈자리 알림을 신청한 회원이라고 알려 주면 알림 끄기를 보여 준다', async () => {
+    vi.mocked(getProgram).mockResolvedValue({ ...DETAIL, remainingSeats: 0, vacancyAlertSubscribed: true });
+    await act(async () => root.render(<ProgramDetailPage programId={5} />));
+
+    expect(button('알림 끄기')).toBeDefined();
+    expect(container.textContent).toContain('빈자리 알림을 신청했어요');
+    expect(button('빈자리 알림 받기')).toBeUndefined();
+  });
 });

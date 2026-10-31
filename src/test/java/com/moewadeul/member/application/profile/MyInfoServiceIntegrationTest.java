@@ -54,6 +54,7 @@ class MyInfoServiceIntegrationTest {
                         "camper",
                         "UNVERIFIED",
                         "USER",
+                        false,
                         AgeGroup.THIRTIES,
                         Gender.FEMALE));
     }

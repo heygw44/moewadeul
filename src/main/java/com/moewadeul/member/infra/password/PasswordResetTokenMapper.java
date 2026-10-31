@@ -10,4 +10,6 @@ public interface PasswordResetTokenMapper {
     int markUsed(@Param("id") long id, @Param("now") Instant now);
 
     int invalidateUnusedTokens(@Param("memberId") long memberId, @Param("now") Instant now);
+
+    int deleteExpiredBefore(@Param("cutoff") Instant cutoff, @Param("limit") int limit);
 }

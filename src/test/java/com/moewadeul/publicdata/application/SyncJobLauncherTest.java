@@ -2,14 +2,23 @@ package com.moewadeul.publicdata.application;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.moewadeul.publicdata.domain.SyncJobType;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 class SyncJobLauncherTest {
@@ -57,6 +66,21 @@ class SyncJobLauncherTest {
         assertThatThrownBy(() -> new SyncJobLauncher(syncJobRunService, jobs, executor))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(SyncJobType.FOREST.name());
+    }
+
+    @Test
+    @DisplayName("[F-06] 실행기가 작업을 거절하면 방금 만든 실행 기록을 실패가 아닌 거절로 끝내고 예외를 그대로 던진다")
+    void rejectedSubmitMarksRunRejected() {
+        // given
+        SyncJobLauncher launcher = new SyncJobLauncher(syncJobRunService, jobsOf(SyncJobType.values()), executor);
+        when(syncJobRunService.begin(eq(SyncJobType.GOCAMPING), any(), anyLong()))
+                .thenReturn(Optional.of(new SyncJobRunService.SyncJobStart(7L, Optional.empty())));
+        doThrow(new TaskRejectedException("full")).when(executor).execute(any(Runnable.class));
+
+        // when & then
+        assertThatThrownBy(() -> launcher.launch(SyncJobType.GOCAMPING, 1L)).isInstanceOf(TaskRejectedException.class);
+        verify(syncJobRunService).reject(7L);
+        verify(syncJobRunService, never()).fail(anyLong(), any());
     }
 
     private static List<SyncJob<?>> jobsOf(SyncJobType... types) {

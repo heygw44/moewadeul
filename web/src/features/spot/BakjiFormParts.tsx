@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { BakjiSubmissionResponse, SignalLevel } from '../../api/types';
 import { Link } from '../../app/router';
+import { Button } from '../../components/Button';
 import { ChoiceGroup } from '../../components/ChoiceGroup';
 import type { ChoiceOption } from '../../components/ChoiceGroup';
 import { Icon } from '../../components/icons';
@@ -35,6 +36,7 @@ export function BakjiFields({
   fieldErrors,
   groundOptions,
   groundHint,
+  onUseMapCenter,
 }: {
   draft: LatLng | null;
   values: BakjiFormValues;
@@ -42,6 +44,7 @@ export function BakjiFields({
   fieldErrors: FieldErrors;
   groundOptions: ChoiceOption<GroundChoice>[];
   groundHint?: string;
+  onUseMapCenter?: () => void;
 }) {
   const set = <K extends keyof BakjiFormValues>(key: K, value: BakjiFormValues[K]) =>
     onChange({ ...values, [key]: value });
@@ -50,13 +53,30 @@ export function BakjiFields({
     <>
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium text-ink">위치</p>
-        {draft === null ? (
-          <p className="text-base text-ink">지도를 눌러 박지 위치를 찍어 주세요</p>
-        ) : (
-          <>
-            <LocationLabel position={draft} />
-            <p className="text-sm text-ink-muted">지도를 다시 누르면 위치가 바뀌어요.</p>
-          </>
+        <div aria-live="polite" className="flex flex-col gap-1">
+          {draft === null ? (
+            <p className="text-base text-ink">
+              {onUseMapCenter
+                ? '지도를 누르거나, 지도를 옮긴 뒤 아래 버튼을 눌러 박지 위치를 찍어 주세요'
+                : '지도를 눌러 박지 위치를 찍어 주세요'}
+            </p>
+          ) : (
+            <>
+              <LocationLabel position={draft} />
+              <p className="text-sm text-ink-muted">
+                {onUseMapCenter
+                  ? '지도를 다시 누르거나 버튼을 다시 누르면 위치가 바뀌어요.'
+                  : '지도를 다시 누르면 위치가 바뀌어요.'}
+              </p>
+            </>
+          )}
+        </div>
+        {onUseMapCenter && (
+          <div>
+            <Button type="button" variant="secondary" onClick={onUseMapCenter}>
+              지도 가운데를 위치로 쓰기
+            </Button>
+          </div>
         )}
         {fieldErrors.location && (
           <p role="alert" className="flex items-start gap-1 text-sm text-danger">

@@ -25,6 +25,7 @@ import type { UploadImageItem } from '../../components/useImageUploads';
 import { todayKst } from '../../lib/datetime';
 import type { LatLng } from '../../map/types';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+import { useSaveOutlivingScreen } from '../../app/saveNotice/saveNotices';
 import { useDraftCapture, useRestoredDraft } from '../../app/session/formDraft';
 import { useSession } from '../../app/session/session';
 import { useRequireAuth } from '../../app/session/useRequireAuth';
@@ -241,6 +242,8 @@ function MemoryForm(props: MemoryFormProps) {
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
+  const awaitWhileOnScreen = useSaveOutlivingScreen();
+
   useDraftCapture<MemoryDraft>(pathname + search, memberId, {
     visitedDate,
     nights,
@@ -303,7 +306,18 @@ function MemoryForm(props: MemoryFormProps) {
           spotId: spot?.spotId,
           imageIds,
         };
-        const created = await idempotentRunner.run(request, (key) => createMemory(request, key));
+        const created = await awaitWhileOnScreen(
+          idempotentRunner.run(request, (key) => createMemory(request, key)),
+          {
+            pending: '기록을 남기는 중이에요.',
+            done: ({ memoryId }) => ({
+              title: '기록을 남겼어요.',
+              link: { to: `/memories/${memoryId}`, label: '기록 보기' },
+            }),
+            failed: '기록을 남기지 못했어요.',
+            checkAt: { to: '/me/memories', label: '내 기록 보기' },
+          },
+        );
         navigate(`/memories/${created.memoryId}`);
         return;
       }
@@ -316,7 +330,15 @@ function MemoryForm(props: MemoryFormProps) {
         spot,
         imageIds,
       });
-      if (Object.keys(changes).length > 0) await updateMemory(memory.memoryId, changes);
+      if (Object.keys(changes).length > 0) {
+        const memoryLink = { to: `/memories/${memory.memoryId}`, label: '기록 보기' };
+        await awaitWhileOnScreen(updateMemory(memory.memoryId, changes), {
+          pending: '기록을 고치는 중이에요.',
+          done: () => ({ title: '기록을 고쳤어요.', link: memoryLink }),
+          failed: '기록을 고치지 못했어요.',
+          checkAt: memoryLink,
+        });
+      }
       navigate(`/memories/${memory.memoryId}`);
     } catch (error) {
       setSubmitting(false);

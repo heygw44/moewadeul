@@ -21,6 +21,8 @@ import { useSession } from '../../app/session/session';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import type { CommunityReportTarget } from './CommunityReportDialog';
 
+const itemKey = (item: CommunityComment) => item.commentId;
+
 const CONTENT_MAX = 1000;
 
 type CommunityCommentsProps = {
@@ -32,7 +34,7 @@ type CommunityCommentsProps = {
 export function CommunityComments({ postId, count, onChanged }: CommunityCommentsProps) {
   const session = useSession();
   const myMemberId = session.status === 'authenticated' ? (session.me?.memberId ?? null) : null;
-  const { current: list, loadingMore, loadMore, retry, reload } = usePagedList(true, postId, listComments);
+  const { current: list, loadingMore, loadMore, retry, reload } = usePagedList(true, postId, listComments, itemKey);
   const [replyingId, setReplyingId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);

@@ -75,9 +75,6 @@ export function submitErrorState(error: unknown): { fieldErrors: FieldErrors; fo
     for (const [field, list] of Object.entries(reasons)) fieldErrors[field as FormField] = mergeReasons(list);
     return { fieldErrors, formError: others.length > 0 ? { cause: others.join(' ') } : null };
   }
-  if (error instanceof ApiError && error.code === 'INVALID_INPUT' && error.serverMessage !== '') {
-    return { fieldErrors: {}, formError: { cause: error.serverMessage } };
-  }
   return { fieldErrors: {}, formError: { cause: error } };
 }
 

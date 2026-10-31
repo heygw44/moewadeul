@@ -202,7 +202,7 @@ describe('MapPage', () => {
       search.mockResolvedValueOnce([]);
       await mount();
       expect(view.setCenter).not.toHaveBeenCalled();
-      expect(container.querySelector('[role="region"]')).not.toBeNull();
+      expect(container.querySelector('[aria-label="지도"]')).not.toBeNull();
     });
 
     it('검색이 실패해도 화면이 멈추지 않는다', async () => {
@@ -210,7 +210,7 @@ describe('MapPage', () => {
       search.mockRejectedValueOnce(new Error('boom'));
       await mount();
       expect(view.setCenter).not.toHaveBeenCalled();
-      expect(container.querySelector('[role="region"]')).not.toBeNull();
+      expect(container.querySelector('[aria-label="지도"]')).not.toBeNull();
     });
 
     it('장소 상세 화면에서는 q를 읽지 않는다', async () => {

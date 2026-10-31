@@ -16,6 +16,8 @@ import { usePagedList } from '../../components/usePagedList';
 import { AdminPage } from './AdminGate';
 import { AdminSegments } from './AdminSegments';
 
+const itemKey = (item: AdminReportSummary) => item.reportId;
+
 const ALL = 'ALL';
 
 const STATUS_SEGMENTS = [
@@ -48,7 +50,7 @@ function ReportList() {
     status: status === ALL ? undefined : (status as ReportStatus),
     urgent: urgentOnly ? true : undefined,
   };
-  const { current, loadingMore, loadMore, retry } = usePagedList(true, filter, fetchReports);
+  const { current, loadingMore, loadMore, retry } = usePagedList(true, filter, fetchReports, itemKey);
   const showSkeleton = useDelayedFlag(current === null);
 
   return (

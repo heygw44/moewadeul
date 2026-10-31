@@ -5,7 +5,7 @@ import { DESKTOP_QUERY } from './useIsDesktop';
 
 export type ContextMenu = { position: LatLng; host: HTMLElement };
 
-function visibleMapHeight(host: HTMLElement | null): number | undefined {
+export function visibleMapHeight(host: HTMLElement | null): number | undefined {
   if (!host || window.matchMedia(DESKTOP_QUERY).matches) return undefined;
   const sheet = host.closest('[data-map-root]')?.querySelector('[data-sheet]');
   if (!sheet) return undefined;

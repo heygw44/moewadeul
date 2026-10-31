@@ -39,7 +39,9 @@ public class ProgramQueryService {
         if (row == null) {
             throw BusinessException.notFound();
         }
-        return toDetail(row, now, findMyApplication(programId, viewerId));
+        Boolean vacancyAlertSubscribed =
+                viewerId == null ? null : programQueryMapper.existsVacancyAlert(programId, viewerId);
+        return toDetail(row, now, findMyApplication(programId, viewerId), vacancyAlertSubscribed);
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +104,8 @@ public class ProgramQueryService {
                         phase));
     }
 
-    private static ProgramDetail toDetail(ProgramDetailRow row, Instant now, ProgramDetail.MyApplication mine) {
+    private static ProgramDetail toDetail(
+            ProgramDetailRow row, Instant now, ProgramDetail.MyApplication mine, Boolean vacancyAlertSubscribed) {
         ProgramPhase phase = ProgramPhase.of(row.status(), row.applyOpenAt(), row.applyCloseAt(), now);
         return new ProgramDetail(
                 row.programId(),
@@ -120,6 +123,7 @@ public class ProgramQueryService {
                 row.paymentDeadlineMinutes(),
                 row.overnight(),
                 phase.name(),
-                mine);
+                mine,
+                vacancyAlertSubscribed);
     }
 }

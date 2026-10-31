@@ -3,13 +3,13 @@ package com.moewadeul.program.application.enrollment;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.LockWaits;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.domain.ProgramCancelReason;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
@@ -29,7 +29,6 @@ import org.testcontainers.mysql.MySQLContainer;
 class ProgramSeatReleaseSnapshotIntegrationTest {
 
     private static final Instant OVERDUE = MutableClock.DEFAULT_INSTANT.minus(Duration.ofMinutes(1));
-    private static final long WAIT_MILLIS = 5_000;
 
     @Autowired
     private ProgramSanctionCleanupService cleanupService;
@@ -80,13 +79,12 @@ class ProgramSeatReleaseSnapshotIntegrationTest {
 
     private void assertNoSeatReleasedWhenSeatTakenDuringWait(Runnable cancel) throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        try (Connection monitor = openRootConnection();
-                Connection seatTaker = openRootConnection()) {
+        try (Connection seatTaker = openRootConnection()) {
             seatTaker.setAutoCommit(false);
             execute(seatTaker, "SELECT id FROM program WHERE id = " + programId + " FOR UPDATE");
 
             Future<?> canceling = executor.submit(cancel);
-            awaitLockWait(monitor);
+            LockWaits.await(mysql, 1, "행사 행");
             execute(
                     seatTaker,
                     "INSERT INTO program_application (program_id, member_id, status, payment_due_at, created_at,"
@@ -103,23 +101,6 @@ class ProgramSeatReleaseSnapshotIntegrationTest {
             assertThat(fixture.vacancyAlertNotifiedAt(programId, subscriberId)).isNull();
         } finally {
             executor.shutdownNow();
-        }
-    }
-
-    private void awaitLockWait(Connection monitor) throws SQLException, InterruptedException {
-        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(WAIT_MILLIS);
-        while (lockWaits(monitor) < 1) {
-            assertThat(System.nanoTime()).as("행사 행 잠금 대기를 기다리다 시간이 지났다").isLessThan(deadline);
-            Thread.sleep(20);
-        }
-    }
-
-    private int lockWaits(Connection monitor) throws SQLException {
-        try (Statement statement = monitor.createStatement();
-                ResultSet rows = statement.executeQuery(
-                        "SELECT COUNT(DISTINCT REQUESTING_ENGINE_TRANSACTION_ID) FROM performance_schema.data_lock_waits")) {
-            rows.next();
-            return rows.getInt(1);
         }
     }
 

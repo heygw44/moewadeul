@@ -32,6 +32,7 @@ class EmailVerificationApiIntegrationTest {
     private static final String VERIFY_PATH = "/api/me/email-verification";
     private static final String RESEND_PATH = "/api/me/email-verification/resend";
     private static final String VERIFIED_ONLY_PATH = "/api/bakjis";
+    private static final String ME_PATH = "/api/me";
 
     @Autowired
     private MemberFixture memberFixture;
@@ -90,19 +91,35 @@ class EmailVerificationApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01][TR-03] 인증 전에 다른 기기에서 만든 세션은 다시 로그인하기 전까지 인증 권한이 없다")
-    void otherSessionOfSameMemberKeepsOldAuthorityUntilNextLogin() {
+    @DisplayName("[F-01][TR-03] 다른 기기에서 인증한 뒤 이 세션이 내 정보를 조회하면 다시 로그인하지 않고 이메일 인증이 필요한 경로를 쓸 수 있다")
+    void otherSessionGainsVerifiedAuthorityOnMeLookupWithoutNewLogin() {
         Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
-        Cookie verifyingSession = login(member);
         Cookie otherSession = login(member);
+        Cookie verifyingSession = login(member);
+        assertThat(postJson(VERIFIED_ONLY_PATH, "{}", otherSession)).hasStatus(HttpStatus.FORBIDDEN);
 
-        postJson(VERIFY_PATH, codeBody(issueCode(member)), verifyingSession);
+        assertThat(postJson(VERIFY_PATH, codeBody(issueCode(member)), verifyingSession))
+                .hasStatus(HttpStatus.OK);
+        assertThat(postJson(VERIFIED_ONLY_PATH, "{}", otherSession)).hasStatus(HttpStatus.FORBIDDEN);
 
-        MvcTestResult stale = postJson(VERIFIED_ONLY_PATH, "{}", otherSession);
-        assertThat(stale).hasStatus(HttpStatus.FORBIDDEN);
-        assertThat(stale).bodyJson().extractingPath("$.code").isEqualTo("MEMBER_NOT_VERIFIED");
-        MvcTestResult afterRelogin = postJson(VERIFIED_ONLY_PATH, "{}", login(member));
-        assertThat(afterRelogin.getResponse().getStatus()).isNotIn(401, 403);
+        assertThat(mvc.get().uri(ME_PATH).cookie(otherSession).exchange()).hasStatus(HttpStatus.OK);
+
+        MvcTestResult afterLookup = postJson(VERIFIED_ONLY_PATH, "{}", otherSession);
+        assertThat(afterLookup.getResponse().getStatus()).isNotIn(401, 403);
+    }
+
+    @Test
+    @DisplayName("[F-01][TR-03] 인증 API를 거치지 않고 인증된 회원의 세션도 내 정보를 조회하면 이메일 인증이 필요한 경로를 쓸 수 있다")
+    void sessionVerifiedElsewhereGainsAuthorityOnMeLookup() {
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
+        Cookie session = login(member);
+        jdbc.update("UPDATE member SET status = 'ACTIVE', email_verified_at = NOW(6) WHERE id = ?", member.getId());
+        assertThat(postJson(VERIFIED_ONLY_PATH, "{}", session)).hasStatus(HttpStatus.FORBIDDEN);
+
+        assertThat(mvc.get().uri(ME_PATH).cookie(session).exchange()).hasStatus(HttpStatus.OK);
+
+        MvcTestResult afterLookup = postJson(VERIFIED_ONLY_PATH, "{}", session);
+        assertThat(afterLookup.getResponse().getStatus()).isNotIn(401, 403);
     }
 
     @Test

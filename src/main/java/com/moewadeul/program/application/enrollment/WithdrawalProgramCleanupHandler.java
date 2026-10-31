@@ -11,9 +11,12 @@ import org.springframework.stereotype.Component;
 class WithdrawalProgramCleanupHandler implements OutboxEventHandler {
 
     private final ProgramSanctionCleanupService cleanupService;
+    private final ProgramVacancyAlertService vacancyAlertService;
 
-    WithdrawalProgramCleanupHandler(ProgramSanctionCleanupService cleanupService) {
+    WithdrawalProgramCleanupHandler(
+            ProgramSanctionCleanupService cleanupService, ProgramVacancyAlertService vacancyAlertService) {
         this.cleanupService = cleanupService;
+        this.vacancyAlertService = vacancyAlertService;
     }
 
     @Override
@@ -23,6 +26,7 @@ class WithdrawalProgramCleanupHandler implements OutboxEventHandler {
 
     @Override
     public void handle(OutboxMessage message) {
+        vacancyAlertService.unsubscribeAll(message.aggregateId());
         cleanupService.cleanUp(message.aggregateId(), ProgramCancelReason.WITHDRAWN);
     }
 }

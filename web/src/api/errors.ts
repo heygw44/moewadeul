@@ -57,15 +57,15 @@ const ERROR_MESSAGES: Record<string, string> = {
   AI_SEARCH_UNAVAILABLE: '지금은 AI 검색을 쓸 수 없어요. 지역 이름으로 검색해 주세요.',
   SPOT_REVIEW_DUPLICATED: '이 방문일로 쓴 후기가 이미 있어요. 방문일을 바꿔 주세요.',
 
-  BASECAMP_OPEN_LIMIT: '모집 중인 베이스캠프는 3개까지 열 수 있어요. 모집 중인 베이스캠프를 마감한 뒤 열어 주세요.',
+  BASECAMP_OPEN_LIMIT:
+    '모집 중이거나 마감한 베이스캠프는 3개까지 열 수 있어요. 하나를 확정하거나 취소한 뒤 열어 주세요.',
   BASECAMP_CAPACITY_INVALID: '정원은 캠프 리더를 포함해 2~6명으로 정해 주세요.',
   BASECAMP_SCHEDULE_INVALID: '출발일은 내일부터 60일 안에서, 일정은 1~3박으로 골라 주세요.',
   BASECAMP_WARNING_SPOT: '공원 경계 경고가 있는 박지에서는 베이스캠프를 열 수 없어요. 다른 장소를 골라 주세요.',
   BASECAMP_CONDITION_NOT_MET: '이 베이스캠프의 합류 조건에 맞지 않아요. 다른 베이스캠프를 찾아 주세요.',
   BASECAMP_DATE_CONFLICT: '같은 날짜에 이미 함께하는 다른 베이스캠프가 있어요.',
   BASECAMP_REAPPLY_NOT_ALLOWED: '이 베이스캠프에는 다시 합류 신청할 수 없어요. 다른 베이스캠프를 찾아 주세요.',
-  BASECAMP_PENDING_LIMIT:
-    '답을 기다리는 합류 신청이 너무 많아요. 내 베이스캠프에서 신청을 취소한 뒤 다시 신청해 주세요.',
+  BASECAMP_PENDING_LIMIT: '이 베이스캠프에 답을 기다리는 신청이 가득 찼어요. 다른 베이스캠프를 찾아 주세요.',
   BASECAMP_ALREADY_APPLIED: '이미 합류 신청했거나 멤버인 베이스캠프예요. 내 베이스캠프에서 볼 수 있어요.',
   BASECAMP_FULL: '정원이 모두 찼어요. 다른 베이스캠프를 찾아 주세요.',
   BASECAMP_INVALID_STATE: STATE_CHANGED,

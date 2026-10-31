@@ -54,6 +54,7 @@ export function createFakeMapView(initialLevel = 12): FakeMapView {
     getBounds: () => view.bounds,
     getLevel: () => view.level,
     getCenter: () => center,
+    getVisibleCenter: () => center,
     setCenter: vi.fn((position: LatLng, level?: number) => {
       center = position;
       if (level !== undefined && level !== view.level) {

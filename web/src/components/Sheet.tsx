@@ -134,6 +134,7 @@ export function Sheet({ snap, onSnapChange, header, toolbar, children, label, ab
     <section
       ref={sectionRef}
       data-sheet
+      data-route-focus
       aria-label={label}
       onKeyDown={handleKeyDown}
       style={{ '--sheet-h': dragging ? `${dragHeight}px` : sheetHeight(snap, aboveBottomNav) } as CSSProperties}

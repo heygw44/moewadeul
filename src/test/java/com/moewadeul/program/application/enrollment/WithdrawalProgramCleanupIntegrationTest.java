@@ -37,6 +37,12 @@ class WithdrawalProgramCleanupIntegrationTest {
     private ProgramSanctionCleanupService cleanupService;
 
     @Autowired
+    private ProgramVacancyAlertService vacancyAlertService;
+
+    @Autowired
+    private ProgramPaymentService paymentService;
+
+    @Autowired
     private MemberJpaRepository memberRepository;
 
     @Autowired
@@ -91,6 +97,40 @@ class WithdrawalProgramCleanupIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-01][PV-14][PG-07] 탈퇴하면 빈자리 알림 신청이 모두 지워져서, 정리로 자리가 돌아오거나 다른 신청이 취소돼도 탈퇴한 회원은 알림 대상이 아니다")
+    void withdrawalRemovesVacancyAlerts() {
+        long member = saveMemberWithPassword();
+        long waiting = fixture.saveMember();
+        long holder = fixture.saveMember();
+        long canceler = fixture.saveMember();
+        long programA = fixture.saveProgram(1, false);
+        long programB = fixture.saveProgram(2, false);
+        fixture.saveApplication(programA, member, "PENDING_PAYMENT");
+        fixture.saveVacancyAlert(programA, member);
+        fixture.saveVacancyAlert(programA, waiting);
+        fixture.saveApplication(programB, holder, "CONFIRMED");
+        long cancelerApplicationId = fixture.saveApplication(programB, canceler, "PENDING_PAYMENT");
+        vacancyAlertService.subscribe(member, programB);
+        fixture.saveVacancyAlert(programB, waiting);
+
+        withdrawalService.withdraw(member, PASSWORD, REQUEST_IP);
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
+        paymentService.cancel(canceler, cancelerApplicationId);
+        outboxPublisher.publishPending(OutboxLane.DEFAULT);
+
+        assertThat(fixture.vacancyAlertCount(programA, member)).isZero();
+        assertThat(fixture.vacancyAlertCount(programB, member)).isZero();
+        assertThat(seatReleasedMemberIds(programA)).containsExactly(waiting);
+        assertThat(seatReleasedMemberIds(programB)).containsExactly(waiting);
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM notification WHERE member_id = ? AND type = 'PROGRAM_SEAT_RELEASED'",
+                        Integer.class,
+                        member))
+                .isZero();
+    }
+
+    @Test
     @DisplayName("[F-01][NFR-04] 같은 정리를 다시 실행해도 이벤트가 늘지 않고 처음 기록한 취소·확인 요청 시각이 유지된다")
     void rerunChangesNothing() {
         long member = saveMemberWithPassword();
@@ -112,6 +152,13 @@ class WithdrawalProgramCleanupIntegrationTest {
         assertThat(reviewRequestedAt(confirmed)).isEqualTo(firstReviewAt);
         assertThat(canceledAt(pending)).isEqualTo(firstCanceledAt);
         assertThat(cancelReason(pending)).isEqualTo("WITHDRAWN");
+    }
+
+    private List<Long> seatReleasedMemberIds(long programId) {
+        return fixture.seatReleasedPayloads(programId).stream()
+                .flatMap(payload -> JsonPath.<List<Number>>read(payload, "$.memberIds").stream())
+                .map(Number::longValue)
+                .toList();
     }
 
     private long saveMemberWithPassword() {

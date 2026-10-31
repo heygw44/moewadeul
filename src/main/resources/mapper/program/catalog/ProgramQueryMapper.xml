@@ -83,6 +83,13 @@
         LIMIT 1
     </select>
 
+    <select id="existsVacancyAlert" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM program_vacancy_alert v
+            WHERE v.program_id = #{programId}
+              AND v.member_id = #{memberId})
+    </select>
+
     <select id="selectApplicants" resultType="com.moewadeul.program.infra.catalog.ProgramApplicantRow">
         SELECT a.id AS application_id,
                a.member_id AS member_id,

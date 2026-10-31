@@ -2,6 +2,7 @@ package com.moewadeul.publicdata.application;
 
 import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.transaction.OutsideTransaction;
+import com.moewadeul.publicdata.domain.ResumePoint;
 import com.moewadeul.publicdata.domain.SyncJobRun;
 import com.moewadeul.publicdata.domain.SyncJobRunRepository;
 import com.moewadeul.publicdata.domain.SyncJobStatus;
@@ -71,6 +72,11 @@ public class SyncJobRunService {
         getRun(runId).fail(message, clock.instant());
     }
 
+    @Transactional
+    public void reject(long runId) {
+        getRun(runId).reject(clock.instant());
+    }
+
     @Transactional(readOnly = true)
     public boolean hasCompletedSinceStartOf(SyncJobType jobType, long runId) {
         Instant startedAt = getRun(runId).getStartedAt();
@@ -84,5 +90,5 @@ public class SyncJobRunService {
                 .orElseThrow(() -> new IllegalStateException("실행 기록이 없습니다. runId=" + runId));
     }
 
-    public record SyncJobStart(long runId, String resumeCursor) {}
+    public record SyncJobStart(long runId, Optional<ResumePoint> resumePoint) {}
 }

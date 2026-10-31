@@ -78,10 +78,16 @@ export interface TrustProgress {
   required: number;
 }
 
+export interface TrustLimit {
+  current: number;
+  limit: number;
+}
+
 export interface NextTrustLevel {
   level: number;
   completedCompanions: TrustProgress;
   rejoinRate: TrustProgress;
+  recentEarlyLeaves: TrustLimit;
   noRecentSanction: boolean;
 }
 

@@ -7,9 +7,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.jayway.jsonpath.JsonPath;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.member.domain.Member;
+import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import jakarta.servlet.http.Cookie;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -38,6 +40,7 @@ class NotificationSettingApiIntegrationTest {
     private static final String PASSWORD = "Valid-pass1";
     private static final String SESSION_COOKIE = "SESSION";
     private static final int TYPE_COUNT = 14;
+    private static final Instant VERIFIED_AT = Instant.parse("2026-01-01T00:00:00Z");
 
     @Autowired
     private MockMvcTester mvc;
@@ -60,10 +63,8 @@ class NotificationSettingApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        owner = memberRepository.saveAndFlush(
-                aMember().passwordHash(passwordEncoder.encode(PASSWORD)).build());
-        Member other = memberRepository.saveAndFlush(
-                aMember().passwordHash(passwordEncoder.encode(PASSWORD)).build());
+        owner = memberRepository.saveAndFlush(verifiedMember());
+        Member other = memberRepository.saveAndFlush(verifiedMember());
         ownerSession = login(owner);
         otherSession = login(other);
     }
@@ -219,6 +220,14 @@ class NotificationSettingApiIntegrationTest {
 
     private static List<String> disabledTypes(MvcTestResult result) {
         return JsonPath.read(body(result), "$[?(@.emailEnabled == false)].type");
+    }
+
+    private Member verifiedMember() {
+        return aMember()
+                .passwordHash(passwordEncoder.encode(PASSWORD))
+                .status(MemberStatus.ACTIVE)
+                .emailVerifiedAt(VERIFIED_AT)
+                .build();
     }
 
     private Cookie login(Member member) {

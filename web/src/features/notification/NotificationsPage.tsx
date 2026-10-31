@@ -19,10 +19,13 @@ import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { usePagedList } from '../../components/usePagedList';
 import { formatRelativeKst } from '../../lib/datetime';
+import { GatedButton } from '../../app/session/GatedButton';
 import { safeInternalPath } from '../../app/session/nextPath';
 import { useRequireAuth } from '../../app/session/useRequireAuth';
 import { NOTIFICATION_LABELS, NOTIFICATION_TYPES } from './notificationLabels';
 import { refreshUnreadCount } from './unreadCount';
+
+const itemKey = (item: NotificationItem) => item.notificationId;
 
 export function NotificationsPage() {
   const session = useRequireAuth();
@@ -42,7 +45,7 @@ function fetchPage(_filter: string, page: number, signal?: AbortSignal) {
 }
 
 function NotificationList() {
-  const { current: state, loadingMore, loadMore, updateItems, retry } = usePagedList(true, '', fetchPage);
+  const { current: state, loadingMore, loadMore, updateItems, retry } = usePagedList(true, '', fetchPage, itemKey);
   const [markingAll, setMarkingAll] = useState(false);
   const [actionError, setActionError] = useState<{ cause: unknown } | null>(null);
   const showSkeleton = useDelayedFlag(state === null);
@@ -276,9 +279,14 @@ function EmailSettingsCard() {
             </div>
           )}
           <div>
-            <Button loading={saving} onClick={() => void save()}>
+            <GatedButton
+              variant="primary"
+              loading={saving}
+              unverifiedReason="이메일 인증을 마치면 저장할 수 있어요"
+              onClick={() => void save()}
+            >
               저장
-            </Button>
+            </GatedButton>
           </div>
         </>
       )}

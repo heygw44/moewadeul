@@ -8,6 +8,7 @@ import com.moewadeul.program.domain.ProgramRepository;
 import com.moewadeul.program.infra.enrollment.ExpiryTarget;
 import com.moewadeul.program.infra.enrollment.ProgramPaymentExpiryMapper;
 import java.time.Instant;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -22,22 +23,20 @@ class ProgramPaymentExpiryWriter {
     private final ProgramPaymentExpiryMapper expiryMapper;
     private final OutboxEventRecorder outboxEventRecorder;
     private final ProgramRepository programRepository;
-    private final ProgramSeatReleaseRecorder seatReleaseRecorder;
 
     @Transactional(propagation = Propagation.MANDATORY)
-    boolean expire(ExpiryTarget target, Instant now) {
+    Optional<Program> expire(ExpiryTarget target, Instant now) {
         Program program =
                 programRepository.findByIdForUpdate(target.programId()).orElseThrow(BusinessException::notFound);
         if (expiryMapper.expireIfDue(target.applicationId(), now) == 0) {
-            return false;
+            return Optional.empty();
         }
         outboxEventRecorder.record(
                 ProgramEvents.APPLICATION_EXPIRED,
                 ProgramEvents.APPLICATION_AGGREGATE_TYPE,
                 target.applicationId(),
                 new ProgramEvents.ApplicationPayload(target.applicationId(), target.memberId(), target.programId()));
-        seatReleaseRecorder.record(program, now);
         log.info("program application expired applicationId={} memberId={}", target.applicationId(), target.memberId());
-        return true;
+        return Optional.of(program);
     }
 }
