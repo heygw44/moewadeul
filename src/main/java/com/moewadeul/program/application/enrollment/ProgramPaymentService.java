@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -44,7 +45,7 @@ public class ProgramPaymentService {
         return new ProgramPayResult(applicationId, ProgramApplicationStatus.CONFIRMED, now);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ProgramApplicationCancelResult cancel(long memberId, long applicationId) {
         LockedApplication locked = lockOwnApplication(memberId, applicationId);
         ProgramApplication application = locked.application();

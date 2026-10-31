@@ -30,7 +30,7 @@ public class ProgramVacancyAlertService {
         Instant now = clock.instant();
         requireFull(program, now);
         boolean created = vacancyAlertRepository.subscribe(programId, memberId, now) == 1;
-        // 자리 반환의 잠금 읽기에 막혔던 INSERT는 반환이 커밋된 뒤에 들어가므로, 그 반환을 놓치지 않게 다시 센다.
+        // INSERT는 외래 키 검사가 자리 반환의 행사 행 잠금에 막혀 반환이 커밋된 뒤에 들어가므로, 그 반환을 놓치지 않게 다시 센다.
         requireFull(program, now);
         log.info("program vacancy alert subscribed programId={} memberId={} created={}", programId, memberId, created);
         return created;
