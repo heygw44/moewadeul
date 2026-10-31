@@ -19,8 +19,11 @@ updates:
       interval: weekly
     # typescript-eslint가 지원하는 TypeScript 메이저 버전보다 먼저 올리면 npm ci가 peer 의존성 충돌로 실패한다(#262).
     # 그래서 TypeScript 메이저 버전 올림은 typescript-eslint의 지원을 확인한 뒤 사람이 직접 한다.
+    # @types/node는 CI와 개발 환경의 Node 메이저(ci.yml node-version)에 맞춘다. 앞서 올리면 그 버전에만 있는 API가 타입 검사를 지나 실행 때 실패한다.
     ignore:
       - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
     groups:
       npm:
