@@ -23,6 +23,8 @@ public class SyncJobRun {
 
     public static final int ERROR_MESSAGE_MAX_LENGTH = 2000;
 
+    public static final String REJECTED_MESSAGE = "작업 실행기에 빈 스레드가 없어 작업을 시작하지 못했습니다.";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -108,6 +110,10 @@ public class SyncJobRun {
         this.updatedAt = now;
     }
 
+    public void reject(Instant now) {
+        fail(REJECTED_MESSAGE, now);
+    }
+
     public boolean isStale(Instant now, Duration staleAfter) {
         return isRunning() && updatedAt.plus(staleAfter).isBefore(now);
     }
@@ -116,7 +122,11 @@ public class SyncJobRun {
         if (!isFailed() || progressCursor == null) {
             return Optional.empty();
         }
-        return Optional.of(new ResumePoint(progressCursor, !madeProgress()));
+        return Optional.of(new ResumePoint(progressCursor, !madeProgress() && !wasRejected()));
+    }
+
+    private boolean wasRejected() {
+        return REJECTED_MESSAGE.equals(errorMessage);
     }
 
     private boolean madeProgress() {

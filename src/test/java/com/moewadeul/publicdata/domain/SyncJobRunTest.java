@@ -103,6 +103,18 @@ class SyncJobRunTest {
     }
 
     @Test
+    @DisplayName("[F-06] 실행기가 거절해 한 단위도 시도하지 못한 기록은 다음 단위를 건너뛰지 않고 같은 위치에서 이어받는다")
+    void rejectedRunResumesWithoutSkippingNext() {
+        // given
+        SyncJobRun run = SyncJobRun.start(SyncJobType.GOCAMPING, "1", NOW);
+        run.reject(NOW.plusSeconds(1));
+
+        // when, then
+        assertThat(run.isFailed()).isTrue();
+        assertThat(run.resumePoint()).contains(new ResumePoint("1", false));
+    }
+
+    @Test
     @DisplayName("[F-06] 이어받은 위치도 진행도 없이 실패한 기록은 이어받지 않고 처음부터 시작한다")
     void failedRunWithoutProgressAndCursorStartsFresh() {
         // given

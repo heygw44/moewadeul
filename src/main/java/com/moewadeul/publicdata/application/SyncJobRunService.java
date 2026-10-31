@@ -72,6 +72,11 @@ public class SyncJobRunService {
         getRun(runId).fail(message, clock.instant());
     }
 
+    @Transactional
+    public void reject(long runId) {
+        getRun(runId).reject(clock.instant());
+    }
+
     @Transactional(readOnly = true)
     public boolean hasCompletedSinceStartOf(SyncJobType jobType, long runId) {
         Instant startedAt = getRun(runId).getStartedAt();
