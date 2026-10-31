@@ -33,6 +33,18 @@ jobs:
       # 우리는 단위·통합·포맷 실패를 한 번에 보려고 --continue를 쓴다
       - run: ./gradlew check --continue --console=plain
 
+      # 테스트 프로필은 조건부 빈을 대부분 끈다. 운영 프로필로 컨텍스트를 한 번 띄워 그 빈들의 기동 실패를 여기서 잡는다(#886).
+      - name: 운영 프로필 기동 확인
+        if: ${{ !cancelled() }}
+        run: |
+          ./gradlew bootJar --console=plain
+          scripts/boot-prod-context.sh build/libs/*.jar
+
+      # 임시(#886 비교용): 이미지 빌드(푸시 없음) 비용을 잰다
+      - name: tmp image build
+        if: ${{ !cancelled() }}
+        run: docker build -f Dockerfile -t moewadeul-app:ci .
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:

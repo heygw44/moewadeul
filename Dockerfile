@@ -16,16 +16,8 @@ COPY --from=extract /work/extracted/spring-boot-loader/ ./
 COPY --from=extract /work/extracted/snapshot-dependencies/ ./
 COPY --from=extract /work/extracted/application/ ./
 # 기동 시간을 줄이려고 빌드 때 앱을 한 번 띄워 Java AOT 캐시를 만든다. 로컬 운영 조건(CPU 2개, 768MB)에서 기동이 약 30% 줄었다(#852).
-RUN SPRING_PROFILES_ACTIVE=prod \
-    DB_URL=jdbc:mysql://127.0.0.1:3306/moewadeul DB_USERNAME=training DB_PASSWORD=training \
-    SPRING_FLYWAY_ENABLED=false SPRING_JPA_HIBERNATE_DDL_AUTO=none \
-    SPRING_JPA_PROPERTIES_HIBERNATE_BOOT_ALLOW_JDBC_METADATA_ACCESS=false \
-    SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect \
-    CI_HMAC_KEY=training-run-only-not-a-real-key-0000000000000000 \
-    MAIL_SECRET_HMAC_KEY=training-run-only-not-a-real-key-0000000000000000 \
-    UPLOAD_BUCKET=training OPENAI_API_KEY=training PUBLICDATA_SERVICE_KEY=training \
-    MAIL_USERNAME=training MAIL_APP_PASSWORD=training \
-    java -XX:AOTCacheOutput=app.aot -Dspring.context.exit=onRefresh -jar app.jar
+RUN --mount=type=bind,source=scripts/boot-prod-context.sh,target=/tmp/boot-prod-context.sh \
+    sh /tmp/boot-prod-context.sh app.jar -XX:AOTCacheOutput=app.aot
 USER app
 EXPOSE 8080
 # 컨테이너 메모리 한도의 40%까지만 힙으로 쓴다. 한도 768MB면 힙 최대는 약 308MB다.
