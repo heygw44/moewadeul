@@ -39,7 +39,8 @@ describe('법정 고지 페이지', () => {
         </SessionProvider>,
       );
     });
-    await vi.waitFor(() => expect(container.querySelector('h1')).not.toBeNull());
+    // 지연 로딩한 화면은 act 밖에서 커밋되고 제목 effect는 다음 태스크에 돈다. 짧게 폴링해 그 사이를 매번 밟는다.
+    await vi.waitFor(() => expect(container.querySelector('h1')).not.toBeNull(), { interval: 1 });
   }
 
   it('/privacy는 개인정보 처리방침을 보여 준다', async () => {
