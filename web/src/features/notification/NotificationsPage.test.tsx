@@ -18,9 +18,14 @@ vi.mock('./unreadCount', async (importOriginal) => ({
   refreshUnreadCount: vi.fn(),
 }));
 
+const session = vi.hoisted(() => ({ memberStatus: 'ACTIVE' }));
+
 vi.mock('../../app/session/session', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../app/session/session')>()),
-  useSession: () => ({ status: 'authenticated', me: { memberId: 1, nickname: '산사람' } }),
+  useSession: () => ({
+    status: 'authenticated',
+    me: { memberId: 1, nickname: '산사람', status: session.memberStatus },
+  }),
 }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -50,6 +55,7 @@ describe('알림 화면', () => {
   const unreadCount = () => container.querySelectorAll('section[aria-label="알림 목록"] .sr-only').length;
 
   beforeEach(async () => {
+    session.memberStatus = 'ACTIVE';
     container = document.createElement('div');
     document.body.append(container);
     root = createRoot(container);
@@ -85,5 +91,17 @@ describe('알림 화면', () => {
 
     expect(markAllNotificationsRead).toHaveBeenCalledTimes(1);
     expect(unreadCount()).toBe(0);
+  });
+
+  it('이메일 인증을 마치지 않은 회원에게는 알림 설정 저장 버튼이 잠겨 있다', async () => {
+    session.memberStatus = 'UNVERIFIED';
+    await act(async () => root.render(<NotificationsPage key="unverified" />));
+
+    expect(button('저장')?.disabled).toBe(true);
+    expect(container.textContent).toContain('이메일 인증을 마치면 저장할 수 있어요');
+  });
+
+  it('이메일 인증을 마친 회원은 알림 설정을 저장할 수 있다', () => {
+    expect(button('저장')?.disabled).toBe(false);
   });
 });

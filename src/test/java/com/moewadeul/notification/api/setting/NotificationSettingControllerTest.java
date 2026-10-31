@@ -161,8 +161,12 @@ class NotificationSettingControllerTest {
     }
 
     private static RequestPostProcessor login() {
-        LoginMember loginMember = new LoginMember(MEMBER_ID, "USER", false);
+        LoginMember loginMember = new LoginMember(MEMBER_ID, "USER", true);
         return authentication(UsernamePasswordAuthenticationToken.authenticated(
-                loginMember, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+                loginMember,
+                null,
+                List.of(
+                        new SimpleGrantedAuthority("ROLE_USER"),
+                        new SimpleGrantedAuthority(LoginMember.AUTHORITY_EMAIL_VERIFIED))));
     }
 }

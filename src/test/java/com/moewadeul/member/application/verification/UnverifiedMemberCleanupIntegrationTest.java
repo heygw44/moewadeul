@@ -108,6 +108,24 @@ class UnverifiedMemberCleanupIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-01][EV-05] 알림 설정 행이 있는 만료된 미인증 회원도 같은 묶음의 다른 미인증 회원과 함께 지워진다")
+    void deletesExpiredUnverifiedMemberWithNotificationSettings() {
+        Member withSetting = saveMember(sevenDaysAgo().minus(ONE_SECOND));
+        Member withoutSetting = saveMember(sevenDaysAgo().minus(ONE_SECOND));
+        jdbc.update(
+                "INSERT INTO notification_setting (member_id, type, email_enabled) VALUES (?, 'BASECAMP_APPROVED', FALSE)",
+                withSetting.getId());
+
+        int deleted = cleanupService.deleteExpiredUnverifiedMembers();
+
+        assertThat(deleted).isEqualTo(2);
+        assertThat(count("member WHERE id IN (?, ?)", withSetting.getId(), withoutSetting.getId()))
+                .isZero();
+        assertThat(count("notification_setting WHERE member_id = ?", withSetting.getId()))
+                .isZero();
+    }
+
+    @Test
     @DisplayName("[F-01][EV-05] 정확히 7일 된 미인증 회원은 남기고, 7일이 되기 1초 전인 회원도 남긴다")
     void keepsUnverifiedMembersNotOlderThanSevenDays() {
         Member exactlySevenDays = saveMember(sevenDaysAgo());

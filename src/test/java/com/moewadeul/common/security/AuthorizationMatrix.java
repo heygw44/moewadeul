@@ -46,7 +46,6 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.POST, "/api/me/notifications/1/read"),
             new Endpoint(HttpMethod.POST, "/api/me/notifications/read-all"),
             new Endpoint(HttpMethod.GET, "/api/me/notification-settings"),
-            new Endpoint(HttpMethod.PUT, "/api/me/notification-settings"),
             new Endpoint(HttpMethod.POST, "/api/auth/logout"));
 
     static final List<Endpoint> LOGIN_EMAIL_VERIFICATION = List.of(
@@ -55,6 +54,7 @@ final class AuthorizationMatrix {
 
     static final List<Endpoint> VERIFIED = List.of(
             new Endpoint(HttpMethod.PATCH, "/api/me"),
+            new Endpoint(HttpMethod.PUT, "/api/me/notification-settings"),
             new Endpoint(HttpMethod.POST, "/api/me/identity-verification"),
             new Endpoint(HttpMethod.POST, "/api/bakjis"),
             new Endpoint(HttpMethod.PATCH, "/api/bakjis/1"),

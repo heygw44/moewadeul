@@ -85,7 +85,10 @@ public class SecurityConfig {
     };
 
     private static final String[] VERIFIED_PUT_PATTERNS = {
-        "/api/basecamps/*/contact", "/api/community/posts/*/like", "/api/memories/*/like",
+        "/api/me/notification-settings",
+        "/api/basecamps/*/contact",
+        "/api/community/posts/*/like",
+        "/api/memories/*/like",
     };
 
     private static final String[] VERIFIED_PATCH_PATTERNS = {
