@@ -32,6 +32,7 @@ class EmailVerificationApiIntegrationTest {
     private static final String VERIFY_PATH = "/api/me/email-verification";
     private static final String RESEND_PATH = "/api/me/email-verification/resend";
     private static final String VERIFIED_ONLY_PATH = "/api/bakjis";
+    private static final String ME_PATH = "/api/me";
 
     @Autowired
     private MemberFixture memberFixture;
@@ -102,6 +103,20 @@ class EmailVerificationApiIntegrationTest {
 
         MvcTestResult afterVerification = postJson(VERIFIED_ONLY_PATH, "{}", otherSession);
         assertThat(afterVerification.getResponse().getStatus()).isNotIn(401, 403);
+    }
+
+    @Test
+    @DisplayName("[F-01][TR-03] 인증 API를 거치지 않고 인증된 회원의 세션도 내 정보를 조회하면 이메일 인증이 필요한 경로를 쓸 수 있다")
+    void sessionVerifiedElsewhereGainsAuthorityOnMeLookup() {
+        Member member = memberFixture.saveWithPassword(VALID_PASSWORD);
+        Cookie session = login(member);
+        jdbc.update("UPDATE member SET status = 'ACTIVE', email_verified_at = NOW(6) WHERE id = ?", member.getId());
+        assertThat(postJson(VERIFIED_ONLY_PATH, "{}", session)).hasStatus(HttpStatus.FORBIDDEN);
+
+        assertThat(mvc.get().uri(ME_PATH).cookie(session).exchange()).hasStatus(HttpStatus.OK);
+
+        MvcTestResult afterLookup = postJson(VERIFIED_ONLY_PATH, "{}", session);
+        assertThat(afterLookup.getResponse().getStatus()).isNotIn(401, 403);
     }
 
     @Test
