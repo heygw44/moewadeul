@@ -1,4 +1,5 @@
 import NotFoundPage from './app/NotFoundPage';
+import { SaveNoticeTray } from './app/saveNotice/SaveNoticeTray';
 import { Router } from './app/router';
 import { routes } from './app/routes';
 import { SessionProvider, useSession } from './app/session/session';
@@ -9,6 +10,7 @@ export default function App() {
     <SessionProvider>
       <SignedInUnreadSync />
       <Router routes={routes} fallback={<NotFoundPage />} />
+      <SaveNoticeTray />
     </SessionProvider>
   );
 }
