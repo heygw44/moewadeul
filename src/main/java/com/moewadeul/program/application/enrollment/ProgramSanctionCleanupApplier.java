@@ -11,6 +11,7 @@ import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -24,7 +25,7 @@ class ProgramSanctionCleanupApplier {
     private final OutboxEventRecorder outboxEventRecorder;
     private final Clock clock;
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     boolean cancelPending(long applicationId, long memberId, ProgramCancelReason reason) {
         LockedApplication locked = applicationLocker.lock(applicationId).orElse(null);
         if (locked == null || locked.application().getStatus() != ProgramApplicationStatus.PENDING_PAYMENT) {
