@@ -7,7 +7,9 @@
 #   정의가 없으면 복원한 DB에서 앱은 뜨지만 로그인이 모두 실패한다. 스키마 초기화를 Flyway가 맡아서 앱이 다시 만들어 주지 않는다.
 # - 성공하면 마지막 성공 시각·크기·걸린 시간을 지표 파일로 남긴다. 수집 에이전트가 이 파일을 읽고,
 #   Grafana 알림이 마지막 성공 시각이 26시간을 넘기면 알린다. 그래서 실패를 따로 알리지 않아도 백업이 멈추면 알림이 온다.
-# - S3 버킷의 수명 주기 규칙이 7일 지난 백업을 지운다. 서버의 인스턴스 역할에는 삭제 권한을 주지 않는다.
+# - S3 수명 주기 규칙이 7일 지난 백업을 지운다. 서버의 인스턴스 역할에는 삭제 권한이 없다.
+#   버킷 정책이 If-None-Match 없는 업로드를 거부해(#867 운영 조치), 서버 자격 증명이 새도 이미 있는 백업을 덮어쓰지 못한다. 그래서 aws s3 cp를 쓰지 않는다.
+# - 덤프가 여는 트랜잭션 뒤에서 배포의 Flyway DDL이 메타데이터 잠금을 기다리지 않게, 배포와 같은 잠금을 잡고 시작한다.
 set -euo pipefail
 
 # snap으로 설치한 AWS CLI는 /snap/bin에 있다. systemd가 여는 환경의 PATH에는 이 경로가 없다.
@@ -66,6 +68,11 @@ EOF
 
 main() {
     local started db_name db_user db_password bucket container key size finished
+    exec 9>/run/lock/moewadeul.lock
+    if ! flock -w 1800 9; then
+        log "배포가 1800초 안에 끝나지 않아 백업하지 않는다"
+        exit 1
+    fi
     started="$(date -u +%s)"
     db_name="$(read_env DB_NAME)"
     db_user="$(read_env DB_USERNAME)"
@@ -106,7 +113,7 @@ main() {
     fi
 
     size="$(stat -c %s "$DUMP_FILE")"
-    aws s3 cp "$DUMP_FILE" "s3://$bucket/$key" --region "$REGION" --only-show-errors
+    aws s3api put-object --bucket "$bucket" --key "$key" --body "$DUMP_FILE" --if-none-match '*' --region "$REGION" > /dev/null
     finished="$(date -u +%s)"
     write_metrics "$finished" "$size" "$((finished - started))"
     log "백업 성공: s3://$bucket/$key (${size}바이트, $((finished - started))초)"
