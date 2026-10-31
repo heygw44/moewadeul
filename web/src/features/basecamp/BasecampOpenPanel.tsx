@@ -199,7 +199,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
   const [formError, setFormError] = useState<{ message: string; traceId?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
-  const track = useSaveOutlivingScreen();
+  const awaitWhileOnScreen = useSaveOutlivingScreen();
 
   const endMin = startDate === '' ? undefined : addDaysToLocalDate(startDate, MIN_NIGHTS);
   const endMax = startDate === '' ? undefined : addDaysToLocalDate(startDate, MAX_NIGHTS);
@@ -252,7 +252,7 @@ function OpenForm({ spotId, spotName }: { spotId: number; spotName: string }) {
 
     setSubmitting(true);
     try {
-      const response = await track(
+      const response = await awaitWhileOnScreen(
         idempotentRunner.run(request, (key) => openBasecamp(request, key)),
         {
           pending: '베이스캠프를 여는 중이에요.',

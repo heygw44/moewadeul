@@ -23,7 +23,7 @@ describe('저장 알림 트레이', () => {
   let outcome: string[];
 
   function SaveScreen() {
-    const track = useSaveOutlivingScreen();
+    const awaitWhileOnScreen = useSaveOutlivingScreen();
     return (
       <button
         type="button"
@@ -31,7 +31,7 @@ describe('저장 알림 트레이', () => {
           const save = new Promise<number>((resolve, reject) => {
             settleSave = { resolve, reject };
           });
-          track(save, COPY).then(
+          awaitWhileOnScreen(save, COPY).then(
             (id) => outcome.push(`저장됨 ${id}`),
             () => outcome.push('실패'),
           );

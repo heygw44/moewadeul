@@ -242,7 +242,7 @@ function MemoryForm(props: MemoryFormProps) {
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
-  const track = useSaveOutlivingScreen();
+  const awaitWhileOnScreen = useSaveOutlivingScreen();
 
   useDraftCapture<MemoryDraft>(pathname + search, memberId, {
     visitedDate,
@@ -306,7 +306,7 @@ function MemoryForm(props: MemoryFormProps) {
           spotId: spot?.spotId,
           imageIds,
         };
-        const created = await track(
+        const created = await awaitWhileOnScreen(
           idempotentRunner.run(request, (key) => createMemory(request, key)),
           {
             pending: '기록을 남기는 중이에요.',
@@ -332,7 +332,7 @@ function MemoryForm(props: MemoryFormProps) {
       });
       if (Object.keys(changes).length > 0) {
         const memoryLink = { to: `/memories/${memory.memoryId}`, label: '기록 보기' };
-        await track(updateMemory(memory.memoryId, changes), {
+        await awaitWhileOnScreen(updateMemory(memory.memoryId, changes), {
           pending: '기록을 고치는 중이에요.',
           done: () => ({ title: '기록을 고쳤어요.', link: memoryLink }),
           failed: '기록을 고치지 못했어요.',

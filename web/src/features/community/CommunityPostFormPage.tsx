@@ -219,7 +219,7 @@ function PostForm(props: PostFormProps) {
   const [formError, setFormError] = useState<ApiError | string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [idempotentRunner] = useState(createIdempotentRunner);
-  const track = useSaveOutlivingScreen();
+  const awaitWhileOnScreen = useSaveOutlivingScreen();
 
   useDraftCapture<PostDraft>(pathname + search, memberId, {
     title,
@@ -275,7 +275,7 @@ function PostForm(props: PostFormProps) {
           spotId: spot?.spotId,
           imageIds,
         };
-        const created = await track(
+        const created = await awaitWhileOnScreen(
           idempotentRunner.run(request, (key) => createPost(request, key)),
           {
             pending: '글을 올리는 중이에요.',
@@ -298,7 +298,7 @@ function PostForm(props: PostFormProps) {
       }
       if (Object.keys(changes).length > 0) {
         const postLink = { to: `/community/${post.postId}`, label: '글 보기' };
-        await track(updatePost(post.postId, changes), {
+        await awaitWhileOnScreen(updatePost(post.postId, changes), {
           pending: '글을 고치는 중이에요.',
           done: () => ({ title: '글을 고쳤어요.', link: postLink }),
           failed: '글을 고치지 못했어요.',

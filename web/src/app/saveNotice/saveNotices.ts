@@ -95,7 +95,6 @@ export function useSaveOutlivingScreen(): <T>(save: Promise<T>, copy: SaveCopy<T
       else replaceSaveNotice(entry.noticeId, next);
     }
 
-    // 화면이 사라진 뒤에는 이 promise를 끝내지 않는다. 끝내면 호출한 쪽의 setState·navigate가 남의 화면에서 실행된다.
     return new Promise<T>((resolve, reject) => {
       save.then(
         (result) => {
