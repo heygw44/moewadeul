@@ -9,6 +9,8 @@ import { routes } from '../routes';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
+const POLL_BEFORE_LAZY_PAGE_EFFECTS = { interval: 1 };
+
 describe('법정 고지 페이지', () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -39,8 +41,7 @@ describe('법정 고지 페이지', () => {
         </SessionProvider>,
       );
     });
-    // 지연 로딩한 화면은 act 밖에서 커밋되고 제목 effect는 다음 태스크에 돈다. 짧게 폴링해야 그 틈에 제목을 읽는 단언이 매번 드러난다.
-    await vi.waitFor(() => expect(container.querySelector('h1')).not.toBeNull(), { interval: 1 });
+    await vi.waitFor(() => expect(container.querySelector('h1')).not.toBeNull(), POLL_BEFORE_LAZY_PAGE_EFFECTS);
   }
 
   it('/privacy는 개인정보 처리방침을 보여 준다', async () => {
