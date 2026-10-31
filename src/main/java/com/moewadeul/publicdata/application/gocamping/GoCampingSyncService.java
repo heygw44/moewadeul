@@ -6,6 +6,7 @@ import com.moewadeul.publicdata.application.SyncJob;
 import com.moewadeul.publicdata.application.SyncJobRunService;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
 import com.moewadeul.publicdata.application.SyncJobStoppedException;
+import com.moewadeul.publicdata.domain.ResumePoint;
 import com.moewadeul.publicdata.domain.SyncJobType;
 import com.moewadeul.publicdata.infra.gocamping.GoCampingClient;
 import com.moewadeul.publicdata.infra.gocamping.GoCampingItem;
@@ -59,7 +60,7 @@ public class GoCampingSyncService implements SyncJob<GoCampingSyncResult> {
         OutsideTransaction.require("고캠핑 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         long runId = start.runId();
         try {
-            int firstPage = firstPage(start.resumeCursor());
+            int firstPage = firstPage(runId, start.resumePoint());
             log.info("gocamping sync started runId={} firstPage={}", runId, firstPage);
             GoCampingSyncResult result = syncPages(runId, firstPage);
             syncJobRunService.complete(runId);
@@ -71,11 +72,19 @@ public class GoCampingSyncService implements SyncJob<GoCampingSyncResult> {
         }
     }
 
-    private static int firstPage(String resumeCursor) {
-        if (resumeCursor == null) {
+    // 건너뛴 페이지도 이 실행의 진행 위치에 올린다. 그래야 이 실행이 바로 실패해도 다음 실행이 그다음 페이지를 건너뛴다.
+    private int firstPage(long runId, Optional<ResumePoint> resumePoint) {
+        if (resumePoint.isEmpty()) {
             return 1;
         }
-        return Integer.parseInt(resumeCursor) + 1;
+        int lastDone = Integer.parseInt(resumePoint.get().cursor());
+        if (!resumePoint.get().skipNext()) {
+            return lastDone + 1;
+        }
+        int skippedPage = lastDone + 1;
+        log.warn("gocamping page skipped after repeated failure runId={} page={}", runId, skippedPage);
+        syncJobRunService.recordProgress(runId, String.valueOf(skippedPage), 0, 0);
+        return skippedPage + 1;
     }
 
     private GoCampingSyncResult syncPages(long runId, int firstPage) {

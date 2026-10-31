@@ -240,32 +240,68 @@ class GoCampingSyncServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-06][NFR-06] 이어받은 실행이 한 페이지도 끝내지 못하고 실패하면 진행 기록이 없으므로, 다음 실행은 처음 페이지부터 다시 받는다")
-    void syncRestartsFromFirstPageWhenResumedRunFailedWithoutProgress() {
+    @DisplayName("[F-06][NFR-06] 같은 페이지가 두 번 연속 실패하면 세 번째 실행은 그 페이지를 건너뛰고 뒤 페이지를 끝까지 받는다")
+    void syncSkipsPageThatFailedTwiceInARowAndSyncsLaterPages() {
         // given
         stubPage(1);
         stubPage(3);
         stubPage(4);
-        wireMock.stubFor(get(urlPathEqualTo(BASED_SYNC_LIST_PATH))
-                .withQueryParam("pageNo", equalTo("2"))
-                .willReturn(aResponse().withStatus(500)));
+        stubFailingPage(2);
 
         // when
         assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
         clock.advance(Duration.ofHours(1));
         assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+        int page2RequestsBeforeThirdRun = requestCount(2);
         clock.advance(Duration.ofHours(1));
-        assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+        goCampingSyncService.sync();
 
         // then
         List<RunRow> runs = runs();
-        assertThat(runs).hasSize(3).allSatisfy(run -> assertThat(run.status()).isEqualTo("FAILED"));
+        assertThat(runs).hasSize(3);
+        assertThat(runs.get(0).status()).isEqualTo("FAILED");
+        assertThat(runs.get(0).progressCursor()).isEqualTo("1");
         assertThat(runs.get(0).processedCount()).isEqualTo(2);
+        assertThat(runs.get(1).status()).isEqualTo("FAILED");
         assertThat(runs.get(1).progressCursor()).isEqualTo("1");
         assertThat(runs.get(1).processedCount()).isZero();
-        assertThat(requestCount(1)).isEqualTo(2);
-        assertThat(runs.get(2).progressCursor()).isEqualTo("1");
-        assertThat(runs.get(2).processedCount()).isEqualTo(2);
+        assertThat(runs.get(2).status()).isEqualTo("COMPLETED");
+        assertThat(runs.get(2).progressCursor()).isEqualTo(String.valueOf(PAGE_COUNT));
+        assertThat(runs.get(2).processedCount()).isEqualTo(3);
+        assertThat(requestCount(2)).isEqualTo(page2RequestsBeforeThirdRun);
+        assertThat(requestCount(1)).isEqualTo(1);
+        assertThat(requestCount(3)).isEqualTo(1);
+        assertThat(requestCount(4)).isEqualTo(1);
+        assertThat(externalIds()).containsExactly("146", "1467", "2329", "7002");
+    }
+
+    @Test
+    @DisplayName("[F-06][NFR-06] 건너뛴 페이지를 건너뛴 실행이 끝나면 다음 실행은 처음 페이지부터 다시 받아 그 페이지를 다시 시도한다")
+    void syncRetriesSkippedPageFromFirstPageAfterRunCompleted() {
+        // given
+        stubPage(1);
+        stubPage(3);
+        stubPage(4);
+        stubFailingPage(2);
+        assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+        clock.advance(Duration.ofHours(1));
+        assertThatThrownBy(() -> goCampingSyncService.sync()).isInstanceOf(GoCampingApiException.class);
+        clock.advance(Duration.ofHours(1));
+        goCampingSyncService.sync();
+        int page1RequestsBeforeFourthRun = requestCount(1);
+
+        // when
+        stubPage(2);
+        clock.advance(Duration.ofHours(1));
+        goCampingSyncService.sync();
+
+        // then
+        List<RunRow> runs = runs();
+        assertThat(runs).hasSize(4);
+        assertThat(runs.get(3).status()).isEqualTo("COMPLETED");
+        assertThat(runs.get(3).processedCount()).isEqualTo(RECEIVED_COUNT);
+        assertThat(requestCount(1)).isEqualTo(page1RequestsBeforeFourthRun + 1);
+        assertThat(externalIds()).containsExactly("146", "1467", "2329", "2931", "7001", "7002");
     }
 
     @Test
@@ -532,6 +568,18 @@ class GoCampingSyncServiceIntegrationTest {
 
     private void stubPage(int pageNo) {
         stubPage(pageNo, Map.of());
+    }
+
+    private void stubFailingPage(int pageNo) {
+        wireMock.stubFor(get(urlPathEqualTo(BASED_SYNC_LIST_PATH))
+                .withQueryParam("pageNo", equalTo(String.valueOf(pageNo)))
+                .willReturn(aResponse().withStatus(500)));
+    }
+
+    private List<String> externalIds() {
+        return jdbcTemplate.queryForList(
+                "SELECT external_id FROM public_spot_detail WHERE source = 'GOCAMPING' ORDER BY external_id",
+                String.class);
     }
 
     private void stubPage(int pageNo, Map<String, Map<String, String>> itemOverrides) {

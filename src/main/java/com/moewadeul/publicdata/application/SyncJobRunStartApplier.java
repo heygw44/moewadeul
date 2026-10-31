@@ -4,6 +4,7 @@ import com.moewadeul.common.audit.AdminAuditAction;
 import com.moewadeul.common.audit.AdminAuditRecorder;
 import com.moewadeul.common.audit.AdminAuditTargetType;
 import com.moewadeul.publicdata.application.SyncJobRunService.SyncJobStart;
+import com.moewadeul.publicdata.domain.ResumePoint;
 import com.moewadeul.publicdata.domain.SyncJobRun;
 import com.moewadeul.publicdata.domain.SyncJobRunRepository;
 import com.moewadeul.publicdata.domain.SyncJobType;
@@ -40,8 +41,9 @@ class SyncJobRunStartApplier {
             }
             failStaleRun(running, now);
         }
-        String resumeCursor = latest.flatMap(SyncJobRun::resumeCursor).orElse(null);
-        SyncJobRun started = syncJobRunRepository.save(SyncJobRun.start(jobType, resumeCursor, now));
+        Optional<ResumePoint> resumePoint = latest.flatMap(SyncJobRun::resumePoint);
+        String startCursor = resumePoint.map(ResumePoint::cursor).orElse(null);
+        SyncJobRun started = syncJobRunRepository.save(SyncJobRun.start(jobType, startCursor, now));
         if (adminId != null) {
             adminAuditRecorder.record(
                     adminId,
@@ -50,7 +52,7 @@ class SyncJobRunStartApplier {
                     started.getId(),
                     Map.of("jobType", jobType.name()));
         }
-        return Optional.of(new SyncJobStart(started.getId(), resumeCursor));
+        return Optional.of(new SyncJobStart(started.getId(), resumePoint));
     }
 
     // DB는 종류마다 RUNNING 기록을 하나만 받는다. 그런데 Hibernate는 새 기록의 INSERT를 바로 보내고 기존 기록의 UPDATE는 커밋할 때 보낸다.

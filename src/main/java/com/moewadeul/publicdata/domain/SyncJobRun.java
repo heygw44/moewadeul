@@ -112,11 +112,11 @@ public class SyncJobRun {
         return isRunning() && updatedAt.plus(staleAfter).isBefore(now);
     }
 
-    public Optional<String> resumeCursor() {
-        if (!isFailed() || !madeProgress()) {
+    public Optional<ResumePoint> resumePoint() {
+        if (!isFailed() || progressCursor == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(progressCursor);
+        return Optional.of(new ResumePoint(progressCursor, !madeProgress()));
     }
 
     private boolean madeProgress() {
