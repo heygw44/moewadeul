@@ -28,6 +28,7 @@ import type { BakjiFormValues, FieldErrors, FormError } from './bakjiFormModel';
 type BakjiEditPanelProps = {
   spotId: number;
   draft: LatLng | null;
+  onUseMapCenter?: () => void;
   onLoaded: (detail: SpotDetail) => void;
   onCancel: () => void;
   onSubmitted: (response: BakjiSubmissionResponse) => void;
@@ -37,7 +38,14 @@ type Original = { name: string; lat: number; lng: number; bakji: BakjiDetail };
 
 type LoadResult = { attempt: number; detail: SpotDetail } | { attempt: number; error: unknown };
 
-export function BakjiEditPanel({ spotId, draft, onLoaded, onCancel, onSubmitted }: BakjiEditPanelProps) {
+export function BakjiEditPanel({
+  spotId,
+  draft,
+  onUseMapCenter,
+  onLoaded,
+  onCancel,
+  onSubmitted,
+}: BakjiEditPanelProps) {
   const session = useSession();
   const location = useLocation();
   const showSessionSkeleton = useDelayedFlag(session.status === 'loading');
@@ -62,6 +70,7 @@ export function BakjiEditPanel({ spotId, draft, onLoaded, onCancel, onSubmitted 
         spotId={spotId}
         memberId={session.me.memberId}
         draft={draft}
+        onUseMapCenter={onUseMapCenter}
         onLoaded={onLoaded}
         onSubmitted={onSubmitted}
       />
@@ -90,12 +99,14 @@ function EditLoader({
   spotId,
   memberId,
   draft,
+  onUseMapCenter,
   onLoaded,
   onSubmitted,
 }: {
   spotId: number;
   memberId: number;
   draft: LatLng | null;
+  onUseMapCenter?: () => void;
   onLoaded: (detail: SpotDetail) => void;
   onSubmitted: (response: BakjiSubmissionResponse) => void;
 }) {
@@ -142,6 +153,7 @@ function EditLoader({
         spotId={spotId}
         original={{ name: editable.name, lat: editable.lat, lng: editable.lng, bakji: editable.bakji }}
         draft={draft}
+        onUseMapCenter={onUseMapCenter}
         onSubmitted={(response) => {
           onSubmitted(response);
           setResult(response);
@@ -206,11 +218,13 @@ function EditForm({
   spotId,
   original,
   draft,
+  onUseMapCenter,
   onSubmitted,
 }: {
   spotId: number;
   original: Original;
   draft: LatLng | null;
+  onUseMapCenter?: () => void;
   onSubmitted: (response: BakjiSubmissionResponse) => void;
 }) {
   const [values, setValues] = useState(() => initialValues(original));
@@ -271,6 +285,7 @@ function EditForm({
         fieldErrors={fieldErrors}
         groundOptions={GROUND_OPTIONS_WITH_KEEP}
         groundHint="바닥을 바꿀 때만 골라 주세요."
+        onUseMapCenter={onUseMapCenter}
       />
 
       <Button type="submit" fullWidth loading={submitting}>

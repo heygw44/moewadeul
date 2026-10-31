@@ -77,6 +77,7 @@ export async function createMapView(
     level: initial.level,
     scrollwheel: initial.scrollWheel ?? true,
     draggable: initial.draggable ?? true,
+    keyboardShortcuts: initial.draggable ?? true,
   });
   map.setCopyrightPosition(kakao.maps.CopyrightPosition.BOTTOMRIGHT, true);
   // 폰 지도 화면은 지도 아래쪽을 시트가 덮는다. 카카오는 로고 자리를 아래쪽으로만 고르게 하므로,
@@ -356,6 +357,13 @@ export async function createMapView(
     getCenter(): LatLng {
       const center = map.getCenter();
       return { lat: center.getLat(), lng: center.getLng() };
+    },
+
+    getVisibleCenter(visibleHeight?: number): LatLng {
+      const height = Math.min(visibleHeight ?? container.clientHeight, container.clientHeight);
+      const point = new kakao.maps.Point(container.clientWidth / 2, height / 2);
+      const position = map.getProjection().coordsFromContainerPoint(point);
+      return { lat: position.getLat(), lng: position.getLng() };
     },
 
     setCenter(position: LatLng, level?: number) {

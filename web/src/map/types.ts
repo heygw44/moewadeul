@@ -30,6 +30,7 @@ export interface MapView {
   getBounds(): Bounds;
   getLevel(): number;
   getCenter(): LatLng;
+  getVisibleCenter(visibleHeight?: number): LatLng;
   setCenter(position: LatLng, level?: number): void;
   // setCenter와 같지만 중심을 부드럽게 옮긴다. 화면 밖 먼 곳이면 카카오맵이 바로 옮긴다.
   panTo(position: LatLng, level?: number): void;

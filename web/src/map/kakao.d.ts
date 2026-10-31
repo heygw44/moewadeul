@@ -46,6 +46,7 @@ declare namespace kakao.maps {
     level?: number;
     scrollwheel?: boolean;
     draggable?: boolean;
+    keyboardShortcuts?: boolean;
   }
 
   interface SetLevelOptions {

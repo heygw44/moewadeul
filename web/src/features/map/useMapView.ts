@@ -19,7 +19,12 @@ export function useMapView() {
     const host = hostRef.current;
     if (!host) return;
     const element = document.createElement('div');
-    element.className = 'absolute inset-0';
+    // 카카오 지도의 방향키 이동은 지도를 그린 이 칸이 포커스를 가져야 동작한다.
+    element.className = 'absolute inset-0 focus-visible:-outline-offset-2';
+    element.tabIndex = 0;
+    element.setAttribute('role', 'application');
+    element.setAttribute('aria-label', '지도');
+    element.setAttribute('aria-describedby', 'map-keyboard-hint');
     host.appendChild(element);
 
     let cancelled = false;
