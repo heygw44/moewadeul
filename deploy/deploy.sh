@@ -123,6 +123,15 @@ check_architecture() {
     fi
 }
 
+# backup.sh가 덮어쓰기를 막으려고 put-object --if-none-match를 쓴다. 이 옵션이 없는 CLI면 백업이 매일 실패하고
+# 알림은 26시간 뒤에야 오므로, 서버 파일을 바꾸기 전에 배포를 멈춘다.
+check_backup_cli() {
+    if ! aws s3api put-object --generate-cli-skeleton input 2>/dev/null | grep -q '"IfNoneMatch"'; then
+        log "서버의 AWS CLI가 put-object --if-none-match를 모른다. CLI를 올린 뒤 다시 배포한다"
+        exit 1
+    fi
+}
+
 load_server_env() {
     if [[ ! -f "$SERVER_ENV_FILE" ]]; then
         log "$SERVER_ENV_FILE 이 없다. deploy/server.env.example을 보고 만든다"
@@ -430,6 +439,7 @@ main() {
     trap '(($? == 0)) || restore_last_successful_files' EXIT
 
     check_architecture
+    check_backup_cli
     load_server_env
     load_secrets
 
