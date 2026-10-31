@@ -33,7 +33,7 @@ public class ProgramSeatReleaseRecorder {
         if (applicationRepository.countSeatHolders(programId, now) >= program.getCapacity()) {
             return;
         }
-        // 대상이 없어도 잠금 읽기를 건너뛰지 않는다. 비어 있는 범위의 잠금이 동시에 들어오는 알림 신청의 INSERT를 커밋까지 막는다.
+        // 호출자가 행사 행을 배타 잠금으로 쥐고 있어서, 외래 키 검사로 행사 행에 공유 잠금을 거는 알림 신청 INSERT는 이 반환이 커밋될 때까지 기다린다.
         List<Long> targets = vacancyAlertRepository.lockAlertTargets(programId, notifiedBefore);
         if (targets.isEmpty()) {
             return;

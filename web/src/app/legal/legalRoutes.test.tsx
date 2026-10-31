@@ -9,6 +9,8 @@ import { routes } from '../routes';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
+const POLL_BEFORE_LAZY_PAGE_EFFECTS = { interval: 1 };
+
 describe('법정 고지 페이지', () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -39,7 +41,7 @@ describe('법정 고지 페이지', () => {
         </SessionProvider>,
       );
     });
-    await vi.waitFor(() => expect(container.querySelector('h1')).not.toBeNull());
+    await vi.waitFor(() => expect(container.querySelector('h1')).not.toBeNull(), POLL_BEFORE_LAZY_PAGE_EFFECTS);
   }
 
   it('/privacy는 개인정보 처리방침을 보여 준다', async () => {
@@ -49,7 +51,7 @@ describe('법정 고지 페이지', () => {
     expect(container.textContent).toContain('2026년 10월 29일');
     expect(container.textContent).toContain('개인정보 보호책임자');
     expect(container.textContent).toContain('moewadeul@gmail.com');
-    expect(document.title).toBe('개인정보 처리방침 · 뫼와들');
+    await vi.waitFor(() => expect(document.title).toBe('개인정보 처리방침 · 뫼와들'));
   });
 
   it('/privacy의 목차 링크가 각 조항을 가리킨다', async () => {
@@ -68,6 +70,6 @@ describe('법정 고지 페이지', () => {
 
     expect(container.querySelector('h1')?.textContent).toBe('이용약관');
     expect(container.textContent).toContain('2026년 10월 29일');
-    expect(document.title).toBe('이용약관 · 뫼와들');
+    await vi.waitFor(() => expect(document.title).toBe('이용약관 · 뫼와들'));
   });
 });
