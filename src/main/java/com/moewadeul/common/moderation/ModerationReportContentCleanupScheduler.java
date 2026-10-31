@@ -13,12 +13,12 @@ import org.springframework.stereotype.Component;
         name = "enabled",
         havingValue = "true",
         matchIfMissing = true)
-public class ReportContentCleanupScheduler {
+public class ModerationReportContentCleanupScheduler {
 
     private final List<ReportContentCleanup> cleanups;
     private final ScheduledJobRunner jobRunner;
 
-    public ReportContentCleanupScheduler(List<ReportContentCleanup> cleanups, ScheduledJobRunner jobRunner) {
+    public ModerationReportContentCleanupScheduler(List<ReportContentCleanup> cleanups, ScheduledJobRunner jobRunner) {
         this.cleanups = cleanups;
         this.jobRunner = jobRunner;
         cleanups.forEach(cleanup -> jobRunner.register(jobName(cleanup)));
