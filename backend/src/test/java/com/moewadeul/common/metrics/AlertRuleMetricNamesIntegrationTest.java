@@ -26,10 +26,10 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureMockMvc
 class AlertRuleMetricNamesIntegrationTest {
 
-    private static final Path ALERT_RULES = Path.of("deploy/grafana/alert-rules.json");
+    private static final Path ALERT_RULES = Path.of("../deploy/grafana/alert-rules.json");
 
     private static final Map<String, Path> EXTERNAL_PRODUCERS =
-            Map.of("moewadeul_backup_last_success_timestamp_seconds", Path.of("deploy/backup/backup.sh"));
+            Map.of("moewadeul_backup_last_success_timestamp_seconds", Path.of("../deploy/backup/backup.sh"));
 
     private static final Pattern APP_METRIC =
             Pattern.compile("\\b((?:moewadeul|http_server_requests|hikaricp_connections)_[a-z0-9_]+)");

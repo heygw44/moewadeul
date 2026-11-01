@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 class NotificationLabelsDriftTest {
 
-    private static final Path WEB_LABELS = Path.of("web/src/features/notification/notificationLabels.ts");
+    private static final Path WEB_LABELS = Path.of("../frontend/src/features/notification/notificationLabels.ts");
     private static final Pattern LABEL_KEY = Pattern.compile("^ {2}([A-Z_]+):", Pattern.MULTILINE);
 
     @Test
@@ -23,7 +23,7 @@ class NotificationLabelsDriftTest {
         Set<String> webTypes = webLabelKeys();
 
         assertThat(webTypes)
-                .as("web/src/features/notification/notificationLabels.ts의 NOTIFICATION_LABELS와"
+                .as("frontend/src/features/notification/notificationLabels.ts의 NOTIFICATION_LABELS와"
                         + " NotificationEventTypes.EMAIL_CONFIGURABLE이 어긋났다. 서버에 종류를 더했다면 화면의"
                         + " NotificationType·NOTIFICATION_LABELS에도 더하고, 화면에만 있다면 서버가 받지 않는 종류이므로 화면에서 뺀다")
                 .containsExactlyInAnyOrderElementsOf(NotificationEventTypes.EMAIL_CONFIGURABLE);

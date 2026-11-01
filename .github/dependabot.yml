@@ -3,7 +3,7 @@
 version: 2
 updates:
   - package-ecosystem: gradle
-    directory: /
+    directory: /backend
     target-branch: develop
     schedule:
       interval: weekly
@@ -13,7 +13,7 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: npm
-    directory: /web
+    directory: /frontend
     target-branch: develop
     schedule:
       interval: weekly
@@ -45,7 +45,7 @@ updates:
 
   - package-ecosystem: docker
     directories:
-      - /
+      - /backend
       - /deploy/caddy
     target-branch: develop
     schedule:

@@ -4,9 +4,9 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // docker compose와 백엔드가 읽는 저장소 루트의 .env를 프론트엔드도 함께 읽어서, 개발자가 .env 하나만 채우면 된다.
+  // docker compose와 백엔드가 읽는 backend/.env를 프론트엔드도 함께 읽어서, 개발자가 .env 하나만 채우면 된다.
   // Vite는 VITE_ 접두사가 붙은 변수만 브라우저 코드에 내보내므로 DB 비밀번호 같은 다른 값은 번들에 들어가지 않는다.
-  envDir: '..',
+  envDir: '../backend',
   test: {
     // 화면 코드가 window·document를 쓰므로 jsdom에서 돌린다. 테스트 파일은 소스 옆에 `*.test.ts(x)`로 둔다.
     environment: 'jsdom',
