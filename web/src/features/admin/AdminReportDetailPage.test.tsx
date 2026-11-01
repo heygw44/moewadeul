@@ -135,36 +135,36 @@ describe('관리자 신고 상세의 제재 해제', () => {
     expect(submit?.disabled).toBe(true);
     expect(text(dialog())).toContain('해제 사유를 골라 주세요.');
 
-    await act(async () => reasonRadio('조기 종료').click());
+    await act(async () => reasonRadio('일찍 해제').click());
 
     expect(submit?.disabled).toBe(false);
-    expect(text(dialog())).toContain('다음 제재 단계와 신뢰 회원 판정에 반영돼요.');
+    expect(text(dialog())).toContain('다음 제재 단계와 신뢰 단계에 반영돼요.');
 
-    await act(async () => reasonRadio('처분 취소').click());
+    await act(async () => reasonRadio('제재 취소').click());
 
     expect(text(dialog())).toContain('제재 이력에서 빠져요.');
     expect(liftBodies).toEqual([]);
   });
 
-  it('SN-15: 조기 종료를 고르고 해제하면 reason END_EARLY를 보낸다', async () => {
+  it('SN-15: 일찍 해제를 고르고 해제하면 reason END_EARLY를 보낸다', async () => {
     await openLiftDialog();
 
-    await act(async () => reasonRadio('조기 종료').click());
+    await act(async () => reasonRadio('일찍 해제').click());
     await act(async () => button('해제', dialog())?.click());
 
     expect(liftBodies).toEqual([{ reason: 'END_EARLY' }]);
   });
 
-  it('SN-15: 처분 취소를 고르고 해제하면 reason REVOKE를 보낸다', async () => {
+  it('SN-15: 제재 취소를 고르고 해제하면 reason REVOKE를 보낸다', async () => {
     await openLiftDialog();
 
-    await act(async () => reasonRadio('처분 취소').click());
+    await act(async () => reasonRadio('제재 취소').click());
     await act(async () => button('해제', dialog())?.click());
 
     expect(liftBodies).toEqual([{ reason: 'REVOKE' }]);
   });
 
-  it('SN-15: 해제된 제재는 조기 종료와 처분 취소로 구분해 보여 주고 다시 해제할 수 없다', async () => {
+  it('SN-15: 해제된 제재는 일찍 해제와 제재 취소로 구분해 보여 주고 다시 해제할 수 없다', async () => {
     history = [
       sanction({ sanctionId: 31, status: 'ENDED_EARLY', liftedAt: '2026-10-05T00:00:00Z' }),
       sanction({ sanctionId: 32, status: 'REVOKED', liftedAt: '2026-10-06T00:00:00Z' }),
@@ -178,8 +178,8 @@ describe('관리자 신고 상세의 제재 해제', () => {
       );
     });
 
-    expect(text(container)).toContain('조기 종료');
-    expect(text(container)).toContain('처분 취소');
+    expect(text(container)).toContain('일찍 해제');
+    expect(text(container)).toContain('제재 취소');
     expect(button('해제')).toBeUndefined();
   });
 });

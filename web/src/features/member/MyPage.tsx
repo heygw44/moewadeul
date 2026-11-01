@@ -172,7 +172,7 @@ function TrustCard({ me }: { me: Me }) {
               }
             />
             <ProgressRow
-              label="최근 180일 임박 탈퇴"
+              label="최근 180일 출발 직전 나가기"
               value={`${next.recentEarlyLeaves.current} / ${next.recentEarlyLeaves.limit}회 미만`}
             />
             <ProgressRow label="최근 180일 확정 제재" value={next.noRecentSanction ? '없음' : '있음'} />

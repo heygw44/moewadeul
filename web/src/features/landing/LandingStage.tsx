@@ -16,6 +16,8 @@ import {
 } from './landingStyles';
 import { approach, useFrameWhileVisible, usePrefersReducedMotion, useRise } from './motion';
 
+const HERO_TITLE_CLASS = 'text-[clamp(2.125rem,5vw,4.75rem)] leading-[1.1] font-extrabold tracking-[-0.045em]';
+
 export function LandingStage() {
   return (
     <>
@@ -45,13 +47,12 @@ function Hero() {
       className="relative isolate overflow-hidden bg-brand text-white [&_:focus-visible]:outline-white"
     >
       <div className="relative z-10 mx-auto min-h-[max(44rem,calc(100svh_-_7rem))] max-w-[90rem] px-4 pt-14 lg:px-8 lg:pt-24">
-        <h1 id="hero-title" className={`${DISPLAY_CLASS} ${title.className}`} style={title.style}>
-          어디서 잘지,
-          <br />
-          누구와 갈지.
+        <h1 id="hero-title" className={`${HERO_TITLE_CLASS} ${title.className}`} style={title.style}>
+          잘 곳과 함께 갈 사람을
+          <br />한 번에 찾아요
         </h1>
         <p className={`mt-6 max-w-[30ch] text-lg text-brand-ink lg:text-xl ${intro.className}`} style={intro.style}>
-          합법적인 박지를 지도에서 찾고, 신뢰 단계를 확인한 사람과 함께 떠나요.
+          공원 경계 밖 박지를 지도에서 고르고, 본인확인을 마친 사람과 함께 떠나요.
         </p>
         <div className={`mt-8 ${action.className}`} style={action.style}>
           <Link to="/map" className={`${BASE_CLASSES} ${WHITE_BUTTON_CLASS} group min-h-13 px-7 text-lg`}>
@@ -105,7 +106,7 @@ const HOW_STEPS = [
             <span className="text-[0.9375rem] text-ink-muted">반경 20km</span>
           </div>
           <FragmentRow number={1} name="명지산 계곡 야영장" meta="공공데이터 · 운영 중" distance="3.2km" />
-          <FragmentRow number={2} name="적목리 강변 박지" meta="사용자 제보 · 확인 7명" distance="5.8km" />
+          <FragmentRow number={2} name="적목리 강변 박지" meta="회원 제보 · 확인 7명" distance="5.8km" />
         </div>
       </StepArt>
     ),
@@ -155,7 +156,7 @@ function HowSection() {
   return (
     <section ref={ref} aria-labelledby="how-title" className="mx-auto max-w-[90rem] px-4 pb-24 lg:px-8 lg:pb-40">
       <h2 id="how-title" className={`${H2_CLASS} text-center ${heading.className}`} style={heading.style}>
-        지도 하나로, 출발까지
+        지도에서 출발까지 한 번에
       </h2>
       <ol className="mt-10 grid gap-4 lg:mt-16 lg:grid-cols-[5fr_4fr_4fr]">
         {HOW_STEPS.map((step, index) => {
@@ -181,16 +182,16 @@ function HowSection() {
 
 const APPROACH_ITEMS = [
   {
-    title: '공원 경계로 판정해요',
-    body: '국립·도립·군립공원 경계 자료로 박지를 판정하고, 자료의 출처와 기준일을 함께 보여 줘요.',
+    title: '공원 경계 안인지 확인해요',
+    body: '국립·도립·군립공원 경계 자료로 박지가 공원 안인지 확인하고, 자료의 출처와 기준일을 함께 보여 줘요.',
   },
   {
-    title: '신뢰 단계를 매번 계산해요',
-    body: '본인확인과 동행 기록으로 단계를 정해요. 저장해 둔 값이 아니라 볼 때마다 지금 기록으로 다시 계산해요.',
+    title: '동행 기록으로 신뢰 단계를 매겨요',
+    body: '본인확인과 동행 기록으로 단계를 정해요. 기록이 바뀌면 단계도 바로 달라져요.',
   },
   {
     title: '신고하면 바로 막아요',
-    body: '성희롱이나 위협을 신고하면 확인 전이라도 72시간 동안 이용을 멈춰요. 제재는 경고, 7일, 30일, 영구 정지 순서예요.',
+    body: '성희롱이나 위협을 신고하면 확인 전이라도 72시간 동안 상대 회원의 이용을 멈춰요. 제재는 경고, 7일, 30일, 영구 정지 순서예요.',
   },
 ];
 
@@ -226,7 +227,7 @@ function ApproachSection() {
     >
       <div>
         <h2 id="approach-title" className={`${H2_CLASS} ${heading.className}`} style={heading.style}>
-          판단 근거부터 보여 줘요
+          믿고 떠날 수 있어요
         </h2>
         <ul className="mt-9 flex flex-col gap-6">
           {APPROACH_ITEMS.map((item, index) => {
@@ -295,8 +296,8 @@ const SERVICES = [
   {
     to: '/community',
     name: '커뮤니티',
-    body: '게시판 하나에 글을 올리고, 댓글과 좋아요로 이야기해요.',
-    tags: ['이미지 5장', '댓글', '좋아요'],
+    body: '다녀온 박지와 장비 이야기를 나누고 궁금한 걸 물어봐요.',
+    tags: ['사진 5장', '댓글', '좋아요'],
     action: '글 보기',
   },
 ] as const;
@@ -346,9 +347,9 @@ function ServicesSection() {
 }
 
 const JUDGE_POINTS = [
-  '국립·도립·군립공원 경계 자료로 판정해요',
+  '국립·도립·군립공원 경계 자료로 공원 안인지 확인해요',
   '출처와 기준일이 항상 같이 보여요',
-  '경고 박지로는 베이스캠프를 열 수 없어요',
+  '경고가 붙은 박지로는 베이스캠프를 열 수 없어요',
 ];
 
 const JUDGE_PHOTOS = [
@@ -373,7 +374,7 @@ function JudgeSection() {
             </h2>
             <div className={body.className} style={body.style}>
               <p className="mt-4 max-w-[34ch] text-lg text-brand-ink">
-                핀을 옮겨 보세요. 공원 경계 안인지 바로 판정해요.
+                핀을 옮겨 보세요. 공원 경계 안인지 바로 확인해요.
               </p>
               <ul className="mt-7 flex flex-col gap-3">
                 {JUDGE_POINTS.map((point) => (
@@ -406,7 +407,7 @@ function JudgeSection() {
 const PROGRAM_POINTS = [
   {
     title: '선착순으로 정원만큼만',
-    body: '신청이 한꺼번에 몰려도 정원만큼만 받고, 한 사람은 한 번만 신청해요.',
+    body: '정원이 차면 마감돼요. 한 사람당 한 번만 신청할 수 있어요.',
   },
   {
     title: '결제는 15분 안에',
@@ -455,9 +456,9 @@ function ProgramSection() {
       </div>
       <div>
         <h2 id="program-title" className={`${H2_CLASS} ${heading.className}`} style={heading.style}>
-          공식 행사 자리,
+          공식 행사는
           <br />
-          놓치지 않게
+          선착순으로 받아요
         </h2>
         <ul className="mt-9 flex flex-col gap-6">
           {PROGRAM_POINTS.map((point, index) => {
@@ -505,15 +506,16 @@ const TRUST_LEVELS: TrustLevel[] = [
     level: 1,
     name: '본인확인 · 성인',
     condition: '본인확인을 마친 만 19세 이상이에요.',
-    abilities: ['베이스캠프 열기와 합류', '숙박 행사 신청', '단계 0에서 하는 모든 일'],
+    abilities: ['베이스캠프 열기와 합류', '숙박 행사 신청', '0단계에서 할 수 있는 모든 일'],
     action: { to: '/identity-verification', label: '본인확인하기' },
     featured: true,
   },
   {
     level: 2,
     name: '신뢰 회원',
-    condition: '완료한 동행 3회 이상, 다시 동행 80% 이상, 최근 180일 확정 제재 없음이에요.',
-    abilities: ['"신뢰 회원만" 조건의 베이스캠프 합류', '단계 1에서 하는 모든 일'],
+    condition:
+      '동행을 3번 이상 마치고, 함께한 사람의 80% 이상이 다시 동행하고 싶다고 했고, 최근 180일 동안 제재가 없어야 해요.',
+    abilities: ['"신뢰 회원만" 조건의 베이스캠프 합류', '1단계에서 할 수 있는 모든 일'],
     action: { to: '/basecamps', label: '베이스캠프 둘러보기' },
   },
 ];
@@ -525,11 +527,11 @@ function TrustSection() {
     <section ref={ref} aria-labelledby="trust-title" className="mx-auto max-w-[90rem] px-4 pb-24 lg:px-8 lg:pb-40">
       <div className={heading.className} style={heading.style}>
         <h2 id="trust-title" className={H2_CLASS}>
-          믿을 수 있는 동행은
+          함께 갈 사람은
           <br />
-          단계로 확인해요
+          신뢰 단계로 확인해요
         </h2>
-        <p className="mt-4 max-w-[40ch] text-lg">단계는 저장해 두지 않고, 볼 때마다 지금 기록으로 다시 계산해요.</p>
+        <p className="mt-4 max-w-[40ch] text-lg">본인확인과 동행 기록이 쌓일수록 단계가 올라가요.</p>
       </div>
       <ul className="mt-10 grid gap-6 lg:mt-14 lg:grid-cols-[4fr_5fr_4fr] lg:gap-4">
         {TRUST_LEVELS.map((item, index) => {
@@ -587,11 +589,11 @@ function TrustSection() {
 const FAQ = [
   {
     q: '경고가 붙은 박지는 가면 안 되나요?',
-    a: '경고는 공원 경계 자료로 판정한 참고 정보이고 법적 효력은 없어요. 다만 경고 박지로는 베이스캠프를 열 수 없어요.',
+    a: '경고는 공원 경계 자료로 확인한 참고 정보라서 법적 효력은 없어요. 다만 경고가 붙은 박지로는 베이스캠프를 열 수 없어요.',
   },
   {
     q: '본인확인 때 무엇을 저장하나요?',
-    a: '출생연도와 성별, 그리고 한 사람이 계정 하나만 쓰도록 확인하는 값의 해시만 저장해요. 이름과 전화번호는 남기지 않아요.',
+    a: '출생연도와 성별, 그리고 한 사람이 계정 하나만 쓰도록 확인하는 암호화된 값만 저장해요. 이름과 전화번호는 저장하지 않아요.',
   },
   {
     q: '베이스캠프는 몇 명이 함께 가나요?',
@@ -607,7 +609,7 @@ const FAQ = [
   },
   {
     q: '동행 후기는 언제 보이나요?',
-    a: '내가 상대에게 후기를 쓰거나 다녀온 지 14일이 지나야 받은 후기를 볼 수 있어요. 쓴 뒤에는 고치거나 지울 수 없어요.',
+    a: '내가 상대에게 후기를 쓰면 받은 후기를 볼 수 있어요. 쓰지 않아도 다녀온 지 14일이 지나면 볼 수 있어요. 후기는 한 번 쓰면 수정하거나 삭제할 수 없어요.',
   },
 ];
 

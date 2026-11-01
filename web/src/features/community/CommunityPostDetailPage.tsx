@@ -229,7 +229,7 @@ function PostAside({ post }: { post: CommunityPostDetail | null }) {
             에서 구해요.
           </li>
           <li>금전을 요구하는 글은 신고해 주세요.</li>
-          <li>공원 내에서 야영을 권하는 글은 신고 대상이에요.</li>
+          <li>공원 안에서 야영을 권하는 글은 신고 대상이에요.</li>
         </ul>
       </AsideSection>
     </>

@@ -120,6 +120,8 @@
 
   body {
     min-height: 100dvh;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   ::selection {

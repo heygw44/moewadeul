@@ -87,8 +87,8 @@ export function SiteFooter() {
         </p>
         <div className="mx-auto flex max-w-screen-xl flex-col gap-2 px-4 pt-3 pb-10 text-[0.9375rem] text-ink-muted md:flex-row md:items-center md:justify-between">
           <p className="max-w-[72ch]">
-            공원 경계는 법적 효력이 없는 참고 자료예요. 야영 중에 생긴 일에는 책임지지 않아요. 본인확인과 결제는 시연용
-            가짜 구현이에요. 자세한 내용은 이용약관에서 확인해 주세요.
+            공원 경계는 법적 효력이 없는 참고 자료예요. 야영 중에 생긴 일에는 책임지지 않아요. 본인확인과 결제는
+            시연용이라 실제로 처리되지 않아요. 자세한 내용은 이용약관에서 확인해 주세요.
           </p>
           <p className="flex items-center gap-3">
             <span>© 2026 뫼와들</span>

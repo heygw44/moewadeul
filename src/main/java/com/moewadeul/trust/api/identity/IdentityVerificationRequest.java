@@ -8,10 +8,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record IdentityVerificationRequest(
-        @Schema(description = "출생연도. 1900년부터 올해(한국 시각)까지.", example = "1995") @NotNull(message = "출생연도를 입력해야 합니다.")
+        @Schema(description = "출생연도. 1900년부터 올해(한국 시각)까지.", example = "1995") @NotNull(message = "출생연도를 입력해 주세요.")
         Integer birthYear,
 
-        @Schema(description = "성별. MALE 또는 FEMALE.") @NotNull(message = "성별을 입력해야 합니다.")
+        @Schema(description = "성별. MALE 또는 FEMALE.") @NotNull(message = "성별을 골라 주세요.")
         Gender gender,
 
         @Schema(description = "시연용 식별 문자열. 같은 값이면 같은 사람으로 본다.", example = "demo-person-1")

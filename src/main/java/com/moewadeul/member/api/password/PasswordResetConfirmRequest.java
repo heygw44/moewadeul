@@ -8,7 +8,8 @@ import jakarta.validation.constraints.Size;
 
 @PasswordsMatch(message = "새 비밀번호 확인이 새 비밀번호와 달라요.")
 public record PasswordResetConfirmRequest(
-        @NotBlank(message = "재설정 토큰을 입력해 주세요.") @Size(max = 128, message = "재설정 토큰이 맞지 않아요.")
+        @NotBlank(message = "재설정 링크가 올바르지 않아요. 메일의 링크로 다시 들어와 주세요.")
+        @Size(max = 128, message = "재설정 링크가 올바르지 않아요. 메일의 링크로 다시 들어와 주세요.")
         String token,
 
         @NotBlank(message = "새 비밀번호를 입력해 주세요.") @Size(max = 128, message = "새 비밀번호가 너무 길어요.")

@@ -109,13 +109,13 @@ describe('박지 제보 위치를 키보드로 찍기', () => {
   it('휴대폰에서 시트가 지도를 다 덮으면 가운데 버튼을 숨긴다', async () => {
     const sheetToggle = () =>
       [...container.querySelectorAll('button')].find((element) =>
-        element.getAttribute('aria-label')?.startsWith('시트 크기 바꾸기'),
+        element.getAttribute('aria-label')?.startsWith('패널 크기 바꾸기'),
       );
-    expect(sheetToggle()?.getAttribute('aria-label')).toBe('시트 크기 바꾸기, 지금 절반');
+    expect(sheetToggle()?.getAttribute('aria-label')).toBe('패널 크기 바꾸기, 지금 절반');
 
     await act(async () => sheetToggle()?.click());
 
-    expect(sheetToggle()?.getAttribute('aria-label')).toBe('시트 크기 바꾸기, 지금 전체');
+    expect(sheetToggle()?.getAttribute('aria-label')).toBe('패널 크기 바꾸기, 지금 전체');
     expect(button('지도 가운데를 위치로 쓰기')).toBeUndefined();
     expect(container.textContent).toContain('지도를 눌러 박지 위치를 찍어 주세요');
 

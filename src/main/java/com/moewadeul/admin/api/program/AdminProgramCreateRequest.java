@@ -58,7 +58,7 @@ public record AdminProgramCreateRequest(
         @Max(value = ProgramLimits.PAYMENT_DEADLINE_MINUTES_MAX, message = "결제 기한은 1440분 이하여야 해요.")
         Integer paymentDeadlineMinutes,
 
-        @Schema(description = "숙박 행사 여부.", example = "true") @NotNull(message = "숙박 여부를 입력해야 합니다.")
+        @Schema(description = "숙박 행사 여부.", example = "true") @NotNull(message = "숙박 여부를 골라 주세요.")
         Boolean overnight) {
 
     ProgramCreateCommand toCommand() {

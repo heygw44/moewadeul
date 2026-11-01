@@ -10,10 +10,10 @@ import java.util.List;
 import org.hibernate.validator.constraints.UniqueElements;
 
 public record CompanionReviewWriteRequest(
-        @NotNull(message = "후기를 받을 회원을 입력해 주세요.") @Positive(message = "후기를 받을 회원 ID는 양수여야 해요.")
+        @NotNull(message = "후기를 받을 회원을 골라 주세요.") @Positive(message = "후기를 받을 회원 ID는 양수여야 해요.")
         Long revieweeId,
 
-        @NotNull(message = "다시 동행하고 싶은지 입력해 주세요.") Boolean rejoinWanted,
+        @NotNull(message = "다시 동행하고 싶은지 골라 주세요.") Boolean rejoinWanted,
 
         @Size(max = CompanionReviewWriteRequest.MAX_TAGS, message = "태그는 7개 이하여야 해요.")
         @UniqueElements(message = "같은 태그를 두 번 넣을 수 없어요.")

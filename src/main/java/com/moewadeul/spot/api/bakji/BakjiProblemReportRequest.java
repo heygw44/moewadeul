@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record BakjiProblemReportRequest(
-        @Schema(implementation = BakjiReportReason.class, description = "신고 사유.") @NotNull(message = "신고 사유를 입력해야 합니다.")
+        @Schema(implementation = BakjiReportReason.class, description = "신고 사유.") @NotNull(message = "신고 사유를 골라 주세요.")
         String reason,
 
         @Size(max = BakjiReport.CONTENT_MAX_LENGTH, message = "신고 내용은 1000자 이하여야 해요.")

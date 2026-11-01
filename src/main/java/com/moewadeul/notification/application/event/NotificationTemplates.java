@@ -42,9 +42,9 @@ final class NotificationTemplates {
     }
 
     static List<NotificationDraft> kicked(BasecampEvents.KickedPayload payload) {
-        String body = "캠프 리더가 베이스캠프에서 내보냈어요. 사유: " + kickReasonLabel(payload.reason()) + ". 같은 베이스캠프에는 다시 신청할 수 없어요.";
+        String body = "캠프 리더가 " + kickReasonClause(payload.reason()) + " 베이스캠프에서 내보냈어요. 같은 베이스캠프에는 다시 신청할 수 없어요.";
         return List.of(new NotificationDraft(
-                payload.memberId(), BasecampEvents.KICKED, "베이스캠프에서 제외됨", body, basecampLink(payload.basecampId())));
+                payload.memberId(), BasecampEvents.KICKED, "베이스캠프 내보내기", body, basecampLink(payload.basecampId())));
     }
 
     static List<NotificationDraft> confirmed(BasecampEvents.MembersPayload payload) {
@@ -75,7 +75,7 @@ final class NotificationTemplates {
                 payload,
                 BasecampEvents.MEMBER_CHANGED,
                 "멤버 변경",
-                "멤버 사정으로 베이스캠프 구성이 바뀌었어요.",
+                "멤버가 바뀌어 베이스캠프 구성이 달라졌어요.",
                 basecampLink(payload.basecampId()));
     }
 
@@ -155,12 +155,12 @@ final class NotificationTemplates {
         };
     }
 
-    private static String kickReasonLabel(String reason) {
+    private static String kickReasonClause(String reason) {
         return switch (reason) {
-            case "NO_CONTACT" -> "연락 두절";
-            case "CONDITION_MISMATCH" -> "일정이나 조건이 안 맞음";
-            case "INAPPROPRIATE_BEHAVIOR" -> "부적절한 언행";
-            case "OTHER" -> "기타";
+            case "NO_CONTACT" -> "연락이 닿지 않아";
+            case "CONDITION_MISMATCH" -> "일정이나 조건이 맞지 않아";
+            case "INAPPROPRIATE_BEHAVIOR" -> "부적절한 행동 때문에";
+            case "OTHER" -> "기타 이유로";
             default -> throw new IllegalArgumentException("알 수 없는 강퇴 사유입니다: " + reason);
         };
     }

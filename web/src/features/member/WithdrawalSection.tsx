@@ -90,7 +90,7 @@ function WithdrawalDialog({ onClose }: { onClose: () => void }) {
         <Notice tone="warning" title="탈퇴하기 전에 확인해 주세요">
           <ul className="list-disc pl-5">
             <li>닉네임과 이메일이 지워지고 되돌릴 수 없어요.</li>
-            <li>합류한 베이스캠프에서 빠지고 캠프 리더라면 그 베이스캠프는 취소돼요.</li>
+            <li>합류한 베이스캠프에서 나가요. 캠프 리더라면 그 베이스캠프는 취소돼요.</li>
             <li>결제를 기다리는 행사 신청은 취소돼요.</li>
           </ul>
         </Notice>

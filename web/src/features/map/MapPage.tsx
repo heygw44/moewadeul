@@ -779,7 +779,10 @@ function NearbyList({ nearby, waitingForMap }: { nearby: SpotsNearby; waitingFor
       )}
 
       {nearby.status === 'ready' && nearby.items.length === 0 && (
-        <EmptyState title="반경 안에 조건에 맞는 장소가 없어요" description="반경 칩을 빼거나 조건을 줄여 주세요." />
+        <EmptyState
+          title="반경 안에 조건에 맞는 장소가 없어요"
+          description="반경 조건을 빼거나 다른 조건을 줄여 주세요."
+        />
       )}
 
       {nearby.items.length > 0 && (

@@ -59,7 +59,10 @@ class MemberNotVerifiedAuthorizationIntegrationTest {
 
         assertThat(result).hasStatus(HttpStatus.FORBIDDEN);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("MEMBER_NOT_VERIFIED");
-        assertThat(result).bodyJson().extractingPath("$.message").isEqualTo("이메일 인증이 필요해요.");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.message")
+                .isEqualTo("이메일 인증을 마친 뒤에 할 수 있어요. 메일로 받은 인증 코드를 입력해 주세요.");
         String headerTraceId = result.getResponse().getHeader(TraceIdFilter.HEADER);
         assertThat(headerTraceId).isNotBlank();
         assertThat(result).bodyJson().extractingPath("$.traceId").isEqualTo(headerTraceId);

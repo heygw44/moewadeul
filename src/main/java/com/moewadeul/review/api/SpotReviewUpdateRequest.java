@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record SpotReviewUpdateRequest(
-        @NotNull(message = "평점을 입력해 주세요.")
+        @NotNull(message = "평점을 골라 주세요.")
         @Min(value = SpotReview.MIN_RATING, message = "평점은 1 이상이어야 해요.")
         @Max(value = SpotReview.MAX_RATING, message = "평점은 5 이하여야 해요.")
         Integer rating,

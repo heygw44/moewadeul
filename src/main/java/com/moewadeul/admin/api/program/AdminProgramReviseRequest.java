@@ -53,7 +53,7 @@ public record AdminProgramReviseRequest(
     }
 
     @Schema(hidden = true)
-    @AssertTrue(message = "고칠 필드를 하나 이상 보내 주세요.")
+    @AssertTrue(message = "수정할 항목을 하나 이상 입력해 주세요.")
     public boolean isAnyFieldPresent() {
         return title != null
                 || description != null

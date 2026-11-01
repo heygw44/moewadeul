@@ -20,7 +20,7 @@ public record MyProgramApplicationListRequest(
         Integer size) {
 
     @Schema(hidden = true)
-    @AssertTrue(message = "status는 PENDING_PAYMENT, CONFIRMED, CANCELED, EXPIRED 중 하나여야 해요.")
+    @AssertTrue(message = "신청 상태는 결제 대기, 확정, 취소, 만료 중 하나여야 해요.")
     public boolean isStatusValid() {
         return status == null
                 || EnumParser.find(ProgramApplicationStatus.class, status).isPresent();

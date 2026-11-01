@@ -129,7 +129,10 @@ class MemoryReportControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.message").isEqualTo("입력한 값이 맞지 않아요.");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.message")
+                .isEqualTo("입력한 내용에 맞지 않는 곳이 있어요. 내용을 확인한 뒤 다시 시도해 주세요.");
         assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("reason");
         assertThat(result)
                 .bodyJson()

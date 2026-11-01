@@ -262,13 +262,13 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
           </Dialog>
         )}
         {dialog?.kind === 'kick' && (
-          <Dialog title="멤버 강퇴" onClose={() => !submitting && setDialog(null)}>
+          <Dialog title="멤버 내보내기" onClose={() => !submitting && setDialog(null)}>
             <div className="flex flex-col gap-4">
               <p className="text-base text-ink">
-                {dialog.member.nickname}님을 강퇴할까요? 강퇴된 회원은 다시 신청할 수 없어요.
+                {dialog.member.nickname}님을 내보낼까요? 내보낸 회원은 다시 신청할 수 없어요.
               </p>
               <ChoiceGroup
-                legend="강퇴 사유"
+                legend="내보내는 이유"
                 name="kickReason"
                 options={KICK_OPTIONS}
                 value={kickReason}
@@ -278,15 +278,15 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
               <DialogButtons
                 submitting={submitting}
                 danger
-                confirmLabel="강퇴"
-                confirmDisabledReason={kickReason === null ? '강퇴 사유를 골라 주세요.' : undefined}
+                confirmLabel="내보내기"
+                confirmDisabledReason={kickReason === null ? '내보내는 이유를 골라 주세요.' : undefined}
                 onBack={() => setDialog(null)}
                 onConfirm={() => {
                   if (kickReason === null) return;
                   void run(
                     () => kickMember(basecampId, dialog.member.memberId, kickReason),
-                    `${dialog.member.nickname}님을 강퇴했어요.`,
-                    '강퇴하지 못했어요',
+                    `${dialog.member.nickname}님을 내보냈어요.`,
+                    '내보내지 못했어요',
                   );
                 }}
               />
@@ -567,7 +567,7 @@ function MembersCard({ detail, onKick }: { detail: BasecampDetail; onKick: (memb
                 )}
                 {canKick && member.role !== 'LEADER' && (
                   <Button variant="secondary" className="ml-auto" onClick={() => onKick(member)}>
-                    강퇴
+                    내보내기
                   </Button>
                 )}
               </div>

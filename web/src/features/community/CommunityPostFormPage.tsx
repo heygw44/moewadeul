@@ -106,7 +106,7 @@ function WriteAside() {
             에서 구해요.
           </li>
           <li>금전을 요구하는 글은 신고해 주세요.</li>
-          <li>공원 내에서 야영을 권하는 글은 신고 대상이에요.</li>
+          <li>공원 안에서 야영을 권하는 글은 신고 대상이에요.</li>
           <li>전화번호나 주소 같은 개인정보는 적지 말아 주세요.</li>
         </ul>
       </AsideSection>
@@ -299,9 +299,9 @@ function PostForm(props: PostFormProps) {
       if (Object.keys(changes).length > 0) {
         const postLink = { to: `/community/${post.postId}`, label: '글 보기' };
         await awaitWhileOnScreen(updatePost(post.postId, changes), {
-          pending: '글을 고치는 중이에요.',
-          done: () => ({ title: '글을 고쳤어요.', link: postLink }),
-          failed: '글을 고치지 못했어요.',
+          pending: '글을 수정하는 중이에요.',
+          done: () => ({ title: '글을 수정했어요.', link: postLink }),
+          failed: '글을 수정하지 못했어요.',
           checkAt: postLink,
         });
       }

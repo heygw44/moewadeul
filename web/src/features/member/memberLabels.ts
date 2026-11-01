@@ -36,7 +36,7 @@ export const NEGATIVE_COMPANION_TAGS = ['LATE', 'NO_SHOW', 'LITTERING'] as const
 
 const COMPANION_TAG_LABELS: Record<string, string> = {
   ON_TIME: '시간 약속',
-  LEAVE_NO_TRACE: '흔적 남기지 않기 실천',
+  LEAVE_NO_TRACE: '깔끔한 뒷정리',
   CONSIDERATE: '배려',
   WELL_PREPARED: '준비성',
   LATE: '지각',

@@ -27,7 +27,7 @@ const GENDER_OPTIONS: ReadonlyArray<ChoiceOption<GenderChoice>> = [
   { value: NOT_SET, label: '밝히지 않음' },
 ];
 
-const UNVERIFIED_REASON = '이메일 인증을 마치면 고칠 수 있어요';
+const UNVERIFIED_REASON = '이메일 인증을 마치면 수정할 수 있어요';
 
 type FormField = 'nickname' | 'selfAgeGroup' | 'selfGender';
 type FormErrors = Partial<Record<FormField, string>>;
@@ -120,7 +120,7 @@ export function SelfReportForm({ me, onSaved }: { me: Me; onSaved: () => void })
           disabled={unverified}
           onChange={(event) => setNickname(event.target.value)}
           error={fieldErrors.nickname}
-          hint="2~20자로 정해 주세요. 앞뒤 공백이나 두 칸 이어진 공백은 쓸 수 없어요."
+          hint="2~20자로 정해 주세요. 앞뒤 공백과 연속된 공백은 쓸 수 없어요."
         />
         <ChoiceGroup
           legend="연령대"

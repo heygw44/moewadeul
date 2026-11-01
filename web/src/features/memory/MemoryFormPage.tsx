@@ -333,9 +333,9 @@ function MemoryForm(props: MemoryFormProps) {
       if (Object.keys(changes).length > 0) {
         const memoryLink = { to: `/memories/${memory.memoryId}`, label: '기록 보기' };
         await awaitWhileOnScreen(updateMemory(memory.memoryId, changes), {
-          pending: '기록을 고치는 중이에요.',
-          done: () => ({ title: '기록을 고쳤어요.', link: memoryLink }),
-          failed: '기록을 고치지 못했어요.',
+          pending: '기록을 수정하는 중이에요.',
+          done: () => ({ title: '기록을 수정했어요.', link: memoryLink }),
+          failed: '기록을 수정하지 못했어요.',
           checkAt: memoryLink,
         });
       }

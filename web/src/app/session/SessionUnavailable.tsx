@@ -11,7 +11,7 @@ export function SessionUnavailable({ retrying, onRetry }: { retrying: boolean; o
         <section role="alert" className="w-full max-w-sm rounded-sheet bg-fill p-6">
           <h1 className="text-xl font-bold tracking-tight">로그인 상태를 확인하지 못했어요</h1>
           <p className="mt-2 text-ink-muted">
-            인터넷 연결이 불안정하거나 서버가 잠시 응답하지 않아요. 연결을 확인한 뒤 다시 시도해 주세요.
+            인터넷 연결이 불안정하거나 일시적으로 문제가 생겼어요. 연결을 확인한 뒤 다시 시도해 주세요.
           </p>
           <div className="mt-6">
             <Button loading={retrying} onClick={onRetry}>

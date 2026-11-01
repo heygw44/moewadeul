@@ -12,10 +12,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record SpotReviewCreateRequest(
-        @Schema(description = "방문일(한국 날짜). 오늘보다 뒤일 수 없다.", example = "2026-10-05") @NotNull(message = "방문일을 입력해야 합니다.")
+        @Schema(description = "방문일(한국 날짜). 오늘보다 뒤일 수 없다.", example = "2026-10-05") @NotNull(message = "방문한 날짜를 골라 주세요.")
         LocalDate visitedDate,
 
-        @NotNull(message = "평점을 입력해 주세요.")
+        @NotNull(message = "평점을 골라 주세요.")
         @Min(value = SpotReview.MIN_RATING, message = "평점은 1 이상이어야 해요.")
         @Max(value = SpotReview.MAX_RATING, message = "평점은 5 이하여야 해요.")
         Integer rating,

@@ -67,26 +67,26 @@ describe('내 정보: 신뢰 단계 진행', () => {
     container.remove();
   });
 
-  it('최근 180일 임박 탈퇴 횟수가 한도에 닿았으면 몇 번 중 몇 번인지 한 줄로 보여 준다', async () => {
+  it('최근 180일 출발 직전 나가기 횟수가 한도에 닿았으면 몇 번 중 몇 번인지 한 줄로 보여 준다', async () => {
     vi.mocked(fetchMyTrust).mockResolvedValue(trust({ current: 3, limit: 3 }));
 
     await act(async () => root.render(<MyPage />));
 
-    expect(row('최근 180일 임박 탈퇴')?.textContent).toContain('3 / 3회 미만');
+    expect(row('최근 180일 출발 직전 나가기')?.textContent).toContain('3 / 3회 미만');
   });
 
-  it('임박 탈퇴 줄은 다시 동행 줄과 제재 줄 사이에 놓인다', async () => {
+  it('출발 직전 나가기 줄은 다시 동행 줄과 제재 줄 사이에 놓인다', async () => {
     vi.mocked(fetchMyTrust).mockResolvedValue(trust({ current: 0, limit: 3 }));
 
     await act(async () => root.render(<MyPage />));
 
     const labels = [...container.querySelectorAll('dl > div')].map((element) => element.textContent ?? '');
     const rejoin = labels.findIndex((text) => text.includes('다시 동행하고 싶어요'));
-    const earlyLeave = labels.findIndex((text) => text.includes('최근 180일 임박 탈퇴'));
+    const earlyLeave = labels.findIndex((text) => text.includes('최근 180일 출발 직전 나가기'));
     const sanction = labels.findIndex((text) => text.includes('최근 180일 확정 제재'));
     expect(rejoin).toBeGreaterThanOrEqual(0);
     expect(earlyLeave).toBe(rejoin + 1);
     expect(sanction).toBe(earlyLeave + 1);
-    expect(row('최근 180일 임박 탈퇴')?.textContent).toContain('0 / 3회 미만');
+    expect(row('최근 180일 출발 직전 나가기')?.textContent).toContain('0 / 3회 미만');
   });
 });

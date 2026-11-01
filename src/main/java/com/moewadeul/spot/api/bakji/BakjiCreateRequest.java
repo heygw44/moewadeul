@@ -30,8 +30,8 @@ public record BakjiCreateRequest(
         @Size(max = BakjiContent.DESCRIPTION_MAX_LENGTH, message = "설명은 2000자 이하여야 해요.")
         String description,
 
-        @NotNull(message = "물 유무를 입력해 주세요.") Boolean hasWater,
-        @NotNull(message = "화장실 유무를 입력해 주세요.") Boolean hasToilet,
+        @NotNull(message = "물이 있는지 골라 주세요.") Boolean hasWater,
+        @NotNull(message = "화장실이 있는지 골라 주세요.") Boolean hasToilet,
 
         @Schema(implementation = BakjiSignalLevel.class, description = "통신 상태. 모르면 생략한다.")
         String signalLevel,
