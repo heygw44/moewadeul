@@ -1,0 +1,140 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Tailwind 기본 팔레트(stone, slate, blue 등)를 지워서 프로젝트 토큰만 쓰게 한다 */
+  --color-*: initial;
+  --color-white: #ffffff;
+
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo',
+    'Noto Sans KR', sans-serif;
+  --font-mono: var(--font-sans);
+  --font-mono--font-feature-settings: 'tnum';
+
+  --color-canvas: #ffffff;
+  --color-fill: #f1f4ef;
+  --color-fill-strong: #e6ece4;
+  --color-surface: #ffffff;
+  --color-line: #e3e8e1;
+
+  --color-ink: #16211a;
+  --color-ink-muted: #56625a;
+  --color-ink-subtle: #5f6a62;
+  --color-ink-faint: #8a948c;
+
+  --color-brand: #2c6a45;
+  --color-brand-strong: #22543a;
+  --color-brand-raised: #2c5a40;
+  --color-brand-ink: #dbe6dd;
+
+  --color-accent: #2c6a45;
+  --color-accent-strong: #22543a;
+  --color-accent-deep: #22543a;
+  --color-accent-soft: #e6ece4;
+
+  --color-info: #1d4fc4;
+  --color-info-strong: #173f9c;
+  --color-info-soft: #ebf1fd;
+
+  --color-bakji: #a85d1c;
+  --color-bakji-strong: #6b411c;
+  --color-bakji-soft: #f7efe6;
+
+  --color-warning: #8f4705;
+  --color-warning-line: #c27316;
+  --color-warning-soft: #f6ead8;
+  --color-danger: #c0331b;
+  --color-danger-soft: #fdecea;
+
+  --radius-control: 9999px;
+  --radius-field: 0.75rem;
+  --radius-row: 1.125rem;
+  --radius-sheet: 1.25rem;
+  --radius-drawer: 1.5rem;
+  --shadow-raise: 0 1px 2px rgb(22 33 26 / 0.06), 0 10px 30px rgb(22 33 26 / 0.14);
+
+  --radius-media: 1.5rem;
+
+  --animate-rise: rise 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-line-up: line-up 1.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-marquee: marquee 56s linear infinite;
+  --animate-scene-rise: scene-rise 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes line-up {
+    from {
+      transform: translateY(105%);
+    }
+    to {
+      transform: none;
+    }
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes scene-rise {
+    from {
+      transform: translateY(var(--rise-from, 20%));
+    }
+    to {
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    --bottom-nav-h: calc(4rem + env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 64rem) {
+    :root {
+      --bottom-nav-h: 0px;
+    }
+  }
+
+  html {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    scrollbar-gutter: stable;
+    caret-color: var(--color-brand);
+    scrollbar-color: #c9d1c6 transparent;
+  }
+
+  body {
+    min-height: 100dvh;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-soft);
+    color: var(--color-accent-deep);
+  }
+
+  a {
+    text-underline-offset: 0.2em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-info);
+    outline-offset: 2px;
+  }
+}

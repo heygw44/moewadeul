@@ -20,6 +20,9 @@ jobs:
     name: check
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -28,18 +31,25 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       # 우리는 단위·통합·포맷 실패를 한 번에 보려고 --continue를 쓴다
       - run: ./gradlew check --continue --console=plain
+
+      # 테스트 프로필은 조건부 빈을 대부분 끈다. 운영 프로필로 컨텍스트를 한 번 띄워 그 빈들의 기동 실패를 여기서 잡는다(#886).
+      - name: 운영 프로필 기동 확인
+        if: ${{ !cancelled() }}
+        run: |
+          ./gradlew bootJar --console=plain
+          scripts/boot-prod-context.sh build/libs/*.jar
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: test-reports
           path: |
-            build/reports/tests/
-            build/test-results/
+            backend/build/reports/tests/
+            backend/build/test-results/
           retention-days: 14
           if-no-files-found: warn
 
@@ -47,19 +57,19 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: jacoco-report
-          path: build/reports/jacoco/test/
+          path: backend/build/reports/jacoco/test/
           retention-days: 14
           if-no-files-found: warn
 
-  # 운영 Caddy 이미지는 web/을 npm ci로 설치해서 빌드한다. 그래서 같은 명령을 PR에서도 돌려, 의존성 충돌이나
+  # 운영 Caddy 이미지는 frontend/를 npm ci로 설치해서 빌드한다. 그래서 같은 명령을 PR에서도 돌려, 의존성 충돌이나
   # 타입 오류가 배포 단계가 아니라 PR 단계에서 드러나게 한다(#262). 카카오 키 없이도 빌드는 끝난다.
-  web:
-    name: web
+  frontend:
+    name: frontend
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: web
+        working-directory: frontend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -67,11 +77,11 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
       - run: npm run build
       - run: npm run lint
       - run: npm test
-      # 포맷은 Prettier 설정(web/.prettierrc.json)을 따른다. 어긋나면 로컬에서 npm run format으로 고친다
+      # 포맷은 Prettier 설정(frontend/.prettierrc.json)을 따른다. 어긋나면 로컬에서 npm run format으로 고친다
       - run: npm run format:check

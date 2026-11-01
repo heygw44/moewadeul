@@ -1,0 +1,99 @@
+import type { BasecampApplicant, BasecampStatus, JoinCondition, JoinUnmetReason } from '../../api/types';
+import type { StatusTone } from '../../components/StatusText';
+import { AGE_GROUP_LABELS, GENDER_LABELS } from '../member/memberLabels';
+
+type StatusMeta = { label: string; tone: StatusTone };
+
+export const BASECAMP_STATUS_META: Record<BasecampStatus, StatusMeta> = {
+  RECRUITING: { label: '모집 중', tone: 'accent' },
+  CLOSED: { label: '모집 마감', tone: 'neutral' },
+  CONFIRMED: { label: '확정', tone: 'info' },
+  COMPLETED: { label: '완료', tone: 'neutral' },
+  CANCELED: { label: '취소', tone: 'neutral' },
+};
+
+export const BASECAMP_STATUS_GUIDE: Record<BasecampStatus, string> = {
+  RECRUITING: '',
+  CLOSED: '모집이 마감됐어요.',
+  CONFIRMED: '멤버가 확정돼 이제 신청할 수 없어요.',
+  COMPLETED: '이미 다녀온 베이스캠프예요.',
+  CANCELED: '취소된 베이스캠프예요.',
+};
+
+export const OFF_PLATFORM_PAYMENT_REMINDER = '다른 곳으로 돈을 보내 달라고 하면 신고해 주세요.';
+
+export const AGE_GROUP_STEPS = [20, 30, 40, 50, 60] as const;
+
+export function ageGroupStepLabel(step: number): string {
+  return step >= 60 ? '60대 이상' : `${step}대`;
+}
+
+export function joinConditionSummary(condition: JoinCondition): string {
+  const parts: string[] = [];
+  if (condition.minTrustLevel !== null) {
+    parts.push(`신뢰 단계 ${condition.minTrustLevel} 이상`);
+  }
+  const { ageGroupMin, ageGroupMax } = condition;
+  if (ageGroupMin !== null && ageGroupMax !== null) {
+    if (ageGroupMin === ageGroupMax) {
+      parts.push(ageGroupStepLabel(ageGroupMin));
+    } else if (ageGroupMax >= 60) {
+      parts.push(`${ageGroupMin}대 이상`);
+    } else {
+      parts.push(`${ageGroupMin}~${ageGroupMax}대`);
+    }
+  }
+  if (condition.sameGenderOnly) {
+    parts.push('같은 성별만');
+  }
+  return parts.length === 0 ? '조건 없음' : parts.join(' · ');
+}
+
+type UnmetReasonText = {
+  reason: string;
+  guide?: string;
+};
+
+const IDENTITY_VALUE_GUIDE = '연령대와 성별은 본인확인한 정보로만 따져요.';
+
+const UNMET_REASON_TEXT: Record<JoinUnmetReason, UnmetReasonText> = {
+  TRUST_LEVEL: { reason: '필요한 신뢰 단계에 못 미쳐요.' },
+  AGE_GROUP: { reason: '연령대 조건에 맞지 않아요.', guide: IDENTITY_VALUE_GUIDE },
+  GENDER: { reason: '성별 조건에 맞지 않아요.', guide: IDENTITY_VALUE_GUIDE },
+  DATE_CONFLICT: { reason: '같은 날짜에 이미 합류한 다른 베이스캠프가 있어요.' },
+  ALREADY_JOINED: { reason: '이미 신청했거나 합류한 베이스캠프예요.' },
+  REAPPLY_NOT_ALLOWED: { reason: '거절되거나 내보내졌거나 직접 나간 적이 있어 다시 신청할 수 없어요.' },
+};
+
+export function unmetReasonText(reason: JoinUnmetReason, myTrustLevel: number | null): UnmetReasonText {
+  if (reason === 'TRUST_LEVEL' && myTrustLevel !== null) {
+    return myTrustLevel === 0
+      ? { reason: '합류하려면 본인확인이 필요해요.' }
+      : { reason: '필요한 신뢰 단계에 못 미쳐요.', guide: '동행을 마치고 동행 후기를 받으면 신뢰 단계가 올라가요.' };
+  }
+  return UNMET_REASON_TEXT[reason];
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function nightsBetween(startDate: string, endDate: string): number {
+  return Math.round((Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`)) / DAY_MS);
+}
+
+export function headcountText(headcount: number, capacity: number): string {
+  return `${headcount}/${capacity}`;
+}
+
+export function profileSummary(profile: Omit<BasecampApplicant, 'memberId' | 'nickname'>): string[] {
+  const parts: string[] = [];
+  if (profile.ageGroup) {
+    parts.push(`${AGE_GROUP_LABELS[profile.ageGroup]} ${profile.ageGroupVerified ? '본인확인' : '직접 입력'}`);
+  }
+  if (profile.gender) {
+    parts.push(`${GENDER_LABELS[profile.gender]} ${profile.genderVerified ? '본인확인' : '직접 입력'}`);
+  }
+  if (profile.completedCompanions !== undefined) {
+    parts.push(`완료한 동행 ${profile.completedCompanions}회`);
+  }
+  return parts;
+}
