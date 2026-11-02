@@ -34,7 +34,7 @@ class EmailVerificationController {
             description =
                     "메일로 받은 6자리 코드를 확인한다. 성공하면 회원이 ACTIVE가 되고 현재 세션이 이메일 인증이 필요한 API를 바로 쓸 수 있다. "
                             + "코드는 발송 뒤 10분 동안 유효하다. 코드를 5번 틀리면 그 코드는 무효가 되어 재발송으로 새 코드를 받아야 하고, 그 뒤에는 맞는 코드도 400 EMAIL_CODE_ATTEMPTS_EXCEEDED이다. "
-                            + "형식이 틀리거나 맞지 않으면 400 EMAIL_CODE_INVALID, 만료됐으면 400 EMAIL_CODE_EXPIRED, 이미 인증한 회원이면 409 EMAIL_ALREADY_VERIFIED이다.")
+                            + "코드가 비어 있으면 400 INVALID_INPUT, 형식이 틀리거나 맞지 않으면 400 EMAIL_CODE_INVALID, 만료됐으면 400 EMAIL_CODE_EXPIRED, 이미 인증한 회원이면 409 EMAIL_ALREADY_VERIFIED이다.")
     @PostMapping
     EmailVerificationResponse verify(
             @AuthenticationPrincipal LoginMember loginMember,
