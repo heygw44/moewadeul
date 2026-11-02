@@ -35,7 +35,7 @@ public class Member {
     private static final Set<Integer> BLANK_LETTERS = Set.of(0x115F, 0x1160, 0x3164, 0xFFA0);
 
     public static final String NICKNAME_RULE_MESSAGE = "닉네임은 " + NICKNAME_MIN_LENGTH + "~" + NICKNAME_MAX_LENGTH
-            + "자여야 합니다. 앞뒤 공백, 연속 공백, 보이지 않는 문자는 쓸 수 없고, '" + WITHDRAWN_NICKNAME_PREFIX + "'로 시작하는 닉네임도 쓸 수 없습니다.";
+            + "자여야 해요. 앞뒤 공백, 연속 공백, 보이지 않는 문자는 쓸 수 없고, '" + WITHDRAWN_NICKNAME_PREFIX + "'로 시작하는 닉네임도 쓸 수 없어요.";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

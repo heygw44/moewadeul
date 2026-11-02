@@ -47,11 +47,13 @@ class CommunityPostController {
                     + "keyword를 보내면 searchType(TITLE_CONTENT 기본, TITLE, CONTENT, AUTHOR)에 검색어가 들어간 글만 준다. "
                     + "AUTHOR는 닉네임 부분 일치이고, 댓글은 검색하지 않는다. 검색어는 앞뒤 공백을 지운 뒤 2~50자이고, 공백뿐이면 검색하지 않는다. "
                     + "검색어 안의 %, _, 역슬래시는 와일드카드가 아닌 글자 그대로 찾는다. 장소·인기글 조건과 함께 쓸 수 있다. "
+                    + "검색은 최근 ACTIVE 글 10,000개 안에서만 한다. "
                     + "spotId로 거를 때는 그 장소가 지금 지도에 보이는지 따지지 않는다. "
                     + "각 항목은 postId, 제목(title), 본문 앞 100자(excerpt), 작성자(memberId, nickname), "
-                    + "연결한 장소(spotId, name), 좋아요 수(likeCount), 댓글 수(commentCount), 작성 시각(createdAt)이다. "
+                    + "연결한 장소(spotId, name), 첫 이미지의 주소(thumbnailUrl), 이미지 수(imageCount), "
+                    + "좋아요 수(likeCount), 댓글 수(commentCount), 조회수(viewCount), 작성 시각(createdAt)이다. "
                     + "작성자는 회원 ID와 닉네임만 주고, 탈퇴한 회원이면 익명 닉네임이 나온다. "
-                    + "연결한 장소가 없거나 지도에 보이는(ACTIVE) 상태가 아니면 spot 필드를 뺀다. "
+                    + "연결한 장소가 없거나 지도에 보이는(ACTIVE) 상태가 아니면 spot 필드를, 이미지가 없으면 thumbnailUrl 필드를 뺀다. "
                     + "page는 0부터 시작하고 기본값은 0이다. size는 1~50이고 기본값은 20이다. "
                     + "응답에는 다음 페이지가 있는지(hasNext)만 주고, 조건에 맞는 전체 글 수와 페이지 수는 주지 않는다. "
                     + "마지막 페이지 너머를 요청하면 빈 content와 hasNext=false를 준다. "
@@ -67,8 +69,9 @@ class CommunityPostController {
     @Operation(
             summary = "커뮤니티 글 상세",
             description = "글 한 건을 본문 전체와 함께 돌려준다. 로그인하지 않아도 조회할 수 있다. "
-                    + "필드는 postId, title, content, 작성자(memberId, nickname), 연결한 장소(spotId, name), "
-                    + "좋아요 수(likeCount), 댓글 수(commentCount), 작성 시각(createdAt), 수정 시각(updatedAt)이다. 연결한 장소가 없거나 지도에 보이지 않으면 spot 필드를 뺀다. "
+                    + "필드는 postId, title, content, 이미지(images의 imageId, url), 작성자(memberId, nickname), 연결한 장소(spotId, name), "
+                    + "좋아요 수(likeCount), 댓글 수(commentCount), 조회수(viewCount), 작성 시각(createdAt), 수정 시각(updatedAt)이다. 연결한 장소가 없거나 지도에 보이지 않으면 spot 필드를 뺀다. "
+                    + "조회수는 글 상세를 열 때마다 오르고, 작성자가 자기 글을 열 때는 오르지 않는다. 서버가 조회수를 모아 뒀다가 DB에 반영한다. "
                     + "로그인한 회원에게는 그 회원이 좋아요를 눌렀는지(likedByMe)도 주고, 로그인하지 않았으면 이 필드를 뺀다. "
                     + "글이 없거나 ACTIVE가 아니면(삭제, 숨김, 검토 대기) 404 NOT_FOUND로 응답한다.")
     @GetMapping("/api/community/posts/{postId}")
@@ -81,7 +84,7 @@ class CommunityPostController {
             summary = "커뮤니티 글 작성",
             description = "이메일 인증을 마친 회원이 제목과 본문으로 글을 쓴다. 글은 분류 없이 한 게시판에 올라간다. 201과 함께 postId를 준다. "
                     + "Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. "
-                    + "같은 키로 다시 보내면 글을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. "
+                    + "같은 키와 같은 내용으로 다시 보내면 글을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이다. "
                     + "제목은 공백뿐일 수 없고 100자 이하이며, "
                     + "본문은 공백뿐일 수 없고 10,000자 이하다. 어기면 400 INVALID_INPUT이다. "
                     + "spotId는 선택이다. 보내면 그 장소가 지도에 보이는(ACTIVE) 상태여야 하고, 없거나 ACTIVE가 아니면 400 INVALID_INPUT이다.")

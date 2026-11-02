@@ -53,7 +53,7 @@ class SyncJobAdminController {
     @GetMapping
     PageResponse<SyncJobRunResponse> findRuns(
             @RequestParam(required = false) SyncJobType jobType,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "0") @Min(0) @Max(PageSlice.MAX_PAGE) int page,
             @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
         return PageResponse.from(syncJobRunQueryService.findRuns(jobType, page, size), SyncJobRunResponse::from);
     }

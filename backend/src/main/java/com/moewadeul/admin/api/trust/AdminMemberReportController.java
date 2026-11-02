@@ -52,7 +52,7 @@ class AdminMemberReportController {
     PageResponse<AdminMemberReportSummaryResponse> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Boolean urgent,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "0") @Min(0) @Max(PageSlice.MAX_PAGE) int page,
             @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
         return PageResponse.from(queryService.list(status, urgent, page, size), AdminMemberReportSummaryResponse::from);
     }
@@ -77,11 +77,12 @@ class AdminMemberReportController {
 
     @Operation(
             summary = "신고 조치",
-            description = "검토 중인 신고를 조치 완료(ACTIONED)로 바꾼다. sanction이 있으면 신고 대상 회원에게 제재를 확정하고, "
-                    + "정지이면 그 회원의 세션을 모두 지운다. hideReview는 후기 신고에서만 true로 보낼 수 있고 신고된 동행 후기를 숨긴다. "
-                    + "sanction이 null이고 hideReview가 false이면 400 INVALID_INPUT이다. "
-                    + "서버는 요청 형식(400), 신고 없음(404 NOT_FOUND), 검토 중이 아님(409 REPORT_INVALID_STATE), "
-                    + "신고 종류와 맞지 않는 요청(400), 제재 단계 불일치(400) 순서로 검사한다. 긴급 신고의 임시 정지는 그대로 두고 자연 만료되게 한다.")
+            description =
+                    "검토 중인 신고를 조치 완료(ACTIONED)로 바꾼다. sanction이 있으면 신고 대상 회원에게 제재를 확정하고(type은 WARNING, SUSPEND_7D, SUSPEND_30D, PERMANENT 중 하나이고 reason은 필수이다), "
+                            + "정지이면 그 회원의 세션을 모두 지운다. hideReview는 후기 신고에서만 true로 보낼 수 있고 신고된 동행 후기를 숨긴다. "
+                            + "sanction이 null이고 hideReview가 false이면 400 INVALID_INPUT이다. "
+                            + "서버는 요청 형식과 제재 종류(400), 신고 없음(404 NOT_FOUND), 검토 중이 아님(409 REPORT_INVALID_STATE), "
+                            + "신고 종류와 맞지 않는 요청(400), 제재 단계 불일치(400) 순서로 검사한다. 긴급 신고의 임시 정지는 그대로 두고 자연 만료되게 한다.")
     @PostMapping("/{id}/action")
     MemberReportActionResponse action(
             @PathVariable long id,

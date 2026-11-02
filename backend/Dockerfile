@@ -5,7 +5,7 @@ FROM eclipse-temurin:25-jre AS extract
 WORKDIR /work
 COPY build/libs/*.jar app.jar
 # Spring Boot 도구 모드로 jar를 의존성, 로더, 스냅숏 의존성, 애플리케이션 층으로 나눈다.
-# 코드만 바뀐 배포에서는 서버가 맨 아래 애플리케이션 층만 새로 받는다.
+# 코드만 바뀐 배포에서는 서버가 애플리케이션 층과, 그 위에 쌓는 AOT 캐시 층만 새로 받는다.
 RUN java -Djarmode=tools -jar app.jar extract --layers --destination extracted
 
 FROM eclipse-temurin:25-jre

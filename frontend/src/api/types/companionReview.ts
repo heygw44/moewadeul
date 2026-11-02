@@ -36,3 +36,9 @@ export interface SealedReceivedCompanionReview {
 }
 
 export type ReceivedCompanionReview = RevealedReceivedCompanionReview | SealedReceivedCompanionReview;
+
+export interface PublicCompanionReview {
+  tags: string[];
+  comment: string | null;
+  createdAt: string;
+}

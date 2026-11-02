@@ -5,6 +5,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -138,14 +139,26 @@ class MemoryFeedApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-33] 피드의 page가 아주 커서 건너뛸 건수가 int 범위를 넘어도 500이 아니라 빈 목록을 준다")
-    void feedWithHugePageReturnsEmptyContent() {
-        MvcTestResult result =
-                mvc.get().uri("/api/memories/feed?page=2147483647&size=20").exchange();
+    @DisplayName("[F-33] 피드의 page가 상한이면 500이 아니라 빈 목록을 준다")
+    void feedWithMaxPageReturnsEmptyContent() {
+        MvcTestResult result = mvc.get()
+                .uri("/api/memories/feed?page=" + PageSlice.MAX_PAGE + "&size=" + PageSlice.MAX_SIZE)
+                .exchange();
 
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(result).bodyJson().extractingPath("$.content").asList().isEmpty();
         assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+    }
+
+    @Test
+    @DisplayName("[F-33] 피드의 page가 상한을 넘으면 400 INVALID_INPUT이다")
+    void feedRejectsPageOverCap() {
+        MvcTestResult result = mvc.get()
+                .uri("/api/memories/feed?page=" + ((long) PageSlice.MAX_PAGE + 1))
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
     }
 
     @Test

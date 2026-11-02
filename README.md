@@ -30,10 +30,10 @@
 - **공원 경계 경고와 출처 표시.** 박지가 자연공원 경계 안에 있으면 야영·취사 금지 경고를 띄웁니다. 장소마다 어느 공공데이터에서 왔고 언제 기준인지 함께 보여 줍니다.
 - **장소 상세, 날씨·일몰.** 장소 정보와 회원 후기·평점, 기상청 단기예보, 일출·일몰 시각을 한 화면에서 확인합니다.
 - **베이스캠프(동행 모집).** 장소와 날짜를 정해 동행을 모집합니다. 캠프 리더는 최소 신뢰 단계, 연령대, 동성만 같은 합류 조건을 걸 수 있습니다. 동행이 끝나면 서로 후기를 남깁니다.
-- **신뢰 단계.** 이메일 인증(0단계), 본인확인을 마친 성인(1단계), 동행 3회 이상에 "다시 동행하고 싶어요" 비율 80% 이상인 회원(2단계)으로 나눕니다. 단계는 저장해 두지 않고 매번 조건으로 계산하므로, 제재가 확정되면 그 즉시 반영됩니다.
+- **신뢰 단계.** 이메일 인증(0단계), 본인확인을 마친 성인(1단계), 동행 3회 이상에 "다시 동행하고 싶어요" 비율 80% 이상이고, 최근 180일 동안 출발 48시간 안에 동행에서 빠진 일이 3회 미만이며 확정된 제재가 없는 회원(2단계)으로 나눕니다. 단계는 저장해 두지 않고 매번 조건으로 계산하므로, 제재가 확정되면 그 즉시 반영됩니다.
 - **공식 행사 선착순 신청.** 지자체나 브랜드가 여는 백패킹 행사에 선착순으로 신청합니다. 신청 오픈 순간에 수천 건이 몰려도 정원보다 많이 받지 않고, 자리가 다 차면 빈자리 알림을 신청할 수 있습니다.
 - **커뮤니티와 추억 기록.** 백패킹 경험이나 장비 소개 글을 쓰고, 다녀온 곳을 사진과 함께 피드에 남깁니다.
-- **신고와 제재, 알림.** 회원·글·댓글을 신고하면 관리자가 검토해 제재합니다. 합류 승인이나 행사 결과는 웹 알림함과 이메일로 받습니다.
+- **신고와 제재, 알림.** 회원·박지·글·댓글·추억 기록을 신고하면 관리자가 검토해 처리합니다. 합류 승인이나 행사 결과는 웹 알림함과 이메일로 받습니다.
 
 ## 🛠 기술 스택
 
@@ -46,7 +46,7 @@
 ![MyBatis](https://img.shields.io/badge/MyBatis-B52E31?style=flat-square)
 ![MySQL](https://img.shields.io/badge/MySQL_8.4-4479A1?style=flat-square&logo=mysql&logoColor=white)
 ![Flyway](https://img.shields.io/badge/Flyway-CC0200?style=flat-square&logo=flyway&logoColor=white)
-![JUnit 5](https://img.shields.io/badge/JUnit_5-25A162?style=flat-square&logo=junit5&logoColor=white)
+![JUnit 6](https://img.shields.io/badge/JUnit_6-25A162?style=flat-square&logo=junit5&logoColor=white)
 ![Testcontainers](https://img.shields.io/badge/Testcontainers-291A3F?style=flat-square)
 
 **Frontend**

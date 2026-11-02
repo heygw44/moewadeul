@@ -34,8 +34,15 @@ class SpotDetailController {
                     + "경고이면 공원 이름(areaName), 경계 데이터 출처(source)와 기준일(sourceDate), 참고용 고지(notice), "
                     + "안내(guide)를 함께 준다. 공원 경계 행이 없는 경고에는 areaName, source, sourceDate가 빠진다. "
                     + "날씨는 이 응답에 없고 GET /api/spots/{spotId}/weather로 따로 받는다. 서버는 이 요청에서 외부 API를 부르지 않는다. "
-                    + "아직 채우지 않는 항목이 있어서, rating은 average가 null이고 count가 0이며, "
-                    + "recentReviews, expectedPeople, recruitingBasecamps는 빈 배열로 준다. "
+                    + "rating의 average는 후기를 쓴 회원별로 평균을 낸 뒤 그 평균들을 다시 평균한 값(소수 첫째 자리)이고, "
+                    + "count는 후기 전체 개수다. 후기가 없으면 average는 null이고 count는 0이다. "
+                    + "recentReviews는 최근 후기를 최신순으로 최대 3건 주고, 작성자, 방문일, 별점, 내용, 이미지, 작성 시각이 들어 있다. "
+                    + "expectedPeople은 오늘부터 하룻밤 단위로 날짜별 예상 인원을 센다. 체크아웃하는 날은 세지 않는다. "
+                    + "확정된 베이스캠프의 참여 중인 회원, 개인 일정을 등록한 회원(탈퇴한 회원 제외), "
+                    + "숙박 일정이 있는 예정 행사의 확정 신청자를 더하고, 인원이 0인 날은 뺀다. "
+                    + "recruitingBasecamps는 모집 중인 베이스캠프를 시작일순으로 주고, "
+                    + "제목, 기간, 정원, 현재 인원, 참여 조건(joinCondition)이 들어 있다. "
+                    + "해당하는 항목이 없으면 recentReviews, expectedPeople, recruitingBasecamps는 빈 배열이다. "
                     + "장소가 없거나 숨김, 삭제, 검토 대기 상태이면 404 NOT_FOUND로 응답한다. "
                     + "spotId가 숫자가 아니면 400 INVALID_INPUT으로 응답한다.")
     @GetMapping("/{spotId}")

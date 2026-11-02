@@ -45,7 +45,8 @@ class CommunityCommentController {
                     + "응답에는 전체 개수가 없고, 다음 페이지가 있는지만 hasNext로 알려 준다. "
                     + "각 항목은 commentId, 작성자(memberId, nickname), 내용(content), 삭제 여부(deleted), 작성 시각(createdAt), "
                     + "수정 시각(updatedAt), 답글 목록(replies)이다. replies는 그 댓글의 답글을 오래된 순으로 모두 담은 같은 모양의 배열이고, "
-                    + "답글의 replies는 빈 배열이다. 작성자는 회원 ID와 닉네임만 주고, 탈퇴한 회원이면 익명 닉네임이 나온다. "
+                    + "답글의 replies는 빈 배열이다. 답글에 단 답글에는 답한 답글의 작성자(replyTo의 memberId, nickname)가 더해지고, 그 밖의 댓글에는 이 필드가 없다. "
+                    + "작성자는 회원 ID와 닉네임만 주고, 탈퇴한 회원이면 익명 닉네임이 나온다. "
                     + "삭제·숨김·검토 대기 댓글은 보이는 답글이 있을 때만 commentId, deleted(true), replies만 담은 자리로 나오고, "
                     + "author·content·createdAt·updatedAt 필드는 뺀다. 보이는 답글이 없으면 목록에서 뺀다. "
                     + "글이 없거나 ACTIVE가 아니면 404 NOT_FOUND, 범위를 벗어난 page나 size는 400 INVALID_INPUT이다.")
@@ -61,7 +62,7 @@ class CommunityCommentController {
             summary = "커뮤니티 댓글 작성",
             description = "이메일 인증을 마친 회원이 글에 댓글이나 답글을 쓴다. 201과 함께 commentId를 준다. "
                     + "Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. "
-                    + "같은 키로 다시 보내면 댓글을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. "
+                    + "같은 키와 같은 내용으로 다시 보내면 댓글을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이다. "
                     + "content는 공백뿐일 수 없고 1,000자 이하이며, 어기면 400 INVALID_INPUT이다. "
                     + "parentId는 선택이고, 보내면 그 댓글에 다는 답글이 된다. 부모 댓글이 없거나, 다른 글의 댓글이거나, "
                     + "ACTIVE가 아니면 400 INVALID_INPUT이다. 답글에 답해도 되고, 그러면 새 답글은 그 답글의 최상위 댓글 아래에 저장된다. "

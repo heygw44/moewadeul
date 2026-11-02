@@ -34,7 +34,7 @@ class SpotReviewController {
     @Operation(
             summary = "장소 후기 목록",
             description = "장소의 후기를 작성 시각이 늦은 순서로 돌려준다. 작성 시각이 같으면 reviewId가 큰 것이 먼저다. 로그인하지 않아도 조회할 수 있다. "
-                    + "각 항목은 reviewId, 작성자(memberId, nickname), 방문일(visitedDate), 평점(rating), 내용(content), 작성 시각(createdAt)이다. "
+                    + "각 항목은 reviewId, 작성자(memberId, nickname), 방문일(visitedDate), 평점(rating), 내용(content), 이미지(images의 imageId, url), 작성 시각(createdAt)이다. "
                     + "작성자는 회원 ID와 닉네임만 주고, 탈퇴한 회원이면 익명 닉네임이 나온다. "
                     + "page는 0부터 시작하고 기본값은 0이다. size는 1~50이고 기본값은 20이다. "
                     + "응답에는 전체 개수가 없고, 다음 페이지가 있는지만 hasNext로 알려 준다. "
@@ -69,7 +69,8 @@ class SpotReviewController {
 
     @Operation(
             summary = "장소 후기 수정",
-            description = "작성자가 자기 후기의 평점과 내용을 고친다. rating과 content를 둘 다 보내야 하고, 방문일은 바꿀 수 없다. "
+            description = "작성자가 자기 후기의 평점, 내용, 이미지를 고친다. rating과 content를 둘 다 보내야 하고, 방문일은 바꿀 수 없다. "
+                    + "imageIds를 보내면 그 순서대로 이미지를 통째로 바꾸고, 보내지 않으면 이미지를 그대로 둔다. "
                     + "평점은 1~5 정수이고, 내용은 공백뿐일 수 없으며 2,000자 이하다. 어기면 400 INVALID_INPUT이다. "
                     + "응답은 200과 함께 고친 뒤의 후기 한 건이고, 모양은 후기 목록의 항목과 같다. "
                     + "후기가 없으면 404 NOT_FOUND로, 다른 회원이 쓴 후기이면 403 ACCESS_DENIED로 응답한다. "

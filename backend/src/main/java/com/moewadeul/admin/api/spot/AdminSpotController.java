@@ -36,7 +36,7 @@ class AdminSpotController {
     @GetMapping
     PageResponse<AdminSpotSummaryResponse> list(
             @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "0") @Min(0) @Max(PageSlice.MAX_PAGE) int page,
             @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
         return PageResponse.from(queryService.list(status, page, size), AdminSpotSummaryResponse::from);
     }
