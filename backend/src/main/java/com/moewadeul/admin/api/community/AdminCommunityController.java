@@ -36,7 +36,7 @@ class AdminCommunityController {
     @GetMapping("/posts")
     PageResponse<AdminCommunityPostResponse> listPosts(
             @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "0") @Min(0) @Max(PageSlice.MAX_PAGE) int page,
             @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
         return PageResponse.from(queryService.listPosts(status, page, size), AdminCommunityPostResponse::from);
     }
@@ -67,7 +67,7 @@ class AdminCommunityController {
     @GetMapping("/comments")
     PageResponse<AdminCommunityCommentResponse> listComments(
             @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "0") @Min(0) @Max(PageSlice.MAX_PAGE) int page,
             @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
         return PageResponse.from(queryService.listComments(status, page, size), AdminCommunityCommentResponse::from);
     }

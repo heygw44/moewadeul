@@ -12,6 +12,7 @@ public record PageSlice<T>(List<T> content, int page, int size, boolean hasNext)
     public static final int DEFAULT_PAGE = 0;
     public static final int DEFAULT_SIZE = 20;
     public static final int MAX_SIZE = 50;
+    public static final int MAX_PAGE = Integer.MAX_VALUE / MAX_SIZE;
 
     public static long offsetOf(int page, int size) {
         return (long) page * size;

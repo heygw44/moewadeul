@@ -21,7 +21,9 @@ public record CommunityPostListRequest(
         @Size(min = 2, max = 50, message = "검색어는 2자 이상 50자 이하여야 해요.")
         String keyword,
 
-        @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.") Integer page,
+        @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.")
+        @Max(value = PageSlice.MAX_PAGE, message = "페이지 번호는 " + PageSlice.MAX_PAGE + " 이하여야 해요.")
+        Integer page,
 
         @Min(value = 1, message = "페이지 크기는 1 이상이어야 해요.")
         @Max(value = PageSlice.MAX_SIZE, message = "페이지 크기는 " + PageSlice.MAX_SIZE + " 이하여야 해요.")

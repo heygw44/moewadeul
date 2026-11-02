@@ -85,7 +85,7 @@ class AdminProgramController {
                             regexp = "PENDING_PAYMENT|CONFIRMED|CANCELED|EXPIRED",
                             message = "신청 상태는 결제 대기, 확정, 취소, 만료 중 하나여야 해요.")
                     String status,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "0") @Min(0) @Max(PageSlice.MAX_PAGE) int page,
             @RequestParam(defaultValue = "" + PageSlice.DEFAULT_SIZE) @Min(1) @Max(PageSlice.MAX_SIZE) int size) {
         return PageResponse.from(
                 programAdminService.applications(programId, new ProgramApplicantQuery(status, page, size)),
