@@ -32,7 +32,6 @@ class PasswordResetApplier {
 
     @Transactional
     long apply(String rawToken, String newPassword) {
-        Password password = Password.of(newPassword);
         Instant now = Instant.now(clock);
         PasswordResetToken token = findUsableToken(rawToken, now);
         long memberId = token.getMemberId();
@@ -40,6 +39,7 @@ class PasswordResetApplier {
         if (member.isWithdrawn()) {
             throw invalidToken();
         }
+        Password password = Password.of(newPassword);
         if (passwordResetTokenMapper.markUsed(token.getId(), now) == 0) {
             throw invalidToken();
         }

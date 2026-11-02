@@ -305,6 +305,24 @@ class PasswordResetApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[PW-01][PW-02] 토큰이 유효하지 않으면 새 비밀번호가 규칙을 어겨도 400 PASSWORD_RESET_TOKEN_INVALID다")
+    void invalidTokenIsReportedBeforePasswordPolicy() {
+        String neverIssued = ResetToken.generate(new SecureRandom()).value();
+        String expired = issueToken(memberFixture.saveWithPassword(OLD_PASSWORD));
+        String used = issueToken(memberFixture.saveWithPassword(OLD_PASSWORD));
+        assertThat(postJson(CONFIRM_PATH, confirmBody(used, NEW_PASSWORD), null))
+                .hasStatus(HttpStatus.NO_CONTENT);
+        clock.advance(PasswordResetPolicy.TOKEN_VALIDITY);
+
+        for (String token : List.of(neverIssued, "abc", expired, used)) {
+            MvcTestResult result = postJson(CONFIRM_PATH, confirmBody(token, "Weak-1"), null);
+
+            assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+            assertThat(result).bodyJson().extractingPath("$.code").isEqualTo(INVALID_TOKEN);
+        }
+    }
+
+    @Test
     @DisplayName("[PW-02] 재설정에 성공하면 그 회원의 사용하지 않은 다른 토큰도 무효가 된다")
     void otherUnusedTokensAreInvalidated() {
         Member member = memberFixture.saveWithPassword(OLD_PASSWORD);
