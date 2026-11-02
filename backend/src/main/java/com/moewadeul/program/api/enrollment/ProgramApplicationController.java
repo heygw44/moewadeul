@@ -27,7 +27,7 @@ class ProgramApplicationController {
             description =
                     "로그인한 인증 회원이 자기 결제 대기 신청을 결제해 확정한다. 실제 결제 기관을 부르지 않는다. "
                             + "Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. "
-                            + "같은 키로 다시 보내면 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. "
+                            + "같은 키와 같은 내용으로 다시 보내면 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이다. "
                             + "본문의 method는 FAKE_CARD만 받고, 없거나 모르는 값이면 400 INVALID_INPUT이다. "
                             + "성공하면 200과 applicationId, status(CONFIRMED), paidAt(결제 시각)을 돌려준다. 결제 금액은 결제하는 시점의 행사 참가비이다. "
                             + "오류는 이 순서로 처음 걸린 하나만 응답한다. 신청이 없으면 404 NOT_FOUND, 남의 신청이면 403 ACCESS_DENIED, "

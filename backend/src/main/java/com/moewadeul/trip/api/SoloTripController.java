@@ -39,7 +39,7 @@ class SoloTripController {
             summary = "개인 일정 등록",
             description = "이메일 인증을 마친 회원이 혼자 가는 야영 일정을 등록한다. 201과 함께 soloTripId를 준다. "
                     + "Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. "
-                    + "같은 키로 다시 보내면 일정을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. "
+                    + "같은 키와 같은 내용으로 다시 보내면 일정을 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이다. "
                     + "날짜는 한국 날짜다. 출발일은 내일부터 60일 안이고 종료일은 출발일의 1~3일 뒤여야 하며, 어기거나 빠지면 400 SOLO_TRIP_SCHEDULE_INVALID다. "
                     + "spotId가 없으면 400 INVALID_INPUT이다. 종료일이 오늘보다 뒤인 내 일정이 이미 3개면 409 SOLO_TRIP_LIMIT, "
                     + "그중 하나와 밤이 하루라도 겹치면 409 SOLO_TRIP_OVERLAP이다. 앞 일정의 종료일에 출발하는 일정은 겹치지 않는다. "

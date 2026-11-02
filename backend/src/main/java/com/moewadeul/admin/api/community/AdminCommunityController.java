@@ -63,7 +63,7 @@ class AdminCommunityController {
     @Operation(
             summary = "커뮤니티 댓글 검토 목록",
             description = "글 검토 목록과 같은 파라미터와 정렬로 댓글을 돌려준다. 항목에는 댓글이 달린 글의 postId, 작성자, 내용 전체, 검토 전 신고 정보를 담는다. "
-                    + "작성자가 지운 댓글의 content는 null이다. 다른 status는 400 INVALID_INPUT이다.")
+                    + "작성자가 지운 댓글은 나오지 않는다. 다른 status는 400 INVALID_INPUT이다.")
     @GetMapping("/comments")
     PageResponse<AdminCommunityCommentResponse> listComments(
             @RequestParam(required = false) String status,

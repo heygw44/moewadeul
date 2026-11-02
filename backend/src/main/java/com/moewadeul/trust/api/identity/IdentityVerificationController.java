@@ -28,7 +28,8 @@ class IdentityVerificationController {
                     + "출생연도가 1900년보다 이르거나 올해보다 늦거나, gender가 MALE·FEMALE이 아니거나, "
                     + "demoIdentityKey가 비었거나 100자를 넘으면 400 INVALID_INPUT으로 응답한다. "
                     + "이미 본인확인한 회원이면 409 IDENTITY_ALREADY_VERIFIED로, "
-                    + "같은 demoIdentityKey로 본인확인한 다른 계정이 있으면 409 IDENTITY_CI_DUPLICATED로 응답한다.")
+                    + "같은 demoIdentityKey로 본인확인한 다른 계정이 있으면 409 IDENTITY_CI_DUPLICATED로, "
+                    + "본인확인 제공자를 쓸 수 없는 환경이면 503 IDENTITY_UNAVAILABLE로 응답한다.")
     @PostMapping("/api/me/identity-verification")
     IdentityVerificationResponse verify(
             @AuthenticationPrincipal LoginMember loginMember, @Valid @RequestBody IdentityVerificationRequest request) {

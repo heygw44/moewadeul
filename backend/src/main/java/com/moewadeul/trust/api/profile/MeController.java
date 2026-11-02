@@ -59,7 +59,7 @@ class MeController {
 
     @Operation(
             summary = "내 정보 수정",
-            description = "닉네임과 자기 신고 연령대·성별을 바꾼다. 요청에 없는 필드는 그대로 두고, null로 보낸 연령대·성별은 지운다. "
+            description = "이메일 인증을 마친 회원이 닉네임과 자기 신고 연령대·성별을 바꾼다. 요청에 없는 필드는 그대로 두고, null로 보낸 연령대·성별은 지운다. "
                     + "닉네임은 null로 지울 수 없다. 다른 회원이 쓰는 닉네임이면 409로 응답하고, 응답 형태는 내 정보 조회와 같다.")
     @PatchMapping
     MeResponse update(@AuthenticationPrincipal LoginMember loginMember, @RequestBody MeUpdateRequest request) {
@@ -72,7 +72,7 @@ class MeController {
             description = "비밀번호를 다시 확인한 뒤 개인정보를 지우고 모든 세션을 삭제한다. 이메일 인증 전인 회원도 탈퇴할 수 있다. "
                     + "비밀번호가 틀리면 401(LOGIN_FAILED)이고 로그인 실패로 기록되어 로그인 잠금 계산에 들어간다. "
                     + "실패가 쌓여 잠겨 있으면 비밀번호를 확인하지 않고 429 LOGIN_LOCKED와 Retry-After 헤더를 돌려준다. "
-                    + "진행 중인 베이스캠프와 결제 대기 행사 신청은 응답 뒤에 이벤트 처리기가 정리한다.")
+                    + "진행 중인 베이스캠프와 결제 대기 행사 신청, 추억 기록과 그 사진은 응답 뒤에 이벤트 처리기가 정리한다.")
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void withdraw(

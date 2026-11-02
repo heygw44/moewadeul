@@ -63,7 +63,7 @@ class AdminProgramController {
     @Operation(
             summary = "공식 행사 취소",
             description = "행사를 CANCELED로 바꾸고, 결제 대기·확정 신청을 모두 취소 사유 PROGRAM_CANCELED로 취소하며, 결제 완료 건을 환불 처리한다. "
-                    + "신청자에게 알림은 보내지 않는다. 응답은 programId, status(CANCELED), 함께 취소된 신청 수 canceledApplicationCount이다. "
+                    + "신청자마다 취소 알림 이벤트를 같은 트랜잭션에서 기록하고, 결제 완료 건은 환불도 알린다. 응답은 programId, status(CANCELED), 함께 취소된 신청 수 canceledApplicationCount이다. "
                     + "행사가 없으면 404 NOT_FOUND, 이미 취소된 행사이면 409 PROGRAM_INVALID_STATE이다.")
     @PostMapping("/{programId}/cancel")
     AdminProgramCancelResponse cancel(@PathVariable long programId, @AuthenticationPrincipal LoginMember admin) {
@@ -74,7 +74,7 @@ class AdminProgramController {
             summary = "행사 신청자 목록",
             description =
                     "행사의 신청을 신청한 순서(applicationId 오름차순)로 돌려준다. status(PENDING_PAYMENT, CONFIRMED, CANCELED, EXPIRED)를 보내면 그 상태만 준다. "
-                            + "항목마다 applicationId, member(memberId, nickname), status, paymentDueAt, confirmedAt, canceledAt, cancelReason, createdAt이 있고 이메일은 없다. "
+                            + "항목마다 applicationId, member(memberId, nickname), status, paymentDueAt, confirmedAt, canceledAt, cancelReason, reviewRequestedAt(제재를 받은 회원의 확정 신청을 검토 대상으로 표시한 시각이고 아니면 null), createdAt이 있고 이메일은 없다. "
                             + "page는 0부터 세고 기본값은 0이다. size는 1~50이고 기본값은 20이다. "
                             + "행사가 없으면 404 NOT_FOUND, status가 허용 값이 아니거나 page·size가 범위를 벗어나면 400 INVALID_INPUT이다.")
     @GetMapping("/{programId}/applications")
