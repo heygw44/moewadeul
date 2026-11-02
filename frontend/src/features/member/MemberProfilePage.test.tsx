@@ -8,7 +8,7 @@ import { fetchMemberProfile } from '../../api/members';
 import type { MemberProfile, Page, PublicCompanionReview } from '../../api/types';
 import { MemberProfilePage } from './MemberProfilePage';
 
-const viewer = vi.hoisted(() => ({ status: 'ACTIVE' as 'ACTIVE' | 'UNVERIFIED' }));
+const viewer = vi.hoisted(() => ({ status: 'ACTIVE' as 'ACTIVE' | 'UNVERIFIED', sessionLoading: false }));
 
 vi.mock('../../api/members', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../api/members')>()),
@@ -22,19 +22,22 @@ vi.mock('../../api/companionReviews', async (importOriginal) => ({
 
 vi.mock('../../app/session/session', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../app/session/session')>()),
-  useSession: () => ({
-    status: 'authenticated',
-    me: {
-      memberId: 1,
-      email: 'a@b.c',
-      nickname: '산사람',
-      status: viewer.status,
-      role: 'USER',
-      identityVerified: false,
-      trustLevel: 0,
-    },
-    logout: vi.fn(),
-  }),
+  useSession: () =>
+    viewer.sessionLoading
+      ? { status: 'loading', me: null, logout: vi.fn() }
+      : {
+          status: 'authenticated',
+          me: {
+            memberId: 1,
+            email: 'a@b.c',
+            nickname: '산사람',
+            status: viewer.status,
+            role: 'USER',
+            identityVerified: false,
+            trustLevel: 0,
+          },
+          logout: vi.fn(),
+        },
 }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -72,6 +75,7 @@ describe('회원 프로필: 받은 후기', () => {
 
   beforeEach(() => {
     viewer.status = 'ACTIVE';
+    viewer.sessionLoading = false;
     vi.mocked(fetchMemberProfile).mockResolvedValue(PROFILE);
     vi.mocked(fetchMemberCompanionReviews).mockReset();
     container = document.createElement('div');
@@ -128,6 +132,16 @@ describe('회원 프로필: 받은 후기', () => {
 
     expect(fetchMemberCompanionReviews).not.toHaveBeenCalled();
     expect(text()).toContain('이메일 인증을 마치면 이 회원이 받은 후기를 읽을 수 있어요.');
+    expect(text()).not.toContain('불러오지 못했어요');
+    expect(text()).toContain('완료한 동행');
+  });
+
+  it('세션을 확인하는 동안에는 후기를 부르지 않는다', async () => {
+    viewer.sessionLoading = true;
+
+    await render();
+
+    expect(fetchMemberCompanionReviews).not.toHaveBeenCalled();
     expect(text()).not.toContain('불러오지 못했어요');
     expect(text()).toContain('완료한 동행');
   });

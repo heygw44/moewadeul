@@ -29,6 +29,13 @@ async function fetchReviewPage(memberId: number, page: number, signal?: AbortSig
 
 export function ReceivedReviewsCard({ memberId }: { memberId: number }) {
   const session = useSession();
+  if (session.status === 'loading') {
+    return (
+      <PageCard title={REVIEW_TITLE}>
+        <Skeleton className="h-16 w-full" />
+      </PageCard>
+    );
+  }
   if (session.me?.status === 'UNVERIFIED') {
     return (
       <PageCard title={REVIEW_TITLE}>
