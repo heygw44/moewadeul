@@ -45,8 +45,7 @@ class WeatherTomcatThreadsIntegrationTest {
     private static final String MID_TA_PATH = "/1360000/MidFcstInfoService/getMidTa";
     private static final String RISE_SET_PATH = "/B090041/openapi/service/RiseSetInfoService/getLCRiseSetInfo";
     private static final int WEATHER_REQUESTS = 60;
-    private static final int KMA_DELAY_MILLIS = 1_500;
-    private static final Duration DB_ONLY_LIMIT = Duration.ofMillis(700);
+    private static final int KMA_DELAY_MILLIS = 700;
     private static final Instant NOW = Instant.parse("2026-10-04T05:10:00Z");
 
     private final HttpClient http = HttpClient.newHttpClient();
@@ -64,7 +63,8 @@ class WeatherTomcatThreadsIntegrationTest {
     private MutableClock clock;
 
     @Test
-    @DisplayName("[F-09][NFR-05] 느린 기상청의 차가운 격자 하나로 날씨 요청이 톰캣 스레드 수보다 많이 몰려도, DB만 쓰는 요청은 기다리지 않고 응답한다")
+    @DisplayName(
+            "[F-09][NFR-05] 느리지만 성공하는 기상청의 차가운 격자 하나로 날씨 요청이 톰캣 스레드 수보다 많이 몰려도, DB만 쓰는 요청은 날씨 값을 받는 중인 요청보다 먼저 응답하고, 날씨를 받은 요청도 있다")
     void dbOnlyRequestStaysResponsiveWhileWeatherRequestsWaitOnOneColdGrid() throws Exception {
         // given
         long spotId = insertSeoulCampsite();
@@ -79,18 +79,31 @@ class WeatherTomcatThreadsIntegrationTest {
                 .until(() -> wireMock.findAll(getRequestedFor(urlPathEqualTo(VILAGE_FCST_PATH)))
                                 .size()
                         == 1);
+        // 날씨 요청이 모두 톰캣에 닿은 뒤여야 DB만 쓰는 요청이 그 사이를 새치기한 것이 아니다.
         Thread.sleep(300);
         long startedAt = System.nanoTime();
         HttpResponse<String> dbOnly = sendAsync("/api/spots/" + spotId).get();
         Duration dbOnlyElapsed = Duration.ofNanos(System.nanoTime() - startedAt);
+        long stillWaiting =
+                weather.stream().filter(response -> !response.isDone()).count();
 
         // then
-        log.info("날씨 요청 {}건이 몰린 중 DB만 쓰는 요청의 응답 시간 {}ms", WEATHER_REQUESTS, dbOnlyElapsed.toMillis());
+        log.info(
+                "날씨 요청 {}건이 몰린 중 DB만 쓰는 요청의 응답 시간 {}ms, 그때 아직 응답하지 못한 날씨 요청 {}건",
+                WEATHER_REQUESTS,
+                dbOnlyElapsed.toMillis(),
+                stillWaiting);
         assertThat(dbOnly.statusCode()).isEqualTo(200);
-        assertThat(dbOnlyElapsed).isLessThan(DB_ONLY_LIMIT);
+        assertThat(stillWaiting).isPositive();
+        long withWeather = 0;
         for (CompletableFuture<HttpResponse<String>> response : weather) {
-            assertThat(response.get().statusCode()).isEqualTo(200);
+            HttpResponse<String> done = response.get();
+            assertThat(done.statusCode()).isEqualTo(200);
+            if (done.body().contains("\"weather\":{")) {
+                withWeather++;
+            }
         }
+        assertThat(withWeather).isPositive();
     }
 
     private CompletableFuture<HttpResponse<String>> sendAsync(String path) {
@@ -113,9 +126,10 @@ class WeatherTomcatThreadsIntegrationTest {
     private void stubSlowKma() {
         wireMock.stubFor(get(urlPathEqualTo(VILAGE_FCST_PATH))
                 .willReturn(okJson(readFixture("kma/vilage-fcst.json")).withFixedDelay(KMA_DELAY_MILLIS)));
-        wireMock.stubFor(
-                get(urlPathEqualTo(MID_LAND_FCST_PATH)).willReturn(okJson(readFixture("kma/mid-land-fcst.json"))));
-        wireMock.stubFor(get(urlPathEqualTo(MID_TA_PATH)).willReturn(okJson(readFixture("kma/mid-ta.json"))));
+        wireMock.stubFor(get(urlPathEqualTo(MID_LAND_FCST_PATH))
+                .willReturn(okJson(readFixture("kma/mid-land-fcst.json")).withFixedDelay(KMA_DELAY_MILLIS)));
+        wireMock.stubFor(get(urlPathEqualTo(MID_TA_PATH))
+                .willReturn(okJson(readFixture("kma/mid-ta.json")).withFixedDelay(KMA_DELAY_MILLIS)));
         wireMock.stubFor(get(urlPathEqualTo(RISE_SET_PATH))
                 .willReturn(aResponse()
                         .withStatus(200)
