@@ -19,6 +19,7 @@ import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.weather.application.WeatherProperties;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
@@ -61,6 +62,9 @@ class KasiClientIntegrationTest {
 
     @Autowired
     private KasiProperties kasiProperties;
+
+    @Autowired
+    private WeatherProperties weatherProperties;
 
     @Autowired
     private ExternalApiMetrics metrics;
@@ -265,8 +269,12 @@ class KasiClientIntegrationTest {
     @DisplayName("[NFR-05][NFR-06] 천문연이 재시도까지 실패하면 쉬는 시간 동안 천문연을 부르지 않고, 쉬는 시간이 지나면 다시 부른다")
     void restsAfterOutage() {
         // given
-        KasiClient resting =
-                new KasiClient(kasiProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), metrics, clock);
+        KasiClient resting = new KasiClient(
+                kasiProperties,
+                new ExternalApiProperties(10, Duration.ofSeconds(30)),
+                weatherProperties,
+                metrics,
+                clock);
         stub(serverError());
 
         // when

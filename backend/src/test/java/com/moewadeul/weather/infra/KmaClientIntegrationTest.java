@@ -20,6 +20,7 @@ import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.weather.application.WeatherProperties;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -78,6 +79,9 @@ class KmaClientIntegrationTest {
 
     @Autowired
     private KmaProperties kmaProperties;
+
+    @Autowired
+    private WeatherProperties weatherProperties;
 
     @Autowired
     private JsonMapper jsonMapper;
@@ -342,7 +346,8 @@ class KmaClientIntegrationTest {
         // given
         KmaClient unlimited = new KmaClient(
                 kmaProperties,
-                new ExternalApiProperties(CONCURRENT_REQUESTS, Duration.ZERO),
+                new ExternalApiProperties(10, Duration.ZERO),
+                new WeatherProperties(Duration.ofSeconds(3), 500, CONCURRENT_REQUESTS),
                 jsonMapper,
                 metrics,
                 clock);
@@ -430,6 +435,13 @@ class KmaClientIntegrationTest {
     void rejectsCallsBeyondConcurrentLimitWithoutCallingKma() throws Exception {
         // given
         int threads = 30;
+        KmaClient limited = new KmaClient(
+                kmaProperties,
+                new ExternalApiProperties(10, Duration.ZERO),
+                new WeatherProperties(Duration.ofSeconds(3), 500, 10),
+                jsonMapper,
+                metrics,
+                clock);
         stub(MID_TA_PATH, okJson(readFixture("mid-ta.json")).withFixedDelay(500));
         long successBefore = timerCount("getMidTa", "success");
         ExecutorService executor = Executors.newFixedThreadPool(threads);
@@ -441,7 +453,7 @@ class KmaClientIntegrationTest {
                 ready.countDown();
                 start.await();
                 try {
-                    client.getMidTa("11B10101", TM_FC);
+                    limited.getMidTa("11B10101", TM_FC);
                     return "OK";
                 } catch (KmaApiException e) {
                     return e.isRetryable() ? "RETRYABLE" : "REJECTED";
@@ -555,7 +567,12 @@ class KmaClientIntegrationTest {
 
     private KmaClient clientWithCooldown() {
         return new KmaClient(
-                kmaProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), jsonMapper, metrics, clock);
+                kmaProperties,
+                new ExternalApiProperties(10, Duration.ofSeconds(30)),
+                weatherProperties,
+                jsonMapper,
+                metrics,
+                clock);
     }
 
     private double skippedCount() {

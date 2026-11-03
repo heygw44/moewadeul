@@ -8,6 +8,7 @@ import com.moewadeul.common.external.ExternalCallLimit;
 import com.moewadeul.common.external.ExternalFailureCooldown;
 import com.moewadeul.common.external.PublicDataHttp;
 import com.moewadeul.common.external.PublicDataHttp.RawResponse;
+import com.moewadeul.weather.application.WeatherProperties;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -63,6 +64,7 @@ public class KmaClient {
     public KmaClient(
             KmaProperties properties,
             ExternalApiProperties externalApiProperties,
+            WeatherProperties weatherProperties,
             JsonMapper jsonMapper,
             ExternalApiMetrics metrics,
             Clock clock) {
@@ -71,7 +73,7 @@ public class KmaClient {
         this.serviceKey = properties.serviceKey();
         this.jsonMapper = jsonMapper;
         this.metrics = metrics;
-        this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
+        this.callLimit = new ExternalCallLimit(API, weatherProperties.maxConcurrentCalls(), metrics);
         this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 
