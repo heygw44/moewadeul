@@ -7,8 +7,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("moewadeul.weather")
 public record WeatherProperties(
         @DefaultValue("3s") Duration responseDeadline,
-        @DefaultValue("500") int maxInFlight,
-        @DefaultValue("25") int maxConcurrentCalls) {
+        @DefaultValue("500") int maxInFlight) {
 
     private static final String PREFIX = "moewadeul.weather.";
 
@@ -18,9 +17,6 @@ public record WeatherProperties(
         }
         if (maxInFlight < 1) {
             throw new IllegalArgumentException(PREFIX + "maxInFlight must be positive");
-        }
-        if (maxConcurrentCalls < 1) {
-            throw new IllegalArgumentException(PREFIX + "maxConcurrentCalls must be positive");
         }
     }
 }

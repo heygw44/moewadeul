@@ -6,7 +6,6 @@ import com.moewadeul.common.external.ExternalCallLimit;
 import com.moewadeul.common.external.ExternalFailureCooldown;
 import com.moewadeul.common.external.PublicDataHttp;
 import com.moewadeul.common.external.PublicDataHttp.RawResponse;
-import com.moewadeul.weather.application.WeatherProperties;
 import java.io.IOException;
 import java.io.StringReader;
 import java.time.Clock;
@@ -52,14 +51,14 @@ public class KasiClient {
     public KasiClient(
             KasiProperties properties,
             ExternalApiProperties externalApiProperties,
-            WeatherProperties weatherProperties,
+            WeatherCallProperties callProperties,
             ExternalApiMetrics metrics,
             Clock clock) {
         this.restClient = PublicDataHttp.createRestClient(
                 properties.baseUrl(), properties.connectTimeout(), properties.readTimeout());
         this.serviceKey = properties.serviceKey();
         this.metrics = metrics;
-        this.callLimit = new ExternalCallLimit(API, weatherProperties.maxConcurrentCalls(), metrics);
+        this.callLimit = new ExternalCallLimit(API, callProperties.maxConcurrentCalls(), metrics);
         this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 

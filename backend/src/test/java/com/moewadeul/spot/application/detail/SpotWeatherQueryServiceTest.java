@@ -117,7 +117,7 @@ class SpotWeatherQueryServiceTest {
                 weatherQueryService,
                 sunQueryService,
                 new ExternalApiMetrics(new SimpleMeterRegistry()),
-                new WeatherProperties(Duration.ofSeconds(3), maxInFlight, 25),
+                new WeatherProperties(Duration.ofSeconds(3), maxInFlight),
                 executor,
                 Clock.fixed(Instant.parse("2026-10-04T03:58:00Z"), ZoneOffset.UTC));
     }

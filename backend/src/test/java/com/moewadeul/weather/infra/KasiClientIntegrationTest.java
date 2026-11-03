@@ -19,7 +19,6 @@ import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.weather.application.WeatherProperties;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
@@ -64,7 +63,7 @@ class KasiClientIntegrationTest {
     private KasiProperties kasiProperties;
 
     @Autowired
-    private WeatherProperties weatherProperties;
+    private WeatherCallProperties callProperties;
 
     @Autowired
     private ExternalApiMetrics metrics;
@@ -270,11 +269,7 @@ class KasiClientIntegrationTest {
     void restsAfterOutage() {
         // given
         KasiClient resting = new KasiClient(
-                kasiProperties,
-                new ExternalApiProperties(10, Duration.ofSeconds(30)),
-                weatherProperties,
-                metrics,
-                clock);
+                kasiProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), callProperties, metrics, clock);
         stub(serverError());
 
         // when

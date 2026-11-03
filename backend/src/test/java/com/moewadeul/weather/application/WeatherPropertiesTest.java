@@ -3,6 +3,7 @@ package com.moewadeul.weather.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.moewadeul.weather.infra.WeatherCallProperties;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +25,8 @@ class WeatherPropertiesTest {
 
             assertThat(properties.responseDeadline()).isEqualTo(Duration.ofSeconds(3));
             assertThat(properties.maxInFlight()).isEqualTo(500);
-            assertThat(properties.maxConcurrentCalls()).isEqualTo(25);
+            assertThat(context.getBean(WeatherCallProperties.class).maxConcurrentCalls())
+                    .isEqualTo(25);
         });
     }
 
@@ -45,24 +47,25 @@ class WeatherPropertiesTest {
 
                     assertThat(properties.responseDeadline()).isEqualTo(Duration.ofSeconds(5));
                     assertThat(properties.maxInFlight()).isEqualTo(40);
-                    assertThat(properties.maxConcurrentCalls()).isEqualTo(12);
+                    assertThat(context.getBean(WeatherCallProperties.class).maxConcurrentCalls())
+                            .isEqualTo(12);
                 });
     }
 
     @Test
     @DisplayName("[F-09][NFR-05] 응답 제한이 0이거나 한도가 1 미만이면 기동 때 거부한다")
     void rejectsNonPositiveValues() {
-        assertThatThrownBy(() -> new WeatherProperties(Duration.ZERO, 500, 25))
+        assertThatThrownBy(() -> new WeatherProperties(Duration.ZERO, 500))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("responseDeadline");
-        assertThatThrownBy(() -> new WeatherProperties(Duration.ofSeconds(3), 0, 25))
+        assertThatThrownBy(() -> new WeatherProperties(Duration.ofSeconds(3), 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("maxInFlight");
-        assertThatThrownBy(() -> new WeatherProperties(Duration.ofSeconds(3), 500, 0))
+        assertThatThrownBy(() -> new WeatherCallProperties(0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("maxConcurrentCalls");
     }
 
-    @EnableConfigurationProperties(WeatherProperties.class)
+    @EnableConfigurationProperties({WeatherProperties.class, WeatherCallProperties.class})
     static class PropertiesConfig {}
 }

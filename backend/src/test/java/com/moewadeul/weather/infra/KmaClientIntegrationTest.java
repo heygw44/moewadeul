@@ -20,7 +20,6 @@ import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
-import com.moewadeul.weather.application.WeatherProperties;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -81,7 +80,7 @@ class KmaClientIntegrationTest {
     private KmaProperties kmaProperties;
 
     @Autowired
-    private WeatherProperties weatherProperties;
+    private WeatherCallProperties callProperties;
 
     @Autowired
     private JsonMapper jsonMapper;
@@ -347,7 +346,7 @@ class KmaClientIntegrationTest {
         KmaClient unlimited = new KmaClient(
                 kmaProperties,
                 new ExternalApiProperties(10, Duration.ZERO),
-                new WeatherProperties(Duration.ofSeconds(3), 500, CONCURRENT_REQUESTS),
+                new WeatherCallProperties(CONCURRENT_REQUESTS),
                 jsonMapper,
                 metrics,
                 clock);
@@ -438,7 +437,7 @@ class KmaClientIntegrationTest {
         KmaClient limited = new KmaClient(
                 kmaProperties,
                 new ExternalApiProperties(10, Duration.ZERO),
-                new WeatherProperties(Duration.ofSeconds(3), 500, 10),
+                new WeatherCallProperties(10),
                 jsonMapper,
                 metrics,
                 clock);
@@ -569,7 +568,7 @@ class KmaClientIntegrationTest {
         return new KmaClient(
                 kmaProperties,
                 new ExternalApiProperties(10, Duration.ofSeconds(30)),
-                weatherProperties,
+                callProperties,
                 jsonMapper,
                 metrics,
                 clock);
