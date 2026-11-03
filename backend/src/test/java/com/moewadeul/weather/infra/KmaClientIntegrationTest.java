@@ -37,7 +37,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -340,12 +339,14 @@ class KmaClientIntegrationTest {
     @DisplayName("[F-09][NFR-05] 압축된 응답을 읽는 도중 응답 대기 시간이 지나도, 모든 요청이 정상 응답이나 다시 보낼 수 있는 예외로 끝난다")
     void everyRequestEndsWithRetryableFailureWhenReadTimeoutHitsDuringCompressedBody() throws Exception {
         // given
+        KmaProperties unlimitedProperties = new KmaProperties(
+                kmaProperties.baseUrl(),
+                kmaProperties.serviceKey(),
+                kmaProperties.connectTimeout(),
+                kmaProperties.readTimeout(),
+                CONCURRENT_REQUESTS);
         KmaClient unlimited = new KmaClient(
-                kmaProperties,
-                new ExternalApiProperties(CONCURRENT_REQUESTS, Duration.ZERO),
-                jsonMapper,
-                metrics,
-                clock);
+                unlimitedProperties, new ExternalApiProperties(10, Duration.ZERO), jsonMapper, metrics, clock);
         List<String> unexpected = new CopyOnWriteArrayList<>();
         ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_REQUESTS);
 
@@ -426,42 +427,49 @@ class KmaClientIntegrationTest {
     }
 
     @Test
-    @DisplayName("[NFR-05] 기상청이 느릴 때 동시 호출이 한도(10)를 넘으면, 넘는 호출은 기다리지 않고 기상청을 부르지 않은 채 다시 보낼 수 없는 예외로 끝난다")
+    @DisplayName(
+            "[NFR-05] 기상청이 느릴 때 동시 호출 20건은 모두 기상청을 부르고, 그 20건이 진행 중일 때 온 추가 호출은 기다리지 않고 기상청을 부르지 않은 채 다시 보낼 수 없는 예외로 끝난다")
     void rejectsCallsBeyondConcurrentLimitWithoutCallingKma() throws Exception {
         // given
-        int threads = 30;
-        stub(MID_TA_PATH, okJson(readFixture("mid-ta.json")).withFixedDelay(500));
+        int limit = 20;
+        int extra = 10;
+        stub(MID_TA_PATH, okJson(readFixture("mid-ta.json")).withFixedDelay(800));
         long successBefore = timerCount("getMidTa", "success");
-        ExecutorService executor = Executors.newFixedThreadPool(threads);
-        CountDownLatch ready = new CountDownLatch(threads);
-        CountDownLatch start = new CountDownLatch(1);
-        List<Future<String>> futures = new ArrayList<>();
-        for (int i = 0; i < threads; i++) {
-            futures.add(executor.submit(() -> {
-                ready.countDown();
-                start.await();
-                try {
-                    client.getMidTa("11B10101", TM_FC);
-                    return "OK";
-                } catch (KmaApiException e) {
-                    return e.isRetryable() ? "RETRYABLE" : "REJECTED";
-                }
-            }));
-        }
+        ExecutorService executor = Executors.newFixedThreadPool(limit + extra);
+        try {
+            List<Future<String>> holders = new ArrayList<>();
+            for (int i = 0; i < limit; i++) {
+                holders.add(executor.submit(this::callMidTa));
+            }
+            await().atMost(Duration.ofSeconds(5)).until(() -> requestCount(MID_TA_PATH) == limit);
 
-        // when
-        ready.await();
-        start.countDown();
-        List<String> outcomes = new ArrayList<>();
-        for (Future<String> future : futures) {
-            outcomes.add(future.get(30, TimeUnit.SECONDS));
-        }
-        executor.shutdown();
+            // when
+            List<Future<String>> late = new ArrayList<>();
+            for (int i = 0; i < extra; i++) {
+                late.add(executor.submit(this::callMidTa));
+            }
 
-        // then
-        assertThat(outcomes).containsOnly("OK", "REJECTED");
-        assertThat(outcomes.stream().filter("OK"::equals).count()).isBetween(1L, 10L);
-        assertThat(timerCount("getMidTa", "success") - successBefore).isBetween(1L, 10L);
+            // then
+            for (Future<String> outcome : late) {
+                assertThat(outcome.get(5, TimeUnit.SECONDS)).isEqualTo("REJECTED");
+            }
+            for (Future<String> outcome : holders) {
+                assertThat(outcome.get(5, TimeUnit.SECONDS)).isEqualTo("OK");
+            }
+            assertThat(requestCount(MID_TA_PATH)).isEqualTo(limit);
+            assertThat(timerCount("getMidTa", "success") - successBefore).isEqualTo(limit);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private String callMidTa() {
+        try {
+            client.getMidTa("11B10101", TM_FC);
+            return "OK";
+        } catch (KmaApiException e) {
+            return e.isRetryable() ? "RETRYABLE" : "REJECTED";
+        }
     }
 
     private static void assertNoServiceKey(Throwable thrown) {

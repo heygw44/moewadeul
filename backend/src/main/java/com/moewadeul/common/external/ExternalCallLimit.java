@@ -9,9 +9,9 @@ public final class ExternalCallLimit {
     private final Semaphore permits;
     private final ExternalApiMetrics metrics;
 
-    public ExternalCallLimit(String api, ExternalApiProperties properties, ExternalApiMetrics metrics) {
+    public ExternalCallLimit(String api, int maxConcurrentCalls, ExternalApiMetrics metrics) {
         this.api = api;
-        this.permits = new Semaphore(properties.maxConcurrentCalls());
+        this.permits = new Semaphore(maxConcurrentCalls);
         this.metrics = metrics;
     }
 

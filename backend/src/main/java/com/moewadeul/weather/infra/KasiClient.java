@@ -57,7 +57,7 @@ public class KasiClient {
                 properties.baseUrl(), properties.connectTimeout(), properties.readTimeout());
         this.serviceKey = properties.serviceKey();
         this.metrics = metrics;
-        this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
+        this.callLimit = new ExternalCallLimit(API, externalApiProperties.maxConcurrentCalls(), metrics);
         this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 

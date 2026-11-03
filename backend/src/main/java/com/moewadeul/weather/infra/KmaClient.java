@@ -71,7 +71,7 @@ public class KmaClient {
         this.serviceKey = properties.serviceKey();
         this.jsonMapper = jsonMapper;
         this.metrics = metrics;
-        this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
+        this.callLimit = new ExternalCallLimit(API, properties.maxConcurrentCalls(), metrics);
         this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 
