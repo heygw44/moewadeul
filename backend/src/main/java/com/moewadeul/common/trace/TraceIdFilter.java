@@ -21,12 +21,23 @@ public class TraceIdFilter extends OncePerRequestFilter {
     public static final String MDC_KEY = "traceId";
     public static final String HEADER = "X-Trace-Id";
 
+    private static final String ATTRIBUTE = TraceIdFilter.class.getName() + ".traceId";
     private static final int TRACE_ID_LENGTH = 12;
+
+    // 비동기 요청은 컨테이너가 같은 요청을 다시 디스패치한다. 이때도 처음 만든 추적 ID를 써야 재디스패치에서 남기는 로그에 같은 ID가 찍힌다.
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        String traceId = generateTraceId();
+        String traceId = (String) request.getAttribute(ATTRIBUTE);
+        if (traceId == null) {
+            traceId = generateTraceId();
+            request.setAttribute(ATTRIBUTE, traceId);
+        }
         MDC.put(MDC_KEY, traceId);
         response.setHeader(HEADER, traceId);
         try {

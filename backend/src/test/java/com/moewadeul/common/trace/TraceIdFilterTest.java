@@ -7,6 +7,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.DisplayName;
@@ -119,5 +120,26 @@ class TraceIdFilterTest {
         filter.doFilter(new MockHttpServletRequest(), second, (req, res) -> {});
 
         assertThat(first.getHeader(TraceIdFilter.HEADER)).isNotEqualTo(second.getHeader(TraceIdFilter.HEADER));
+    }
+
+    @Test
+    @DisplayName("비동기 재디스패치에서도 필터가 돌아, 처음 만든 추적 ID를 MDC에 다시 넣고 응답 헤더 값을 바꾸지 않는다")
+    void reusesTraceIdOnAsyncDispatch() throws Exception {
+        // given
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(request, response, (req, res) -> {});
+        String firstTraceId = response.getHeader(TraceIdFilter.HEADER);
+        request.setDispatcherType(DispatcherType.ASYNC);
+        AtomicReference<String> traceIdInDispatch = new AtomicReference<>();
+        FilterChain chain = (req, res) -> traceIdInDispatch.set(MDC.get(TraceIdFilter.MDC_KEY));
+
+        // when
+        filter.doFilter(request, response, chain);
+
+        // then
+        assertThat(traceIdInDispatch.get()).isEqualTo(firstTraceId);
+        assertThat(response.getHeaders(TraceIdFilter.HEADER)).containsExactly(firstTraceId);
+        assertThat(MDC.get(TraceIdFilter.MDC_KEY)).isNull();
     }
 }
