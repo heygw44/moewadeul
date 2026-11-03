@@ -24,7 +24,14 @@ public class SunQueryService {
 
     public Optional<SunTimes> sunTimes(double lat, double lng, LocalDate date) {
         OutsideTransaction.require("천문연 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
-        return caches.sunTimes(lat, lng, date, () -> fetch(lat, lng, date));
+        try {
+            return caches.sunTimes(lat, lng, date, () -> fetch(lat, lng, date));
+        } catch (WeatherCacheBusyException e) {
+            log.warn("천문연 응답을 기다리는 자리가 없어 출몰시각 없이 응답한다. reason={}", e.getMessage());
+            metrics.recordFallback(API);
+            metrics.recordRejected(API);
+            return Optional.empty();
+        }
     }
 
     private Optional<SunTimes> fetch(double lat, double lng, LocalDate date) {
