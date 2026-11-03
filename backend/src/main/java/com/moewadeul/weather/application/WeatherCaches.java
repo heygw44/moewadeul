@@ -57,10 +57,28 @@ public class WeatherCaches {
                 sunTimes, new SunTimesKey(date, lat, lng), () -> loader.get().orElse(null)));
     }
 
+    boolean shortTermReady(LocalDateTime baseDateTime, int nx, int ny) {
+        return isReady(shortTerm, new ShortTermKey(baseDateTime, nx, ny));
+    }
+
+    boolean midTermReady(String operation, String regId, LocalDateTime tmFc) {
+        return isReady(midTerm, new MidTermKey(operation, regId, tmFc));
+    }
+
+    boolean sunTimesReady(double lat, double lng, LocalDate date) {
+        return isReady(sunTimes, new SunTimesKey(date, lat, lng));
+    }
+
     public void clear() {
         shortTerm.synchronous().invalidateAll();
         midTerm.synchronous().invalidateAll();
         sunTimes.synchronous().invalidateAll();
+    }
+
+    private static <K, V> boolean isReady(AsyncCache<K, V> cache, K key) {
+        // load와 같은 이유로 asMap()으로 본다. 준비 여부를 묻는 일이 적중·누락 지표를 바꾸면 안 된다.
+        CompletableFuture<V> future = cache.asMap().get(key);
+        return future != null && future.isDone() && !future.isCompletedExceptionally();
     }
 
     private static <K, V> V load(AsyncCache<K, V> cache, K key, Supplier<V> loader) {

@@ -101,6 +101,35 @@ class SpotWeatherAdmissionIntegrationTest {
         assertThat(requestCount(VILAGE_FCST_PATH)).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("[F-09][NFR-05] 입장 자리가 가득 차도 메모리에 다 있는 다른 격자의 요청은 기다리지 않고 날씨를 받으며 거부 지표도 오르지 않는다")
+    void answersFullyCachedGridWhileAdmissionIsFull() {
+        // given
+        long cachedSpotId = insertSeoulCampsite();
+        stubKma(0);
+        stubKasi(okXml(readFixture("kasi/rise-set.xml")));
+        assertThat(spotWeatherQueryService.findWeather(cachedSpotId).join())
+                .hasValueSatisfying(found -> assertThat(found.sun()).isNotNull());
+        long coldSpotId = insertBusanCampsite();
+        stubKma(SLOW_MILLIS);
+        assertThat(spotWeatherQueryService.findWeather(coldSpotId).join()).isEmpty();
+        double rejectedBefore = rejectedCount();
+
+        // when
+        CompletableFuture<Optional<LocationWeather>> cached = spotWeatherQueryService.findWeather(cachedSpotId);
+
+        // then
+        assertThat(cached).isCompleted();
+        assertThat(cached.join()).hasValueSatisfying(found -> {
+            assertThat(found.forecast().shortTerm()).isNotEmpty();
+            assertThat(found.sun()).isNotNull();
+        });
+        assertThat(rejectedCount() - rejectedBefore).isZero();
+        assertThat(spotWeatherQueryService.findWeather(coldSpotId)).isCompletedWithValue(Optional.empty());
+        assertThat(rejectedCount() - rejectedBefore).isEqualTo(1);
+        awaitPermitReturned(coldSpotId);
+    }
+
     private void awaitPermitReturned(long spotId) {
         await().atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(100))
@@ -118,13 +147,23 @@ class SpotWeatherAdmissionIntegrationTest {
     }
 
     private long insertSeoulCampsite() {
+        return insertCampsite("POINT(37.5665 126.978)", 60, 127);
+    }
+
+    private long insertBusanCampsite() {
+        return insertCampsite("POINT(35.1796 129.0756)", 98, 76);
+    }
+
+    private long insertCampsite(String point, int nx, int ny) {
         clock.setInstant(Instant.parse("2026-10-04T03:58:00Z"));
         String name = TestSequence.unique("야영장");
         jdbcTemplate.update(
                 "INSERT INTO spot (type, name, location, weather_nx, weather_ny, status, created_at, updated_at)"
-                        + " VALUES ('CAMPSITE', ?, ST_GeomFromText('POINT(37.5665 126.978)', 4326), 60, 127, 'ACTIVE',"
-                        + " NOW(6), NOW(6))",
-                name);
+                        + " VALUES ('CAMPSITE', ?, ST_GeomFromText(?, 4326), ?, ?, 'ACTIVE', NOW(6), NOW(6))",
+                name,
+                point,
+                nx,
+                ny);
         return jdbcTemplate.queryForObject("SELECT id FROM spot WHERE name = ?", Long.class, name);
     }
 

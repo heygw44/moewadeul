@@ -23,6 +23,10 @@ public class SunQueryService {
         return caches.sunTimes(lat, lng, date, () -> fetch(lat, lng, date));
     }
 
+    public boolean isSunReady(double lat, double lng, LocalDate date) {
+        return caches.sunTimesReady(lat, lng, date);
+    }
+
     private Optional<SunTimes> fetch(double lat, double lng, LocalDate date) {
         try {
             Optional<KasiRiseSetItem> item = kasiClient.getRiseSet(date, lat, lng);

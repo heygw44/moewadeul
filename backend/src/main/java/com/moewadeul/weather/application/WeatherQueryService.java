@@ -43,15 +43,23 @@ public class WeatherQueryService {
         }
     }
 
+    public boolean isForecastReady(int nx, int ny, double lat, double lng) {
+        ForecastKeys keys = keysAt(clock.instant(), lat, lng);
+        return caches.shortTermReady(keys.base(), nx, ny)
+                && caches.midTermReady(MID_LAND_FCST, keys.region().landRegId(), keys.tmFc())
+                && caches.midTermReady(MID_TA, keys.region().taRegId(), keys.tmFc());
+    }
+
     private WeatherForecast fetchForecast(int nx, int ny, double lat, double lng) {
         Instant now = clock.instant();
-        LocalDateTime base = KmaBaseTimes.shortTermBase(now);
+        ForecastKeys keys = keysAt(now, lat, lng);
+        LocalDateTime base = keys.base();
+        MidTermRegion region = keys.region();
+        LocalDateTime tmFc = keys.tmFc();
         List<ShortTermForecast> published = caches.shortTerm(
                 base, nx, ny, () -> KmaForecastConverter.toShortTerm(kmaClient.getVilageFcst(base, nx, ny)));
         List<ShortTermForecast> shortTerm = KmaForecastConverter.upcoming(published, now);
 
-        MidTermRegion region = midTermRegions.nearest(lat, lng);
-        LocalDateTime tmFc = KmaBaseTimes.midTermBase(now);
         Optional<KmaMidTermItem> land = caches.midTerm(
                 MID_LAND_FCST, region.landRegId(), tmFc, () -> kmaClient.getMidLandFcst(region.landRegId(), tmFc));
         Optional<KmaMidTermItem> ta =
@@ -61,4 +69,11 @@ public class WeatherQueryService {
 
         return new WeatherForecast(WeatherForecast.KMA_SOURCE, shortTerm, midTerm);
     }
+
+    private ForecastKeys keysAt(Instant now, double lat, double lng) {
+        return new ForecastKeys(
+                KmaBaseTimes.shortTermBase(now), midTermRegions.nearest(lat, lng), KmaBaseTimes.midTermBase(now));
+    }
+
+    private record ForecastKeys(LocalDateTime base, MidTermRegion region, LocalDateTime tmFc) {}
 }

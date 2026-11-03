@@ -50,6 +50,10 @@ public class LocationWeatherService {
 
     public CompletableFuture<Optional<LocationWeather>> findWeather(int nx, int ny, double lat, double lng) {
         OutsideTransaction.require("기상청·천문연 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
+        LocalDate today = KoreaTime.today(clock);
+        if (weatherQueryService.isForecastReady(nx, ny, lat, lng) && sunQueryService.isSunReady(lat, lng, today)) {
+            return CompletableFuture.completedFuture(readCached(nx, ny, lat, lng, today));
+        }
         if (!admission.tryAcquire()) {
             metrics.recordWeatherAdmissionRejected();
             return CompletableFuture.completedFuture(Optional.empty());
@@ -68,6 +72,15 @@ public class LocationWeatherService {
                                 .thenApply(times -> Optional.of(new LocationWeather(found.get(), times.orElse(null)))));
     }
 
+    // 메모리에서 바로 읽히면 입장 자리도 가상 스레드도 쓰지 않는다. 확인과 읽기 사이에 항목이 만료되면 호출한 스레드가
+    // 외부 API를 한 번 기다리는데, 호출 한 번의 시간 제한이 있어 받아들인다.
+    private Optional<LocationWeather> readCached(int nx, int ny, double lat, double lng, LocalDate today) {
+        return weatherQueryService
+                .forecast(nx, ny, lat, lng)
+                .map(found -> new LocationWeather(
+                        found, sunQueryService.sunTimes(lat, lng, today).orElse(null)));
+    }
+
     private void fetchThenReleaseAdmission(
             int nx,
             int ny,
@@ -79,8 +92,7 @@ public class LocationWeatherService {
             Optional<WeatherForecast> found = weatherQueryService.forecast(nx, ny, lat, lng);
             boolean responseStillWaiting = forecast.complete(found);
             if (responseStillWaiting && found.isPresent()) {
-                LocalDate today = KoreaTime.today(clock);
-                sun.complete(sunQueryService.sunTimes(lat, lng, today));
+                sun.complete(sunQueryService.sunTimes(lat, lng, KoreaTime.today(clock)));
             }
         } catch (Throwable e) {
             // 제한 시간이 지나 응답이 이미 나갔으면 이 실패를 받아 줄 호출자가 없다.

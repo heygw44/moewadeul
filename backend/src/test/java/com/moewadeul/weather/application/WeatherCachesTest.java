@@ -184,6 +184,63 @@ class WeatherCachesTest {
         assertThat(calls).hasValue(1);
     }
 
+    @Test
+    @DisplayName("[F-09][NFR-05] 준비 여부는 값이 다 들어온 항목만 참이고, 불러오는 중이거나 실패한 항목은 거짓이다")
+    void reportsReadyOnlyForCompletedSuccessfulEntries() throws Exception {
+        // given
+        CountDownLatch loading = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        assertThat(caches.shortTermReady(BASE, 60, 127)).isFalse();
+
+        // when
+        Future<List<ShortTermForecast>> inFlight = executor.submit(
+                () -> caches.shortTerm(BASE, 60, 127, () -> awaitThenReturn(loading, release, List.of())));
+        assertThat(loading.await(5, TimeUnit.SECONDS)).isTrue();
+        boolean readyWhileLoading = caches.shortTermReady(BASE, 60, 127);
+        release.countDown();
+        inFlight.get(5, TimeUnit.SECONDS);
+
+        // then
+        assertThat(readyWhileLoading).isFalse();
+        assertThat(caches.shortTermReady(BASE, 60, 127)).isTrue();
+        assertThat(caches.shortTermReady(BASE, 61, 127)).isFalse();
+        assertThatThrownBy(() -> caches.midTerm("getMidTa", "11B10101", BASE, () -> {
+                    throw new KmaApiException("기상청 응답 실패");
+                }))
+                .isInstanceOf(KmaApiException.class);
+        assertThat(caches.midTermReady("getMidTa", "11B10101", BASE)).isFalse();
+        caches.sunTimes(37.5665, 126.978, DATE, () -> Optional.of(SUN_TIMES));
+        assertThat(caches.sunTimesReady(37.5665, 126.978, DATE)).isTrue();
+    }
+
+    @Test
+    @DisplayName("[F-09][NFR-05] 준비 여부를 물어도 캐시 적중·누락 지표는 변하지 않는다")
+    void readinessCheckLeavesCacheStatsUntouched() {
+        // given
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        WeatherCaches measured = new WeatherCaches(registry);
+        measured.shortTerm(BASE, 60, 127, List::of);
+        double hitsBefore = cacheGets(registry, "hit");
+        double missesBefore = cacheGets(registry, "miss");
+
+        // when
+        boolean ready = measured.shortTermReady(BASE, 60, 127);
+        measured.shortTermReady(BASE, 61, 127);
+
+        // then
+        assertThat(ready).isTrue();
+        assertThat(cacheGets(registry, "hit")).isEqualTo(hitsBefore);
+        assertThat(cacheGets(registry, "miss")).isEqualTo(missesBefore);
+    }
+
+    private static double cacheGets(SimpleMeterRegistry registry, String result) {
+        return registry.get("cache.gets")
+                .tag("cache", "kmaShortTerm")
+                .tag("result", result)
+                .functionCounter()
+                .count();
+    }
+
     private <T> List<Future<T>> runConcurrently(CountDownLatch loading, CountDownLatch release, Callable<T> task)
             throws InterruptedException {
         List<Future<T>> results = new ArrayList<>();
