@@ -83,6 +83,8 @@ public class LocationWeatherService {
                 sun.complete(sunQueryService.sunTimes(lat, lng, today));
             }
         } catch (Throwable e) {
+            // 제한 시간이 지나 응답이 이미 나갔으면 이 실패를 받아 줄 호출자가 없다.
+            log.error("날씨를 가져오다 예상하지 못한 오류가 났다.", e);
             forecast.completeExceptionally(e);
             sun.completeExceptionally(e);
         } finally {
@@ -94,14 +96,11 @@ public class LocationWeatherService {
         return Math.max(0, properties.responseDeadline().toNanos() - (System.nanoTime() - startedAt));
     }
 
-    // 시간 초과 이어받기는 JDK 공용 스케줄러 스레드에서 돈다. 로그가 그 스레드를 막지 않게 호출한 쪽이 실행기로 넘긴다.
+    // orTimeout의 시간 초과는 JDK 공용 스케줄러 스레드에서 이어진다. 로그가 그 스레드를 막지 않게 exceptionallyAsync로
+    // 실행기에 넘긴다. 성공했을 때도 실행기를 한 번 거치지만 값은 그대로 통과한다.
     private <T> Optional<T> onDeadline(Throwable failure, String api, String apiName, String missing) {
         if (failure instanceof TimeoutException) {
-            log.warn(
-                    "{} 응답이 {}ms 안에 오지 않아 {} 없이 응답한다.",
-                    apiName,
-                    properties.responseDeadline().toMillis(),
-                    missing);
+            log.warn("{} 응답이 응답 제한 시간 안에 오지 않아 {} 없이 응답한다.", apiName, missing);
             metrics.recordDeadline(api);
             return Optional.empty();
         }
