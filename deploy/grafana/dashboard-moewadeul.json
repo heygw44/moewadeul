@@ -790,6 +790,26 @@
           "expr": "sum by (api) (rate(moewadeul_external_api_fallbacks_total{job=\"moewadeul-app\"}[5m])) * 60",
           "legendFormat": "{{api}} 값 없이 응답",
           "range": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__PROM_UID__"
+          },
+          "expr": "sum by (api) (rate(moewadeul_external_api_deadline_total{job=\"moewadeul-app\"}[5m])) * 60",
+          "legendFormat": "{{api}} 제한 시간 초과",
+          "range": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__PROM_UID__"
+          },
+          "expr": "sum(rate(moewadeul_weather_admission_rejected_total{job=\"moewadeul-app\"}[5m])) * 60",
+          "legendFormat": "날씨 입장 거부",
+          "range": true
         }
       ],
       "fieldConfig": {
