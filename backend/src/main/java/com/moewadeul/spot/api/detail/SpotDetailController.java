@@ -3,6 +3,7 @@ package com.moewadeul.spot.api.detail;
 import com.moewadeul.spot.application.detail.SpotDetailQueryService;
 import com.moewadeul.spot.application.detail.SpotWeatherQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,13 +56,18 @@ class SpotDetailController {
             description = "장소 하나의 기상청 단기·중기 예보와 오늘(한국 날짜) 출몰시각(sun)을 weather에 담아 준다. "
                     + "로그인하지 않아도 조회할 수 있다. 화면은 장소 상세와 이 요청을 함께 보낸다. "
                     + "기상청 호출이 실패하거나 늦어도 200으로 응답하고 weather는 null이다. 이때 천문연은 부르지 않는다. "
-                    + "기상청은 성공하고 천문연만 실패하면 weather는 채우고 sun만 null로 준다. "
+                    + "기상청은 성공하고 천문연만 실패하거나 늦으면 weather는 채우고 sun만 null로 준다. "
+                    + "서버는 외부 API를 기다리는 시간에 상한을 둔다(기본 3초, moewadeul.weather.response-deadline). "
+                    + "상한을 넘기면 기다리던 값을 빼고 응답하고, 그 호출은 계속 이어서 결과를 메모리에 둔다. 다음 요청이 그 값을 받는다. "
+                    + "동시에 처리 중인 날씨 요청이 서버 한도에 닿으면 기다리지 않고 바로 weather를 null로 응답한다. "
+                    + "상한은 외부 API를 기다리는 시간에만 걸린다. 장소 위치를 읽는 DB 조회와 응답을 쓰는 시간은 상한에 들지 않는다. "
                     + "서버는 같은 격자·같은 발표 시각의 예보와 같은 장소·같은 날짜의 출몰시각을 메모리에 잠시 두고 다시 쓴다. "
                     + "장소가 없거나 숨김, 삭제, 검토 대기 상태이면 외부 API를 부르지 않고 404 NOT_FOUND로 응답한다. "
                     + "spotId가 숫자가 아니면 400 INVALID_INPUT으로 응답한다.")
     @GetMapping("/{spotId}/weather")
-    SpotWeatherResponse findWeather(@PathVariable long spotId) {
-        return SpotWeatherResponse.from(
-                spotWeatherQueryService.findWeather(spotId).orElse(null));
+    CompletableFuture<SpotWeatherResponse> findWeather(@PathVariable long spotId) {
+        return spotWeatherQueryService
+                .findWeather(spotId)
+                .thenApply(weather -> SpotWeatherResponse.from(weather.orElse(null)));
     }
 }

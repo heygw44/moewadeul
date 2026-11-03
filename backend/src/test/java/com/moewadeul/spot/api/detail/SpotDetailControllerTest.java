@@ -1,5 +1,7 @@
 package com.moewadeul.spot.api.detail;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -353,7 +355,8 @@ class SpotDetailControllerTest {
                 List.of(new WeatherForecast.MidTermForecast(LocalDate.of(2026, 10, 8), 10, 20, "맑음", "구름많음", 10, 20)));
         SunTimes sun =
                 new SunTimes(LocalDate.of(2026, 10, 4), LocalTime.of(7, 1), LocalTime.of(18, 11), LocalTime.of(18, 38));
-        when(spotWeatherQueryService.findWeather(103L)).thenReturn(Optional.of(new SpotWeather(forecast, sun)));
+        when(spotWeatherQueryService.findWeather(103L))
+                .thenReturn(completedFuture(Optional.of(new SpotWeather(forecast, sun))));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/103/weather").exchange();
@@ -383,7 +386,8 @@ class SpotDetailControllerTest {
     void keepsSunFieldAsNullWhenSunMissing() {
         // given
         WeatherForecast forecast = new WeatherForecast("기상청", List.of(), List.of());
-        when(spotWeatherQueryService.findWeather(104L)).thenReturn(Optional.of(new SpotWeather(forecast, null)));
+        when(spotWeatherQueryService.findWeather(104L))
+                .thenReturn(completedFuture(Optional.of(new SpotWeather(forecast, null))));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/104/weather").exchange();
@@ -404,7 +408,7 @@ class SpotDetailControllerTest {
     @DisplayName("[F-09][NFR-05] 기상청이 실패해 날씨가 없으면 200으로 weather 필드를 null로 남긴다")
     void keepsWeatherFieldAsNullWhenForecastMissing() {
         // given
-        when(spotWeatherQueryService.findWeather(105L)).thenReturn(Optional.empty());
+        when(spotWeatherQueryService.findWeather(105L)).thenReturn(completedFuture(Optional.empty()));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/105/weather").exchange();
@@ -428,6 +432,20 @@ class SpotDetailControllerTest {
         // then
         assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    @DisplayName("[F-09][NFR-05] 날씨를 기다리는 비동기 작업이 예외로 끝나면 500 INTERNAL_ERROR를 응답한다")
+    void failedWeatherFutureReturnsInternalError() {
+        // given
+        when(spotWeatherQueryService.findWeather(106L)).thenReturn(failedFuture(new IllegalStateException("boom")));
+
+        // when
+        MvcTestResult result = mvc.get().uri(PATH + "/106/weather").exchange();
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INTERNAL_ERROR");
     }
 
     @Test

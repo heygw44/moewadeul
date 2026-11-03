@@ -68,7 +68,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubKasi(okXml(readFixture("kasi/rise-set.xml")));
 
         // when
-        Optional<SpotWeather> weather = spotWeatherQueryService.findWeather(spotId);
+        Optional<SpotWeather> weather = find(spotId);
 
         // then
         assertThat(weather).isPresent();
@@ -89,7 +89,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubKasi(okXml(readFixture("kasi/rise-set.xml")));
 
         // when
-        Optional<SpotWeather> weather = spotWeatherQueryService.findWeather(spotId);
+        Optional<SpotWeather> weather = find(spotId);
 
         // then
         assertThat(weather).isEmpty();
@@ -105,7 +105,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubKasi(serverError());
 
         // when
-        Optional<SpotWeather> weather = spotWeatherQueryService.findWeather(spotId);
+        Optional<SpotWeather> weather = find(spotId);
 
         // then
         assertThat(weather).isPresent();
@@ -122,7 +122,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubAllSuccess();
 
         // when, then
-        assertThatThrownBy(() -> spotWeatherQueryService.findWeather(spotId))
+        assertThatThrownBy(() -> find(spotId))
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.NOT_FOUND));
@@ -136,7 +136,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubAllSuccess();
 
         // when, then
-        assertThatThrownBy(() -> spotWeatherQueryService.findWeather(Long.MAX_VALUE))
+        assertThatThrownBy(() -> find(Long.MAX_VALUE))
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.NOT_FOUND));
@@ -149,10 +149,10 @@ class SpotWeatherQueryServiceIntegrationTest {
         // given
         long spotId = insertSeoulCampsite("ACTIVE");
         stubAllSuccess();
-        SpotWeather first = spotWeatherQueryService.findWeather(spotId).orElseThrow();
+        SpotWeather first = find(spotId).orElseThrow();
 
         // when
-        SpotWeather second = spotWeatherQueryService.findWeather(spotId).orElseThrow();
+        SpotWeather second = find(spotId).orElseThrow();
 
         // then
         assertThat(second).isEqualTo(first);
@@ -168,10 +168,10 @@ class SpotWeatherQueryServiceIntegrationTest {
         long firstSpot = insertSeoulCampsite("ACTIVE");
         long secondSpot = insertCampsite("ACTIVE", "POINT(37.5700 126.9800)");
         stubAllSuccess();
-        spotWeatherQueryService.findWeather(firstSpot);
+        find(firstSpot);
 
         // when
-        spotWeatherQueryService.findWeather(secondSpot);
+        find(secondSpot);
 
         // then
         assertThat(requestCount(VILAGE_FCST_PATH)).isEqualTo(1);
@@ -184,11 +184,11 @@ class SpotWeatherQueryServiceIntegrationTest {
         // given
         long spotId = insertSeoulCampsite("ACTIVE");
         wireMock.stubFor(get(urlPathEqualTo(VILAGE_FCST_PATH)).willReturn(serverError()));
-        assertThat(spotWeatherQueryService.findWeather(spotId)).isEmpty();
+        assertThat(find(spotId)).isEmpty();
         stubAllSuccess();
 
         // when
-        Optional<SpotWeather> weather = spotWeatherQueryService.findWeather(spotId);
+        Optional<SpotWeather> weather = find(spotId);
 
         // then
         assertThat(weather).isPresent();
@@ -202,12 +202,11 @@ class SpotWeatherQueryServiceIntegrationTest {
         long spotId = insertSeoulCampsite("ACTIVE");
         stubKmaSuccess();
         stubKasi(serverError());
-        assertThat(spotWeatherQueryService.findWeather(spotId).orElseThrow().sun())
-                .isNull();
+        assertThat(find(spotId).orElseThrow().sun()).isNull();
         stubKasi(okXml(readFixture("kasi/rise-set.xml")));
 
         // when
-        SpotWeather weather = spotWeatherQueryService.findWeather(spotId).orElseThrow();
+        SpotWeather weather = find(spotId).orElseThrow();
 
         // then
         assertThat(weather.sun()).isNotNull();
@@ -220,19 +219,11 @@ class SpotWeatherQueryServiceIntegrationTest {
         // given
         long spotId = insertSeoulCampsite("ACTIVE");
         stubAllSuccess();
-        List<ShortTermForecast> before = spotWeatherQueryService
-                .findWeather(spotId)
-                .orElseThrow()
-                .forecast()
-                .shortTerm();
+        List<ShortTermForecast> before = find(spotId).orElseThrow().forecast().shortTerm();
         clock.setInstant(FIXTURE_TIME.plus(Duration.ofMinutes(70)));
 
         // when
-        List<ShortTermForecast> after = spotWeatherQueryService
-                .findWeather(spotId)
-                .orElseThrow()
-                .forecast()
-                .shortTerm();
+        List<ShortTermForecast> after = find(spotId).orElseThrow().forecast().shortTerm();
 
         // then
         assertThat(requestCount(VILAGE_FCST_PATH)).isEqualTo(1);
@@ -246,15 +237,19 @@ class SpotWeatherQueryServiceIntegrationTest {
         // given
         long spotId = insertSeoulCampsite("ACTIVE");
         stubAllSuccess();
-        spotWeatherQueryService.findWeather(spotId);
+        find(spotId);
         clock.setInstant(FIXTURE_TIME.plus(Duration.ofMinutes(72)));
 
         // when
-        spotWeatherQueryService.findWeather(spotId);
+        find(spotId);
 
         // then
         assertThat(requestCount(VILAGE_FCST_PATH)).isEqualTo(2);
         wireMock.verify(getRequestedFor(urlPathEqualTo(VILAGE_FCST_PATH)).withQueryParam("base_time", equalTo("1400")));
+    }
+
+    private Optional<SpotWeather> find(long spotId) {
+        return spotWeatherQueryService.findWeather(spotId).join();
     }
 
     private long insertSeoulCampsite(String status) {
