@@ -58,7 +58,6 @@ public class ExternalApiMetrics {
                 .increment();
     }
 
-    // 늦게 실패한 호출은 recordFallback에도 잡히므로 두 값을 더해 읽지 않는다.
     public void recordDeadline(String api) {
         Counter.builder(DEADLINE_COUNTER_NAME)
                 .description("응답 제한 시간 안에 외부 API 값을 받지 못해 해당 값 없이 응답한 수")

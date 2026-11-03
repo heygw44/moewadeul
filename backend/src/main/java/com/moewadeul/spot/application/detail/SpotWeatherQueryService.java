@@ -60,8 +60,6 @@ public class SpotWeatherQueryService {
         this.admission = new Semaphore(properties.maxInFlight());
     }
 
-    // 응답 제한 시간을 넘겨도 외부 호출은 취소하지 않는다. 호출은 제한 시간이 정해져 있어서 끝나면 캐시에 남고, 다음 요청이 받아 간다.
-    // 입장 자리는 응답이 아니라 이 작업이 끝날 때 돌려준다. 포기한 호출이 쌓여 가상 스레드가 무한히 늘어나는 것을 막으려는 것이다.
     public CompletableFuture<Optional<SpotWeather>> findWeather(long spotId) {
         SpotWeatherLocationRow location =
                 spotDetailMapper.selectActiveWeatherLocation(spotId).orElseThrow(BusinessException::notFound);
@@ -74,21 +72,7 @@ public class SpotWeatherQueryService {
         CompletableFuture<Optional<SunTimes>> sun = new CompletableFuture<>();
         Executor traced = withCallerMdc(weatherExecutor);
         try {
-            traced.execute(() -> {
-                try {
-                    Optional<WeatherForecast> found = weatherQueryService.forecast(
-                            location.weatherNx(), location.weatherNy(), location.lat(), location.lng());
-                    // 제한 시간이 지나 이미 응답했다면 sun을 읽을 곳이 없으니 천문연을 부르지 않는다.
-                    if (forecast.complete(found) && found.isPresent()) {
-                        sun.complete(sunQueryService.sunTimes(location.lat(), location.lng(), KoreaTime.today(clock)));
-                    }
-                } catch (Throwable e) {
-                    forecast.completeExceptionally(e);
-                    sun.completeExceptionally(e);
-                } finally {
-                    admission.release();
-                }
-            });
+            traced.execute(() -> fetchThenReleaseAdmission(location, forecast, sun));
         } catch (RejectedExecutionException e) {
             admission.release();
             throw e;
@@ -100,6 +84,25 @@ public class SpotWeatherQueryService {
                         : sun.orTimeout(remaining(startedAt), TimeUnit.NANOSECONDS)
                                 .exceptionallyAsync(e -> onDeadline(e, KASI, "천문연", "출몰시각"), traced)
                                 .thenApply(times -> Optional.of(new SpotWeather(found.get(), times.orElse(null)))));
+    }
+
+    private void fetchThenReleaseAdmission(
+            SpotWeatherLocationRow location,
+            CompletableFuture<Optional<WeatherForecast>> forecast,
+            CompletableFuture<Optional<SunTimes>> sun) {
+        try {
+            Optional<WeatherForecast> found = weatherQueryService.forecast(
+                    location.weatherNx(), location.weatherNy(), location.lat(), location.lng());
+            boolean responseStillWaiting = forecast.complete(found);
+            if (responseStillWaiting && found.isPresent()) {
+                sun.complete(sunQueryService.sunTimes(location.lat(), location.lng(), KoreaTime.today(clock)));
+            }
+        } catch (Throwable e) {
+            forecast.completeExceptionally(e);
+            sun.completeExceptionally(e);
+        } finally {
+            admission.release();
+        }
     }
 
     private long remaining(long startedAt) {
@@ -126,11 +129,7 @@ public class SpotWeatherQueryService {
             if (callerMdc != null) {
                 MDC.setContextMap(callerMdc);
             }
-            try {
-                task.run();
-            } finally {
-                MDC.clear();
-            }
+            task.run();
         });
     }
 }
