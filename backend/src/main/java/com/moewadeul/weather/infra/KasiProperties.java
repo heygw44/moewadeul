@@ -12,7 +12,8 @@ public record KasiProperties(
 
         String serviceKey,
         @DefaultValue("1s") Duration connectTimeout,
-        @DefaultValue("2s") Duration readTimeout) {
+        @DefaultValue("2s") Duration readTimeout,
+        @DefaultValue("25") int maxConcurrentCalls) {
 
     private static final String PREFIX = "moewadeul.weather.kasi.";
 
@@ -23,6 +24,9 @@ public record KasiProperties(
         serviceKey = Objects.requireNonNullElse(serviceKey, "");
         requirePositive(connectTimeout, "connectTimeout");
         requirePositive(readTimeout, "readTimeout");
+        if (maxConcurrentCalls < 1) {
+            throw new IllegalArgumentException(PREFIX + "maxConcurrentCalls must be positive");
+        }
     }
 
     private static void requirePositive(Duration value, String name) {
@@ -34,6 +38,6 @@ public record KasiProperties(
     @Override
     public String toString() {
         return "KasiProperties[baseUrl=" + baseUrl + ", serviceKey=****, connectTimeout=" + connectTimeout
-                + ", readTimeout=" + readTimeout + "]";
+                + ", readTimeout=" + readTimeout + ", maxConcurrentCalls=" + maxConcurrentCalls + "]";
     }
 }

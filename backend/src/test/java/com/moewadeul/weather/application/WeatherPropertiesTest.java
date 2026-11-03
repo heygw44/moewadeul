@@ -3,7 +3,8 @@ package com.moewadeul.weather.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.moewadeul.weather.infra.WeatherCallProperties;
+import com.moewadeul.weather.infra.KasiProperties;
+import com.moewadeul.weather.infra.KmaProperties;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -18,20 +19,22 @@ class WeatherPropertiesTest {
             new ApplicationContextRunner().withUserConfiguration(PropertiesConfig.class);
 
     @Test
-    @DisplayName("[F-09][NFR-05] 설정이 없으면 응답 제한 3초, 동시 처리 500건, 기상청·천문연 동시 호출 25건으로 쓴다")
+    @DisplayName("[F-09][NFR-05] 설정이 없으면 응답 제한 3초, 동시 처리 500건, 기상청·천문연 동시 호출 각각 25건으로 쓴다")
     void usesDefaultsWhenNothingConfigured() {
         runner.run(context -> {
             WeatherProperties properties = context.getBean(WeatherProperties.class);
 
             assertThat(properties.responseDeadline()).isEqualTo(Duration.ofSeconds(3));
             assertThat(properties.maxInFlight()).isEqualTo(500);
-            assertThat(context.getBean(WeatherCallProperties.class).maxConcurrentCalls())
+            assertThat(context.getBean(KmaProperties.class).maxConcurrentCalls())
+                    .isEqualTo(25);
+            assertThat(context.getBean(KasiProperties.class).maxConcurrentCalls())
                     .isEqualTo(25);
         });
     }
 
     @Test
-    @DisplayName("[F-09][NFR-05] 환경변수 MOEWADEUL_WEATHER_* 로 세 값을 바꿀 수 있고, 기상청 설정과 같은 접두어를 써도 서로 섞이지 않는다")
+    @DisplayName("[F-09][NFR-05] 환경변수 MOEWADEUL_WEATHER_* 로 값을 바꿀 수 있고, 기상청 설정과 같은 접두어를 써도 서로 섞이지 않는다")
     void bindsEnvironmentVariables() {
         runner.withInitializer(context -> context.getEnvironment()
                         .getPropertySources()
@@ -40,15 +43,18 @@ class WeatherPropertiesTest {
                                 Map.of(
                                         "MOEWADEUL_WEATHER_RESPONSE_DEADLINE", "5s",
                                         "MOEWADEUL_WEATHER_MAX_IN_FLIGHT", "40",
-                                        "MOEWADEUL_WEATHER_MAX_CONCURRENT_CALLS", "12",
+                                        "MOEWADEUL_WEATHER_KMA_MAX_CONCURRENT_CALLS", "12",
+                                        "MOEWADEUL_WEATHER_KASI_MAX_CONCURRENT_CALLS", "8",
                                         "MOEWADEUL_WEATHER_KMA_READ_TIMEOUT", "7s"))))
                 .run(context -> {
                     WeatherProperties properties = context.getBean(WeatherProperties.class);
 
                     assertThat(properties.responseDeadline()).isEqualTo(Duration.ofSeconds(5));
                     assertThat(properties.maxInFlight()).isEqualTo(40);
-                    assertThat(context.getBean(WeatherCallProperties.class).maxConcurrentCalls())
+                    assertThat(context.getBean(KmaProperties.class).maxConcurrentCalls())
                             .isEqualTo(12);
+                    assertThat(context.getBean(KasiProperties.class).maxConcurrentCalls())
+                            .isEqualTo(8);
                 });
     }
 
@@ -61,11 +67,16 @@ class WeatherPropertiesTest {
         assertThatThrownBy(() -> new WeatherProperties(Duration.ofSeconds(3), 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("maxInFlight");
-        assertThatThrownBy(() -> new WeatherCallProperties(0))
+        assertThatThrownBy(() ->
+                        new KmaProperties("https://kma.test", "", Duration.ofSeconds(1), Duration.ofSeconds(2), 0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("maxConcurrentCalls");
+                .hasMessageContaining("kma.maxConcurrentCalls");
+        assertThatThrownBy(() ->
+                        new KasiProperties("https://kasi.test", "", Duration.ofSeconds(1), Duration.ofSeconds(2), 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("kasi.maxConcurrentCalls");
     }
 
-    @EnableConfigurationProperties({WeatherProperties.class, WeatherCallProperties.class})
+    @EnableConfigurationProperties({WeatherProperties.class, KmaProperties.class, KasiProperties.class})
     static class PropertiesConfig {}
 }

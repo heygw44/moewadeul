@@ -63,7 +63,6 @@ public class KmaClient {
     public KmaClient(
             KmaProperties properties,
             ExternalApiProperties externalApiProperties,
-            WeatherCallProperties callProperties,
             JsonMapper jsonMapper,
             ExternalApiMetrics metrics,
             Clock clock) {
@@ -72,7 +71,7 @@ public class KmaClient {
         this.serviceKey = properties.serviceKey();
         this.jsonMapper = jsonMapper;
         this.metrics = metrics;
-        this.callLimit = new ExternalCallLimit(API, callProperties.maxConcurrentCalls(), metrics);
+        this.callLimit = new ExternalCallLimit(API, properties.maxConcurrentCalls(), metrics);
         this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 

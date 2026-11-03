@@ -51,14 +51,13 @@ public class KasiClient {
     public KasiClient(
             KasiProperties properties,
             ExternalApiProperties externalApiProperties,
-            WeatherCallProperties callProperties,
             ExternalApiMetrics metrics,
             Clock clock) {
         this.restClient = PublicDataHttp.createRestClient(
                 properties.baseUrl(), properties.connectTimeout(), properties.readTimeout());
         this.serviceKey = properties.serviceKey();
         this.metrics = metrics;
-        this.callLimit = new ExternalCallLimit(API, callProperties.maxConcurrentCalls(), metrics);
+        this.callLimit = new ExternalCallLimit(API, properties.maxConcurrentCalls(), metrics);
         this.failureCooldown = new ExternalFailureCooldown(API, externalApiProperties, clock, metrics);
     }
 

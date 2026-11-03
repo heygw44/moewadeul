@@ -80,9 +80,6 @@ class KmaClientIntegrationTest {
     private KmaProperties kmaProperties;
 
     @Autowired
-    private WeatherCallProperties callProperties;
-
-    @Autowired
     private JsonMapper jsonMapper;
 
     @Autowired
@@ -344,9 +341,8 @@ class KmaClientIntegrationTest {
     void everyRequestEndsWithRetryableFailureWhenReadTimeoutHitsDuringCompressedBody() throws Exception {
         // given
         KmaClient unlimited = new KmaClient(
-                kmaProperties,
+                withCallLimit(CONCURRENT_REQUESTS),
                 new ExternalApiProperties(10, Duration.ZERO),
-                new WeatherCallProperties(CONCURRENT_REQUESTS),
                 jsonMapper,
                 metrics,
                 clock);
@@ -435,12 +431,7 @@ class KmaClientIntegrationTest {
         // given
         int threads = 30;
         KmaClient limited = new KmaClient(
-                kmaProperties,
-                new ExternalApiProperties(10, Duration.ZERO),
-                new WeatherCallProperties(10),
-                jsonMapper,
-                metrics,
-                clock);
+                withCallLimit(10), new ExternalApiProperties(10, Duration.ZERO), jsonMapper, metrics, clock);
         stub(MID_TA_PATH, okJson(readFixture("mid-ta.json")).withFixedDelay(500));
         long successBefore = timerCount("getMidTa", "success");
         ExecutorService executor = Executors.newFixedThreadPool(threads);
@@ -564,14 +555,18 @@ class KmaClientIntegrationTest {
         assertThat(requestCount(MID_TA_PATH)).isEqualTo(2);
     }
 
+    private KmaProperties withCallLimit(int maxConcurrentCalls) {
+        return new KmaProperties(
+                kmaProperties.baseUrl(),
+                kmaProperties.serviceKey(),
+                kmaProperties.connectTimeout(),
+                kmaProperties.readTimeout(),
+                maxConcurrentCalls);
+    }
+
     private KmaClient clientWithCooldown() {
         return new KmaClient(
-                kmaProperties,
-                new ExternalApiProperties(10, Duration.ofSeconds(30)),
-                callProperties,
-                jsonMapper,
-                metrics,
-                clock);
+                kmaProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), jsonMapper, metrics, clock);
     }
 
     private double skippedCount() {

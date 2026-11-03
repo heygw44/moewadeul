@@ -63,9 +63,6 @@ class KasiClientIntegrationTest {
     private KasiProperties kasiProperties;
 
     @Autowired
-    private WeatherCallProperties callProperties;
-
-    @Autowired
     private ExternalApiMetrics metrics;
 
     @Autowired
@@ -268,8 +265,8 @@ class KasiClientIntegrationTest {
     @DisplayName("[NFR-05][NFR-06] 천문연이 재시도까지 실패하면 쉬는 시간 동안 천문연을 부르지 않고, 쉬는 시간이 지나면 다시 부른다")
     void restsAfterOutage() {
         // given
-        KasiClient resting = new KasiClient(
-                kasiProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), callProperties, metrics, clock);
+        KasiClient resting =
+                new KasiClient(kasiProperties, new ExternalApiProperties(10, Duration.ofSeconds(30)), metrics, clock);
         stub(serverError());
 
         // when
