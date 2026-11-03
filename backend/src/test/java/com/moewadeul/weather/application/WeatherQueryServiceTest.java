@@ -41,7 +41,7 @@ class WeatherQueryServiceTest {
     }
 
     @Test
-    @DisplayName("[F-09][NFR-05] 진행 중인 기상청 호출을 기다릴 자리가 없으면 예외 없이 날씨 없이 응답하고, 대체 응답과 거부를 지표에 남긴다")
+    @DisplayName("[F-09][NFR-05] 진행 중인 기상청 호출을 기다릴 자리가 없으면 예외 없이 날씨 없이 응답하고, 자리가 없었던 수만 따로 지표에 남긴다")
     void returnsEmptyWithoutWaitingWhenNoWaiterSlotIsLeft() throws Exception {
         // given
         MeterRegistry meterRegistry = new SimpleMeterRegistry();
@@ -81,11 +81,13 @@ class WeatherQueryServiceTest {
             assertThat(rejected).isEmpty();
             assertThat(inFlight).noneMatch(Future::isDone);
             assertThat(meterRegistry
-                            .get("moewadeul.external.api.rejected")
+                            .get("moewadeul.weather.cache.busy")
                             .tag("api", "kma")
                             .counter()
                             .count())
                     .isEqualTo(1.0);
+            assertThat(meterRegistry.find("moewadeul.external.api.rejected").counter())
+                    .isNull();
             release.countDown();
             for (Future<Optional<WeatherForecast>> result : inFlight) {
                 assertThat(result.get(5, TimeUnit.SECONDS)).isEmpty();
@@ -95,7 +97,7 @@ class WeatherQueryServiceTest {
                             .tag("api", "kma")
                             .counter()
                             .count())
-                    .isEqualTo(WeatherCaches.MAX_WAITERS + 2.0);
+                    .isEqualTo(WeatherCaches.MAX_WAITERS + 1.0);
         } finally {
             release.countDown();
             executor.shutdownNow();

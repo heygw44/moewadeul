@@ -41,7 +41,7 @@ class SunQueryServiceTest {
     }
 
     @Test
-    @DisplayName("[F-09][NFR-05] 진행 중인 천문연 호출을 기다릴 자리가 없으면 예외 없이 출몰시각 없이 응답하고, 거부를 지표에 남긴다")
+    @DisplayName("[F-09][NFR-05] 진행 중인 천문연 호출을 기다릴 자리가 없으면 예외 없이 출몰시각 없이 응답하고, 자리가 없었던 수만 따로 지표에 남긴다")
     void returnsEmptyWithoutWaitingWhenNoWaiterSlotIsLeft() throws Exception {
         // given
         LocalDate date = LocalDate.of(2026, 10, 5);
@@ -78,11 +78,15 @@ class SunQueryServiceTest {
             assertThat(rejected).isEmpty();
             assertThat(inFlight).noneMatch(Future::isDone);
             assertThat(meterRegistry
-                            .get("moewadeul.external.api.rejected")
+                            .get("moewadeul.weather.cache.busy")
                             .tag("api", "kasi")
                             .counter()
                             .count())
                     .isEqualTo(1.0);
+            assertThat(meterRegistry.find("moewadeul.external.api.rejected").counter())
+                    .isNull();
+            assertThat(meterRegistry.find("moewadeul.external.api.fallbacks").counter())
+                    .isNull();
         } finally {
             release.countDown();
             executor.shutdownNow();

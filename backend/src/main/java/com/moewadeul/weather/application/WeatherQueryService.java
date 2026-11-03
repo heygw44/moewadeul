@@ -46,8 +46,7 @@ public class WeatherQueryService {
             return Optional.empty();
         } catch (WeatherCacheBusyException e) {
             log.warn("기상청 응답을 기다리는 자리가 없어 날씨 없이 응답한다. reason={}", e.getMessage());
-            metrics.recordFallback(API);
-            metrics.recordRejected(API);
+            metrics.recordCacheBusy(API);
             return Optional.empty();
         }
     }

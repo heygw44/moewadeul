@@ -28,8 +28,7 @@ public class SunQueryService {
             return caches.sunTimes(lat, lng, date, () -> fetch(lat, lng, date));
         } catch (WeatherCacheBusyException e) {
             log.warn("천문연 응답을 기다리는 자리가 없어 출몰시각 없이 응답한다. reason={}", e.getMessage());
-            metrics.recordFallback(API);
-            metrics.recordRejected(API);
+            metrics.recordCacheBusy(API);
             return Optional.empty();
         }
     }
