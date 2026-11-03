@@ -213,7 +213,7 @@ class SpotWeatherHttpIntegrationTest {
                 .anySatisfy(event -> assertThat(event.getFormattedMessage()).isEqualTo("dispatch ASYNC"))
                 .anySatisfy(event -> {
                     assertThat(event.getFormattedMessage()).contains("기상청 날씨를 받지 못해");
-                    assertThat(event.getThreadName()).doesNotStartWith("http-nio");
+                    assertThat(event.getThreadName()).startsWith("weather-");
                 });
     }
 
