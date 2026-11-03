@@ -13,6 +13,7 @@ public class WeatherExecutorConfig {
     // 기본 close()는 작업이 끝나기를 기다린다. 응답을 포기한 호출이 남아 있어도 종료를 막지 않으려고 shutdown만 부른다.
     @Bean(name = WEATHER_EXECUTOR, destroyMethod = "shutdown")
     ExecutorService weatherExecutor() {
-        return Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("weather-", 0).factory());
+        return Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("weather-", 0).factory());
     }
 }

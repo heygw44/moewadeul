@@ -17,6 +17,7 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.weather.application.LocationWeather;
 import com.moewadeul.weather.application.WeatherForecast.ShortTermForecast;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -68,7 +69,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubKasi(okXml(readFixture("kasi/rise-set.xml")));
 
         // when
-        Optional<SpotWeather> weather = find(spotId);
+        Optional<LocationWeather> weather = find(spotId);
 
         // then
         assertThat(weather).isPresent();
@@ -89,7 +90,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubKasi(okXml(readFixture("kasi/rise-set.xml")));
 
         // when
-        Optional<SpotWeather> weather = find(spotId);
+        Optional<LocationWeather> weather = find(spotId);
 
         // then
         assertThat(weather).isEmpty();
@@ -105,7 +106,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubKasi(serverError());
 
         // when
-        Optional<SpotWeather> weather = find(spotId);
+        Optional<LocationWeather> weather = find(spotId);
 
         // then
         assertThat(weather).isPresent();
@@ -149,10 +150,10 @@ class SpotWeatherQueryServiceIntegrationTest {
         // given
         long spotId = insertSeoulCampsite("ACTIVE");
         stubAllSuccess();
-        SpotWeather first = find(spotId).orElseThrow();
+        LocationWeather first = find(spotId).orElseThrow();
 
         // when
-        SpotWeather second = find(spotId).orElseThrow();
+        LocationWeather second = find(spotId).orElseThrow();
 
         // then
         assertThat(second).isEqualTo(first);
@@ -188,7 +189,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubAllSuccess();
 
         // when
-        Optional<SpotWeather> weather = find(spotId);
+        Optional<LocationWeather> weather = find(spotId);
 
         // then
         assertThat(weather).isPresent();
@@ -206,7 +207,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         stubKasi(okXml(readFixture("kasi/rise-set.xml")));
 
         // when
-        SpotWeather weather = find(spotId).orElseThrow();
+        LocationWeather weather = find(spotId).orElseThrow();
 
         // then
         assertThat(weather.sun()).isNotNull();
@@ -248,7 +249,7 @@ class SpotWeatherQueryServiceIntegrationTest {
         wireMock.verify(getRequestedFor(urlPathEqualTo(VILAGE_FCST_PATH)).withQueryParam("base_time", equalTo("1400")));
     }
 
-    private Optional<SpotWeather> find(long spotId) {
+    private Optional<LocationWeather> find(long spotId) {
         return spotWeatherQueryService.findWeather(spotId).join();
     }
 

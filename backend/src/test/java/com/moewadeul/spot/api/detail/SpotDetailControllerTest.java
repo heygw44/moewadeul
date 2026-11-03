@@ -24,12 +24,12 @@ import com.moewadeul.spot.application.detail.SpotPublicDetail;
 import com.moewadeul.spot.application.detail.SpotRating;
 import com.moewadeul.spot.application.detail.SpotRecentReview;
 import com.moewadeul.spot.application.detail.SpotRecruitingBasecamp;
-import com.moewadeul.spot.application.detail.SpotWeather;
 import com.moewadeul.spot.application.detail.SpotWeatherQueryService;
 import com.moewadeul.spot.application.park.ProtectedAreaSource;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
 import com.moewadeul.spot.domain.SpotType;
 import com.moewadeul.spot.domain.bakji.BakjiSignalLevel;
+import com.moewadeul.weather.application.LocationWeather;
 import com.moewadeul.weather.application.SunTimes;
 import com.moewadeul.weather.application.WeatherForecast;
 import java.time.Instant;
@@ -356,7 +356,7 @@ class SpotDetailControllerTest {
         SunTimes sun =
                 new SunTimes(LocalDate.of(2026, 10, 4), LocalTime.of(7, 1), LocalTime.of(18, 11), LocalTime.of(18, 38));
         when(spotWeatherQueryService.findWeather(103L))
-                .thenReturn(completedFuture(Optional.of(new SpotWeather(forecast, sun))));
+                .thenReturn(completedFuture(Optional.of(new LocationWeather(forecast, sun))));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/103/weather").exchange();
@@ -387,7 +387,7 @@ class SpotDetailControllerTest {
         // given
         WeatherForecast forecast = new WeatherForecast("기상청", List.of(), List.of());
         when(spotWeatherQueryService.findWeather(104L))
-                .thenReturn(completedFuture(Optional.of(new SpotWeather(forecast, null))));
+                .thenReturn(completedFuture(Optional.of(new LocationWeather(forecast, null))));
 
         // when
         MvcTestResult result = mvc.get().uri(PATH + "/104/weather").exchange();

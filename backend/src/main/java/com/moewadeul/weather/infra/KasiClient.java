@@ -32,7 +32,7 @@ import org.xml.sax.SAXException;
 @Component
 public class KasiClient {
 
-    private static final String API = "kasi";
+    public static final String API = "kasi";
     private static final String RISE_SET = "getLCRiseSetInfo";
     private static final String RISE_SET_URI = "/RiseSetInfoService/getLCRiseSetInfo?serviceKey={serviceKey}"
             + "&locdate={locdate}&longitude={longitude}&latitude={latitude}&dnYn={dnYn}";

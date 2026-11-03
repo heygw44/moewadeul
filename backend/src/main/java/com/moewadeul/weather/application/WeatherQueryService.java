@@ -2,7 +2,6 @@ package com.moewadeul.weather.application;
 
 import com.moewadeul.common.external.ExternalApiMetrics;
 import com.moewadeul.common.time.KoreaTime;
-import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.weather.application.WeatherForecast.MidTermForecast;
 import com.moewadeul.weather.application.WeatherForecast.ShortTermForecast;
 import com.moewadeul.weather.domain.KmaBaseTimes;
@@ -25,8 +24,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class WeatherQueryService {
 
-    private static final String API = "kma";
-
     private static final String MID_LAND_FCST = "getMidLandFcst";
     private static final String MID_TA = "getMidTa";
 
@@ -37,12 +34,11 @@ public class WeatherQueryService {
     private final Clock clock;
 
     public Optional<WeatherForecast> forecast(int nx, int ny, double lat, double lng) {
-        OutsideTransaction.require("기상청 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         try {
             return Optional.of(fetchForecast(nx, ny, lat, lng));
         } catch (KmaApiException e) {
             log.warn("기상청 날씨를 받지 못해 날씨 없이 응답한다. reason={}", e.getMessage());
-            metrics.recordFallback(API);
+            metrics.recordFallback(KmaClient.API);
             return Optional.empty();
         }
     }

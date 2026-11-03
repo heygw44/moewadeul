@@ -28,7 +28,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class KmaClient {
 
-    private static final String API = "kma";
+    public static final String API = "kma";
     private static final String VILAGE_FCST = "getVilageFcst";
     private static final String MID_LAND_FCST = "getMidLandFcst";
     private static final String MID_TA = "getMidTa";

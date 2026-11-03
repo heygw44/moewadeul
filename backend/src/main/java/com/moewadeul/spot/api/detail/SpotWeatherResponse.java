@@ -1,7 +1,7 @@
 package com.moewadeul.spot.api.detail;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.moewadeul.spot.application.detail.SpotWeather;
+import com.moewadeul.weather.application.LocationWeather;
 import com.moewadeul.weather.application.SunTimes;
 import com.moewadeul.weather.application.WeatherForecast;
 import java.time.Instant;
@@ -11,13 +11,13 @@ import java.util.List;
 
 public record SpotWeatherResponse(Weather weather) {
 
-    static SpotWeatherResponse from(SpotWeather weather) {
+    static SpotWeatherResponse from(LocationWeather weather) {
         return new SpotWeatherResponse(weather == null ? null : Weather.from(weather));
     }
 
     public record Weather(String source, List<ShortTerm> shortTerm, List<MidTerm> midTerm, Sun sun) {
 
-        static Weather from(SpotWeather weather) {
+        static Weather from(LocationWeather weather) {
             WeatherForecast forecast = weather.forecast();
             return new Weather(
                     forecast.source(),

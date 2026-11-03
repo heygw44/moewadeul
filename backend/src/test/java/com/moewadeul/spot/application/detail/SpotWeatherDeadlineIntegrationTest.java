@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.weather.application.LocationWeather;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
@@ -70,7 +71,7 @@ class SpotWeatherDeadlineIntegrationTest {
 
         // when
         long startedAt = System.nanoTime();
-        Optional<SpotWeather> weather =
+        Optional<LocationWeather> weather =
                 spotWeatherQueryService.findWeather(spotId).join();
         Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
 
@@ -91,7 +92,7 @@ class SpotWeatherDeadlineIntegrationTest {
         assertThat(spotWeatherQueryService.findWeather(spotId).join()).isEmpty();
 
         // when
-        SpotWeather weather = awaitCached(spotId);
+        LocationWeather weather = awaitCached(spotId);
 
         // then
         assertThat(weather.forecast().shortTerm()).isNotEmpty();
@@ -112,7 +113,7 @@ class SpotWeatherDeadlineIntegrationTest {
 
         // when
         long startedAt = System.nanoTime();
-        Optional<SpotWeather> weather =
+        Optional<LocationWeather> weather =
                 spotWeatherQueryService.findWeather(spotId).join();
         Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
 
@@ -124,7 +125,7 @@ class SpotWeatherDeadlineIntegrationTest {
         assertThat(elapsed).isBetween(DEADLINE.minusMillis(50), DEADLINE.plusMillis(500));
         assertThat(deadlineCount("kasi") - kasiDeadlinesBefore).isEqualTo(1);
         assertThat(deadlineCount("kma") - kmaDeadlinesBefore).isZero();
-        SpotWeather later = awaitCached(spotId);
+        LocationWeather later = awaitCached(spotId);
         assertThat(later.sun()).isNotNull();
         assertThat(requestCount(RISE_SET_PATH)).isEqualTo(1);
     }
@@ -138,7 +139,7 @@ class SpotWeatherDeadlineIntegrationTest {
         stubKasi(okXml(readFixture("kasi/rise-set.xml")));
 
         // when
-        Optional<SpotWeather> weather =
+        Optional<LocationWeather> weather =
                 spotWeatherQueryService.findWeather(spotId).join();
 
         // then
@@ -150,7 +151,7 @@ class SpotWeatherDeadlineIntegrationTest {
                 .untilAsserted(() -> assertThat(requestCount(RISE_SET_PATH)).isZero());
     }
 
-    private SpotWeather awaitCached(long spotId) {
+    private LocationWeather awaitCached(long spotId) {
         return await().atMost(Duration.ofSeconds(10))
                 .pollInterval(Duration.ofMillis(100))
                 .until(

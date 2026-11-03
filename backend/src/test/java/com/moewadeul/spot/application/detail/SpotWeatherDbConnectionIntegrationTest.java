@@ -12,6 +12,7 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.weather.application.LocationWeather;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
 import java.io.IOException;
@@ -78,7 +79,7 @@ class SpotWeatherDbConnectionIntegrationTest {
         HikariPoolMXBean pool = dataSource.unwrap(HikariDataSource.class).getHikariPoolMXBean();
 
         // when
-        CompletableFuture<Optional<SpotWeather>> weather = spotWeatherQueryService.findWeather(spotId);
+        CompletableFuture<Optional<LocationWeather>> weather = spotWeatherQueryService.findWeather(spotId);
         List<Integer> activeConnections = new ArrayList<>();
         while (!weather.isDone()) {
             activeConnections.add(pool.getActiveConnections());

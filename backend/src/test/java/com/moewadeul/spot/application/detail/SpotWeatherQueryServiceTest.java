@@ -2,32 +2,21 @@ package com.moewadeul.spot.application.detail;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.moewadeul.common.external.ExternalApiMetrics;
+import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.spot.infra.detail.SpotDetailMapper;
 import com.moewadeul.spot.infra.detail.SpotWeatherLocationRow;
-import com.moewadeul.weather.application.SunQueryService;
+import com.moewadeul.weather.application.LocationWeather;
+import com.moewadeul.weather.application.LocationWeatherService;
 import com.moewadeul.weather.application.WeatherForecast;
-import com.moewadeul.weather.application.WeatherProperties;
-import com.moewadeul.weather.application.WeatherQueryService;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -36,89 +25,38 @@ class SpotWeatherQueryServiceTest {
     private static final long SPOT_ID = 7L;
 
     private final SpotDetailMapper mapper = mock(SpotDetailMapper.class);
-    private final WeatherQueryService weatherQueryService = mock(WeatherQueryService.class);
-    private final SunQueryService sunQueryService = mock(SunQueryService.class);
-    private final WeatherForecast forecast = new WeatherForecast("기상청", List.of(), List.of());
+    private final LocationWeatherService locationWeatherService = mock(LocationWeatherService.class);
+    private final SpotWeatherQueryService service = new SpotWeatherQueryService(mapper, locationWeatherService);
 
-    SpotWeatherQueryServiceTest() {
-        when(mapper.selectActiveWeatherLocation(anyLong()))
+    @Test
+    @DisplayName("[F-09] 장소의 격자와 좌표를 날씨 서비스에 그대로 넘기고 그 결과를 돌려준다")
+    void delegatesLocationToWeatherService() {
+        // given
+        when(mapper.selectActiveWeatherLocation(SPOT_ID))
                 .thenReturn(Optional.of(new SpotWeatherLocationRow(37.5, 127.0, 60, 127)));
+        CompletableFuture<Optional<LocationWeather>> expected = CompletableFuture.completedFuture(
+                Optional.of(new LocationWeather(new WeatherForecast("기상청", List.of(), List.of()), null)));
+        when(locationWeatherService.findWeather(60, 127, 37.5, 127.0)).thenReturn(expected);
+
+        // when
+        CompletableFuture<Optional<LocationWeather>> actual = service.findWeather(SPOT_ID);
+
+        // then
+        assertThat(actual).isSameAs(expected);
+        verify(locationWeatherService).findWeather(60, 127, 37.5, 127.0);
     }
 
     @Test
-    @DisplayName("[F-09][NFR-05] 기상청 처리에서 예상 못 한 예외가 나면 빈 값으로 감추지 않고 예외로 끝내며, 입장 자리는 돌려준다")
-    void failsFutureAndReturnsPermitWhenForecastThrows() {
+    @DisplayName("[F-09] 장소가 없으면 날씨 서비스를 부르지 않고 바로 404 예외를 던진다")
+    void throwsNotFoundBeforeCallingWeatherService() {
         // given
-        when(weatherQueryService.forecast(anyInt(), anyInt(), anyDouble(), anyDouble()))
-                .thenThrow(new IllegalStateException("boom"))
-                .thenReturn(Optional.of(forecast));
-        when(sunQueryService.sunTimes(anyDouble(), anyDouble(), any(LocalDate.class)))
-                .thenReturn(Optional.empty());
-        SpotWeatherQueryService service = service(Runnable::run, 1);
+        when(mapper.selectActiveWeatherLocation(SPOT_ID)).thenReturn(Optional.empty());
 
-        // when
-        CompletableFuture<Optional<SpotWeather>> failed = service.findWeather(SPOT_ID);
-
-        // then
-        assertThatThrownBy(failed::join)
-                .isInstanceOf(CompletionException.class)
-                .hasRootCauseInstanceOf(IllegalStateException.class);
-        assertThat(service.findWeather(SPOT_ID).join()).isPresent();
-    }
-
-    @Test
-    @DisplayName("[F-09][NFR-05] 천문연 처리에서 예상 못 한 예외가 나면 sun만 null로 응답하지 않고 예외로 끝낸다")
-    void failsFutureWhenSunLookupThrows() {
-        // given
-        when(weatherQueryService.forecast(anyInt(), anyInt(), anyDouble(), anyDouble()))
-                .thenReturn(Optional.of(forecast));
-        when(sunQueryService.sunTimes(anyDouble(), anyDouble(), any(LocalDate.class)))
-                .thenThrow(new IllegalStateException("boom"));
-
-        // when
-        CompletableFuture<Optional<SpotWeather>> failed =
-                service(Runnable::run, 1).findWeather(SPOT_ID);
-
-        // then
-        assertThatThrownBy(failed::join)
-                .isInstanceOf(CompletionException.class)
-                .hasRootCauseInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    @DisplayName("[F-09][NFR-05] 실행기가 작업을 받지 않으면 예외를 그대로 던지고 입장 자리는 돌려준다")
-    void rethrowsRejectionAndReturnsPermit() {
-        // given
-        when(weatherQueryService.forecast(anyInt(), anyInt(), anyDouble(), anyDouble()))
-                .thenReturn(Optional.of(forecast));
-        when(sunQueryService.sunTimes(anyDouble(), anyDouble(), any(LocalDate.class)))
-                .thenReturn(Optional.empty());
-        boolean[] rejecting = {true};
-        SpotWeatherQueryService service = service(
-                task -> {
-                    if (rejecting[0]) {
-                        throw new RejectedExecutionException("closed");
-                    }
-                    task.run();
-                },
-                1);
-
-        // when
-        assertThatThrownBy(() -> service.findWeather(SPOT_ID)).isInstanceOf(RejectedExecutionException.class);
-        rejecting[0] = false;
-
-        // then
-        assertThat(service.findWeather(SPOT_ID).join()).isPresent();
-    }
-
-    private SpotWeatherQueryService service(Executor executor, int maxInFlight) {
-        return new SpotWeatherQueryService(
-                mapper,
-                weatherQueryService,
-                sunQueryService,
-                new ExternalApiMetrics(new SimpleMeterRegistry()),
-                new WeatherProperties(Duration.ofSeconds(3), maxInFlight),
-                executor,
-                Clock.fixed(Instant.parse("2026-10-04T03:58:00Z"), ZoneOffset.UTC));
+        // when & then
+        assertThatThrownBy(() -> service.findWeather(SPOT_ID))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.NOT_FOUND));
+        verifyNoInteractions(locationWeatherService);
     }
 }

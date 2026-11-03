@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.weather.application.LocationWeather;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
@@ -67,10 +68,10 @@ class SpotWeatherAdmissionIntegrationTest {
         stubKma(SLOW_MILLIS);
         stubKasi(okXml(readFixture("kasi/rise-set.xml")));
         double rejectedBefore = rejectedCount();
-        CompletableFuture<Optional<SpotWeather>> admitted = spotWeatherQueryService.findWeather(spotId);
+        CompletableFuture<Optional<LocationWeather>> admitted = spotWeatherQueryService.findWeather(spotId);
 
         // when
-        CompletableFuture<Optional<SpotWeather>> rejected = spotWeatherQueryService.findWeather(spotId);
+        CompletableFuture<Optional<LocationWeather>> rejected = spotWeatherQueryService.findWeather(spotId);
 
         // then
         assertThat(rejected).isCompletedWithValue(Optional.empty());
@@ -90,7 +91,8 @@ class SpotWeatherAdmissionIntegrationTest {
         double rejectedBefore = rejectedCount();
 
         // when
-        CompletableFuture<Optional<SpotWeather>> whileAbandonedWorkRuns = spotWeatherQueryService.findWeather(spotId);
+        CompletableFuture<Optional<LocationWeather>> whileAbandonedWorkRuns =
+                spotWeatherQueryService.findWeather(spotId);
 
         // then
         assertThat(whileAbandonedWorkRuns).isCompletedWithValue(Optional.empty());
