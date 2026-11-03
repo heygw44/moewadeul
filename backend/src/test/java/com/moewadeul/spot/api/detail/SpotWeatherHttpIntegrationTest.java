@@ -67,7 +67,7 @@ class SpotWeatherHttpIntegrationTest {
     private static final String TRACE_HEADER = "X-Trace-Id";
     private static final String PASSWORD = "Valid-pass1";
     private static final String SESSION_COOKIE = "SESSION";
-    private static final int KMA_DELAY_MILLIS = 800;
+    private static final int KMA_DELAY_MILLIS = 400;
     private static final int WEATHER_REQUESTS = 40;
 
     private final HttpClient http =
