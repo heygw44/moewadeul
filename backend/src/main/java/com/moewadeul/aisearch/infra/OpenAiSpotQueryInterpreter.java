@@ -71,7 +71,7 @@ public class OpenAiSpotQueryInterpreter implements SpotQueryInterpreter {
         this.properties = properties;
         this.jsonMapper = jsonMapper;
         this.metrics = metrics;
-        this.callLimit = new ExternalCallLimit(API, externalApiProperties, metrics);
+        this.callLimit = new ExternalCallLimit(API, externalApiProperties.maxConcurrentCalls(), metrics);
         this.restClient = createRestClient(properties);
     }
 

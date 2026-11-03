@@ -69,7 +69,7 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
                 properties,
                 buildClient(properties),
                 buildPresigner(properties),
-                new ExternalCallLimit(API, externalApiProperties, metrics));
+                new ExternalCallLimit(API, externalApiProperties.maxConcurrentCalls(), metrics));
     }
 
     S3ImageStorage(

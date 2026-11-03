@@ -340,12 +340,14 @@ class KmaClientIntegrationTest {
     @DisplayName("[F-09][NFR-05] 압축된 응답을 읽는 도중 응답 대기 시간이 지나도, 모든 요청이 정상 응답이나 다시 보낼 수 있는 예외로 끝난다")
     void everyRequestEndsWithRetryableFailureWhenReadTimeoutHitsDuringCompressedBody() throws Exception {
         // given
+        KmaProperties unlimitedProperties = new KmaProperties(
+                kmaProperties.baseUrl(),
+                kmaProperties.serviceKey(),
+                kmaProperties.connectTimeout(),
+                kmaProperties.readTimeout(),
+                CONCURRENT_REQUESTS);
         KmaClient unlimited = new KmaClient(
-                kmaProperties,
-                new ExternalApiProperties(CONCURRENT_REQUESTS, Duration.ZERO),
-                jsonMapper,
-                metrics,
-                clock);
+                unlimitedProperties, new ExternalApiProperties(10, Duration.ZERO), jsonMapper, metrics, clock);
         List<String> unexpected = new CopyOnWriteArrayList<>();
         ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_REQUESTS);
 
@@ -426,7 +428,7 @@ class KmaClientIntegrationTest {
     }
 
     @Test
-    @DisplayName("[NFR-05] 기상청이 느릴 때 동시 호출이 한도(10)를 넘으면, 넘는 호출은 기다리지 않고 기상청을 부르지 않은 채 다시 보낼 수 없는 예외로 끝난다")
+    @DisplayName("[NFR-05] 기상청이 느릴 때 동시 호출이 한도(20)를 넘으면, 넘는 호출은 기다리지 않고 기상청을 부르지 않은 채 다시 보낼 수 없는 예외로 끝난다")
     void rejectsCallsBeyondConcurrentLimitWithoutCallingKma() throws Exception {
         // given
         int threads = 30;
@@ -460,8 +462,8 @@ class KmaClientIntegrationTest {
 
         // then
         assertThat(outcomes).containsOnly("OK", "REJECTED");
-        assertThat(outcomes.stream().filter("OK"::equals).count()).isBetween(1L, 10L);
-        assertThat(timerCount("getMidTa", "success") - successBefore).isBetween(1L, 10L);
+        assertThat(outcomes.stream().filter("OK"::equals).count()).isBetween(1L, 20L);
+        assertThat(timerCount("getMidTa", "success") - successBefore).isBetween(1L, 20L);
     }
 
     private static void assertNoServiceKey(Throwable thrown) {
