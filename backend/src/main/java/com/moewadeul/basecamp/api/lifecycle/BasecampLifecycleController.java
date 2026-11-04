@@ -33,7 +33,7 @@ class BasecampLifecycleController {
             summary = "베이스캠프 열기",
             description = "본인확인을 마친 회원(신뢰 단계 1 이상)이 장소에 베이스캠프를 열고, 201과 함께 basecampId와 status(RECRUITING)를 준다. "
                     + "Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. "
-                    + "같은 키로 다시 보내면 베이스캠프를 새로 열지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. "
+                    + "같은 키와 같은 내용으로 다시 보내면 베이스캠프를 새로 열지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이다. "
                     + "캠프 리더는 첫 멤버가 된다. 출발일은 내일부터 60일 뒤까지, 박 수는 1~3박, 정원은 캠프 리더를 포함해 2~6명이다. "
                     + "일정이 어긋나면 400 BASECAMP_SCHEDULE_INVALID, 정원이 어긋나면 400 BASECAMP_CAPACITY_INVALID로 응답한다. "
                     + "합류 조건(joinCondition)은 생략할 수 있다. 연령대는 하한·상한을 함께 보내야 하고 20~60의 십 단위이며, "
@@ -109,7 +109,7 @@ class BasecampLifecycleController {
             summary = "베이스캠프 연락 수단 등록",
             description = "캠프 리더가 연락 수단을 등록하거나 바꾸고, 200과 함께 basecampId와 status를 준다. "
                     + "contactInfo는 필수이고 255자 이하의 https URL이어야 하며, 어긋나면 400 INVALID_INPUT이다. "
-                    + "연락 수단은 베이스캠프가 확정된 뒤부터 완료 후 7일까지 ACTIVE 멤버에게만 상세 응답에 나타난다. "
+                    + "연락 수단은 모집 중이거나 마감된 동안에는 캠프 리더에게만, 확정된 뒤부터 완료 후 7일까지는 ACTIVE 멤버에게만 상세 응답에 나타난다. "
                     + "다음 순서로 검사하고 처음 걸린 이유로 응답한다. "
                     + "요청 값이 어긋나면 400 INVALID_INPUT, 베이스캠프가 없으면 404 NOT_FOUND, 캠프 리더가 아니면 403 ACCESS_DENIED, "
                     + "완료되었거나 취소되었으면 409 BASECAMP_INVALID_STATE이다.")

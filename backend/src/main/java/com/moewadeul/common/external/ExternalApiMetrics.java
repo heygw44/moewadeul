@@ -14,6 +14,7 @@ public class ExternalApiMetrics {
     private static final String TIMER_NAME = "moewadeul.external.api.requests";
     private static final String FALLBACK_COUNTER_NAME = "moewadeul.external.api.fallbacks";
     private static final String REJECTED_COUNTER_NAME = "moewadeul.external.api.rejected";
+    private static final String CACHE_BUSY_COUNTER_NAME = "moewadeul.weather.cache.busy";
     private static final String SKIPPED_COUNTER_NAME = "moewadeul.external.api.skipped";
     private static final String SUCCESS = "success";
     private static final String FAILURE = "failure";
@@ -43,6 +44,14 @@ public class ExternalApiMetrics {
     public void recordRejected(String api) {
         Counter.builder(REJECTED_COUNTER_NAME)
                 .description("동시 호출 수 한도에 닿아 외부 API를 부르지 않고 거부한 수")
+                .tag("api", api)
+                .register(meterRegistry)
+                .increment();
+    }
+
+    public void recordCacheBusy(String api) {
+        Counter.builder(CACHE_BUSY_COUNTER_NAME)
+                .description("같은 값을 받는 중인 호출을 기다릴 자리가 없어 날씨 없이 응답한 수")
                 .tag("api", api)
                 .register(meterRegistry)
                 .increment();

@@ -1,5 +1,11 @@
 import { apiFetch } from './client';
-import type { CompanionReviewCreateRequest, Page, PendingCompanionReview, ReceivedCompanionReview } from './types';
+import type {
+  CompanionReviewCreateRequest,
+  Page,
+  PendingCompanionReview,
+  PublicCompanionReview,
+  ReceivedCompanionReview,
+} from './types';
 
 const RECEIVED_REVIEW_PAGE_SIZE = 10;
 
@@ -22,6 +28,17 @@ export function fetchReceivedCompanionReviews(
   signal?: AbortSignal,
 ): Promise<Page<ReceivedCompanionReview>> {
   return apiFetch<Page<ReceivedCompanionReview>>('/api/me/companion-reviews/received', {
+    query: { page, size: RECEIVED_REVIEW_PAGE_SIZE },
+    signal,
+  });
+}
+
+export function fetchMemberCompanionReviews(
+  memberId: number,
+  page: number,
+  signal?: AbortSignal,
+): Promise<Page<PublicCompanionReview>> {
+  return apiFetch<Page<PublicCompanionReview>>(`/api/members/${memberId}/companion-reviews`, {
     query: { page, size: RECEIVED_REVIEW_PAGE_SIZE },
     signal,
   });

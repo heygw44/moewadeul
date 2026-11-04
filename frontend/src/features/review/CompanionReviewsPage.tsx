@@ -282,7 +282,9 @@ function WriteDialog({
           error={commentError}
           onChange={(event) => setComment(event.target.value)}
         />
-        <Notice tone="info" title="남긴 뒤에는 수정하거나 삭제할 수 없어요" />
+        <Notice tone="info" title="남긴 뒤에는 수정하거나 삭제할 수 없어요">
+          태그와 한마디는 내 닉네임 없이 상대 프로필에 공개돼요. 이메일 인증을 마친 회원이 볼 수 있어요.
+        </Notice>
         <div className="flex flex-wrap items-start justify-end gap-2">
           <Button variant="secondary" disabled={submitting} onClick={onClose}>
             닫기

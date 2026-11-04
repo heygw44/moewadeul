@@ -38,10 +38,10 @@ class BasecampMembershipController {
                     + "요청 본문과 message는 생략할 수 있고, message는 500자 이하여야 한다(넘으면 400 INVALID_INPUT). "
                     + "스스로 취소했던 신청은 같은 applicationId로 다시 PENDING이 된다. 캠프 리더에게 알릴 이벤트가 같은 트랜잭션에서 기록된다. "
                     + "다음 순서로 검사하고 처음 걸린 이유로 응답한다. "
-                    + "베이스캠프가 없으면 404 NOT_FOUND, 신뢰 단계가 1 미만이면 403 TRUST_LEVEL_INSUFFICIENT, "
+                    + "베이스캠프가 없거나 연결한 장소가 지도에 보이지 않으면 404 NOT_FOUND, 신뢰 단계가 1 미만이면 403 TRUST_LEVEL_INSUFFICIENT, "
                     + "모집 중이 아니면 409 BASECAMP_INVALID_STATE, 이미 대기 중이거나 멤버(캠프 리더 포함)이면 409 BASECAMP_ALREADY_APPLIED, "
                     + "거절·탈퇴·강퇴된 적이 있으면 409 BASECAMP_REAPPLY_NOT_ALLOWED, "
-                    + "합류 조건(최소 신뢰 단계 2, 본인확인한 연령대, 본인확인한 성별)을 충족하지 못하면 403 BASECAMP_CONDITION_NOT_MET, "
+                    + "그 베이스캠프의 합류 조건(최소 신뢰 단계, 본인확인한 연령대, 본인확인한 성별)을 충족하지 못하면 403 BASECAMP_CONDITION_NOT_MET, "
                     + "같은 기간에 진행 중인(모집 중·마감·확정) 다른 베이스캠프의 ACTIVE 멤버이면 409 BASECAMP_DATE_CONFLICT, "
                     + "대기 신청이 이미 20건이면 409 BASECAMP_PENDING_LIMIT이다.")
     @PostMapping("/api/basecamps/{basecampId}/applications")
@@ -92,7 +92,7 @@ class BasecampMembershipController {
             description = "캠프 리더가 대기 중인 합류 신청을 승인하고, 200과 함께 승인한 뒤의 인원(headcount)과 베이스캠프 상태(status)를 준다. "
                     + "신청자는 멤버가 되고, 승인해서 정원이 차면 베이스캠프는 자동으로 마감되어 status가 CLOSED다. 신청자에게 알릴 이벤트가 같은 트랜잭션에서 기록된다. "
                     + "다음 순서로 검사하고 처음 걸린 이유로 응답하며, 거부되면 신청은 대기 중으로 남는다. "
-                    + "베이스캠프가 없으면 404 NOT_FOUND, 캠프 리더가 아니면 403 ACCESS_DENIED, 이 베이스캠프의 신청이 아니면 404 NOT_FOUND, "
+                    + "베이스캠프가 없으면 404 NOT_FOUND, 캠프 리더가 아니면 403 ACCESS_DENIED, 연결한 장소가 지도에 보이지 않거나 이 베이스캠프의 신청이 아니면 404 NOT_FOUND, "
                     + "모집 중이 아니거나 신청이 대기 중이 아니면 409 BASECAMP_INVALID_STATE, 정원이 이미 차 있으면 409 BASECAMP_FULL, "
                     + "신청자가 지금 합류 조건(최소 신뢰 단계, 본인확인한 연령대, 본인확인한 성별)을 충족하지 못하면 403 BASECAMP_CONDITION_NOT_MET, "
                     + "신청자가 같은 기간에 진행 중인(모집 중·마감·확정) 다른 베이스캠프의 ACTIVE 멤버이면 409 BASECAMP_DATE_CONFLICT이다.")

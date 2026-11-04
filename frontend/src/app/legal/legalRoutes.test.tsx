@@ -48,7 +48,7 @@ describe('법정 고지 페이지', () => {
     await visit('/privacy');
 
     expect(container.querySelector('h1')?.textContent).toBe('개인정보 처리방침');
-    expect(container.textContent).toContain('2026년 10월 29일');
+    expect(container.textContent).toContain('2026년 11월 2일');
     expect(container.textContent).toContain('개인정보 보호책임자');
     expect(container.textContent).toContain('moewadeul@gmail.com');
     await vi.waitFor(() => expect(document.title).toBe('개인정보 처리방침 · 뫼와들'));

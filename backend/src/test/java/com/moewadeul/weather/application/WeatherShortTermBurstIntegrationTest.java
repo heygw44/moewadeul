@@ -60,12 +60,14 @@ class WeatherShortTermBurstIntegrationTest {
     private MeterRegistry meterRegistry;
 
     @Test
-    @DisplayName("[F-09][NFR-06] 단기예보 발표가 바뀐 직후 같은 격자를 100건 동시에 읽어도 서버는 기상청 단기예보를 한 번만 부르고, 100건 모두 예보를 받는다")
-    void callsShortTermOnceWhenPublishTimeChanges() throws Exception {
+    @DisplayName(
+            "[F-09][NFR-06] 단기예보 발표가 바뀐 직후 같은 격자를 100건 동시에 읽어도 서버는 기상청 단기예보를 한 번만 부르고, 기다릴 자리를 얻지 못한 요청만 날씨 없이 응답하고 나머지는 예보를 받는다. 이후 요청은 보관한 예보를 받는다")
+    void callsShortTermOnceAndRejectsWaitersBeyondLimit() throws Exception {
         // given
         fillPreviousPublish();
         stubAll(SHORT_TERM_DELAY_MILLIS);
         long callsBefore = shortTermCallCount();
+        double busyBefore = busyCount();
 
         // when
         List<Optional<WeatherForecast>> results = forecastConcurrently();
@@ -81,13 +83,21 @@ class WeatherShortTermBurstIntegrationTest {
                 requestCount(VILAGE_FCST_PATH),
                 received);
         assertThat(shortTermCalls).isEqualTo(1);
-        assertThat(received).isEqualTo(THREADS);
+        assertThat(received).isPositive();
+        assertThat(busyCount() - busyBefore).isEqualTo(THREADS - received);
         assertThat(requestCount(MID_LAND_FCST_PATH)).isZero();
         assertThat(requestCount(MID_TA_PATH)).isZero();
+
+        // when
+        Optional<WeatherForecast> later = service.forecast(NX, NY, SEOUL_LAT, SEOUL_LNG);
+
+        // then
+        assertThat(later).isPresent();
+        assertThat(shortTermCallCount() - callsBefore).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("[F-09][NFR-05] 발표가 바뀐 직후 첫 기상청 호출이 실패하면 기다리던 100건 모두 날씨 없이 응답하고, 다음 요청은 기상청을 다시 부른다")
+    @DisplayName("[F-09][NFR-05] 발표가 바뀐 직후 첫 기상청 호출이 실패하면 동시에 온 100건 모두 날씨 없이 응답하고, 다음 요청은 기상청을 다시 부른다")
     void allWaitersFallBackWhenFirstCallFailsAndNextRequestRetries() throws Exception {
         // given
         fillPreviousPublish();
@@ -149,6 +159,12 @@ class WeatherShortTermBurstIntegrationTest {
                 .willReturn(okJson(readFixture("vilage-fcst.json")).withFixedDelay(shortTermDelayMillis)));
         wireMock.stubFor(get(urlPathEqualTo(MID_LAND_FCST_PATH)).willReturn(okJson(readFixture("mid-land-fcst.json"))));
         wireMock.stubFor(get(urlPathEqualTo(MID_TA_PATH)).willReturn(okJson(readFixture("mid-ta.json"))));
+    }
+
+    private double busyCount() {
+        return meterRegistry
+                .counter("moewadeul.weather.cache.busy", "api", "kma")
+                .count();
     }
 
     private long shortTermCallCount() {

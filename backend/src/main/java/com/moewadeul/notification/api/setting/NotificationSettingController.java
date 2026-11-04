@@ -34,10 +34,10 @@ class NotificationSettingController {
 
     @Operation(
             summary = "알림 이메일 설정 변경",
-            description = "로그인한 회원의 알림 이메일 설정을 요청 본문으로 통째로 바꾸고, 바뀐 뒤의 모든 종류별 설정을 조회와 같은 형식으로 돌려준다. "
+            description = "이메일 인증을 마친 회원의 알림 이메일 설정을 요청 본문으로 통째로 바꾸고, 바뀐 뒤의 모든 종류별 설정을 조회와 같은 형식으로 돌려준다. "
                     + "본문에 없는 종류는 기본값(emailEnabled true)으로 돌아간다. "
                     + "type이 비었거나 emailEnabled가 없거나 항목이 종류 수보다 많거나, 알 수 없는 type이거나 같은 type이 두 번 있으면 400 INVALID_INPUT이다. "
-                    + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED이다.")
+                    + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, 이메일 인증을 마치지 않았으면 403 MEMBER_NOT_VERIFIED이다.")
     @PutMapping
     List<NotificationSettingResponse> replace(
             @AuthenticationPrincipal LoginMember loginMember,

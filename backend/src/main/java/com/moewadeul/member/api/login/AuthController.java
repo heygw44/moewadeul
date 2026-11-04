@@ -29,7 +29,12 @@ class AuthController {
         this.loginSessionManager = loginSessionManager;
     }
 
-    @Operation(summary = "로그인")
+    @Operation(
+            summary = "로그인",
+            description = "세션 쿠키를 발급한다. 이메일 인증 전(UNVERIFIED) 회원도 로그인할 수 있고, 응답의 status로 구분한다. "
+                    + "이메일이나 비밀번호가 맞지 않거나 탈퇴한 계정이면 401 LOGIN_FAILED이다. "
+                    + "같은 계정에서 실패가 쌓였거나 같은 IP의 실패가 많으면 429 LOGIN_LOCKED와 Retry-After 헤더로 응답한다. "
+                    + "정지된 계정이면 403 MEMBER_SUSPENDED이고 응답에 suspendedUntil(영구 정지이면 없음)을 담는다.")
     @PostMapping("/login")
     LoginResponse login(
             @Valid @RequestBody LoginRequest request,

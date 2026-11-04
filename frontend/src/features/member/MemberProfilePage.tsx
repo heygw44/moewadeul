@@ -13,6 +13,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
 import { MemberBoard, MEMBER_BOARD_LINK_CLASS } from './MemberBoard';
+import { ReceivedReviewsCard } from './ReceivedReviewsCard';
 import { AGE_GROUP_LABELS, companionTagLabel, GENDER_LABELS } from './memberLabels';
 import { withNext } from '../../app/session/nextPath';
 import { useSession } from '../../app/session/session';
@@ -164,6 +165,8 @@ function ProfileContent({ profile }: { profile: MemberProfile }) {
           </div>
         )}
       </PageCard>
+
+      <ReceivedReviewsCard memberId={profile.memberId} />
     </>
   );
 }

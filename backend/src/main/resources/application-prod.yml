@@ -6,8 +6,12 @@ spring:
 
 server:
   tomcat:
+    # 스레드 포화는 HTTP 오류 없이 응답만 늦어져서 tomcat_threads_* 지표로만 보인다.
+    mbeanregistry:
+      enabled: true
     threads:
-      max: 50
+      # 값의 근거는 ExternalWaitThreadBudgetTest가 확인한다.
+      max: 70
 
 logging:
   structured:

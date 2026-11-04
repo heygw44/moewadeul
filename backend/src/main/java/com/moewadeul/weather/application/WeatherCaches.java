@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Semaphore;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Component;
 
@@ -25,10 +26,13 @@ public class WeatherCaches {
     private static final long SHORT_TERM_MAX = 2_000;
     private static final long MID_TERM_MAX = 500;
     private static final long SUN_TIMES_MAX = 10_000;
+    // 다른 요청이 받는 중인 값을 기다리는 스레드는 외부 호출 한도를 거치지 않으므로, 세 캐시를 합쳐 따로 막는다.
+    static final int MAX_WAITERS = 10;
 
     private final AsyncCache<ShortTermKey, List<ShortTermForecast>> shortTerm;
     private final AsyncCache<MidTermKey, KmaMidTermItem> midTerm;
     private final AsyncCache<SunTimesKey, SunTimes> sunTimes;
+    private final Semaphore waiters = new Semaphore(MAX_WAITERS);
 
     public WeatherCaches(MeterRegistry meterRegistry) {
         this.shortTerm = build(SHORT_TERM_TTL, SHORT_TERM_MAX);
@@ -63,7 +67,7 @@ public class WeatherCaches {
         sunTimes.synchronous().invalidateAll();
     }
 
-    private static <K, V> V load(AsyncCache<K, V> cache, K key, Supplier<V> loader) {
+    private <K, V> V load(AsyncCache<K, V> cache, K key, Supplier<V> loader) {
         // getIfPresent는 캐시 지표에 적중·누락을 남기고, asMap()은 남기지 않는다.
         CompletableFuture<V> existing = cache.getIfPresent(key);
         if (existing == null) {
@@ -73,7 +77,21 @@ public class WeatherCaches {
                 return loadInto(mine, loader);
             }
         }
-        return join(existing);
+        return await(existing);
+    }
+
+    private <V> V await(CompletableFuture<V> future) {
+        if (future.isDone()) {
+            return join(future);
+        }
+        if (!waiters.tryAcquire()) {
+            throw new WeatherCacheBusyException();
+        }
+        try {
+            return join(future);
+        } finally {
+            waiters.release();
+        }
     }
 
     private static <V> V loadInto(CompletableFuture<V> future, Supplier<V> loader) {

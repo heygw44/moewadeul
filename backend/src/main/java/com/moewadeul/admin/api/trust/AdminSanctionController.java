@@ -25,7 +25,7 @@ class AdminSanctionController {
             summary = "제재 해제",
             description =
                     "적용 중(ACTIVE)인 제재를 해제한다. 경고와 확정 정지 모두 해제할 수 있고, 정지를 해제하면 회원의 정지 상태를 "
-                            + "남은 정지에 맞춰 다시 정한다. 사유(reason)는 필수이다. 조기 종료(END_EARLY)는 제재가 ENDED_EARLY가 되어 이력에 남고, "
+                            + "남은 정지에 맞춰 다시 정한다. 사유(reason)는 필수이며 END_EARLY와 REVOKE 중 하나이다. 조기 종료(END_EARLY)는 제재가 ENDED_EARLY가 되어 이력에 남고, "
                             + "다음 제재 단계와 신뢰 회원 판정에 계속 반영된다. 처분 취소(REVOKE)는 제재가 REVOKED가 되어 이력에서 빠진다. "
                             + "이미 정리한 베이스캠프와 결제 대기 신청은 되돌리지 않는다. "
                             + "사유가 없거나 올바르지 않으면 400 INVALID_INPUT, 제재가 없으면 404 NOT_FOUND, 적용 중이 아니면 409 SANCTION_INVALID_STATE이다.")

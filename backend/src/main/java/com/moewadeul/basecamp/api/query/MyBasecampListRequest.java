@@ -13,7 +13,9 @@ public record MyBasecampListRequest(
 
         @Schema(description = "베이스캠프 상태. 생략하면 모든 상태.") BasecampStatus status,
 
-        @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.") Integer page,
+        @Min(value = 0, message = "페이지 번호는 0 이상이어야 해요.")
+        @Max(value = PageSlice.MAX_PAGE, message = "페이지 번호는 " + PageSlice.MAX_PAGE + " 이하여야 해요.")
+        Integer page,
 
         @Min(value = 1, message = "페이지 크기는 1 이상이어야 해요.")
         @Max(value = PageSlice.MAX_SIZE, message = "페이지 크기는 " + PageSlice.MAX_SIZE + " 이하여야 해요.")

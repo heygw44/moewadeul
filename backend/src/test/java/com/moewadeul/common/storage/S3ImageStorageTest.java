@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.external.ExternalApiMetrics;
-import com.moewadeul.common.external.ExternalApiProperties;
 import com.moewadeul.common.external.ExternalCallLimit;
 import com.moewadeul.common.storage.ImageStorage.PresignedUpload;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -76,10 +75,7 @@ class S3ImageStorageTest {
                 properties,
                 mock(S3Client.class),
                 presigner,
-                new ExternalCallLimit(
-                        "s3",
-                        new ExternalApiProperties(10, Duration.ZERO),
-                        new ExternalApiMetrics(new SimpleMeterRegistry())));
+                new ExternalCallLimit("s3", 10, new ExternalApiMetrics(new SimpleMeterRegistry())));
     }
 
     @AfterEach
@@ -320,9 +316,6 @@ class S3ImageStorageTest {
                 properties,
                 s3Client,
                 presigner,
-                new ExternalCallLimit(
-                        "s3",
-                        new ExternalApiProperties(maxConcurrentCalls, Duration.ZERO),
-                        new ExternalApiMetrics(new SimpleMeterRegistry())));
+                new ExternalCallLimit("s3", maxConcurrentCalls, new ExternalApiMetrics(new SimpleMeterRegistry())));
     }
 }

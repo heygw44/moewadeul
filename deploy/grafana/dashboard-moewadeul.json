@@ -790,6 +790,16 @@
           "expr": "sum by (api) (rate(moewadeul_external_api_fallbacks_total{job=\"moewadeul-app\"}[5m])) * 60",
           "legendFormat": "{{api}} 값 없이 응답",
           "range": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__PROM_UID__"
+          },
+          "expr": "sum by (api) (rate(moewadeul_weather_cache_busy_total{job=\"moewadeul-app\"}[5m])) * 60",
+          "legendFormat": "{{api}} 날씨 대기 자리 부족",
+          "range": true
         }
       ],
       "fieldConfig": {
@@ -1141,7 +1151,7 @@
           "mode": "multi"
         }
       },
-      "description": "아직 만들지 않은 기능(베이스캠프, 행사, 신고)의 지표는 기능을 만들 때 추가한다"
+      "description": "베이스캠프, 행사, 신고의 지표는 아직 없어서 필요해지면 추가한다"
     },
     {
       "type": "stat",
