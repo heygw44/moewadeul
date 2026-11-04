@@ -11,7 +11,6 @@ public record KmaProperties(
         String serviceKey,
         @DefaultValue("1s") Duration connectTimeout,
         @DefaultValue("2s") Duration readTimeout,
-        // 올리면 ExternalWaitThreadBudgetTest가 운영 Tomcat 스레드 수도 함께 올리라고 알린다.
         @DefaultValue("20") int maxConcurrentCalls) {
 
     private static final String PREFIX = "moewadeul.weather.kma.";

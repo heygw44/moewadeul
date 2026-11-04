@@ -6,8 +6,11 @@ spring:
 
 server:
   tomcat:
+    # 스레드 포화는 HTTP 오류 없이 응답만 늦어져서 tomcat_threads_* 지표로만 보인다.
+    mbeanregistry:
+      enabled: true
     threads:
-      # 외부 응답을 기다리는 스레드가 최대 60개다(날씨 40, OpenAI 10, S3 HEAD 10). 나머지 10개가 DB만 쓰는 요청 몫이라 외부 한도를 올리면 함께 올린다.
+      # 값의 근거는 ExternalWaitThreadBudgetTest가 확인한다.
       max: 70
 
 logging:
