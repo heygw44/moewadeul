@@ -11,8 +11,7 @@ public record KmaProperties(
         String serviceKey,
         @DefaultValue("1s") Duration connectTimeout,
         @DefaultValue("2s") Duration readTimeout,
-        // 날씨 경로가 쥘 수 있는 톰캣 스레드는 최대 40개(기다리는 요청 10, 기상청 20, 천문연 10)다.
-        // OpenAI·S3까지 함께 느려지면 합이 50개를 넘는다.
+        // 올리면 ExternalWaitThreadBudgetTest가 운영 Tomcat 스레드 수도 함께 올리라고 알린다.
         @DefaultValue("20") int maxConcurrentCalls) {
 
     private static final String PREFIX = "moewadeul.weather.kma.";
