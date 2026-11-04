@@ -52,6 +52,7 @@ class S3ImageStorageTest {
     private static final String BUCKET = "moewadeul-upload-test";
     private static final String KEY = "community/7/3f0c1c7e-0000-4000-8000-000000000001.jpg";
 
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
     private S3Presigner presigner;
     private S3ImageStorage storage;
 
@@ -71,11 +72,9 @@ class S3ImageStorageTest {
                 Duration.ofMinutes(30),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(5));
+        ExternalApiMetrics metrics = new ExternalApiMetrics(registry);
         storage = new S3ImageStorage(
-                properties,
-                mock(S3Client.class),
-                presigner,
-                new ExternalCallLimit("s3", 10, new ExternalApiMetrics(new SimpleMeterRegistry())));
+                properties, mock(S3Client.class), presigner, new ExternalCallLimit("s3", 10, metrics), metrics);
     }
 
     @AfterEach
@@ -149,6 +148,23 @@ class S3ImageStorageTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_STORAGE_UNAVAILABLE));
+        assertThat(headCalls("failure")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[NFR-05] 파일이 있으면 HEAD 호출을 성공으로 잰다")
+    void findObjectSizeRecordsSuccess() {
+        // given
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+                .thenReturn(HeadObjectResponse.builder().contentLength(7L).build());
+
+        // when
+        Optional<Long> size = storageWith(s3Client, 10).findObjectSize(KEY);
+
+        // then
+        assertThat(size).contains(7L);
+        assertThat(headCalls("success")).isEqualTo(1);
     }
 
     @Test
@@ -161,6 +177,7 @@ class S3ImageStorageTest {
 
         // when & then
         assertThat(storageWith(s3Client, 10).findObjectSize(KEY)).isEmpty();
+        assertThat(headCalls("success")).isEqualTo(1);
     }
 
     @Test
@@ -220,6 +237,7 @@ class S3ImageStorageTest {
             verify(s3Client, times(1)).headObject(any(HeadObjectRequest.class));
             release.countDown();
             assertThat(holding.get(5, TimeUnit.SECONDS)).contains(7L);
+            assertThat(headCalls("success")).isEqualTo(1);
         } finally {
             release.countDown();
             executor.shutdownNow();
@@ -312,10 +330,17 @@ class S3ImageStorageTest {
                 Duration.ofMinutes(30),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(5));
+        ExternalApiMetrics metrics = new ExternalApiMetrics(registry);
         return new S3ImageStorage(
-                properties,
-                s3Client,
-                presigner,
-                new ExternalCallLimit("s3", maxConcurrentCalls, new ExternalApiMetrics(new SimpleMeterRegistry())));
+                properties, s3Client, presigner, new ExternalCallLimit("s3", maxConcurrentCalls, metrics), metrics);
+    }
+
+    private long headCalls(String outcome) {
+        return registry.get("moewadeul.external.api.requests")
+                .tag("api", "s3")
+                .tag("operation", "headObject")
+                .tag("outcome", outcome)
+                .timer()
+                .count();
     }
 }
