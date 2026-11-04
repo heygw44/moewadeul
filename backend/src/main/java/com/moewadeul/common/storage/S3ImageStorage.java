@@ -53,11 +53,13 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
     private static final String CONTENT_TYPE = "Content-Type";
     private static final String CONTENT_LENGTH = "Content-Length";
     private static final String API = "s3";
+    private static final String HEAD_OPERATION = "headObject";
 
     private final ImageStorageProperties properties;
     private final S3Client s3Client;
     private final S3Presigner presigner;
     private final ExternalCallLimit headLimit;
+    private final ExternalApiMetrics metrics;
     private final Cache<String, String> viewUrls;
 
     @Autowired
@@ -69,15 +71,21 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
                 properties,
                 buildClient(properties),
                 buildPresigner(properties),
-                new ExternalCallLimit(API, externalApiProperties.maxConcurrentCalls(), metrics));
+                new ExternalCallLimit(API, externalApiProperties.maxConcurrentCalls(), metrics),
+                metrics);
     }
 
     S3ImageStorage(
-            ImageStorageProperties properties, S3Client s3Client, S3Presigner presigner, ExternalCallLimit headLimit) {
+            ImageStorageProperties properties,
+            S3Client s3Client,
+            S3Presigner presigner,
+            ExternalCallLimit headLimit,
+            ExternalApiMetrics metrics) {
         this.properties = properties;
         this.s3Client = s3Client;
         this.presigner = presigner;
         this.headLimit = headLimit;
+        this.metrics = metrics;
         this.viewUrls = Caffeine.newBuilder()
                 .expireAfterWrite(properties.viewUrlSigningInterval())
                 .maximumSize(VIEW_URL_CACHE_MAX_SIZE)
@@ -118,7 +126,8 @@ public class S3ImageStorage implements ImageStorage, DisposableBean {
 
     @Override
     public Optional<Long> findObjectSize(String key) {
-        return headLimit.call(() -> headObject(key), S3ImageStorage::unavailable);
+        return headLimit.call(
+                () -> metrics.record(API, HEAD_OPERATION, () -> headObject(key)), S3ImageStorage::unavailable);
     }
 
     private Optional<Long> headObject(String key) {
