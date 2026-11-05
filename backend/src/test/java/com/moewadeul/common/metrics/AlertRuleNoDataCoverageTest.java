@@ -94,6 +94,9 @@ class AlertRuleNoDataCoverageTest {
     }
 
     private static JsonNode rules() throws IOException {
-        return JsonMapper.builder().build().readTree(Files.readString(ALERT_RULES)).path("rules");
+        return JsonMapper.builder()
+                .build()
+                .readTree(Files.readString(ALERT_RULES))
+                .path("rules");
     }
 }
