@@ -327,7 +327,10 @@ class EmailVerificationFlowIntegrationTest {
                         + " email_attempt_count, email_sent_at, created_at)"
                         + " VALUES (?, 'BASECAMP_CONFIRMED', '확정', '확정됐어요.', ?, 'SENT', 0, ?, ?)",
                 rows);
-        assertThat(countRows("notification WHERE email_status = 'SENT'"))
+        Timestamp windowStart =
+                Timestamp.from(MutableClock.DEFAULT_INSTANT.minus(NotificationEventTypes.EMAIL_LIMIT_WINDOW));
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM notification WHERE email_sent_at > ?", Integer.class, windowStart))
                 .isEqualTo(NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW);
 
         // when
