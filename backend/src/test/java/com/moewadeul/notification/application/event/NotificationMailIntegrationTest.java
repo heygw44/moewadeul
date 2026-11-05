@@ -338,7 +338,7 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 일시적인 실패도 알림을 만든 지 일시 실패 재시도 기간(1일)이 지났으면 FAILED로 굳히고, 기간 안의 알림은 PENDING으로 둔다")
+    @DisplayName("[F-20] 일시적인 실패도 알림을 만든 지 일시 실패 재시도 기간(26시간)이 지났으면 FAILED로 굳히고, 기간 안의 알림은 PENDING으로 둔다")
     void transientFailureBecomesFailedOnlyAfterRetryWindow() {
         // given
         recordApproved(saveActiveMember().getId(), 3L);
