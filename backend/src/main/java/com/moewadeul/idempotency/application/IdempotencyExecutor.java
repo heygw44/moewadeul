@@ -21,6 +21,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
@@ -36,6 +37,7 @@ public class IdempotencyExecutor {
     private final JsonMapper jsonMapper;
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
+    private final TransactionTemplate readCommittedTemplate;
 
     public IdempotencyExecutor(
             IdempotencyRecordRepository recordRepository,
@@ -46,6 +48,8 @@ public class IdempotencyExecutor {
         this.jsonMapper = jsonMapper;
         this.clock = clock;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.readCommittedTemplate = new TransactionTemplate(transactionManager);
+        this.readCommittedTemplate.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
 
     public <T> T execute(
@@ -58,6 +62,22 @@ public class IdempotencyExecutor {
             HttpStatus successStatus,
             Class<T> responseType,
             Runnable precheckOutsideTransaction,
+            Supplier<T> action) {
+        return claimAndRun(
+                request, successStatus, responseType, precheckOutsideTransaction, transactionTemplate, action);
+    }
+
+    public <T> T executeReadCommitted(
+            IdempotentRequest request, HttpStatus successStatus, Class<T> responseType, Supplier<T> action) {
+        return claimAndRun(request, successStatus, responseType, () -> {}, readCommittedTemplate, action);
+    }
+
+    private <T> T claimAndRun(
+            IdempotentRequest request,
+            HttpStatus successStatus,
+            Class<T> responseType,
+            Runnable precheckOutsideTransaction,
+            TransactionTemplate template,
             Supplier<T> action) {
         OutsideTransaction.require("멱등성 기록은 작업과 따로 커밋해야 한다.");
         String key = validateKey(request.key());
@@ -75,7 +95,7 @@ public class IdempotencyExecutor {
             }
         }
 
-        return runAndComplete(record, successStatus, request.memberId(), precheckOutsideTransaction, action);
+        return runAndComplete(record, successStatus, request.memberId(), precheckOutsideTransaction, template, action);
     }
 
     private String validateKey(String key) {
@@ -146,10 +166,11 @@ public class IdempotencyExecutor {
             HttpStatus successStatus,
             long memberId,
             Runnable precheckOutsideTransaction,
+            TransactionTemplate template,
             Supplier<T> action) {
         try {
             precheckOutsideTransaction.run();
-            return transactionTemplate.execute(status -> {
+            return template.execute(status -> {
                 T result = action.get();
                 recordCompletion(record, successStatus, result, memberId);
                 return result;
