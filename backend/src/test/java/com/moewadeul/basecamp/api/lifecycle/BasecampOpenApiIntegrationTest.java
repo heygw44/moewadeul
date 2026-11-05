@@ -143,6 +143,23 @@ class BasecampOpenApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-12][SF-03] 본인확인한 미성년이 열면 403 TRUST_LEVEL_INSUFFICIENT이고 저장하지 않는다")
+    void identityVerifiedMinorIsForbidden() {
+        // given
+        long spotId = saveBakji(ParkAreaJudgement.outside(MutableClock.DEFAULT_INSTANT));
+        Cookie session =
+                identityVerifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD), "FEMALE", ADULT_BIRTH_YEAR + 1);
+
+        // when
+        MvcTestResult result = open(session, spotId, "\"capacity\":4");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.FORBIDDEN);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("TRUST_LEVEL_INSUFFICIENT");
+        assertThat(countBasecamps()).isZero();
+    }
+
+    @Test
     @DisplayName("[F-12][BC-01] 본인확인을 하지 않은 회원이 열면 403 TRUST_LEVEL_INSUFFICIENT이고 저장하지 않는다")
     void notIdentityVerifiedMemberIsForbidden() {
         // given
@@ -503,6 +520,10 @@ class BasecampOpenApiIntegrationTest {
     }
 
     private Cookie identityVerifiedSession(Member member, String gender) {
+        return identityVerifiedSession(member, gender, ADULT_BIRTH_YEAR);
+    }
+
+    private Cookie identityVerifiedSession(Member member, String gender, int birthYear) {
         Cookie session = verifiedSession(member);
         identitySequence++;
         MvcTestResult result = mvc.post()
@@ -511,7 +532,7 @@ class BasecampOpenApiIntegrationTest {
                 .cookie(session)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"birthYear\":%d,\"gender\":\"%s\",\"demoIdentityKey\":\"demo-leader-%d\"}"
-                        .formatted(ADULT_BIRTH_YEAR, gender, identitySequence))
+                        .formatted(birthYear, gender, identitySequence))
                 .exchange();
         assertThat(result).hasStatus(HttpStatus.OK);
         return session;
