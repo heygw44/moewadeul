@@ -356,6 +356,48 @@ class AdminProgramApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-17][PG-09] 끝난 행사는 취소할 수 없다. 409 PROGRAM_ENDED로 거부하고 행사·신청·결제·알림·감사 로그를 그대로 둔다")
+    void cancelOfEndedProgramIsRejectedAndRefundsNothing() {
+        // given
+        Instant now = clock.instant();
+        long programId = programId(createProgram(body(now.minus(Duration.ofHours(1)), 10, null)));
+        long confirmed = insertApplication(programId, "CONFIRMED", now);
+        insertPayment(confirmed, "PAID");
+        clock.advance(Duration.ofDays(16));
+
+        // when
+        MvcTestResult result = post(ADMIN_PROGRAMS + "/" + programId + "/cancel");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.CONFLICT);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("PROGRAM_ENDED");
+        assertThat(statusOfProgram(programId)).isEqualTo("SCHEDULED");
+        assertThat(applicationStatus(confirmed)).isEqualTo("CONFIRMED");
+        assertThat(cancelReason(confirmed)).isNull();
+        assertThat(paymentStatus(confirmed)).isEqualTo("PAID");
+        assertThat(canceledEvents()).isEmpty();
+        assertThat(count("admin_audit_log WHERE action = 'PROGRAM_CANCEL'")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-17][PG-09] 시작했지만 아직 끝나지 않은 행사는 취소하고 환불할 수 있다")
+    void cancelOfRunningProgramStillRefunds() {
+        // given
+        Instant now = clock.instant();
+        long programId = programId(createProgram(body(now.minus(Duration.ofHours(1)), 10, null)));
+        long confirmed = insertApplication(programId, "CONFIRMED", now);
+        insertPayment(confirmed, "PAID");
+        clock.advance(Duration.ofDays(14).plusHours(1));
+
+        // when
+        MvcTestResult result = post(ADMIN_PROGRAMS + "/" + programId + "/cancel");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(paymentStatus(confirmed)).isEqualTo("REFUNDED");
+    }
+
+    @Test
     @DisplayName("[F-17] 공개 목록은 status로 거르고 시작 시각 순서로 나오며, 남은 자리를 계산하고 취소된 행사를 뺀다")
     void publicListFiltersAndCountsRemainingSeats() {
         // given

@@ -62,9 +62,10 @@ class AdminProgramController {
 
     @Operation(
             summary = "공식 행사 취소",
-            description = "행사를 CANCELED로 바꾸고, 결제 대기·확정 신청을 모두 취소 사유 PROGRAM_CANCELED로 취소하며, 결제 완료 건을 환불 처리한다. "
-                    + "신청자마다 취소 알림 이벤트를 같은 트랜잭션에서 기록하고, 결제 완료 건은 환불도 알린다. 응답은 programId, status(CANCELED), 함께 취소된 신청 수 canceledApplicationCount이다. "
-                    + "행사가 없으면 404 NOT_FOUND, 이미 취소된 행사이면 409 PROGRAM_INVALID_STATE이다.")
+            description =
+                    "행사를 CANCELED로 바꾸고, 결제 대기·확정 신청을 모두 취소 사유 PROGRAM_CANCELED로 취소하며, 결제 완료 건을 환불 처리한다. "
+                            + "신청자마다 취소 알림 이벤트를 같은 트랜잭션에서 기록하고, 결제 완료 건은 환불도 알린다. 응답은 programId, status(CANCELED), 함께 취소된 신청 수 canceledApplicationCount이다. "
+                            + "행사가 없으면 404 NOT_FOUND, 이미 취소된 행사이면 409 PROGRAM_INVALID_STATE, 행사 종료 시각이 지난 행사이면 409 PROGRAM_ENDED이다.")
     @PostMapping("/{programId}/cancel")
     AdminProgramCancelResponse cancel(@PathVariable long programId, @AuthenticationPrincipal LoginMember admin) {
         return AdminProgramCancelResponse.from(programAdminService.cancel(admin.memberId(), programId));
