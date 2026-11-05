@@ -55,6 +55,28 @@ describe('감사 기록 detail 요약', () => {
     ]);
   });
 
+  it('번호에는 천 단위 쉼표를 붙이지 않고 개수에는 붙인다', () => {
+    expect(
+      texts(
+        summarizeAuditDetail(
+          { sanctionId: 1234, liftedSanctionId: 12345, memberId: 1234567, reviewedReportCount: 1234 },
+          'SANCTION',
+        ),
+      ),
+    ).toEqual([
+      '제재 번호: 1234',
+      '함께 해제한 제재 번호: 12345',
+      '대상 회원 번호: 1234567',
+      '함께 검토 처리된 신고: 1,234건',
+    ]);
+  });
+
+  it('행사의 바뀐 항목 이름은 등록 폼과 같은 말을 쓴다', () => {
+    expect(texts(summarizeAuditDetail({ changedFields: ['startAt', 'endAt', 'applyOpenAt'] }, 'PROGRAM'))).toEqual([
+      '바뀐 항목: 행사 시작, 행사 종료, 신청 시작',
+    ]);
+  });
+
   it('행사 수정과 취소의 값을 보인다', () => {
     expect(
       texts(

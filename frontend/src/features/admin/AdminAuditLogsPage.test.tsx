@@ -137,7 +137,7 @@ describe('관리자 감사 기록 화면', () => {
     expect(items[0]?.textContent).toContain('신고 조치');
     expect(items[0]?.textContent).toContain('신고 5번');
     expect(items[0]?.textContent).toContain('관리자 3번');
-    expect(items[0]?.textContent).toContain('11월 5일');
+    expect(items[0]?.textContent).toContain('2026년 11월 5일');
     expect(items[0]?.textContent).toContain('14:30');
     expect(items[0]?.textContent).toContain('상태: 검토 중 → 조치 완료');
     expect(items[0]?.textContent).toContain('제재 종류: 7일 정지');
@@ -246,8 +246,42 @@ describe('관리자 감사 기록 화면', () => {
   it('기록이 하나도 없고 조건도 없으면 처음 안내를 보인다', async () => {
     await render();
 
-    expect(text()).toContain('아직 남은 관리자 기록이 없어요');
+    expect(text()).toContain('아직 관리자 기록이 없어요');
     expect(text()).not.toContain('조건에 맞는 기록이 없어요');
+  });
+
+  it('같은 조건으로 조회를 다시 누르면 다시 요청해 새로 쌓인 기록을 보인다', async () => {
+    respond = () => json(200, pageOf([log({ auditLogId: 1, action: 'REPORT_DISMISS' })]));
+    await render();
+    await type('관리자 번호', '3');
+    await act(async () => button('조회')?.click());
+    expect(queries).toHaveLength(2);
+
+    respond = () =>
+      json(
+        200,
+        pageOf([log({ auditLogId: 2, action: 'SANCTION_LIFT' }), log({ auditLogId: 1, action: 'REPORT_DISMISS' })]),
+      );
+    await act(async () => button('조회')?.click());
+
+    expect(queries).toHaveLength(3);
+    expect(queries[2]?.get('adminId')).toBe('3');
+    expect(text()).toContain('제재 해제');
+  });
+
+  it('다음 쪽을 불러오지 못하면 다시 시도 버튼은 더 보기 하나만 보인다', async () => {
+    respond = (query) =>
+      query.get('page') === '0'
+        ? json(200, pageOf([log({ auditLogId: 2, action: 'REPORT_DISMISS' })], 0, true))
+        : json(500, { code: 'INTERNAL_ERROR', message: 'x', traceId: 'trace-next' });
+    await render();
+
+    await act(async () => button('더 보기')?.click());
+
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('trace-next');
+    expect(button('다시 불러오기')).toBeUndefined();
+    expect(button('더 보기')).toBeDefined();
+    expect(text()).toContain('신고 기각');
   });
 
   it('조건에 맞는 기록이 없으면 조건 지우기로 돌아갈 수 있다', async () => {

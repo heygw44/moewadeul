@@ -11,7 +11,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { TextField } from '../../components/TextField';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { usePagedList } from '../../components/usePagedList';
-import { formatKstDateTime } from '../../lib/datetime';
+import { formatKstDateTimeWithYear } from '../../lib/datetime';
 import { AdminPage } from './AdminGate';
 import {
   EMPTY_AUDIT_FORM,
@@ -52,7 +52,7 @@ function AuditLogList() {
   const [form, setForm] = useState<AuditFilterForm>(EMPTY_AUDIT_FORM);
   const [errors, setErrors] = useState<AuditFilterErrors>({});
   const [applied, setApplied] = useState<AuditQuery>(EMPTY_AUDIT_QUERY);
-  const { current, loadingMore, loadMore, retry } = usePagedList(true, applied, fetchLogs, itemKey);
+  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, applied, fetchLogs, itemKey);
   const showSkeleton = useDelayedFlag(current === null);
   const filtered = hasAuditCondition(applied);
 
@@ -69,7 +69,8 @@ function AuditLogList() {
       return;
     }
     setErrors({});
-    setApplied(result.query);
+    if (JSON.stringify(result.query) === JSON.stringify(applied)) reload();
+    else setApplied(result.query);
   }
 
   function clear() {
@@ -127,18 +128,20 @@ function AuditLogList() {
             error={current.error}
             traceId={current.traceId ?? undefined}
           />
-          <div>
-            <Button variant="secondary" onClick={retry}>
-              다시 불러오기
-            </Button>
-          </div>
+          {current.failedOn === 'first' && (
+            <div>
+              <Button variant="secondary" onClick={retry}>
+                다시 불러오기
+              </Button>
+            </div>
+          )}
         </div>
       )}
       {current === null && showSkeleton && <Skeleton className="h-40 w-full" />}
       {current !== null && current.items.length === 0 && !current.error && (
         <EmptyState
           framed
-          title={filtered ? '조건에 맞는 기록이 없어요' : '아직 남은 관리자 기록이 없어요'}
+          title={filtered ? '조건에 맞는 기록이 없어요' : '아직 관리자 기록이 없어요'}
           action={
             filtered ? (
               <Button variant="secondary" onClick={clear}>
@@ -175,7 +178,9 @@ function AuditLogRow({ item }: { item: AdminAuditLog }) {
     <li className="flex min-w-0 flex-col gap-1 rounded-row bg-surface px-4 py-3">
       <p className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="text-base font-bold text-ink">{AUDIT_ACTION_LABELS[item.action]}</span>
-        <span className="font-mono text-sm tabular-nums text-ink-muted">{formatKstDateTime(item.createdAt)}</span>
+        <span className="font-mono text-sm tabular-nums text-ink-muted">
+          {formatKstDateTimeWithYear(item.createdAt)}
+        </span>
       </p>
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-muted">
         <span className="min-w-0 break-words">

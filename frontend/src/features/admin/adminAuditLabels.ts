@@ -98,8 +98,8 @@ const PROGRAM_FIELD_LABELS: Record<string, string> = {
   description: '설명',
   spotId: '장소',
   locationText: '장소 설명',
-  startAt: '시작 시각',
-  endAt: '끝나는 시각',
+  startAt: '행사 시작',
+  endAt: '행사 종료',
   capacity: '정원',
   fee: '참가비',
   applyOpenAt: '신청 시작',
@@ -112,6 +112,7 @@ type FieldSpec =
   | { label: string; kind: 'status' }
   | { label: string; kind: 'text'; names: Readonly<Record<string, string>> }
   | { label: string; kind: 'number'; unit: string }
+  | { label: string; kind: 'id' }
   | { label: string; kind: 'flag'; yes: string; no: string }
   | { label: string; kind: 'list'; names: Readonly<Record<string, string>> };
 
@@ -123,11 +124,11 @@ const DETAIL_FIELDS: ReadonlyMap<string, FieldSpec> = new Map<string, FieldSpec>
   ['toStatus', { label: '이후 상태', ...STATUS_SPEC }],
   ['reviewedReportCount', { label: '함께 검토 처리된 신고', kind: 'number', unit: '건' }],
   ['hideReview', { label: '신고된 후기 숨김', kind: 'flag', yes: '함께 숨김', no: '숨기지 않음' }],
-  ['sanctionId', { label: '제재 번호', kind: 'number', unit: '' }],
+  ['sanctionId', { label: '제재 번호', kind: 'id' }],
   ['sanctionType', { label: '제재 종류', kind: 'text', names: SANCTION_TYPE_LABELS }],
   ['level', { label: '제재 단계', kind: 'number', unit: '단계' }],
-  ['liftedSanctionId', { label: '함께 해제한 제재 번호', kind: 'number', unit: '' }],
-  ['memberId', { label: '대상 회원 번호', kind: 'number', unit: '' }],
+  ['liftedSanctionId', { label: '함께 해제한 제재 번호', kind: 'id' }],
+  ['memberId', { label: '대상 회원 번호', kind: 'id' }],
   ['spotType', { label: '장소 종류', kind: 'text', names: SPOT_TYPE_LABELS }],
   ['jobType', { label: '작업', kind: 'text', names: SYNC_JOB_LABELS }],
   ['capacity', { label: '정원', ...CAPACITY_SPEC }],
@@ -168,6 +169,8 @@ function formatValue(spec: FieldSpec, value: unknown, targetType: AdminAuditTarg
       return typeof value === 'string' ? namedText(spec.names, value) : plainText(value);
     case 'number':
       return typeof value === 'number' ? `${value.toLocaleString('ko-KR')}${spec.unit}` : plainText(value);
+    case 'id':
+      return typeof value === 'number' ? String(value) : plainText(value);
     case 'flag':
       return typeof value === 'boolean' ? (value ? spec.yes : spec.no) : plainText(value);
     case 'list':
