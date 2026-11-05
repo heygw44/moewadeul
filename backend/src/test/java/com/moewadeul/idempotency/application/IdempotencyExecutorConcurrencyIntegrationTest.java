@@ -83,6 +83,33 @@ class IdempotencyExecutorConcurrencyIntegrationTest {
         assertThat(calls.get()).isEqualTo(1);
     }
 
+    @RepeatedTest(5)
+    @DisplayName("[NFR-03] 오래된 선점을 여러 요청이 동시에 넘겨받으려 해도 action은 한 번만 실행한다")
+    void abandonedClaimIsTakenOverOnce() throws Exception {
+        long memberId = memberFixture.save().getId();
+        executor.execute(
+                new IdempotentRequest(memberId, "key-1", OPERATION, null),
+                HttpStatus.CREATED,
+                Result.class,
+                () -> new Result(0));
+        jdbc.update("UPDATE idempotency_record SET response_status = NULL, response_body = NULL,"
+                + " created_at = created_at - INTERVAL 1 HOUR");
+        AtomicInteger calls = new AtomicInteger();
+        CountDownLatch allRequestsFinishedOrBlocked = new CountDownLatch(THREADS - 1);
+
+        List<Object> outcomes = sendConcurrently(
+                memberId,
+                () -> {
+                    int sequence = calls.incrementAndGet();
+                    await(allRequestsFinishedOrBlocked);
+                    return new Result(sequence);
+                },
+                allRequestsFinishedOrBlocked);
+
+        assertThat(calls.get()).isEqualTo(1);
+        assertThat(outcomes.stream().filter(o -> o instanceof Result).toList()).containsOnly(new Result(1));
+    }
+
     private List<Object> sendConcurrently(
             long memberId, Supplier<Result> action, CountDownLatch finishedOrBlockedSignal) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(THREADS);

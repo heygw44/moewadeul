@@ -134,6 +134,20 @@ class BasecampApplyApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-13][SF-03] 본인확인한 미성년이 신청하면 403 TRUST_LEVEL_INSUFFICIENT이고 신청 행과 이벤트를 남기지 않는다")
+    void identityVerifiedMinorIsForbidden() {
+        // given
+        Cookie session = fixture.identityVerifiedMinorSession(fixture.saveMember());
+
+        // when
+        MvcTestResult result = apply(session, basecampId, MESSAGE);
+
+        // then
+        assertFailure(result, HttpStatus.FORBIDDEN, "TRUST_LEVEL_INSUFFICIENT");
+        assertNothingRecorded();
+    }
+
+    @Test
     @DisplayName("[F-13][BC-05] 최소 신뢰 단계 2 조건이면 단계 1인 회원은 403 BASECAMP_CONDITION_NOT_MET이다")
     void minTrustLevelTwoRejectsLevelOne() {
         // given

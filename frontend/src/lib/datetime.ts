@@ -27,6 +27,10 @@ export function formatKstDateTime(iso: string): string {
   return `${month}월 ${day}일 (${weekday}) ${hour}:${minute}`;
 }
 
+export function formatKstDateTimeWithYear(iso: string): string {
+  return `${KST_DATE.format(new Date(iso)).slice(0, 4)}년 ${formatKstDateTime(iso)}`;
+}
+
 export function formatKstTime(iso: string): string {
   const { hour, minute } = kstParts(iso);
   return `${hour}:${minute}`;

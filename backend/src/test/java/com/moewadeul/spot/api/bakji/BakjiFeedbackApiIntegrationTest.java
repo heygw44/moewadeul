@@ -105,7 +105,7 @@ class BakjiFeedbackApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-08] 회원이 박지를 신고하면 201을 본문 없이 응답하고 사유와 내용을 저장하며, 같은 회원의 두 번째 신고는 409 BAKJI_ALREADY_REPORTED다")
+    @DisplayName("[F-08][SN-06] 회원이 박지를 신고하면 201을 본문 없이 응답하고 사유와 내용을 저장하며, 같은 회원의 두 번째 신고는 409 BAKJI_ALREADY_REPORTED다")
     void memberReportsOnce() {
         // given
         int spotId = createBakji(verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)));
@@ -122,6 +122,7 @@ class BakjiFeedbackApiIntegrationTest {
         assertThat(second).bodyJson().extractingPath("$.code").isEqualTo("BAKJI_ALREADY_REPORTED");
         assertThat(count("SELECT COUNT(*) FROM bakji_report WHERE spot_id = ?", spotId))
                 .isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM member_report")).isZero();
         assertThat(jdbc.queryForObject("SELECT reason FROM bakji_report WHERE spot_id = ?", String.class, spotId))
                 .isEqualTo("FALSE_INFO");
         assertThat(jdbc.queryForObject("SELECT content FROM bakji_report WHERE spot_id = ?", String.class, spotId))

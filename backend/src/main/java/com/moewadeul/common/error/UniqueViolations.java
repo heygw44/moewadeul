@@ -1,6 +1,7 @@
 package com.moewadeul.common.error;
 
 import java.sql.SQLException;
+import java.util.regex.Pattern;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -8,6 +9,7 @@ public final class UniqueViolations {
 
     private static final String KEY_MARKER = " for key '";
     private static final int MYSQL_DUPLICATE_ENTRY = 1062;
+    private static final Pattern DUPLICATE_ENTRY_VALUE = Pattern.compile("Duplicate entry '.*' for key '");
 
     private UniqueViolations() {}
 
@@ -28,6 +30,10 @@ public final class UniqueViolations {
     public static boolean isDuplicateEntry(DataIntegrityViolationException e) {
         return NestedExceptionUtils.getMostSpecificCause(e) instanceof SQLException sqlException
                 && sqlException.getErrorCode() == MYSQL_DUPLICATE_ENTRY;
+    }
+
+    public static String redactValues(String text) {
+        return text == null ? null : DUPLICATE_ENTRY_VALUE.matcher(text).replaceAll("Duplicate entry for key '");
     }
 
     public static String redactedMessage(DataIntegrityViolationException e) {

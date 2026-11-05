@@ -8,6 +8,7 @@ import java.util.Map;
 public record AdminCommunityCommentSummary(
         long commentId,
         long postId,
+        String postStatus,
         String content,
         AdminCommunityAuthor author,
         String status,
