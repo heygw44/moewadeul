@@ -91,7 +91,7 @@ class NotificationWriter {
                 draft.link(),
                 dedupKey,
                 emailStatus,
-                NotificationEventTypes.BULK_EMAIL.contains(draft.type()),
+                draft.bulkEmail(),
                 now);
     }
 }

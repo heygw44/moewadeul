@@ -6,7 +6,6 @@ import com.moewadeul.common.event.TrustEvents;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public final class NotificationEventTypes {
 
@@ -27,10 +26,6 @@ public final class NotificationEventTypes {
             ProgramEvents.SEAT_RELEASED);
 
     public static final boolean DEFAULT_EMAIL_ENABLED = true;
-
-    /** 이벤트 하나로 수십에서 수천 통이 생기는 종류다. 이 메일이 밀려도 다른 메일이 뒤에 서지 않도록 나중에 보낸다. */
-    public static final Set<String> BULK_EMAIL =
-            Set.of(ProgramEvents.APPLICATION_EXPIRED, ProgramEvents.APPLICATION_CANCELED, ProgramEvents.SEAT_RELEASED);
 
     public static final Map<String, Integer> EMAIL_LIMIT_PER_EVENT = Map.of(ProgramEvents.SEAT_RELEASED, 50);
 
