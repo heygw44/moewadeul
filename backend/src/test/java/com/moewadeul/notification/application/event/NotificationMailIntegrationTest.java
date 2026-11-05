@@ -641,6 +641,31 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-20][PG-07] 행사 취소로 생긴 취소 메일이 밀려 있어도 회원 한 명의 신청 취소와 빈자리 메일이 먼저 나간다")
+    void individualMailOvertakesProgramCancelBacklog() {
+        // given
+        List<Long> applicants = saveActiveMembers(properties.batchSize() + 1);
+        for (Long applicantId : applicants) {
+            recordProgramApplicationCanceled(applicantId, "PROGRAM_CANCELED", true);
+        }
+        publisher.publishPending(OutboxLane.DEFAULT);
+        Member canceledByThemself = saveActiveMember();
+        recordProgramApplicationCanceled(canceledByThemself.getId(), "USER", true);
+        Member waiting = saveActiveMember();
+        record(SEAT_RELEASED, 7L, Map.of("programId", 7L, "memberIds", List.of(waiting.getId())));
+        publisher.publishPending(OutboxLane.DEFAULT);
+
+        // when
+        mailer.sendDue();
+
+        // then
+        assertThat(mailSender.sent().subList(0, 2))
+                .extracting(MailMessage::to)
+                .containsExactly(canceledByThemself.getEmail(), waiting.getEmail());
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(3);
+    }
+
+    @Test
     @DisplayName("[F-20][EV-07] 최근 24시간에 보낸 알림 메일이 상한(300통)에 닿으면 남은 자리만큼만 보내고, 나머지는 알림함에 두고 보내기를 미룬다")
     void mailsBeyondDailyLimitStayPendingWhileInboxKeepsAll() {
         // given
@@ -783,6 +808,23 @@ class NotificationMailIntegrationTest {
 
     private void recordConfirmed(long basecampId, List<Long> memberIds) {
         record(CONFIRMED, basecampId, Map.of("basecampId", basecampId, "memberIds", memberIds));
+    }
+
+    private void recordProgramApplicationCanceled(long memberId, String reason, boolean refunded) {
+        record(
+                "PROGRAM_APPLICATION_CANCELED",
+                memberId,
+                Map.of(
+                        "applicationId",
+                        memberId,
+                        "memberId",
+                        memberId,
+                        "programId",
+                        7L,
+                        "reason",
+                        reason,
+                        "refunded",
+                        refunded));
     }
 
     private void record(String eventType, long aggregateId, Map<String, Object> payload) {
