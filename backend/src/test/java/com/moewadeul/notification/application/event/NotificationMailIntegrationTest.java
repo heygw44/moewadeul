@@ -367,6 +367,28 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-20] Gmail 하루 한도(지난 24시간)에 막힌 알림 메일은 만든 지 24시간이 지나 한도가 풀릴 무렵 한 번 더 거부돼도 남아 있다가 다음 시도에 나간다")
+    void mailBlockedByDailyQuotaIsSentAfterQuotaLifts() {
+        // given
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending(OutboxLane.DEFAULT);
+        mailSender.failNextSendsTransiently(1);
+        mailer.sendDue();
+        clock.advance(Duration.ofHours(24).plusMinutes(5));
+        mailSender.failNextSendsTransiently(1);
+        mailer.sendDue();
+
+        // when
+        clock.advance(properties.retryMaxDelay());
+        mailer.sendDue();
+
+        // then
+        assertThat(countByEmailStatus("SENT")).isEqualTo(1);
+        assertThat(mailSender.sent()).extracting(MailMessage::to).containsExactly(applicant.getEmail());
+    }
+
+    @Test
     @DisplayName("[F-20] 재시도 사이에 회원이 이메일을 끄면 남은 메일은 보내지 않고 SKIPPED로 둔다")
     void settingChangedBetweenRetriesIsRespected() {
         // given
