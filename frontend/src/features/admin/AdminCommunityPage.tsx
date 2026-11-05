@@ -163,6 +163,7 @@ function ReviewList<T extends AdminCommunityItem>({
                   tab,
                   failure: failure?.id === id ? failure.error : null,
                   onAction: (action) => perform(item, action),
+                  onReload: reload,
                 })}
               </Fragment>
             );

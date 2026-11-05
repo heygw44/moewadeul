@@ -104,4 +104,25 @@ describe('관리자 기록 검토', () => {
     expect(text(container)).not.toContain('작성자A님의 기록');
     expect(text(container.querySelector('[role="alert"]'))).toContain('기록을 불러오지 못했어요');
   });
+  it('기록에 붙은 사진을 열 장까지 모두 보여 주고, 각각 새 창에서 크게 볼 수 있다', async () => {
+    const images = Array.from({ length: 10 }, (_, index) => ({
+      imageId: index + 1,
+      url: `https://img.test/${index + 1}.jpg`,
+    }));
+    listReply = () => json(200, { content: [{ ...memory(), images }], page: 0, size: 20, hasNext: false });
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <SessionProvider>
+          <AdminMemoriesPage />
+        </SessionProvider>,
+      );
+    });
+
+    const shown = [...container.querySelectorAll('ul[aria-label="사진 10장"] img')];
+    expect(shown.map((image) => image.getAttribute('src'))).toEqual(images.map((image) => image.url));
+    const links = [...container.querySelectorAll('ul[aria-label="사진 10장"] a')];
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(images.map((image) => image.url));
+  });
 });

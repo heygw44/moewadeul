@@ -50,6 +50,7 @@ function comment(overrides: Partial<AdminCommunityComment> = {}): AdminCommunity
   return {
     commentId: 30,
     postId: 12,
+    postStatus: 'ACTIVE',
     content: '연락처 남겨 주세요',
     author: { memberId: 8, nickname: '댓글러' },
     status: 'PENDING_REVIEW',
@@ -159,16 +160,43 @@ describe('관리자 커뮤니티 검토', () => {
     expect(text(container)).toContain('개인정보 노출 5');
   });
 
-  it('글에 붙은 사진을 작은 그림으로 보여 주고 네 장을 넘으면 몇 장인지 알린다', async () => {
+  it('글에 붙은 사진을 다섯 장까지 모두 보여 주고, 각각 새 창에서 크게 볼 수 있다', async () => {
     const images = [1, 2, 3, 4, 5].map((imageId) => ({ imageId, url: `https://img.test/${imageId}.jpg` }));
     posts.PENDING_REVIEW = () => json(200, page([post({ images })]));
     await render();
 
     const card = cards()[0] ?? null;
     const shown = [...(card?.querySelectorAll('img') ?? [])];
-    expect(shown.map((image) => image.getAttribute('src'))).toEqual(images.slice(0, 4).map((image) => image.url));
+    expect(shown.map((image) => image.getAttribute('src'))).toEqual(images.map((image) => image.url));
     expect(card?.querySelector('ul[aria-label="사진 5장"]')).not.toBeNull();
-    expect(text(card)).toContain('사진 5장 중 4장만 보여요.');
+    expect(text(card)).not.toContain('장만 보여요');
+    const links = [...(card?.querySelectorAll('ul[aria-label="사진 5장"] a') ?? [])];
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(images.map((image) => image.url));
+    expect(links.every((link) => link.getAttribute('target') === '_blank')).toBe(true);
+    expect(links.every((link) => link.getAttribute('rel') === 'noreferrer')).toBe(true);
+    expect(links[4]?.getAttribute('aria-label')).toBe('사진 5 크게 보기');
+  });
+
+  it('사진 주소가 만료돼 그림을 못 불러오면 안내하고, 다시 불러오기를 누르면 새 주소로 바뀌어 안내가 사라진다', async () => {
+    const expired = [{ imageId: 1, url: 'https://img.test/old.jpg' }];
+    const fresh = [{ imageId: 1, url: 'https://img.test/new.jpg' }];
+    posts.PENDING_REVIEW = () => json(200, page([post({ images: expired })]));
+    await render();
+    const failedImage = cards()[0]?.querySelector('img');
+    await act(async () => failedImage?.dispatchEvent(new Event('error')));
+
+    const alert = text(cards()[0]?.querySelector('[role="alert"]') ?? null);
+    expect(alert).toContain('사진 1장을 불러오지 못했어요.');
+    expect(alert).toContain('사진 주소가 만료돼요');
+
+    posts.PENDING_REVIEW = () => json(200, page([post({ images: fresh })]));
+    await act(async () => button('다시 불러오기', cards()[0] ?? container)?.click());
+
+    expect(lists('GET', '/api/admin/community/posts')).toHaveLength(2);
+    const reloaded = cards()[0]?.querySelector('img');
+    expect(reloaded?.getAttribute('src')).toBe('https://img.test/new.jpg');
+    await act(async () => reloaded?.dispatchEvent(new Event('load')));
+    expect(cards()[0]?.querySelector('[role="alert"]')).toBeNull();
   });
 
   it('사진이 없는 글에는 사진 칸이 없다', async () => {
@@ -177,13 +205,52 @@ describe('관리자 커뮤니티 검토', () => {
     expect(cards()[0]?.querySelector('img')).toBeNull();
   });
 
-  it('댓글 카드에서 달린 글로 가는 링크를 준다', async () => {
+  it('달린 글이 공개 상태면 댓글 카드가 글 보기 링크를 준다', async () => {
     await render();
 
     await act(async () => button('댓글')?.click());
 
     const link = [...container.querySelectorAll('a')].find((element) => element.textContent === '글 보기');
     expect(link?.getAttribute('href')).toBe('/community/12');
+  });
+
+  it.each([
+    [
+      'PENDING_REVIEW',
+      '검토 대기 글이라 공개 화면에서는 열리지 않아요.',
+      '글 검토에서 보기',
+      '/admin/community?kind=post',
+    ],
+    [
+      'HIDDEN',
+      '숨긴 글이라 공개 화면에서는 열리지 않아요.',
+      '숨긴 글에서 보기',
+      '/admin/community?kind=post&tab=hidden',
+    ],
+  ] as const)(
+    '달린 글이 %s이면 404가 될 글 보기 링크 대신 글 검토 목록으로 안내한다',
+    async (postStatus, notice, label, href) => {
+      comments.PENDING_REVIEW = () => json(200, page([comment({ postStatus })]));
+      await render();
+
+      await act(async () => button('댓글')?.click());
+
+      const card = cards()[0] ?? null;
+      expect(text(card)).toContain(notice);
+      expect([...(card?.querySelectorAll('a') ?? [])].map((link) => link.textContent)).toEqual([label]);
+      expect([...(card?.querySelectorAll('a') ?? [])][0]?.getAttribute('href')).toBe(href);
+    },
+  );
+
+  it('달린 글을 작성자가 지웠으면 링크 없이 그렇게 알린다', async () => {
+    comments.PENDING_REVIEW = () => json(200, page([comment({ postStatus: 'DELETED' })]));
+    await render();
+
+    await act(async () => button('댓글')?.click());
+
+    const card = cards()[0] ?? null;
+    expect(text(card)).toContain('작성자가 지운 글이에요.');
+    expect(card?.querySelectorAll('a')).toHaveLength(0);
   });
 
   it('주소에 kind와 tab이 있으면 그 목록으로 시작한다', async () => {
