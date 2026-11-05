@@ -36,7 +36,7 @@ public class ImageCleanupScheduler implements SchedulingConfigurer {
             CronTrigger trigger = new CronTrigger(environment.getRequiredProperty(property + "cron"), KoreaTime.ZONE);
             registrar.addCronTask(new CronTask(
                     () -> jobRunner.runCountingFailures(
-                            job, () -> cleanup.deleteExpiredRowsThenObjects().storageFailures()),
+                            job, () -> cleanup.deleteExpiredObjectsThenRows().storageFailures()),
                     trigger));
         }
     }
