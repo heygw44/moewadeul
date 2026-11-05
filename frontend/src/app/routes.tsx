@@ -1,20 +1,24 @@
-import { BasecampManagePage } from '../features/basecamp/BasecampManagePage';
-import { MyBasecampsPage } from '../features/basecamp/MyBasecampsPage';
-import { NotificationsPage } from '../features/notification/NotificationsPage';
-import { CompanionReviewsPage } from '../features/review/CompanionReviewsPage';
-import { AccountSettingsPage } from '../features/member/AccountSettingsPage';
 import { LoginPage } from '../features/member/LoginPage';
-import { PasswordResetPage } from '../features/member/PasswordResetPage';
-import { MemberProfilePage } from '../features/member/MemberProfilePage';
-import { MyPage } from '../features/member/MyPage';
 import { SignupPage } from '../features/member/SignupPage';
-import { VerifyEmailPage } from '../features/member/VerifyEmailPage';
-import { IdentityVerificationPage } from '../features/trust/IdentityVerificationPage';
 import { MapPage } from '../features/map/MapPage';
 import NotFoundPage from './NotFoundPage';
 import { lazyPage } from './lazyPage';
 import type { LatLng } from '../map/types';
 import type { RouteDef } from './router';
+
+const BasecampManagePage = lazyPage(() => import('../features/basecamp/BasecampManagePage'), 'BasecampManagePage');
+const MyBasecampsPage = lazyPage(() => import('../features/basecamp/MyBasecampsPage'), 'MyBasecampsPage');
+const NotificationsPage = lazyPage(() => import('../features/notification/NotificationsPage'), 'NotificationsPage');
+const CompanionReviewsPage = lazyPage(() => import('../features/review/CompanionReviewsPage'), 'CompanionReviewsPage');
+const AccountSettingsPage = lazyPage(() => import('../features/member/AccountSettingsPage'), 'AccountSettingsPage');
+const PasswordResetPage = lazyPage(() => import('../features/member/PasswordResetPage'), 'PasswordResetPage');
+const MemberProfilePage = lazyPage(() => import('../features/member/MemberProfilePage'), 'MemberProfilePage');
+const MyPage = lazyPage(() => import('../features/member/MyPage'), 'MyPage');
+const VerifyEmailPage = lazyPage(() => import('../features/member/VerifyEmailPage'), 'VerifyEmailPage');
+const IdentityVerificationPage = lazyPage(
+  () => import('../features/trust/IdentityVerificationPage'),
+  'IdentityVerificationPage',
+);
 
 const AdminReportDetailPage = lazyPage(
   () => import('../features/admin/AdminReportDetailPage'),
@@ -106,6 +110,7 @@ export const routes: RouteDef[] = [
   },
   {
     path: '/basecamps/:basecampId/manage',
+    preload: BasecampManagePage.preload,
     render: (params) => {
       const basecampId = toPositiveId(params.basecampId);
       return basecampId === null ? <NotFoundPage /> : <BasecampManagePage key={basecampId} basecampId={basecampId} />;
@@ -160,16 +165,16 @@ export const routes: RouteDef[] = [
       return programId === null ? <NotFoundPage /> : <ProgramDetailPage key={programId} programId={programId} />;
     },
   },
-  { path: '/me/settings', render: () => <AccountSettingsPage /> },
-  { path: '/me/basecamps', render: () => <MyBasecampsPage /> },
+  { path: '/me/settings', render: () => <AccountSettingsPage />, preload: AccountSettingsPage.preload },
+  { path: '/me/basecamps', render: () => <MyBasecampsPage />, preload: MyBasecampsPage.preload },
   {
     path: '/me/program-applications',
     render: () => <MyProgramApplicationsPage />,
     preload: MyProgramApplicationsPage.preload,
   },
   { path: '/me/memories', render: () => <MyMemoriesPage />, preload: MyMemoriesPage.preload },
-  { path: '/me/companion-reviews', render: () => <CompanionReviewsPage /> },
-  { path: '/me/notifications', render: () => <NotificationsPage /> },
+  { path: '/me/companion-reviews', render: () => <CompanionReviewsPage />, preload: CompanionReviewsPage.preload },
+  { path: '/me/notifications', render: () => <NotificationsPage />, preload: NotificationsPage.preload },
   { path: '/admin/reports', render: () => <AdminReportsPage />, preload: AdminReportsPage.preload },
   {
     path: '/admin/reports/:reportId',
@@ -186,10 +191,14 @@ export const routes: RouteDef[] = [
   { path: '/terms', render: () => <TermsPage />, preload: TermsPage.preload },
   { path: '/login', render: () => <LoginPage /> },
   { path: '/signup', render: () => <SignupPage /> },
-  { path: '/password-reset', render: () => <PasswordResetPage /> },
-  { path: '/verify-email', render: () => <VerifyEmailPage /> },
-  { path: '/identity-verification', render: () => <IdentityVerificationPage /> },
-  { path: '/me', render: () => <MyPage /> },
+  { path: '/password-reset', render: () => <PasswordResetPage />, preload: PasswordResetPage.preload },
+  { path: '/verify-email', render: () => <VerifyEmailPage />, preload: VerifyEmailPage.preload },
+  {
+    path: '/identity-verification',
+    render: () => <IdentityVerificationPage />,
+    preload: IdentityVerificationPage.preload,
+  },
+  { path: '/me', render: () => <MyPage />, preload: MyPage.preload },
   {
     path: '/members/:memberId/memories',
     preload: MemberMemoriesPage.preload,
@@ -200,6 +209,7 @@ export const routes: RouteDef[] = [
   },
   {
     path: '/members/:memberId',
+    preload: MemberProfilePage.preload,
     render: (params) => {
       const memberId = toPositiveId(params.memberId);
       return memberId === null ? <NotFoundPage /> : <MemberProfilePage key={memberId} memberId={memberId} />;
