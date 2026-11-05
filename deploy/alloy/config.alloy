@@ -22,10 +22,10 @@ prometheus.remote_write "grafana_cloud" {
 
 // ---------- 앱 ----------
 
-// 앱은 Compose 내부망에서 app:8080으로 닿는다. Caddy는 /actuator를 넘기지 않으므로 밖에서는 이 주소를 읽을 수 없다.
+// 앱의 지표 주소는 Compose 내부망의 app:8081이다. Caddy는 8080만 넘기므로 밖에서는 읽을 수 없다.
 prometheus.scrape "app" {
 	job_name        = "moewadeul-app"
-	targets         = [{"__address__" = "app:8080"}]
+	targets         = [{"__address__" = "app:8081"}]
 	metrics_path    = "/actuator/prometheus"
 	scrape_interval = "60s"
 	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
@@ -101,6 +101,49 @@ discovery.relabel "host" {
 prometheus.scrape "host" {
 	job_name        = "node"
 	targets         = discovery.relabel.host.output
+	scrape_interval = "60s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// ---------- Caddy ----------
+
+// 앱에 닿지 못해 Caddy가 직접 만든 502는 앱 지표에 없다. Caddy 응답 수를 읽어 경보에 쓴다.
+prometheus.scrape "caddy" {
+	job_name        = "caddy"
+	targets         = [{"__address__" = "caddy:2020"}]
+	scrape_interval = "60s"
+	forward_to      = [prometheus.relabel.caddy.receiver]
+}
+
+// Caddy 지표는 구간이 많아 시계열을 많이 쓴다. 경보에 쓰는 요청 수만 남겨 무료 한도를 아낀다.
+// 502는 응답 시간(response_duration)에는 남지 않고 요청 시간(request_duration)에만 남는다.
+prometheus.relabel "caddy" {
+	forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+	rule {
+		source_labels = ["__name__"]
+		regex         = "caddy_http_request_duration_seconds_count"
+		action        = "keep"
+	}
+}
+
+// ---------- 사이트 탐침 ----------
+
+// 서버 안에서 공인 주소로 사이트를 읽는다. DNS, TLS, Caddy, 앱을 함께 지나고 인증서 만료일도 읽는다.
+// 서버가 통째로 죽으면 탐침도 멈추지만, 그때는 지표가 끊겨 앱 상태 경보가 울린다.
+prometheus.exporter.blackbox "site" {
+	config = "{ modules: { https_2xx: { prober: http, timeout: 10s, http: { preferred_ip_protocol: ip4, fail_if_not_ssl: true } } } }"
+
+	target {
+		name    = "site"
+		address = "https://" + sys.env("SITE_ADDRESS") + "/api/programs"
+		module  = "https_2xx"
+	}
+}
+
+prometheus.scrape "blackbox" {
+	job_name        = "site-probe"
+	targets         = prometheus.exporter.blackbox.site.targets
 	scrape_interval = "60s"
 	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
 }

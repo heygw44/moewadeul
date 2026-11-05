@@ -4,6 +4,12 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
+# 지표와 상태 확인을 요청 스레드와 다른 Tomcat에서 받는다. 요청 스레드가 포화된 순간에도 지표를 읽어야 포화 경보가 울린다.
+# Caddy는 8080만 넘기고 8081은 Compose 내부망과 서버 안에서만 닿는다.
+management:
+  server:
+    port: 8081
+
 server:
   tomcat:
     # 스레드 포화는 HTTP 오류 없이 응답만 늦어져서 tomcat_threads_* 지표로만 보인다.
