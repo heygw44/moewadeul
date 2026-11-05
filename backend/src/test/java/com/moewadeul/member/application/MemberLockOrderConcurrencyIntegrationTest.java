@@ -95,6 +95,13 @@ class MemberLockOrderConcurrencyIntegrationTest {
             actions.add(() -> approvalService.approve(basecamp, application, leader));
         }
         long report = saveReport(reporter, target, firstBasecamp);
+        jdbc.update(
+                "INSERT INTO sanction (member_id, type, level, reason, starts_at, status, created_at, updated_at)"
+                        + " VALUES (?, 'WARNING', 1, '경고', ?, 'ACTIVE', ?, ?)",
+                target,
+                AT,
+                AT,
+                AT);
         actions.add(() ->
                 reportActionService.act(new MemberReportActionCommand(report, admin, "SUSPEND_7D", "사유", false, "메모")));
         actions.add(() -> {
@@ -119,6 +126,12 @@ class MemberLockOrderConcurrencyIntegrationTest {
         List<Throwable> failures = runConcurrently(actions);
 
         assertThat(failures).noneMatch(failure -> failure instanceof PessimisticLockingFailureException);
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM sanction WHERE member_id = ? AND type = 'SUSPEND_7D'",
+                        Integer.class,
+                        target))
+                .as("정지 제재가 실제로 확정돼 회원 행을 바꿨다")
+                .isEqualTo(1);
     }
 
     private long saveVerifiedMember() {
