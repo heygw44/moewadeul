@@ -88,6 +88,7 @@ main() {
     # 임시 파일 경로는 전역 변수에 둔다. EXIT trap은 main이 끝난 뒤 실행되므로, 지역 변수를 쓰면 그때는 이미 사라져 있다.
     DUMP_FILE="$(mktemp /var/tmp/moewadeul-backup.XXXXXX)"
     trap 'rm -f "$DUMP_FILE"' EXIT
+    # 키의 시각은 덤프 시작보다 앞서야 한다. 시점 복구가 이 시각부터 binlog를 다시 적용한다. 스냅샷보다 늦으면 그 사이 쓰기를 잃는다.
     key="$S3_PREFIX/${db_name}-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
 
     log "덤프 시작: $db_name"

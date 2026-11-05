@@ -72,10 +72,18 @@ main() {
     t_download="$(date +%s)"
 
     log "2/3 임시 MySQL 컨테이너 시작"
+    # 버퍼 풀과 performance_schema 인자는 운영과 같다. 기본값으로 복원하면 운영 설정의 2.2배가 걸려 복구 시간을 잘못 읽는다.
     docker run -d --name "$DRILL_CONTAINER" --network none --memory 512m \
         -e MYSQL_ROOT_PASSWORD="$root_password" -e MYSQL_DATABASE="$DRILL_DB" \
         "$MYSQL_IMAGE" --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci \
-        --default-time-zone=+00:00 > /dev/null
+        --default-time-zone=+00:00 --log-bin-trust-function-creators=1 \
+        --innodb-buffer-pool-size=256M --innodb-log-buffer-size=16M \
+        --performance-schema-digests-size=1000 --performance-schema-events-statements-history-long-size=0 \
+        --performance-schema-events-stages-history-long-size=0 --performance-schema-events-waits-history-long-size=0 \
+        --performance-schema-events-transactions-history-long-size=0 --performance-schema-max-thread-instances=100 \
+        --performance-schema-accounts-size=10 --performance-schema-hosts-size=10 --performance-schema-users-size=10 \
+        --performance-schema-max-table-handles=500 --performance-schema-max-table-instances=500 \
+        --performance-schema-max-file-instances=1000 > /dev/null
     # 초기화 중인 임시 서버는 소켓만 열고 TCP는 막아 둔다. 그래서 TCP로 접속이 되면 준비가 끝난 것이다.
     # 컨테이너가 메모리 부족 등으로 죽으면 접속은 영원히 안 되므로, 기다리는 동안 컨테이너가 살아 있는지와 시간 상한을 함께 본다.
     local ready_deadline=$((SECONDS + READY_TIMEOUT_SECONDS)) state
