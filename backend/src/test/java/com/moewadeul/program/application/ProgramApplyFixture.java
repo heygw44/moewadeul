@@ -31,11 +31,20 @@ public final class ProgramApplyFixture {
     }
 
     public long saveVerifiedMember() {
+        return saveVerifiedMember(2007);
+    }
+
+    public long saveVerifiedMinor() {
+        return saveVerifiedMember(2008);
+    }
+
+    private long saveVerifiedMember(int birthYear) {
         long memberId = saveMember();
         jdbc.update(
                 "INSERT INTO identity_verification (member_id, birth_year, gender, ci_hash, provider, verified_at,"
-                        + " created_at, updated_at) VALUES (?, 2007, 'MALE', ?, 'FAKE', ?, ?, ?)",
+                        + " created_at, updated_at) VALUES (?, ?, 'MALE', ?, 'FAKE', ?, ?, ?)",
                 memberId,
+                birthYear,
                 "%064d".formatted(memberId),
                 AT_DEFAULT_INSTANT,
                 AT_DEFAULT_INSTANT,

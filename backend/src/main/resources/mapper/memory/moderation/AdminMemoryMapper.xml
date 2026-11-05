@@ -26,7 +26,14 @@
         ) rc ON rc.memory_id = r.id
         WHERE r.status = #{status}
           AND r.visibility = 'PUBLIC'
-        ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, r.updated_at ASC, r.id ASC
+        <choose>
+            <when test="status.name() == 'HIDDEN'">
+                ORDER BY r.updated_at DESC, r.id DESC
+            </when>
+            <otherwise>
+                ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, r.updated_at ASC, r.id ASC
+            </otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 

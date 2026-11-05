@@ -209,7 +209,7 @@ class OutboxReliabilityIntegrationTest {
     }
 
     @Test
-    @DisplayName("[NFR-04] 일시적인 실패도 이벤트를 만든 지 일시 실패 재시도 기간(1일)이 지났으면 FAILED로 굳히고, 기간 안의 이벤트는 PENDING으로 둔다")
+    @DisplayName("[NFR-04] 일시적인 실패도 이벤트를 만든 지 일시 실패 재시도 기간(26시간)이 지났으면 FAILED로 굳히고, 기간 안의 이벤트는 PENDING으로 둔다")
     void transientFailureBecomesFailedOnlyAfterRetryWindow() {
         // given
         long older = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
@@ -309,6 +309,29 @@ class OutboxReliabilityIntegrationTest {
         assertThat(afterExpiry).isEqualTo(1);
         assertThat(handler.calledEventIds()).containsExactly(eventId);
         assertThat(findEvent(eventId).get("status")).isEqualTo("PUBLISHED");
+    }
+
+    @Test
+    @DisplayName("[NFR-04] 앱이 죽어 임대만 남은 이벤트는 다시 뜰 때 풀려 바로 처리하고, 실패해 재시도를 기다리는 이벤트의 간격은 그대로 둔다")
+    void restartReleasesLeasesOfDeadRunButKeepsRetryDelay() {
+        // given
+        long waitingRetry =
+                recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
+        handler.failNextCalls(1);
+        publisher.publishPending(OutboxLane.DEFAULT);
+        long leasedByDeadRun =
+                recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).getLast();
+        assertThat(store.claim(clock.instant(), OutboxLane.DEFAULT, Set.of()).messages())
+                .extracting(OutboxMessage::eventId)
+                .containsExactly(leasedByDeadRun);
+
+        // when
+        publisher.releaseLeasesOfPreviousRun();
+        publisher.publishPending(OutboxLane.DEFAULT);
+
+        // then
+        assertThat(findEvent(leasedByDeadRun).get("status")).isEqualTo("PUBLISHED");
+        assertThat(findEvent(waitingRetry).get("status")).isEqualTo("PENDING");
     }
 
     @Test

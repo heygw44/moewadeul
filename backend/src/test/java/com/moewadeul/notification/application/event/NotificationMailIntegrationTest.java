@@ -338,7 +338,7 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 일시적인 실패도 알림을 만든 지 일시 실패 재시도 기간(1일)이 지났으면 FAILED로 굳히고, 기간 안의 알림은 PENDING으로 둔다")
+    @DisplayName("[F-20] 일시적인 실패도 알림을 만든 지 일시 실패 재시도 기간(26시간)이 지났으면 FAILED로 굳히고, 기간 안의 알림은 PENDING으로 둔다")
     void transientFailureBecomesFailedOnlyAfterRetryWindow() {
         // given
         recordApproved(saveActiveMember().getId(), 3L);
@@ -367,6 +367,28 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-20] Gmail 하루 한도(지난 24시간)에 막힌 알림 메일은 만든 지 24시간이 지나 한도가 풀릴 무렵 한 번 더 거부돼도 남아 있다가 다음 시도에 나간다")
+    void mailBlockedByDailyQuotaIsSentAfterQuotaLifts() {
+        // given
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending(OutboxLane.DEFAULT);
+        mailSender.failNextSendsTransiently(1);
+        mailer.sendDue();
+        clock.advance(Duration.ofHours(24).plusMinutes(5));
+        mailSender.failNextSendsTransiently(1);
+        mailer.sendDue();
+
+        // when
+        clock.advance(properties.retryMaxDelay());
+        mailer.sendDue();
+
+        // then
+        assertThat(countByEmailStatus("SENT")).isEqualTo(1);
+        assertThat(mailSender.sent()).extracting(MailMessage::to).containsExactly(applicant.getEmail());
+    }
+
+    @Test
     @DisplayName("[F-20] 재시도 사이에 회원이 이메일을 끄면 남은 메일은 보내지 않고 SKIPPED로 둔다")
     void settingChangedBetweenRetriesIsRespected() {
         // given
@@ -383,6 +405,32 @@ class NotificationMailIntegrationTest {
         // then
         assertThat(mailSender.sent()).isEmpty();
         assertThat(countByEmailStatus("SKIPPED")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-20] 앱이 죽어 임대만 남은 메일은 다시 뜰 때 풀려 바로 나가고, 실패해 재시도를 기다리는 메일의 간격은 그대로 둔다")
+    void restartReleasesLeasesOfDeadRunButKeepsRetryDelay() {
+        // given
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending(OutboxLane.DEFAULT);
+        long leasedByDeadRun = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
+        assertThat(mailStore.claim(clock.instant()).targets()).hasSize(1);
+        Member other = saveActiveMember();
+        recordApproved(other.getId(), 4L);
+        publisher.publishPending(OutboxLane.DEFAULT);
+        jdbcTemplate.update(
+                "UPDATE notification SET email_attempt_count = 1, email_next_attempt_at = ? WHERE id <> ?",
+                java.sql.Timestamp.from(clock.instant().plus(properties.lease())),
+                leasedByDeadRun);
+
+        // when
+        mailer.releaseLeasesOfPreviousRun();
+        int sent = mailer.sendDue();
+
+        // then
+        assertThat(sent).isEqualTo(1);
+        assertThat(mailSender.sent()).extracting(MailMessage::to).containsExactly(applicant.getEmail());
     }
 
     @Test
@@ -640,7 +688,7 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 최근 24시간에 보낸 알림 메일이 상한(300통)에 닿으면 남은 자리만큼만 보내고, 나머지는 알림함에 두고 보내기를 미룬다")
+    @DisplayName("[F-20][EV-07] 최근 24시간에 보낸 알림 메일이 상한(300통)에 닿으면 남은 자리만큼만 보내고, 나머지는 알림함에 두고 보내기를 미룬다")
     void mailsBeyondDailyLimitStayPendingWhileInboxKeepsAll() {
         // given
         int remaining = 3;
@@ -669,7 +717,7 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 상한 때문에 미룬 알림 메일은 이미 보낸 메일이 24시간 기간에서 빠지면 알림 순서대로 나간다")
+    @DisplayName("[F-20][EV-07] 상한 때문에 미룬 알림 메일은 이미 보낸 메일이 24시간 기간에서 빠지면 알림 순서대로 나간다")
     void deferredMailsGoOutWhenSentMailsLeaveTheWindow() {
         // given
         List<Long> memberIds = saveActiveMembers(5);
@@ -699,7 +747,7 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 기간(24시간) 밖에서 보낸 알림 메일은 상한에 세지 않는다")
+    @DisplayName("[F-20][EV-07] 기간(24시간) 밖에서 보낸 알림 메일은 상한에 세지 않는다")
     void mailsSentBeforeTheWindowDoNotCountTowardLimit() {
         // given
         List<Long> memberIds = saveActiveMembers(5);

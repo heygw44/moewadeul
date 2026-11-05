@@ -30,9 +30,10 @@ class AdminCommunityController {
 
     @Operation(
             summary = "커뮤니티 글 검토 목록",
-            description = "status(PENDING_REVIEW 기본, 또는 HIDDEN)인 글을 돌려준다. 검토 전 신고 중 금전 요구·사기(MONEY_SCAM)가 있는 글이 먼저이고, "
-                    + "같은 묶음에서는 상태가 바뀐 시각이 이른 순서다. 각 항목에는 작성자, 본문 전체, 검토 전 신고의 수, 사유별 수, 최근 신고 5건의 내용을 담는다. "
-                    + "다른 status는 400 INVALID_INPUT이다. page는 0부터 세고, size는 기본 20, 1~50이다.")
+            description =
+                    "status(PENDING_REVIEW 기본, 또는 HIDDEN)인 글을 돌려준다. PENDING_REVIEW는 검토 전 신고 중 금전 요구·사기(MONEY_SCAM)가 있는 글이 먼저이고, "
+                            + "같은 묶음에서는 상태가 바뀐 시각이 이른 순서다. HIDDEN은 방금 숨긴 글이 먼저인 최신순(상태가 바뀐 시각, id 내림차순)이고 MONEY_SCAM 우선은 없다. 각 항목에는 작성자, 본문 전체, 검토 전 신고의 수, 사유별 수, 최근 신고 5건의 내용을 담는다. "
+                            + "다른 status는 400 INVALID_INPUT이다. page는 0부터 세고, size는 기본 20, 1~50이다.")
     @GetMapping("/posts")
     PageResponse<AdminCommunityPostResponse> listPosts(
             @RequestParam(required = false) String status,
@@ -62,8 +63,9 @@ class AdminCommunityController {
 
     @Operation(
             summary = "커뮤니티 댓글 검토 목록",
-            description = "글 검토 목록과 같은 파라미터와 정렬로 댓글을 돌려준다. 항목에는 댓글이 달린 글의 postId, 작성자, 내용 전체, 검토 전 신고 정보를 담는다. "
-                    + "작성자가 지운 댓글은 나오지 않는다. 다른 status는 400 INVALID_INPUT이다.")
+            description =
+                    "글 검토 목록과 같은 파라미터와 정렬(status별 규칙 포함)로 댓글을 돌려준다. 항목에는 댓글이 달린 글의 postId와 그 글의 상태(postStatus: ACTIVE, PENDING_REVIEW, HIDDEN, DELETED), 작성자, 내용 전체, 검토 전 신고 정보를 담는다. "
+                            + "작성자가 지운 댓글은 나오지 않는다. 다른 status는 400 INVALID_INPUT이다.")
     @GetMapping("/comments")
     PageResponse<AdminCommunityCommentResponse> listComments(
             @RequestParam(required = false) String status,

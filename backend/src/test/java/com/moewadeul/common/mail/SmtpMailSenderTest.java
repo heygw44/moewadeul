@@ -23,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailException;
@@ -139,6 +141,18 @@ class SmtpMailSenderTest {
 
         assertThat(failureOf(new MailSendException(Map.of("message", permanentReply))))
                 .isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "550 5.4.5 Daily user sending quota exceeded.",
+                "550-5.4.5 Daily user sending limit exceeded. For more information on Gmail"
+            })
+    @DisplayName("[F-20] Gmail 하루 발송 한도 거부(550 5.4.5)는 다음 날 풀리므로 일시적인 실패로 표시한다")
+    void dailyQuotaRejectionIsTransient(String reply) {
+        assertThat(failureOf(new MailSendException(Map.of("message", new MessagingException(reply)))))
+                .isTrue();
     }
 
     @Test

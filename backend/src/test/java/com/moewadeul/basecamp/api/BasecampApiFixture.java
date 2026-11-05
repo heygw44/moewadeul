@@ -84,6 +84,14 @@ public final class BasecampApiFixture {
     }
 
     public Cookie identityVerifiedSession(Member member, String gender) {
+        return identityVerifiedSession(member, gender, ADULT_BIRTH_YEAR);
+    }
+
+    public Cookie identityVerifiedMinorSession(Member member) {
+        return identityVerifiedSession(member, "FEMALE", ADULT_BIRTH_YEAR + 1);
+    }
+
+    private Cookie identityVerifiedSession(Member member, String gender, int birthYear) {
         Cookie session = verifiedSession(member);
         identitySequence++;
         MvcTestResult result = mvc.post()
@@ -92,7 +100,7 @@ public final class BasecampApiFixture {
                 .cookie(session)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"birthYear\":%d,\"gender\":\"%s\",\"demoIdentityKey\":\"demo-member-%d\"}"
-                        .formatted(ADULT_BIRTH_YEAR, gender, identitySequence))
+                        .formatted(birthYear, gender, identitySequence))
                 .exchange();
         assertThat(result).hasStatus(HttpStatus.OK);
         return session;

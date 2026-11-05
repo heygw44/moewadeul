@@ -79,7 +79,11 @@ function createProgram(adminSession, csrfToken) {
         overnight: OVERNIGHT,
     };
     const res = http.post(`${BASE_URL}/api/admin/programs`, JSON.stringify(body), {
-        headers: { 'Content-Type': 'application/json', ...authHeaders(adminSession, csrfToken) },
+        headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': crypto.randomUUID(),
+            ...authHeaders(adminSession, csrfToken),
+        },
         tags: { name: 'program-create' },
     });
     if (res.status !== 201) {

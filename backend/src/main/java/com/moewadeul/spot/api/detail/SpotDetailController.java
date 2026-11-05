@@ -1,8 +1,10 @@
 package com.moewadeul.spot.api.detail;
 
 import com.moewadeul.spot.application.detail.SpotDetailQueryService;
+import com.moewadeul.spot.application.detail.SpotWeatherIpLimiter;
 import com.moewadeul.spot.application.detail.SpotWeatherQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,11 +16,15 @@ class SpotDetailController {
 
     private final SpotDetailQueryService spotDetailQueryService;
     private final SpotWeatherQueryService spotWeatherQueryService;
+    private final SpotWeatherIpLimiter spotWeatherIpLimiter;
 
     SpotDetailController(
-            SpotDetailQueryService spotDetailQueryService, SpotWeatherQueryService spotWeatherQueryService) {
+            SpotDetailQueryService spotDetailQueryService,
+            SpotWeatherQueryService spotWeatherQueryService,
+            SpotWeatherIpLimiter spotWeatherIpLimiter) {
         this.spotDetailQueryService = spotDetailQueryService;
         this.spotWeatherQueryService = spotWeatherQueryService;
+        this.spotWeatherIpLimiter = spotWeatherIpLimiter;
     }
 
     @Operation(
@@ -58,11 +64,13 @@ class SpotDetailController {
                     + "기상청은 성공하고 천문연만 실패하면 weather는 채우고 sun만 null로 준다. "
                     + "같은 값을 받으려고 많은 요청이 몰려 기다릴 자리가 없으면 weather나 sun이 일시적으로 null일 수 있고, "
                     + "조금 뒤에 다시 요청하면 받는다. "
+                    + "한 IP가 1분에 60번을 넘게 요청하면 429 TOO_MANY_REQUESTS와 Retry-After로 막는다. "
                     + "서버는 같은 격자·같은 발표 시각의 예보와 같은 장소·같은 날짜의 출몰시각을 메모리에 잠시 두고 다시 쓴다. "
                     + "장소가 없거나 숨김, 삭제, 검토 대기 상태이면 외부 API를 부르지 않고 404 NOT_FOUND로 응답한다. "
                     + "spotId가 숫자가 아니면 400 INVALID_INPUT으로 응답한다.")
     @GetMapping("/{spotId}/weather")
-    SpotWeatherResponse findWeather(@PathVariable long spotId) {
+    SpotWeatherResponse findWeather(@PathVariable long spotId, HttpServletRequest request) {
+        spotWeatherIpLimiter.acquire(request.getRemoteAddr());
         return SpotWeatherResponse.from(
                 spotWeatherQueryService.findWeather(spotId).orElse(null));
     }

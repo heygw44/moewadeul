@@ -1,6 +1,8 @@
 import type { SpotType } from './spot';
 import type { BakjiReportReason } from './bakji';
 import type { BasecampStatus } from './basecamp';
+import type { CommunityReportReason } from './community';
+import type { ProgramApplicationStatus, ProgramCancelReason, ProgramDetail } from './program';
 import type { ReportKind, ReportStatus, ReportType, SanctionStatus, SanctionType } from './report';
 
 export interface AdminMemberRef {
@@ -99,4 +101,117 @@ export interface SyncJobRun {
   errorMessage: string | null;
   startedAt: string;
   finishedAt: string | null;
+}
+
+export type AdminCommunityStatus = 'PENDING_REVIEW' | 'HIDDEN';
+
+export type AdminModerationResultStatus = 'ACTIVE' | 'HIDDEN';
+
+export interface AdminCommunityRecentReport {
+  reason: CommunityReportReason;
+  content: string | null;
+  createdAt: string;
+}
+
+interface AdminCommunityItemBase {
+  author: AdminMemberRef;
+  status: AdminCommunityStatus;
+  reportCount: number;
+  reasonCounts: Partial<Record<CommunityReportReason, number>>;
+  recentReports: AdminCommunityRecentReport[];
+  statusChangedAt: string;
+}
+
+export interface AdminCommunityImage {
+  imageId: number;
+  url: string;
+}
+
+export interface AdminCommunityPost extends AdminCommunityItemBase {
+  postId: number;
+  title: string;
+  content: string;
+  images: AdminCommunityImage[];
+}
+
+export type AdminCommentPostStatus = 'ACTIVE' | 'PENDING_REVIEW' | 'HIDDEN' | 'DELETED';
+
+export interface AdminCommunityComment extends AdminCommunityItemBase {
+  commentId: number;
+  postId: number;
+  postStatus: AdminCommentPostStatus;
+  content: string;
+}
+
+export interface AdminProgramCreateRequest {
+  title: string;
+  description: string;
+  spotId?: number | null;
+  locationText: string;
+  startAt: string;
+  endAt: string;
+  capacity: number;
+  fee: number;
+  applyOpenAt: string;
+  applyCloseAt: string;
+  paymentDeadlineMinutes?: number;
+  overnight: boolean;
+}
+
+export type AdminProgramReviseRequest = Partial<AdminProgramCreateRequest>;
+
+export type AdminProgramDetail = Omit<ProgramDetail, 'myApplication' | 'vacancyAlertSubscribed'>;
+
+export interface AdminProgramCancelResponse {
+  programId: number;
+  status: 'CANCELED';
+  canceledApplicationCount: number;
+}
+
+export interface AdminProgramApplicant {
+  applicationId: number;
+  member: AdminMemberRef;
+  status: ProgramApplicationStatus;
+  paymentDueAt: string | null;
+  confirmedAt: string | null;
+  canceledAt: string | null;
+  cancelReason: ProgramCancelReason | null;
+  reviewRequestedAt: string | null;
+  createdAt: string;
+}
+
+export type AdminAuditAction =
+  | 'REPORT_START_REVIEW'
+  | 'REPORT_ACTION'
+  | 'REPORT_DISMISS'
+  | 'SANCTION_LIFT'
+  | 'SPOT_HIDE'
+  | 'SPOT_RESTORE'
+  | 'COMMUNITY_HIDE'
+  | 'COMMUNITY_RESTORE'
+  | 'MEMORY_HIDE'
+  | 'MEMORY_RESTORE'
+  | 'SYNC_JOB_RUN'
+  | 'PROGRAM_CREATE'
+  | 'PROGRAM_UPDATE'
+  | 'PROGRAM_CANCEL';
+
+export type AdminAuditTargetType =
+  | 'MEMBER_REPORT'
+  | 'SANCTION'
+  | 'SPOT'
+  | 'COMMUNITY_POST'
+  | 'COMMUNITY_COMMENT'
+  | 'MEMORY'
+  | 'PROGRAM'
+  | 'SYNC_JOB_RUN';
+
+export interface AdminAuditLog {
+  auditLogId: number;
+  adminId: number;
+  action: AdminAuditAction;
+  targetType: AdminAuditTargetType;
+  targetId: number;
+  detail: Record<string, unknown> | null;
+  createdAt: string;
 }
