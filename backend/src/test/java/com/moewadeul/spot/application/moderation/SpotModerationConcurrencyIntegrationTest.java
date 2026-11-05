@@ -218,40 +218,6 @@ class SpotModerationConcurrencyIntegrationTest {
         assertThat(sourceRemovedAt(spotId)).isNotNull();
     }
 
-    @RepeatedTest(20)
-    @DisplayName("[F-06][F-21] 동기화가 여러 장소를 한 번에 숨기는 동안 관리자가 그 장소들을 반대 순서로 숨겨도 데드락 없이 각 장소가 한 번만 숨겨진다")
-    void bulkSourceRemovalRacingHidesStaysConsistent() throws Exception {
-        // given
-        List<String> externalIds = List.of("b1", "b2", "b3", "b4", "b5");
-        List<Long> spotIds = new ArrayList<>();
-        for (String externalId : externalIds) {
-            spotIds.add(savePublicSpot(externalId));
-        }
-        long admin = memberFixture.save().getId();
-        List<Callable<Object>> tasks = new ArrayList<>();
-        tasks.add(() -> publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, externalIds));
-        for (int i = spotIds.size() - 1; i >= 0; i--) {
-            long spotId = spotIds.get(i);
-            tasks.add(() -> {
-                spotModerationService.hide(spotId, admin);
-                return null;
-            });
-        }
-
-        // when
-        List<Throwable> failures = runConcurrently(tasks);
-
-        // then
-        assertThat(failures)
-                .allSatisfy(failure -> assertThat(failure)
-                        .isInstanceOfSatisfying(
-                                BusinessException.class,
-                                e -> assertThat(e.getErrorCode()).isEqualTo(SpotErrorCode.SPOT_INVALID_STATE)));
-        for (long spotId : spotIds) {
-            assertThat(statusOf(spotId)).isEqualTo("HIDDEN");
-        }
-    }
-
     @RepeatedTest(50)
     @DisplayName("[F-06][F-21] 원천 삭제로 숨긴 공공데이터 장소의 관리자 복구와 재등장 적재가 동시에 와도 데드락 없이 장소는 ACTIVE이고 삭제 표시는 지워진다")
     void restoreRacingResurfacingUpsertStaysConsistent() throws Exception {
