@@ -17,7 +17,10 @@ import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
 import com.moewadeul.program.application.catalog.ProgramApplicantItem;
 import com.moewadeul.program.application.catalog.ProgramApplicantQuery;
@@ -26,13 +29,16 @@ import com.moewadeul.program.application.catalog.ProgramCreateCommand;
 import com.moewadeul.program.application.catalog.ProgramDetail;
 import com.moewadeul.program.application.catalog.ProgramReviseCommand;
 import com.moewadeul.program.domain.ProgramErrorCode;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -42,9 +48,16 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @WebMvcTest(AdminProgramController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class})
+@Import({
+    GlobalExceptionHandler.class,
+    TraceIdFilter.class,
+    SecurityConfig.class,
+    IdempotencyExecutor.class,
+    AdminProgramControllerTest.ClockConfig.class
+})
 class AdminProgramControllerTest {
 
     private static final String PROGRAMS = "/api/admin/programs";
@@ -56,6 +69,12 @@ class AdminProgramControllerTest {
 
     @MockitoBean
     private ProgramAdminService programAdminService;
+
+    @MockitoBean
+    private IdempotencyRecordRepository idempotencyRecordRepository;
+
+    @MockitoBean
+    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("[F-17] 로그인하지 않았거나 관리자가 아닌 회원이 행사 관리 API를 부르면 401, 403이다")
@@ -107,6 +126,22 @@ class AdminProgramControllerTest {
         assertThat(captor.getValue().capacity()).isEqualTo(200);
         assertThat(captor.getValue().paymentDeadlineMinutes()).isNull();
         assertThat(captor.getValue().applyOpenAt()).isEqualTo(Instant.parse("2026-11-01T01:00:00Z"));
+    }
+
+    @Test
+    @DisplayName("[F-17][NFR-03] 행사 등록에 Idempotency-Key 헤더가 없으면 400 IDEMPOTENCY_KEY_REQUIRED이고 서비스를 부르지 않는다")
+    void createProgramRequiresIdempotencyKey() {
+        MvcTestResult result = mvc.post()
+                .uri(PROGRAMS)
+                .with(admin())
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(validCreateBody())
+                .exchange();
+
+        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("IDEMPOTENCY_KEY_REQUIRED");
+        verifyNoInteractions(programAdminService);
     }
 
     @Test
@@ -305,7 +340,10 @@ class AdminProgramControllerTest {
         if (body == null) {
             return request.exchange();
         }
-        return request.contentType(MediaType.APPLICATION_JSON).content(body).exchange();
+        return request.header("Idempotency-Key", "key-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .exchange();
     }
 
     private MvcTestResult patch(RequestPostProcessor login, String path, String body) {
@@ -359,5 +397,14 @@ class AdminProgramControllerTest {
                 List.of(
                         new SimpleGrantedAuthority("ROLE_" + role),
                         new SimpleGrantedAuthority(LoginMember.AUTHORITY_EMAIL_VERIFIED))));
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class ClockConfig {
+
+        @Bean
+        Clock clock() {
+            return MutableClock.atDefaultInstant();
+        }
     }
 }

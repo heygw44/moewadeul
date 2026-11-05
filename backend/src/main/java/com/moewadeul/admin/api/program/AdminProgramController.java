@@ -3,6 +3,8 @@ package com.moewadeul.admin.api.program;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.web.PageResponse;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.application.IdempotentRequest;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
 import com.moewadeul.program.application.catalog.ProgramApplicantQuery;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -27,22 +30,34 @@ import org.springframework.web.bind.annotation.RestController;
 class AdminProgramController {
 
     private final ProgramAdminService programAdminService;
+    private final IdempotencyExecutor idempotencyExecutor;
 
-    AdminProgramController(ProgramAdminService programAdminService) {
+    AdminProgramController(ProgramAdminService programAdminService, IdempotencyExecutor idempotencyExecutor) {
         this.programAdminService = programAdminService;
+        this.idempotencyExecutor = idempotencyExecutor;
     }
 
     @Operation(
             summary = "공식 행사 등록",
-            description = "관리자가 행사를 등록하고 201과 함께 programId를 준다. 제목 1~100자, 설명 1~5000자, 장소 설명 1~255자, 정원 1~1000, "
+            description = "관리자가 행사를 등록하고 201과 함께 programId를 준다. "
+                    + "Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. "
+                    + "같은 키와 같은 내용으로 다시 보내면 행사를 새로 만들지 않고 처음 결과를 그대로 돌려주고, 처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이다. "
+                    + "제목 1~100자, 설명 1~5000자, 장소 설명 1~255자, 정원 1~1000, "
                     + "참가비 0~1,000,000원, 결제 기한 1~1440분(생략하면 15분)이다. spotId는 선택이고 지도에 보이는 장소여야 한다. "
                     + "시각은 신청 시작 < 신청 마감 <= 행사 시작 < 행사 종료 순서여야 하고, 행사 시작은 현재보다 늦어야 한다. "
                     + "필수 값이 없거나 범위·시각 순서가 틀리거나 장소를 연결할 수 없으면 400 INVALID_INPUT이다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     AdminProgramCreateResponse create(
-            @Valid @RequestBody AdminProgramCreateRequest request, @AuthenticationPrincipal LoginMember admin) {
-        return new AdminProgramCreateResponse(programAdminService.create(admin.memberId(), request.toCommand()));
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody AdminProgramCreateRequest request,
+            @AuthenticationPrincipal LoginMember admin) {
+        long adminId = admin.memberId();
+        return idempotencyExecutor.execute(
+                new IdempotentRequest(adminId, idempotencyKey, "POST /api/admin/programs", request),
+                HttpStatus.CREATED,
+                AdminProgramCreateResponse.class,
+                () -> new AdminProgramCreateResponse(programAdminService.create(adminId, request.toCommand())));
     }
 
     @Operation(

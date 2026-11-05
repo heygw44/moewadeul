@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -95,6 +96,46 @@ class AdminProgramApiIntegrationTest {
         assertThat(detail).bodyJson().extractingPath("$.paymentDeadlineMinutes").isEqualTo(15);
         assertThat(detail).bodyJson().extractingPath("$.spotId").isNull();
         assertThat(detail).bodyJson().doesNotHavePath("$.myApplication");
+    }
+
+    @Test
+    @DisplayName("[F-17][NFR-03] 응답을 못 받고 같은 키·같은 내용으로 다시 등록해도 처음 결과를 돌려주고 행사와 감사 로그는 하나뿐이다")
+    void retryWithSameKeyCreatesOneProgram() {
+        // given
+        String key = "admin-create-" + UUID.randomUUID();
+        String body = body(clock.instant().plus(Duration.ofDays(1)), 200, null);
+
+        // when
+        MvcTestResult first = createProgram(key, body);
+        MvcTestResult retry = createProgram(key, body);
+
+        // then
+        assertThat(first).hasStatus(HttpStatus.CREATED);
+        assertThat(retry).hasStatus(HttpStatus.CREATED);
+        assertThat(programId(retry)).isEqualTo(programId(first));
+        assertThat(count("program")).isEqualTo(1);
+        assertThat(count("admin_audit_log WHERE action = 'PROGRAM_CREATE'")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName(
+            "[F-17][NFR-03] 키가 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이고 행사를 만들지 않는다")
+    void createRequiresKeyAndRejectsKeyReuseWithOtherBody() {
+        // given
+        Instant open = clock.instant().plus(Duration.ofDays(1));
+        String key = "admin-create-" + UUID.randomUUID();
+        assertThat(createProgram(key, body(open, 200, null))).hasStatus(HttpStatus.CREATED);
+
+        // when
+        MvcTestResult noKey = send(mvc.post().uri(ADMIN_PROGRAMS), adminSession, body(open, 200, null));
+        MvcTestResult reused = createProgram(key, body(open, 150, null));
+
+        // then
+        assertThat(noKey).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(noKey).bodyJson().extractingPath("$.code").isEqualTo("IDEMPOTENCY_KEY_REQUIRED");
+        assertThat(reused).hasStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(reused).bodyJson().extractingPath("$.code").isEqualTo("IDEMPOTENCY_KEY_REUSED");
+        assertThat(count("program")).isEqualTo(1);
     }
 
     @Test
@@ -614,7 +655,11 @@ class AdminProgramApiIntegrationTest {
     }
 
     private MvcTestResult createProgram(String body) {
-        return send(mvc.post().uri(ADMIN_PROGRAMS), adminSession, body);
+        return createProgram(UUID.randomUUID().toString(), body);
+    }
+
+    private MvcTestResult createProgram(String idempotencyKey, String body) {
+        return send(mvc.post().uri(ADMIN_PROGRAMS).header("Idempotency-Key", idempotencyKey), adminSession, body);
     }
 
     private MvcTestResult patch(long programId, String body) {
