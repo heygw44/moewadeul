@@ -17,9 +17,12 @@ import com.moewadeul.member.application.signup.SignupResult;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberStatus;
 import com.moewadeul.member.domain.verification.VerificationCode;
+import com.moewadeul.notification.application.NotificationEventTypes;
 import com.moewadeul.outbox.application.OutboxProperties;
 import com.moewadeul.outbox.application.OutboxPublisher;
+import java.sql.Timestamp;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -307,5 +310,29 @@ class EmailVerificationFlowIntegrationTest {
 
     private int countRows(String table) {
         return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class);
+    }
+
+    @Test
+    @DisplayName("[F-20][EV-07] 알림 메일이 상한(300통)에 닿아도 인증 코드 메일은 나간다")
+    void verificationMailIsNotLimitedByNotificationMailCap() {
+        // given
+        SignupResult signedUp = signUp(TestSequence.email());
+        Timestamp sentAt = Timestamp.from(MutableClock.DEFAULT_INSTANT.minus(Duration.ofHours(1)));
+        List<Object[]> rows = new ArrayList<>();
+        for (int i = 0; i < NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW; i++) {
+            rows.add(new Object[] {signedUp.memberId(), "seed:" + i, sentAt, sentAt});
+        }
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO notification (member_id, type, title, body, dedup_key, email_status,"
+                        + " email_attempt_count, email_sent_at, created_at)"
+                        + " VALUES (?, 'BASECAMP_CONFIRMED', '확정', '확정됐어요.', ?, 'SENT', 0, ?, ?)",
+                rows);
+
+        // when
+        int processed = publisher.publishPending(OutboxLane.MAIL);
+
+        // then
+        assertThat(processed).isEqualTo(1);
+        assertThat(mailSender.sent()).hasSize(1);
     }
 }

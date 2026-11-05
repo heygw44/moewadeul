@@ -15,9 +15,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +31,9 @@ class ContentReportContentCleanupIntegrationTest {
     private static final Duration ONE_SECOND = Duration.ofSeconds(1);
     private static final DateTimeFormatter DATETIME_UTC =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS").withZone(ZoneOffset.UTC);
+
+    @Autowired
+    private List<ReportContentCleanup> cleanups;
 
     @Autowired
     private CommunityReportContentCleanupService communityCleanup;
@@ -55,6 +60,14 @@ class ContentReportContentCleanupIntegrationTest {
     void setUp() {
         fixture = new CompanionReviewFixture(jdbc, memberRepository);
         targetId = fixture.saveVerifiedMember(TestSequence.nickname());
+    }
+
+    @Test
+    @DisplayName("[F-21][PV-07] 정리 스케줄러가 받는 대상은 커뮤니티, 추억 기록, 박지 신고 셋이다")
+    void schedulerReceivesAllThreeTargets() {
+        assertThat(cleanups)
+                .extracting(ReportContentCleanup::target)
+                .containsExactlyInAnyOrder(communityCleanup.target(), memoryCleanup.target(), bakjiCleanup.target());
     }
 
     @ParameterizedTest

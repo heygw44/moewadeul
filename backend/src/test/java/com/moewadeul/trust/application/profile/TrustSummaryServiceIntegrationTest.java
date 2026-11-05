@@ -278,4 +278,18 @@ class TrustSummaryServiceIntegrationTest {
                 LocalDateTime.ofInstant(startsAt, ZoneOffset.UTC),
                 status);
     }
+
+    @Test
+    @DisplayName("[TR-02][SN-10] 단계 2 회원은 제재가 확정되면 그 즉시 단계 1이 되고, 처분을 취소하면 다시 단계 2로 계산한다")
+    void trustLevelIsRecalculatedFromConditionsRightAfterSanction() {
+        long member = fixture.saveVerifiedMember(TestSequence.nickname());
+        makeQualified(member);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.TRUSTED);
+
+        insertSanction(member, "SUSPEND_7D", "ACTIVE", NOW);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.IDENTITY_VERIFIED);
+
+        jdbc.update("UPDATE sanction SET status = 'REVOKED' WHERE member_id = ?", member);
+        assertThat(trustSummaryService.summarize(member).trustLevel()).isEqualTo(TrustLevel.TRUSTED);
+    }
 }

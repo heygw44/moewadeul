@@ -169,4 +169,15 @@ class FlywayMigrationIntegrationTest {
         Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class);
         return count;
     }
+
+    @Test
+    @DisplayName("[F-01][EV-08] 만 14세 확인 값은 저장하지 않으므로 회원 테이블에 그 칼럼이 없다")
+    void ageConfirmationIsNotStored() {
+        Integer columns = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns"
+                        + " WHERE table_schema = DATABASE() AND table_name = 'member' AND column_name LIKE '%age_confirm%'",
+                Integer.class);
+
+        assertThat(columns).isZero();
+    }
 }
