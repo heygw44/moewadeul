@@ -27,9 +27,11 @@ import org.springframework.data.domain.Persistable;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
 
-    // 작업은 DB 트랜잭션 하나이고 잠금 대기가 5초에 끊긴다. 이보다 오래된 선점은 주인이 죽었다고 보고 넘겨받는다.
-    // 주인이 느리게 살아 있었더라도 완료 기록에서 선점을 잃은 것을 알고 롤백하므로 작업은 한 번만 커밋된다.
-    public static final Duration ABANDONED_AFTER = Duration.ofMinutes(1);
+    // 이보다 오래된 선점은 주인이 죽었다고 보고 넘겨받는다. 살아 있던 주인은 완료 기록에서 선점을 잃은 것을 알고 롤백하므로 작업은 한 번만 커밋된다.
+    // 다만 그러면 주인이 한 일이 버려지므로, 정상 요청이 가장 오래 걸리는 시간보다 길게 둔다. 가장 긴 것은 사진 10장을 붙인 추억 쓰기로,
+    // 커넥션 대기 30초 세 번(선점, 사전 확인 조회, 트랜잭션)과 사진·썸네일 20개의 S3 HEAD 5초씩, 잠금 대기를 더하면 약 3분 30초다.
+    // 화면은 30초에 응답을 끊고 같은 키로 다시 보내고, Caddy는 응답을 기다리는 시간에 제한이 없다.
+    public static final Duration ABANDONED_AFTER = Duration.ofMinutes(5);
 
     @Id
     @Column(name = "member_id")
