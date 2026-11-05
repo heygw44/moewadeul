@@ -1,6 +1,9 @@
 package com.moewadeul.spot.api.detail;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
@@ -398,6 +402,37 @@ class SpotDetailControllerTest {
                 .isEmpty();
         assertThat(result).bodyJson().extractingPath("$.weather").asMap().containsKey("sun");
         assertThat(result).bodyJson().extractingPath("$.weather.sun").isNull();
+    }
+
+    @Test
+    @DisplayName("[F-09] 한 IP가 1분에 60번을 넘게 날씨를 물으면 429와 Retry-After로 막고 서비스를 부르지 않으며, 다른 IP는 그대로 받는다")
+    void limitsWeatherRequestsPerIp() {
+        // given
+        when(spotWeatherQueryService.findWeather(106L)).thenReturn(Optional.empty());
+        for (int i = 0; i < 60; i++) {
+            assertThat(weatherFrom("203.0.113.60")).hasStatus(HttpStatus.OK);
+        }
+        clearInvocations(spotWeatherQueryService);
+
+        // when
+        MvcTestResult rejected = weatherFrom("203.0.113.60");
+        MvcTestResult otherIp = weatherFrom("203.0.113.61");
+
+        // then
+        assertThat(rejected).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(rejected.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isNotNull();
+        assertThat(otherIp).hasStatus(HttpStatus.OK);
+        verify(spotWeatherQueryService, times(1)).findWeather(106L);
+    }
+
+    private MvcTestResult weatherFrom(String ip) {
+        return mvc.get()
+                .uri(PATH + "/106/weather")
+                .with(request -> {
+                    request.setRemoteAddr(ip);
+                    return request;
+                })
+                .exchange();
     }
 
     @Test
