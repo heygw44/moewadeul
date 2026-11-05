@@ -130,20 +130,32 @@ describe('다른 회원의 기록 화면', () => {
     expect(button('다시 불러오기')).toBeUndefined();
   });
 
-  it('로그인 상태를 확인하는 동안에는 기록을 요청하지 않고, 확인이 끝나면 요청해서 보여 준다', async () => {
+  it('로그인 상태를 확인하는 동안에도 기록을 바로 요청하고, 비로그인으로 끝나도 다시 요청하지 않는다', async () => {
     session.status = 'loading';
     vi.mocked(fetchMemberMemories).mockResolvedValue([memory(11)]);
 
     await render();
 
-    expect(fetchMemberMemories).not.toHaveBeenCalled();
-    expect(container.querySelector('a[href="/memories/11"]')).toBeNull();
+    expect(fetchMemberMemories).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('a[href="/memories/11"]')).not.toBeNull();
 
-    session.status = 'authenticated';
+    session.status = 'anonymous';
     await render();
 
     expect(fetchMemberMemories).toHaveBeenCalledTimes(1);
     expect(container.querySelector('a[href="/memories/11"]')).not.toBeNull();
+  });
+
+  it('로그인한 사람이 바뀌면 그 사람 기준으로 기록을 다시 요청한다', async () => {
+    session.status = 'anonymous';
+    vi.mocked(fetchMemberMemories).mockResolvedValue([memory(11)]);
+    await render();
+    expect(fetchMemberMemories).toHaveBeenCalledTimes(1);
+
+    session.status = 'authenticated';
+    await render();
+
+    expect(fetchMemberMemories).toHaveBeenCalledTimes(2);
   });
 
   it('다른 회원의 화면으로 바뀌면 앞 회원의 기록은 사라지고 새 회원의 기록이 보인다', async () => {
