@@ -28,6 +28,7 @@ const AdminReportDetailPage = lazyPage(
 );
 const AdminReportsPage = lazyPage(() => import('../features/admin/AdminReportsPage'), 'AdminReportsPage');
 const AdminMemoriesPage = lazyPage(() => import('../features/admin/AdminMemoriesPage'), 'AdminMemoriesPage');
+const AdminCommunityPage = lazyPage(() => import('../features/admin/AdminCommunityPage'), 'AdminCommunityPage');
 const AdminSyncJobsPage = lazyPage(() => import('../features/admin/AdminSyncJobsPage'), 'AdminSyncJobsPage');
 const AdminSpotsPage = lazyPage(() => import('../features/admin/AdminSpotsPage'), 'AdminSpotsPage');
 const CommunityListPage = lazyPage(() => import('../features/community/CommunityListPage'), 'CommunityListPage');
@@ -217,6 +218,7 @@ export const routes: RouteDef[] = [
   },
   { path: '/admin/spots', render: () => <AdminSpotsPage />, preload: AdminSpotsPage.preload },
   { path: '/admin/memories', render: () => <AdminMemoriesPage />, preload: AdminMemoriesPage.preload },
+  { path: '/admin/community', render: () => <AdminCommunityPage />, preload: AdminCommunityPage.preload },
   { path: '/admin/sync-jobs', render: () => <AdminSyncJobsPage />, preload: AdminSyncJobsPage.preload },
   { path: '/privacy', render: () => <PrivacyPolicyPage />, preload: PrivacyPolicyPage.preload },
   { path: '/terms', render: () => <TermsPage />, preload: TermsPage.preload },

@@ -11,6 +11,7 @@ public record AdminCommunityPostResponse(
         String title,
         String content,
         AdminModerationReports.Member author,
+        List<Image> images,
         String status,
         long reportCount,
         Map<String, Long> reasonCounts,
@@ -24,10 +25,15 @@ public record AdminCommunityPostResponse(
                 summary.content(),
                 new AdminModerationReports.Member(
                         summary.author().memberId(), summary.author().nickname()),
+                summary.images().stream()
+                        .map(image -> new Image(image.imageId(), image.url()))
+                        .toList(),
                 summary.status(),
                 summary.reportCount(),
                 summary.reasonCounts(),
                 AdminModerationReports.RecentReport.fromAll(summary.recentReports()),
                 summary.statusChangedAt());
     }
+
+    public record Image(long imageId, String url) {}
 }

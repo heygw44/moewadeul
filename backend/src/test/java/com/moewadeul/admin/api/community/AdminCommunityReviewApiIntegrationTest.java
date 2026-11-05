@@ -124,6 +124,30 @@ class AdminCommunityReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-08] 검토 대기 글과 숨긴 글은 붙은 사진을 표시 순서대로 함께 주고, 사진이 없는 글은 빈 배열이다")
+    void listShowsPostImagesInDisplayOrder() {
+        // given
+        long pending = insertPost("PENDING_REVIEW", BASE);
+        insertPostImage(pending, "community/1/second.jpg", 1);
+        insertPostImage(pending, "community/1/first.jpg", 0);
+        long hidden = insertPost("HIDDEN", BASE);
+
+        // when
+        MvcTestResult pendingList = get(POSTS);
+        MvcTestResult hiddenList = get(POSTS + "?status=HIDDEN");
+
+        // then
+        assertThat(pendingList).hasStatus(HttpStatus.OK);
+        List<String> urls = json(pendingList, "$.content[0].images[*].url");
+        assertThat(urls).hasSize(2);
+        assertThat(urls.get(0)).contains("community/1/first.jpg");
+        assertThat(urls.get(1)).contains("community/1/second.jpg");
+        assertThat(ids(hiddenList, "$.content[*].postId")).containsExactly(hidden);
+        List<Object> hiddenImages = json(hiddenList, "$.content[0].images");
+        assertThat(hiddenImages).isEmpty();
+    }
+
+    @Test
     @DisplayName("[F-29][CM-08] 금전 요구·사기 신고가 있는 글이 먼저 나오고, 같은 묶음에서는 상태가 바뀐 시각이 이른 글부터 나오며, 페이지를 넘기면 hasNext를 알린다")
     void listPutsMoneyScamFirstThenOldest() {
         // given
@@ -475,6 +499,17 @@ class AdminCommunityReviewApiIntegrationTest {
                 BASE,
                 updatedAt);
         return jdbc.queryForObject("SELECT MAX(id) FROM community_post", Long.class);
+    }
+
+    private void insertPostImage(long postId, String key, int displayOrder) {
+        jdbc.update(
+                "INSERT INTO community_image (member_id, post_id, object_key, content_type, size_bytes, display_order, created_at)"
+                        + " VALUES (?, ?, ?, 'image/jpeg', 1000, ?, ?)",
+                authorId,
+                postId,
+                key,
+                displayOrder,
+                BASE);
     }
 
     private long insertComment(long postId, String status, String content, Instant updatedAt) {
