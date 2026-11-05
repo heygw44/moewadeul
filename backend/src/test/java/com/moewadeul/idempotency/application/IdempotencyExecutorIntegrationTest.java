@@ -11,6 +11,7 @@ import com.moewadeul.idempotency.domain.IdempotencyRecord;
 import com.moewadeul.idempotency.domain.IdempotencyRecordId;
 import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +43,11 @@ class IdempotencyExecutorIntegrationTest {
     private TransactionTemplate transactionTemplate;
 
     record Result(long id, String name) {}
+
+    private static final String EXPIRE_KEY_1 =
+            "UPDATE idempotency_record SET created_at = created_at - INTERVAL 1 HOUR WHERE idempotency_key = 'key-1'";
+    private static final String MARKER_INSERT =
+            "INSERT INTO idempotency_record (member_id, idempotency_key, request_hash, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP(6))";
 
     @Test
     @DisplayName("[NFR-03] 첫 요청은 실행해 완료로 저장하고, 같은 키로 다시 보내면 action 없이 같은 값을 돌려준다")
@@ -121,6 +127,73 @@ class IdempotencyExecutorIntegrationTest {
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS));
         assertThat(calls.get()).isZero();
+    }
+
+    @Test
+    @DisplayName("[NFR-03] 서버가 작업 도중 죽어 오래된 선점만 남으면, 같은 키로 다시 보낸 요청이 작업을 한 번 실행하고 그 결과를 재전송에도 돌려준다")
+    void abandonedClaimIsTakenOver() {
+        long memberId = memberFixture.save().getId();
+        leaveAbandonedClaim(memberId, "key-1", Map.of("a", 1));
+        AtomicInteger calls = new AtomicInteger();
+
+        Result retried = run(memberId, "key-1", OPERATION, Map.of("a", 1), () -> new Result(calls.incrementAndGet(), "재시도"));
+        Result replayed = run(memberId, "key-1", OPERATION, Map.of("a", 1), () -> new Result(calls.incrementAndGet(), "또"));
+
+        assertThat(retried).isEqualTo(new Result(1, "재시도"));
+        assertThat(replayed).isEqualTo(retried);
+        assertThat(calls.get()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[NFR-03] 오래된 선점이어도 본문이 다르면 넘겨받지 않고 IDEMPOTENCY_KEY_REUSED")
+    void abandonedClaimOfDifferentRequestIsNotTakenOver() {
+        long memberId = memberFixture.save().getId();
+        leaveAbandonedClaim(memberId, "key-1", Map.of("a", 1));
+
+        assertThatThrownBy(() -> run(memberId, "key-1", OPERATION, Map.of("a", 2), () -> new Result(1, "x")))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IDEMPOTENCY_KEY_REUSED));
+    }
+
+    @Test
+    @DisplayName("[NFR-03] 살아 있지만 느린 요청이 선점을 빼앗기면 그 작업은 롤백되고, 넘겨받은 요청의 결과와 기록은 그대로 남는다")
+    void slowRequestThatLostItsClaimRollsBack() {
+        long memberId = memberFixture.save().getId();
+
+        assertThatThrownBy(() -> run(memberId, "key-1", OPERATION, null, () -> {
+                    jdbc.update(MARKER_INSERT, memberId, "slow-request-effect", "a".repeat(64));
+                    Result taken = onOtherThread(() -> {
+                        jdbc.update(EXPIRE_KEY_1);
+                        return run(memberId, "key-1", OPERATION, null, () -> new Result(2, "넘겨받음"));
+                    });
+                    assertThat(taken).isEqualTo(new Result(2, "넘겨받음"));
+                    return new Result(1, "느린 요청");
+                }))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS));
+
+        assertThat(jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM idempotency_record WHERE idempotency_key = 'slow-request-effect'",
+                        Integer.class))
+                .isZero();
+        assertThat(run(memberId, "key-1", OPERATION, null, () -> new Result(3, "또"))).isEqualTo(new Result(2, "넘겨받음"));
+    }
+
+    @Test
+    @DisplayName("[NFR-03] 넘겨받은 요청이 실패해도 그사이 다른 요청이 넘겨받은 선점은 지우지 않는다")
+    void failedRequestDoesNotReleaseClaimItLost() {
+        long memberId = memberFixture.save().getId();
+        BusinessException failure = new BusinessException(CommonErrorCode.ACCESS_DENIED);
+
+        assertThatThrownBy(() -> run(memberId, "key-1", OPERATION, null, () -> {
+                    onOtherThread(() -> jdbc.update(EXPIRE_KEY_1));
+                    throw failure;
+                }))
+                .isSameAs(failure);
+
+        assertThat(count()).isEqualTo(1);
     }
 
     @Test
@@ -252,6 +325,16 @@ class IdempotencyExecutorIntegrationTest {
                 Result.class,
                 precheckOutsideTransaction,
                 action);
+    }
+
+    private void leaveAbandonedClaim(long memberId, String key, Object payload) {
+        run(memberId, key, OPERATION, payload, () -> new Result(0, "죽기 전"));
+        jdbc.update("UPDATE idempotency_record SET response_status = NULL, response_body = NULL,"
+                + " created_at = created_at - INTERVAL 1 HOUR");
+    }
+
+    private static <T> T onOtherThread(Supplier<T> work) {
+        return CompletableFuture.supplyAsync(work).join();
     }
 
     private int count() {
