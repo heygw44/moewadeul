@@ -192,9 +192,9 @@ function parseJson(text: string): unknown {
   }
 }
 
-const GET_TIMEOUT_MS = 15_000;
-// 변경 요청은 서버가 처리를 마쳤을 수 있어 더 기다린다. 끊긴 요청을 다시 보낼 때는 멱등 키를 그대로 쓴다(idempotency.ts).
-const MUTATION_TIMEOUT_MS = 30_000;
+// 배포로 앱이 다시 뜨는 동안 Caddy는 연결하지 못한 요청을 최대 30초(lb_try_duration) 붙들고 다시 보낸다. 그보다 먼저 포기하면 앱이 곧 답할 요청을 끊는다.
+// 변경 요청은 끊긴 뒤 다시 보낼 때 멱등 키를 그대로 쓴다(idempotency.ts).
+const REQUEST_TIMEOUT_MS = 30_000;
 
 function startDeadline(callerSignal: AbortSignal | undefined, timeoutMs: number) {
   const controller = new AbortController();
@@ -242,7 +242,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     }
   }
 
-  const deadline = startDeadline(options.signal, method === 'GET' ? GET_TIMEOUT_MS : MUTATION_TIMEOUT_MS);
+  const deadline = startDeadline(options.signal, REQUEST_TIMEOUT_MS);
   let response: Response;
   let text: string;
   try {
