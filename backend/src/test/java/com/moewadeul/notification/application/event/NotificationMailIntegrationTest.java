@@ -338,7 +338,7 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 일시적인 실패도 알림을 만든 지 일시 실패 재시도 기간(1일)이 지났으면 FAILED로 굳히고, 기간 안의 알림은 PENDING으로 둔다")
+    @DisplayName("[F-20] 일시적인 실패도 알림을 만든 지 일시 실패 재시도 기간(26시간)이 지났으면 FAILED로 굳히고, 기간 안의 알림은 PENDING으로 둔다")
     void transientFailureBecomesFailedOnlyAfterRetryWindow() {
         // given
         recordApproved(saveActiveMember().getId(), 3L);
@@ -364,6 +364,28 @@ class NotificationMailIntegrationTest {
                         "SELECT email_next_attempt_at IS NOT NULL FROM notification WHERE email_status = 'PENDING'",
                         Boolean.class))
                 .isTrue();
+    }
+
+    @Test
+    @DisplayName("[F-20] Gmail 하루 한도(지난 24시간)에 막힌 알림 메일은 만든 지 24시간이 지나 한도가 풀릴 무렵 한 번 더 거부돼도 남아 있다가 다음 시도에 나간다")
+    void mailBlockedByDailyQuotaIsSentAfterQuotaLifts() {
+        // given
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending(OutboxLane.DEFAULT);
+        mailSender.failNextSendsTransiently(1);
+        mailer.sendDue();
+        clock.advance(Duration.ofHours(24).plusMinutes(5));
+        mailSender.failNextSendsTransiently(1);
+        mailer.sendDue();
+
+        // when
+        clock.advance(properties.retryMaxDelay());
+        mailer.sendDue();
+
+        // then
+        assertThat(countByEmailStatus("SENT")).isEqualTo(1);
+        assertThat(mailSender.sent()).extracting(MailMessage::to).containsExactly(applicant.getEmail());
     }
 
     @Test

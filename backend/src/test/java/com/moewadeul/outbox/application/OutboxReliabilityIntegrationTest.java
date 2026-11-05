@@ -209,7 +209,7 @@ class OutboxReliabilityIntegrationTest {
     }
 
     @Test
-    @DisplayName("[NFR-04] 일시적인 실패도 이벤트를 만든 지 일시 실패 재시도 기간(1일)이 지났으면 FAILED로 굳히고, 기간 안의 이벤트는 PENDING으로 둔다")
+    @DisplayName("[NFR-04] 일시적인 실패도 이벤트를 만든 지 일시 실패 재시도 기간(26시간)이 지났으면 FAILED로 굳히고, 기간 안의 이벤트는 PENDING으로 둔다")
     void transientFailureBecomesFailedOnlyAfterRetryWindow() {
         // given
         long older = recordEvents(1, RecordingOutboxEventHandler.EVENT_TYPE).get(0);
