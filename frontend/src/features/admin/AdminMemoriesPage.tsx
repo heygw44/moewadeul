@@ -48,7 +48,12 @@ export function AdminMemoriesPage() {
 
 function MemoryReview() {
   const [tab, setTab] = useState<AdminMemoryStatus>('PENDING_REVIEW');
-  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, fetchMemories, itemKey);
+  const { current, loadingMore, loadMore, retry, reload, updateItems } = usePagedList(
+    true,
+    tab,
+    fetchMemories,
+    itemKey,
+  );
   const showSkeleton = useDelayedFlag(current === null);
 
   return (
@@ -82,7 +87,15 @@ function MemoryReview() {
       {current !== null && current.items.length > 0 && (
         <ul className="flex flex-col gap-3">
           {current.items.map((item) => (
-            <MemoryCard key={item.memoryId} item={item} tab={tab} onDone={reload} />
+            <MemoryCard
+              key={item.memoryId}
+              item={item}
+              tab={tab}
+              onDone={() => {
+                updateItems((items) => items.filter((candidate) => candidate.memoryId !== item.memoryId));
+                reload();
+              }}
+            />
           ))}
         </ul>
       )}

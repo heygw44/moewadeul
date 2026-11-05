@@ -1,11 +1,13 @@
 package com.moewadeul.community.application.moderation;
 
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.moderation.ModerationStatus;
 import com.moewadeul.common.moderation.RecentReport;
 import com.moewadeul.common.moderation.RecentReportRow;
 import com.moewadeul.common.moderation.ReportReasonCount;
 import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.community.application.image.CommunityImageReader;
 import com.moewadeul.community.domain.comment.CommunityCommentStatus;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.domain.report.CommunityReportTargetType;
@@ -24,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminCommunityQueryService {
 
     private final AdminCommunityMapper adminCommunityMapper;
+    private final CommunityImageReader communityImageReader;
 
     @Transactional(readOnly = true)
     public PageSlice<AdminCommunityPostSummary> listPosts(String status, int page, int size) {
@@ -35,11 +38,13 @@ public class AdminCommunityQueryService {
                 slice.content().stream().map(AdminCommunityPostRow::postId).toList();
         Map<Long, List<RecentReport>> recent = readRecentReports(CommunityReportTargetType.POST, postIds);
         Map<Long, Map<String, Long>> reasonCounts = readReasonCounts(CommunityReportTargetType.POST, postIds);
+        Map<Long, List<ImageView>> images = communityImageReader.readByPostIds(postIds);
         return slice.map(row -> new AdminCommunityPostSummary(
                 row.postId(),
                 row.title(),
                 row.content(),
                 new AdminCommunityAuthor(row.authorId(), row.authorNickname()),
+                images.getOrDefault(row.postId(), List.of()),
                 row.status().name(),
                 row.reportCount(),
                 reasonCounts.get(row.postId()),
