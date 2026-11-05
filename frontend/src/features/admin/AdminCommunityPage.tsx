@@ -21,7 +21,8 @@ import { AdminSegments } from './AdminSegments';
 import { CommentCard, PostCard } from './AdminCommunityCards';
 import type { ActionResult, CardProps } from './AdminCommunityCards';
 import { EMPTY_COPY, STATUS_TABS, isStaleItemError } from './adminCommunityLabels';
-import type { AdminCommunityItem, CommunityNoun, ReviewAction } from './adminCommunityLabels';
+import type { AdminCommunityItem, ReviewAction } from './adminCommunityLabels';
+import type { CommunityNoun } from '../community/communityLabels';
 
 type Kind = 'post' | 'comment';
 
