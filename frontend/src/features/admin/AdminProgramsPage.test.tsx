@@ -204,6 +204,20 @@ describe('관리자 행사 관리 목록', () => {
     expect(container.querySelector('[role="alert"]')).toBeNull();
   });
 
+  it('끝난 행사에는 취소 버튼 대신 취소할 수 없다는 안내를 보여 준다', async () => {
+    listed = [
+      program({ programId: 7, title: '지난 행사', startAt: '2020-01-10T01:00:00Z', endAt: '2020-01-11T03:00:00Z' }),
+      program({ programId: 8, title: '다가오는 행사', endAt: '2099-01-11T03:00:00Z' }),
+    ];
+
+    await mount();
+
+    const [past, upcoming] = [...container.querySelectorAll('ul[aria-label="행사 목록"] li')];
+    expect(button('행사 취소', past)).toBeUndefined();
+    expect(text(past ?? null)).toContain('끝난 행사는 취소할 수 없어요.');
+    expect(button('행사 취소', upcoming)).toBeDefined();
+  });
+
   describe('행사 취소', () => {
     async function openCancelDialog() {
       await mount();
@@ -315,6 +329,24 @@ describe('관리자 행사 관리 목록', () => {
       expect(programListUrls()).toHaveLength(2);
     });
 
+    it('응답을 받지 못하면 취소 여부를 확인하지 못했다고 알리고, 닫으면 목록을 다시 불러온다', async () => {
+      cancelResponse = async () => {
+        throw new TypeError('Failed to fetch');
+      };
+      await openCancelDialog();
+
+      await click(button('행사 취소하기', dialog()));
+
+      const alert = text(dialog().querySelector('[role="alert"]'));
+      expect(alert).toContain('처리 결과를 확인하지 못했어요');
+      expect(alert).toContain('행사가 취소됐는지 확인하지 못했어요.');
+      expect(alert).not.toContain('행사를 취소하지 못했어요');
+
+      await click(button('닫기', dialog()));
+
+      expect(programListUrls()).toHaveLength(2);
+    });
+
     it('행사를 찾을 수 없으면(404) 대화상자 안에 오류를 보여 준다', async () => {
       cancelResponse = async () => json(404, { code: 'NOT_FOUND', message: 'x', traceId: 't' });
       await openCancelDialog();
@@ -351,12 +383,12 @@ describe('관리자 행사 관리 목록', () => {
       expect(window.location.pathname + window.location.search).toBe('/admin/programs');
     });
 
-    it('고치고 돌아오면 고쳤다는 안내를 보여 준다', async () => {
+    it('수정하고 돌아오면 수정했다는 안내를 보여 준다', async () => {
       window.history.replaceState(null, '', '/admin/programs?saved=revised');
 
       await mount();
 
-      expect(text(container.querySelector('[role="status"]'))).toContain('행사를 고쳤어요.');
+      expect(text(container.querySelector('[role="status"]'))).toContain('행사를 수정했어요.');
       expect(window.location.search).toBe('');
     });
 

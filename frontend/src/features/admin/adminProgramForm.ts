@@ -1,4 +1,4 @@
-import type { ApiError } from '../../api/client';
+import { ApiError } from '../../api/client';
 import type { AdminProgramCreateRequest, AdminProgramReviseRequest, ProgramDetail } from '../../api/types';
 
 export type ProgramFormValues = {
@@ -274,6 +274,12 @@ function serverIssues(error: ApiError): Array<{ field: string; reason: string }>
   return prefixed?.[1] && prefixed[2] ? [{ field: prefixed[1], reason: prefixed[2] }] : [];
 }
 
+export const UNCONFIRMED_TITLE = '처리 결과를 확인하지 못했어요';
+
+export function isResultUnknown(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 0;
+}
+
 export function serverErrorsToFields(error: ApiError): { fields: ProgramFormErrors; rest: string[] } {
   const fields: ProgramFormErrors = {};
   const rest: string[] = [];
@@ -294,7 +300,7 @@ export type SavedKind = 'created' | 'revised';
 
 export const SAVED_NOTICES: Record<SavedKind, string> = {
   created: '행사를 등록했어요.',
-  revised: '행사를 고쳤어요.',
+  revised: '행사를 수정했어요.',
 };
 
 export function savedListPath(kind: SavedKind): string {
