@@ -159,8 +159,11 @@ export function restoreCommunityComment(
   return apiFetch(`/api/admin/community/comments/${commentId}/restore`, { method: 'POST' });
 }
 
-export function createProgram(request: AdminProgramCreateRequest): Promise<{ programId: number }> {
-  return apiFetch('/api/admin/programs', { method: 'POST', body: request });
+export function createProgram(
+  request: AdminProgramCreateRequest,
+  idempotencyKey: string,
+): Promise<{ programId: number }> {
+  return apiFetch('/api/admin/programs', { method: 'POST', body: request, idempotencyKey });
 }
 
 export function reviseProgram(programId: number, request: AdminProgramReviseRequest): Promise<AdminProgramDetail> {
