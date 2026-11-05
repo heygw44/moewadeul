@@ -30,9 +30,14 @@ class NotificationMailMetricsIntegrationTest {
     @Autowired
     private MutableClock clock;
 
+    @Autowired
+    private NotificationMailMetrics mailMetrics;
+
     @Test
     @DisplayName("[NFR-09] 보낼 메일이 없으면 보낼 메일 수, 실패 수, 가장 오래된 보낼 메일의 나이가 모두 0이다")
     void reportsZeroWhenNothingIsPending() {
+        mailMetrics.refresh();
+
         assertThat(mails("pending")).isZero();
         assertThat(mails("failed")).isZero();
         assertThat(oldestPendingAgeSeconds()).isZero();
@@ -51,6 +56,7 @@ class NotificationMailMetricsIntegrationTest {
 
         // when
         clock.advance(Duration.ofMinutes(15));
+        mailMetrics.refresh();
 
         // then
         assertThat(mails("pending")).isEqualTo(2);
