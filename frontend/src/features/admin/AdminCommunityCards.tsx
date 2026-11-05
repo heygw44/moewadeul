@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AdminCommunityComment, AdminCommunityPost, AdminCommunityStatus } from '../../api/types';
+import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { ErrorNotice } from '../../components/ErrorNotice';
@@ -17,6 +18,8 @@ import {
   type ReviewAction,
 } from './adminCommunityLabels';
 
+const MAX_THUMBNAILS = 4;
+
 export type ActionResult = 'done' | 'failed';
 
 export interface CardProps<T extends AdminCommunityItem> {
@@ -30,7 +33,7 @@ interface ReviewCardProps extends Omit<CardProps<AdminCommunityItem>, 'item'> {
   item: AdminCommunityItem;
   noun: CommunityNoun;
   heading: string;
-  facts: ReadonlyArray<{ label: string; value: string }>;
+  facts: ReadonlyArray<{ label: string; value: ReactNode }>;
   children: ReactNode;
 }
 
@@ -44,7 +47,29 @@ export function PostCard({ item, ...rest }: CardProps<AdminCommunityPost>) {
       facts={[{ label: '작성자', value: item.author.nickname }]}
     >
       <p className="whitespace-pre-line break-words text-base text-ink">{item.content}</p>
+      <PostImages images={item.images} />
     </ReviewCard>
+  );
+}
+
+function PostImages({ images }: { images: AdminCommunityPost['images'] }) {
+  if (images.length === 0) return null;
+  const shown = images.slice(0, MAX_THUMBNAILS);
+  return (
+    <div className="flex flex-col gap-1">
+      <ul className="grid grid-cols-4 gap-1" aria-label={`사진 ${images.length}장`}>
+        {shown.map((image, index) => (
+          <li key={image.imageId} className="aspect-square overflow-hidden rounded-row bg-fill-strong">
+            <img src={image.url} alt={`사진 ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
+          </li>
+        ))}
+      </ul>
+      {images.length > shown.length && (
+        <p className="text-sm text-ink-muted">
+          사진 <span className="font-mono tabular-nums">{images.length}</span>장 중 {shown.length}장만 보여요.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -55,7 +80,20 @@ export function CommentCard({ item, ...rest }: CardProps<AdminCommunityComment>)
       item={item}
       noun="댓글"
       heading={`${item.author.nickname}님의 댓글`}
-      facts={[{ label: '달린 글', value: `글 번호 ${item.postId}` }]}
+      facts={[
+        {
+          label: '달린 글',
+          value: (
+            <>
+              글 번호 <span className="font-mono tabular-nums">{item.postId}</span>
+              {' · '}
+              <Link to={`/community/${item.postId}`} className="text-accent underline underline-offset-2">
+                글 보기
+              </Link>
+            </>
+          ),
+        },
+      ]}
     >
       <p className="whitespace-pre-line break-words text-base text-ink">{item.content}</p>
     </ReviewCard>
@@ -154,7 +192,7 @@ function ReviewCard({ item, noun, heading, facts, tab, failure, onAction, childr
   );
 }
 
-function FactRow({ label, value }: { label: string; value: string }) {
+function FactRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <>
       <dt className="text-ink-muted">{label}</dt>

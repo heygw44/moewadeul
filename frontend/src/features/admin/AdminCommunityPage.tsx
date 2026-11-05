@@ -9,6 +9,7 @@ import {
   restoreCommunityPost,
 } from '../../api/admin';
 import type { AdminCommunityComment, AdminCommunityPost, AdminCommunityStatus, Page } from '../../api/types';
+import { useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorNotice } from '../../components/ErrorNotice';
@@ -65,8 +66,13 @@ export function AdminCommunityPage() {
 }
 
 function CommunityReview() {
-  const [kind, setKind] = useState<Kind>('post');
-  const [tab, setTab] = useState<AdminCommunityStatus>('PENDING_REVIEW');
+  const { search } = useLocation();
+  const [kind, setKind] = useState<Kind>(() =>
+    new URLSearchParams(search).get('kind') === 'comment' ? 'comment' : 'post',
+  );
+  const [tab, setTab] = useState<AdminCommunityStatus>(() =>
+    new URLSearchParams(search).get('tab') === 'hidden' ? 'HIDDEN' : 'PENDING_REVIEW',
+  );
 
   return (
     <section className="flex flex-col gap-4" aria-label="커뮤니티 검토 목록">
@@ -90,7 +96,12 @@ function ReviewList<T extends AdminCommunityItem>({
   config: KindConfig<T>;
   tab: AdminCommunityStatus;
 }) {
-  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, config.fetchPage, config.itemId);
+  const { current, loadingMore, loadMore, retry, reload, updateItems } = usePagedList(
+    true,
+    tab,
+    config.fetchPage,
+    config.itemId,
+  );
   const [failure, setFailure] = useState<{ id: number; error: unknown } | null>(null);
   const showSkeleton = useDelayedFlag(current === null);
   const orphanFailure =
@@ -108,6 +119,7 @@ function ReviewList<T extends AdminCommunityItem>({
       if (isStaleItemError(caught)) reload();
       return 'failed';
     }
+    updateItems((items) => items.filter((candidate) => config.itemId(candidate) !== id));
     reload();
     return 'done';
   }

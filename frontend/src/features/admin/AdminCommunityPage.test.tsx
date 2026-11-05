@@ -35,6 +35,7 @@ function post(overrides: Partial<AdminCommunityPost> = {}): AdminCommunityPost {
     postId: 1,
     title: '여기서 장사해도 돼요',
     content: '첫 줄\n둘째 줄',
+    images: [],
     author: { memberId: 7, nickname: '작성자A' },
     status: 'PENDING_REVIEW',
     reportCount: 5,
@@ -158,6 +159,44 @@ describe('관리자 커뮤니티 검토', () => {
     expect(text(container)).toContain('개인정보 노출 5');
   });
 
+  it('글에 붙은 사진을 작은 그림으로 보여 주고 네 장을 넘으면 몇 장인지 알린다', async () => {
+    const images = [1, 2, 3, 4, 5].map((imageId) => ({ imageId, url: `https://img.test/${imageId}.jpg` }));
+    posts.PENDING_REVIEW = () => json(200, page([post({ images })]));
+    await render();
+
+    const card = cards()[0] ?? null;
+    const shown = [...(card?.querySelectorAll('img') ?? [])];
+    expect(shown.map((image) => image.getAttribute('src'))).toEqual(images.slice(0, 4).map((image) => image.url));
+    expect(card?.querySelector('ul[aria-label="사진 5장"]')).not.toBeNull();
+    expect(text(card)).toContain('사진 5장 중 4장만 보여요.');
+  });
+
+  it('사진이 없는 글에는 사진 칸이 없다', async () => {
+    await render();
+
+    expect(cards()[0]?.querySelector('img')).toBeNull();
+  });
+
+  it('댓글 카드에서 달린 글로 가는 링크를 준다', async () => {
+    await render();
+
+    await act(async () => button('댓글')?.click());
+
+    const link = [...container.querySelectorAll('a')].find((element) => element.textContent === '글 보기');
+    expect(link?.getAttribute('href')).toBe('/community/12');
+  });
+
+  it('주소에 kind와 tab이 있으면 그 목록으로 시작한다', async () => {
+    window.history.replaceState(null, '', '/admin/community?kind=comment&tab=hidden');
+    comments.HIDDEN = () => json(200, page([comment({ status: 'HIDDEN' })]));
+
+    await render();
+
+    expect(lists('GET', '/api/admin/community/comments').map((call) => call.status)).toEqual(['HIDDEN']);
+    expect(lists('GET', '/api/admin/community/posts')).toHaveLength(0);
+    expect(text(container)).toContain('댓글러님의 댓글');
+  });
+
   it('탭에 따라 status 쿼리가 바뀌고, 숨김 탭에는 복구만 있다', async () => {
     posts.HIDDEN = () => json(200, page([post({ status: 'HIDDEN' })]));
     await render();
@@ -215,6 +254,19 @@ describe('관리자 커뮤니티 검토', () => {
     expect(container.querySelector('dialog')).toBeNull();
     expect(lists('GET', '/api/admin/community/posts')).toHaveLength(2);
     expect(cards()).toHaveLength(0);
+  });
+
+  it('숨김은 성공했는데 목록을 다시 불러오지 못해도 대화상자가 닫히고 그 카드가 빠진다', async () => {
+    await render();
+    posts.PENDING_REVIEW = () => json(500, { code: 'INTERNAL_ERROR', message: 'x', traceId: 'trace-reload' });
+
+    await act(async () => button('숨기기')?.click());
+    await act(async () => button('숨기기', container.querySelector('dialog') ?? container)?.click());
+
+    expect(lists('POST', '/api/admin/community/posts/1/hide')).toHaveLength(1);
+    expect(container.querySelector('dialog')).toBeNull();
+    expect(cards()).toHaveLength(0);
+    expect(text(container.querySelector('[role="alert"]'))).toContain('글을 불러오지 못했어요');
   });
 
   it('이미 처리된 항목(409)은 카드 안에 오류를 보이고 목록을 다시 불러온다', async () => {
