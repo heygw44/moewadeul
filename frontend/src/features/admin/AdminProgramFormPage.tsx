@@ -18,10 +18,12 @@ import { AdminPage } from './AdminGate';
 import {
   emptyProgramForm,
   formValuesOf,
+  isResultUnknown,
   LIST_PATH,
   savedListPath,
   serverErrorsToFields,
   TEXT_MAX_LENGTH,
+  UNCONFIRMED_TITLE,
   toCreateRequest,
   toRevision,
   validate,
@@ -94,7 +96,7 @@ function EditLoader({ programId }: { programId: number }) {
     return (
       <EmptyState
         framed
-        title="취소한 행사는 고칠 수 없어요"
+        title="취소한 행사는 수정할 수 없어요"
         description="이미 취소된 행사라서 내용을 바꿀 수 없어요."
         action={<ListLink />}
       />
@@ -106,7 +108,12 @@ function EditLoader({ programId }: { programId: number }) {
 
 type ProgramFormProps = { initial: ProgramFormValues } & ({ mode: 'create' } | { mode: 'edit'; programId: number });
 
-type SubmitFailure = { message: string; error: unknown };
+type SubmitFailure = { message: string; error: unknown; unconfirmed: boolean };
+
+const UNCONFIRMED_MESSAGES: Record<ProgramFormMode, string> = {
+  create: '행사가 등록됐는지 확인하지 못했어요. 다시 누르기 전에 행사 목록에서 먼저 확인해 주세요.',
+  edit: '수정한 내용이 저장됐는지 확인하지 못했어요. 행사 목록에서 확인한 뒤 필요하면 다시 저장해 주세요.',
+};
 
 function ProgramForm(props: ProgramFormProps) {
   const [original] = useState(props.initial);
@@ -142,12 +149,16 @@ function ProgramForm(props: ProgramFormProps) {
 
   function showServerError(form: HTMLFormElement, caught: unknown) {
     if (!(caught instanceof ApiError)) {
-      setFailure({ message: toUserMessage(caught), error: caught });
+      setFailure({ message: toUserMessage(caught), error: caught, unconfirmed: false });
+      return;
+    }
+    if (isResultUnknown(caught)) {
+      setFailure({ message: UNCONFIRMED_MESSAGES[props.mode], error: caught, unconfirmed: true });
       return;
     }
     const { fields, rest } = serverErrorsToFields(caught);
     setErrors(fields);
-    if (rest.length > 0) setFailure({ message: rest.join(' '), error: caught });
+    if (rest.length > 0) setFailure({ message: rest.join(' '), error: caught, unconfirmed: false });
     focusFirstError(form, fields);
   }
 
@@ -228,7 +239,9 @@ function ProgramForm(props: ProgramFormProps) {
           label="정원 (명)"
           inputMode="numeric"
           autoComplete="off"
-          hint={isCreate ? undefined : '신청이 시작된 뒤에는 정원을 줄일 수 없어요. 늘리는 건 괜찮아요.'}
+          hint={
+            isCreate ? undefined : '신청이 시작됐거나 신청이 들어온 행사는 정원을 줄일 수 없어요. 늘리는 건 괜찮아요.'
+          }
           {...textProps('capacity')}
         />
         <TextField
@@ -264,16 +277,24 @@ function ProgramForm(props: ProgramFormProps) {
           {failure !== null && (
             <div role="alert">
               <ErrorNotice
-                title={isCreate ? '행사를 등록하지 못했어요' : '행사를 고치지 못했어요'}
+                title={failureTitle(isCreate, failure.unconfirmed)}
                 error={failure.error}
                 message={failure.message}
-              />
+              >
+                {failure.unconfirmed && (
+                  <p className="mt-2">
+                    <Link to={LIST_PATH} className="font-semibold underline">
+                      행사 목록에서 확인하기
+                    </Link>
+                  </p>
+                )}
+              </ErrorNotice>
             </div>
           )}
           {unchanged && (
             <div role="status">
               <Notice tone="info" title="바뀐 내용이 없어요">
-                <p>고친 곳이 있는지 확인해 주세요.</p>
+                <p>수정한 곳이 있는지 확인해 주세요.</p>
               </Notice>
             </div>
           )}
@@ -290,6 +311,11 @@ function ProgramForm(props: ProgramFormProps) {
       </div>
     </form>
   );
+}
+
+function failureTitle(isCreate: boolean, unconfirmed: boolean): string {
+  if (unconfirmed) return UNCONFIRMED_TITLE;
+  return isCreate ? '행사를 등록하지 못했어요' : '행사를 수정하지 못했어요';
 }
 
 function Section({ title, note, children }: { title: string; note?: string; children: ReactNode }) {

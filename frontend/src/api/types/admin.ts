@@ -122,10 +122,16 @@ interface AdminCommunityItemBase {
   statusChangedAt: string;
 }
 
+export interface AdminCommunityImage {
+  imageId: number;
+  url: string;
+}
+
 export interface AdminCommunityPost extends AdminCommunityItemBase {
   postId: number;
   title: string;
   content: string;
+  images: AdminCommunityImage[];
 }
 
 export interface AdminCommunityComment extends AdminCommunityItemBase {

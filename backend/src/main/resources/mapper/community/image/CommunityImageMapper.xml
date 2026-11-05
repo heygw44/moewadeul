@@ -3,10 +3,18 @@
 <mapper namespace="com.moewadeul.community.infra.image.CommunityImageMapper">
 
     <select id="selectByPostId" resultType="com.moewadeul.community.infra.image.CommunityImageRow">
-        SELECT id AS image_id, object_key
+        SELECT id AS image_id, post_id, object_key
         FROM community_image
         WHERE post_id = #{postId}
         ORDER BY display_order
+    </select>
+
+    <select id="selectByNonEmptyPostIds" resultType="com.moewadeul.community.infra.image.CommunityImageRow">
+        SELECT id AS image_id, post_id, object_key
+        FROM community_image
+        WHERE post_id IN
+        <foreach collection="postIds" item="postId" open="(" separator="," close=")">#{postId}</foreach>
+        ORDER BY post_id, display_order
     </select>
 
     <select id="selectUnattachedCreatedBefore" resultType="com.moewadeul.common.image.infra.UnattachedImageRow">
