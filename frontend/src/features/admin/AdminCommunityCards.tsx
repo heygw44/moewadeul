@@ -10,13 +10,13 @@ import { formatKstDateTime } from '../../lib/datetime';
 import {
   RESTORE_NOTE,
   STATUS_LABELS,
-  hideConfirmText,
   reasonCountsText,
   reasonLabel,
   type AdminCommunityItem,
-  type CommunityNoun,
   type ReviewAction,
 } from './adminCommunityLabels';
+import { hideConfirmText } from '../community/communityLabels';
+import type { CommunityNoun } from '../community/communityLabels';
 
 const MAX_THUMBNAILS = 4;
 

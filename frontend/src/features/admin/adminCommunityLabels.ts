@@ -6,10 +6,9 @@ import type {
   CommunityReportReason,
 } from '../../api/types';
 import { REPORT_REASON_OPTIONS } from '../community/communityLabels';
+import type { CommunityNoun } from '../community/communityLabels';
 
 export type AdminCommunityItem = AdminCommunityPost | AdminCommunityComment;
-
-export type CommunityNoun = '글' | '댓글';
 
 export type ReviewAction = 'hide' | 'restore';
 
@@ -35,10 +34,6 @@ export const EMPTY_COPY: Record<CommunityNoun, Record<AdminCommunityStatus, { ti
 };
 
 export const RESTORE_NOTE = '복구하면 이전 신고는 세지 않아요. 새 신고가 5건 쌓여야 다시 검토 대기가 돼요.';
-
-export function hideConfirmText(noun: CommunityNoun, nickname: string): string {
-  return `${nickname}님의 ${noun}을 숨겨요. 숨긴 ${noun}은 다른 회원에게 보이지 않아요. 숨김 탭에서 복구할 수 있어요.`;
-}
 
 export function reasonLabel(reason: CommunityReportReason): string {
   return REPORT_REASON_OPTIONS.find((option) => option.value === reason)?.label ?? reason;

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { ErrorNotice } from '../../components/ErrorNotice';
-import { hideConfirmText } from '../admin/adminCommunityLabels';
-import type { CommunityNoun } from '../admin/adminCommunityLabels';
+import { hideConfirmText } from './communityLabels';
+import type { CommunityNoun } from './communityLabels';
 
 type AdminHideDialogProps = {
   noun: CommunityNoun;
