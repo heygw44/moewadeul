@@ -156,12 +156,12 @@ describe('지도 검색 칸', () => {
     expect(container.querySelector('input')).toBeNull();
   });
 
-  it('[F-27][AI-07] AI 모드에는 입력한 문장을 OpenAI가 분석한다는 안내가 보인다', async () => {
+  it('[F-27][AI-07] AI 모드에는 입력한 문장을 해석을 위해 OpenAI로 보낸다는 안내가 보인다', async () => {
     await mount();
 
     await turnOnAi();
 
-    expect(container.textContent).toContain('입력한 문장은 OpenAI가 분석해요.');
+    expect(container.textContent).toContain('입력한 문장은 해석을 위해 OpenAI로 보내져요.');
   });
 
   it('[F-27][AI-02] 공백을 뺀 길이가 2자 미만이거나 100자를 넘으면 서버를 부르지 않는다', async () => {
@@ -194,7 +194,7 @@ describe('지도 검색 칸', () => {
     expect(onSelect).toHaveBeenCalledWith(candidate('안동시'));
   });
 
-  it('[F-27][AI-03] 하루 한도를 넘으면 남은 시간과 지역 검색은 쓸 수 있다는 안내를 보여 준다', async () => {
+  it('[F-27][AI-03] 하루 한도를 넘고 남은 시간을 모르면 내일 다시 쓸 수 있다는 안내와 지역 검색은 쓸 수 있다는 안내를 보여 준다', async () => {
     interpret.mockRejectedValue(apiError('AI_SEARCH_LIMITED', 429));
     await mount();
     await turnOnAi();
@@ -203,7 +203,19 @@ describe('지도 검색 칸', () => {
 
     const alert = container.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('오늘 AI 검색 20번을 모두 썼어요.');
+    expect(alert?.textContent).toContain('내일 다시 쓸 수 있어요.');
     expect(alert?.textContent).toContain('지역 이름 검색은 지금도 쓸 수 있어요.');
+  });
+
+  it('[F-27][AI-03] 하루 한도를 넘고 서버가 남은 시간을 주면 그 시간을 보여 준다', async () => {
+    interpret.mockRejectedValue(new ApiError(429, 'AI_SEARCH_LIMITED', null, 5400));
+    await mount();
+    await turnOnAi();
+
+    await submit('강원도 계곡 옆 박지');
+
+    const alert = container.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('1시간 30분 뒤에 다시 쓸 수 있어요.');
   });
 
   it('[F-27][AI-05] 해석한 지역의 후보가 하나면 결과와 후보를 함께 넘긴다', async () => {

@@ -171,11 +171,11 @@ class FlywayMigrationIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01][EV-08] 만 14세 확인 값은 저장하지 않으므로 회원 테이블에 그 칼럼이 없다")
+    @DisplayName("[F-01][EV-08] 만 14세 확인 값은 저장하지 않으므로 스키마 어느 테이블에도 age_confirm이 들어간 이름의 칼럼이 없다")
     void ageConfirmationIsNotStored() {
         Integer columns = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.columns"
-                        + " WHERE table_schema = DATABASE() AND table_name = 'member' AND column_name LIKE '%age_confirm%'",
+                        + " WHERE table_schema = DATABASE() AND column_name LIKE '%age_confirm%'",
                 Integer.class);
 
         assertThat(columns).isZero();

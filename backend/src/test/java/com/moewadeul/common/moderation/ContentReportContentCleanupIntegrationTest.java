@@ -63,11 +63,11 @@ class ContentReportContentCleanupIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-21][PV-07] 정리 스케줄러가 받는 대상은 커뮤니티, 추억 기록, 박지 신고 셋이다")
+    @DisplayName("[F-21][PV-07] 정리 스케줄러에 주입되는 신고 내용 정리 대상은 커뮤니티, 추억 기록, 박지 신고 셋이며 작업 이름의 바탕이 된다")
     void schedulerReceivesAllThreeTargets() {
         assertThat(cleanups)
                 .extracting(ReportContentCleanup::target)
-                .containsExactlyInAnyOrder(communityCleanup.target(), memoryCleanup.target(), bakjiCleanup.target());
+                .containsExactlyInAnyOrder("community", "memory", "bakji");
     }
 
     @ParameterizedTest

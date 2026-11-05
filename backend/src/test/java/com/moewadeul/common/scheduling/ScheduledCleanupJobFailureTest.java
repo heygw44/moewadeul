@@ -74,7 +74,7 @@ class ScheduledCleanupJobFailureTest {
     }
 
     @Test
-    @DisplayName("[NFR-09][NFR-04] 발행한 이벤트 정리는 실패를 삼키고 작업 실패 수를 올린다")
+    @DisplayName("[NFR-09] 발행한 이벤트 정리는 실패를 삼키고 작업 실패 수를 올린다")
     void outboxEventCleanup() {
         OutboxEventCleaner cleaner = mock(OutboxEventCleaner.class);
         OutboxEventCleanupScheduler scheduler = new OutboxEventCleanupScheduler(cleaner, runner);
@@ -104,7 +104,7 @@ class ScheduledCleanupJobFailureTest {
     }
 
     @Test
-    @DisplayName("[NFR-09][SN-10] 제재 만료 처리는 실패를 삼키고 작업 실패 수를 올린다")
+    @DisplayName("[NFR-09] 제재 만료 처리는 실패를 삼키고 작업 실패 수를 올린다")
     void sanctionExpiry() {
         SanctionExpiryService service = mock(SanctionExpiryService.class);
         SanctionExpiryScheduler scheduler = new SanctionExpiryScheduler(service, runner);

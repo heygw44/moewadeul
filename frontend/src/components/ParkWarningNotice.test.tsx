@@ -20,7 +20,10 @@ describe('공원 경계 경고', () => {
     expect(html).toContain('설악산국립공원');
     expect(html).toContain('이곳에서는 야영하지 마세요.');
     expect(html).toContain('공원 경계는 참고 자료예요.');
+    expect(html).toContain('출처');
+    expect(html).toContain('한국보호지역통합DB(KDPA)');
     expect(html).toContain('기준일');
+    expect(html).toContain('2025-01-01');
     expect(html).not.toContain('흔적');
   });
 

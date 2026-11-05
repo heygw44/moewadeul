@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.time.KoreaTime;
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -24,43 +25,50 @@ import org.springframework.stereotype.Component;
 
 class ScheduledJobCronContractTest {
 
+    private static final String DAILY = "daily";
     private static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{[^:}]+:([^}]+)}");
     private static final ZonedDateTime FROM =
             LocalDateTime.of(2026, 11, 5, 23, 59, 59).atZone(ZoneId.of(KoreaTime.ZONE_ID));
 
     @Test
-    @DisplayName("[NFR-09] 크론 작업은 모두 기본 표현식이 유효하고 한국 시간으로 돌며, 정해 둔 시각에 처음 실행된다")
-    void cronJobsRunAtExpectedKoreanTime() throws ClassNotFoundException {
-        Map<String, String> firstRuns = new TreeMap<>();
+    @DisplayName("[NFR-09] @Scheduled 크론 작업은 모두 기본 표현식이 유효하고 한국 시간으로 돌며, 자정 작업은 정해 둔 시각과 주기를 지킨다")
+    void cronJobsRunAtExpectedKoreanTimeAndInterval() throws ClassNotFoundException {
+        Map<String, String> schedules = new TreeMap<>();
         for (Scheduled scheduled : scheduledCronMethods()) {
             assertThat(scheduled.zone()).isEqualTo(KoreaTime.ZONE_ID);
             String expression = defaultValue(scheduled.cron());
-            ZonedDateTime next = CronExpression.parse(expression).next(FROM);
-            assertThat(next).as(expression).isNotNull();
-            firstRuns.merge(
-                    scheduled.cron().replaceAll("^\\$\\{|:.*$", ""),
-                    next.toLocalTime().toString(),
-                    (a, b) -> a);
+            CronExpression cron = CronExpression.parse(expression);
+            ZonedDateTime first = cron.next(FROM);
+            assertThat(first).as(expression).isNotNull();
+            ZonedDateTime second = cron.next(first);
+            ZonedDateTime third = cron.next(second);
+            schedules.merge(scheduled.cron().replaceAll("^\\$\\{|:.*$", ""), describe(first, second, third), (a, b) -> a);
         }
 
-        assertThat(firstRuns)
+        assertThat(schedules)
                 .containsOnly(
-                        Map.entry("moewadeul.aisearch.usage-cleanup.cron", "04:20"),
-                        Map.entry("moewadeul.basecamp.auto-transition.cron", "00:00"),
-                        Map.entry("moewadeul.basecamp.contact-cleanup.cron", "04:45"),
-                        Map.entry("moewadeul.idempotency.cleanup.cron", "04:20"),
-                        Map.entry("moewadeul.member.email-verification-cleanup.cron", "05:40"),
-                        Map.entry("moewadeul.member.login-history-cleanup.cron", "04:30"),
-                        Map.entry("moewadeul.member.reset-throttle-cleanup.cron", "04:10"),
-                        Map.entry("moewadeul.member.reset-token-cleanup.cron", "04:15"),
-                        Map.entry("moewadeul.member.unverified-cleanup.cron", "04:00"),
-                        Map.entry("moewadeul.moderation.report-content-cleanup.cron", "04:55"),
-                        Map.entry("moewadeul.outbox.cleanup.cron", "05:00"),
-                        Map.entry("moewadeul.program.payment-expiry.cron", "00:00"),
-                        Map.entry("moewadeul.publicdata.gocamping.sync.cron", "03:00"),
-                        Map.entry("moewadeul.trust.ci-retention-cleanup.cron", "04:40"),
-                        Map.entry("moewadeul.trust.report-content-cleanup.cron", "04:50"),
-                        Map.entry("moewadeul.trust.sanction-expiry.cron", "00:00"));
+                        Map.entry("moewadeul.aisearch.usage-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.basecamp.auto-transition.cron", "00:00 PT10M"),
+                        Map.entry("moewadeul.basecamp.contact-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.idempotency.cleanup.cron", DAILY),
+                        Map.entry("moewadeul.member.email-verification-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.member.login-history-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.member.reset-throttle-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.member.reset-token-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.member.unverified-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.moderation.report-content-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.outbox.cleanup.cron", DAILY),
+                        Map.entry("moewadeul.program.payment-expiry.cron", "00:00 PT1M"),
+                        Map.entry("moewadeul.publicdata.gocamping.sync.cron", DAILY),
+                        Map.entry("moewadeul.trust.ci-retention-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.trust.report-content-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.trust.sanction-expiry.cron", "00:00 PT10M"));
+    }
+
+    private static String describe(ZonedDateTime first, ZonedDateTime second, ZonedDateTime third) {
+        Duration gap = Duration.between(first, second);
+        assertThat(Duration.between(second, third)).isEqualTo(gap);
+        return gap.equals(Duration.ofDays(1)) ? DAILY : first.toLocalTime() + " " + gap;
     }
 
     private static String defaultValue(String cron) {

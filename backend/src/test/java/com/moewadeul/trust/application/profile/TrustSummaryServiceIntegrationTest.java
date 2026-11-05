@@ -280,7 +280,7 @@ class TrustSummaryServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[TR-02][SN-10] 단계 2 회원은 제재가 확정되면 그 즉시 단계 1이 되고, 처분을 취소하면 다시 단계 2로 계산한다")
+    @DisplayName("[TR-02] 단계 2 회원은 제재가 확정되면 그 즉시 단계 1이 되고, 처분을 취소하면 다시 단계 2로 계산한다")
     void trustLevelIsRecalculatedFromConditionsRightAfterSanction() {
         long member = fixture.saveVerifiedMember(TestSequence.nickname());
         makeQualified(member);

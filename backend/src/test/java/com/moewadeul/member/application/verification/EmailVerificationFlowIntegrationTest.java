@@ -327,6 +327,8 @@ class EmailVerificationFlowIntegrationTest {
                         + " email_attempt_count, email_sent_at, created_at)"
                         + " VALUES (?, 'BASECAMP_CONFIRMED', '확정', '확정됐어요.', ?, 'SENT', 0, ?, ?)",
                 rows);
+        assertThat(countRows("notification WHERE email_status = 'SENT'"))
+                .isEqualTo(NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW);
 
         // when
         int processed = publisher.publishPending(OutboxLane.MAIL);
@@ -334,5 +336,6 @@ class EmailVerificationFlowIntegrationTest {
         // then
         assertThat(processed).isEqualTo(1);
         assertThat(mailSender.sent()).hasSize(1);
+        assertThat(mailSender.sent().get(0).subject()).isEqualTo(MAIL_SUBJECT);
     }
 }
