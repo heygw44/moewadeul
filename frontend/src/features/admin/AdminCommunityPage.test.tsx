@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AdminCommunityComment, AdminCommunityPost, AdminCommunityStatus } from '../../api/types';
+import { Router } from '../../app/router';
 import { SessionProvider } from '../../app/session/session';
 import { AdminCommunityPage } from './AdminCommunityPage';
 
@@ -128,7 +129,7 @@ describe('관리자 커뮤니티 검토', () => {
     await act(async () => {
       root.render(
         <SessionProvider>
-          <AdminCommunityPage />
+          <Router routes={[{ path: '/admin/community', render: () => <AdminCommunityPage /> }]} fallback={null} />
         </SessionProvider>,
       );
     });
@@ -199,6 +200,44 @@ describe('관리자 커뮤니티 검토', () => {
     expect(cards()[0]?.querySelector('[role="alert"]')).toBeNull();
   });
 
+  it('더 보기로 펼친 목록에서 사진을 다시 불러와도 펼친 쪽이 그대로 남고 새 주소를 받는다', async () => {
+    let signed = 'old';
+    const requestedPage = () => calls.at(-1)?.page;
+    posts.PENDING_REVIEW = () =>
+      requestedPage() === '1'
+        ? json(
+            200,
+            page(
+              [
+                post({
+                  postId: 2,
+                  title: '둘째 글',
+                  images: [{ imageId: 2, url: `https://img.test/${signed}-2.jpg` }],
+                }),
+              ],
+              { page: 1 },
+            ),
+          )
+        : json(
+            200,
+            page([post({ images: [{ imageId: 1, url: `https://img.test/${signed}-1.jpg` }] })], { hasNext: true }),
+          );
+    await render();
+    await act(async () => button('더 보기')?.click());
+    expect(cards()).toHaveLength(2);
+    await act(async () => cards()[0]?.querySelector('img')?.dispatchEvent(new Event('error')));
+
+    signed = 'new';
+    await act(async () => button('다시 불러오기', cards()[0] ?? container)?.click());
+
+    expect(lists('GET', '/api/admin/community/posts').map((call) => call.page)).toEqual(['0', '1', '0', '1']);
+    expect(cards()).toHaveLength(2);
+    expect(text(cards()[1] ?? null)).toContain('둘째 글');
+    expect(cards()[0]?.querySelector('img')?.getAttribute('src')).toBe('https://img.test/new-1.jpg');
+    expect(cards()[1]?.querySelector('img')?.getAttribute('src')).toBe('https://img.test/new-2.jpg');
+    expect(button('더 보기')).toBeUndefined();
+  });
+
   it('사진이 없는 글에는 사진 칸이 없다', async () => {
     await render();
 
@@ -262,6 +301,53 @@ describe('관리자 커뮤니티 검토', () => {
     expect(lists('GET', '/api/admin/community/comments').map((call) => call.status)).toEqual(['HIDDEN']);
     expect(lists('GET', '/api/admin/community/posts')).toHaveLength(0);
     expect(text(container)).toContain('댓글러님의 댓글');
+  });
+
+  it('댓글 카드의 숨긴 글에서 보기를 누르면 같은 화면에서 숨긴 글 목록으로 바뀐다', async () => {
+    comments.PENDING_REVIEW = () => json(200, page([comment({ postStatus: 'HIDDEN' })]));
+    posts.HIDDEN = () => json(200, page([post({ status: 'HIDDEN', title: '숨긴 글 제목' })]));
+    window.history.replaceState(null, '', '/admin/community?kind=comment');
+    await render();
+
+    const link = [...container.querySelectorAll('a')].find((element) => element.textContent === '숨긴 글에서 보기');
+    await act(async () => link?.click());
+
+    expect(window.location.search).toBe('?kind=post&tab=hidden');
+    expect(lists('GET', '/api/admin/community/posts').map((call) => call.status)).toEqual(['HIDDEN']);
+    expect(text(container)).toContain('숨긴 글 제목');
+    expect(button('글')?.getAttribute('aria-pressed')).toBe('true');
+    expect(button('숨김')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('댓글 카드의 글 검토에서 보기를 누르면 검토 대기 글 목록으로 바뀐다', async () => {
+    comments.HIDDEN = () => json(200, page([comment({ status: 'HIDDEN', postStatus: 'PENDING_REVIEW' })]));
+    window.history.replaceState(null, '', '/admin/community?kind=comment&tab=hidden');
+    await render();
+
+    const link = [...container.querySelectorAll('a')].find((element) => element.textContent === '글 검토에서 보기');
+    await act(async () => link?.click());
+
+    expect(lists('GET', '/api/admin/community/posts').map((call) => call.status)).toEqual(['PENDING_REVIEW']);
+    expect(text(container)).toContain('여기서 장사해도 돼요');
+    expect(button('검토 대기')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('탭을 눌러 옮긴 뒤 같은 링크를 다시 눌러도 그 목록으로 돌아간다', async () => {
+    comments.PENDING_REVIEW = () => json(200, page([comment({ postStatus: 'HIDDEN' })]));
+    comments.HIDDEN = () => json(200, page([comment({ status: 'HIDDEN', postStatus: 'HIDDEN' })]));
+    posts.HIDDEN = () => json(200, page([post({ status: 'HIDDEN', title: '숨긴 글 제목' })]));
+    window.history.replaceState(null, '', '/admin/community?kind=comment');
+    await render();
+    const open = () =>
+      [...container.querySelectorAll('a')].find((element) => element.textContent === '숨긴 글에서 보기');
+
+    await act(async () => open()?.click());
+    await act(async () => button('댓글')?.click());
+    expect(window.location.search).toBe('?kind=comment&tab=hidden');
+    await act(async () => open()?.click());
+
+    expect(window.location.search).toBe('?kind=post&tab=hidden');
+    expect(text(container)).toContain('숨긴 글 제목');
   });
 
   it('탭에 따라 status 쿼리가 바뀌고, 숨김 탭에는 복구만 있다', async () => {
