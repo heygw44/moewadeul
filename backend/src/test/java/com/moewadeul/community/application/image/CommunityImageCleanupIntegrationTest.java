@@ -117,7 +117,7 @@ class CommunityImageCleanupIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-29][CM-06] 저장소 객체 삭제가 한 이미지에서 실패해도 나머지를 계속 지우고, 실패한 이미지의 행은 이미 지워진 채 실패 수에 센다")
+    @DisplayName("[F-29][CM-06] 저장소 객체 삭제가 한 이미지에서 실패해도 나머지를 계속 지우고, 실패한 이미지의 행은 남겨 다음 정리에서 다시 지운다")
     void storageDeleteFailureDoesNotStopCleanup() {
         // given
         Instant old = clock.instant().minus(Duration.ofDays(2));
@@ -129,15 +129,24 @@ class CommunityImageCleanupIntegrationTest {
         CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
-        assertThat(result.deletedRows()).isEqualTo(2);
+        assertThat(result.deletedRows()).isEqualTo(1);
         assertThat(result.storageFailures()).isEqualTo(1);
-        assertThat(exists(failing)).isFalse();
+        assertThat(exists(failing)).isTrue();
         assertThat(exists(other)).isFalse();
-        assertThat(storage.deletedKeys()).containsExactly(keyOf(other));
+        assertThat(storage.deletedKeys()).doesNotContain(keyOf(failing));
+
+        // when
+        storage.allowDeleteOf(keyOf(failing));
+        CommunityImageCleanupService.Result retried = cleanupService.deleteExpiredRowsThenObjects();
+
+        // then
+        assertThat(retried.deletedRows()).isEqualTo(1);
+        assertThat(exists(failing)).isFalse();
+        assertThat(storage.deletedKeys()).contains(keyOf(failing));
     }
 
     @Test
-    @DisplayName("[F-29][CM-06] 썸네일이 있는 이미지는 원본과 썸네일 객체를 모두 지우고, 원본 삭제가 실패해도 썸네일은 지우며 실패를 한 번 센다")
+    @DisplayName("[F-29][CM-06] 썸네일이 있는 이미지는 원본과 썸네일 객체를 모두 지우고, 원본 삭제가 실패해도 썸네일은 지우고 행을 남기며 실패를 한 번 센다")
     void deletesOriginalAndThumbnailObjects() {
         // given
         Instant old = clock.instant().minus(Duration.ofDays(2));
@@ -149,8 +158,9 @@ class CommunityImageCleanupIntegrationTest {
         CommunityImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
 
         // then
-        assertThat(result.deletedRows()).isEqualTo(2);
+        assertThat(result.deletedRows()).isEqualTo(1);
         assertThat(result.storageFailures()).isEqualTo(1);
+        assertThat(exists(failingOriginal)).isTrue();
         assertThat(storage.deletedKeys())
                 .containsExactly(keyOf(withThumbnail), thumbnailKeyOf(withThumbnail), thumbnailKeyOf(failingOriginal));
     }
