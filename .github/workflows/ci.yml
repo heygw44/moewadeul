@@ -16,6 +16,20 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # GitHub push protection은 알려진 서비스의 키만 막는다. HMAC 키처럼 형식 없는 값은 gitleaks의 일반 규칙이 본다.
+      # 오탐은 .gitleaksignore에 지문으로 적는다.
+      - name: Scan history
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f git /repo --no-banner --redact # vv8.30.1
+
   check:
     name: check
     runs-on: ubuntu-24.04
