@@ -80,7 +80,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   PROGRAM_PAYMENT_EXPIRED: '결제 기한이 지났어요. 남은 자리가 있으면 다시 신청해 주세요.',
   PROGRAM_INVALID_STATE: STATE_CHANGED,
   PROGRAM_CANCEL_NOT_ALLOWED: '취소할 수 있는 기한이 지났어요. 관리자에게 문의해 주세요.',
-  PROGRAM_CAPACITY_DECREASE: '신청이 시작된 뒤에는 정원을 줄일 수 없어요. 정원을 늘리거나 그대로 둬 주세요.',
+  PROGRAM_CAPACITY_DECREASE:
+    '신청이 시작됐거나 신청이 들어온 행사는 정원을 줄일 수 없어요. 정원을 늘리거나 그대로 둬 주세요.',
 
   COMMUNITY_ALREADY_REPORTED: '이미 신고한 글이나 댓글이에요. 처리 결과를 기다려 주세요.',
   MEMORY_ALREADY_REPORTED: '이미 신고한 기록이에요. 처리 결과를 기다려 주세요.',

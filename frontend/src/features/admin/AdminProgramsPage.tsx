@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cancelProgram } from '../../api/admin';
+import { serverNow } from '../../api/client';
 import { listPrograms } from '../../api/programs';
 import type { ProgramListStatus } from '../../api/programs';
 import type { Page, ProgramSummary } from '../../api/types';
@@ -18,7 +19,7 @@ import { formatKstDateTime } from '../../lib/datetime';
 import { feeText, PROGRAM_FILTERS, PROGRAM_STATUS_META, seatsText } from '../program/programLabels';
 import { AdminPage } from './AdminGate';
 import { AdminSegments } from './AdminSegments';
-import { LIST_PATH, SAVED_NOTICES, savedKindFrom } from './adminProgramForm';
+import { isResultUnknown, LIST_PATH, SAVED_NOTICES, savedKindFrom, UNCONFIRMED_TITLE } from './adminProgramForm';
 
 type ProgramFilter = ProgramListStatus | 'ALL';
 
@@ -133,6 +134,7 @@ type ProgramCardProps = {
 function ProgramCard({ item, onCanceled, onStale }: ProgramCardProps) {
   const [confirming, setConfirming] = useState(false);
   const status = PROGRAM_STATUS_META[item.status];
+  const ended = Date.parse(item.endAt) <= serverNow();
 
   return (
     <li className="flex flex-col gap-3 rounded-sheet bg-fill p-5">
@@ -170,9 +172,13 @@ function ProgramCard({ item, onCanceled, onStale }: ProgramCardProps) {
         >
           수정
         </Link>
-        <Button variant="danger" aria-label={`${item.title} 행사 취소`} onClick={() => setConfirming(true)}>
-          행사 취소
-        </Button>
+        {ended ? (
+          <p className="text-sm text-ink-muted">끝난 행사는 취소할 수 없어요.</p>
+        ) : (
+          <Button variant="danger" aria-label={`${item.title} 행사 취소`} onClick={() => setConfirming(true)}>
+            행사 취소
+          </Button>
+        )}
       </div>
       {confirming && (
         <CancelDialog
@@ -225,7 +231,15 @@ function CancelDialog({ program, onClose, onCanceled }: CancelDialogProps) {
         </div>
         {failed && (
           <div role="alert">
-            <ErrorNotice title="행사를 취소하지 못했어요" error={error} />
+            {isResultUnknown(error) ? (
+              <ErrorNotice
+                title={UNCONFIRMED_TITLE}
+                error={error}
+                message="행사가 취소됐는지 확인하지 못했어요. 닫으면 목록을 새로 불러오니 그때 확인해 주세요."
+              />
+            ) : (
+              <ErrorNotice title="행사를 취소하지 못했어요" error={error} />
+            )}
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-2">
