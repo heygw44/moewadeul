@@ -16,6 +16,7 @@ import { lazyPage } from './lazyPage';
 import type { LatLng } from '../map/types';
 import type { RouteDef } from './router';
 
+const AdminProgramsPage = lazyPage(() => import('../features/admin/AdminProgramsPage'), 'AdminProgramsPage');
 const AdminReportDetailPage = lazyPage(
   () => import('../features/admin/AdminReportDetailPage'),
   'AdminReportDetailPage',
@@ -179,6 +180,7 @@ export const routes: RouteDef[] = [
       return reportId === null ? <NotFoundPage /> : <AdminReportDetailPage key={reportId} reportId={reportId} />;
     },
   },
+  { path: '/admin/programs', render: () => <AdminProgramsPage />, preload: AdminProgramsPage.preload },
   { path: '/admin/spots', render: () => <AdminSpotsPage />, preload: AdminSpotsPage.preload },
   { path: '/admin/memories', render: () => <AdminMemoriesPage />, preload: AdminMemoriesPage.preload },
   { path: '/admin/sync-jobs', render: () => <AdminSyncJobsPage />, preload: AdminSyncJobsPage.preload },
