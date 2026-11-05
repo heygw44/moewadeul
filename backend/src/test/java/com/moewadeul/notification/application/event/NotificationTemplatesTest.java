@@ -89,7 +89,7 @@ class NotificationTemplatesTest {
     }
 
     @Test
-    @DisplayName("[F-20] 베이스캠프 확정 알림은 멤버 전원에게 가고 안전 수칙을 한 건에 함께 담는다")
+    @DisplayName("[F-20][SF-04] 베이스캠프 확정 알림은 멤버 전원에게 가고 안전 수칙을 한 건에 함께 담는다")
     void confirmedNotifiesAllMembersWithSafetyRules() {
         // given
         BasecampEvents.MembersPayload payload = new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(1L, 2L, 3L));
@@ -102,7 +102,12 @@ class NotificationTemplatesTest {
         assertThat(drafts).allSatisfy(draft -> {
             assertThat(draft.type()).isEqualTo("BASECAMP_CONFIRMED");
             assertThat(draft.title()).isEqualTo("베이스캠프 확정");
-            assertThat(draft.body()).contains("확정됐어요").contains("안전 수칙");
+            assertThat(draft.body())
+                    .contains("확정됐어요")
+                    .contains("안전 수칙")
+                    .contains("가족이나 지인과 공유")
+                    .contains("일행과 떨어지지")
+                    .contains("흔적을 남기지");
             assertThat(draft.link()).isEqualTo("/basecamps/30");
         });
     }

@@ -615,7 +615,7 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 최근 24시간에 보낸 알림 메일이 상한(300통)에 닿으면 남은 자리만큼만 보내고, 나머지는 알림함에 두고 보내기를 미룬다")
+    @DisplayName("[F-20][EV-07] 최근 24시간에 보낸 알림 메일이 상한(300통)에 닿으면 남은 자리만큼만 보내고, 나머지는 알림함에 두고 보내기를 미룬다")
     void mailsBeyondDailyLimitStayPendingWhileInboxKeepsAll() {
         // given
         int remaining = 3;
@@ -644,7 +644,7 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 상한 때문에 미룬 알림 메일은 이미 보낸 메일이 24시간 기간에서 빠지면 알림 순서대로 나간다")
+    @DisplayName("[F-20][EV-07] 상한 때문에 미룬 알림 메일은 이미 보낸 메일이 24시간 기간에서 빠지면 알림 순서대로 나간다")
     void deferredMailsGoOutWhenSentMailsLeaveTheWindow() {
         // given
         List<Long> memberIds = saveActiveMembers(5);
@@ -674,7 +674,7 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 기간(24시간) 밖에서 보낸 알림 메일은 상한에 세지 않는다")
+    @DisplayName("[F-20][EV-07] 기간(24시간) 밖에서 보낸 알림 메일은 상한에 세지 않는다")
     void mailsSentBeforeTheWindowDoNotCountTowardLimit() {
         // given
         List<Long> memberIds = saveActiveMembers(5);
