@@ -16,6 +16,10 @@ import { lazyPage } from './lazyPage';
 import type { LatLng } from '../map/types';
 import type { RouteDef } from './router';
 
+const AdminProgramApplicationsPage = lazyPage(
+  () => import('../features/admin/AdminProgramApplicationsPage'),
+  'AdminProgramApplicationsPage',
+);
 const AdminProgramFormPage = lazyPage(() => import('../features/admin/AdminProgramFormPage'), 'AdminProgramFormPage');
 const AdminProgramsPage = lazyPage(() => import('../features/admin/AdminProgramsPage'), 'AdminProgramsPage');
 const AdminReportDetailPage = lazyPage(
@@ -186,6 +190,18 @@ export const routes: RouteDef[] = [
     path: '/admin/programs/new',
     preload: AdminProgramFormPage.preload,
     render: () => <AdminProgramFormPage key="create" mode="create" />,
+  },
+  {
+    path: '/admin/programs/:programId/applications',
+    preload: AdminProgramApplicationsPage.preload,
+    render: (params) => {
+      const programId = toPositiveId(params.programId);
+      return programId === null ? (
+        <NotFoundPage />
+      ) : (
+        <AdminProgramApplicationsPage key={programId} programId={programId} />
+      );
+    },
   },
   {
     path: '/admin/programs/:programId/edit',
