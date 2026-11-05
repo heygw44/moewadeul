@@ -23,7 +23,14 @@
             GROUP BY r.target_id
         ) rc ON rc.target_id = p.id
         WHERE p.status = #{status}
-        ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, p.updated_at ASC, p.id ASC
+        <choose>
+            <when test="status.name() == 'HIDDEN'">
+                ORDER BY p.updated_at DESC, p.id DESC
+            </when>
+            <otherwise>
+                ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, p.updated_at ASC, p.id ASC
+            </otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
@@ -48,7 +55,14 @@
             GROUP BY r.target_id
         ) rc ON rc.target_id = c.id
         WHERE c.status = #{status}
-        ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, c.updated_at ASC, c.id ASC
+        <choose>
+            <when test="status.name() == 'HIDDEN'">
+                ORDER BY c.updated_at DESC, c.id DESC
+            </when>
+            <otherwise>
+                ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, c.updated_at ASC, c.id ASC
+            </otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 

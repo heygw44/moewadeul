@@ -174,6 +174,35 @@ class AdminCommunityReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-08] 숨김 목록은 가장 최근에 숨긴 글부터 나와서, 방금 숨긴 글과 댓글이 쌓인 숨김 뒤에도 첫 쪽 맨 앞에 있다")
+    void hiddenListShowsLatestFirst() {
+        // given
+        long postId = insertPost("ACTIVE", BASE);
+        long oldHidden = insertPost("HIDDEN", BASE);
+        long midHidden = insertPost("HIDDEN", BASE.plus(Duration.ofHours(1)));
+        long pendingPost = insertPost("PENDING_REVIEW", BASE);
+        long oldHiddenComment = insertComment(postId, "HIDDEN", "오래 전에 숨긴 댓글", BASE);
+        long midHiddenComment = insertComment(postId, "HIDDEN", "얼마 전에 숨긴 댓글", BASE.plus(Duration.ofHours(1)));
+        long pendingComment = insertComment(postId, "PENDING_REVIEW", "방금 숨길 댓글", BASE);
+
+        // when
+        assertThat(post(POSTS + "/" + pendingPost + "/hide")).hasStatus(HttpStatus.OK);
+        assertThat(post(COMMENTS + "/" + pendingComment + "/hide")).hasStatus(HttpStatus.OK);
+        MvcTestResult posts = get(POSTS + "?status=HIDDEN&size=2");
+        MvcTestResult comments = get(COMMENTS + "?status=HIDDEN&size=2");
+
+        // then
+        assertThat(ids(posts, "$.content[*].postId")).containsExactly(pendingPost, midHidden);
+        assertThat(posts).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertThat(ids(get(POSTS + "?status=HIDDEN"), "$.content[*].postId"))
+                .containsExactly(pendingPost, midHidden, oldHidden);
+        assertThat(ids(comments, "$.content[*].commentId")).containsExactly(pendingComment, midHiddenComment);
+        assertThat(comments).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertThat(ids(get(COMMENTS + "?status=HIDDEN"), "$.content[*].commentId"))
+                .containsExactly(pendingComment, midHiddenComment, oldHiddenComment);
+    }
+
+    @Test
     @DisplayName(
             "[F-29][CM-08] status=HIDDEN이면 숨긴 글만 나오고 신고가 없는 글도 사유별 수가 모두 0으로 보이며, 허용하지 않는 status와 범위를 벗어난 size는 400 INVALID_INPUT이다")
     void listFiltersByStatusAndValidatesInput() {
