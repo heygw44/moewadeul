@@ -8,7 +8,9 @@ import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,6 +26,10 @@ import org.springframework.data.domain.Persistable;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
+
+    // 작업은 DB 트랜잭션 하나이고 잠금 대기가 5초에 끊긴다. 이보다 오래된 선점은 주인이 죽었다고 보고 넘겨받는다.
+    // 주인이 느리게 살아 있었더라도 완료 기록에서 선점을 잃은 것을 알고 롤백하므로 작업은 한 번만 커밋된다.
+    public static final Duration ABANDONED_AFTER = Duration.ofMinutes(1);
 
     @Id
     @Column(name = "member_id")
@@ -55,7 +61,8 @@ public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
         this.memberId = memberId;
         this.idempotencyKey = idempotencyKey;
         this.requestHash = requestHash;
-        this.createdAt = now;
+        // 컬럼이 마이크로초까지만 저장한다. 선점 시각을 선점의 주인 표시로 비교하므로 저장한 값과 정확히 같아야 한다.
+        this.createdAt = now.truncatedTo(ChronoUnit.MICROS);
     }
 
     public static IdempotencyRecord claim(long memberId, String idempotencyKey, String requestHash, Instant now) {
@@ -82,6 +89,19 @@ public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
 
     public boolean isCompleted() {
         return responseStatus != null && responseBody != null;
+    }
+
+    public boolean isAbandonedAt(Instant now) {
+        return !isCompleted() && !createdAt.plus(ABANDONED_AFTER).isAfter(now);
+    }
+
+    public boolean isSameClaim(IdempotencyRecord other) {
+        return !isCompleted() && createdAt.equals(other.createdAt);
+    }
+
+    public IdempotencyRecord takenOverAt(Instant now) {
+        this.createdAt = now.truncatedTo(ChronoUnit.MICROS);
+        return this;
     }
 
     public boolean matches(String requestHash) {

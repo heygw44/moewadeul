@@ -45,7 +45,7 @@ class IdempotencyExecutorIntegrationTest {
     record Result(long id, String name) {}
 
     private static final String EXPIRE_KEY_1 =
-            "UPDATE idempotency_record SET created_at = created_at - INTERVAL 1 HOUR WHERE idempotency_key = 'key-1'";
+            "UPDATE idempotency_record SET created_at = created_at - INTERVAL 1 HOUR WHERE member_id = ? AND idempotency_key = 'key-1'";
     private static final String MARKER_INSERT =
             "INSERT INTO idempotency_record (member_id, idempotency_key, request_hash, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP(6))";
 
@@ -136,8 +136,10 @@ class IdempotencyExecutorIntegrationTest {
         leaveAbandonedClaim(memberId, "key-1", Map.of("a", 1));
         AtomicInteger calls = new AtomicInteger();
 
-        Result retried = run(memberId, "key-1", OPERATION, Map.of("a", 1), () -> new Result(calls.incrementAndGet(), "재시도"));
-        Result replayed = run(memberId, "key-1", OPERATION, Map.of("a", 1), () -> new Result(calls.incrementAndGet(), "또"));
+        Result retried =
+                run(memberId, "key-1", OPERATION, Map.of("a", 1), () -> new Result(calls.incrementAndGet(), "재시도"));
+        Result replayed =
+                run(memberId, "key-1", OPERATION, Map.of("a", 1), () -> new Result(calls.incrementAndGet(), "또"));
 
         assertThat(retried).isEqualTo(new Result(1, "재시도"));
         assertThat(replayed).isEqualTo(retried);
@@ -164,7 +166,7 @@ class IdempotencyExecutorIntegrationTest {
         assertThatThrownBy(() -> run(memberId, "key-1", OPERATION, null, () -> {
                     jdbc.update(MARKER_INSERT, memberId, "slow-request-effect", "a".repeat(64));
                     Result taken = onOtherThread(() -> {
-                        jdbc.update(EXPIRE_KEY_1);
+                        jdbc.update(EXPIRE_KEY_1, memberId);
                         return run(memberId, "key-1", OPERATION, null, () -> new Result(2, "넘겨받음"));
                     });
                     assertThat(taken).isEqualTo(new Result(2, "넘겨받음"));
@@ -178,7 +180,8 @@ class IdempotencyExecutorIntegrationTest {
                         "SELECT COUNT(*) FROM idempotency_record WHERE idempotency_key = 'slow-request-effect'",
                         Integer.class))
                 .isZero();
-        assertThat(run(memberId, "key-1", OPERATION, null, () -> new Result(3, "또"))).isEqualTo(new Result(2, "넘겨받음"));
+        assertThat(run(memberId, "key-1", OPERATION, null, () -> new Result(3, "또")))
+                .isEqualTo(new Result(2, "넘겨받음"));
     }
 
     @Test
@@ -188,7 +191,7 @@ class IdempotencyExecutorIntegrationTest {
         BusinessException failure = new BusinessException(CommonErrorCode.ACCESS_DENIED);
 
         assertThatThrownBy(() -> run(memberId, "key-1", OPERATION, null, () -> {
-                    onOtherThread(() -> jdbc.update(EXPIRE_KEY_1));
+                    onOtherThread(() -> jdbc.update(EXPIRE_KEY_1, memberId));
                     throw failure;
                 }))
                 .isSameAs(failure);
