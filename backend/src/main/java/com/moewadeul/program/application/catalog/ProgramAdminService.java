@@ -61,8 +61,7 @@ public class ProgramAdminService {
                 () -> create(adminId, command));
     }
 
-    @Transactional
-    public long create(long adminId, ProgramCreateCommand command) {
+    private long create(long adminId, ProgramCreateCommand command) {
         Program program = newProgram(adminId, command, clock.instant());
         requireVisibleSpot(command.spotId());
         Program saved = programRepository.saveAndFlush(program);
