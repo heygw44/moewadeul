@@ -3,8 +3,6 @@ package com.moewadeul.admin.api.program;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.web.PageResponse;
-import com.moewadeul.idempotency.application.IdempotencyExecutor;
-import com.moewadeul.idempotency.application.IdempotentRequest;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
 import com.moewadeul.program.application.catalog.ProgramApplicantQuery;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,11 +28,9 @@ import org.springframework.web.bind.annotation.RestController;
 class AdminProgramController {
 
     private final ProgramAdminService programAdminService;
-    private final IdempotencyExecutor idempotencyExecutor;
 
-    AdminProgramController(ProgramAdminService programAdminService, IdempotencyExecutor idempotencyExecutor) {
+    AdminProgramController(ProgramAdminService programAdminService) {
         this.programAdminService = programAdminService;
-        this.idempotencyExecutor = idempotencyExecutor;
     }
 
     @Operation(
@@ -52,12 +48,8 @@ class AdminProgramController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody AdminProgramCreateRequest request,
             @AuthenticationPrincipal LoginMember admin) {
-        long adminId = admin.memberId();
-        return idempotencyExecutor.execute(
-                new IdempotentRequest(adminId, idempotencyKey, "POST /api/admin/programs", request),
-                HttpStatus.CREATED,
-                AdminProgramCreateResponse.class,
-                () -> new AdminProgramCreateResponse(programAdminService.create(adminId, request.toCommand())));
+        return new AdminProgramCreateResponse(
+                programAdminService.createOnce(admin.memberId(), idempotencyKey, request.toCommand()));
     }
 
     @Operation(

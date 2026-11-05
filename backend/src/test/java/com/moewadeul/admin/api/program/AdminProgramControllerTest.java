@@ -5,6 +5,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -17,10 +18,7 @@ import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
-import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.trace.TraceIdFilter;
-import com.moewadeul.idempotency.application.IdempotencyExecutor;
-import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import com.moewadeul.program.application.catalog.ProgramAdminService;
 import com.moewadeul.program.application.catalog.ProgramApplicantItem;
 import com.moewadeul.program.application.catalog.ProgramApplicantQuery;
@@ -29,16 +27,13 @@ import com.moewadeul.program.application.catalog.ProgramCreateCommand;
 import com.moewadeul.program.application.catalog.ProgramDetail;
 import com.moewadeul.program.application.catalog.ProgramReviseCommand;
 import com.moewadeul.program.domain.ProgramErrorCode;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -48,16 +43,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
-import org.springframework.transaction.PlatformTransactionManager;
 
 @WebMvcTest(AdminProgramController.class)
-@Import({
-    GlobalExceptionHandler.class,
-    TraceIdFilter.class,
-    SecurityConfig.class,
-    IdempotencyExecutor.class,
-    AdminProgramControllerTest.ClockConfig.class
-})
+@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class})
 class AdminProgramControllerTest {
 
     private static final String PROGRAMS = "/api/admin/programs";
@@ -69,12 +57,6 @@ class AdminProgramControllerTest {
 
     @MockitoBean
     private ProgramAdminService programAdminService;
-
-    @MockitoBean
-    private IdempotencyRecordRepository idempotencyRecordRepository;
-
-    @MockitoBean
-    private PlatformTransactionManager transactionManager;
 
     @Test
     @DisplayName("[F-17] 로그인하지 않았거나 관리자가 아닌 회원이 행사 관리 API를 부르면 401, 403이다")
@@ -114,7 +96,7 @@ class AdminProgramControllerTest {
     @Test
     @DisplayName("[F-17] 행사 등록은 로그인한 관리자 ID로 서비스를 부르고 201과 programId를 응답한다")
     void createProgramReturnsCreated() {
-        when(programAdminService.create(eq(ADMIN_ID), any(ProgramCreateCommand.class)))
+        when(programAdminService.createOnce(eq(ADMIN_ID), eq("key-1"), any(ProgramCreateCommand.class)))
                 .thenReturn(31L);
 
         MvcTestResult result = post(admin(), PROGRAMS, validCreateBody());
@@ -122,26 +104,10 @@ class AdminProgramControllerTest {
         assertThat(result).hasStatus(HttpStatus.CREATED);
         assertThat(result).bodyJson().extractingPath("$.programId").isEqualTo(31);
         ArgumentCaptor<ProgramCreateCommand> captor = ArgumentCaptor.forClass(ProgramCreateCommand.class);
-        verify(programAdminService).create(eq(ADMIN_ID), captor.capture());
+        verify(programAdminService).createOnce(eq(ADMIN_ID), eq("key-1"), captor.capture());
         assertThat(captor.getValue().capacity()).isEqualTo(200);
         assertThat(captor.getValue().paymentDeadlineMinutes()).isNull();
         assertThat(captor.getValue().applyOpenAt()).isEqualTo(Instant.parse("2026-11-01T01:00:00Z"));
-    }
-
-    @Test
-    @DisplayName("[F-17][NFR-03] 행사 등록에 Idempotency-Key 헤더가 없으면 400 IDEMPOTENCY_KEY_REQUIRED이고 서비스를 부르지 않는다")
-    void createProgramRequiresIdempotencyKey() {
-        MvcTestResult result = mvc.post()
-                .uri(PROGRAMS)
-                .with(admin())
-                .with(csrf())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(validCreateBody())
-                .exchange();
-
-        assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
-        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("IDEMPOTENCY_KEY_REQUIRED");
-        verifyNoInteractions(programAdminService);
     }
 
     @Test
@@ -170,7 +136,7 @@ class AdminProgramControllerTest {
     @Test
     @DisplayName("[F-17] 서비스가 던진 INVALID_INPUT은 400으로 응답한다")
     void createProgramMapsInvalidInput() {
-        when(programAdminService.create(anyLong(), any(ProgramCreateCommand.class)))
+        when(programAdminService.createOnce(anyLong(), anyString(), any(ProgramCreateCommand.class)))
                 .thenThrow(new BusinessException(CommonErrorCode.INVALID_INPUT, "시각 순서가 틀립니다."));
 
         MvcTestResult result = post(admin(), PROGRAMS, validCreateBody());
@@ -397,14 +363,5 @@ class AdminProgramControllerTest {
                 List.of(
                         new SimpleGrantedAuthority("ROLE_" + role),
                         new SimpleGrantedAuthority(LoginMember.AUTHORITY_EMAIL_VERIFIED))));
-    }
-
-    @TestConfiguration(proxyBeanMethods = false)
-    static class ClockConfig {
-
-        @Bean
-        Clock clock() {
-            return MutableClock.atDefaultInstant();
-        }
     }
 }

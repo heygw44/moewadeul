@@ -21,6 +21,7 @@ import com.moewadeul.community.application.image.CommunityImageReader;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.infra.moderation.AdminCommunityMapper;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
 import com.moewadeul.member.application.profile.MyInfoService;
 import com.moewadeul.member.application.profile.MyInfoUpdateCommand;
 import com.moewadeul.member.domain.Member;
@@ -292,6 +293,7 @@ class EnumInputServicesTest {
                 mock(AdminAuditRecorder.class),
                 mock(OutboxEventRecorder.class),
                 mock(ProgramSeatReleaseRecorder.class),
+                mock(IdempotencyExecutor.class),
                 CLOCK);
     }
 
