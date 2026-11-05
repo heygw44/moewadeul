@@ -129,4 +129,34 @@ describe('createIdempotentRunner', () => {
 
     expect(keys[2]).not.toBe(keys[0]);
   });
+
+  it('같은 내용의 요청이 아직 진행 중일 때 다시 부르면 새로 보내지 않고 같은 결과를 돌려준다', async () => {
+    const runner = createIdempotentRunner();
+    const keys: string[] = [];
+    let release: () => void = () => {};
+    const send = (key: string) => {
+      keys.push(key);
+      return new Promise<{ id: number }>((resolve) => {
+        release = () => resolve({ id: keys.length });
+      });
+    };
+
+    const first = runner.run({ title: '가' }, send);
+    const second = runner.run({ title: '가' }, send);
+    release();
+
+    await expect(first).resolves.toEqual({ id: 1 });
+    await expect(second).resolves.toEqual({ id: 1 });
+    expect(keys).toHaveLength(1);
+  });
+
+  it('진행 중이던 요청이 끝난 뒤에는 같은 내용도 다시 보낸다', async () => {
+    const runner = createIdempotentRunner();
+    const { keys, send } = sender('ok', 'ok');
+
+    await runner.run({ title: '가' }, send);
+    await runner.run({ title: '가' }, send);
+
+    expect(keys).toHaveLength(2);
+  });
 });
