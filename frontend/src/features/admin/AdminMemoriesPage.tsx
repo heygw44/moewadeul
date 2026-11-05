@@ -47,7 +47,7 @@ export function AdminMemoriesPage() {
 
 function MemoryReview() {
   const [tab, setTab] = useState<AdminMemoryStatus>('PENDING_REVIEW');
-  const { current, loadingMore, loadMore, retry, reload, updateItems } = usePagedList(
+  const { current, loadingMore, loadMore, retry, reload, refreshLoaded, updateItems } = usePagedList(
     true,
     tab,
     fetchMemories,
@@ -90,7 +90,7 @@ function MemoryReview() {
               key={item.memoryId}
               item={item}
               tab={tab}
-              onReload={reload}
+              onReload={refreshLoaded}
               onDone={() => {
                 updateItems((items) => items.filter((candidate) => candidate.memoryId !== item.memoryId));
                 reload();
