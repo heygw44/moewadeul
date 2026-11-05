@@ -146,6 +146,54 @@ class IdentityVerificationConcurrencyIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("[ID-04] 저장하다 실제 DB 교착 상태의 희생자가 되면 다시 실행해서 본인확인을 끝낸다")
+    void retriesWhenChosenAsDeadlockVictim() throws Exception {
+        // given
+        // 잠금 연결이 지운 CI를 쥐면 요청은 회원 키를 넣은 채 CI에서 멈춘다. 그 회원 키를 잠금 연결이 넣으려 하면 고리가 생기고, 먼저 넣은 행들이 있는 잠금 연결은 무거워서 요청이 희생된다.
+        try (Connection snapshot = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword());
+                Statement snapshotStatement = snapshot.createStatement();
+                Connection locker = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword());
+                Statement lockerStatement = locker.createStatement()) {
+            snapshotStatement.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT");
+            service.verify(memberFixture.save().getId(), new IdentityVerifyCommand(1995, Gender.MALE, "victim-person"));
+            String ciHash = jdbc.queryForObject("SELECT ci_hash FROM identity_verification", String.class);
+            jdbc.update("DELETE FROM identity_verification");
+            long memberId = memberFixture.save().getId();
+            lockerStatement.execute("START TRANSACTION");
+            lockerStatement.execute("SELECT id FROM identity_verification WHERE ci_hash = '" + ciHash + "' FOR UPDATE");
+            for (char suffix : "abcdef".toCharArray()) {
+                lockerStatement.executeUpdate(insertIdentity(
+                        memberFixture.save().getId(), String.valueOf(suffix).repeat(64)));
+            }
+            long deadlocksBefore = deadlockCount(snapshotStatement);
+
+            // when
+            ExecutorService requester = Executors.newSingleThreadExecutor();
+            try {
+                Future<IdentityVerificationResult> verifying = requester.submit(
+                        () -> service.verify(memberId, new IdentityVerifyCommand(1995, Gender.MALE, "victim-person")));
+                LockWaits.await(mysql, 1, "요청이 지운 CI에서 멈춘다");
+                lockerStatement.executeUpdate(insertIdentity(memberId, "9".repeat(64)));
+                lockerStatement.execute("ROLLBACK");
+
+                // then
+                assertThat(verifying.get(30, TimeUnit.SECONDS).identityVerified())
+                        .isTrue();
+            } finally {
+                requester.shutdown();
+            }
+            assertThat(deadlockCount(snapshotStatement)).isEqualTo(deadlocksBefore + 1);
+            assertThat(jdbc.queryForObject("SELECT member_id FROM identity_verification", Long.class))
+                    .isEqualTo(memberId);
+        }
+    }
+
+    private static String insertIdentity(long memberId, String ciHash) {
+        return "INSERT INTO identity_verification (member_id, birth_year, gender, ci_hash, provider, verified_at, created_at, updated_at)"
+                + " VALUES (" + memberId + ", 1995, 'MALE', '" + ciHash + "', 'FAKE', NOW(6), NOW(6), NOW(6))";
+    }
+
     private static long deadlockCount(Statement statement) throws SQLException {
         try (ResultSet rows = statement.executeQuery(
                 "SELECT `COUNT` FROM information_schema.INNODB_METRICS WHERE NAME = 'lock_deadlocks'")) {

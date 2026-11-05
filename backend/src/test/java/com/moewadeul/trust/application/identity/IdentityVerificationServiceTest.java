@@ -32,7 +32,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
-import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class IdentityVerificationServiceTest {
@@ -113,8 +113,8 @@ class IdentityVerificationServiceTest {
         // given
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
         when(applier.apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE))
-                .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"))
-                .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"))
+                .thenThrow(new DeadlockLoserDataAccessException("Deadlock found when trying to get lock", null))
+                .thenThrow(new DeadlockLoserDataAccessException("Deadlock found when trying to get lock", null))
                 .thenThrow(new BusinessException(TrustErrorCode.IDENTITY_CI_DUPLICATED));
 
         // when, then
@@ -132,11 +132,11 @@ class IdentityVerificationServiceTest {
         // given
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
         when(applier.apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE))
-                .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"));
+                .thenThrow(new DeadlockLoserDataAccessException("Deadlock found when trying to get lock", null));
 
         // when, then
         assertThatThrownBy(() -> serviceWith(applier).verify(MEMBER_ID, command(1995)))
-                .isInstanceOf(CannotAcquireLockException.class);
+                .isInstanceOf(DeadlockLoserDataAccessException.class);
         verify(applier, times(3)).apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE);
         verify(provider, times(1)).verify(any());
     }
