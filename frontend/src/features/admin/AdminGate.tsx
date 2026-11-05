@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: '/admin/spots', label: '박지 검토' },
   { to: '/admin/memories', label: '기록 검토' },
   { to: '/admin/community', label: '커뮤니티 검토' },
+  { to: '/admin/audit-logs', label: '감사 기록' },
   { to: '/admin/sync-jobs', label: '데이터 불러오기' },
 ] as const;
 
