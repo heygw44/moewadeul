@@ -9,6 +9,7 @@ interface AdminReviewPhotosProps {
 
 export function AdminReviewPhotos({ images, onReload }: AdminReviewPhotosProps) {
   const [broken, setBroken] = useState<ReadonlySet<number>>(new Set());
+  const [attempt, setAttempt] = useState(0);
   if (images.length === 0) return null;
 
   function mark(imageId: number, isBroken: boolean) {
@@ -19,6 +20,12 @@ export function AdminReviewPhotos({ images, onReload }: AdminReviewPhotosProps) 
       else next.delete(imageId);
       return next;
     });
+  }
+
+  function reload() {
+    setBroken(new Set());
+    setAttempt((value) => value + 1);
+    onReload();
   }
 
   return (
@@ -34,6 +41,7 @@ export function AdminReviewPhotos({ images, onReload }: AdminReviewPhotosProps) 
               className="block h-full w-full"
             >
               <img
+                key={attempt}
                 src={image.url}
                 alt={`사진 ${index + 1}`}
                 loading="lazy"
@@ -50,7 +58,7 @@ export function AdminReviewPhotos({ images, onReload }: AdminReviewPhotosProps) 
           <p className="min-w-0 flex-1">
             사진 {broken.size}장을 불러오지 못했어요. 화면을 오래 열어 두면 사진 주소가 만료돼요.
           </p>
-          <Button variant="secondary" onClick={onReload}>
+          <Button variant="secondary" onClick={reload}>
             다시 불러오기
           </Button>
         </div>
