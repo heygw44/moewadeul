@@ -615,6 +615,26 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-20] 한꺼번에 생기는 메일이 밀려 있어도 뒤에 생긴 개별 메일이 먼저 나간다")
+    void individualMailOvertakesBulkBacklog() {
+        // given
+        List<Long> subscribers = saveActiveMembers(properties.batchSize() + 5);
+        record(SEAT_RELEASED, 7L, Map.of("programId", 7L, "memberIds", subscribers));
+        publisher.publishPending(OutboxLane.DEFAULT);
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending(OutboxLane.DEFAULT);
+
+        // when
+        mailer.sendDue();
+
+        // then
+        assertThat(mailSender.sent().getFirst().to()).isEqualTo(applicant.getEmail());
+        assertThat(mailSender.sent()).hasSize(properties.batchSize());
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(6);
+    }
+
+    @Test
     @DisplayName("[F-20] 최근 24시간에 보낸 알림 메일이 상한(300통)에 닿으면 남은 자리만큼만 보내고, 나머지는 알림함에 두고 보내기를 미룬다")
     void mailsBeyondDailyLimitStayPendingWhileInboxKeepsAll() {
         // given
