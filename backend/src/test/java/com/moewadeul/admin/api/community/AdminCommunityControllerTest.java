@@ -124,6 +124,7 @@ class AdminCommunityControllerTest {
         var summary = new AdminCommunityCommentSummary(
                 12L,
                 9L,
+                "ACTIVE",
                 null,
                 new AdminCommunityAuthor(4L, "작성자"),
                 "HIDDEN",
@@ -145,6 +146,7 @@ class AdminCommunityControllerTest {
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(result).bodyJson().extractingPath("$.content[0].commentId").isEqualTo(12);
         assertThat(result).bodyJson().extractingPath("$.content[0].postId").isEqualTo(9);
+        assertThat(result).bodyJson().extractingPath("$.content[0].postStatus").isEqualTo("ACTIVE");
         assertThat(result).bodyJson().extractingPath("$.content[0].content").isNull();
         assertThat(result)
                 .bodyJson()

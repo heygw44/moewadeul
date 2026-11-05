@@ -423,6 +423,29 @@ class AdminCommunityReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-08] 댓글 검토 목록은 댓글이 달린 글의 상태를 함께 줘서, 화면이 공개 상세가 404인 글로 보내지 않게 한다")
+    void commentListCarriesPostStatus() {
+        // given
+        long activePost = insertPost("ACTIVE", BASE);
+        long pendingPost = insertPost("PENDING_REVIEW", BASE);
+        long hiddenPost = insertPost("HIDDEN", BASE);
+        long onActive = insertComment(activePost, "PENDING_REVIEW", "공개 글의 댓글", BASE);
+        long onPending = insertComment(pendingPost, "PENDING_REVIEW", "검토 대기 글의 댓글", BASE.plus(Duration.ofHours(1)));
+        long onHidden = insertComment(hiddenPost, "PENDING_REVIEW", "숨긴 글의 댓글", BASE.plus(Duration.ofHours(2)));
+
+        // when
+        MvcTestResult result = get(COMMENTS);
+
+        // then
+        assertThat(ids(result, "$.content[*].commentId")).containsExactly(onActive, onPending, onHidden);
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.content[*].postStatus")
+                .asList()
+                .containsExactly("ACTIVE", "PENDING_REVIEW", "HIDDEN");
+    }
+
+    @Test
     @DisplayName("[F-29][CM-08] 댓글을 숨기면 내용은 그대로이고 복구하면 ACTIVE로 돌아오며 검토 전 신고가 검토 완료로 표시되고 감사 로그가 남는다")
     void hideAndRestoreComment() {
         // given

@@ -37,6 +37,7 @@
     <select id="selectComments" resultType="com.moewadeul.community.infra.moderation.AdminCommunityCommentRow">
         SELECT c.id AS comment_id,
                c.post_id AS post_id,
+               cp.status AS post_status,
                c.content AS content,
                c.member_id AS author_id,
                m.nickname AS author_nickname,
@@ -45,6 +46,7 @@
                c.updated_at AS status_changed_at
         FROM community_comment c
         JOIN member m ON m.id = c.member_id
+        JOIN community_post cp ON cp.id = c.post_id
         LEFT JOIN (
             SELECT r.target_id AS target_id,
                    COUNT(*) AS report_count,
