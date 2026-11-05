@@ -142,6 +142,21 @@ class ProgramApplyServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-18][SF-03] 본인확인한 미성년은 숙박 행사에 신청할 수 없고, 숙박이 없는 행사에는 신청할 수 있다")
+    void minorCannotApplyToOvernightProgram() {
+        // given
+        long overnight = fixture.saveProgram(3, true);
+        long dayTrip = fixture.saveProgram(3, false);
+        long minor = fixture.saveVerifiedMinor();
+
+        // then
+        assertErrorCode(() -> programApplyService.apply(minor, overnight), TrustErrorCode.TRUST_LEVEL_INSUFFICIENT);
+        assertThat(fixture.applicationCount(overnight, minor)).isZero();
+        assertThat(programApplyService.apply(minor, dayTrip).status())
+                .isEqualTo(ProgramApplicationStatus.PENDING_PAYMENT);
+    }
+
+    @Test
     @DisplayName("[F-18][PG-02] 숙박이 없는 행사는 신뢰 단계 0 회원도 신청할 수 있다")
     void dayProgramAllowsTrustLevelZero() {
         long programId = fixture.saveProgram(3, false);

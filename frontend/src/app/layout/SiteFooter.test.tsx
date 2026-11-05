@@ -56,10 +56,11 @@ describe('푸터의 법정 고지', () => {
     expect(link('moewadeul@gmail.com')?.getAttribute('href')).toBe('mailto:moewadeul@gmail.com');
   });
 
-  it('운영자 정보와 기존 고지를 유지한다', () => {
+  it('[SF-06] 운영자 정보와 기존 고지를 유지한다', () => {
     expect(container.textContent).toContain('개인이 운영하는 비영리 포트폴리오 서비스');
     expect(container.textContent).toContain('데이터 ·');
     expect(container.textContent).toContain('본인확인과 결제는 시연용이라 실제로 처리되지 않아요');
+    expect(container.textContent).toContain('야영 중에 생긴 일에는 책임지지 않아요');
     expect(link('GitHub')?.getAttribute('href')).toBe('https://github.com/heygw44/moewadeul');
   });
 });

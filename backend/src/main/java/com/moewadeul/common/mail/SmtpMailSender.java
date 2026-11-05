@@ -31,7 +31,8 @@ public class SmtpMailSender implements MailSender, DisposableBean {
 
     // 메일 구현체(Angus Mail)는 SMTP 응답 줄을 예외 메시지에 그대로 넣는다. 응답 코드를 읽는 클래스는 실행할 때만 있는 의존성이라
     // 컴파일할 때 쓸 수 없다. 그래서 메시지 맨 앞의 세 자리 숫자로 4xx 응답인지 판단한다.
-    private static final Pattern TRANSIENT_REPLY = Pattern.compile("^4\\d\\d\\b");
+    // Gmail 하루 발송 한도(550 5.4.5)는 5xx이지만 다음 날 풀린다. 세는 쪽에 두면 약 55분 뒤 FAILED로 굳어 풀려도 나가지 않는다.
+    private static final Pattern TRANSIENT_REPLY = Pattern.compile("^(4\\d\\d\\b|550[ -]5\\.4\\.5\\b)");
 
     private final JavaMailSender javaMailSender;
     private final MailProperties properties;

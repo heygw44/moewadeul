@@ -53,6 +53,13 @@ class NotificationMailer {
         return handled;
     }
 
+    void releaseLeasesOfPreviousRun() {
+        int released = store.releaseLeasesOfPreviousRun();
+        if (released > 0) {
+            log.warn("notification mail leases of previous run released count={}", released);
+        }
+    }
+
     private void releaseUnsent(NotificationMailStore.Claim claim, int handled) {
         List<Long> unsentIds = claim.targets().subList(handled, claim.targets().size()).stream()
                 .map(NotificationMailRow::notificationId)

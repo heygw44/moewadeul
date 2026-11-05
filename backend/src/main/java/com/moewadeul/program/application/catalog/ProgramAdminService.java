@@ -9,6 +9,8 @@ import com.moewadeul.common.error.EnumParser;
 import com.moewadeul.common.event.ProgramEvents;
 import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
+import com.moewadeul.idempotency.application.IdempotentRequest;
 import com.moewadeul.program.application.enrollment.ProgramSeatReleaseRecorder;
 import com.moewadeul.program.domain.PaymentRepository;
 import com.moewadeul.program.domain.Program;
@@ -30,6 +32,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,10 +50,18 @@ public class ProgramAdminService {
     private final AdminAuditRecorder adminAuditRecorder;
     private final OutboxEventRecorder outboxEventRecorder;
     private final ProgramSeatReleaseRecorder seatReleaseRecorder;
+    private final IdempotencyExecutor idempotencyExecutor;
     private final Clock clock;
 
-    @Transactional
-    public long create(long adminId, ProgramCreateCommand command) {
+    public long createOnce(long adminId, String idempotencyKey, ProgramCreateCommand command) {
+        return idempotencyExecutor.execute(
+                new IdempotentRequest(adminId, idempotencyKey, "POST /api/admin/programs", command),
+                HttpStatus.CREATED,
+                Long.class,
+                () -> create(adminId, command));
+    }
+
+    private long create(long adminId, ProgramCreateCommand command) {
         Program program = newProgram(adminId, command, clock.instant());
         requireVisibleSpot(command.spotId());
         Program saved = programRepository.saveAndFlush(program);

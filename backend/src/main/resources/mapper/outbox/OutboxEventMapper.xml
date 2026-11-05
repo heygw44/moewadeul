@@ -51,6 +51,16 @@
         </foreach>
     </update>
 
+    <!-- 실패한 뒤 재시도를 기다리는 행도 locked_until을 쓴다. 시도한 적 없는 행만 풀어 재시도 간격은 그대로 둔다. -->
+    <update id="releaseFirstAttemptLeases">
+        UPDATE outbox_event
+        SET locked_until = NULL,
+            updated_at = #{now}
+        WHERE status = 'PENDING'
+          AND attempt_count = 0
+          AND locked_until &gt; #{now}
+    </update>
+
     <select id="selectByIds" resultType="com.moewadeul.outbox.infra.OutboxMessageRow">
         SELECT id, event_type, aggregate_type, aggregate_id, payload, created_at
         FROM outbox_event

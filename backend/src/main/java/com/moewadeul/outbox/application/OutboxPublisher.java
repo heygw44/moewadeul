@@ -1,5 +1,6 @@
 package com.moewadeul.outbox.application;
 
+import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.mail.MailDeliveryException;
 import com.moewadeul.common.outbox.OutboxEventHandler;
 import com.moewadeul.common.outbox.OutboxLane;
@@ -57,6 +58,13 @@ public class OutboxPublisher {
         return processed;
     }
 
+    public void releaseLeasesOfPreviousRun() {
+        int released = store.releaseLeasesOfPreviousRun();
+        if (released > 0) {
+            log.warn("outbox leases of previous run released count={}", released);
+        }
+    }
+
     private void releaseUnprocessed(OutboxEventStore.Claim claim, int processed) {
         List<Long> unprocessedIds = claim
                 .messages()
@@ -106,7 +114,7 @@ public class OutboxPublisher {
     private static String describe(Exception e) {
         String message = e.getMessage();
         String description = e.getClass().getSimpleName() + (message == null ? "" : ": " + message);
-        return truncate(description);
+        return truncate(UniqueViolations.redactValues(description));
     }
 
     private static String truncate(String text) {

@@ -14,7 +14,8 @@ public record OutboxProperties(
         @DefaultValue("30s") Duration retryDelay,
         @DefaultValue("10m") Duration retryMaxDelay,
         @DefaultValue("10") int maxAttempts,
-        @DefaultValue("1d") Duration transientRetryWindow) {
+        // 가장 오래가는 일시 실패는 Gmail 하루 한도(지난 24시간 기준)다. 한도가 풀린 뒤에도 재시도 간격만큼 몇 번 더 보내도록 24시간보다 길게 둔다.
+        @DefaultValue("26h") Duration transientRetryWindow) {
 
     static final String DEFAULT_POLL_DELAY = "1s";
 

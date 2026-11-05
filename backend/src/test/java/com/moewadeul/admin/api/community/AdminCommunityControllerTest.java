@@ -13,6 +13,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
+import com.moewadeul.common.image.application.ImageView;
 import com.moewadeul.common.moderation.ModerationResult;
 import com.moewadeul.common.moderation.RecentReport;
 import com.moewadeul.common.paging.PageSlice;
@@ -86,6 +87,7 @@ class AdminCommunityControllerTest {
                 "제목",
                 "본문 전체",
                 new AdminCommunityAuthor(4L, "작성자"),
+                List.of(new ImageView(31L, "https://img.test/31.jpg")),
                 "PENDING_REVIEW",
                 5L,
                 Map.of("SPAM", 2L, "ABUSE", 1L, "ILLEGAL_CAMPING", 0L, "PRIVACY", 0L, "MONEY_SCAM", 1L, "OTHER", 1L),
@@ -104,6 +106,7 @@ class AdminCommunityControllerTest {
                   "content": [{
                     "postId": 9, "title": "제목", "content": "본문 전체",
                     "author": {"memberId": 4, "nickname": "작성자"},
+                    "images": [{"imageId": 31, "url": "https://img.test/31.jpg"}],
                     "status": "PENDING_REVIEW", "reportCount": 5,
                     "reasonCounts": {"SPAM": 2, "ABUSE": 1, "ILLEGAL_CAMPING": 0, "PRIVACY": 0, "MONEY_SCAM": 1, "OTHER": 1},
                     "recentReports": [{"reason": "MONEY_SCAM", "content": "돈을 요구한다", "createdAt": "2026-10-05T03:00:00Z"}],
@@ -121,6 +124,7 @@ class AdminCommunityControllerTest {
         var summary = new AdminCommunityCommentSummary(
                 12L,
                 9L,
+                "ACTIVE",
                 null,
                 new AdminCommunityAuthor(4L, "작성자"),
                 "HIDDEN",
@@ -142,6 +146,7 @@ class AdminCommunityControllerTest {
         assertThat(result).hasStatus(HttpStatus.OK);
         assertThat(result).bodyJson().extractingPath("$.content[0].commentId").isEqualTo(12);
         assertThat(result).bodyJson().extractingPath("$.content[0].postId").isEqualTo(9);
+        assertThat(result).bodyJson().extractingPath("$.content[0].postStatus").isEqualTo("ACTIVE");
         assertThat(result).bodyJson().extractingPath("$.content[0].content").isNull();
         assertThat(result)
                 .bodyJson()

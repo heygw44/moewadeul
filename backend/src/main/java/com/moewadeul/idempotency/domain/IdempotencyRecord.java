@@ -8,7 +8,9 @@ import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,6 +26,12 @@ import org.springframework.data.domain.Persistable;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
+
+    // 이보다 오래된 선점은 주인이 죽었다고 보고 넘겨받는다. 살아 있던 주인은 완료 기록에서 선점을 잃은 것을 알고 롤백하므로 작업은 한 번만 커밋된다.
+    // 다만 그러면 주인이 한 일이 버려지므로, 정상 요청이 가장 오래 걸리는 시간보다 길게 둔다. 가장 긴 것은 사진 10장을 붙인 추억 쓰기로,
+    // 커넥션 대기 30초 세 번(선점, 사전 확인 조회, 트랜잭션)과 사진·썸네일 20개의 S3 HEAD 5초씩, 잠금 대기를 더하면 약 3분 30초다.
+    // 화면은 30초에 응답을 끊고 같은 키로 다시 보내고, Caddy는 응답을 기다리는 시간에 제한이 없다.
+    public static final Duration ABANDONED_AFTER = Duration.ofMinutes(5);
 
     @Id
     @Column(name = "member_id")
@@ -55,7 +63,8 @@ public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
         this.memberId = memberId;
         this.idempotencyKey = idempotencyKey;
         this.requestHash = requestHash;
-        this.createdAt = now;
+        // 컬럼이 마이크로초까지만 저장한다. 선점 시각을 선점의 주인 표시로 비교하므로 저장한 값과 정확히 같아야 한다.
+        this.createdAt = now.truncatedTo(ChronoUnit.MICROS);
     }
 
     public static IdempotencyRecord claim(long memberId, String idempotencyKey, String requestHash, Instant now) {
@@ -82,6 +91,19 @@ public class IdempotencyRecord implements Persistable<IdempotencyRecordId> {
 
     public boolean isCompleted() {
         return responseStatus != null && responseBody != null;
+    }
+
+    public boolean isAbandonedAt(Instant now) {
+        return !isCompleted() && !createdAt.plus(ABANDONED_AFTER).isAfter(now);
+    }
+
+    public boolean isSameClaim(IdempotencyRecord other) {
+        return !isCompleted() && createdAt.equals(other.createdAt);
+    }
+
+    public IdempotencyRecord takenOverAt(Instant now) {
+        this.createdAt = now.truncatedTo(ChronoUnit.MICROS);
+        return this;
     }
 
     public boolean matches(String requestHash) {
