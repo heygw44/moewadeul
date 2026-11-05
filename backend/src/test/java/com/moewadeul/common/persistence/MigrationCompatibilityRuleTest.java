@@ -38,7 +38,8 @@ class MigrationCompatibilityRuleTest {
     void newMigrationsKeepPreviousReleaseWorking() throws IOException {
         List<String> violations = new ArrayList<>();
         try (Stream<Path> files = Files.list(MIGRATIONS)) {
-            for (Path file : files.filter(path -> version(path) > LAST_VERSION_BEFORE_RULE).toList()) {
+            for (Path file : files.filter(path -> version(path) > LAST_VERSION_BEFORE_RULE)
+                    .toList()) {
                 String sql = Files.readString(file);
                 if (!CONTRACT_MARK.matcher(sql).find()) {
                     breakingChanges(sql).forEach(change -> violations.add(file.getFileName() + ": " + change));
@@ -70,8 +71,7 @@ class MigrationCompatibilityRuleTest {
                         ALTER TABLE sample ADD COLUMN c DOUBLE AS (a + 1) STORED NOT NULL;
                         ALTER TABLE sample ADD INDEX idx_a (a), DROP INDEX idx_b, DROP FOREIGN KEY fk_c;
                         UPDATE sample SET a = 1;
-                        """))
-                .isEmpty();
+                        """)).isEmpty();
     }
 
     @Test
@@ -121,7 +121,8 @@ class MigrationCompatibilityRuleTest {
         Matcher added = ADD_COLUMN.matcher(statement);
         while (added.find()) {
             String definition = added.group(2);
-            if (NOT_NULL.matcher(definition).find() && !HAS_VALUE_FOR_OLD_WRITERS.matcher(definition).find()) {
+            if (NOT_NULL.matcher(definition).find()
+                    && !HAS_VALUE_FOR_OLD_WRITERS.matcher(definition).find()) {
                 changes.add("기본값 없는 NOT NULL 컬럼 추가");
             }
         }
