@@ -1,6 +1,7 @@
 package com.moewadeul.outbox.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -72,6 +73,7 @@ class OutboxMetricsTest {
         when(mapper.selectBacklog()).thenThrow(new IllegalStateException("커넥션을 얻지 못했다"));
 
         clock.advance(PolledSnapshot.STALE_AFTER.plusSeconds(1));
+        assertThatThrownBy(metrics::refresh).isInstanceOf(IllegalStateException.class);
 
         assertThat(events("pending")).isNaN();
         assertThat(events("failed")).isNaN();
