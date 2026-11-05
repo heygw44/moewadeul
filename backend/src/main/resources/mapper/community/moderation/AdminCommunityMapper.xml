@@ -23,13 +23,21 @@
             GROUP BY r.target_id
         ) rc ON rc.target_id = p.id
         WHERE p.status = #{status}
-        ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, p.updated_at ASC, p.id ASC
+        <choose>
+            <when test="status.name() == 'HIDDEN'">
+                ORDER BY p.updated_at DESC, p.id DESC
+            </when>
+            <otherwise>
+                ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, p.updated_at ASC, p.id ASC
+            </otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="selectComments" resultType="com.moewadeul.community.infra.moderation.AdminCommunityCommentRow">
         SELECT c.id AS comment_id,
                c.post_id AS post_id,
+               cp.status AS post_status,
                c.content AS content,
                c.member_id AS author_id,
                m.nickname AS author_nickname,
@@ -38,6 +46,7 @@
                c.updated_at AS status_changed_at
         FROM community_comment c
         JOIN member m ON m.id = c.member_id
+        JOIN community_post cp ON cp.id = c.post_id
         LEFT JOIN (
             SELECT r.target_id AS target_id,
                    COUNT(*) AS report_count,
@@ -48,7 +57,14 @@
             GROUP BY r.target_id
         ) rc ON rc.target_id = c.id
         WHERE c.status = #{status}
-        ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, c.updated_at ASC, c.id ASC
+        <choose>
+            <when test="status.name() == 'HIDDEN'">
+                ORDER BY c.updated_at DESC, c.id DESC
+            </when>
+            <otherwise>
+                ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, c.updated_at ASC, c.id ASC
+            </otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 

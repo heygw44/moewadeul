@@ -134,9 +134,12 @@ export interface AdminCommunityPost extends AdminCommunityItemBase {
   images: AdminCommunityImage[];
 }
 
+export type AdminCommentPostStatus = 'ACTIVE' | 'PENDING_REVIEW' | 'HIDDEN' | 'DELETED';
+
 export interface AdminCommunityComment extends AdminCommunityItemBase {
   commentId: number;
   postId: number;
+  postStatus: AdminCommentPostStatus;
   content: string;
 }
 

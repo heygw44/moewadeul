@@ -53,6 +53,8 @@ describe('관리자 행사 관리 목록', () => {
   let listed: ProgramSummary[];
   let listStatus: number;
   let hasNext: boolean;
+  let secondPage: ProgramSummary[];
+  let detailReply: () => Promise<Response>;
   let cancelResponse: () => Promise<Response>;
 
   const text = (element: Element | null) => element?.textContent ?? '';
@@ -64,7 +66,8 @@ describe('관리자 행사 관리 목록', () => {
     if (!found) throw new Error('대화상자가 없다');
     return found;
   };
-  const programListUrls = () => calls.filter((call) => call.url.startsWith('/api/programs')).map((call) => call.url);
+  const programListUrls = () => calls.filter((call) => call.url.startsWith('/api/programs?')).map((call) => call.url);
+  const detailUrls = () => calls.filter((call) => call.url === '/api/programs/7').map((call) => call.url);
   const posts = () => calls.filter((call) => call.method === 'POST');
 
   async function mount() {
@@ -90,6 +93,8 @@ describe('관리자 행사 관리 목록', () => {
     listed = [program()];
     listStatus = 200;
     hasNext = false;
+    secondPage = [];
+    detailReply = async () => json(200, { ...program(), status: 'CANCELED' });
     cancelResponse = async () => json(200, { programId: 7, status: 'CANCELED', canceledApplicationCount: 3 });
     window.history.replaceState(null, '', '/admin/programs');
     HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
@@ -106,8 +111,15 @@ describe('관리자 행사 관리 목록', () => {
         calls.push({ method, url, body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined });
         if (url.startsWith('/api/programs?')) {
           if (listStatus !== 200) return json(listStatus, { code: 'INTERNAL_ERROR', message: 'x', traceId: 'trace-1' });
-          return json(200, { content: listed, page: 0, size: 20, hasNext });
+          const second = url.endsWith('page=1');
+          return json(200, {
+            content: second ? secondPage : listed,
+            page: second ? 1 : 0,
+            size: 20,
+            hasNext: second ? false : hasNext,
+          });
         }
+        if (url === '/api/programs/7' && method === 'GET') return detailReply();
         if (url === '/api/admin/programs/7/cancel' && method === 'POST') return cancelResponse();
         return json(404, { code: 'NOT_FOUND', message: 'x', traceId: 't' });
       }),
@@ -311,28 +323,50 @@ describe('관리자 행사 관리 목록', () => {
       expect(posts()).toHaveLength(1);
     });
 
-    it('이미 취소된 행사(409)면 대화상자 안에 오류를 보여 주고, 닫으면 목록을 다시 불러온다', async () => {
+    it('이미 취소된 행사(409)면 이미 처리됐다고 알리고, 닫으면 그 행사를 목록에서 빼고 다시 불러온다', async () => {
       cancelResponse = async () => json(409, { code: 'PROGRAM_INVALID_STATE', message: 'x', traceId: 't' });
       await openCancelDialog();
 
       await click(button('행사 취소하기', dialog()));
 
       const alert = dialog().querySelector('[role="alert"]');
-      expect(text(alert)).toContain('행사를 취소하지 못했어요');
-      expect(text(alert)).toContain('상태가 바뀌어 지금은 할 수 없어요.');
+      expect(text(alert)).toContain('이미 취소된 행사예요');
+      expect(text(alert)).not.toContain('행사를 취소하지 못했어요');
       expect(container.querySelector('[role="status"]')).toBeNull();
       expect(programListUrls()).toHaveLength(1);
 
+      listed = [];
       await click(button('닫기', dialog()));
 
       expect(container.querySelector('dialog')).toBeNull();
+      expect(text(container.querySelector('[role="status"]'))).toContain('이미 취소된 행사예요.');
+      expect(text(container)).not.toContain('가을 백패킹 데이');
       expect(programListUrls()).toHaveLength(2);
     });
 
-    it('응답을 받지 못하면 취소 여부를 확인하지 못했다고 알리고, 닫으면 목록을 다시 불러온다', async () => {
-      cancelResponse = async () => {
-        throw new TypeError('Failed to fetch');
-      };
+    it('끝난 행사 취소를 서버가 거절하면(409 PROGRAM_ENDED) 이유를 알리고 목록은 건드리지 않는다', async () => {
+      cancelResponse = async () => json(409, { code: 'PROGRAM_ENDED', message: 'x', traceId: 't' });
+      await openCancelDialog();
+
+      await click(button('행사 취소하기', dialog()));
+
+      const alert = text(dialog().querySelector('[role="alert"]'));
+      expect(alert).toContain('행사를 취소하지 못했어요');
+      expect(alert).toContain('이미 끝난 행사는 취소할 수 없어요.');
+
+      await click(button('닫기', dialog()));
+
+      expect(programListUrls()).toHaveLength(1);
+      expect(detailUrls()).toEqual([]);
+      expect(text(container)).toContain('가을 백패킹 데이');
+    });
+
+    it.each([
+      ['응답을 받지 못하면', async () => Promise.reject(new TypeError('Failed to fetch'))],
+      ['앞단이 502를 돌려주면', async () => json(502, { code: 'INTERNAL_ERROR', message: 'x', traceId: 't' })],
+      ['앞단이 504를 돌려주면', async () => json(504, { code: 'INTERNAL_ERROR', message: 'x', traceId: 't' })],
+    ])('%s 취소 여부를 확인하지 못했다고 알린다', async (_name, reply) => {
+      cancelResponse = reply;
       await openCancelDialog();
 
       await click(button('행사 취소하기', dialog()));
@@ -341,10 +375,67 @@ describe('관리자 행사 관리 목록', () => {
       expect(alert).toContain('처리 결과를 확인하지 못했어요');
       expect(alert).toContain('행사가 취소됐는지 확인하지 못했어요.');
       expect(alert).not.toContain('행사를 취소하지 못했어요');
+    });
+
+    it('응답을 못 받고 닫았을 때 행사가 실제로 취소돼 있으면 그렇게 알리고 목록에서 뺀다', async () => {
+      cancelResponse = async () => Promise.reject(new TypeError('Failed to fetch'));
+      await openCancelDialog();
+      await click(button('행사 취소하기', dialog()));
+      listed = [];
 
       await click(button('닫기', dialog()));
 
+      expect(detailUrls()).toHaveLength(1);
+      expect(text(container.querySelector('[role="status"]'))).toContain(
+        '행사가 취소된 것을 확인했어요. 신청도 함께 취소됐어요.',
+      );
+      expect(text(container)).not.toContain('가을 백패킹 데이');
       expect(programListUrls()).toHaveLength(2);
+    });
+
+    it('응답을 못 받고 닫았는데 행사가 취소되지 않았으면, 둘째 쪽까지 펼친 목록을 그대로 둔 채 그렇게 알린다', async () => {
+      hasNext = true;
+      secondPage = [program({ programId: 8, title: '겨울 설악산 야영' })];
+      cancelResponse = async () => Promise.reject(new TypeError('Failed to fetch'));
+      detailReply = async () => json(200, { ...program(), status: 'OPEN' });
+      await mount();
+      await click(button('더 보기'));
+      await click(button('행사 취소'));
+      await click(button('행사 취소하기', dialog()));
+
+      await click(button('닫기', dialog()));
+
+      expect(text(container.querySelector('[role="status"]'))).toContain('행사는 아직 취소되지 않았어요.');
+      expect(text(container)).toContain('가을 백패킹 데이');
+      expect(text(container)).toContain('겨울 설악산 야영');
+      expect(programListUrls()).toEqual(['/api/programs?page=0', '/api/programs?page=1']);
+    });
+
+    it('응답을 못 받고 닫았는데 상태도 확인하지 못하면 목록은 그대로 두고 그렇게 알린다', async () => {
+      cancelResponse = async () => Promise.reject(new TypeError('Failed to fetch'));
+      detailReply = async () => json(500, { code: 'INTERNAL_ERROR', message: 'x', traceId: 't' });
+      await openCancelDialog();
+      await click(button('행사 취소하기', dialog()));
+
+      await click(button('닫기', dialog()));
+
+      expect(text(container.querySelector('[role="status"]'))).toContain('행사가 취소됐는지 확인하지 못했어요.');
+      expect(text(container)).toContain('가을 백패킹 데이');
+      expect(programListUrls()).toHaveLength(1);
+    });
+
+    it('응답을 못 받은 취소를 다시 눌렀을 때 이미 처리돼 있으면(409) 이미 취소된 행사라고 알린다', async () => {
+      cancelResponse = async () => Promise.reject(new TypeError('Failed to fetch'));
+      await openCancelDialog();
+      await click(button('행사 취소하기', dialog()));
+      cancelResponse = async () => json(409, { code: 'PROGRAM_INVALID_STATE', message: 'x', traceId: 't' });
+
+      await click(button('행사 취소하기', dialog()));
+
+      const alert = text(dialog().querySelector('[role="alert"]'));
+      expect(alert).toContain('이미 취소된 행사예요');
+      expect(alert).not.toContain('행사를 취소하지 못했어요');
+      expect(posts()).toHaveLength(2);
     });
 
     it('행사를 찾을 수 없으면(404) 대화상자 안에 오류를 보여 준다', async () => {

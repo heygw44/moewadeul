@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { createProgram, reviseProgram } from '../../api/admin';
 import { ApiError, serverNow } from '../../api/client';
-import { toUserMessage } from '../../api/errors';
+import { toUserMessage, UNCONFIRMED_TITLE } from '../../api/errors';
+import { createIdempotentRunner, isOutcomeUnknown } from '../../api/idempotency';
 import { Link, navigate } from '../../app/router';
 import { Button } from '../../components/Button';
 import { buttonClassName } from '../../components/buttonClass';
@@ -18,12 +19,10 @@ import { AdminPage } from './AdminGate';
 import {
   emptyProgramForm,
   formValuesOf,
-  isResultUnknown,
   LIST_PATH,
   savedListPath,
   serverErrorsToFields,
   TEXT_MAX_LENGTH,
-  UNCONFIRMED_TITLE,
   toCreateRequest,
   toRevision,
   validate,
@@ -111,7 +110,8 @@ type ProgramFormProps = { initial: ProgramFormValues } & ({ mode: 'create' } | {
 type SubmitFailure = { message: string; error: unknown; unconfirmed: boolean };
 
 const UNCONFIRMED_MESSAGES: Record<ProgramFormMode, string> = {
-  create: '행사가 등록됐는지 확인하지 못했어요. 다시 누르기 전에 행사 목록에서 먼저 확인해 주세요.',
+  create:
+    '행사가 등록됐는지 확인하지 못했어요. 내용을 바꾸지 않고 다시 등록하면 행사는 하나만 만들어져요. 내용을 바꾸려면 행사 목록에서 먼저 확인해 주세요.',
   edit: '수정한 내용이 저장됐는지 확인하지 못했어요. 행사 목록에서 확인한 뒤 필요하면 다시 저장해 주세요.',
 };
 
@@ -122,6 +122,7 @@ function ProgramForm(props: ProgramFormProps) {
   const [failure, setFailure] = useState<SubmitFailure | null>(null);
   const [unchanged, setUnchanged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [idempotentRunner] = useState(createIdempotentRunner);
   const isCreate = props.mode === 'create';
 
   function change<K extends keyof ProgramFormValues>(key: K, value: ProgramFormValues[K]) {
@@ -152,7 +153,7 @@ function ProgramForm(props: ProgramFormProps) {
       setFailure({ message: toUserMessage(caught), error: caught, unconfirmed: false });
       return;
     }
-    if (isResultUnknown(caught)) {
+    if (isOutcomeUnknown(caught)) {
       setFailure({ message: UNCONFIRMED_MESSAGES[props.mode], error: caught, unconfirmed: true });
       return;
     }
@@ -177,7 +178,8 @@ function ProgramForm(props: ProgramFormProps) {
     setSubmitting(true);
     try {
       if (props.mode === 'create') {
-        await createProgram(toCreateRequest(values));
+        const request = toCreateRequest(values);
+        await idempotentRunner.run(request, (key) => createProgram(request, key));
         navigate(savedListPath('created'), { replace: true });
         return;
       }

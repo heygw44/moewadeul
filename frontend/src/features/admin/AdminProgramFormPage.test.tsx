@@ -50,8 +50,13 @@ const FIELD_LABELS =
     '|',
   );
 
-type Call = { method: string; url: string; body: unknown };
+type Call = { method: string; url: string; body: unknown; key?: string };
 type Reply = () => Promise<Response>;
+
+function keyOf(init?: RequestInit): { key?: string } {
+  const key = new Headers(init?.headers).get('Idempotency-Key');
+  return key === null ? {} : { key };
+}
 
 describe('관리자 행사 등록·수정 화면', () => {
   let container: HTMLDivElement;
@@ -132,7 +137,12 @@ describe('관리자 행사 등록·수정 화면', () => {
       vi.fn(async (url: string, init?: RequestInit) => {
         if (url === '/api/me') return json(200, me);
         const method = init?.method ?? 'GET';
-        calls.push({ method, url, body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined });
+        calls.push({
+          method,
+          url,
+          body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
+          ...keyOf(init),
+        });
         if (url === '/api/programs/7' && method === 'GET') return detailReply();
         if (url === '/api/admin/programs' && method === 'POST') return saveReply();
         if (url === '/api/admin/programs/7' && method === 'PATCH') return saveReply();
@@ -227,6 +237,7 @@ describe('관리자 행사 등록·수정 화면', () => {
         {
           method: 'POST',
           url: '/api/admin/programs',
+          key: expect.any(String),
           body: {
             title: '겨울 백패킹',
             description: '눈 쌓인 길을 걸어요.',
@@ -328,7 +339,7 @@ describe('관리자 행사 등록·수정 화면', () => {
       expect(button('등록하기')?.disabled).toBe(false);
     });
 
-    it('응답을 받지 못하면 등록 여부를 확인하지 못했다고 알리고 행사 목록을 먼저 보라고 안내한다', async () => {
+    it('응답을 받지 못하면 등록 여부를 확인하지 못했다고 알리고, 내용을 바꾸지 않고 다시 누르면 하나만 만들어진다고 안내한다', async () => {
       saveReply = async () => {
         throw new TypeError('Failed to fetch');
       };
@@ -340,11 +351,68 @@ describe('관리자 행사 등록·수정 화면', () => {
       const alert = container.querySelector('[role="alert"]');
       expect(text(alert)).toContain('처리 결과를 확인하지 못했어요');
       expect(text(alert)).toContain(
-        '행사가 등록됐는지 확인하지 못했어요. 다시 누르기 전에 행사 목록에서 먼저 확인해 주세요.',
+        '행사가 등록됐는지 확인하지 못했어요. 내용을 바꾸지 않고 다시 등록하면 행사는 하나만 만들어져요.',
       );
       expect(text(alert)).not.toContain('행사를 등록하지 못했어요');
       expect(alert?.querySelector('a')?.getAttribute('href')).toBe('/admin/programs');
       expect(location()).toBe('/admin/programs/new');
+    });
+
+    it('등록 요청에는 Idempotency-Key를 싣는다', async () => {
+      await mount();
+      await fillRequiredFields();
+
+      await click(button('등록하기'));
+
+      expect(writes()).toHaveLength(1);
+      expect(writes()[0]?.key).toMatch(/^[A-Za-z0-9_-]{1,64}$/);
+    });
+
+    it.each([
+      ['응답을 받지 못한', async () => Promise.reject(new TypeError('Failed to fetch'))],
+      ['앞단이 502를 돌려준', async () => json(502, { code: 'INTERNAL_ERROR', message: 'x', traceId: 't' })],
+      ['앞단이 504를 돌려준', async () => json(504, { code: 'INTERNAL_ERROR', message: 'x', traceId: 't' })],
+    ])('%s 뒤 같은 내용으로 다시 등록하면 같은 키로 보내고, 성공하면 목록으로 돌아간다', async (_name, lost) => {
+      saveReply = lost;
+      await mount();
+      await fillRequiredFields();
+      await click(button('등록하기'));
+      expect(text(container.querySelector('[role="alert"]'))).toContain('처리 결과를 확인하지 못했어요');
+
+      saveReply = async () => json(201, { programId: 31 });
+      await click(button('등록하기'));
+
+      expect(writes()).toHaveLength(2);
+      expect(writes()[1]?.key).toBe(writes()[0]?.key);
+      expect(location()).toBe('/admin/programs?saved=created');
+    });
+
+    it('내용을 바꿔 다시 등록하면 새 키로 보낸다', async () => {
+      saveReply = async () => {
+        throw new TypeError('Failed to fetch');
+      };
+      await mount();
+      await fillRequiredFields();
+      await click(button('등록하기'));
+
+      await type('정원 (명)', '130');
+      await click(button('등록하기'));
+
+      expect(writes()).toHaveLength(2);
+      expect(writes()[1]?.key).not.toBe(writes()[0]?.key);
+    });
+
+    it('서버가 거절한(400) 뒤 다시 등록하면 새 키로 보낸다', async () => {
+      saveReply = async () =>
+        json(400, { code: 'INVALID_INPUT', message: 'spotId: 지도에 보이는 장소만 연결할 수 있어요.', traceId: 't' });
+      await mount();
+      await fillRequiredFields();
+      await click(button('등록하기'));
+
+      await click(button('등록하기'));
+
+      expect(writes()).toHaveLength(2);
+      expect(writes()[1]?.key).not.toBe(writes()[0]?.key);
     });
   });
 

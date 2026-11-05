@@ -9,6 +9,7 @@ import java.util.Map;
 public record AdminCommunityCommentResponse(
         long commentId,
         long postId,
+        String postStatus,
         String content,
         AdminModerationReports.Member author,
         String status,
@@ -21,6 +22,7 @@ public record AdminCommunityCommentResponse(
         return new AdminCommunityCommentResponse(
                 summary.commentId(),
                 summary.postId(),
+                summary.postStatus(),
                 summary.content(),
                 new AdminModerationReports.Member(
                         summary.author().memberId(), summary.author().nickname()),

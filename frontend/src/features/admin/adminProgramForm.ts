@@ -274,12 +274,6 @@ function serverIssues(error: ApiError): Array<{ field: string; reason: string }>
   return prefixed?.[1] && prefixed[2] ? [{ field: prefixed[1], reason: prefixed[2] }] : [];
 }
 
-export const UNCONFIRMED_TITLE = '처리 결과를 확인하지 못했어요';
-
-export function isResultUnknown(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 0;
-}
-
 export function serverErrorsToFields(error: ApiError): { fields: ProgramFormErrors; rest: string[] } {
   const fields: ProgramFormErrors = {};
   const rest: string[] = [];
