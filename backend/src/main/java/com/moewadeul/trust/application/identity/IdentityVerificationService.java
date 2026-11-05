@@ -13,7 +13,7 @@ import java.time.Year;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -49,7 +49,7 @@ public class IdentityVerificationService {
         for (int attempt = 1; ; attempt++) {
             try {
                 return identityVerificationApplier.apply(memberId, identity, identityProvider.type());
-            } catch (CannotAcquireLockException e) {
+            } catch (PessimisticLockingFailureException e) {
                 if (attempt >= MAX_ATTEMPTS) {
                     throw e;
                 }
