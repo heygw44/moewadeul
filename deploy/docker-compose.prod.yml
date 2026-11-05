@@ -94,6 +94,8 @@ services:
       - --slow-query-log=ON
       - --long-query-time=0.2
       - --slow-query-log-file=/var/log/mysql-slow/slow.log
+      # 데드락마다 양쪽 문장과 잠금을 컨테이너 로그(stderr)에 남긴다. 켜지 않으면 마지막 한 건만 SHOW ENGINE INNODB STATUS로 볼 수 있다.
+      - --innodb-print-all-deadlocks=ON
       - --performance-schema-digests-size=1000
       - --performance-schema-events-statements-history-long-size=0
       - --performance-schema-events-stages-history-long-size=0
