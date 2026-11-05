@@ -18,7 +18,10 @@ import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 
+// 모든 열을 쓰면 잠그지 않은 읽기 하나가 정지 같은 다른 경로의 변경까지 지운다.
+@DynamicUpdate
 @Entity
 @Table(name = "member")
 @Getter
