@@ -21,6 +21,8 @@ public interface OutboxEventMapper {
     int releaseLease(
             @Param("ids") List<Long> ids, @Param("lockedUntil") Instant lockedUntil, @Param("now") Instant now);
 
+    int releaseFirstAttemptLeases(@Param("now") Instant now);
+
     List<OutboxMessageRow> selectByIds(@Param("ids") List<Long> ids);
 
     int markPublished(@Param("id") long id, @Param("leaseUntil") Instant leaseUntil, @Param("now") Instant now);

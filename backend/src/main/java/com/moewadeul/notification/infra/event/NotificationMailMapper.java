@@ -19,6 +19,8 @@ public interface NotificationMailMapper {
 
     int releaseLease(@Param("ids") Collection<Long> ids, @Param("leaseUntil") Instant leaseUntil);
 
+    int releaseFirstAttemptLeases(@Param("now") Instant now);
+
     int markSkipped(@Param("ids") Collection<Long> ids);
 
     int markSent(@Param("id") long id, @Param("leaseUntil") Instant leaseUntil, @Param("now") Instant now);

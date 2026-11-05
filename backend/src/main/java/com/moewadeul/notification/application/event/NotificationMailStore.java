@@ -56,6 +56,11 @@ class NotificationMailStore {
     }
 
     @Transactional
+    int releaseLeasesOfPreviousRun() {
+        return mailMapper.releaseFirstAttemptLeases(clock.instant());
+    }
+
+    @Transactional
     void markSent(long notificationId, Instant leaseUntil) {
         if (mailMapper.markSent(notificationId, leaseUntil, clock.instant()) == 0) {
             log.warn(
