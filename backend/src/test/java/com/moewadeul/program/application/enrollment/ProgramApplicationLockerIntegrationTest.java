@@ -9,8 +9,10 @@ import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.idempotency.application.IdempotencyExecutor;
 import com.moewadeul.idempotency.application.IdempotentRequest;
+import com.moewadeul.idempotency.domain.IdempotencyRecord;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
+import com.moewadeul.program.domain.ProgramApplicationStatus;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
@@ -39,6 +41,12 @@ class ProgramApplicationLockerIntegrationTest {
 
     @Autowired
     private IdempotencyExecutor idempotencyExecutor;
+
+    @Autowired
+    private ProgramPaymentService paymentService;
+
+    @Autowired
+    private MutableClock clock;
 
     @Autowired
     private MemberJpaRepository memberRepository;
@@ -101,5 +109,30 @@ class ProgramApplicationLockerIntegrationTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("[F-19] 결제 선점이 서버 중단으로 버려진 뒤 5분 지나 다시 보낸 결제도 READ COMMITTED로 돌아 신청을 확정한다")
+    void paymentThatTakesOverAbandonedClaimRunsReadCommitted() {
+        ProgramApplyFixture fixture = new ProgramApplyFixture(jdbc, memberRepository);
+        long programId = fixture.saveProgram(5, false);
+        long memberId = fixture.saveMember();
+        long applicationId = fixture.saveApplication(programId, memberId, "PENDING_PAYMENT", DUE);
+        IdempotentRequest request = new IdempotentRequest(memberId, TestSequence.unique("pay"), "pay-test", null);
+        idempotencyExecutor.executeReadCommitted(request, HttpStatus.OK, ProgramPayResult.class, () -> null);
+        jdbc.update(
+                "UPDATE idempotency_record SET response_status = NULL, response_body = NULL"
+                        + " WHERE member_id = ? AND idempotency_key = ?",
+                memberId,
+                request.key());
+        clock.advance(IdempotencyRecord.ABANDONED_AFTER);
+
+        ProgramPayResult paid = idempotencyExecutor.executeReadCommitted(
+                request, HttpStatus.OK, ProgramPayResult.class, () -> paymentService.pay(memberId, applicationId));
+
+        assertThat(paid.status()).isEqualTo(ProgramApplicationStatus.CONFIRMED);
+        assertThat(jdbc.queryForObject(
+                        "SELECT status FROM program_application WHERE id = ?", String.class, applicationId))
+                .isEqualTo("CONFIRMED");
     }
 }
