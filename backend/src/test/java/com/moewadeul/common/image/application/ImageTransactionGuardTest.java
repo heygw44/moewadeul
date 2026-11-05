@@ -70,7 +70,7 @@ class ImageTransactionGuardTest {
         ImageCleanup cleanup = new ImageCleanup(KIND, null, null, null) {};
         TransactionSynchronizationManager.setActualTransactionActive(true);
 
-        assertThatThrownBy(cleanup::deleteExpiredRowsThenObjects)
+        assertThatThrownBy(cleanup::deleteExpiredObjectsThenRows)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageStartingWith("트랜잭션 밖에서 불러야 합니다.");
     }

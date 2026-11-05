@@ -283,9 +283,9 @@ class MemoryImageIntegrationTest {
 
         // when
         commandService.delete(memberId, memoryId);
-        int beforeRetention = cleanupService.deleteExpiredRowsThenObjects().deletedRows();
+        int beforeRetention = cleanupService.deleteExpiredObjectsThenRows().deletedRows();
         clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
-        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
+        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
 
         // then
         assertThat(beforeRetention).isZero();
@@ -323,7 +323,7 @@ class MemoryImageIntegrationTest {
         clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
 
         // when
-        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
+        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);
@@ -332,7 +332,7 @@ class MemoryImageIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-33][MM-05] 정리 작업은 원본 객체 삭제가 실패해도 썸네일 객체를 지우고 실패를 한 번 센다")
+    @DisplayName("[F-33][MM-05] 정리 작업은 원본 객체 삭제가 실패해도 썸네일 객체를 지우고, 행을 남겨 다음 정리에서 다시 지우며 실패를 한 번 센다")
     void cleanupDeletesThumbnailEvenWhenOriginalDeleteFails() {
         // given
         long image = issueWithThumbnail();
@@ -342,12 +342,14 @@ class MemoryImageIntegrationTest {
         clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
 
         // when
-        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
+        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
 
         // then
-        assertThat(result.deletedRows()).isEqualTo(1);
+        assertThat(result.deletedRows()).isZero();
         assertThat(result.storageFailures()).isEqualTo(1);
         assertThat(storage.deletedKeys()).containsExactly(thumbnailKey);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory_image WHERE id = ?", Integer.class, image))
+                .isEqualTo(1);
     }
 
     @Test
@@ -360,7 +362,7 @@ class MemoryImageIntegrationTest {
         clock.advance(Duration.ofDays(3));
 
         // when
-        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredRowsThenObjects();
+        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
 
         // then
         assertThat(result.deletedRows()).isEqualTo(1);

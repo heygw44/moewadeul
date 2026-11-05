@@ -118,7 +118,8 @@ final class NotificationTemplates {
                 ProgramEvents.APPLICATION_CANCELED,
                 "행사 신청 취소",
                 body,
-                programLink(payload.programId())));
+                programLink(payload.programId()),
+                payload.reason().equals("PROGRAM_CANCELED")));
     }
 
     static List<NotificationDraft> programApplicationExpired(ProgramEvents.ApplicationPayload payload) {
@@ -127,7 +128,8 @@ final class NotificationTemplates {
                 ProgramEvents.APPLICATION_EXPIRED,
                 "행사 신청 만료",
                 "결제 기한이 지나 행사 신청이 취소됐어요.",
-                programLink(payload.programId())));
+                programLink(payload.programId()),
+                true));
     }
 
     static List<NotificationDraft> programSeatReleased(ProgramEvents.SeatReleasedPayload payload) {

@@ -72,7 +72,7 @@ class BasecampDetailApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-12][NFR-11] 비로그인 요청자는 기본 정보와 멤버의 닉네임·역할만 보고, 연락 수단과 프로필 요약 필드는 없다")
+    @DisplayName("[F-12][NFR-11][SF-01] 비로그인 요청자는 기본 정보와 멤버의 닉네임·역할만 보고, 연락 수단과 프로필 요약 필드는 없다")
     void anonymousSeesOnlyNicknames() {
         // given
         long id = confirmedBasecampWithContact();
@@ -96,7 +96,11 @@ class BasecampDetailApiIntegrationTest {
         assertThat(result).bodyJson().extractingPath("$.leader.nickname").isEqualTo(leader.getNickname());
         assertThat(result).bodyJson().extractingPath("$.members[0].role").isEqualTo("LEADER");
         assertThat(result).bodyJson().extractingPath("$.members[1].nickname").isEqualTo(member.getNickname());
-        assertThat(result).bodyJson().extractingPath("$.safetyNotice").isNotNull();
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.safetyNotice")
+                .asString()
+                .contains("플랫폼 밖 송금 요구는 신고해 주세요");
         assertThat(result).bodyJson().doesNotHavePath("$.contactInfo");
         assertThat(result).bodyJson().doesNotHavePath("$.leader.trustLevel");
         assertThat(result).bodyJson().doesNotHavePath("$.members[0].ageGroup");
@@ -109,7 +113,7 @@ class BasecampDetailApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-12][NFR-11] 로그인한 회원은 멤버의 본인확인 연령대·성별과 신뢰 단계를 보지만 연락 수단은 못 본다")
+    @DisplayName("[F-12][NFR-11][BC-24] 로그인한 회원은 멤버의 본인확인 연령대·성별과 신뢰 단계를 보지만 연락 수단은 못 본다")
     void loggedInOutsiderSeesProfilesButNoContact() {
         // given
         long id = confirmedBasecampWithContact();
@@ -142,6 +146,20 @@ class BasecampDetailApiIntegrationTest {
                 .extractingPath("$.members[0].completedCompanions")
                 .isEqualTo(0);
         assertThat(result).bodyJson().extractingPath("$.members[1].gender").isEqualTo("MALE");
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.members[0]")
+                .asMap()
+                .containsOnlyKeys(
+                        "memberId",
+                        "nickname",
+                        "role",
+                        "ageGroup",
+                        "ageGroupVerified",
+                        "gender",
+                        "genderVerified",
+                        "trustLevel",
+                        "completedCompanions");
         assertThat(result).bodyJson().doesNotHavePath("$.contactInfo");
         assertThat(result).bodyJson().extractingPath("$.safetyNotice").isNotNull();
         assertNoEmailOrBirthYear(result);

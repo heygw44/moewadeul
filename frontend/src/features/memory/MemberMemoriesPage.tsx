@@ -12,7 +12,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useDelayedFlag } from '../../components/useDelayedFlag';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { useDocumentTitle } from '../../components/useDocumentTitle';
-import { useSession } from '../../app/session/session';
+import { useViewerEpoch } from '../../app/session/useViewerEpoch';
 import type { MemoryCellItem } from './memoryItems';
 import { MemoryMapGrid } from './MemoryMapGrid';
 
@@ -21,14 +21,12 @@ type LoadResult =
   | { memberId: number; attempt: number; error: unknown };
 
 export function MemberMemoriesPage({ memberId }: { memberId: number }) {
-  const session = useSession();
+  const viewerEpoch = useViewerEpoch();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
   const [nickname, setNickname] = useState<{ memberId: number; value: string } | null>(null);
-  const sessionReady = session.status !== 'loading';
 
   useEffect(() => {
-    if (!sessionReady) return;
     const controller = new AbortController();
     fetchMemberMemories(memberId, controller.signal).then(
       (memories) => {
@@ -39,7 +37,7 @@ export function MemberMemoriesPage({ memberId }: { memberId: number }) {
       },
     );
     return () => controller.abort();
-  }, [memberId, attempt, sessionReady]);
+  }, [memberId, attempt, viewerEpoch]);
 
   useEffect(() => {
     const controller = new AbortController();

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { hideCommunityComment } from '../../api/admin';
 import { createComment, deleteComment, listComments, updateComment } from '../../api/community';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
@@ -18,6 +19,7 @@ import { formatKstDateTime, formatRelativeKst } from '../../lib/datetime';
 import { withNext } from '../../app/session/nextPath';
 import { UnverifiedNote } from '../../app/session/GatedButton';
 import { useSession } from '../../app/session/session';
+import { AdminHideDialog } from './AdminHideDialog';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import type { CommunityReportTarget } from './CommunityReportDialog';
 
@@ -39,6 +41,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [reporting, setReporting] = useState<CommunityReportTarget | null>(null);
+  const [adminHiding, setAdminHiding] = useState<{ commentId: number; nickname: string } | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [idempotentRunner] = useState(createIdempotentRunner);
   const showSkeleton = useDelayedFlag(list === null);
@@ -116,6 +119,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                 }}
                 onDelete={setDeleting}
                 onReport={(id) => setReporting({ type: 'comment', id })}
+                onAdminHide={setAdminHiding}
                 replying={replyingId === comment.commentId}
                 onReply={() => {
                   setStatus(null);
@@ -149,6 +153,7 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
                         }}
                         onDelete={setDeleting}
                         onReport={(id) => setReporting({ type: 'comment', id })}
+                        onAdminHide={setAdminHiding}
                         replying={replyingId === reply.commentId}
                         onReply={() => {
                           setStatus(null);
@@ -194,6 +199,18 @@ export function CommunityComments({ postId, count, onChanged }: CommunityComment
           }}
         />
       )}
+      {adminHiding !== null && (
+        <AdminHideDialog
+          noun="댓글"
+          nickname={adminHiding.nickname}
+          hide={() => hideCommunityComment(adminHiding.commentId)}
+          onClose={() => setAdminHiding(null)}
+          onHidden={() => {
+            setAdminHiding(null);
+            refreshAfterChange('댓글을 숨겼어요. 관리자 화면의 커뮤니티 검토 숨김 탭에서 복구할 수 있어요.');
+          }}
+        />
+      )}
       {reporting && <CommunityReportDialog target={reporting} onClose={() => setReporting(null)} />}
     </section>
   );
@@ -226,6 +243,7 @@ type CommentItemProps = {
   onSaveEdit: (commentId: number, content: string) => Promise<void>;
   onDelete: (commentId: number) => void;
   onReport: (commentId: number) => void;
+  onAdminHide: (target: { commentId: number; nickname: string }) => void;
   replying?: boolean;
   onReply?: () => void;
   onCancelReply?: () => void;
@@ -241,6 +259,7 @@ function CommentItem({
   onSaveEdit,
   onDelete,
   onReport,
+  onAdminHide,
   replying = false,
   onReply,
   onCancelReply,
@@ -255,6 +274,7 @@ function CommentItem({
   const signedIn = session.status === 'authenticated' && session.me !== null;
   const unverified = signedIn && session.me?.status === 'UNVERIFIED';
   const mine = myMemberId !== null && comment.author?.memberId === myMemberId;
+  const isAdmin = signedIn && session.me?.role === 'ADMIN';
   const content = comment.content ?? '';
 
   if (editingId === comment.commentId) {
@@ -326,6 +346,17 @@ function CommentItem({
               신고
             </Button>
           )
+        )}
+        {isAdmin && (
+          <Button
+            variant="danger-outline"
+            onClick={() =>
+              onAdminHide({ commentId: comment.commentId, nickname: comment.author?.nickname ?? '작성자' })
+            }
+            className="px-2"
+          >
+            관리자 숨기기
+          </Button>
         )}
       </div>
       {replying && onSubmitReply && (

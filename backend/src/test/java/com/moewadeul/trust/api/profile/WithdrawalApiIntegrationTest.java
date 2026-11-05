@@ -288,7 +288,7 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-11][PV-05] CI 해시가 남아 있는 동안 같은 사람이 다른 계정으로 본인확인하면 409 IDENTITY_CI_DUPLICATED이다")
+    @DisplayName("[F-11][PV-05][ID-05] CI 해시가 남아 있는 동안 같은 사람이 다른 계정으로 본인확인하면 409 IDENTITY_CI_DUPLICATED이다")
     void sameIdentityCannotVerifyWhileCiIsRetained() {
         Member first = saveActiveMember();
         String demoKey = "same-person-" + TestSequence.next();
@@ -305,7 +305,7 @@ class WithdrawalApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-11][PV-05] CI 보관 기한이 지나 정리 작업이 행을 지우면 같은 사람이 다른 계정으로 본인확인할 수 있다")
+    @DisplayName("[F-11][PV-05][ID-05] CI 보관 기한이 지나 정리 작업이 행을 지우면 같은 사람이 다른 계정으로 본인확인할 수 있다")
     void sameIdentityCanVerifyAfterCiRetentionCleanup() {
         Member first = saveActiveMember();
         String demoKey = "same-person-" + TestSequence.next();

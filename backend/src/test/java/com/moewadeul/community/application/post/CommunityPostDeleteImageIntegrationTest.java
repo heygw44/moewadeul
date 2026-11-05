@@ -73,7 +73,7 @@ class CommunityPostDeleteImageIntegrationTest {
         assertThat(unattachedImageIds()).containsExactlyInAnyOrderElementsOf(imageIds);
 
         clock.advance(CommunityImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
-        cleanupService.deleteExpiredRowsThenObjects();
+        cleanupService.deleteExpiredObjectsThenRows();
         assertThat(unattachedImageIds()).isEmpty();
     }
 

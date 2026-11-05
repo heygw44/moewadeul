@@ -5,6 +5,7 @@ import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -95,7 +96,7 @@ class AdminProgramControllerTest {
     @Test
     @DisplayName("[F-17] 행사 등록은 로그인한 관리자 ID로 서비스를 부르고 201과 programId를 응답한다")
     void createProgramReturnsCreated() {
-        when(programAdminService.create(eq(ADMIN_ID), any(ProgramCreateCommand.class)))
+        when(programAdminService.createOnce(eq(ADMIN_ID), eq("key-1"), any(ProgramCreateCommand.class)))
                 .thenReturn(31L);
 
         MvcTestResult result = post(admin(), PROGRAMS, validCreateBody());
@@ -103,7 +104,7 @@ class AdminProgramControllerTest {
         assertThat(result).hasStatus(HttpStatus.CREATED);
         assertThat(result).bodyJson().extractingPath("$.programId").isEqualTo(31);
         ArgumentCaptor<ProgramCreateCommand> captor = ArgumentCaptor.forClass(ProgramCreateCommand.class);
-        verify(programAdminService).create(eq(ADMIN_ID), captor.capture());
+        verify(programAdminService).createOnce(eq(ADMIN_ID), eq("key-1"), captor.capture());
         assertThat(captor.getValue().capacity()).isEqualTo(200);
         assertThat(captor.getValue().paymentDeadlineMinutes()).isNull();
         assertThat(captor.getValue().applyOpenAt()).isEqualTo(Instant.parse("2026-11-01T01:00:00Z"));
@@ -135,7 +136,7 @@ class AdminProgramControllerTest {
     @Test
     @DisplayName("[F-17] 서비스가 던진 INVALID_INPUT은 400으로 응답한다")
     void createProgramMapsInvalidInput() {
-        when(programAdminService.create(anyLong(), any(ProgramCreateCommand.class)))
+        when(programAdminService.createOnce(anyLong(), anyString(), any(ProgramCreateCommand.class)))
                 .thenThrow(new BusinessException(CommonErrorCode.INVALID_INPUT, "시각 순서가 틀립니다."));
 
         MvcTestResult result = post(admin(), PROGRAMS, validCreateBody());
@@ -305,7 +306,10 @@ class AdminProgramControllerTest {
         if (body == null) {
             return request.exchange();
         }
-        return request.contentType(MediaType.APPLICATION_JSON).content(body).exchange();
+        return request.header("Idempotency-Key", "key-1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .exchange();
     }
 
     private MvcTestResult patch(RequestPostProcessor login, String path, String body) {

@@ -156,6 +156,9 @@ public class Program {
         if (status == ProgramStatus.CANCELED) {
             throw new BusinessException(ProgramErrorCode.PROGRAM_INVALID_STATE);
         }
+        if (!now.isBefore(endAt)) {
+            throw new BusinessException(ProgramErrorCode.PROGRAM_ENDED);
+        }
         this.status = ProgramStatus.CANCELED;
         this.updatedAt = now;
     }
