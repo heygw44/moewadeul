@@ -615,23 +615,28 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-20] 한꺼번에 생기는 메일이 밀려 있어도 뒤에 생긴 개별 메일이 먼저 나간다")
-    void individualMailOvertakesBulkBacklog() {
+    @DisplayName("[F-20][PG-07] 행사 취소로 생긴 취소 메일이 밀려 있어도 회원 한 명의 신청 취소와 빈자리 메일이 먼저 나간다")
+    void individualMailOvertakesProgramCancelBacklog() {
         // given
-        List<Long> subscribers = saveActiveMembers(properties.batchSize() + 5);
-        record(SEAT_RELEASED, 7L, Map.of("programId", 7L, "memberIds", subscribers));
+        List<Long> applicants = saveActiveMembers(properties.batchSize() + 1);
+        for (Long applicantId : applicants) {
+            recordProgramApplicationCanceled(applicantId, "PROGRAM_CANCELED", true);
+        }
         publisher.publishPending(OutboxLane.DEFAULT);
-        Member applicant = saveActiveMember();
-        recordApproved(applicant.getId(), 3L);
+        Member canceledByThemself = saveActiveMember();
+        recordProgramApplicationCanceled(canceledByThemself.getId(), "USER", true);
+        Member waiting = saveActiveMember();
+        record(SEAT_RELEASED, 7L, Map.of("programId", 7L, "memberIds", List.of(waiting.getId())));
         publisher.publishPending(OutboxLane.DEFAULT);
 
         // when
         mailer.sendDue();
 
         // then
-        assertThat(mailSender.sent().getFirst().to()).isEqualTo(applicant.getEmail());
-        assertThat(mailSender.sent()).hasSize(properties.batchSize());
-        assertThat(countByEmailStatus("PENDING")).isEqualTo(6);
+        assertThat(mailSender.sent().subList(0, 2))
+                .extracting(MailMessage::to)
+                .containsExactly(canceledByThemself.getEmail(), waiting.getEmail());
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(3);
     }
 
     @Test
@@ -777,6 +782,23 @@ class NotificationMailIntegrationTest {
 
     private void recordConfirmed(long basecampId, List<Long> memberIds) {
         record(CONFIRMED, basecampId, Map.of("basecampId", basecampId, "memberIds", memberIds));
+    }
+
+    private void recordProgramApplicationCanceled(long memberId, String reason, boolean refunded) {
+        record(
+                "PROGRAM_APPLICATION_CANCELED",
+                memberId,
+                Map.of(
+                        "applicationId",
+                        memberId,
+                        "memberId",
+                        memberId,
+                        "programId",
+                        7L,
+                        "reason",
+                        reason,
+                        "refunded",
+                        refunded));
     }
 
     private void record(String eventType, long aggregateId, Map<String, Object> payload) {
