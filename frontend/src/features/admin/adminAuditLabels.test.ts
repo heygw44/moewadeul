@@ -105,8 +105,9 @@ describe('감사 기록 detail 요약', () => {
     ]);
   });
 
-  it('신고만 화면 주소가 있다', () => {
+  it('신고와 행사만 화면 주소가 있다', () => {
     expect(auditTargetPath('MEMBER_REPORT', 5)).toBe('/admin/reports/5');
-    expect(auditTargetPath('PROGRAM', 5)).toBeNull();
+    expect(auditTargetPath('PROGRAM', 5)).toBe('/admin/programs/5/applications');
+    expect(auditTargetPath('SPOT', 5)).toBeNull();
   });
 });

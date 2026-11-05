@@ -147,21 +147,23 @@ describe('관리자 감사 기록 화면', () => {
     expect(items[1]?.textContent).toContain('취소된 신청: 3건');
   });
 
-  it('신고 대상만 신고 상세로 가는 링크이고, 화면이 없는 대상은 글자만 보인다', async () => {
+  it('신고는 신고 상세로, 행사는 신청자 목록으로 가는 링크이고, 화면이 없는 대상은 글자만 보인다', async () => {
     respond = () =>
       json(
         200,
         pageOf([
           log({ auditLogId: 2, targetType: 'MEMBER_REPORT', targetId: 5 }),
           log({ auditLogId: 1, action: 'PROGRAM_CREATE', targetType: 'PROGRAM', targetId: 9 }),
+          log({ auditLogId: 3, action: 'SPOT_HIDE', targetType: 'SPOT', targetId: 4 }),
         ]),
       );
     await render();
 
     const links = [...container.querySelectorAll('a')].map((el) => [el.textContent, el.getAttribute('href')]);
     expect(links).toContainEqual(['신고 5번', '/admin/reports/5']);
-    expect(links.some(([label]) => label === '행사 9번')).toBe(false);
-    expect(text()).toContain('행사 9번');
+    expect(links).toContainEqual(['행사 9번', '/admin/programs/9/applications']);
+    expect(links.some(([label]) => label === '박지 4번')).toBe(false);
+    expect(text()).toContain('박지 4번');
   });
 
   it('모르는 detail 키는 키 이름으로, 중첩 값은 한 줄 JSON으로 보인다', async () => {

@@ -40,7 +40,6 @@ export const AUDIT_TARGET_TYPES: readonly AdminAuditTargetType[] = [
   'SYNC_JOB_RUN',
 ];
 
-// 화면이 있는 대상만 주소를 가진다. 화면이 생기면 이 표에 한 줄을 더한다.
 const AUDIT_TARGET_PATHS: Record<AdminAuditTargetType, ((targetId: number) => string) | null> = {
   MEMBER_REPORT: (targetId) => `/admin/reports/${targetId}`,
   SANCTION: null,
@@ -48,7 +47,7 @@ const AUDIT_TARGET_PATHS: Record<AdminAuditTargetType, ((targetId: number) => st
   COMMUNITY_POST: null,
   COMMUNITY_COMMENT: null,
   MEMORY: null,
-  PROGRAM: null,
+  PROGRAM: (targetId) => `/admin/programs/${targetId}/applications`,
   SYNC_JOB_RUN: null,
 };
 

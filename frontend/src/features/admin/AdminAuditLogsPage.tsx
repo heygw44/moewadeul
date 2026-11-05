@@ -80,7 +80,6 @@ function AuditLogList() {
 
   return (
     <section className="flex flex-col gap-4" aria-label="감사 기록">
-      <p className="text-base text-ink-muted">관리자가 한 모든 조치가 최근 순서로 남아요.</p>
       <form className="flex flex-wrap items-start gap-3" aria-label="기록 조건" onSubmit={submit} noValidate>
         <SelectField
           className="w-full sm:w-52"
