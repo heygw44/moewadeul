@@ -57,6 +57,13 @@ public class OutboxPublisher {
         return processed;
     }
 
+    public void releaseLeasesOfPreviousRun() {
+        int released = store.releaseLeasesOfPreviousRun();
+        if (released > 0) {
+            log.warn("outbox leases of previous run released count={}", released);
+        }
+    }
+
     private void releaseUnprocessed(OutboxEventStore.Claim claim, int processed) {
         List<Long> unprocessedIds = claim
                 .messages()

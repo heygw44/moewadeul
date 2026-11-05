@@ -44,6 +44,11 @@ public class OutboxEventStore {
     }
 
     @Transactional
+    public int releaseLeasesOfPreviousRun() {
+        return mapper.releaseFirstAttemptLeases(clock.instant());
+    }
+
+    @Transactional
     public void markPublished(long eventId, Instant leaseUntil) {
         int updated = mapper.markPublished(eventId, leaseUntil, clock.instant());
         if (updated == 0) {
