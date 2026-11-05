@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { ApiError } from './client';
 import { createIdempotentRunner } from './idempotency';
 
-function sender(...outcomes: Array<'ok' | 'network' | 'timeout' | 'inProgress' | 'business'>) {
+function sender(
+  ...outcomes: Array<
+    'ok' | 'network' | 'timeout' | 'inProgress' | 'business' | 'badGateway' | 'gatewayTimeout' | 'unavailable'
+  >
+) {
   const keys: string[] = [];
   const send = async (key: string) => {
     keys.push(key);
@@ -10,6 +14,9 @@ function sender(...outcomes: Array<'ok' | 'network' | 'timeout' | 'inProgress' |
     if (outcome === 'network') throw new ApiError(0, 'NETWORK_ERROR', null);
     if (outcome === 'timeout') throw new ApiError(0, 'REQUEST_TIMEOUT', null);
     if (outcome === 'inProgress') throw new ApiError(409, 'IDEMPOTENCY_IN_PROGRESS', null);
+    if (outcome === 'badGateway') throw new ApiError(502, 'INTERNAL_ERROR', null);
+    if (outcome === 'gatewayTimeout') throw new ApiError(504, 'INTERNAL_ERROR', null);
+    if (outcome === 'unavailable') throw new ApiError(503, 'RESOURCE_BUSY', null);
     if (outcome === 'business') throw new ApiError(409, 'SOLO_TRIP_OVERLAP', null);
     return { id: keys.length };
   };
@@ -46,6 +53,29 @@ describe('createIdempotentRunner', () => {
     await runner.run({ title: '가' }, send);
 
     expect(keys[1]).toBe(keys[0]);
+  });
+
+  it.each([
+    ['502', 'badGateway'],
+    ['504', 'gatewayTimeout'],
+  ] as const)('앞단이 %s를 돌려준 뒤 같은 내용으로 다시 보내면 같은 키를 쓴다', async (_status, outcome) => {
+    const runner = createIdempotentRunner();
+    const { keys, send } = sender(outcome, 'ok');
+
+    await expect(runner.run({ title: '가' }, send)).rejects.toBeInstanceOf(ApiError);
+    await runner.run({ title: '가' }, send);
+
+    expect(keys[1]).toBe(keys[0]);
+  });
+
+  it('서버가 처리하지 못했다고 밝힌 503 뒤에는 새 키를 쓴다', async () => {
+    const runner = createIdempotentRunner();
+    const { keys, send } = sender('unavailable', 'ok');
+
+    await expect(runner.run({ title: '가' }, send)).rejects.toMatchObject({ status: 503 });
+    await runner.run({ title: '가' }, send);
+
+    expect(keys[1]).not.toBe(keys[0]);
   });
 
   it('응답을 받지 못한 뒤 내용을 고쳐 보내면 새 키를 쓴다', async () => {
