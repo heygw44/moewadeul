@@ -39,6 +39,12 @@ public class EmailSendIpLimiter {
         return summarizeSentByIp(requestIp, Instant.now(clock));
     }
 
+    @Transactional(readOnly = true)
+    public SendWindow peekSendsByIp(String requestIp) {
+        requireRequestIp(requestIp);
+        return summarizeSentByIp(requestIp, Instant.now(clock));
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     public void recordDuplicateSignup(String requestIp) {
         signupDuplicateAttemptMapper.insert(requestIp, Instant.now(clock));
