@@ -171,6 +171,27 @@ class AdminMemoryReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-33][MM-11] 숨김 목록은 가장 최근에 숨긴 기록부터 나오고, 검토 대기 목록은 그대로 오래된 순이다")
+    void hiddenListShowsLatestFirst() {
+        // given
+        long oldHidden = insertMemory("PUBLIC", "HIDDEN", BASE);
+        long midHidden = insertMemory("PUBLIC", "HIDDEN", BASE.plus(Duration.ofHours(1)));
+        long newHidden = insertMemory("PUBLIC", "HIDDEN", BASE.plus(Duration.ofHours(2)));
+        long oldPending = insertMemory("PUBLIC", "PENDING_REVIEW", BASE);
+        long newPending = insertMemory("PUBLIC", "PENDING_REVIEW", BASE.plus(Duration.ofHours(1)));
+
+        // when
+        MvcTestResult hiddenFirstPage = get(MEMORIES + "?status=HIDDEN&size=2");
+
+        // then
+        assertThat(ids(hiddenFirstPage, "$.content[*].memoryId")).containsExactly(newHidden, midHidden);
+        assertThat(hiddenFirstPage).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertThat(ids(get(MEMORIES + "?status=HIDDEN"), "$.content[*].memoryId"))
+                .containsExactly(newHidden, midHidden, oldHidden);
+        assertThat(ids(get(MEMORIES), "$.content[*].memoryId")).containsExactly(oldPending, newPending);
+    }
+
+    @Test
     @DisplayName("[F-33][MM-11] 검토 대기 기록을 숨기면 HIDDEN이 되고 감사 로그 한 줄이 남으며 detail에 글과 신고 내용이 없다")
     void hideWritesAuditLog() {
         // given

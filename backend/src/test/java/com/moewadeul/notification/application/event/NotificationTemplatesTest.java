@@ -89,7 +89,7 @@ class NotificationTemplatesTest {
     }
 
     @Test
-    @DisplayName("[F-20] 베이스캠프 확정 알림은 멤버 전원에게 가고 안전 수칙을 한 건에 함께 담는다")
+    @DisplayName("[F-20][SF-04] 베이스캠프 확정 알림은 멤버 전원에게 가고 안전 수칙을 한 건에 함께 담는다")
     void confirmedNotifiesAllMembersWithSafetyRules() {
         // given
         BasecampEvents.MembersPayload payload = new BasecampEvents.MembersPayload(BASECAMP_ID, List.of(1L, 2L, 3L));
@@ -102,7 +102,12 @@ class NotificationTemplatesTest {
         assertThat(drafts).allSatisfy(draft -> {
             assertThat(draft.type()).isEqualTo("BASECAMP_CONFIRMED");
             assertThat(draft.title()).isEqualTo("베이스캠프 확정");
-            assertThat(draft.body()).contains("확정됐어요").contains("안전 수칙");
+            assertThat(draft.body())
+                    .contains("확정됐어요")
+                    .contains("안전 수칙")
+                    .contains("가족이나 지인과 공유")
+                    .contains("일행과 떨어지지")
+                    .contains("흔적을 남기지");
             assertThat(draft.link()).isEqualTo("/basecamps/30");
         });
     }
@@ -257,20 +262,21 @@ class NotificationTemplatesTest {
 
     @ParameterizedTest
     @CsvSource({
-        "USER, false, 행사 신청을 취소했어요.",
-        "USER, true, 행사 신청을 취소했어요. 결제한 금액은 환불돼요.",
-        "PROGRAM_CANCELED, false, 행사가 취소돼 신청도 취소됐어요.",
-        "PROGRAM_CANCELED, true, 행사가 취소돼 신청도 취소됐어요. 결제한 금액은 환불돼요.",
-        "SANCTIONED, false, 이용 제재로 행사 신청이 취소됐어요."
+        "USER, false, 행사 신청을 취소했어요., false",
+        "USER, true, 행사 신청을 취소했어요. 결제한 금액은 환불돼요., false",
+        "PROGRAM_CANCELED, false, 행사가 취소돼 신청도 취소됐어요., true",
+        "PROGRAM_CANCELED, true, 행사가 취소돼 신청도 취소됐어요. 결제한 금액은 환불돼요., true",
+        "SANCTIONED, false, 이용 제재로 행사 신청이 취소됐어요., false"
     })
-    @DisplayName("[F-19][F-20] 행사 신청 취소 알림 본문은 취소 사유로 나뉘고, 환불했으면 환불 문장이 붙는다")
-    void programApplicationCanceledBodyDependsOnReasonAndRefund(String reason, boolean refunded, String body) {
+    @DisplayName("[F-19][F-20] 행사 신청 취소 알림 본문은 취소 사유로 나뉘고, 환불했으면 환불 문장이 붙고, 행사 취소로 생긴 것만 대량 메일이다")
+    void programApplicationCanceledBodyDependsOnReasonAndRefund(
+            String reason, boolean refunded, String body, boolean bulkEmail) {
         List<NotificationDraft> drafts = NotificationTemplates.programApplicationCanceled(
                 new ProgramEvents.CanceledPayload(1L, 2L, 9L, reason, refunded));
 
         assertThat(drafts)
-                .containsExactly(
-                        new NotificationDraft(2L, "PROGRAM_APPLICATION_CANCELED", "행사 신청 취소", body, "/programs/9"));
+                .containsExactly(new NotificationDraft(
+                        2L, "PROGRAM_APPLICATION_CANCELED", "행사 신청 취소", body, "/programs/9", bulkEmail));
     }
 
     @Test
@@ -289,7 +295,7 @@ class NotificationTemplatesTest {
 
         assertThat(drafts)
                 .containsExactly(new NotificationDraft(
-                        2L, "PROGRAM_APPLICATION_EXPIRED", "행사 신청 만료", "결제 기한이 지나 행사 신청이 취소됐어요.", "/programs/9"));
+                        2L, "PROGRAM_APPLICATION_EXPIRED", "행사 신청 만료", "결제 기한이 지나 행사 신청이 취소됐어요.", "/programs/9", true));
     }
 
     @Test

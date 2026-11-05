@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { hideCommunityPost } from '../../api/admin';
 import { deletePost, getPost, likePost, unlikePost } from '../../api/community';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
@@ -17,9 +18,12 @@ import { formatKstDateTime, formatRelativeKst } from '../../lib/datetime';
 import { withNext } from '../../app/session/nextPath';
 import { useSession } from '../../app/session/session';
 import { useViewerEpoch } from '../../app/session/useViewerEpoch';
+import { AdminHideDialog } from './AdminHideDialog';
 import { CommunityComments } from './CommunityComments';
 import { CommunityReportDialog } from './CommunityReportDialog';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
+
+const ADMIN_HIDDEN_POSTS_PATH = '/admin/community?kind=post&tab=hidden';
 
 type LoadResult = { postId: number; post: CommunityPostDetail } | { postId: number; error: unknown };
 
@@ -183,6 +187,8 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
   const mine = signedIn && session.me?.memberId === post.author.memberId;
   const [deleting, setDeleting] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [hiding, setHiding] = useState(false);
+  const isAdmin = signedIn && session.me?.role === 'ADMIN';
 
   if (!signedIn) return null;
   return (
@@ -200,6 +206,20 @@ function PostActions({ post }: { post: CommunityPostDetail }) {
         <Button variant="ghost" onClick={() => setReporting(true)} disabled={unverified}>
           신고
         </Button>
+      )}
+      {isAdmin && (
+        <Button variant="danger-outline" onClick={() => setHiding(true)}>
+          관리자 숨기기
+        </Button>
+      )}
+      {hiding && (
+        <AdminHideDialog
+          noun="글"
+          nickname={post.author.nickname}
+          hide={() => hideCommunityPost(post.postId)}
+          onClose={() => setHiding(false)}
+          onHidden={() => navigate(ADMIN_HIDDEN_POSTS_PATH)}
+        />
       )}
       {deleting && <DeletePostDialog postId={post.postId} onClose={() => setDeleting(false)} />}
       {reporting && (

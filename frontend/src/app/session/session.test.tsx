@@ -94,7 +94,7 @@ describe('SessionProvider', () => {
     );
 
     await mount();
-    await advance(14_999);
+    await advance(29_999);
     expect(probe()).toBe('loading');
     await advance(1);
 

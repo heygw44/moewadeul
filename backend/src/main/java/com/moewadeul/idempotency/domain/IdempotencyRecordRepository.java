@@ -1,5 +1,6 @@
 package com.moewadeul.idempotency.domain;
 
+import java.time.Instant;
 import java.util.Optional;
 
 public interface IdempotencyRecordRepository {
@@ -10,5 +11,9 @@ public interface IdempotencyRecordRepository {
 
     Optional<IdempotencyRecord> findById(IdempotencyRecordId id);
 
-    void deleteById(IdempotencyRecordId id);
+    Optional<IdempotencyRecord> findByIdForUpdate(IdempotencyRecordId id);
+
+    int takeOverClaim(long memberId, String idempotencyKey, Instant claimedAt, Instant now);
+
+    int releaseClaim(long memberId, String idempotencyKey, Instant claimedAt);
 }
