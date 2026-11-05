@@ -386,6 +386,32 @@ class NotificationMailIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-20] 앱이 죽어 임대만 남은 메일은 다시 뜰 때 풀려 바로 나가고, 실패해 재시도를 기다리는 메일의 간격은 그대로 둔다")
+    void restartReleasesLeasesOfDeadRunButKeepsRetryDelay() {
+        // given
+        Member applicant = saveActiveMember();
+        recordApproved(applicant.getId(), 3L);
+        publisher.publishPending(OutboxLane.DEFAULT);
+        long leasedByDeadRun = jdbcTemplate.queryForObject("SELECT id FROM notification", Long.class);
+        assertThat(mailStore.claim(clock.instant()).targets()).hasSize(1);
+        Member other = saveActiveMember();
+        recordApproved(other.getId(), 4L);
+        publisher.publishPending(OutboxLane.DEFAULT);
+        jdbcTemplate.update(
+                "UPDATE notification SET email_attempt_count = 1, email_next_attempt_at = ? WHERE id <> ?",
+                java.sql.Timestamp.from(clock.instant().plus(properties.lease())),
+                leasedByDeadRun);
+
+        // when
+        mailer.releaseLeasesOfPreviousRun();
+        int sent = mailer.sendDue();
+
+        // then
+        assertThat(sent).isEqualTo(1);
+        assertThat(mailSender.sent()).extracting(MailMessage::to).containsExactly(applicant.getEmail());
+    }
+
+    @Test
     @DisplayName("[F-20] 발송 작업이 집은 메일은 임대가 끝나기 전에는 다른 발송 작업이 다시 집지 않는다")
     void claimedMailIsNotClaimedAgainBeforeLeaseEnds() {
         // given
