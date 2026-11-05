@@ -228,7 +228,7 @@ function ProgramForm(props: ProgramFormProps) {
           label="정원 (명)"
           inputMode="numeric"
           autoComplete="off"
-          hint="신청이 시작된 뒤에는 정원을 줄일 수 없어요. 늘리는 건 괜찮아요."
+          hint={isCreate ? undefined : '신청이 시작된 뒤에는 정원을 줄일 수 없어요. 늘리는 건 괜찮아요.'}
           {...textProps('capacity')}
         />
         <TextField
@@ -254,7 +254,7 @@ function ProgramForm(props: ProgramFormProps) {
           name="overnight"
           checked={values.overnight}
           disabled={submitting}
-          hint="숙박 행사는 신뢰 단계 1 이상인 회원만 신청할 수 있어요."
+          hint="숙박 행사는 본인확인을 마친 회원만 신청할 수 있어요."
           onChange={(event) => change('overnight', event.target.checked)}
         />
       </Section>
