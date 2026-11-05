@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, apiFetch } from './client';
 
-const TIMEOUT_MS = 15_000;
-const MUTATION_TIMEOUT_MS = 30_000;
+const TIMEOUT_MS = 30_000;
 
 function abortError() {
   return new DOMException('aborted', 'AbortError');
@@ -38,7 +37,7 @@ describe('apiFetch 제한 시간', () => {
     document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   });
 
-  it('GET은 15초 안에 응답이 없으면 REQUEST_TIMEOUT으로 끝난다', async () => {
+  it('GET은 30초 안에 응답이 없으면 REQUEST_TIMEOUT으로 끝난다', async () => {
     vi.stubGlobal('fetch', fetchThatNeverAnswers());
     let finished = false;
     const result = settle(apiFetch('/api/spots')).then((r) => {
@@ -55,7 +54,7 @@ describe('apiFetch 제한 시간', () => {
     expect(error).toMatchObject({ status: 0, code: 'REQUEST_TIMEOUT' });
   });
 
-  it('GET은 응답 헤더만 오고 본문이 멈춰도 15초 뒤 REQUEST_TIMEOUT으로 끝난다', async () => {
+  it('GET은 응답 헤더만 오고 본문이 멈춰도 30초 뒤 REQUEST_TIMEOUT으로 끝난다', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (_url: string, init?: RequestInit) => ({
@@ -130,7 +129,7 @@ describe('apiFetch 제한 시간', () => {
       return r;
     });
 
-    await vi.advanceTimersByTimeAsync(MUTATION_TIMEOUT_MS - 1);
+    await vi.advanceTimersByTimeAsync(TIMEOUT_MS - 1);
     expect(finished).toBe(false);
 
     await vi.advanceTimersByTimeAsync(1);
