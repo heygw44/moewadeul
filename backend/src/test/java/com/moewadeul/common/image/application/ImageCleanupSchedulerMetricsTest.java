@@ -36,7 +36,7 @@ class ImageCleanupSchedulerMetricsTest {
 
     private void runCleanupReturning(ImageCleanup.Result result) {
         when(cleanup.keyPrefix()).thenReturn("community");
-        when(cleanup.deleteExpiredRowsThenObjects()).thenReturn(result);
+        when(cleanup.deleteExpiredObjectsThenRows()).thenReturn(result);
         MockEnvironment environment =
                 new MockEnvironment().withProperty("moewadeul.community.image-cleanup.cron", "0 10 5 * * *");
         ImageCleanupScheduler scheduler = new ImageCleanupScheduler(

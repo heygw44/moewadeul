@@ -36,7 +36,7 @@ class PasswordResetThrottleCleanupIntegrationTest {
     private MutableClock clock;
 
     @Test
-    @DisplayName("[F-02][PW-05] 마지막 요청이 24시간보다 1초 더 오래된 행은 지운다")
+    @DisplayName("[F-02][PW-05][PV-09] 마지막 요청이 24시간보다 1초 더 오래된 행은 지운다")
     void deletesRowOlderThanStaleAfter() {
         String stale = insertRow(cutoff().minus(ONE_SECOND));
 
@@ -47,7 +47,7 @@ class PasswordResetThrottleCleanupIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-02][PW-05] 마지막 요청이 정확히 24시간 전인 행은 남기고, 24시간이 되기 1초 전인 행도 남긴다")
+    @DisplayName("[F-02][PW-05][PV-09] 마지막 요청이 정확히 24시간 전인 행은 남기고, 24시간이 되기 1초 전인 행도 남긴다")
     void keepsRowNotOlderThanStaleAfter() {
         String exactly = insertRow(cutoff());
         String justUnder = insertRow(cutoff().plus(ONE_SECOND));

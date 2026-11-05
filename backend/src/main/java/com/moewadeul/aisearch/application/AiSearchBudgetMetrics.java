@@ -1,22 +1,22 @@
 package com.moewadeul.aisearch.application;
 
+import com.moewadeul.common.metrics.PolledMetric;
+import com.moewadeul.common.metrics.PolledSnapshot;
 import com.moewadeul.common.time.KoreaTime;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
-@Slf4j
 @Component
-public class AiSearchBudgetMetrics {
+public class AiSearchBudgetMetrics implements PolledMetric {
 
     static final String USED_RATIO_METRIC = "moewadeul.aisearch.budget.used.ratio";
 
     private final AiSearchUsageRecorder usageRecorder;
     private final AiSearchProperties properties;
     private final Clock clock;
+    private final PolledSnapshot<Double> usedRatio;
 
     public AiSearchBudgetMetrics(
             AiSearchUsageRecorder usageRecorder,
@@ -26,17 +26,23 @@ public class AiSearchBudgetMetrics {
         this.usageRecorder = usageRecorder;
         this.properties = properties;
         this.clock = clock;
-        Gauge.builder(USED_RATIO_METRIC, this, AiSearchBudgetMetrics::readUsedRatio)
+        this.usedRatio = new PolledSnapshot<>(this::readUsedRatio, clock);
+        Gauge.builder(USED_RATIO_METRIC, usedRatio, snapshot -> snapshot.read(Double::doubleValue))
                 .description("오늘 AI 검색 비용 / 하루 예산")
                 .register(meterRegistry);
     }
 
+    @Override
+    public String job() {
+        return "ai-search-budget-metrics-refresh";
+    }
+
+    @Override
+    public void refresh() {
+        usedRatio.refresh();
+    }
+
     private double readUsedRatio() {
-        try {
-            return properties.usedRatio(usageRecorder.sumTokens(KoreaTime.today(clock)));
-        } catch (DataAccessException e) {
-            log.warn("ai search budget ratio read failed", e);
-            return Double.NaN;
-        }
+        return properties.usedRatio(usageRecorder.sumTokens(KoreaTime.today(clock)));
     }
 }

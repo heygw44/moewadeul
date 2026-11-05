@@ -11,6 +11,7 @@ public enum ProgramErrorCode implements ErrorCode {
     PROGRAM_PAYMENT_EXPIRED(HttpStatus.CONFLICT, "결제 기한이 지났어요. 남은 자리가 있으면 다시 신청해 주세요."),
     PROGRAM_INVALID_STATE(HttpStatus.CONFLICT, "상태가 바뀌어 지금은 할 수 없어요. 화면을 새로고침해 주세요."),
     PROGRAM_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "취소할 수 있는 기한이 지났어요. 관리자에게 문의해 주세요."),
+    PROGRAM_ENDED(HttpStatus.CONFLICT, "이미 끝난 행사는 취소할 수 없어요. 다녀온 참가자의 신청과 결제 기록은 그대로 남아요."),
     PROGRAM_CAPACITY_DECREASE(HttpStatus.CONFLICT, "신청이 시작된 뒤에는 정원을 줄일 수 없어요. 정원을 늘리거나 그대로 둬 주세요.");
 
     private final HttpStatus httpStatus;

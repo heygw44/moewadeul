@@ -5,7 +5,6 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.UniqueViolations;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.idempotency.domain.IdempotencyRecord;
-import com.moewadeul.idempotency.domain.IdempotencyRecordId;
 import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -85,17 +84,40 @@ public class IdempotencyExecutor {
 
         IdempotencyRecord record = IdempotencyRecord.claim(request.memberId(), key, requestHash, Instant.now(clock));
         if (!tryClaim(record)) {
-            Optional<T> replayed = replayExisting(request.memberId(), key, requestHash, responseType);
-            if (replayed.isPresent()) {
-                return replayed.get();
-            }
-            record = IdempotencyRecord.claim(request.memberId(), key, requestHash, Instant.now(clock));
-            if (!tryClaim(record)) {
-                throw new BusinessException(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS);
+            Optional<IdempotencyRecord> existing = recordRepository.findById(record.getId());
+            if (existing.isEmpty()) {
+                record = IdempotencyRecord.claim(request.memberId(), key, requestHash, Instant.now(clock));
+                if (!tryClaim(record)) {
+                    throw new BusinessException(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS);
+                }
+            } else {
+                IdempotencyRecord found = existing.get();
+                if (!found.matches(requestHash)) {
+                    throw new BusinessException(CommonErrorCode.IDEMPOTENCY_KEY_REUSED);
+                }
+                if (found.isCompleted()) {
+                    return replay(found, responseType);
+                }
+                record = takeOver(found);
             }
         }
+        return runAndComplete(record, successStatus, precheckOutsideTransaction, template, action);
+    }
 
-        return runAndComplete(record, successStatus, request.memberId(), precheckOutsideTransaction, template, action);
+    private IdempotencyRecord takeOver(IdempotencyRecord found) {
+        Instant now = Instant.now(clock);
+        if (!found.isAbandonedAt(now)) {
+            throw new BusinessException(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS);
+        }
+        Instant abandonedClaim = found.getCreatedAt();
+        IdempotencyRecord takenOver = found.takenOverAt(now);
+        Integer updated = transactionTemplate.execute(status -> recordRepository.takeOverClaim(
+                takenOver.getMemberId(), takenOver.getIdempotencyKey(), abandonedClaim, takenOver.getCreatedAt()));
+        if (updated == null || updated == 0) {
+            throw new BusinessException(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS);
+        }
+        log.warn("idempotency claim taken over memberId={} abandonedClaim={}", takenOver.getMemberId(), abandonedClaim);
+        return takenOver;
     }
 
     private String validateKey(String key) {
@@ -142,20 +164,9 @@ public class IdempotencyExecutor {
         }
     }
 
-    private <T> Optional<T> replayExisting(long memberId, String key, String requestHash, Class<T> responseType) {
-        Optional<IdempotencyRecord> existing = recordRepository.findById(new IdempotencyRecordId(memberId, key));
-        if (existing.isEmpty()) {
-            return Optional.empty();
-        }
-        IdempotencyRecord found = existing.get();
-        if (!found.matches(requestHash)) {
-            throw new BusinessException(CommonErrorCode.IDEMPOTENCY_KEY_REUSED);
-        }
-        if (!found.isCompleted()) {
-            throw new BusinessException(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS);
-        }
+    private <T> T replay(IdempotencyRecord completed, Class<T> responseType) {
         try {
-            return Optional.of(jsonMapper.readValue(found.getResponseBody(), responseType));
+            return jsonMapper.readValue(completed.getResponseBody(), responseType);
         } catch (JacksonException e) {
             throw new IllegalStateException("저장된 멱등성 응답을 읽을 수 없습니다. 응답 타입=" + responseType.getName(), e);
         }
@@ -164,7 +175,6 @@ public class IdempotencyExecutor {
     private <T> T runAndComplete(
             IdempotencyRecord record,
             HttpStatus successStatus,
-            long memberId,
             Runnable precheckOutsideTransaction,
             TransactionTemplate template,
             Supplier<T> action) {
@@ -172,7 +182,7 @@ public class IdempotencyExecutor {
             precheckOutsideTransaction.run();
             return template.execute(status -> {
                 T result = action.get();
-                recordCompletion(record, successStatus, result, memberId);
+                recordCompletion(record, successStatus, result);
                 return result;
             });
         } catch (RuntimeException e) {
@@ -183,20 +193,28 @@ public class IdempotencyExecutor {
 
     private void releaseClaim(IdempotencyRecord record, RuntimeException original) {
         try {
-            recordRepository.deleteById(record.getId());
+            transactionTemplate.execute(status -> recordRepository.releaseClaim(
+                    record.getMemberId(), record.getIdempotencyKey(), record.getCreatedAt()));
         } catch (RuntimeException deleteFailure) {
             original.addSuppressed(deleteFailure);
         }
     }
 
-    private <T> void recordCompletion(IdempotencyRecord record, HttpStatus successStatus, T result, long memberId) {
+    // 다른 요청이 선점을 넘겨받았으면 이 요청의 작업을 트랜잭션째 버린다. 그래서 느리게 살아 있던 요청이 있어도 작업은 한 번만 커밋된다.
+    // 행이 없으면 넘겨받은 요청이 실패해 선점을 지운 경우이고, 커밋된 작업이 없으므로 이 요청이 완료해도 된다.
+    private <T> void recordCompletion(IdempotencyRecord record, HttpStatus successStatus, T result) {
         try {
+            recordRepository.findByIdForUpdate(record.getId()).ifPresent(current -> {
+                if (!current.isSameClaim(record)) {
+                    throw new BusinessException(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS);
+                }
+            });
             String body = jsonMapper.writeValueAsString(result);
             recordRepository.save(record.complete(successStatus.value(), body));
         } catch (RuntimeException e) {
             log.error(
                     "idempotency completion record failed memberId={} errorType={}",
-                    memberId,
+                    record.getMemberId(),
                     e.getClass().getName());
             throw e;
         }

@@ -284,7 +284,7 @@ class MemberControllerTest {
     }
 
     @Test
-    @DisplayName("[F-01] 만 14세 확인이 없으면 ageConfirmed 필드 오류로 400을 응답하고 서비스를 부르지 않는다")
+    @DisplayName("[F-01][EV-08] 만 14세 확인이 없으면 ageConfirmed 필드 오류로 400을 응답하고 서비스를 부르지 않는다")
     void missingAgeConfirmedReturnsFieldError() {
         MvcTestResult result = postBody(
                 "{\"email\":\"hiker@example.com\",\"password\":\"%s\",\"passwordConfirm\":\"%s\",\"nickname\":\"hiker\"}"

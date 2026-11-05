@@ -1,7 +1,18 @@
 import { apiFetch } from './client';
 import type {
+  AdminAuditLog,
+  AdminAuditTargetType,
+  AdminCommunityComment,
+  AdminCommunityPost,
+  AdminCommunityStatus,
   AdminMemoryStatus,
   AdminMemorySummary,
+  AdminModerationResultStatus,
+  AdminProgramApplicant,
+  AdminProgramCancelResponse,
+  AdminProgramCreateRequest,
+  AdminProgramDetail,
+  AdminProgramReviseRequest,
   AdminReportActionRequest,
   AdminReportActionResponse,
   AdminReportDetail,
@@ -9,6 +20,7 @@ import type {
   AdminSpotStatus,
   AdminSpotSummary,
   Page,
+  ProgramApplicationStatus,
   ReportStatus,
   SanctionLiftReason,
   SanctionStatus,
@@ -105,4 +117,87 @@ export function fetchSyncJobRuns(
 
 export function startSyncJob(jobType: SyncJobType): Promise<{ jobRunId: number }> {
   return apiFetch('/api/admin/sync-jobs', { method: 'POST', body: { jobType } });
+}
+
+export function fetchAdminCommunityPosts(
+  params: { status: AdminCommunityStatus; page: number },
+  signal?: AbortSignal,
+): Promise<Page<AdminCommunityPost>> {
+  return apiFetch<Page<AdminCommunityPost>>('/api/admin/community/posts', {
+    query: { status: params.status, page: params.page, size: ADMIN_PAGE_SIZE },
+    signal,
+  });
+}
+
+export function hideCommunityPost(postId: number): Promise<{ postId: number; status: AdminModerationResultStatus }> {
+  return apiFetch(`/api/admin/community/posts/${postId}/hide`, { method: 'POST' });
+}
+
+export function restoreCommunityPost(postId: number): Promise<{ postId: number; status: AdminModerationResultStatus }> {
+  return apiFetch(`/api/admin/community/posts/${postId}/restore`, { method: 'POST' });
+}
+
+export function fetchAdminCommunityComments(
+  params: { status: AdminCommunityStatus; page: number },
+  signal?: AbortSignal,
+): Promise<Page<AdminCommunityComment>> {
+  return apiFetch<Page<AdminCommunityComment>>('/api/admin/community/comments', {
+    query: { status: params.status, page: params.page, size: ADMIN_PAGE_SIZE },
+    signal,
+  });
+}
+
+export function hideCommunityComment(
+  commentId: number,
+): Promise<{ commentId: number; status: AdminModerationResultStatus }> {
+  return apiFetch(`/api/admin/community/comments/${commentId}/hide`, { method: 'POST' });
+}
+
+export function restoreCommunityComment(
+  commentId: number,
+): Promise<{ commentId: number; status: AdminModerationResultStatus }> {
+  return apiFetch(`/api/admin/community/comments/${commentId}/restore`, { method: 'POST' });
+}
+
+export function createProgram(
+  request: AdminProgramCreateRequest,
+  idempotencyKey: string,
+): Promise<{ programId: number }> {
+  return apiFetch('/api/admin/programs', { method: 'POST', body: request, idempotencyKey });
+}
+
+export function reviseProgram(programId: number, request: AdminProgramReviseRequest): Promise<AdminProgramDetail> {
+  return apiFetch<AdminProgramDetail>(`/api/admin/programs/${programId}`, { method: 'PATCH', body: request });
+}
+
+export function cancelProgram(programId: number): Promise<AdminProgramCancelResponse> {
+  return apiFetch<AdminProgramCancelResponse>(`/api/admin/programs/${programId}/cancel`, { method: 'POST' });
+}
+
+export function fetchProgramApplicants(
+  programId: number,
+  params: { status?: ProgramApplicationStatus; page: number },
+  signal?: AbortSignal,
+): Promise<Page<AdminProgramApplicant>> {
+  return apiFetch<Page<AdminProgramApplicant>>(`/api/admin/programs/${programId}/applications`, {
+    query: { status: params.status, page: params.page, size: ADMIN_PAGE_SIZE },
+    signal,
+  });
+}
+
+export function fetchAdminAuditLogs(
+  params: { adminId?: number; targetType?: AdminAuditTargetType; from?: string; to?: string; page: number },
+  signal?: AbortSignal,
+): Promise<Page<AdminAuditLog>> {
+  return apiFetch<Page<AdminAuditLog>>('/api/admin/audit-logs', {
+    query: {
+      adminId: params.adminId,
+      targetType: params.targetType,
+      from: params.from,
+      to: params.to,
+      page: params.page,
+      size: ADMIN_PAGE_SIZE,
+    },
+    signal,
+  });
 }

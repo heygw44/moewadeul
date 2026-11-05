@@ -16,12 +16,20 @@ import { lazyPage } from './lazyPage';
 import type { LatLng } from '../map/types';
 import type { RouteDef } from './router';
 
+const AdminProgramApplicationsPage = lazyPage(
+  () => import('../features/admin/AdminProgramApplicationsPage'),
+  'AdminProgramApplicationsPage',
+);
+const AdminProgramFormPage = lazyPage(() => import('../features/admin/AdminProgramFormPage'), 'AdminProgramFormPage');
+const AdminProgramsPage = lazyPage(() => import('../features/admin/AdminProgramsPage'), 'AdminProgramsPage');
 const AdminReportDetailPage = lazyPage(
   () => import('../features/admin/AdminReportDetailPage'),
   'AdminReportDetailPage',
 );
 const AdminReportsPage = lazyPage(() => import('../features/admin/AdminReportsPage'), 'AdminReportsPage');
 const AdminMemoriesPage = lazyPage(() => import('../features/admin/AdminMemoriesPage'), 'AdminMemoriesPage');
+const AdminCommunityPage = lazyPage(() => import('../features/admin/AdminCommunityPage'), 'AdminCommunityPage');
+const AdminAuditLogsPage = lazyPage(() => import('../features/admin/AdminAuditLogsPage'), 'AdminAuditLogsPage');
 const AdminSyncJobsPage = lazyPage(() => import('../features/admin/AdminSyncJobsPage'), 'AdminSyncJobsPage');
 const AdminSpotsPage = lazyPage(() => import('../features/admin/AdminSpotsPage'), 'AdminSpotsPage');
 const CommunityListPage = lazyPage(() => import('../features/community/CommunityListPage'), 'CommunityListPage');
@@ -179,8 +187,40 @@ export const routes: RouteDef[] = [
       return reportId === null ? <NotFoundPage /> : <AdminReportDetailPage key={reportId} reportId={reportId} />;
     },
   },
+  { path: '/admin/programs', render: () => <AdminProgramsPage />, preload: AdminProgramsPage.preload },
+  {
+    path: '/admin/programs/new',
+    preload: AdminProgramFormPage.preload,
+    render: () => <AdminProgramFormPage key="create" mode="create" />,
+  },
+  {
+    path: '/admin/programs/:programId/applications',
+    preload: AdminProgramApplicationsPage.preload,
+    render: (params) => {
+      const programId = toPositiveId(params.programId);
+      return programId === null ? (
+        <NotFoundPage />
+      ) : (
+        <AdminProgramApplicationsPage key={programId} programId={programId} />
+      );
+    },
+  },
+  {
+    path: '/admin/programs/:programId/edit',
+    preload: AdminProgramFormPage.preload,
+    render: (params) => {
+      const programId = toPositiveId(params.programId);
+      return programId === null ? (
+        <NotFoundPage />
+      ) : (
+        <AdminProgramFormPage key={programId} mode="edit" programId={programId} />
+      );
+    },
+  },
   { path: '/admin/spots', render: () => <AdminSpotsPage />, preload: AdminSpotsPage.preload },
   { path: '/admin/memories', render: () => <AdminMemoriesPage />, preload: AdminMemoriesPage.preload },
+  { path: '/admin/community', render: () => <AdminCommunityPage />, preload: AdminCommunityPage.preload },
+  { path: '/admin/audit-logs', render: () => <AdminAuditLogsPage />, preload: AdminAuditLogsPage.preload },
   { path: '/admin/sync-jobs', render: () => <AdminSyncJobsPage />, preload: AdminSyncJobsPage.preload },
   { path: '/privacy', render: () => <PrivacyPolicyPage />, preload: PrivacyPolicyPage.preload },
   { path: '/terms', render: () => <TermsPage />, preload: TermsPage.preload },
