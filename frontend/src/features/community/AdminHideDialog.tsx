@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { UNCONFIRMED_TITLE } from '../../api/errors';
+import { isOutcomeUnknown } from '../../api/idempotency';
 import { Button } from '../../components/Button';
 import { Dialog } from '../../components/Dialog';
 import { ErrorNotice } from '../../components/ErrorNotice';
@@ -37,7 +39,15 @@ export function AdminHideDialog({ noun, nickname, hide, onClose, onHidden }: Adm
         <p className="text-base text-ink">{hideConfirmText(noun, nickname)}</p>
         {error !== null && (
           <div role="alert">
-            <ErrorNotice title={`${noun}을 숨기지 못했어요`} error={error} />
+            {isOutcomeUnknown(error) ? (
+              <ErrorNotice
+                title={UNCONFIRMED_TITLE}
+                error={error}
+                message={`${noun}이 숨겨졌는지 확인하지 못했어요. 화면을 새로 열어 확인해 주세요.`}
+              />
+            ) : (
+              <ErrorNotice title={`${noun}을 숨기지 못했어요`} error={error} />
+            )}
           </div>
         )}
         <div className="flex flex-wrap justify-end gap-2">

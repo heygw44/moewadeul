@@ -66,6 +66,7 @@ public class AdminCommunityQueryService {
         return slice.map(row -> new AdminCommunityCommentSummary(
                 row.commentId(),
                 row.postId(),
+                row.postStatus().name(),
                 row.content(),
                 new AdminCommunityAuthor(row.authorId(), row.authorNickname()),
                 row.status().name(),

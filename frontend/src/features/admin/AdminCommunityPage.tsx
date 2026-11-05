@@ -9,7 +9,7 @@ import {
   restoreCommunityPost,
 } from '../../api/admin';
 import type { AdminCommunityComment, AdminCommunityPost, AdminCommunityStatus, Page } from '../../api/types';
-import { useLocation } from '../../app/router';
+import { navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorNotice } from '../../components/ErrorNotice';
@@ -25,6 +25,8 @@ import type { AdminCommunityItem, ReviewAction } from './adminCommunityLabels';
 import type { CommunityNoun } from '../community/communityLabels';
 
 type Kind = 'post' | 'comment';
+
+const LIST_PATH = '/admin/community';
 
 const KINDS: ReadonlyArray<{ value: Kind; label: CommunityNoun }> = [
   { value: 'post', label: '글' },
@@ -60,26 +62,43 @@ const COMMENTS: KindConfig<AdminCommunityComment> = {
 
 export function AdminCommunityPage() {
   return (
-    <AdminPage title="커뮤니티 검토" current="/admin/community">
+    <AdminPage title="커뮤니티 검토" current={LIST_PATH}>
       <CommunityReview />
     </AdminPage>
   );
 }
 
+function parseReviewView(search: string): { kind: Kind; tab: AdminCommunityStatus } {
+  const params = new URLSearchParams(search);
+  return {
+    kind: params.get('kind') === 'comment' ? 'comment' : 'post',
+    tab: params.get('tab') === 'hidden' ? 'HIDDEN' : 'PENDING_REVIEW',
+  };
+}
+
+function reviewViewPath(kind: Kind, tab: AdminCommunityStatus): string {
+  return `${LIST_PATH}?kind=${kind}${tab === 'HIDDEN' ? '&tab=hidden' : ''}`;
+}
+
 function CommunityReview() {
   const { search } = useLocation();
-  const [kind, setKind] = useState<Kind>(() =>
-    new URLSearchParams(search).get('kind') === 'comment' ? 'comment' : 'post',
-  );
-  const [tab, setTab] = useState<AdminCommunityStatus>(() =>
-    new URLSearchParams(search).get('tab') === 'hidden' ? 'HIDDEN' : 'PENDING_REVIEW',
-  );
+  const { kind, tab } = parseReviewView(search);
 
   return (
     <section className="flex flex-col gap-4" aria-label="커뮤니티 검토 목록">
       <div className="flex flex-wrap gap-3">
-        <AdminSegments label="검토 대상" segments={KINDS} value={kind} onChange={setKind} />
-        <AdminSegments label="목록 종류" segments={STATUS_TABS} value={tab} onChange={setTab} />
+        <AdminSegments
+          label="검토 대상"
+          segments={KINDS}
+          value={kind}
+          onChange={(next) => navigate(reviewViewPath(next, tab), { replace: true })}
+        />
+        <AdminSegments
+          label="목록 종류"
+          segments={STATUS_TABS}
+          value={tab}
+          onChange={(next) => navigate(reviewViewPath(kind, next), { replace: true })}
+        />
       </div>
       {kind === 'post' ? (
         <ReviewList key={`post:${tab}`} config={POSTS} tab={tab} />
@@ -97,7 +116,7 @@ function ReviewList<T extends AdminCommunityItem>({
   config: KindConfig<T>;
   tab: AdminCommunityStatus;
 }) {
-  const { current, loadingMore, loadMore, retry, reload, updateItems } = usePagedList(
+  const { current, loadingMore, loadMore, retry, reload, refreshLoaded, updateItems } = usePagedList(
     true,
     tab,
     config.fetchPage,
@@ -163,6 +182,7 @@ function ReviewList<T extends AdminCommunityItem>({
                   tab,
                   failure: failure?.id === id ? failure.error : null,
                   onAction: (action) => perform(item, action),
+                  onReload: refreshLoaded,
                 })}
               </Fragment>
             );

@@ -52,6 +52,7 @@ describe('공개 글과 댓글의 관리자 숨기기', () => {
   let role: string;
   let writes: string[];
   let hideReply: () => Response;
+  let failNextHide: (() => Promise<Response>) | null;
   let commentListCalls: number;
 
   const text = (element: Element | null) => element?.textContent ?? '';
@@ -66,6 +67,7 @@ describe('공개 글과 댓글의 관리자 숨기기', () => {
     writes = [];
     commentListCalls = 0;
     hideReply = () => json(200, { postId: 5, status: 'HIDDEN' });
+    failNextHide = null;
     window.history.replaceState(null, '', '/community/5');
     HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
       this.open = true;
@@ -80,6 +82,7 @@ describe('공개 글과 댓글의 관리자 숨기기', () => {
         if (pathname === '/api/me') return json(200, { ...ME, role });
         if (init?.method === 'POST') {
           writes.push(pathname);
+          if (failNextHide !== null) return failNextHide();
           return hideReply();
         }
         if (pathname === '/api/community/posts/5') return json(200, POST);
@@ -149,6 +152,24 @@ describe('공개 글과 댓글의 관리자 숨기기', () => {
     await act(async () => button('숨기기', dialog() ?? container)?.click());
 
     expect(text(dialog()?.querySelector('[role="alert"]') ?? null)).toContain('글을 숨기지 못했어요');
+    expect(window.location.pathname).toBe('/community/5');
+  });
+
+  it.each([
+    ['응답을 받지 못하면', () => Promise.reject(new TypeError('Failed to fetch'))],
+    ['앞단이 502를 돌려주면', () => Promise.resolve(json(502, { code: 'INTERNAL_ERROR', message: 'x', traceId: 't' }))],
+    ['앞단이 504를 돌려주면', () => Promise.resolve(json(504, { code: 'INTERNAL_ERROR', message: 'x', traceId: 't' }))],
+  ])('글 숨기기에서 %s 결과를 확인하지 못했다고 알리고 이동하지 않는다', async (_name, reply) => {
+    failNextHide = reply;
+    await renderPost();
+
+    await act(async () => button('관리자 숨기기')?.click());
+    await act(async () => button('숨기기', dialog() ?? container)?.click());
+
+    const alert = text(dialog()?.querySelector('[role="alert"]') ?? null);
+    expect(alert).toContain('처리 결과를 확인하지 못했어요');
+    expect(alert).toContain('글이 숨겨졌는지 확인하지 못했어요.');
+    expect(alert).not.toContain('글을 숨기지 못했어요');
     expect(window.location.pathname).toBe('/community/5');
   });
 

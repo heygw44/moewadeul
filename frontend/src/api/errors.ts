@@ -80,6 +80,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   PROGRAM_PAYMENT_EXPIRED: '결제 기한이 지났어요. 남은 자리가 있으면 다시 신청해 주세요.',
   PROGRAM_INVALID_STATE: STATE_CHANGED,
   PROGRAM_CANCEL_NOT_ALLOWED: '취소할 수 있는 기한이 지났어요. 관리자에게 문의해 주세요.',
+  PROGRAM_ENDED: '이미 끝난 행사는 취소할 수 없어요. 다녀온 참가자의 신청과 결제 기록은 그대로 남아요.',
   PROGRAM_CAPACITY_DECREASE:
     '신청이 시작됐거나 신청이 들어온 행사는 정원을 줄일 수 없어요. 정원을 늘리거나 그대로 둬 주세요.',
 
@@ -98,6 +99,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   NETWORK_ERROR: '인터넷에 연결하지 못했어요. 연결 상태를 확인한 뒤 다시 시도해 주세요.',
   REQUEST_TIMEOUT: '응답이 오지 않아요. 연결 상태를 확인한 뒤 다시 시도해 주세요.',
 };
+
+export const UNCONFIRMED_TITLE = '처리 결과를 확인하지 못했어요';
 
 const UNEXPECTED_ERROR_MESSAGE = '예상하지 못한 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.';
 
