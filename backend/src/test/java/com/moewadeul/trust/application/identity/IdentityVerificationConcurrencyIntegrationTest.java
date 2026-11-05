@@ -89,7 +89,6 @@ class IdentityVerificationConcurrencyIntegrationTest {
     void sameCiAfterDeletedRowIsLinkedToOneMember() throws Exception {
         // given
         // 지운 행은 InnoDB가 정리하기 전까지 같은 키의 삭제 표시 레코드로 인덱스에 남는다.
-        // 같은 키를 동시에 넣는 트랜잭션들은 이 레코드에 공유 잠금을 건 뒤 삽입 잠금을 기다려서 교착 상태가 생길 수 있다.
         service.verify(memberFixture.save().getId(), new IdentityVerifyCommand(1995, Gender.MALE, "reused-person"));
         jdbc.update("DELETE FROM identity_verification");
         List<Long> memberIds = new ArrayList<>();

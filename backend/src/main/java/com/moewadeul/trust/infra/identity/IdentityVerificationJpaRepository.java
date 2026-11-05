@@ -10,9 +10,6 @@ public interface IdentityVerificationJpaRepository
         extends JpaRepository<IdentityVerification, Long>, IdentityVerificationRepository {
 
     @Override
-    IdentityVerification saveAndFlush(IdentityVerification identityVerification);
-
-    @Override
     Optional<IdentityVerification> findByMemberId(long memberId);
 
     @Override

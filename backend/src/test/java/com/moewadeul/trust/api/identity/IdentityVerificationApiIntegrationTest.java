@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
+import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
@@ -14,6 +15,8 @@ import com.moewadeul.trust.application.identity.IdentityProvider;
 import com.moewadeul.trust.domain.identity.CiHash;
 import com.moewadeul.trust.domain.identity.IdentityClaim;
 import jakarta.servlet.http.Cookie;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,9 @@ class IdentityVerificationApiIntegrationTest {
 
     private static final int ADULT_BIRTH_YEAR = 2007;
     private static final int MINOR_BIRTH_YEAR = 2008;
+
+    @Autowired
+    private MutableClock clock;
 
     @Autowired
     private MemberFixture memberFixture;
@@ -75,6 +81,7 @@ class IdentityVerificationApiIntegrationTest {
         assertThat(row.get("birth_year")).isEqualTo(ADULT_BIRTH_YEAR);
         assertThat(row.get("gender")).isEqualTo("FEMALE");
         assertThat(row.get("provider")).isEqualTo("FAKE");
+        assertThat(row.get("verified_at")).isEqualTo(LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
         assertThat(row.get("ci_retained_until")).isNull();
         String ciHash = (String) row.get("ci_hash");
         assertThat(ciHash).matches("[0-9a-f]{64}").doesNotContain("demo-person-1");
