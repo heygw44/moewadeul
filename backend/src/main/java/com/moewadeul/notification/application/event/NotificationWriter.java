@@ -84,6 +84,14 @@ class NotificationWriter {
     private static Notification toNotification(
             String dedupKey, NotificationDraft draft, NotificationEmailStatus emailStatus, Instant now) {
         return Notification.create(
-                draft.memberId(), draft.type(), draft.title(), draft.body(), draft.link(), dedupKey, emailStatus, now);
+                draft.memberId(),
+                draft.type(),
+                draft.title(),
+                draft.body(),
+                draft.link(),
+                dedupKey,
+                emailStatus,
+                NotificationEventTypes.BULK_EMAIL.contains(draft.type()),
+                now);
     }
 }
