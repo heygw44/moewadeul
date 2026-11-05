@@ -26,6 +26,7 @@ import com.moewadeul.spot.application.detail.SpotRating;
 import com.moewadeul.spot.application.detail.SpotRecentReview;
 import com.moewadeul.spot.application.detail.SpotRecruitingBasecamp;
 import com.moewadeul.spot.application.detail.SpotWeather;
+import com.moewadeul.spot.application.detail.SpotWeatherIpLimiter;
 import com.moewadeul.spot.application.detail.SpotWeatherQueryService;
 import com.moewadeul.spot.application.park.ProtectedAreaSource;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
@@ -33,6 +34,7 @@ import com.moewadeul.spot.domain.SpotType;
 import com.moewadeul.spot.domain.bakji.BakjiSignalLevel;
 import com.moewadeul.weather.application.SunTimes;
 import com.moewadeul.weather.application.WeatherForecast;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -42,7 +44,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -51,7 +55,13 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 @WebMvcTest(SpotDetailController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class})
+@Import({
+    GlobalExceptionHandler.class,
+    TraceIdFilter.class,
+    SecurityConfig.class,
+    SpotWeatherIpLimiter.class,
+    SpotDetailControllerTest.SystemClock.class
+})
 class SpotDetailControllerTest {
 
     private static final String PATH = "/api/spots";
@@ -523,5 +533,14 @@ class SpotDetailControllerTest {
                 .asList()
                 .isNotEmpty();
         verifyNoInteractions(spotDetailQueryService);
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class SystemClock {
+
+        @Bean
+        Clock clock() {
+            return Clock.systemUTC();
+        }
     }
 }
