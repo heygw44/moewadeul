@@ -64,14 +64,12 @@ class MemberMetricsIntegrationTest {
     }
 
     @Test
-    @DisplayName("[NFR-09] 가입을 감싼 트랜잭션이 롤백되면 가입 수가 오르지 않는다")
-    void doesNotCountRolledBackSignup() {
+    @DisplayName("[NFR-09] 가입을 트랜잭션 안에서 부르면 거부하고 가입 수가 오르지 않는다")
+    void rejectsSignupInsideTransaction() {
         double before = signups();
 
-        transactionTemplate.executeWithoutResult(status -> {
-            signUp(TestSequence.email());
-            status.setRollbackOnly();
-        });
+        assertThatThrownBy(() -> transactionTemplate.executeWithoutResult(status -> signUp(TestSequence.email())))
+                .isInstanceOf(IllegalStateException.class);
 
         assertThat(signups()).isEqualTo(before);
     }
