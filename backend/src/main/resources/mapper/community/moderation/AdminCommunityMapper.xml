@@ -9,26 +9,20 @@
                p.member_id AS author_id,
                m.nickname AS author_nickname,
                p.status AS status,
-               COALESCE(rc.report_count, 0) AS report_count,
+               (SELECT COUNT(*) FROM community_report r
+                WHERE r.target_type = 'POST' AND r.target_id = p.id AND r.reviewed_at IS NULL) AS report_count,
                p.updated_at AS status_changed_at
         FROM community_post p
         JOIN member m ON m.id = p.member_id
-        LEFT JOIN (
-            SELECT r.target_id AS target_id,
-                   COUNT(*) AS report_count,
-                   COUNT(CASE WHEN r.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count
-            FROM community_report r
-            WHERE r.target_type = 'POST'
-              AND r.reviewed_at IS NULL
-            GROUP BY r.target_id
-        ) rc ON rc.target_id = p.id
         WHERE p.status = #{status}
         <choose>
             <when test="status.name() == 'HIDDEN'">
                 ORDER BY p.updated_at DESC, p.id DESC
             </when>
             <otherwise>
-                ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, p.updated_at ASC, p.id ASC
+                ORDER BY EXISTS (SELECT 1 FROM community_report r
+                        WHERE r.target_type = 'POST' AND r.target_id = p.id AND r.reviewed_at IS NULL
+                          AND r.reason = 'MONEY_SCAM') DESC, p.updated_at ASC, p.id ASC
             </otherwise>
         </choose>
         LIMIT #{limit} OFFSET #{offset}
@@ -42,27 +36,21 @@
                c.member_id AS author_id,
                m.nickname AS author_nickname,
                c.status AS status,
-               COALESCE(rc.report_count, 0) AS report_count,
+               (SELECT COUNT(*) FROM community_report r
+                WHERE r.target_type = 'COMMENT' AND r.target_id = c.id AND r.reviewed_at IS NULL) AS report_count,
                c.updated_at AS status_changed_at
         FROM community_comment c
         JOIN member m ON m.id = c.member_id
         JOIN community_post cp ON cp.id = c.post_id
-        LEFT JOIN (
-            SELECT r.target_id AS target_id,
-                   COUNT(*) AS report_count,
-                   COUNT(CASE WHEN r.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count
-            FROM community_report r
-            WHERE r.target_type = 'COMMENT'
-              AND r.reviewed_at IS NULL
-            GROUP BY r.target_id
-        ) rc ON rc.target_id = c.id
         WHERE c.status = #{status}
         <choose>
             <when test="status.name() == 'HIDDEN'">
                 ORDER BY c.updated_at DESC, c.id DESC
             </when>
             <otherwise>
-                ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, c.updated_at ASC, c.id ASC
+                ORDER BY EXISTS (SELECT 1 FROM community_report r
+                        WHERE r.target_type = 'COMMENT' AND r.target_id = c.id AND r.reviewed_at IS NULL
+                          AND r.reason = 'MONEY_SCAM') DESC, c.updated_at ASC, c.id ASC
             </otherwise>
         </choose>
         LIMIT #{limit} OFFSET #{offset}
