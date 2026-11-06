@@ -83,7 +83,7 @@ class AlertRuleMetricNamesIntegrationTest {
         assertThat(failures).isNotEmpty();
         assertThat(failures).allSatisfy(line -> assertThat(line).containsPattern("[{,]job=\"[^\"]+\""));
         assertThat(exprs().stream()
-                        .filter(expr -> expr.contains("moewadeul_scheduled_job_failures_total"))
+                        .filter(expr -> expr.contains("increase(moewadeul_scheduled_job_failures_total"))
                         .toList())
                 .isNotEmpty()
                 .allSatisfy(expr -> assertThat(expr).contains("by (exported_job)"));

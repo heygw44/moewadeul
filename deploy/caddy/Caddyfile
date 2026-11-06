@@ -2,6 +2,16 @@
 # 그래서 CORS를 열지 않고, 세션 쿠키를 SameSite=Lax로 쓸 수 있다.
 # Caddy는 SITE_ADDRESS 도메인의 Let's Encrypt 인증서를 자동으로 받고 갱신하며, 80번 포트 요청을 HTTPS로 넘긴다.
 
+{
+	# 앱에 닿지 못해 Caddy가 만든 502는 앱 지표에 남지 않는다. 그래서 Caddy의 응답 수를 따로 센다.
+	metrics
+}
+
+# Compose 내부망의 Alloy만 읽는다. 이 포트는 서버 밖에 열지 않는다.
+http://:2020 {
+	metrics
+}
+
 {$SITE_ADDRESS} {
 	encode zstd gzip
 

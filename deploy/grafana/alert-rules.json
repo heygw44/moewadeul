@@ -638,6 +638,349 @@
           }
         }
       ]
+    },
+    {
+      "uid": "moewadeul-tomcat-threads-saturated",
+      "title": "Tomcat 스레드 90% 이상 지속",
+      "condition": "C",
+      "for": "2m",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "요청 스레드가 2분 넘게 90% 넘게 차 있다. HTTP 오류 없이 응답만 늦어진다. 외부 API 대기(대시보드 외부 API 행)와 커넥션 대기를 본다(TS-060)."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "max(tomcat_threads_busy_threads{job=\"moewadeul-app\"}) / max(tomcat_threads_config_max_threads{job=\"moewadeul-app\"})",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0.9
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "uid": "moewadeul-cpu-high",
+      "title": "CPU 사용률 90% 이상 지속",
+      "condition": "C",
+      "for": "10m",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "서버 CPU가 10분 넘게 90% 넘게 쓰인다. t4g는 크레딧이 떨어지면 steal로 보여 이 경보에 함께 잡힌다. 대시보드의 mode별 CPU와 CloudWatch CPUCreditBalance를 본다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "1 - avg(rate(node_cpu_seconds_total{instance=\"moewadeul-prod\",job=\"integrations/unix\",mode=\"idle\"}[5m]))",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0.9
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "uid": "moewadeul-map-latency",
+      "title": "지도 응답 p95 1초 초과 지속",
+      "condition": "C",
+      "for": "5m",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "지도 조회 p95가 5분 넘게 1초를 넘는다. 요청이 5분에 15건 넘을 때만 본다. 커넥션 대기, 스레드, 슬로 쿼리 순서로 본다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"moewadeul-app\",uri=\"/api/spots\"}[5m]))) and on () sum(rate(http_server_requests_seconds_count{job=\"moewadeul-app\",uri=\"/api/spots\"}[5m])) > 0.05",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    1
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "uid": "moewadeul-caddy-502",
+      "title": "Caddy 502 발생",
+      "condition": "C",
+      "for": "0s",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "최근 5분 안에 Caddy가 앱에 닿지 못해 502를 돌려줬다. 앱 지표에는 남지 않는다. 앱 컨테이너 상태와 배포 기록을 본다(TS-045, TS-047)."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "(max(increase(caddy_http_request_duration_seconds_count{job=\"caddy\",code=\"502\"}[5m])) > 0) or (max(caddy_http_request_duration_seconds_count{job=\"caddy\",code=\"502\"}) unless max(caddy_http_request_duration_seconds_count{job=\"caddy\",code=\"502\"} offset 5m))",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "uid": "moewadeul-site-probe-failed",
+      "title": "사이트 탐침 실패 지속",
+      "condition": "C",
+      "for": "3m",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "서버 안에서 공인 주소로 읽은 /api/programs가 3분 넘게 실패한다. DNS, 인증서, Caddy, 앱 순서로 본다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "min(probe_success{job=~\"integrations/blackbox/.+\"})",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "lt",
+                  "params": [
+                    1
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "uid": "moewadeul-tls-expiring",
+      "title": "TLS 인증서 만료 14일 전",
+      "condition": "C",
+      "for": "0s",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "인증서 만료가 14일 안으로 들어왔다. Caddy는 30일 전에 갱신하므로 갱신이 실패하고 있다. Caddy 로그의 ACME 오류와 80번 포트를 본다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "min(probe_ssl_earliest_cert_expiry{job=~\"integrations/blackbox/.+\"}) - time()",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "lt",
+                  "params": [
+                    1209600
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "uid": "moewadeul-metrics-missing",
+      "title": "지표 시계열 끊김 지속",
+      "condition": "C",
+      "for": "5m",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "경보가 읽는 시계열 중 항상 있어야 할 것이 5분 넘게 없다. 데이터가 없는 규칙은 정상으로 처리돼 조용해지므로(TS-008) 라벨과 수집 설정을 본다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 600,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "absent(moewadeul_outbox_oldest_pending_age_seconds{job=\"moewadeul-app\"}) or absent(moewadeul_notification_mail_oldest_pending_age_seconds{job=\"moewadeul-app\"}) or absent(moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}) or absent(moewadeul_notification_mails{job=\"moewadeul-app\",status=\"failed\"}) or absent(moewadeul_aisearch_budget_used_ratio{job=\"moewadeul-app\"}) or absent(moewadeul_scheduled_job_failures_total{job=\"moewadeul-app\"}) or absent(hikaricp_connections_acquire_seconds_max{job=\"moewadeul-app\"}) or absent(tomcat_threads_busy_threads{job=\"moewadeul-app\"}) or absent(tomcat_threads_config_max_threads{job=\"moewadeul-app\"}) or absent(node_filesystem_avail_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\",mountpoint=\"/\"}) or absent(node_filesystem_size_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\",mountpoint=\"/\"}) or absent(node_memory_MemAvailable_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"}) or absent(node_memory_MemTotal_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"}) or absent(node_cpu_seconds_total{instance=\"moewadeul-prod\",job=\"integrations/unix\",mode=\"idle\"}) or absent(caddy_http_request_duration_seconds_count{job=\"caddy\"}) or absent(probe_success{job=~\"integrations/blackbox/.+\"})",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

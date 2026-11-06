@@ -40,6 +40,7 @@ services:
     ports:
       # 배포 스크립트가 서버 안에서 /actuator/health를 확인하는 용도라 127.0.0.1에만 연다. 밖에서는 caddy만 보인다.
       - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:?}
@@ -147,6 +148,7 @@ services:
       GRAFANA_LOKI_USER: ${GRAFANA_LOKI_USER:?}
       GRAFANA_CLOUD_TOKEN: ${GRAFANA_CLOUD_TOKEN:?}
       MYSQL_EXPORTER_PASSWORD: ${MYSQL_EXPORTER_PASSWORD:?}
+      SITE_ADDRESS: ${SITE_ADDRESS:?}
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       # 전송에 실패한 지표를 잠시 쌓아 두는 곳이다. 컨테이너를 새로 만들어도 남게 볼륨에 둔다.

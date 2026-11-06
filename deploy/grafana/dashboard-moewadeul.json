@@ -800,6 +800,16 @@
           "expr": "sum by (api) (rate(moewadeul_weather_cache_busy_total{job=\"moewadeul-app\"}[5m])) * 60",
           "legendFormat": "{{api}} 날씨 대기 자리 부족",
           "range": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__PROM_UID__"
+          },
+          "expr": "sum by (api) (rate(moewadeul_external_api_skipped_total{job=\"moewadeul-app\"}[5m])) * 60",
+          "legendFormat": "{{api}} 쉬는 중이라 건너뜀",
+          "range": true
         }
       ],
       "fieldConfig": {
