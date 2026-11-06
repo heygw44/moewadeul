@@ -33,6 +33,21 @@ public class ProgramApplyService {
     private final TrustSummaryService trustSummaryService;
     private final Clock clock;
 
+    // 매진 뒤 몰린 요청이 행사 행 잠금 줄에 서면 커넥션 10개를 붙잡아 지도 요청까지 기다리게 한다. 확실히 매진일 때만 잠금 없이 거절한다.
+    public void rejectIfSoldOutWithoutLock(long memberId, long programId) {
+        Program program = programRepository.findById(programId).orElseThrow(BusinessException::notFound);
+        Instant now = clock.instant();
+        if (programApplicationMapper.countSeatHolders(programId, now) < program.getCapacity()) {
+            return;
+        }
+        program.requireApplicableAt(now);
+        requireTrustLevel(program, memberId);
+        if (programApplicationMapper.existsActive(programId, memberId)) {
+            return;
+        }
+        throw new BusinessException(ProgramErrorCode.PROGRAM_SOLD_OUT);
+    }
+
     @Transactional
     public ProgramApplyResult apply(long memberId, long programId) {
         Program program = programRepository.findByIdForUpdate(programId).orElseThrow(BusinessException::notFound);
