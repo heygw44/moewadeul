@@ -1,0 +1,30 @@
+# 측정 전용. app, mysql, caddy를 CPU 4개(cpuset 4-7)에 묶고, 가짜 SMTP와 fake 이미지 저장소를 쓴다. Alloy는 띄우지 않는다.
+# 상대 경로는 compose의 --project-directory(opt/) 기준이다.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:28081:80"
+    cpuset: "4-7"
+  app:
+    ports: !override
+      - "127.0.0.1:28080:8080"
+      - "127.0.0.1:28082:8081"
+    volumes: !reset []
+    cpuset: "4-7"
+    environment:
+      MOEWADEUL_IMAGE_STORAGE_STORAGE: fake
+      MAIL_HOST: smtpsink
+      MAIL_PORT: "2525"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "false"
+  mysql:
+    cpuset: "4-7"
+  alloy:
+    profiles: ["never"]
+  smtpsink:
+    image: python:3.13-alpine
+    restart: unless-stopped
+    command: ["python", "-u", "/sink/sink.py"]
+    volumes:
+      - ./sink:/sink
