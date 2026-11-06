@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -195,6 +196,24 @@ class SpotModerationConcurrencyIntegrationTest {
         // then
         assertThat(failures).isEmpty();
         assertThat(hiddenBySync.get()).isZero();
+        assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
+        assertThat(sourceRemovedAt(spotId)).isNotNull();
+    }
+
+    @Test
+    @DisplayName("[F-06][F-21] 관리자 복구가 커밋된 뒤 동기화가 후보를 읽어도 복구한 장소를 다시 숨기지 않는다")
+    void sourceRemovalAfterRestoreCommitKeepsRestoredSpot() {
+        // given
+        long spotId = savePublicSpot();
+        long admin = memberFixture.save().getId();
+        spotModerationService.hide(spotId, admin);
+        spotModerationService.restore(spotId, admin);
+
+        // when
+        int hidden = publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, List.of(EXTERNAL_ID));
+
+        // then
+        assertThat(hidden).isZero();
         assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
         assertThat(sourceRemovedAt(spotId)).isNotNull();
     }
