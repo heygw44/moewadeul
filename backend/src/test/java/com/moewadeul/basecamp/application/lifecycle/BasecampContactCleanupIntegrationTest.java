@@ -92,6 +92,39 @@ class BasecampContactCleanupIntegrationTest {
         assertThat(cleanupService.clearExpiredContacts()).isZero();
     }
 
+    @Test
+    @DisplayName("[BC-23][PV-13] 여러 묶음에 걸친 취소·옛 완료 베이스캠프의 연락 수단을 모두 지우고, 모집 중이거나 최근 완료한 것은 남긴다")
+    void clearsAcrossBatchesAndKeepsOthers() {
+        long canceledTemplate = basecampWithContact("CANCELED");
+        long completedTemplate = completedBasecampWithContact(
+                Basecamp.CONTACT_VISIBLE_AFTER_COMPLETION.plusDays(1).toSeconds());
+        long recruiting = basecampWithContact("RECRUITING");
+        long recentlyCompleted = completedBasecampWithContact(
+                Basecamp.CONTACT_VISIBLE_AFTER_COMPLETION.minusDays(1).toSeconds());
+        copyBasecamps(canceledTemplate, 1_100);
+        copyBasecamps(completedTemplate, 600);
+
+        int cleared = cleanupService.clearExpiredContacts();
+
+        assertThat(cleared).isEqualTo(1_702);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM basecamp WHERE contact_info IS NOT NULL", Integer.class))
+                .isEqualTo(2);
+        assertThat(contactOf(recruiting)).isEqualTo(CONTACT);
+        assertThat(contactOf(recentlyCompleted)).isEqualTo(CONTACT);
+    }
+
+    private void copyBasecamps(long templateId, int count) {
+        jdbc.update(
+                "INSERT /*+ SET_VAR(cte_max_recursion_depth=2000) */ INTO basecamp (leader_id, spot_id, title, description, start_date, end_date, capacity,"
+                        + " status, contact_info, completed_at, created_at, updated_at)"
+                        + " WITH RECURSIVE seq (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < ?)"
+                        + " SELECT b.leader_id, b.spot_id, b.title, b.description, b.start_date, b.end_date,"
+                        + " b.capacity, b.status, b.contact_info, b.completed_at, b.created_at, b.updated_at"
+                        + " FROM basecamp b JOIN seq WHERE b.id = ?",
+                count,
+                templateId);
+    }
+
     private long completedBasecampWithContact(long secondsAgo) {
         long id = basecampWithContact("COMPLETED");
         jdbc.update(
