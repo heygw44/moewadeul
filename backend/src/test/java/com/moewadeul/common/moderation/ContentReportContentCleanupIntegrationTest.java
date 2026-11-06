@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
@@ -129,6 +130,34 @@ class ContentReportContentCleanupIntegrationTest {
             assertThat(result).as(status).isZero();
             assertThat(contentErased(kind, report)).as(status).isFalse();
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = ContentReportKind.class,
+            names = {"COMMUNITY_POST", "MEMORY", "BAKJI"})
+    @DisplayName("[F-21][PV-07] 한 번에 지우는 상한보다 대상이 많아도 모두 지우고, 조건 밖인 신고의 내용은 남긴다")
+    void clearsAllRowsBeyondBatchSizeAndKeepsOthers(ContentReportKind kind) {
+        long activeTarget = contentTarget(kind, "ACTIVE", cutoff().minus(Duration.ofDays(400)));
+        int total = ReportContentCleanup.BATCH_SIZE + 1;
+        List<Long> expired = new ArrayList<>();
+        for (int i = 0; i < total; i++) {
+            expired.add(contentReport(kind, activeTarget, cutoff().minus(Duration.ofDays(30))));
+        }
+        long recent = contentReport(kind, activeTarget, cutoff().plus(ONE_SECOND));
+        long unreviewed = contentReport(kind, activeTarget, null);
+
+        int result = kind.cleanup(this).clearExpiredContent();
+
+        assertThat(result).isEqualTo(total);
+        assertThat(count(
+                        kind.reportTable + " WHERE reviewed_at <= ? AND content IS NOT NULL",
+                        DATETIME_UTC.format(cutoff())))
+                .isZero();
+        assertThat(contentErased(kind, expired.get(0))).isTrue();
+        assertThat(contentErased(kind, expired.get(total - 1))).isTrue();
+        assertThat(contentErased(kind, recent)).isFalse();
+        assertThat(contentErased(kind, unreviewed)).isFalse();
     }
 
     private Instant cutoff() {
