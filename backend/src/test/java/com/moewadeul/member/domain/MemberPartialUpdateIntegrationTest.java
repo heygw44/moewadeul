@@ -7,6 +7,7 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.TestSequence;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,15 +34,20 @@ class MemberPartialUpdateIntegrationTest {
                 .save(aMember().email(TestSequence.email()).build())
                 .getId();
 
+        String nickname = TestSequence.nickname();
+
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             Member stale = memberRepository.findById(memberId).orElseThrow();
-            jdbc.update(
-                    "UPDATE member SET status = 'SUSPENDED', suspended_until = NOW(6) + INTERVAL 1 DAY WHERE id = ?",
-                    memberId);
-            stale.changeNickname(TestSequence.nickname(), Instant.now());
+            CompletableFuture.runAsync(() -> jdbc.update(
+                            "UPDATE member SET status = 'SUSPENDED', suspended_until = NOW(6) + INTERVAL 1 DAY"
+                                    + " WHERE id = ?",
+                            memberId))
+                    .join();
+            stale.changeNickname(nickname, Instant.now());
         });
 
-        assertThat(jdbc.queryForObject("SELECT status FROM member WHERE id = ?", String.class, memberId))
-                .isEqualTo("SUSPENDED");
+        assertThat(jdbc.queryForMap("SELECT status, nickname FROM member WHERE id = ?", memberId))
+                .containsEntry("status", "SUSPENDED")
+                .containsEntry("nickname", nickname);
     }
 }

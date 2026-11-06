@@ -20,7 +20,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.DynamicUpdate;
 
-// 모든 열을 쓰면 잠그지 않은 읽기 하나가 정지 같은 다른 경로의 변경까지 지운다.
+// 바뀐 열만 써서, 잠그지 않고 읽은 회원의 닉네임을 고쳐도 그사이 다른 트랜잭션이 바꾼 정지 상태 같은 열을 덮어쓰지 않는다.
+// 상태와 정지 기한, 탈퇴 열처럼 함께 바뀌어야 하는 열의 정합은 막지 못하므로, 상태를 바꾸는 메서드는 회원 행을 잠근 뒤에 부른다.
 @DynamicUpdate
 @Entity
 @Table(name = "member")
