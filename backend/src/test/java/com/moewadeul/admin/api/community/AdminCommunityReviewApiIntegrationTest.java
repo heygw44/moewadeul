@@ -368,6 +368,50 @@ class AdminCommunityReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-08] 금전 요구·사기 신고가 있는 댓글이 먼저 나오고, 검토가 끝난 신고는 순서에도 신고 수에도 들지 않는다")
+    void commentListPutsMoneyScamFirstAndIgnoresReviewedReports() {
+        // given
+        long postId = insertPost("ACTIVE", BASE);
+        long plainOld = insertComment(postId, "PENDING_REVIEW", "일반 댓글", BASE);
+        long scamNew = insertComment(postId, "PENDING_REVIEW", "사기 댓글", BASE.plus(Duration.ofHours(5)));
+        long reviewedScam = insertComment(postId, "PENDING_REVIEW", "검토 끝난 사기 신고 댓글", BASE.plus(Duration.ofHours(1)));
+        insertCommentReport(plainOld, "ABUSE", null, BASE);
+        insertCommentReport(scamNew, "MONEY_SCAM", null, BASE);
+        insertCommentReport(scamNew, "ABUSE", null, BASE);
+        insertReport("COMMENT", reviewedScam, "MONEY_SCAM", null, BASE, BASE.plus(Duration.ofMinutes(1)));
+
+        // when
+        MvcTestResult all = get(COMMENTS);
+        MvcTestResult first = get(COMMENTS + "?size=2");
+
+        // then
+        assertThat(ids(all, "$.content[*].commentId")).containsExactly(scamNew, plainOld, reviewedScam);
+        assertThat(all).bodyJson().extractingPath("$.content[0].reportCount").isEqualTo(2);
+        assertThat(all).bodyJson().extractingPath("$.content[1].reportCount").isEqualTo(1);
+        assertThat(all).bodyJson().extractingPath("$.content[2].reportCount").isEqualTo(0);
+        assertThat(ids(first, "$.content[*].commentId")).containsExactly(scamNew, plainOld);
+        assertThat(first).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-08] 검토가 끝난 금전 요구·사기 신고만 있는 글은 먼저 나오지 않고 신고 수에도 들지 않는다")
+    void postListIgnoresReviewedMoneyScamReport() {
+        // given
+        long reviewedScam = insertPost("PENDING_REVIEW", BASE.plus(Duration.ofHours(1)));
+        long plainOld = insertPost("PENDING_REVIEW", BASE);
+        insertPostReport(reviewedScam, "MONEY_SCAM", null, BASE, BASE.plus(Duration.ofMinutes(1)));
+        insertPostReport(plainOld, "SPAM", null, BASE, null);
+
+        // when
+        MvcTestResult all = get(POSTS);
+
+        // then
+        assertThat(ids(all, "$.content[*].postId")).containsExactly(plainOld, reviewedScam);
+        assertThat(all).bodyJson().extractingPath("$.content[0].reportCount").isEqualTo(1);
+        assertThat(all).bodyJson().extractingPath("$.content[1].reportCount").isEqualTo(0);
+    }
+
+    @Test
     @DisplayName("[F-29][CM-08] 댓글 검토 목록은 글 ID와 작성자, 원문, 사유별 신고 수를 담고 지운 댓글이 아닌 숨긴 댓글도 원문을 준다")
     void commentListShowsReports() {
         // given
