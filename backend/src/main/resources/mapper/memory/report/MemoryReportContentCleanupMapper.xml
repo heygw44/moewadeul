@@ -2,10 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.memory.infra.report.MemoryReportContentCleanupMapper">
 
-    <update id="clearContentProcessedBefore">
-        UPDATE memory_report r
-        SET r.content = NULL
-        WHERE r.content IS NOT NULL
+    <sql id="processedBefore">
+        r.content IS NOT NULL
           AND (
                 r.reviewed_at &lt;= #{cutoff}
                 OR (
@@ -19,6 +17,21 @@
                     )
                 )
               )
+    </sql>
+
+    <select id="selectIdsProcessedBefore" resultType="long">
+        SELECT r.id
+        FROM memory_report r
+        WHERE <include refid="processedBefore"/>
+        ORDER BY r.id
         LIMIT #{limit}
+    </select>
+
+    <update id="clearContentByIds">
+        UPDATE memory_report r
+        SET r.content = NULL
+        WHERE r.id IN
+          <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+          AND <include refid="processedBefore"/>
     </update>
 </mapper>

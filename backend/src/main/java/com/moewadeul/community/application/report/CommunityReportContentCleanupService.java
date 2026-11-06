@@ -4,6 +4,7 @@ import com.moewadeul.common.moderation.ReportContentCleanup;
 import com.moewadeul.community.infra.report.CommunityReportContentCleanupMapper;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,7 +18,12 @@ public class CommunityReportContentCleanupService extends ReportContentCleanup {
     }
 
     @Override
-    protected int clearContentProcessedBefore(Instant cutoff, int limit) {
-        return cleanupMapper.clearContentProcessedBefore(cutoff, limit);
+    protected List<Long> selectIdsProcessedBefore(Instant cutoff, int limit) {
+        return cleanupMapper.selectIdsProcessedBefore(cutoff, limit);
+    }
+
+    @Override
+    protected int clearContent(List<Long> ids, Instant cutoff) {
+        return cleanupMapper.clearContentByIds(ids, cutoff);
     }
 }

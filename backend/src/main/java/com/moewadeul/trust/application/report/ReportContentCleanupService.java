@@ -26,10 +26,14 @@ public class ReportContentCleanupService {
     public Result clearExpiredContent() {
         Instant cutoff =
                 Instant.now(clock).atZone(ZoneOffset.UTC).minus(RETENTION).toInstant();
-        int reports =
-                BatchDeletion.untilDrained(BATCH_SIZE, size -> cleanupMapper.clearHandledReportContent(cutoff, size));
-        int sanctions =
-                BatchDeletion.untilDrained(BATCH_SIZE, size -> cleanupMapper.clearFinishedSanctionReason(cutoff, size));
+        int reports = BatchDeletion.untilDrainedByIds(
+                BATCH_SIZE,
+                size -> cleanupMapper.selectHandledReportIds(cutoff, size),
+                ids -> cleanupMapper.clearHandledReportContent(ids, cutoff));
+        int sanctions = BatchDeletion.untilDrainedByIds(
+                BATCH_SIZE,
+                size -> cleanupMapper.selectFinishedSanctionIds(cutoff, size),
+                ids -> cleanupMapper.clearFinishedSanctionReason(ids, cutoff));
         log.info("report content cleared reportCount={} sanctionCount={}", reports, sanctions);
         return new Result(reports, sanctions);
     }
