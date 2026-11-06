@@ -143,7 +143,7 @@ class ProgramPaymentConcurrencyIntegrationTest {
     }
 
     private Object payWithKey(long memberId, long applicationId, String key) {
-        ProgramPayResult result = idempotencyExecutor.execute(
+        ProgramPayResult result = idempotencyExecutor.executeReadCommitted(
                 new IdempotentRequest(memberId, key, "POST /api/program-applications/" + applicationId + "/pay", null),
                 HttpStatus.OK,
                 ProgramPayResult.class,

@@ -20,6 +20,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
@@ -35,6 +36,7 @@ public class IdempotencyExecutor {
     private final JsonMapper jsonMapper;
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
+    private final TransactionTemplate readCommittedTemplate;
 
     public IdempotencyExecutor(
             IdempotencyRecordRepository recordRepository,
@@ -45,6 +47,8 @@ public class IdempotencyExecutor {
         this.jsonMapper = jsonMapper;
         this.clock = clock;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.readCommittedTemplate = new TransactionTemplate(transactionManager);
+        this.readCommittedTemplate.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
 
     public <T> T execute(
@@ -58,30 +62,46 @@ public class IdempotencyExecutor {
             Class<T> responseType,
             Runnable precheckOutsideTransaction,
             Supplier<T> action) {
+        return claimAndRun(
+                request, successStatus, responseType, precheckOutsideTransaction, transactionTemplate, action);
+    }
+
+    public <T> T executeReadCommitted(
+            IdempotentRequest request, HttpStatus successStatus, Class<T> responseType, Supplier<T> action) {
+        return claimAndRun(request, successStatus, responseType, () -> {}, readCommittedTemplate, action);
+    }
+
+    private <T> T claimAndRun(
+            IdempotentRequest request,
+            HttpStatus successStatus,
+            Class<T> responseType,
+            Runnable precheckOutsideTransaction,
+            TransactionTemplate template,
+            Supplier<T> action) {
         OutsideTransaction.require("멱등성 기록은 작업과 따로 커밋해야 한다.");
         String key = validateKey(request.key());
         String requestHash = hash(request);
 
         IdempotencyRecord record = IdempotencyRecord.claim(request.memberId(), key, requestHash, Instant.now(clock));
-        if (tryClaim(record)) {
-            return runAndComplete(record, successStatus, precheckOutsideTransaction, action);
-        }
-        Optional<IdempotencyRecord> existing = recordRepository.findById(record.getId());
-        if (existing.isEmpty()) {
-            record = IdempotencyRecord.claim(request.memberId(), key, requestHash, Instant.now(clock));
-            if (!tryClaim(record)) {
-                throw new BusinessException(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS);
+        if (!tryClaim(record)) {
+            Optional<IdempotencyRecord> existing = recordRepository.findById(record.getId());
+            if (existing.isEmpty()) {
+                record = IdempotencyRecord.claim(request.memberId(), key, requestHash, Instant.now(clock));
+                if (!tryClaim(record)) {
+                    throw new BusinessException(CommonErrorCode.IDEMPOTENCY_IN_PROGRESS);
+                }
+            } else {
+                IdempotencyRecord found = existing.get();
+                if (!found.matches(requestHash)) {
+                    throw new BusinessException(CommonErrorCode.IDEMPOTENCY_KEY_REUSED);
+                }
+                if (found.isCompleted()) {
+                    return replay(found, responseType);
+                }
+                record = takeOver(found);
             }
-            return runAndComplete(record, successStatus, precheckOutsideTransaction, action);
         }
-        IdempotencyRecord found = existing.get();
-        if (!found.matches(requestHash)) {
-            throw new BusinessException(CommonErrorCode.IDEMPOTENCY_KEY_REUSED);
-        }
-        if (found.isCompleted()) {
-            return replay(found, responseType);
-        }
-        return runAndComplete(takeOver(found), successStatus, precheckOutsideTransaction, action);
+        return runAndComplete(record, successStatus, precheckOutsideTransaction, template, action);
     }
 
     private IdempotencyRecord takeOver(IdempotencyRecord found) {
@@ -156,10 +176,11 @@ public class IdempotencyExecutor {
             IdempotencyRecord record,
             HttpStatus successStatus,
             Runnable precheckOutsideTransaction,
+            TransactionTemplate template,
             Supplier<T> action) {
         try {
             precheckOutsideTransaction.run();
-            return transactionTemplate.execute(status -> {
+            return template.execute(status -> {
                 T result = action.get();
                 recordCompletion(record, successStatus, result);
                 return result;
