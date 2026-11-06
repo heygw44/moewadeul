@@ -157,6 +157,19 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-27] 압축 응답을 받지 않아 읽기 시간 초과가 실패 처리를 건너뛰는 예외로 바뀌지 않는다")
+    void doesNotAskForCompressedResponse() {
+        // given
+        stubOk(content(), 10, 5);
+
+        // when
+        interpreter.interpret(SENTENCE);
+
+        // then
+        assertThat(onlyRequest().getHeader("Accept-Encoding")).isNull();
+    }
+
+    @Test
     @DisplayName("[F-27][AI-05][AI-09] 응답이 읽기 시간 안에 오지 않으면 다시 보내지 않고 실패하며, 보낸 요청 본문의 바이트 수와 최대 출력 토큰을 사용량으로 담는다")
     void failsOnReadTimeoutWithoutRetry() {
         // given
