@@ -282,3 +282,7 @@ k6 run -e BASE_URL=http://앱-서버-사설-IP --summary-trend-stats "avg,med,p(
 ## 4. 전체 API·쿼리 측정 (`sweep/`)
 
 장부의 API 118개와 쿼리 238개를 한 번에 재는 도구다. 시드 세 단계를 넣은 데이터에서 API마다 혼자 재기와 50 VU 재기를 하고, 쿼리 다이제스트와 실행계획을 모은다. 절차는 `sweep/README.md`에 있다.
+
+## 5. 배포 측정 (`deploy/`)
+
+`deploy/deploy.sh`를 로컬 Docker에서 그대로 돌려 평소 배포, 시작 막바지에 죽는 버전의 되돌리기, 긴 마이그레이션, 실패한 마이그레이션 복구 절차를 잰다. 서버 밖에서 Caddy로 요청을 보내며 실패 수와 끊긴 시간을 센다. 절차는 `deploy/README.md`에 있다.
