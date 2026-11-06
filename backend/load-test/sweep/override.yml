@@ -1,0 +1,69 @@
+# 전수 측정 전용. 운영 compose의 메모리 한도와 JVM 옵션을 그대로 두고 app·mysql·caddy를 CPU 0,1에 묶는다. 볼륨은 복사본(moewadeul-lt-sweep_mysql-data)이다.
+name: moewadeul-lt-sweep
+services:
+  extstub:
+    image: wiremock/wiremock:3.13.2
+    command: ["--port", "8080", "--async-response-enabled", "true", "--async-response-threads", "200", "--container-threads", "300", "--no-request-journal", "--disable-request-logging"]
+    volumes:
+      - ${SWEEP_TOOLS}/stub:/home/wiremock
+    cpuset: "4-7"
+    networks:
+      default:
+        aliases:
+          - ltbucket.extstub
+  smtpsink:
+    image: python:3.12-alpine
+    command: ["python", "/sink.py"]
+    volumes:
+      - ./sink:/sink
+      - ${SWEEP_TOOLS}/sink.py:/sink.py:ro
+    cpuset: "4-7"
+  caddy:
+    ports: !override
+      - "127.0.0.1:47180:80"
+    cpuset: "0,1"
+  app:
+    image: ${APP_IMAGE}
+    ports: !override
+      - "127.0.0.1:47181:8080"
+    volumes: !override
+      - ./data:/data:ro
+    cpuset: "0,1"
+    environment:
+      PUBLICDATA_FOREST_FILE: /data/forest_20260325.csv
+      PUBLICDATA_FOREST_STANDARD_FILE: /data/forest-standard.json
+      PUBLICDATA_PARK_BOUNDARY_FILE: /data/parks_20260630.tsv
+      SERVER_SERVLET_SESSION_TIMEOUT: 48h
+      SPRING_SESSION_TIMEOUT: 48h
+      MAIL_HOST: smtpsink
+      MAIL_PORT: "2525"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "false"
+      MOEWADEUL_IMAGE_STORAGE_STORAGE: s3
+      UPLOAD_BUCKET: ltbucket
+      AWS_REGION: ap-northeast-2
+      AWS_ACCESS_KEY_ID: lt-fake-access
+      AWS_SECRET_ACCESS_KEY: lt-fake-secret
+      AWS_ENDPOINT_URL_S3: http://extstub:8080
+      OPENAI_API_KEY: lt-fake-openai
+      MOEWADEUL_AISEARCH_OPENAI_BASE_URL: http://extstub:8080/v1
+      MOEWADEUL_AISEARCH_DAILY_BUDGET_USD: "100000"
+      MOEWADEUL_WEATHER_KMA_BASE_URL: http://extstub:8080/1360000
+      MOEWADEUL_WEATHER_KASI_BASE_URL: http://extstub:8080/B090041/openapi/service
+      MOEWADEUL_PUBLICDATA_GOCAMPING_BASE_URL: http://extstub:8080/gocamping
+      SERVER_TOMCAT_MBEANREGISTRY_ENABLED: "true"
+      JAVA_TOOL_OPTIONS: "-Xlog:gc:stdout:uptime,level"
+      LOGGING_LEVEL_COM_MOEWADEUL: ${LT_APP_LOG:-INFO}
+      SPRING_APPLICATION_JSON: ${LT_APP_JSON:-{}}
+    env_file:
+      - path: ${LT_JOBS_ENV:-${SWEEP_TOOLS}/empty.env}
+    depends_on:
+      extstub:
+        condition: service_started
+      smtpsink:
+        condition: service_started
+  mysql:
+    cpuset: "0,1"
+  alloy:
+    profiles: ["never"]

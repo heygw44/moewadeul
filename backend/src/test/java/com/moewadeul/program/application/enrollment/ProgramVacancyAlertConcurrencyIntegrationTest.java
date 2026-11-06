@@ -1,14 +1,17 @@
 package com.moewadeul.program.application.enrollment;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.testsupport.IntegrationTest;
+import com.moewadeul.common.testsupport.LockWaits;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.domain.ProgramApplicationRepository;
 import com.moewadeul.program.domain.ProgramErrorCode;
 import com.moewadeul.program.domain.ProgramRepository;
+import com.moewadeul.program.domain.ProgramVacancyAlertRepository;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.time.LocalDateTime;
@@ -29,6 +32,7 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.testcontainers.mysql.MySQLContainer;
 
 @IntegrationTest
 class ProgramVacancyAlertConcurrencyIntegrationTest {
@@ -46,6 +50,9 @@ class ProgramVacancyAlertConcurrencyIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private MySQLContainer mysql;
 
     private final CountDownLatch paused = new CountDownLatch(1);
     private final CountDownLatch resume = new CountDownLatch(1);
@@ -102,6 +109,25 @@ class ProgramVacancyAlertConcurrencyIntegrationTest {
         subscribeOutcome(subscribe);
 
         assertAlertNotStranded();
+    }
+
+    @Test
+    @DisplayName("[F-20][PG-07] 취소가 알림 대상을 정한 뒤 들어온 알림 신청은 외래 키 검사로 커밋을 기다렸다가 자리가 있다고 거절된다")
+    void subscribeAfterAlertTargetsWaitsOnForeignKeyUntilCancelCommits() throws Exception {
+        pauseAfter(Set.of("ProgramVacancyAlertRepository.lockAlertTargets"));
+        Future<?> cancel = executor.submit(() -> paymentService.cancel(holderId, holderApplicationId));
+        awaitPaused();
+
+        Future<Boolean> subscribe = executor.submit(() -> vacancyAlertService.subscribe(subscriberId, programId));
+        LockWaits.await(mysql, 1, "알림 신청의 행사 행 공유 잠금");
+        resume.countDown();
+        cancel.get(60, TimeUnit.SECONDS);
+
+        assertThatThrownBy(() -> subscribe.get(60, TimeUnit.SECONDS))
+                .hasCauseInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e.getCause()).getErrorCode())
+                        .isEqualTo(ProgramErrorCode.PROGRAM_SEATS_AVAILABLE));
+        assertThat(fixture.vacancyAlertCount(programId, subscriberId)).isZero();
     }
 
     private void assertAlertNotStranded() {
@@ -180,6 +206,9 @@ class ProgramVacancyAlertConcurrencyIntegrationTest {
                     }
                     if (bean instanceof ProgramRepository) {
                         return wrap(bean, "ProgramRepository");
+                    }
+                    if (bean instanceof ProgramVacancyAlertRepository) {
+                        return wrap(bean, "ProgramVacancyAlertRepository");
                     }
                     return bean;
                 }

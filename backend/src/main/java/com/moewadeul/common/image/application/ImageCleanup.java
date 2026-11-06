@@ -8,7 +8,6 @@ import com.moewadeul.common.transaction.OutsideTransaction;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -39,7 +38,8 @@ public abstract class ImageCleanup {
         return keyPrefix;
     }
 
-    public Result deleteExpiredRowsThenObjects() {
+    // 행을 먼저 지우면 저장소 삭제가 실패한 객체를 다시 찾을 수 없다. 추억 사진은 개인정보라 객체부터 지우고 성공한 사진의 행만 지운다.
+    public Result deleteExpiredObjectsThenRows() {
         OutsideTransaction.require("저장소 삭제를 기다리는 동안 DB 커넥션과 행 잠금을 쥐면 안 된다.");
         Instant createdBefore = clock.instant().minus(RETENTION);
         int deletedRows = 0;
@@ -49,14 +49,14 @@ public abstract class ImageCleanup {
         do {
             List<UnattachedImageRow> batch = imageMapper.selectUnattachedCreatedBefore(createdBefore, BATCH_SIZE);
             batchRead = batch.size();
-            List<UnattachedImageRow> deleted = new ArrayList<>();
+            Set<Long> failed = deleteObjectsReturningFailedIds(batch);
+            storageFailures += failed.size();
+            batchDeleted = 0;
             for (UnattachedImageRow row : batch) {
-                if (imageMapper.deleteIfUnattached(row.imageId()) != 0) {
-                    deleted.add(row);
+                if (!failed.contains(row.imageId())) {
+                    batchDeleted += imageMapper.deleteIfUnattached(row.imageId());
                 }
             }
-            batchDeleted = deleted.size();
-            storageFailures += deleteObjectsReturningFailedIds(deleted).size();
             deletedRows += batchDeleted;
         } while (batchRead == BATCH_SIZE && batchDeleted > 0);
         log.info("{} image cleanup deletedRows={} storageFailures={}", keyPrefix, deletedRows, storageFailures);

@@ -145,6 +145,24 @@ class AdminMemoryReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-33][MM-11] 검토가 끝난 금전 요구·사기 신고만 있는 기록은 먼저 나오지 않고 신고 수에도 들지 않는다")
+    void listIgnoresReviewedMoneyScamReport() {
+        // given
+        long reviewedScam = insertMemory("PUBLIC", "PENDING_REVIEW", BASE.plus(Duration.ofHours(1)));
+        long plainOld = insertMemory("PUBLIC", "PENDING_REVIEW", BASE);
+        insertReport(reviewedScam, "MONEY_SCAM", null, BASE, BASE.plus(Duration.ofMinutes(1)));
+        insertReport(plainOld, "SPAM", null, BASE, null);
+
+        // when
+        MvcTestResult all = get(MEMORIES);
+
+        // then
+        assertThat(ids(all, "$.content[*].memoryId")).containsExactly(plainOld, reviewedScam);
+        assertThat(all).bodyJson().extractingPath("$.content[0].reportCount").isEqualTo(1);
+        assertThat(all).bodyJson().extractingPath("$.content[1].reportCount").isEqualTo(0);
+    }
+
+    @Test
     @DisplayName(
             "[F-33][MM-11] status=HIDDEN이면 숨긴 기록만 나오고 신고가 없는 기록은 사유별 수가 모두 0이며, 허용하지 않는 status와 범위를 벗어난 size는 400 INVALID_INPUT이다")
     void listFiltersByStatusAndValidatesInput() {
@@ -168,6 +186,27 @@ class AdminMemoryReviewApiIntegrationTest {
             assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
             assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
         }
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-11] 숨김 목록은 가장 최근에 숨긴 기록부터 나오고, 검토 대기 목록은 그대로 오래된 순이다")
+    void hiddenListShowsLatestFirst() {
+        // given
+        long oldHidden = insertMemory("PUBLIC", "HIDDEN", BASE);
+        long midHidden = insertMemory("PUBLIC", "HIDDEN", BASE.plus(Duration.ofHours(1)));
+        long newHidden = insertMemory("PUBLIC", "HIDDEN", BASE.plus(Duration.ofHours(2)));
+        long oldPending = insertMemory("PUBLIC", "PENDING_REVIEW", BASE);
+        long newPending = insertMemory("PUBLIC", "PENDING_REVIEW", BASE.plus(Duration.ofHours(1)));
+
+        // when
+        MvcTestResult hiddenFirstPage = get(MEMORIES + "?status=HIDDEN&size=2");
+
+        // then
+        assertThat(ids(hiddenFirstPage, "$.content[*].memoryId")).containsExactly(newHidden, midHidden);
+        assertThat(hiddenFirstPage).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertThat(ids(get(MEMORIES + "?status=HIDDEN"), "$.content[*].memoryId"))
+                .containsExactly(newHidden, midHidden, oldHidden);
+        assertThat(ids(get(MEMORIES), "$.content[*].memoryId")).containsExactly(oldPending, newPending);
     }
 
     @Test

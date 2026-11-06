@@ -4,6 +4,13 @@
 # 메모리가 2GB인 서버라 서비스마다 한도를 둔다. 지표로 부족이 확인되면 이 값을 조정한다.
 name: moewadeul
 
+# Docker 기본 json-file 로그는 크기 제한 없이 쌓인다. 서비스마다 60MB까지만 남기고, 오래 볼 로그는 Alloy가 Loki로 보낸다.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 services:
   caddy:
     image: caddy:2.11.7-alpine
@@ -25,6 +32,7 @@ services:
     # 행사 신청이 열리는 순간처럼 요청 2,000개가 동시에 앱 응답을 기다리면 Caddy는 약 200MB를 쓴다(연결 하나에 약 0.1MB).
     # 128MB에서는 메모리 한도로 종료돼 응답이 전달되지 않았다.
     mem_limit: 256m
+    logging: *logging
 
   app:
     image: ${APP_IMAGE:?}
@@ -61,8 +69,9 @@ services:
     mem_limit: 768m
     # 앱은 SIGTERM을 받으면 보내던 메일 한 통을 마치고 끝난다. 메일 서버가 느려도 한 통은 20초(`moewadeul.mail.send-timeout`)를 넘기지 않고,
     # Spring은 종료 단계마다 최대 30초를 기다린다. 이 유예가 그보다 짧으면 Docker가 먼저 SIGKILL로 끝내서,
-    # 집어 둔 메일이 임대 5분 동안 묶이고 메모리에 모아 둔 조회수가 DB에 남지 않는다.
+    # 메모리에 모아 둔 조회수가 DB에 남지 않는다.
     stop_grace_period: 40s
+    logging: *logging
 
   mysql:
     # 배포 스크립트는 app과 caddy 이미지만 받는다. 그래서 8.4 패치가 새로 나와도 앱 배포가 DB 컨테이너를 다시 만들지 않는다.
@@ -94,6 +103,8 @@ services:
       - --slow-query-log=ON
       - --long-query-time=0.2
       - --slow-query-log-file=/var/log/mysql-slow/slow.log
+      # 데드락마다 양쪽 문장과 잠금을 컨테이너 로그(stderr)에 남긴다. 켜지 않으면 마지막 한 건만 SHOW ENGINE INNODB STATUS로 볼 수 있다.
+      - --innodb-print-all-deadlocks=ON
       - --performance-schema-digests-size=1000
       - --performance-schema-events-statements-history-long-size=0
       - --performance-schema-events-stages-history-long-size=0
@@ -117,6 +128,7 @@ services:
       retries: 30
       start_period: 30s
     mem_limit: 640m
+    logging: *logging
 
   # 지표·로그 수집 에이전트. 설정은 deploy/alloy/config.alloy이고, 배포 워크플로가 이 파일 옆 alloy/ 폴더에 받아 둔다.
   alloy:
@@ -152,6 +164,7 @@ services:
       - app
       - mysql
     mem_limit: 192m
+    logging: *logging
 
 volumes:
   caddy-data:

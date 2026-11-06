@@ -124,7 +124,7 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-27] 요청은 모델, 저장 안 함, 엄격한 JSON 스키마를 담고 문장은 user 메시지에만 넣는다")
+    @DisplayName("[F-27][AI-07] 요청은 모델, 저장 안 함, 엄격한 JSON 스키마를 담고 문장은 user 메시지에만 넣는다")
     void sendsExpectedRequest() {
         // given
         stubOk(content(), 10, 5);
@@ -152,6 +152,8 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
         assertThat(messages.get(0).get("content").asString()).doesNotContain(SENTENCE);
         assertThat(messages.get(1).get("role").asString()).isEqualTo("user");
         assertThat(messages.get(1).get("content").asString()).isEqualTo(SENTENCE);
+        assertThat(body.has("user")).isFalse();
+        assertThat(body.has("metadata")).isFalse();
     }
 
     @Test
@@ -168,7 +170,7 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-27][AI-05] 응답이 읽기 시간 안에 오지 않으면 다시 보내지 않고 실패하며, 보낸 요청 본문의 바이트 수와 최대 출력 토큰을 사용량으로 담는다")
+    @DisplayName("[F-27][AI-05][AI-09] 응답이 읽기 시간 안에 오지 않으면 다시 보내지 않고 실패하며, 보낸 요청 본문의 바이트 수와 최대 출력 토큰을 사용량으로 담는다")
     void failsOnReadTimeoutWithoutRetry() {
         // given
         OpenAiProperties shortTimeout = new OpenAiProperties(
@@ -193,7 +195,7 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-27][AI-05] 연결 자체가 되지 않으면 요청이 OpenAI에 닿지 않았으니 사용량 없이 실패한다")
+    @DisplayName("[F-27][AI-05][AI-09] 연결 자체가 되지 않으면 요청이 OpenAI에 닿지 않았으니 사용량 없이 실패한다")
     void failsWithoutUsageWhenConnectionIsRefused() throws IOException {
         // given
         int closedPort;
@@ -222,7 +224,7 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-27] HTTP 401과 500이면 상태를 메시지에 담아 실패하고 다시 보내지 않는다")
+    @DisplayName("[F-27][AI-09] HTTP 401과 500이면 상태를 메시지에 담아 실패하고 다시 보내지 않는다")
     void failsOnHttpErrors() {
         // given
         stub(aResponse().withStatus(401).withBody("{\"error\":\"" + SENTENCE + "\"}"));
@@ -282,7 +284,7 @@ class OpenAiSpotQueryInterpreterIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-27] 모르는 enum 값이 있으면 실패하고 토큰 수를 예외에 싣는다")
+    @DisplayName("[F-27][AI-09] 모르는 enum 값이 있으면 실패하고 토큰 수를 예외에 싣는다")
     void failsOnUnknownEnumValue() {
         // given
         Map<String, Object> content = content();

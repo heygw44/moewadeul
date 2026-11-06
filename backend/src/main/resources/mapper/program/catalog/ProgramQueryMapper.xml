@@ -90,6 +90,7 @@
               AND v.member_id = #{memberId})
     </select>
 
+    <!-- ORDER BY a.id 때문에 옵티마이저가 기본 키를 훑어 전체 신청(37만 행)을 읽던 것을 (program_id, status) 인덱스로 돌린다. 인덱스를 새로 만들면 오픈 시 신청 INSERT가 느려진다. -->
     <select id="selectApplicants" resultType="com.moewadeul.program.infra.catalog.ProgramApplicantRow">
         SELECT a.id AS application_id,
                a.member_id AS member_id,
@@ -101,7 +102,7 @@
                a.cancel_reason AS cancel_reason,
                a.review_requested_at AS review_requested_at,
                a.created_at AS created_at
-        FROM program_application a
+        FROM program_application a USE INDEX (idx_program_application_program_status)
         JOIN member m ON m.id = a.member_id
         WHERE a.program_id = #{programId}
         <if test="status != null">

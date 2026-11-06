@@ -14,6 +14,7 @@ import { REPORT_REASON_OPTIONS } from '../community/communityLabels';
 import { ApproxLocationLabel } from '../memory/ApproxLocationLabel';
 import { nightsLabel } from '../memory/memoryLabels';
 import { AdminPage } from './AdminGate';
+import { AdminReviewPhotos } from './AdminReviewPhotos';
 import { AdminSegments } from './AdminSegments';
 
 const itemKey = (item: AdminMemorySummary) => item.memoryId;
@@ -27,8 +28,6 @@ const REASON_LABELS = Object.fromEntries(REPORT_REASON_OPTIONS.map((option) => [
   CommunityReportReason,
   string
 >;
-
-const MAX_THUMBNAILS = 4;
 
 function fetchMemories(
   status: AdminMemoryStatus,
@@ -48,7 +47,12 @@ export function AdminMemoriesPage() {
 
 function MemoryReview() {
   const [tab, setTab] = useState<AdminMemoryStatus>('PENDING_REVIEW');
-  const { current, loadingMore, loadMore, retry, reload } = usePagedList(true, tab, fetchMemories, itemKey);
+  const { current, loadingMore, loadMore, retry, reload, refreshLoaded, updateItems } = usePagedList(
+    true,
+    tab,
+    fetchMemories,
+    itemKey,
+  );
   const showSkeleton = useDelayedFlag(current === null);
 
   return (
@@ -82,7 +86,16 @@ function MemoryReview() {
       {current !== null && current.items.length > 0 && (
         <ul className="flex flex-col gap-3">
           {current.items.map((item) => (
-            <MemoryCard key={item.memoryId} item={item} tab={tab} onDone={reload} />
+            <MemoryCard
+              key={item.memoryId}
+              item={item}
+              tab={tab}
+              onReload={refreshLoaded}
+              onDone={() => {
+                updateItems((items) => items.filter((candidate) => candidate.memoryId !== item.memoryId));
+                reload();
+              }}
+            />
           ))}
         </ul>
       )}
@@ -99,11 +112,20 @@ function MemoryReview() {
 
 type Action = 'hide' | 'restore';
 
-function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: AdminMemoryStatus; onDone: () => void }) {
+function MemoryCard({
+  item,
+  tab,
+  onDone,
+  onReload,
+}: {
+  item: AdminMemorySummary;
+  tab: AdminMemoryStatus;
+  onDone: () => void;
+  onReload: () => void;
+}) {
   const [confirmHide, setConfirmHide] = useState(false);
   const [busy, setBusy] = useState<Action | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const thumbnails = item.images.slice(0, MAX_THUMBNAILS);
 
   async function run(action: Action) {
     if (busy) return;
@@ -126,15 +148,7 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
         <h3 className="min-w-0 break-words text-lg font-semibold text-ink">{item.author.nickname}님의 기록</h3>
         <StatusText tone="neutral">{item.status === 'HIDDEN' ? '숨김' : '검토 대기'}</StatusText>
       </div>
-      {thumbnails.length > 0 && (
-        <ul className="grid grid-cols-4 gap-1" aria-label={`사진 ${item.images.length}장`}>
-          {thumbnails.map((image, index) => (
-            <li key={image.imageId} className="aspect-square overflow-hidden rounded-row bg-fill-strong">
-              <img src={image.url} alt={`사진 ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
-            </li>
-          ))}
-        </ul>
-      )}
+      <AdminReviewPhotos images={item.images} onReload={onReload} />
       {item.content && <p className="whitespace-pre-line break-words text-base text-ink">{item.content}</p>}
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-ink-muted">대략 위치</dt>
@@ -146,12 +160,6 @@ function MemoryCard({ item, tab, onDone }: { item: AdminMemorySummary; tab: Admi
           <span className="font-mono tabular-nums">{formatLocalDate(item.visitedDate)}</span> ·{' '}
           {nightsLabel(item.nights)}
         </dd>
-        {item.images.length > thumbnails.length && (
-          <>
-            <dt className="text-ink-muted">사진</dt>
-            <dd className="font-mono tabular-nums text-ink">{item.images.length}장</dd>
-          </>
-        )}
         <dt className="text-ink-muted">검토 전 신고</dt>
         <dd className="font-mono tabular-nums text-ink">
           {item.reportCount}건

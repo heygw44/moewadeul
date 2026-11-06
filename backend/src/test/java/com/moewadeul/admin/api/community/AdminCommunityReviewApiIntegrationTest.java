@@ -124,6 +124,30 @@ class AdminCommunityReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-08] 검토 대기 글과 숨긴 글은 붙은 사진을 표시 순서대로 함께 주고, 사진이 없는 글은 빈 배열이다")
+    void listShowsPostImagesInDisplayOrder() {
+        // given
+        long pending = insertPost("PENDING_REVIEW", BASE);
+        insertPostImage(pending, "community/1/second.jpg", 1);
+        insertPostImage(pending, "community/1/first.jpg", 0);
+        long hidden = insertPost("HIDDEN", BASE);
+
+        // when
+        MvcTestResult pendingList = get(POSTS);
+        MvcTestResult hiddenList = get(POSTS + "?status=HIDDEN");
+
+        // then
+        assertThat(pendingList).hasStatus(HttpStatus.OK);
+        List<String> urls = json(pendingList, "$.content[0].images[*].url");
+        assertThat(urls).hasSize(2);
+        assertThat(urls.get(0)).contains("community/1/first.jpg");
+        assertThat(urls.get(1)).contains("community/1/second.jpg");
+        assertThat(ids(hiddenList, "$.content[*].postId")).containsExactly(hidden);
+        List<Object> hiddenImages = json(hiddenList, "$.content[0].images");
+        assertThat(hiddenImages).isEmpty();
+    }
+
+    @Test
     @DisplayName("[F-29][CM-08] 금전 요구·사기 신고가 있는 글이 먼저 나오고, 같은 묶음에서는 상태가 바뀐 시각이 이른 글부터 나오며, 페이지를 넘기면 hasNext를 알린다")
     void listPutsMoneyScamFirstThenOldest() {
         // given
@@ -147,6 +171,35 @@ class AdminCommunityReviewApiIntegrationTest {
         assertThat(first).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
         assertThat(ids(second, "$.content[*].postId")).containsExactly(plainNew);
         assertThat(second).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-08] 숨김 목록은 가장 최근에 숨긴 글부터 나와서, 방금 숨긴 글과 댓글이 쌓인 숨김 뒤에도 첫 쪽 맨 앞에 있다")
+    void hiddenListShowsLatestFirst() {
+        // given
+        long postId = insertPost("ACTIVE", BASE);
+        long oldHidden = insertPost("HIDDEN", BASE);
+        long midHidden = insertPost("HIDDEN", BASE.plus(Duration.ofHours(1)));
+        long pendingPost = insertPost("PENDING_REVIEW", BASE);
+        long oldHiddenComment = insertComment(postId, "HIDDEN", "오래 전에 숨긴 댓글", BASE);
+        long midHiddenComment = insertComment(postId, "HIDDEN", "얼마 전에 숨긴 댓글", BASE.plus(Duration.ofHours(1)));
+        long pendingComment = insertComment(postId, "PENDING_REVIEW", "방금 숨길 댓글", BASE);
+
+        // when
+        assertThat(post(POSTS + "/" + pendingPost + "/hide")).hasStatus(HttpStatus.OK);
+        assertThat(post(COMMENTS + "/" + pendingComment + "/hide")).hasStatus(HttpStatus.OK);
+        MvcTestResult posts = get(POSTS + "?status=HIDDEN&size=2");
+        MvcTestResult comments = get(COMMENTS + "?status=HIDDEN&size=2");
+
+        // then
+        assertThat(ids(posts, "$.content[*].postId")).containsExactly(pendingPost, midHidden);
+        assertThat(posts).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertThat(ids(get(POSTS + "?status=HIDDEN"), "$.content[*].postId"))
+                .containsExactly(pendingPost, midHidden, oldHidden);
+        assertThat(ids(comments, "$.content[*].commentId")).containsExactly(pendingComment, midHiddenComment);
+        assertThat(comments).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertThat(ids(get(COMMENTS + "?status=HIDDEN"), "$.content[*].commentId"))
+                .containsExactly(pendingComment, midHiddenComment, oldHiddenComment);
     }
 
     @Test
@@ -315,6 +368,50 @@ class AdminCommunityReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-29][CM-08] 금전 요구·사기 신고가 있는 댓글이 먼저 나오고, 검토가 끝난 신고는 순서에도 신고 수에도 들지 않는다")
+    void commentListPutsMoneyScamFirstAndIgnoresReviewedReports() {
+        // given
+        long postId = insertPost("ACTIVE", BASE);
+        long plainOld = insertComment(postId, "PENDING_REVIEW", "일반 댓글", BASE);
+        long scamNew = insertComment(postId, "PENDING_REVIEW", "사기 댓글", BASE.plus(Duration.ofHours(5)));
+        long reviewedScam = insertComment(postId, "PENDING_REVIEW", "검토 끝난 사기 신고 댓글", BASE.plus(Duration.ofHours(1)));
+        insertCommentReport(plainOld, "ABUSE", null, BASE);
+        insertCommentReport(scamNew, "MONEY_SCAM", null, BASE);
+        insertCommentReport(scamNew, "ABUSE", null, BASE);
+        insertReport("COMMENT", reviewedScam, "MONEY_SCAM", null, BASE, BASE.plus(Duration.ofMinutes(1)));
+
+        // when
+        MvcTestResult all = get(COMMENTS);
+        MvcTestResult first = get(COMMENTS + "?size=2");
+
+        // then
+        assertThat(ids(all, "$.content[*].commentId")).containsExactly(scamNew, plainOld, reviewedScam);
+        assertThat(all).bodyJson().extractingPath("$.content[0].reportCount").isEqualTo(2);
+        assertThat(all).bodyJson().extractingPath("$.content[1].reportCount").isEqualTo(1);
+        assertThat(all).bodyJson().extractingPath("$.content[2].reportCount").isEqualTo(0);
+        assertThat(ids(first, "$.content[*].commentId")).containsExactly(scamNew, plainOld);
+        assertThat(first).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-08] 검토가 끝난 금전 요구·사기 신고만 있는 글은 먼저 나오지 않고 신고 수에도 들지 않는다")
+    void postListIgnoresReviewedMoneyScamReport() {
+        // given
+        long reviewedScam = insertPost("PENDING_REVIEW", BASE.plus(Duration.ofHours(1)));
+        long plainOld = insertPost("PENDING_REVIEW", BASE);
+        insertPostReport(reviewedScam, "MONEY_SCAM", null, BASE, BASE.plus(Duration.ofMinutes(1)));
+        insertPostReport(plainOld, "SPAM", null, BASE, null);
+
+        // when
+        MvcTestResult all = get(POSTS);
+
+        // then
+        assertThat(ids(all, "$.content[*].postId")).containsExactly(plainOld, reviewedScam);
+        assertThat(all).bodyJson().extractingPath("$.content[0].reportCount").isEqualTo(1);
+        assertThat(all).bodyJson().extractingPath("$.content[1].reportCount").isEqualTo(0);
+    }
+
+    @Test
     @DisplayName("[F-29][CM-08] 댓글 검토 목록은 글 ID와 작성자, 원문, 사유별 신고 수를 담고 지운 댓글이 아닌 숨긴 댓글도 원문을 준다")
     void commentListShowsReports() {
         // given
@@ -367,6 +464,29 @@ class AdminCommunityReviewApiIntegrationTest {
                 .bodyJson()
                 .extractingPath("$.content[0].reasonCounts")
                 .isEqualTo(reasonCounts(0, 0, 0, 0, 0, 0));
+    }
+
+    @Test
+    @DisplayName("[F-29][CM-08] 댓글 검토 목록은 댓글이 달린 글의 상태를 함께 줘서, 화면이 공개 상세가 404인 글로 보내지 않게 한다")
+    void commentListCarriesPostStatus() {
+        // given
+        long activePost = insertPost("ACTIVE", BASE);
+        long pendingPost = insertPost("PENDING_REVIEW", BASE);
+        long hiddenPost = insertPost("HIDDEN", BASE);
+        long onActive = insertComment(activePost, "PENDING_REVIEW", "공개 글의 댓글", BASE);
+        long onPending = insertComment(pendingPost, "PENDING_REVIEW", "검토 대기 글의 댓글", BASE.plus(Duration.ofHours(1)));
+        long onHidden = insertComment(hiddenPost, "PENDING_REVIEW", "숨긴 글의 댓글", BASE.plus(Duration.ofHours(2)));
+
+        // when
+        MvcTestResult result = get(COMMENTS);
+
+        // then
+        assertThat(ids(result, "$.content[*].commentId")).containsExactly(onActive, onPending, onHidden);
+        assertThat(result)
+                .bodyJson()
+                .extractingPath("$.content[*].postStatus")
+                .asList()
+                .containsExactly("ACTIVE", "PENDING_REVIEW", "HIDDEN");
     }
 
     @Test
@@ -475,6 +595,17 @@ class AdminCommunityReviewApiIntegrationTest {
                 BASE,
                 updatedAt);
         return jdbc.queryForObject("SELECT MAX(id) FROM community_post", Long.class);
+    }
+
+    private void insertPostImage(long postId, String key, int displayOrder) {
+        jdbc.update(
+                "INSERT INTO community_image (member_id, post_id, object_key, content_type, size_bytes, display_order, created_at)"
+                        + " VALUES (?, ?, ?, 'image/jpeg', 1000, ?, ?)",
+                authorId,
+                postId,
+                key,
+                displayOrder,
+                BASE);
     }
 
     private long insertComment(long postId, String status, String content, Instant updatedAt) {
