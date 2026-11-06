@@ -10,11 +10,11 @@ import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.IdentityVerification;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
 import com.moewadeul.trust.domain.identity.VerifiedIdentity;
+import com.moewadeul.trust.infra.identity.IdentityVerificationInsertMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.Year;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 class IdentityVerificationApplier {
 
     private final IdentityVerificationRepository identityVerificationRepository;
+    private final IdentityVerificationInsertMapper identityVerificationInsertMapper;
     private final CiHasher ciHasher;
     private final TrustSummaryService trustSummaryService;
     private final Clock clock;
@@ -37,17 +38,19 @@ class IdentityVerificationApplier {
         if (identityVerificationRepository.existsByCiHash(ciHash)) {
             throw new BusinessException(TrustErrorCode.IDENTITY_CI_DUPLICATED);
         }
-        IdentityVerification saved = save(IdentityVerification.verify(memberId, identity, ciHash, providerType, now));
+        identityVerificationInsertMapper.insertIgnoringDuplicate(
+                IdentityVerification.verify(memberId, identity, ciHash, providerType, now));
+        IdentityVerification saved =
+                identityVerificationRepository.findByMemberId(memberId).orElseThrow(() -> conflictOf(memberId));
         TrustSummary summary = trustSummaryService.summarizeOf(saved, memberId, now);
         return new IdentityVerificationResult(
                 summary.identityVerified(), saved.isAdult(Year.from(now.atZone(KoreaTime.ZONE))), summary.trustLevel());
     }
 
-    private IdentityVerification save(IdentityVerification verification) {
-        try {
-            return identityVerificationRepository.saveAndFlush(verification);
-        } catch (DataIntegrityViolationException e) {
-            throw IdentityUniqueConstraintTranslator.translate(e);
-        }
+    private BusinessException conflictOf(long memberId) {
+        return new BusinessException(
+                identityVerificationInsertMapper.existsByMemberIdCommitted(memberId)
+                        ? TrustErrorCode.IDENTITY_ALREADY_VERIFIED
+                        : TrustErrorCode.IDENTITY_CI_DUPLICATED);
     }
 }

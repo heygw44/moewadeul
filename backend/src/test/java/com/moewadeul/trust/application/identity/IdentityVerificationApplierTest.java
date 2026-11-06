@@ -15,6 +15,7 @@ import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
 import com.moewadeul.trust.domain.identity.VerifiedIdentity;
+import com.moewadeul.trust.infra.identity.IdentityVerificationInsertMapper;
 import java.time.Clock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,8 +25,9 @@ class IdentityVerificationApplierTest {
     private static final long MEMBER_ID = 7L;
 
     private final IdentityVerificationRepository repository = mock(IdentityVerificationRepository.class);
+    private final IdentityVerificationInsertMapper insertMapper = mock(IdentityVerificationInsertMapper.class);
     private final IdentityVerificationApplier applier = new IdentityVerificationApplier(
-            repository, mock(CiHasher.class), mock(TrustSummaryService.class), Clock.systemUTC());
+            repository, insertMapper, mock(CiHasher.class), mock(TrustSummaryService.class), Clock.systemUTC());
 
     @Test
     @DisplayName("이미 본인확인한 회원이 같은 CI로 다시 요청하면 IDENTITY_ALREADY_VERIFIED이고 저장하지 않는다")
@@ -38,6 +40,6 @@ class IdentityVerificationApplierTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.IDENTITY_ALREADY_VERIFIED));
-        verify(repository, never()).saveAndFlush(any());
+        verify(insertMapper, never()).insertIgnoringDuplicate(any());
     }
 }
