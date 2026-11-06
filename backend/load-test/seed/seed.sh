@@ -7,8 +7,8 @@
 #   SEED_DB       데이터를 넣을 데이터베이스 이름. 비우면 MySQL 컨테이너의 MYSQL_DATABASE
 #   ENV_FILE      docker compose에 넘길 --env-file. 비우면 compose 기본값(.env)
 #   COMPOSE_FILE  docker compose가 직접 읽는 표준 변수. 검증 서버에서는 운영 compose 파일을 가리킨다
-#   SEED_STAGES   돌릴 단계. base(장소·신청 회원, seed.sql), extra(베이스캠프·커뮤니티 등, seed-extra.sql). 기본 base,extra.
-#                 첫 단계를 이미 마친 DB에는 extra만 돌린다.
+#   SEED_STAGES   돌릴 단계. base(장소·신청 회원, seed.sql), extra(베이스캠프·커뮤니티 등, seed-extra.sql), sweep(나머지 표, seed-sweep.sql).
+#                 기본 base,extra. 앞 단계를 이미 마친 DB에는 뒤 단계만 돌린다.
 #   두 번째 단계 규모(기본값): EXTRA_MEMBER_COUNT 200000(배경 회원, 10000~1000000), BASECAMP_COUNT 300000, AUDIT_LOG_COUNT 100000,
 #                 LOGIN_HISTORY_COUNT 3000000, PROGRAM_COUNT 2000, POST_COUNT 200000, MEMORY_COUNT 100000
 #
@@ -35,8 +35,8 @@ for value in "$SPOT_COUNT" "$MEMBER_COUNT" "$EXTRA_MEMBER_COUNT" "$BASECAMP_COUN
         exit 1
     fi
 done
-if ! [[ "$SEED_STAGES" =~ ^(base|extra|base,extra)$ ]]; then
-    echo "SEED_STAGES는 base, extra, base,extra 중 하나여야 합니다." >&2
+if ! [[ "$SEED_STAGES" =~ ^(base|extra|base,extra|sweep|extra,sweep|base,extra,sweep)$ ]]; then
+    echo "SEED_STAGES는 base, extra, sweep을 차례대로 이은 값이어야 합니다. 예: base,extra,sweep" >&2
     exit 1
 fi
 if [[ -n "$SEED_DB" && ! "$SEED_DB" =~ ^[A-Za-z0-9_]+$ ]]; then
@@ -66,7 +66,7 @@ if [[ "$SEED_STAGES" == base* ]]; then
     echo "$(date '+%F %T') 첫 단계 끝: $(( $(date +%s) - started ))초"
 fi
 
-if [[ "$SEED_STAGES" == *extra ]]; then
+if [[ "$SEED_STAGES" == *extra* ]]; then
     extra_started=$(date +%s)
     echo "$(date '+%F %T') 두 번째 단계 시작: 배경 회원 ${EXTRA_MEMBER_COUNT}명, 베이스캠프 ${BASECAMP_COUNT}개, 글 ${POST_COUNT}개," \
         "기록 ${MEMORY_COUNT}개, 로그인 기록 ${LOGIN_HISTORY_COUNT}건, 행사 ${PROGRAM_COUNT}개, 감사 로그 ${AUDIT_LOG_COUNT}건"
@@ -81,6 +81,13 @@ if [[ "$SEED_STAGES" == *extra ]]; then
         cat "$SCRIPT_DIR/seed-extra.sql"
     } | run_sql
     echo "$(date '+%F %T') 두 번째 단계 끝: $(( $(date +%s) - extra_started ))초"
+fi
+
+if [[ "$SEED_STAGES" == *sweep ]]; then
+    sweep_started=$(date +%s)
+    echo "$(date '+%F %T') 세 번째 단계 시작: 알림, 후기, 신고, 인증 기록 등"
+    run_sql < "$SCRIPT_DIR/seed-sweep.sql"
+    echo "$(date '+%F %T') 세 번째 단계 끝: $(( $(date +%s) - sweep_started ))초"
 fi
 
 echo "$(date '+%F %T') 끝: $(( $(date +%s) - started ))초"
