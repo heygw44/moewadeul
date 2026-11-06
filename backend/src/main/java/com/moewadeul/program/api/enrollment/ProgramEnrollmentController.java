@@ -47,6 +47,7 @@ class ProgramEnrollmentController {
                         memberId, idempotencyKey, "POST /api/programs/" + programId + "/applications", null),
                 HttpStatus.CREATED,
                 ProgramApplyResponse.class,
+                () -> programApplyService.rejectIfSoldOutWithoutLock(memberId, programId),
                 () -> ProgramApplyResponse.from(programApplyService.apply(memberId, programId)));
     }
 
