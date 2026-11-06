@@ -1,0 +1,6 @@
+{"mappings":[
+ {"priority":9,"request":{"method":"HEAD","urlPathPattern":"/.*"},"response":{"status":200,"headers":{"Content-Length":"200000","Content-Type":"image/jpeg","ETag":"\"lt\""}}},
+ {"priority":9,"request":{"method":"DELETE","urlPathPattern":"/.*"},"response":{"status":204}},
+ {"priority":9,"request":{"method":"POST","urlPathPattern":"/.*","queryParameters":{"delete":{"matches":".*"}}},"response":{"status":200,"headers":{"Content-Type":"application/xml"},"body":"<DeleteResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"></DeleteResult>"}},
+ {"priority":5,"request":{"method":"GET","urlPathPattern":"/gocamping.*"},"response":{"status":200,"headers":{"Content-Type":"application/json"},"bodyFileName":"gocamping.json"}}
+]}

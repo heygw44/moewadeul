@@ -1,0 +1,1 @@
+{"request": {"method": "GET", "urlPath": "/1360000/VilageFcstInfoService_2.0/getVilageFcst"}, "response": {"status": 200, "headers": {"Content-Type": "application/json"}, "bodyFileName": "vilage-fcst.json"}, "id": "5f1e0000-0000-4000-8000-000000000514"}
