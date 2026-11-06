@@ -35,11 +35,16 @@ class ModerationReportContentCleanupSchedulerTest {
     private ReportContentCleanup cleanup(String target, boolean fails) {
         return new ReportContentCleanup(target, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC)) {
             @Override
-            protected int clearContentProcessedBefore(Instant cutoff, int limit) {
+            protected List<Long> selectIdsProcessedBefore(Instant cutoff, int limit) {
                 ran.add(target);
                 if (fails) {
                     throw new IllegalStateException("DB 연결 실패");
                 }
+                return List.of();
+            }
+
+            @Override
+            protected int clearContent(List<Long> ids, Instant cutoff) {
                 return 0;
             }
         };
