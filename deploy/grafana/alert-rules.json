@@ -662,7 +662,7 @@
           "datasourceUid": "__PROM_UID__",
           "model": {
             "refId": "A",
-            "expr": "max(tomcat_threads_busy_threads{job=\"moewadeul-app\"}) / max(tomcat_threads_config_max_threads{job=\"moewadeul-app\"})",
+            "expr": "max(tomcat_threads_busy_threads{job=\"moewadeul-app\",name=\"http-nio-8080\"}) / max(tomcat_threads_config_max_threads{job=\"moewadeul-app\",name=\"http-nio-8080\"})",
             "instant": true,
             "range": false
           }
@@ -956,7 +956,7 @@
           "datasourceUid": "__PROM_UID__",
           "model": {
             "refId": "A",
-            "expr": "absent(moewadeul_outbox_oldest_pending_age_seconds{job=\"moewadeul-app\"}) or absent(moewadeul_notification_mail_oldest_pending_age_seconds{job=\"moewadeul-app\"}) or absent(moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}) or absent(moewadeul_notification_mails{job=\"moewadeul-app\",status=\"failed\"}) or absent(moewadeul_aisearch_budget_used_ratio{job=\"moewadeul-app\"}) or absent(moewadeul_scheduled_job_failures_total{job=\"moewadeul-app\"}) or absent(hikaricp_connections_acquire_seconds_max{job=\"moewadeul-app\"}) or absent(tomcat_threads_busy_threads{job=\"moewadeul-app\"}) or absent(tomcat_threads_config_max_threads{job=\"moewadeul-app\"}) or absent(node_filesystem_avail_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\",mountpoint=\"/\"}) or absent(node_filesystem_size_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\",mountpoint=\"/\"}) or absent(node_memory_MemAvailable_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"}) or absent(node_memory_MemTotal_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"}) or absent(node_cpu_seconds_total{instance=\"moewadeul-prod\",job=\"integrations/unix\",mode=\"idle\"}) or absent(caddy_http_request_duration_seconds_count{job=\"caddy\"}) or absent(probe_success{job=~\"integrations/blackbox/.+\"})",
+            "expr": "absent(moewadeul_outbox_oldest_pending_age_seconds{job=\"moewadeul-app\"}) or absent(moewadeul_notification_mail_oldest_pending_age_seconds{job=\"moewadeul-app\"}) or absent(moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}) or absent(moewadeul_notification_mails{job=\"moewadeul-app\",status=\"failed\"}) or absent(moewadeul_aisearch_budget_used_ratio{job=\"moewadeul-app\"}) or absent(moewadeul_scheduled_job_failures_total{job=\"moewadeul-app\"}) or absent(hikaricp_connections_acquire_seconds_max{job=\"moewadeul-app\"}) or absent(tomcat_threads_busy_threads{job=\"moewadeul-app\",name=\"http-nio-8080\"}) or absent(tomcat_threads_config_max_threads{job=\"moewadeul-app\",name=\"http-nio-8080\"}) or absent(node_filesystem_avail_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\",mountpoint=\"/\"}) or absent(node_filesystem_size_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\",mountpoint=\"/\"}) or absent(node_memory_MemAvailable_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"}) or absent(node_memory_MemTotal_bytes{instance=\"moewadeul-prod\",job=\"integrations/unix\"}) or absent(node_cpu_seconds_total{instance=\"moewadeul-prod\",job=\"integrations/unix\",mode=\"idle\"}) or absent(caddy_http_request_duration_seconds_count{job=\"caddy\"}) or absent(probe_success{job=~\"integrations/blackbox/.+\"})",
             "instant": true,
             "range": false
           }

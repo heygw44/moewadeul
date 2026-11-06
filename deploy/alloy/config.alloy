@@ -142,7 +142,6 @@ prometheus.exporter.blackbox "site" {
 }
 
 prometheus.scrape "blackbox" {
-	job_name        = "site-probe"
 	targets         = prometheus.exporter.blackbox.site.targets
 	scrape_interval = "60s"
 	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
