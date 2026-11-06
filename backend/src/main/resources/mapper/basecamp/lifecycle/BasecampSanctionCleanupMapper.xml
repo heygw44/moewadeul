@@ -4,18 +4,18 @@
 
     <select id="selectInProgressBasecampIds" resultType="long">
         SELECT b.id
-        FROM basecamp b
-        WHERE b.status IN ('RECRUITING', 'CLOSED', 'CONFIRMED')
-          AND (EXISTS (SELECT 1
-                       FROM basecamp_member bm
-                       WHERE bm.basecamp_id = b.id
-                         AND bm.member_id = #{memberId}
-                         AND bm.status = 'ACTIVE')
-               OR EXISTS (SELECT 1
-                          FROM basecamp_application a
-                          WHERE a.basecamp_id = b.id
-                            AND a.applicant_id = #{memberId}
-                            AND a.status = 'PENDING'))
-        ORDER BY b.id
+        FROM basecamp_member bm
+        JOIN basecamp b ON b.id = bm.basecamp_id
+        WHERE bm.member_id = #{memberId}
+          AND bm.status = 'ACTIVE'
+          AND b.status IN ('RECRUITING', 'CLOSED', 'CONFIRMED')
+        UNION
+        SELECT b.id
+        FROM basecamp_application a
+        JOIN basecamp b ON b.id = a.basecamp_id
+        WHERE a.applicant_id = #{memberId}
+          AND a.status = 'PENDING'
+          AND b.status IN ('RECRUITING', 'CLOSED', 'CONFIRMED')
+        ORDER BY id
     </select>
 </mapper>
