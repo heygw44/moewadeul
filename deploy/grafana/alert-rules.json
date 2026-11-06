@@ -493,17 +493,17 @@
       ]
     },
     {
-      "uid": "moewadeul-hikari-pending",
-      "title": "DB 커넥션 대기 2분 이상 지속",
+      "uid": "moewadeul-hikari-acquire-slow",
+      "title": "DB 커넥션 대기 3초 초과",
       "condition": "C",
-      "for": "2m",
+      "for": "0s",
       "noDataState": "OK",
       "execErrState": "Error",
       "labels": {
         "service": "moewadeul"
       },
       "annotations": {
-        "summary": "커넥션 풀을 기다리는 요청이 2분 넘게 이어졌다. 한 행의 잠금이 길어져 쓰기 요청이 커넥션을 쥐고 있을 수 있다(#662). 대시보드의 커넥션 풀과 InnoDB 행 잠금 대기를 본다."
+        "summary": "최근 2분 안에 커넥션을 얻는 데 3초 넘게 걸린 요청이 있다. 한 행의 잠금을 기다리는 쓰기가 커넥션을 모두 쥐었을 수 있다(TS-029). 대시보드의 커넥션 풀과 InnoDB 행 잠금 대기를 본다."
       },
       "data": [
         {
@@ -515,7 +515,7 @@
           "datasourceUid": "__PROM_UID__",
           "model": {
             "refId": "A",
-            "expr": "sum(hikaricp_connections_pending{job=\"moewadeul-app\"})",
+            "expr": "max(hikaricp_connections_acquire_seconds_max{job=\"moewadeul-app\"})",
             "instant": true,
             "range": false
           }
@@ -532,7 +532,7 @@
                 "evaluator": {
                   "type": "gt",
                   "params": [
-                    0
+                    3
                   ]
                 }
               }

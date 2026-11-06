@@ -2,25 +2,51 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.trust.infra.report.ReportContentCleanupMapper">
 
-    <update id="clearHandledReportContent">
-        UPDATE member_report
-        SET content = NULL,
-            result_note = NULL
-        WHERE status IN ('ACTIONED', 'DISMISSED')
+    <sql id="handledReport">
+        status IN ('ACTIONED', 'DISMISSED')
           AND handled_at &lt;= #{cutoff}
           AND (content IS NOT NULL OR result_note IS NOT NULL)
-        LIMIT #{limit}
-    </update>
+    </sql>
 
-    <update id="clearFinishedSanctionReason">
-        UPDATE sanction
-        SET reason = NULL
-        WHERE reason IS NOT NULL
+    <sql id="finishedSanction">
+        reason IS NOT NULL
           AND (
                 (status = 'EXPIRED' AND ends_at &lt;= #{cutoff})
                 OR (status IN ('ENDED_EARLY', 'REVOKED') AND lifted_at &lt;= #{cutoff})
                 OR (type = 'WARNING' AND status NOT IN ('ENDED_EARLY', 'REVOKED') AND starts_at &lt;= #{cutoff})
               )
+    </sql>
+
+    <select id="selectHandledReportIds" resultType="long">
+        SELECT id
+        FROM member_report
+        WHERE <include refid="handledReport"/>
+        ORDER BY id
         LIMIT #{limit}
+    </select>
+
+    <update id="clearHandledReportContent">
+        UPDATE member_report
+        SET content = NULL,
+            result_note = NULL
+        WHERE id IN
+          <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+          AND <include refid="handledReport"/>
+    </update>
+
+    <select id="selectFinishedSanctionIds" resultType="long">
+        SELECT id
+        FROM sanction
+        WHERE <include refid="finishedSanction"/>
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <update id="clearFinishedSanctionReason">
+        UPDATE sanction
+        SET reason = NULL
+        WHERE id IN
+          <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+          AND <include refid="finishedSanction"/>
     </update>
 </mapper>

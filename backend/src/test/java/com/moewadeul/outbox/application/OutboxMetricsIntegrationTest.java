@@ -34,9 +34,14 @@ class OutboxMetricsIntegrationTest {
     @Autowired
     private MutableClock clock;
 
+    @Autowired
+    private OutboxMetrics outboxMetrics;
+
     @Test
     @DisplayName("[NFR-09] 미발행 이벤트가 없으면 미발행 수, 실패 수, 가장 오래된 미발행 이벤트의 나이가 모두 0이다")
     void reportsZeroWhenNothingIsPending() {
+        outboxMetrics.refresh();
+
         assertThat(events("pending")).isZero();
         assertThat(events("failed")).isZero();
         assertThat(oldestPendingAgeSeconds()).isZero();
@@ -57,6 +62,7 @@ class OutboxMetricsIntegrationTest {
 
         // when
         clock.advance(Duration.ofMinutes(15));
+        outboxMetrics.refresh();
 
         // then
         assertThat(events("pending")).isEqualTo(2);
@@ -71,6 +77,7 @@ class OutboxMetricsIntegrationTest {
                 recorder.record(RecordingOutboxEventHandler.EVENT_TYPE, AGGREGATE_TYPE, 1L, Map.of("sequence", 1)));
         jdbcTemplate.update("UPDATE outbox_event SET status = 'PUBLISHED'");
         clock.advance(Duration.ofHours(1));
+        outboxMetrics.refresh();
 
         assertThat(events("pending")).isZero();
         assertThat(oldestPendingAgeSeconds()).isZero();

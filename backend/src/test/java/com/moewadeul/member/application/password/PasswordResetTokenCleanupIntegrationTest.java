@@ -49,7 +49,7 @@ class PasswordResetTokenCleanupIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-02][PW-02] 만료된 지 하루가 넘은 토큰은 쓴 것이든 안 쓴 것이든 지운다")
+    @DisplayName("[F-02][PW-02][PV-15] 만료된 지 하루가 넘은 토큰은 쓴 것이든 안 쓴 것이든 지운다")
     void deletesTokensExpiredMoreThanOneDayAgo() {
         long unused = insertToken(cutoff().minus(ONE_SECOND), false);
         long used = insertToken(cutoff().minus(Duration.ofDays(30)), true);
@@ -62,7 +62,7 @@ class PasswordResetTokenCleanupIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-02][PW-02] 정확히 하루 전에 만료된 토큰은 지운다")
+    @DisplayName("[F-02][PW-02][PV-15] 정확히 하루 전에 만료된 토큰은 지운다")
     void deletesTokenExpiredExactlyOneDayAgo() {
         long exactly = insertToken(cutoff(), false);
 
@@ -73,7 +73,7 @@ class PasswordResetTokenCleanupIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-02][PW-02] 만료된 지 하루가 안 된 토큰과 아직 유효한 토큰은 남긴다")
+    @DisplayName("[F-02][PW-02][PV-15] 만료된 지 하루가 안 된 토큰과 아직 유효한 토큰은 남긴다")
     void keepsRecentlyExpiredAndValidTokens() {
         long justUnder = insertToken(cutoff().plus(ONE_SECOND), false);
         long usedJustUnder = insertToken(cutoff().plus(ONE_SECOND), true);

@@ -177,6 +177,27 @@ class ReportContentCleanupIntegrationTest {
         assertThat(count("sanction WHERE reason IS NOT NULL")).isZero();
     }
 
+    @Test
+    @DisplayName("[F-21][PV-07] 한 번에 바꾸는 상한보다 처리 완료 신고가 많아도 모두 지우고, 최근 신고와 접수 중인 신고는 남긴다")
+    void clearsAllHandledReportsBeyondBatchSize() {
+        int total = ReportContentCleanupService.BATCH_SIZE + 1;
+        for (int i = 0; i < total; i++) {
+            handledReport(i % 2 == 0 ? "ACTIONED" : "DISMISSED", cutoff().minus(Duration.ofDays(30)));
+        }
+        long recent = handledReport("ACTIONED", cutoff().plus(ONE_SECOND));
+        long received = unfinishedReport("RECEIVED");
+
+        ReportContentCleanupService.Result result = cleanupService.clearExpiredContent();
+
+        assertThat(result.reports()).isEqualTo(total);
+        assertThat(count(
+                        "member_report WHERE handled_at <= ? AND (content IS NOT NULL OR result_note IS NOT NULL)",
+                        DATETIME_UTC.format(cutoff())))
+                .isZero();
+        assertThat(contentErased(recent)).isFalse();
+        assertThat(contentErased(received)).isFalse();
+    }
+
     private Instant cutoff() {
         return clock.instant()
                 .atZone(ZoneOffset.UTC)

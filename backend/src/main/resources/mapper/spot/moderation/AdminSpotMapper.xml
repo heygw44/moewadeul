@@ -12,20 +12,12 @@
                s.park_warning AS park_warning,
                b.reporter_id AS reporter_id,
                m.nickname AS reporter_nickname,
-               COALESCE(rc.report_count, 0) AS report_count,
+               (SELECT COUNT(*) FROM bakji_report r
+                WHERE r.spot_id = s.id AND r.reviewed_at IS NULL) AS report_count,
                s.updated_at AS status_changed_at
         FROM spot s
         LEFT JOIN bakji_detail b ON b.spot_id = s.id
         LEFT JOIN member m ON m.id = b.reporter_id
-        LEFT JOIN (
-            SELECT r.spot_id AS spot_id,
-                   COUNT(*) AS report_count
-            FROM bakji_report r
-            JOIN spot target ON target.id = r.spot_id
-            WHERE r.reviewed_at IS NULL
-              AND target.status = #{status}
-            GROUP BY r.spot_id
-        ) rc ON rc.spot_id = s.id
         WHERE s.status = #{status}
         ORDER BY s.updated_at ASC, s.id ASC
         LIMIT #{limit} OFFSET #{offset}

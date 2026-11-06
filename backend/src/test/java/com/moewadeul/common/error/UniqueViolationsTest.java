@@ -207,4 +207,13 @@ class UniqueViolationsTest {
                 "could not execute statement",
                 new SQLIntegrityConstraintViolationException(message, "23000", errorCode));
     }
+
+    @Test
+    @DisplayName("[NFR-11] 긴 글 안의 제약 위반 값만 지우고 제약 이름과 앞뒤 줄은 그대로 둔다")
+    void redactValuesKeepsConstraintName() {
+        String text = "Caused by: x\nDuplicate entry 'a'b@example.com' for key 'member.uk_member_email'\nat y";
+
+        assertThat(UniqueViolations.redactValues(text))
+                .isEqualTo("Caused by: x\nDuplicate entry for key 'member.uk_member_email'\nat y");
+    }
 }

@@ -18,7 +18,8 @@ export function AiInterpretSummary({ summary, className }: { summary: AiSummary;
         .filter(Boolean)
         .join(' ')}
     >
-      <p className="font-semibold">이 조건으로 찾았어요</p>
+      <p className="font-semibold">AI가 문장을 해석했어요</p>
+      <p>이 조건으로 찾았어요.</p>
       {summary.unparsed.length > 0 && (
         <p className="text-ink-muted">반영하지 못한 말: {summary.unparsed.join(' · ')}</p>
       )}
