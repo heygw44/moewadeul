@@ -25,11 +25,12 @@ class MigrationCompatibilityRuleTest {
     private static final Pattern DROP_TABLE = Pattern.compile("(?is)^\\s*DROP\\s+TABLE\\b.*");
     private static final Pattern RENAME_TABLE = Pattern.compile("(?is)^\\s*RENAME\\s+TABLE\\b.*");
     private static final Pattern DROP_COLUMN =
-            Pattern.compile("(?i)\\bDROP\\s+(?!INDEX\\b|KEY\\b|FOREIGN\\b|PRIMARY\\b|CHECK\\b|CONSTRAINT\\b)");
+            Pattern.compile("(?i)\\bDROP\\s+(?!INDEX\\b|KEY\\b|FOREIGN\\b|PRIMARY\\b|CHECK\\b|CONSTRAINT\\b"
+                    + "|DEFAULT\\b|PARTITION\\b)");
     private static final Pattern RENAME_OR_CHANGE = Pattern.compile("(?i)\\b(RENAME\\s+(COLUMN|TO|AS)|CHANGE)\\b");
-    private static final Pattern MODIFY_NOT_NULL = Pattern.compile("(?is)\\bMODIFY\\b[^,]*\\bNOT\\s+NULL\\b");
+    private static final Pattern MODIFY_NOT_NULL = Pattern.compile("(?is)\\bMODIFY\\b.*\\bNOT\\s+NULL\\b");
     private static final Pattern ADD_COLUMN = Pattern.compile("(?is)\\bADD\\s+(COLUMN\\s+)?(?!INDEX\\b|KEY\\b|UNIQUE\\b"
-            + "|CONSTRAINT\\b|FOREIGN\\b|PRIMARY\\b|SPATIAL\\b|FULLTEXT\\b|CHECK\\b)([^,]*)");
+            + "|CONSTRAINT\\b|FOREIGN\\b|PRIMARY\\b|SPATIAL\\b|FULLTEXT\\b|CHECK\\b)(.*)");
     private static final Pattern NOT_NULL = Pattern.compile("(?i)\\bNOT\\s+NULL\\b");
     private static final Pattern HAS_VALUE_FOR_OLD_WRITERS = Pattern.compile("(?i)\\b(DEFAULT|AS\\s*\\(|GENERATED)\\b");
 
@@ -70,6 +71,8 @@ class MigrationCompatibilityRuleTest {
                         ALTER TABLE sample ADD COLUMN a INT NOT NULL DEFAULT 0, ADD COLUMN b INT NULL;
                         ALTER TABLE sample ADD COLUMN c DOUBLE AS (a + 1) STORED NOT NULL;
                         ALTER TABLE sample ADD INDEX idx_a (a), DROP INDEX idx_b, DROP FOREIGN KEY fk_c;
+                        ALTER TABLE sample ADD COLUMN d DECIMAL(10,2) NOT NULL DEFAULT 0, ALTER COLUMN a DROP DEFAULT;
+                        ALTER TABLE sample DROP PARTITION p0;
                         UPDATE sample SET a = 1;
                         """)).isEmpty();
     }
@@ -84,6 +87,12 @@ class MigrationCompatibilityRuleTest {
         assertThat(breakingChanges("RENAME TABLE sample TO other;")).containsExactly("표 이름 변경");
         assertThat(breakingChanges("DROP TABLE sample;")).containsExactly("표 삭제");
         assertThat(breakingChanges("ALTER TABLE sample DROP a;")).containsExactly("컬럼 삭제");
+        assertThat(breakingChanges("ALTER TABLE sample ADD COLUMN price DECIMAL(10,2) NOT NULL;"))
+                .containsExactly("기본값 없는 NOT NULL 컬럼 추가");
+        assertThat(breakingChanges("ALTER TABLE sample ADD COLUMN kind ENUM('A','B') NOT NULL, ADD COLUMN c INT NULL;"))
+                .containsExactly("기본값 없는 NOT NULL 컬럼 추가");
+        assertThat(breakingChanges("ALTER TABLE sample MODIFY price DECIMAL(10,2) NOT NULL;"))
+                .containsExactly("기존 컬럼을 NOT NULL로 변경");
     }
 
     private static int version(Path file) {
@@ -109,6 +118,14 @@ class MigrationCompatibilityRuleTest {
             return List.of();
         }
         List<String> changes = new ArrayList<>();
+        for (String clause : topLevelClauses(statement)) {
+            changes.addAll(breakingChangesInClause(clause));
+        }
+        return changes;
+    }
+
+    private static List<String> breakingChangesInClause(String statement) {
+        List<String> changes = new ArrayList<>();
         if (DROP_COLUMN.matcher(statement).find()) {
             changes.add("컬럼 삭제");
         }
@@ -127,5 +144,31 @@ class MigrationCompatibilityRuleTest {
             }
         }
         return changes;
+    }
+
+    private static List<String> topLevelClauses(String statement) {
+        List<String> clauses = new ArrayList<>();
+        int depth = 0;
+        char quote = 0;
+        int start = 0;
+        for (int i = 0; i < statement.length(); i++) {
+            char c = statement.charAt(i);
+            if (quote != 0) {
+                if (c == quote) {
+                    quote = 0;
+                }
+            } else if (c == '\'' || c == '"' || c == '`') {
+                quote = c;
+            } else if (c == '(') {
+                depth++;
+            } else if (c == ')') {
+                depth--;
+            } else if (c == ',' && depth == 0) {
+                clauses.add(statement.substring(start, i));
+                start = i + 1;
+            }
+        }
+        clauses.add(statement.substring(start));
+        return clauses;
     }
 }
