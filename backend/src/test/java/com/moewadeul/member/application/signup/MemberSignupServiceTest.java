@@ -66,8 +66,11 @@ class MemberSignupServiceTest {
     @DisplayName("[F-01][EV-03] 줄 서 있던 가입은 차례가 온 뒤 IP 한도를 보므로, 그사이 한도가 차면 해시를 계산하지 않고 SIGNUP_LIMITED다")
     void waitingSignupsSeeLimitFilledWhileQueued() throws Exception {
         AtomicInteger committed = new AtomicInteger();
+        CountDownLatch permitHoldersCommitted = new CountDownLatch(MemberSignupService.MAX_CONCURRENT_SIGNUPS);
         when(applier.signUp(any(), any(), anyString(), anyString())).thenAnswer(invocation -> {
             committed.incrementAndGet();
+            permitHoldersCommitted.countDown();
+            assertThat(permitHoldersCommitted.await(5, TimeUnit.SECONDS)).isTrue();
             return null;
         });
         doAnswer(invocation -> {

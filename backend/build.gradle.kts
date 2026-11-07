@@ -56,6 +56,11 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    inputs.files(
+        "../deploy/grafana/alert-rules.json",
+        "../deploy/backup/backup.sh",
+        "../frontend/src/features/notification/notificationLabels.ts",
+    ).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("repoFilesReadByTests")
 }
 
 tasks.test {
