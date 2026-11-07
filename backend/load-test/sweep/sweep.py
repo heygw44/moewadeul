@@ -320,6 +320,8 @@ def run_phase(phase, args):
         total = len(plan["requests"])
         if total == 0:
             continue
+        if os.path.exists(out):
+            os.remove(out)
         if phase == "seq":
             count = min(SEQ_WRITE, total) if plan["consume"] else SEQ_READ
             bad, rc = k6(path, "seq", out, count=count)
