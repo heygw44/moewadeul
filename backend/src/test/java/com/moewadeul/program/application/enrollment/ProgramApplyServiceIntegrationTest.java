@@ -14,9 +14,12 @@ import com.moewadeul.program.application.catalog.ProgramQueryService;
 import com.moewadeul.program.domain.ProgramApplicationStatus;
 import com.moewadeul.program.domain.ProgramErrorCode;
 import com.moewadeul.trust.domain.TrustErrorCode;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +38,9 @@ class ProgramApplyServiceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private DataSource dataSource;
 
     @Autowired
     private ProgramQueryService programQueryService;
@@ -201,6 +207,75 @@ class ProgramApplyServiceIntegrationTest {
         assertErrorCode(() -> programApplyService.apply(second, programId), ProgramErrorCode.PROGRAM_SOLD_OUT);
         assertErrorCode(() -> programApplyService.apply(first, programId), ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
         assertThat(fixture.activeCount(programId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-18][NFR-02] 자리가 없으면 행사 행을 다른 트랜잭션이 잠그고 있어도 기다리지 않고 PROGRAM_SOLD_OUT이다")
+    void soldOutPrecheckDoesNotWaitForProgramRowLock() throws SQLException {
+        // given
+        long programId = fixture.saveProgram(1, false);
+        long member = fixture.saveMember();
+        programApplyService.apply(fixture.saveMember(), programId);
+
+        // when, then
+        try (Connection holder = dataSource.getConnection()) {
+            holder.setAutoCommit(false);
+            holder.createStatement().executeQuery("SELECT id FROM program WHERE id = " + programId + " FOR UPDATE");
+            long startedAt = System.nanoTime();
+            assertErrorCode(
+                    () -> programApplyService.rejectIfSoldOutWithoutLock(member, programId),
+                    ProgramErrorCode.PROGRAM_SOLD_OUT);
+            assertThat(Duration.ofNanos(System.nanoTime() - startedAt)).isLessThan(Duration.ofSeconds(4));
+            holder.rollback();
+        }
+    }
+
+    @Test
+    @DisplayName("[F-18] 자리가 남았거나 본인 신청이 남아 있으면 사전 확인이 거절하지 않고 잠금 경로에 맡긴다")
+    void soldOutPrecheckLeavesUncertainCasesToLockedPath() {
+        // given
+        long programId = fixture.saveProgram(1, false);
+        long first = fixture.saveMember();
+        long second = fixture.saveMember();
+
+        // when, then
+        programApplyService.rejectIfSoldOutWithoutLock(first, programId);
+        ProgramApplyResult firstResult = programApplyService.apply(first, programId);
+        programApplyService.rejectIfSoldOutWithoutLock(first, programId);
+        assertErrorCode(() -> programApplyService.apply(first, programId), ProgramErrorCode.PROGRAM_ALREADY_APPLIED);
+
+        // when, then
+        clock.setInstant(firstResult.paymentDueAt());
+        programApplyService.apply(second, programId);
+        programApplyService.rejectIfSoldOutWithoutLock(first, programId);
+        assertErrorCode(() -> programApplyService.apply(first, programId), ProgramErrorCode.PROGRAM_SOLD_OUT);
+    }
+
+    @Test
+    @DisplayName("[F-18] 자리가 없어도 사전 확인은 잠금 경로와 같은 순서로 신청 기간과 신뢰 단계 오류를 먼저 낸다")
+    void soldOutPrecheckKeepsErrorOrder() {
+        // given
+        long programId = fixture.saveProgram(1, true);
+        ProgramApplyResult held = programApplyService.apply(fixture.saveVerifiedMember(), programId);
+        jdbc.update("UPDATE program_application SET status = 'CONFIRMED' WHERE id = ?", held.applicationId());
+        long unverified = fixture.saveMember();
+
+        // when, then
+        assertErrorCode(
+                () -> programApplyService.rejectIfSoldOutWithoutLock(unverified, programId),
+                TrustErrorCode.TRUST_LEVEL_INSUFFICIENT);
+        clock.setInstant(MutableClock.DEFAULT_INSTANT.plus(Duration.ofDays(3650)));
+        assertErrorCode(
+                () -> programApplyService.rejectIfSoldOutWithoutLock(unverified, programId),
+                ProgramErrorCode.PROGRAM_NOT_IN_APPLY_PERIOD);
+    }
+
+    @Test
+    @DisplayName("[F-18] 없는 행사는 사전 확인에서도 NOT_FOUND이다")
+    void soldOutPrecheckRejectsMissingProgram() {
+        assertErrorCode(
+                () -> programApplyService.rejectIfSoldOutWithoutLock(fixture.saveMember(), Long.MAX_VALUE),
+                CommonErrorCode.NOT_FOUND);
     }
 
     @Test

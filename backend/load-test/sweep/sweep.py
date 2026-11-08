@@ -307,6 +307,11 @@ def fmt(r):
     return f"n={r['count']} p50={a.get('med', 0):.1f} p95={a.get('p(95)', 0):.1f} max={a.get('max', 0):.1f} rps={r['rate']:.1f} codes={r['statuses']}"
 
 
+def drop(out):
+    if os.path.exists(out):
+        os.remove(out)
+
+
 def run_phase(phase, args):
     only = args[0] if args else None
     res_dir = f"{OUT}/{phase}"
@@ -322,24 +327,30 @@ def run_phase(phase, args):
             continue
         if phase == "seq":
             count = min(SEQ_WRITE, total) if plan["consume"] else SEQ_READ
+            drop(out)
             bad, rc = k6(path, "seq", out, count=count)
             state[key] = count if plan["consume"] else 0
         elif phase == "warm":
             count = 20 if not plan["consume"] else 0
             if not count:
                 continue
+            drop(out)
             bad, rc = k6(path, "seq", out, count=count)
         else:
             skip = state.get(key, 0)
             if plan["consume"]:
                 if total - skip <= 0:
                     continue
+                drop(out)
                 bad, rc = k6(path, "load", out, count=total - skip, skip=skip)
             else:
+                drop(out)
                 bad, rc = k6(path, "load", out, duration=os.environ.get("LOAD_DURATION", "15s"))
         json.dump(state, open(OUT + "/cursor.json", "w"))
-        r = json.load(open(out)) if os.path.exists(out) else None
-        print(f"{phase} {key}: {fmt(r)}", *bad, flush=True)
+        if rc != 0 or not os.path.exists(out):
+            print(f"{phase} {key}: k6 실패 (종료 코드 {rc}, 결과 파일 {'있음' if os.path.exists(out) else '없음'})", *bad, file=sys.stderr, flush=True)
+            return 1
+        print(f"{phase} {key}: {fmt(json.load(open(out)))}", *bad, flush=True)
     return 0
 
 
