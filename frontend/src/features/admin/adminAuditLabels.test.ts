@@ -10,9 +10,17 @@ describe('감사 기록 detail 요약', () => {
     expect(summarizeAuditDetail({}, 'SPOT')).toEqual([]);
   });
 
-  it('조치 14개와 대상 8종에 이름이 모두 있다', () => {
-    expect(Object.keys(AUDIT_ACTION_LABELS)).toHaveLength(14);
-    expect(AUDIT_TARGET_TYPES).toHaveLength(8);
+  it('조치 16개와 대상 9종에 이름이 모두 있다', () => {
+    expect(Object.keys(AUDIT_ACTION_LABELS)).toHaveLength(16);
+    expect(AUDIT_TARGET_TYPES).toHaveLength(9);
+  });
+
+  it('가입 차단 도메인 조치는 도메인을 그대로 보인다', () => {
+    expect(AUDIT_ACTION_LABELS.DISPOSABLE_DOMAIN_ADD).toBe('가입 차단 도메인 추가');
+    expect(texts(summarizeAuditDetail({ domain: 'mailinator.com' }, 'DISPOSABLE_EMAIL_DOMAIN'))).toEqual([
+      '도메인: mailinator.com',
+    ]);
+    expect(auditTargetPath('DISPOSABLE_EMAIL_DOMAIN', 3)).toBeNull();
   });
 
   it('이전과 이후 상태는 한 줄로 합치고 대상에 맞는 이름으로 보인다', () => {
