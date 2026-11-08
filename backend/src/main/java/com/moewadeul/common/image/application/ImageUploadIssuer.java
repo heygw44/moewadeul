@@ -76,10 +76,10 @@ public abstract class ImageUploadIssuer<T extends AttachableImage> {
     private void requireUploadRoom(long memberId, Instant now) {
         imageMapper.lockMember(memberId);
         int limit = kind.maxUnattachedPerMember();
-        List<Instant> createdAts = imageMapper.selectUnattachedCreatedAtsAfter(
-                memberId, now.minus(AttachableImage.UNATTACHED_RETENTION), limit);
+        List<Instant> createdAts =
+                imageMapper.selectUnattachedCreatedAtsAfter(memberId, now.minus(AttachableImage.ATTACHABLE_FOR), limit);
         if (createdAts.size() >= limit) {
-            Instant oldestExpiresAt = createdAts.get(0).plus(AttachableImage.UNATTACHED_RETENTION);
+            Instant oldestExpiresAt = createdAts.get(0).plus(AttachableImage.ATTACHABLE_FOR);
             throw new RateLimitedException(
                     CommonErrorCode.IMAGE_UPLOAD_LIMITED, Duration.between(now, oldestExpiresAt));
         }

@@ -154,7 +154,7 @@ class MemoryImageIntegrationTest {
 
     @Test
     @DisplayName(
-            "[F-33][MM-05] 24시간 안에 발급해 기록에 붙지 않은 사진이 30장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED이고 행을 만들지 않으며, 가장 오래된 사진이 24시간을 넘기면 다시 발급한다")
+            "[F-33][MM-05] 23시간 안에 발급해 기록에 붙지 않은 사진이 30장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED이고 행을 만들지 않으며, 가장 오래된 사진이 23시간을 넘겨 붙일 수 없게 되면 다시 발급한다")
     void issueLimitsUnattachedUploads() {
         // given
         uploadService.issue(memberId, command("image/jpeg", SIZE));
@@ -170,10 +170,10 @@ class MemoryImageIntegrationTest {
         assertThatThrownBy(overLimit).isInstanceOfSatisfying(RateLimitedException.class, e -> {
             assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_UPLOAD_LIMITED);
             assertThat(e.getErrorCode().httpStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
-            assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(23));
+            assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(22));
         });
         assertThat(imageRowCount()).isEqualTo(MemoryImage.KIND.maxUnattachedPerMember());
-        clock.advance(Duration.ofHours(23));
+        clock.advance(Duration.ofHours(22));
         uploadService.issue(memberId, command("image/jpeg", SIZE));
         assertThat(imageRowCount()).isEqualTo(MemoryImage.KIND.maxUnattachedPerMember() + 1);
     }

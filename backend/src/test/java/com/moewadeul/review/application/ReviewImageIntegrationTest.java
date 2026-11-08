@@ -109,7 +109,7 @@ class ReviewImageIntegrationTest {
 
     @Test
     @DisplayName(
-            "[F-24][RI-01] 24시간 안에 발급해 후기에 붙지 않은 이미지가 9장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED이고 행을 만들지 않으며, 가장 오래된 이미지가 24시간을 넘기면 다시 발급한다")
+            "[F-24][RI-01] 23시간 안에 발급해 후기에 붙지 않은 이미지가 9장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED이고 행을 만들지 않으며, 가장 오래된 이미지가 23시간을 넘겨 붙일 수 없게 되면 다시 발급한다")
     void issueLimitsUnattachedUploads() {
         // given
         uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
@@ -125,10 +125,10 @@ class ReviewImageIntegrationTest {
         // then
         assertThatThrownBy(overLimit).isInstanceOfSatisfying(RateLimitedException.class, e -> {
             assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IMAGE_UPLOAD_LIMITED);
-            assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(23));
+            assertThat(e.retryAfter()).isEqualTo(Duration.ofHours(22));
         });
         assertThat(imageRowCount()).isEqualTo(ReviewImage.KIND.maxUnattachedPerMember());
-        clock.advance(Duration.ofHours(23));
+        clock.advance(Duration.ofHours(22));
         uploadService.issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, null));
         assertThat(imageRowCount()).isEqualTo(ReviewImage.KIND.maxUnattachedPerMember() + 1);
     }
