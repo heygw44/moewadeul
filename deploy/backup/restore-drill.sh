@@ -18,6 +18,10 @@ readonly DRILL_DB=restore_drill
 readonly MYSQL_IMAGE=mysql:8.4
 # 임시 MySQL이 연결을 받을 때까지 기다리는 상한(초). 넘으면 복구 연습을 실패로 끝낸다.
 readonly READY_TIMEOUT_SECONDS=300
+# 복원 세션만 binlog와 느린 쿼리 기록에서 뺀다. 덤프의 INSERT는 문장마다 0.2초를 넘어 통째로 slow.log에 남고 binlog에도 같은 양이 쌓여,
+# 운영 크기 덤프 하나로 20GB 디스크가 거의 찼다. 세션 변수라 접속이 끝나면 저절로 돌아오고, 다른 접속의 기록은 그대로다.
+# 운영 DB를 되돌리는 실제 복구(docs/10 12.3)도 같은 문장을 덤프 앞에 붙인다.
+readonly RESTORE_SESSION_SQL='SET SESSION sql_log_bin = 0; SET SESSION long_query_time = 31536000;'
 readonly CHECK_TABLES=(flyway_schema_history member spot public_spot_detail bakji_detail protected_area spot_review identity_verification outbox_event SPRING_SESSION SPRING_SESSION_ATTRIBUTES)
 
 log() {
@@ -73,10 +77,12 @@ main() {
 
     log "2/3 임시 MySQL 컨테이너 시작"
     # 버퍼 풀과 performance_schema 인자는 운영과 같다. 기본값으로 복원하면 운영 설정의 2.2배가 걸려 복구 시간을 잘못 읽는다.
+    # 느린 쿼리 기록도 운영처럼 켜서, 복원이 binlog와 slow.log를 늘리지 않는지 함께 본다.
     docker run -d --name "$DRILL_CONTAINER" --network none --memory 512m \
         -e MYSQL_ROOT_PASSWORD="$root_password" -e MYSQL_DATABASE="$DRILL_DB" \
         "$MYSQL_IMAGE" --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci \
         --default-time-zone=+00:00 --log-bin-trust-function-creators=1 \
+        --slow-query-log=ON --long-query-time=0.2 --slow-query-log-file=/var/lib/mysql/slow.log \
         --innodb-buffer-pool-size=256M --innodb-log-buffer-size=16M \
         --performance-schema-digests-size=1000 --performance-schema-events-statements-history-long-size=0 \
         --performance-schema-events-stages-history-long-size=0 --performance-schema-events-waits-history-long-size=0 \
@@ -103,8 +109,10 @@ main() {
     t_ready="$(date +%s)"
 
     log "3/3 복원"
-    gzip -dc "$DUMP_FILE" | drill_mysql "$DRILL_DB"
+    { echo "$RESTORE_SESSION_SQL"; gzip -dc "$DUMP_FILE"; } | drill_mysql "$DRILL_DB"
     t_import="$(date +%s)"
+    log "복원이 남긴 기록: binlog $(drill_mysql -e 'SHOW BINARY LOGS' | awk '{s += $2} END {print s + 0}')바이트, slow.log $(docker exec "$DRILL_CONTAINER" stat -c %s /var/lib/mysql/slow.log)바이트"
+    log "서버 디스크: $(df -P / | awk 'NR == 2 {print $5 " 사용, 남은 " int($4 / 1024) "MB"}')"
 
     log "주요 테이블 행 수"
     local table
