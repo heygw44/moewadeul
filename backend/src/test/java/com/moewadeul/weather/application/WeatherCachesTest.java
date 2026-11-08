@@ -38,7 +38,8 @@ class WeatherCachesTest {
             new SunTimes(DATE, LocalTime.of(6, 30), LocalTime.of(18, 11), LocalTime.of(18, 38));
     private static final KmaMidTermItem MID_TERM_ITEM = new KmaMidTermItem(Map.of("regId", "11B00000"));
 
-    private final WeatherCaches caches = new WeatherCaches(new SimpleMeterRegistry());
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    private final WeatherCaches caches = new WeatherCaches(registry);
     private final ExecutorService executor = Executors.newFixedThreadPool(WeatherCaches.MAX_WAITERS + 3);
 
     @AfterEach
@@ -69,6 +70,35 @@ class WeatherCachesTest {
         for (Future<List<ShortTermForecast>> result : results) {
             assertThat(result.get(5, TimeUnit.SECONDS)).isSameAs(published);
         }
+    }
+
+    @Test
+    @DisplayName("[F-09][NFR-09] 첫 호출을 기다린 요청은 적중이 아니라 대기로 세고, 적중은 이미 받은 값을 돌려준 요청만 센다")
+    void countsWaitersApartFromHits() throws Exception {
+        // given
+        CountDownLatch loading = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        List<Future<List<ShortTermForecast>>> results = runConcurrently(
+                loading,
+                release,
+                () -> caches.shortTerm(BASE, 60, 127, () -> awaitThenReturn(loading, release, List.of())));
+        for (Future<List<ShortTermForecast>> result : results) {
+            result.get(5, TimeUnit.SECONDS);
+        }
+
+        // when
+        caches.shortTerm(BASE, 60, 127, () -> {
+            throw new AssertionError("이미 받은 값은 다시 부르지 않는다");
+        });
+
+        // then
+        assertThat(cacheGets("miss")).isEqualTo(1);
+        assertThat(cacheGets("hit")).isEqualTo(1);
+        assertThat(registry.get("moewadeul.weather.cache.waits")
+                        .tag("cache", "kmaShortTerm")
+                        .counter()
+                        .count())
+                .isEqualTo(WAITERS);
     }
 
     @Test
@@ -326,6 +356,14 @@ class WeatherCachesTest {
 
         // then
         assertThat(calls).hasValue(1);
+    }
+
+    private double cacheGets(String result) {
+        return registry.get("cache.gets")
+                .tag("cache", "kmaShortTerm")
+                .tag("result", result)
+                .functionCounter()
+                .count();
     }
 
     private List<Future<List<ShortTermForecast>>> startWaiters(int count, int nx, int ny) {
