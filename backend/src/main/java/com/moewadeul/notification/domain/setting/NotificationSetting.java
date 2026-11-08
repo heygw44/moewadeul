@@ -52,6 +52,10 @@ public class NotificationSetting implements Persistable<NotificationSettingId> {
         return new NotificationSetting(memberId, type, emailEnabled);
     }
 
+    public void changeEmailEnabled(boolean emailEnabled) {
+        this.emailEnabled = emailEnabled;
+    }
+
     @Override
     public NotificationSettingId getId() {
         return new NotificationSettingId(memberId, type);

@@ -3,6 +3,7 @@ package com.moewadeul.notification.application.setting;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -15,6 +16,7 @@ import com.moewadeul.notification.application.NotificationEventTypes;
 import com.moewadeul.notification.domain.setting.NotificationSetting;
 import com.moewadeul.notification.domain.setting.NotificationSettingRepository;
 import com.moewadeul.notification.infra.setting.NotificationSettingMemberLockMapper;
+import java.util.Collection;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,16 +64,29 @@ class NotificationSettingServiceTest {
     }
 
     @Test
-    @DisplayName("[F-20] 설정을 바꾸면 기존 설정을 지우고 요청한 항목을 저장하며, 빠진 종류는 기본값으로 돌려준다")
-    void replaceDeletesThenSavesAndRevertsOmitted() {
-        List<NotificationSettingItem> requested = List.of(new NotificationSettingItem(BasecampEvents.APPLIED, false));
+    @DisplayName("[F-20] 설정을 바꾸면 요청에 있는 저장된 설정은 고치고, 없던 종류는 새로 저장하고, 요청에서 빠진 저장된 설정은 지운다")
+    void replaceUpdatesAddsAndDeletesStoredSettings() {
+        NotificationSetting kept = NotificationSetting.of(MEMBER_ID, BasecampEvents.KICKED, false);
+        NotificationSetting omitted = NotificationSetting.of(MEMBER_ID, BasecampEvents.APPROVED, false);
+        when(repository.findByMemberId(MEMBER_ID)).thenReturn(List.of(kept, omitted));
+        List<NotificationSettingItem> requested = List.of(
+                new NotificationSettingItem(BasecampEvents.APPLIED, false),
+                new NotificationSettingItem(BasecampEvents.KICKED, true));
 
         List<NotificationSettingItem> result = service.replace(MEMBER_ID, requested);
 
-        verify(repository).deleteByMemberId(MEMBER_ID);
-        verify(repository).saveAll(any());
-        assertThat(result.get(0)).isEqualTo(new NotificationSettingItem(BasecampEvents.APPLIED, false));
-        assertThat(result.subList(1, result.size())).allMatch(NotificationSettingItem::emailEnabled);
+        assertThat(kept.isEmailEnabled()).isTrue();
+        verify(repository)
+                .deleteAll(argThat(
+                        settings -> List.copyOf((Collection<?>) settings).equals(List.of(omitted))));
+        verify(repository)
+                .saveAll(argThat((List<NotificationSetting> added) -> added.size() == 1
+                        && added.get(0).getType().equals(BasecampEvents.APPLIED)
+                        && !added.get(0).isEmailEnabled()));
+        assertThat(result)
+                .filteredOn(item -> !item.emailEnabled())
+                .extracting(NotificationSettingItem::type)
+                .containsExactly(BasecampEvents.APPLIED);
     }
 
     @Test
@@ -83,7 +98,7 @@ class NotificationSettingServiceTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT));
-        verify(repository, never()).deleteByMemberId(MEMBER_ID);
+        verify(repository, never()).saveAll(any());
     }
 
     @Test
@@ -97,6 +112,6 @@ class NotificationSettingServiceTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT));
-        verify(repository, never()).deleteByMemberId(MEMBER_ID);
+        verify(repository, never()).saveAll(any());
     }
 }
