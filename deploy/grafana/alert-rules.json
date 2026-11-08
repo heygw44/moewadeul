@@ -62,7 +62,7 @@
         "service": "moewadeul"
       },
       "annotations": {
-        "summary": "가장 오래된 미발행 이벤트가 10분 넘게 남아 있다. 발행기가 멈췄거나 처리기가 계속 실패한다."
+        "summary": "{{ $labels.lane }} 줄의 가장 오래된 미발행 이벤트가 10분 넘게 남아 있다. mail 줄만 울리면 메일 서버 장애로 인증·재설정 메일이 밀린 것이고, default 줄이 울리면 발행기가 멈췄거나 처리기가 계속 실패한다."
       },
       "data": [
         {
@@ -74,7 +74,7 @@
           "datasourceUid": "__PROM_UID__",
           "model": {
             "refId": "A",
-            "expr": "max(moewadeul_outbox_oldest_pending_age_seconds{job=\"moewadeul-app\"})",
+            "expr": "max by (lane) (moewadeul_outbox_oldest_pending_age_seconds{job=\"moewadeul-app\"})",
             "instant": true,
             "range": false
           }
@@ -160,7 +160,7 @@
         "service": "moewadeul"
       },
       "annotations": {
-        "summary": "최근 1시간 안에 FAILED가 된 아웃박스 이벤트가 있다. 처리기가 재시도 한도만큼 실패해 더 처리하지 않는다. outbox_event의 last_error를 본다."
+        "summary": "최근 1시간 안에 {{ $labels.lane }} 줄에서 FAILED가 된 아웃박스 이벤트가 있다. 처리기가 재시도 한도만큼 실패해 더 처리하지 않는다. outbox_event의 last_error를 본다."
       },
       "data": [
         {
@@ -172,7 +172,7 @@
           "datasourceUid": "__PROM_UID__",
           "model": {
             "refId": "A",
-            "expr": "max(moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}) - max(min_over_time(moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}[1h]))",
+            "expr": "max by (lane) (moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}) - max by (lane) (min_over_time(moewadeul_outbox_events{job=\"moewadeul-app\",status=\"failed\"}[1h]))",
             "instant": true,
             "range": false
           }

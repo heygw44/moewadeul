@@ -35,5 +35,5 @@ public interface OutboxEventMapper {
             @Param("retry") RetryPolicy retry,
             @Param("now") Instant now);
 
-    OutboxBacklogRow selectBacklog();
+    List<OutboxBacklogRow> selectBacklog(@Param("mailEventTypes") Set<String> mailEventTypes);
 }
