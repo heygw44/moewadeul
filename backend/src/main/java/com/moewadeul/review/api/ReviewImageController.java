@@ -31,9 +31,9 @@ class ReviewImageController {
                     + "그러면 응답에 thumbnailUpload(uploadUrl, method, headers, expiresAt)가 더 들어 있고, 화면은 브라우저가 만든 JPEG 썸네일을 "
                     + "Content-Type image/jpeg로 그 URL에 PUT한다. 썸네일 크기를 보냈으면 후기에 붙일 때 서버가 원본과 썸네일이 모두 올라왔는지 확인한다. "
                     + "후기 목록과 장소 상세의 후기 이미지 url은 썸네일이 있으면 썸네일을, 없으면 원본을 가리킨다. "
-                    + "24시간 안에 후기에 붙이지 않은 이미지는 서버가 지운다. "
-                    + "최근 24시간 안에 받고 아직 후기에 붙이지 않은 이미지가 9장이면 429 IMAGE_UPLOAD_LIMITED이고, "
-                    + "Retry-After는 그중 가장 오래된 이미지가 24시간을 넘길 때까지 남은 초다.")
+                    + "이미지는 받은 지 23시간 안에 후기에 붙여야 하고, 붙이지 않은 이미지는 24시간이 지나면 서버가 지운다. "
+                    + "최근 23시간 안에 받고 아직 후기에 붙이지 않은 이미지가 9장이면 429 IMAGE_UPLOAD_LIMITED이고, "
+                    + "Retry-After는 그중 가장 오래된 이미지가 23시간을 넘길 때까지 남은 초다.")
     @PostMapping("/api/reviews/images")
     @ResponseStatus(HttpStatus.CREATED)
     ReviewImageUploadResponse issueUpload(
