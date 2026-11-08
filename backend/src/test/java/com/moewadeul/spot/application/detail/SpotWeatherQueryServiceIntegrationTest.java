@@ -162,8 +162,8 @@ class SpotWeatherQueryServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-09][NFR-06] 같은 격자의 다른 장소도 기상청 단기예보를 다시 부르지 않고, 출몰시각은 장소마다 부른다")
-    void sharesShortTermForecastBetweenSpotsOnSameGrid() {
+    @DisplayName("[F-09][NFR-06] 같은 격자의 다른 장소는 기상청 단기예보를 다시 부르지 않고, 같은 0.1도 칸이면 출몰시각도 다시 부르지 않는다")
+    void sharesForecastAndSunTimesBetweenNearbySpots() {
         // given
         long firstSpot = insertSeoulCampsite("ACTIVE");
         long secondSpot = insertCampsite("ACTIVE", "POINT(37.5700 126.9800)");
@@ -175,7 +175,7 @@ class SpotWeatherQueryServiceIntegrationTest {
 
         // then
         assertThat(requestCount(VILAGE_FCST_PATH)).isEqualTo(1);
-        assertThat(requestCount(RISE_SET_PATH)).isEqualTo(2);
+        assertThat(requestCount(RISE_SET_PATH)).isEqualTo(1);
     }
 
     @Test
