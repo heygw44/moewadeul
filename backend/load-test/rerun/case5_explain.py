@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""사례 5 마커 조회 힌트를 지금 MySQL 버전에서 다시 본다. 영역 넷의 지도 요청을 보내 앱이 실제로 보낸 SQL을 general log로 잡고,
+"""사례 5 마커 조회 힌트를 지금 MySQL 버전에서 다시 본다. 여러 영역의 지도 요청을 보내 앱이 실제로 보낸 SQL을 general log로 잡고,
 힌트를 둔 문장과 뺀 문장을 EXPLAIN ANALYZE로 비교한다. 사용: withlock.sh python3 case5_explain.py <APP_TAG>
 """
 import json, re, sys, time, urllib.request
 
 import lt
 
-AREAS = {"동네 0.02도": 0.02, "구 0.06도": 0.06, "시 0.15도": 0.15, "넓은 시 0.4도": 0.4}
-CENTER = (37.55, 126.98)
+# 마커 조회는 영역 안 장소가 상한 아래일 때만 돈다. 빽빽한 서울은 좁은 영역만, 장소가 드문 곳은 넓은 영역까지 마커가 된다.
+AREAS = [("서울 0.01도", (37.55, 126.98), 0.01), ("서울 0.02도", (37.55, 126.98), 0.02), ("강원 산간 0.05도", (37.75, 128.6), 0.05), ("제주 0.05도", (33.36, 126.53), 0.05),
+         ("강원 산간 0.15도", (37.75, 128.6), 0.15), ("서해 0.3도", (36.6, 125.9), 0.3)]
 HINT = "/*+ SET_VAR(optimizer_switch = 'prefer_ordering_index=off') */"
 
 
@@ -16,9 +17,9 @@ def main():
     meta = lt.restart_app(sys.argv[1], False)
     out = lt.run_dir("2026-11-08-rerun", "case5-explain")
     res = {"meta": meta, "mysql": lt.sql("SELECT @@version"), "areas": []}
-    for label, w in AREAS.items():
+    for label, center, w in AREAS:
         lt.sql("TRUNCATE mysql.general_log; SET GLOBAL log_output='TABLE'; SET GLOBAL general_log=1;")
-        q = f"swLat={CENTER[0]-w/2:.5f}&swLng={CENTER[1]-w/2:.5f}&neLat={CENTER[0]+w/2:.5f}&neLng={CENTER[1]+w/2:.5f}&zoom=13"
+        q = f"swLat={center[0]-w/2:.5f}&swLng={center[1]-w/2:.5f}&neLat={center[0]+w/2:.5f}&neLng={center[1]+w/2:.5f}&zoom=13"
         body = json.loads(urllib.request.urlopen(f"{lt.BASE}/api/spots?{q}", timeout=60).read())
         time.sleep(0.5)
         lt.sql("SET GLOBAL general_log=0;")
