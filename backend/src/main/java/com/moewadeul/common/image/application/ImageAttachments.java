@@ -8,6 +8,7 @@ import com.moewadeul.common.image.domain.ImageMessages;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.common.transaction.InsideTransaction;
 import com.moewadeul.common.transaction.OutsideTransaction;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -25,12 +26,14 @@ public abstract class ImageAttachments<T extends AttachableImage> {
     private final ImageKind kind;
     private final AttachableImageRepository<T> imageRepository;
     private final ImageStorage imageStorage;
+    private final Clock clock;
 
     protected ImageAttachments(
-            ImageKind kind, AttachableImageRepository<T> imageRepository, ImageStorage imageStorage) {
+            ImageKind kind, AttachableImageRepository<T> imageRepository, ImageStorage imageStorage, Clock clock) {
         this.kind = kind;
         this.imageRepository = imageRepository;
         this.imageStorage = imageStorage;
+        this.clock = clock;
     }
 
     public void precheck(long memberId, Long parentId, List<Long> imageIds) {
@@ -88,7 +91,7 @@ public abstract class ImageAttachments<T extends AttachableImage> {
 
     private T requireAttachable(T image, long memberId, Long parentId) {
         boolean attachable =
-                image != null && image.isUploadedBy(memberId) && (!image.isAttached() || isAttachedTo(image, parentId));
+                image != null && image.isUploadedBy(memberId) && image.isAttachableTo(parentId, clock.instant());
         if (!attachable) {
             throw unusable();
         }

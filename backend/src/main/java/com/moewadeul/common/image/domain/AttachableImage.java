@@ -5,6 +5,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
@@ -20,6 +21,11 @@ import org.hibernate.type.SqlTypes;
 public abstract class AttachableImage {
 
     public static final long MAX_SIZE_BYTES = 5L * 1024 * 1024;
+
+    public static final Duration UNATTACHED_RETENTION = Duration.ofHours(24);
+
+    // 정리 작업은 객체를 지운 뒤 붙지 않은 행만 지운다. 정리 대상이 되기 한 시간 전부터 붙이지 못하게 해, 객체가 지워지는 사진이 글에 붙는 일을 막는다.
+    private static final Duration ATTACHABLE_FOR = UNATTACHED_RETENTION.minusHours(1);
 
     private static final Map<String, String> EXTENSIONS =
             Map.of("image/jpeg", "jpg", "image/png", "png", "image/webp", "webp");
@@ -106,6 +112,13 @@ public abstract class AttachableImage {
 
     public boolean isAttachedTo(long parentId) {
         return this.parentId != null && this.parentId == parentId;
+    }
+
+    public boolean isAttachableTo(Long parentId, Instant now) {
+        if (isAttached()) {
+            return parentId != null && isAttachedTo(parentId);
+        }
+        return createdAt.isAfter(now.minus(ATTACHABLE_FOR));
     }
 
     public boolean isAttached() {

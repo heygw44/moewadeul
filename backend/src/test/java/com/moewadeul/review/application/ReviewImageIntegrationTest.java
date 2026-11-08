@@ -9,6 +9,7 @@ import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.image.application.ImageUpload;
 import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.image.application.ImageView;
+import com.moewadeul.common.image.domain.AttachableImage;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -235,7 +236,7 @@ class ReviewImageIntegrationTest {
         Map<String, Object> detached =
                 jdbc.queryForMap("SELECT review_id, display_order FROM review_image WHERE id = ?", image);
         int beforeRetention = cleanupService.deleteExpiredObjectsThenRows().deletedRows();
-        clock.advance(ReviewImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
+        clock.advance(AttachableImage.UNATTACHED_RETENTION.plus(Duration.ofSeconds(1)));
         ReviewImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
 
         // then

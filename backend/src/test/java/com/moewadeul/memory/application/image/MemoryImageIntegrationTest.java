@@ -10,6 +10,7 @@ import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.image.application.ImageUpload;
 import com.moewadeul.common.image.application.ImageUploadCommand;
 import com.moewadeul.common.image.application.ImageView;
+import com.moewadeul.common.image.domain.AttachableImage;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
@@ -284,7 +285,7 @@ class MemoryImageIntegrationTest {
         // when
         commandService.delete(memberId, memoryId);
         int beforeRetention = cleanupService.deleteExpiredObjectsThenRows().deletedRows();
-        clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
+        clock.advance(AttachableImage.UNATTACHED_RETENTION.plus(Duration.ofSeconds(1)));
         MemoryImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
 
         // then
@@ -320,7 +321,7 @@ class MemoryImageIntegrationTest {
         String thumbnailKey = thumbnailKeyOf(image);
         storage.markUploaded(key, SIZE);
         storage.markUploaded(thumbnailKey, THUMBNAIL_SIZE);
-        clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
+        clock.advance(AttachableImage.UNATTACHED_RETENTION.plus(Duration.ofSeconds(1)));
 
         // when
         MemoryImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
@@ -339,7 +340,7 @@ class MemoryImageIntegrationTest {
         String key = keyOf(image);
         String thumbnailKey = thumbnailKeyOf(image);
         storage.failDeleteOf(key);
-        clock.advance(MemoryImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
+        clock.advance(AttachableImage.UNATTACHED_RETENTION.plus(Duration.ofSeconds(1)));
 
         // when
         MemoryImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
@@ -369,6 +370,67 @@ class MemoryImageIntegrationTest {
         assertThat(storage.hasObject(keyOf(attached))).isTrue();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory_image WHERE id = ?", Integer.class, unattached))
                 .isZero();
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 저장소 삭제가 계속 실패하는 사진이 한 묶음을 채워도 정리 작업은 건너뛰고 뒤의 사진까지 지운다")
+    void cleanupSkipsPastPersistentlyFailingBatch() {
+        // given
+        long template = uploaded(memberId);
+        List<String> failingKeys = new ArrayList<>(List.of(keyOf(template)));
+        while (failingKeys.size() < MemoryImageCleanupService.BATCH_SIZE) {
+            failingKeys.add(keyOf(insertUnattachedLike(template)));
+        }
+        failingKeys.forEach(storage::failDeleteOf);
+        long behind = insertUnattachedLike(template);
+        clock.advance(AttachableImage.UNATTACHED_RETENTION.plus(Duration.ofSeconds(1)));
+
+        // when
+        MemoryImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
+
+        // then
+        assertThat(result.deletedRows()).isEqualTo(1);
+        assertThat(result.storageFailures()).isEqualTo(failingKeys.size());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM memory_image WHERE id = ?", Integer.class, behind))
+                .isZero();
+        assertThat(imageRowCount()).isEqualTo(failingKeys.size());
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 붙지 않은 채 정리 작업이 지울 때가 가까운 사진은 새 기록에 붙이지 못한다")
+    void attachRejectsImageNearCleanup() {
+        // given
+        long image = uploaded(memberId);
+        clock.advance(AttachableImage.UNATTACHED_RETENTION.minus(Duration.ofMinutes(30)));
+
+        // when, then
+        assertInvalid(() -> createMemory(memberId, write(List.of(image))), "imageIds", UNUSABLE);
+        assertThat(memoryIdOf(image)).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-33][MM-05] 이미 붙어 있는 사진은 오래돼도 같은 기록을 고칠 때 그대로 둘 수 있다")
+    void attachedImageStaysOnReviseWhenOld() {
+        // given
+        long kept = uploaded(memberId);
+        long memoryId = createMemory(memberId, write(List.of(kept)));
+        clock.advance(Duration.ofDays(3));
+        long added = uploaded(memberId);
+
+        // when
+        MemoryView revised = commandService.revise(memberId, memoryId, imagesOnly(List.of(added, kept)));
+
+        // then
+        assertThat(revised.images()).extracting(ImageView::imageId).containsExactly(added, kept);
+    }
+
+    private long insertUnattachedLike(long templateId) {
+        jdbc.update(
+                "INSERT INTO memory_image (member_id, object_key, content_type, size_bytes, created_at) "
+                        + "SELECT member_id, CONCAT('memory/', member_id, '/', UUID(), '.jpg'), content_type, size_bytes, created_at "
+                        + "FROM memory_image WHERE id = ?",
+                templateId);
+        return jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
     }
 
     private static ImageUploadCommand command(String contentType, long sizeBytes) {

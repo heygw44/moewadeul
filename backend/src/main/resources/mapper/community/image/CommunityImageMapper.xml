@@ -25,8 +25,8 @@
         </include>
     </select>
 
-    <delete id="deleteIfUnattached">
-        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.deleteIfUnattached">
+    <delete id="deleteUnattachedByIds">
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.deleteUnattachedByIds">
             <property name="table" value="community_image"/>
             <property name="parentColumn" value="post_id"/>
         </include>
