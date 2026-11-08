@@ -59,7 +59,8 @@ updates:
         applies-to: version-updates
         patterns: ["*"]
 
-  # mysql은 배포를 되돌려도 버전이 돌아가지 않으므로 사람이 백업을 확인하고 올린다(#574, docs/10 12.4절).
+  # mysql은 새 버전이 한 번 데이터 디렉터리를 올리면 배포를 되돌려도 옛 버전으로 그 데이터를 다시 읽을 수 없다.
+  # 그래서 Dependabot이 올리지 않고, 사람이 백업을 확인한 뒤 직접 올린다(#574).
   - package-ecosystem: docker-compose
     directory: /deploy
     target-branch: develop
