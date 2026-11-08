@@ -27,7 +27,7 @@ class ReviewImageReader {
         for (ReviewImageRow row : reviewImageMapper.selectByReviewIds(reviewIds)) {
             imagesByReview
                     .computeIfAbsent(row.reviewId(), id -> new ArrayList<>())
-                    .add(new ImageView(row.imageId(), imageStorage.presignView(row.objectKey())));
+                    .add(new ImageView(row.imageId(), imageStorage.presignView(row.thumbnailKey())));
         }
         return imagesByReview;
     }

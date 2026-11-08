@@ -38,6 +38,8 @@ class ReviewImageIntegrationTest {
 
     private static final LocalDate YESTERDAY = LocalDate.of(2026, 10, 4);
     private static final long SIZE = 1024;
+    private static final long THUMBNAIL_SIZE = 64;
+    private static final String THUMBNAIL_SIZE_REASON = "썸네일 크기는 1바이트 이상 256KB 이하여야 해요.";
     private static final String UNUSABLE = "붙일 수 없는 이미지가 있어요.";
 
     @Autowired
@@ -92,6 +94,69 @@ class ReviewImageIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT review_id FROM review_image WHERE id = ?", Long.class, upload.imageId()))
                 .isNull();
         assertThat(upload.headers()).containsEntry("Content-Type", "image/webp");
+    }
+
+    @Test
+    @DisplayName("[F-24][RI-01] 썸네일 크기를 보내면 원본과 같은 UUID에 _thumb.jpg를 붙인 키로 JPEG 썸네일 업로드 URL도 발급한다")
+    void issueWithThumbnailCreatesThumbnailKey() {
+        // when
+        ImageUpload upload = uploadService.issue(memberId, new ImageUploadCommand("image/png", SIZE, THUMBNAIL_SIZE));
+
+        // then
+        String key = keyOf(upload.imageId());
+        String thumbnailKey = thumbnailKeyOf(upload.imageId());
+        assertThat(thumbnailKey).isEqualTo(key.substring(0, key.length() - ".png".length()) + "_thumb.jpg");
+        assertThat(upload.thumbnailUpload().uploadUrl()).contains(thumbnailKey);
+        assertThat(upload.thumbnailUpload().headers())
+                .containsEntry("Content-Type", "image/jpeg")
+                .containsEntry("Content-Length", String.valueOf(THUMBNAIL_SIZE));
+        assertThat(jdbc.queryForObject(
+                        "SELECT thumbnail_size_bytes FROM review_image WHERE id = ?", Long.class, upload.imageId()))
+                .isEqualTo(THUMBNAIL_SIZE);
+    }
+
+    @Test
+    @DisplayName("[F-24][RI-01] 썸네일 크기를 보내지 않으면 썸네일 업로드 URL도 키도 만들지 않는다")
+    void issueWithoutThumbnailLeavesThumbnailEmpty() {
+        // when
+        ImageUpload upload = uploadService.issue(memberId, new ImageUploadCommand("image/png", SIZE, null));
+
+        // then
+        assertThat(upload.thumbnailUpload()).isNull();
+        assertThat(thumbnailKeyOf(upload.imageId())).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-24][RI-01] 썸네일 크기가 0이거나 256KB를 넘으면 thumbnailSizeBytes 필드의 INVALID_INPUT으로 거부한다")
+    void issueRejectsThumbnailSize() {
+        assertInvalid(
+                () -> uploadService.issue(memberId, new ImageUploadCommand("image/png", SIZE, 0L)),
+                "thumbnailSizeBytes",
+                THUMBNAIL_SIZE_REASON);
+        assertInvalid(
+                () -> uploadService.issue(memberId, new ImageUploadCommand("image/png", SIZE, 256L * 1024 + 1)),
+                "thumbnailSizeBytes",
+                THUMBNAIL_SIZE_REASON);
+    }
+
+    @Test
+    @DisplayName("[F-24][RI-02] 썸네일 URL도 발급한 이미지는 썸네일이 올라오지 않았거나 크기가 다르면 거부하고, 원본과 썸네일이 모두 올라오면 붙인다")
+    void attachRequiresThumbnailWhenIssued() {
+        // given
+        long missing = issueWithThumbnail();
+        storage.markUploaded(keyOf(missing), SIZE);
+        long wrongSize = issueWithThumbnail();
+        storage.markUploaded(keyOf(wrongSize), SIZE);
+        storage.markUploaded(thumbnailKeyOf(wrongSize), THUMBNAIL_SIZE + 1);
+        long complete = uploadedWithThumbnail();
+
+        // when
+        long reviewId = commandService.write(memberId, spotId, write(List.of(complete)));
+
+        // then
+        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(missing))), "imageIds", UNUSABLE);
+        assertInvalid(() -> commandService.write(memberId, spotId, write(List.of(wrongSize))), "imageIds", UNUSABLE);
+        assertThat(reviewIdOf(complete)).isEqualTo(reviewId);
     }
 
     @Test
@@ -152,6 +217,28 @@ class ReviewImageIntegrationTest {
         assertThat(detail.recentReviews().get(0).images())
                 .extracting(ImageView::imageId)
                 .containsExactly(second, first);
+    }
+
+    @Test
+    @DisplayName("[F-24][RI-02] 후기 목록과 장소 상세 최근 후기는 썸네일이 있는 이미지에는 썸네일 URL을, 없는 이미지에는 원본 URL을 준다")
+    void listAndDetailSignThumbnailWhenPresentElseOriginal() {
+        // given
+        long withThumbnail = uploadedWithThumbnail();
+        long withoutThumbnail = uploaded(memberId);
+        commandService.write(memberId, spotId, write(List.of(withThumbnail, withoutThumbnail)));
+
+        // when
+        List<ImageView> listed =
+                queryService.list(spotId, 0, 20).content().get(0).images();
+        List<ImageView> detailed =
+                spotDetailQueryService.findDetail(spotId).recentReviews().get(0).images();
+
+        // then
+        for (List<ImageView> images : List.of(listed, detailed)) {
+            assertThat(images).extracting(ImageView::imageId).containsExactly(withThumbnail, withoutThumbnail);
+            assertThat(images.get(0).url()).contains(thumbnailKeyOf(withThumbnail));
+            assertThat(images.get(1).url()).contains(keyOf(withoutThumbnail));
+        }
     }
 
     @Test
@@ -249,6 +336,44 @@ class ReviewImageIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-24][RI-04] 정리 작업은 썸네일이 있는 이미지의 원본과 썸네일 객체를 모두 지운다")
+    void cleanupDeletesOriginalAndThumbnail() {
+        // given
+        long image = uploadedWithThumbnail();
+        String key = keyOf(image);
+        String thumbnailKey = thumbnailKeyOf(image);
+        clock.advance(AttachableImage.UNATTACHED_RETENTION.plus(Duration.ofSeconds(1)));
+
+        // when
+        ReviewImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
+
+        // then
+        assertThat(result.deletedRows()).isEqualTo(1);
+        assertThat(result.storageFailures()).isZero();
+        assertThat(storage.deletedKeys()).containsExactly(key, thumbnailKey);
+    }
+
+    @Test
+    @DisplayName("[F-24][RI-04] 정리 작업은 원본 객체 삭제가 실패해도 썸네일 객체를 지우고, 행을 남겨 다음 정리에서 다시 지우며 실패를 한 번 센다")
+    void cleanupDeletesThumbnailEvenWhenOriginalDeleteFails() {
+        // given
+        long image = issueWithThumbnail();
+        String thumbnailKey = thumbnailKeyOf(image);
+        storage.failDeleteOf(keyOf(image));
+        clock.advance(AttachableImage.UNATTACHED_RETENTION.plus(Duration.ofSeconds(1)));
+
+        // when
+        ReviewImageCleanupService.Result result = cleanupService.deleteExpiredObjectsThenRows();
+
+        // then
+        assertThat(result.deletedRows()).isZero();
+        assertThat(result.storageFailures()).isEqualTo(1);
+        assertThat(storage.deletedKeys()).containsExactly(thumbnailKey);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM review_image WHERE id = ?", Integer.class, image))
+                .isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("[F-24][RI-04] 오래됐어도 후기에 붙은 이미지는 정리 작업이 지우지 않는다")
     void cleanupKeepsAttachedImages() {
         // given
@@ -278,6 +403,23 @@ class ReviewImageIntegrationTest {
                 .imageId();
         storage.markUploaded(keyOf(imageId), SIZE);
         return imageId;
+    }
+
+    private long issueWithThumbnail() {
+        return uploadService
+                .issue(memberId, new ImageUploadCommand("image/jpeg", SIZE, THUMBNAIL_SIZE))
+                .imageId();
+    }
+
+    private long uploadedWithThumbnail() {
+        long imageId = issueWithThumbnail();
+        storage.markUploaded(keyOf(imageId), SIZE);
+        storage.markUploaded(thumbnailKeyOf(imageId), THUMBNAIL_SIZE);
+        return imageId;
+    }
+
+    private String thumbnailKeyOf(long imageId) {
+        return jdbc.queryForObject("SELECT thumbnail_object_key FROM review_image WHERE id = ?", String.class, imageId);
     }
 
     private String keyOf(long imageId) {

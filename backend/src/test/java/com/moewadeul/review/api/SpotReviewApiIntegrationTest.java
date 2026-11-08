@@ -174,6 +174,51 @@ class SpotReviewApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-24][RI-01] 썸네일 크기를 보내면 응답에 JPEG 썸네일 업로드 URL이 더 들어 있고, 보내지 않으면 thumbnailUpload가 없다")
+    void issueUploadUrlWithThumbnail() {
+        // given
+        Cookie session = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+
+        // when
+        MvcTestResult withThumbnail = send(
+                mvc.post().uri("/api/reviews/images"),
+                session,
+                "{\"contentType\":\"image/png\",\"sizeBytes\":2048,\"thumbnailSizeBytes\":512}");
+        MvcTestResult without = send(
+                mvc.post().uri("/api/reviews/images"), session, "{\"contentType\":\"image/png\",\"sizeBytes\":2048}");
+        MvcTestResult tooLarge = send(
+                mvc.post().uri("/api/reviews/images"),
+                session,
+                "{\"contentType\":\"image/png\",\"sizeBytes\":2048,\"thumbnailSizeBytes\":262145}");
+
+        // then
+        String thumbnailKey = jdbc.queryForObject(
+                "SELECT thumbnail_object_key FROM review_image WHERE id = ?",
+                String.class,
+                idOf(withThumbnail, "$.imageId"));
+        assertThat(withThumbnail).hasStatus(HttpStatus.CREATED);
+        assertThat(withThumbnail)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.uploadUrl")
+                .isEqualTo("https://upload.test.invalid/" + thumbnailKey + "?signed=1");
+        assertThat(withThumbnail)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.method")
+                .isEqualTo("PUT");
+        assertThat(withThumbnail)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.headers.Content-Type")
+                .isEqualTo("image/jpeg");
+        assertThat(withThumbnail)
+                .bodyJson()
+                .extractingPath("$.thumbnailUpload.headers.Content-Length")
+                .isEqualTo("512");
+        assertThat(without).hasStatus(HttpStatus.CREATED);
+        assertThat(without).bodyJson().doesNotHavePath("$.thumbnailUpload");
+        assertThat(tooLarge).hasStatus(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     @DisplayName("[F-24][RI-01][RI-02] 인증 회원이 업로드 URL을 받아 올린 이미지를 붙여 후기를 쓰면, 후기 목록 항목의 images에 조회 URL이 담긴다")
     void uploadAndAttachImageThroughApi() {
         // given
