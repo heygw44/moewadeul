@@ -20,3 +20,9 @@ export function parseSpotId(raw: string | null): number | null {
 export const UNVERIFIED_WRITE_REASON = '이메일 인증을 마치면 쓸 수 있어요';
 
 export const LINK_BUTTON_CLASS = buttonClassName('primary');
+
+export type CommunityNoun = '글' | '댓글';
+
+export function hideConfirmText(noun: CommunityNoun, nickname: string): string {
+  return `${nickname}님의 ${noun}을 숨겨요. 숨긴 ${noun}은 다른 회원에게 보이지 않아요. 숨김 탭에서 복구할 수 있어요.`;
+}

@@ -21,7 +21,7 @@
         LEFT JOIN notification_setting s ON s.member_id = n.member_id AND s.type = n.type
         WHERE n.email_status = 'PENDING'
           AND (n.email_next_attempt_at IS NULL OR n.email_next_attempt_at &lt;= #{now})
-        ORDER BY n.id
+        ORDER BY n.email_bulk, n.id
         LIMIT #{limit}
         FOR UPDATE OF n SKIP LOCKED
     </select>
@@ -45,6 +45,15 @@
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+    </update>
+
+    <!-- 실패한 뒤 재시도를 기다리는 행도 email_next_attempt_at을 쓴다. 시도한 적 없는 행만 풀어 재시도 간격은 그대로 둔다. -->
+    <update id="releaseFirstAttemptLeases">
+        UPDATE notification
+        SET email_next_attempt_at = NULL
+        WHERE email_status = 'PENDING'
+          AND email_attempt_count = 0
+          AND email_next_attempt_at &gt; #{now}
     </update>
 
     <update id="markSkipped">

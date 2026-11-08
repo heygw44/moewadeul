@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -22,14 +23,16 @@ import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.IdentityVerification;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
 import com.moewadeul.trust.domain.identity.VerifiedIdentity;
+import com.moewadeul.trust.infra.identity.IdentityVerificationInsertMapper;
 import com.moewadeul.trust.infra.profile.TrustRecordMapper;
 import com.moewadeul.trust.infra.profile.TrustRecordRow;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
-import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class IdentityVerificationServiceTest {
@@ -39,6 +42,7 @@ class IdentityVerificationServiceTest {
     private static final VerifiedIdentity IDENTITY = new VerifiedIdentity("ci-raw", 1995, Gender.FEMALE);
 
     private final IdentityVerificationRepository repository = mock(IdentityVerificationRepository.class);
+    private final IdentityVerificationInsertMapper insertMapper = mock(IdentityVerificationInsertMapper.class);
     private final IdentityProvider provider = mock(IdentityProvider.class);
     private final CiHasher hasher = mock(CiHasher.class);
     private final TrustRecordMapper recordMapper = mock(TrustRecordMapper.class);
@@ -73,7 +77,7 @@ class IdentityVerificationServiceTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT));
-        verify(repository, never()).saveAndFlush(any());
+        verify(insertMapper, never()).insertIgnoringDuplicate(any());
     }
 
     @Test
@@ -99,7 +103,7 @@ class IdentityVerificationServiceTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.IDENTITY_CI_DUPLICATED));
-        verify(repository, never()).saveAndFlush(any());
+        verify(insertMapper, never()).insertIgnoringDuplicate(any());
     }
 
     @Test
@@ -109,8 +113,8 @@ class IdentityVerificationServiceTest {
         // given
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
         when(applier.apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE))
-                .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"))
-                .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"))
+                .thenThrow(new DeadlockLoserDataAccessException("Deadlock found when trying to get lock", null))
+                .thenThrow(new DeadlockLoserDataAccessException("Deadlock found when trying to get lock", null))
                 .thenThrow(new BusinessException(TrustErrorCode.IDENTITY_CI_DUPLICATED));
 
         // when, then
@@ -128,11 +132,11 @@ class IdentityVerificationServiceTest {
         // given
         IdentityVerificationApplier applier = mock(IdentityVerificationApplier.class);
         when(applier.apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE))
-                .thenThrow(new CannotAcquireLockException("Deadlock found when trying to get lock"));
+                .thenThrow(new DeadlockLoserDataAccessException("Deadlock found when trying to get lock", null));
 
         // when, then
         assertThatThrownBy(() -> serviceWith(applier).verify(MEMBER_ID, command(1995)))
-                .isInstanceOf(CannotAcquireLockException.class);
+                .isInstanceOf(DeadlockLoserDataAccessException.class);
         verify(applier, times(3)).apply(MEMBER_ID, IDENTITY, IdentityProviderType.FAKE);
         verify(provider, times(1)).verify(any());
     }
@@ -168,7 +172,12 @@ class IdentityVerificationServiceTest {
         when(provider.verify(any())).thenReturn(new VerifiedIdentity("ci-raw", birthYear, Gender.FEMALE));
         when(provider.type()).thenReturn(IdentityProviderType.FAKE);
         when(hasher.hash("ci-raw")).thenReturn(CI_HASH);
-        when(repository.saveAndFlush(any(IdentityVerification.class))).thenAnswer(call -> call.getArgument(0));
+        doAnswer(call -> {
+                    when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(call.getArgument(0)));
+                    return null;
+                })
+                .when(insertMapper)
+                .insertIgnoringDuplicate(any(IdentityVerification.class));
         when(recordMapper.selectCompanionRecord(anyLong(), any(), any()))
                 .thenReturn(new TrustRecordRow(0, 0, 0, 0, false));
     }
@@ -177,7 +186,11 @@ class IdentityVerificationServiceTest {
         MutableClock clock = MutableClock.at(Instant.parse(instant));
         return service(
                 new IdentityVerificationApplier(
-                        repository, hasher, new TrustSummaryService(repository, recordMapper, clock), clock),
+                        repository,
+                        insertMapper,
+                        hasher,
+                        new TrustSummaryService(repository, recordMapper, clock),
+                        clock),
                 clock);
     }
 

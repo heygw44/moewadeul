@@ -1,6 +1,9 @@
 package com.moewadeul.spot.api.detail;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +26,7 @@ import com.moewadeul.spot.application.detail.SpotRating;
 import com.moewadeul.spot.application.detail.SpotRecentReview;
 import com.moewadeul.spot.application.detail.SpotRecruitingBasecamp;
 import com.moewadeul.spot.application.detail.SpotWeather;
+import com.moewadeul.spot.application.detail.SpotWeatherIpLimiter;
 import com.moewadeul.spot.application.detail.SpotWeatherQueryService;
 import com.moewadeul.spot.application.park.ProtectedAreaSource;
 import com.moewadeul.spot.application.publicspot.PublicSpotSource;
@@ -30,6 +34,7 @@ import com.moewadeul.spot.domain.SpotType;
 import com.moewadeul.spot.domain.bakji.BakjiSignalLevel;
 import com.moewadeul.weather.application.SunTimes;
 import com.moewadeul.weather.application.WeatherForecast;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -39,15 +44,24 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 @WebMvcTest(SpotDetailController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class})
+@Import({
+    GlobalExceptionHandler.class,
+    TraceIdFilter.class,
+    SecurityConfig.class,
+    SpotWeatherIpLimiter.class,
+    SpotDetailControllerTest.SystemClock.class
+})
 class SpotDetailControllerTest {
 
     private static final String PATH = "/api/spots";
@@ -401,6 +415,37 @@ class SpotDetailControllerTest {
     }
 
     @Test
+    @DisplayName("[F-09] 한 IP가 1분에 60번을 넘게 날씨를 물으면 429와 Retry-After로 막고 서비스를 부르지 않으며, 다른 IP는 그대로 받는다")
+    void limitsWeatherRequestsPerIp() {
+        // given
+        when(spotWeatherQueryService.findWeather(106L)).thenReturn(Optional.empty());
+        for (int i = 0; i < 60; i++) {
+            assertThat(weatherFrom("203.0.113.60")).hasStatus(HttpStatus.OK);
+        }
+        clearInvocations(spotWeatherQueryService);
+
+        // when
+        MvcTestResult rejected = weatherFrom("203.0.113.60");
+        MvcTestResult otherIp = weatherFrom("203.0.113.61");
+
+        // then
+        assertThat(rejected).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(rejected.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isNotNull();
+        assertThat(otherIp).hasStatus(HttpStatus.OK);
+        verify(spotWeatherQueryService, times(1)).findWeather(106L);
+    }
+
+    private MvcTestResult weatherFrom(String ip) {
+        return mvc.get()
+                .uri(PATH + "/106/weather")
+                .with(request -> {
+                    request.setRemoteAddr(ip);
+                    return request;
+                })
+                .exchange();
+    }
+
+    @Test
     @DisplayName("[F-09][NFR-05] 기상청이 실패해 날씨가 없으면 200으로 weather 필드를 null로 남긴다")
     void keepsWeatherFieldAsNullWhenForecastMissing() {
         // given
@@ -488,5 +533,14 @@ class SpotDetailControllerTest {
                 .asList()
                 .isNotEmpty();
         verifyNoInteractions(spotDetailQueryService);
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class SystemClock {
+
+        @Bean
+        Clock clock() {
+            return Clock.systemUTC();
+        }
     }
 }

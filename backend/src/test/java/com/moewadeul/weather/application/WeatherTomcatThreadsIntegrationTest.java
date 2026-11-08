@@ -37,7 +37,7 @@ import org.springframework.test.context.TestPropertySource;
 // 톰캣 스레드를 얼마나 쥐는지는 MockMvc로 볼 수 없어서 실제 톰캣을 띄우고 HTTP로 요청한다.
 @Slf4j
 @IntegrationTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-@TestPropertySource(properties = "server.tomcat.threads.max=20")
+@TestPropertySource(properties = {"server.tomcat.threads.max=20", "moewadeul.weather.ip-requests-per-minute=100000"})
 class WeatherTomcatThreadsIntegrationTest {
 
     private static final String VILAGE_FCST_PATH = "/1360000/VilageFcstInfoService_2.0/getVilageFcst";

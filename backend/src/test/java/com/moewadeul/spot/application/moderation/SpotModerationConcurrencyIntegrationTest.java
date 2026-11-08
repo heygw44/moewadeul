@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -199,6 +200,60 @@ class SpotModerationConcurrencyIntegrationTest {
         assertThat(sourceRemovedAt(spotId)).isNotNull();
     }
 
+    @Test
+    @DisplayName("[F-06][F-21] 관리자 복구가 커밋된 뒤 동기화가 후보를 읽어도 복구한 장소를 다시 숨기지 않는다")
+    void sourceRemovalAfterRestoreCommitKeepsRestoredSpot() {
+        // given
+        long spotId = savePublicSpot();
+        long admin = memberFixture.save().getId();
+        spotModerationService.hide(spotId, admin);
+        spotModerationService.restore(spotId, admin);
+
+        // when
+        int hidden = publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, List.of(EXTERNAL_ID));
+
+        // then
+        assertThat(hidden).isZero();
+        assertThat(statusOf(spotId)).isEqualTo("ACTIVE");
+        assertThat(sourceRemovedAt(spotId)).isNotNull();
+    }
+
+    @RepeatedTest(20)
+    @DisplayName("[F-06][F-21] 동기화가 여러 장소를 한 번에 숨기는 동안 관리자가 그 장소들을 반대 순서로 숨겨도 데드락 없이 각 장소가 한 번만 숨겨진다")
+    void bulkSourceRemovalRacingHidesStaysConsistent() throws Exception {
+        // given
+        List<String> externalIds = List.of("b1", "b2", "b3", "b4", "b5");
+        List<Long> spotIds = new ArrayList<>();
+        for (String externalId : externalIds) {
+            spotIds.add(savePublicSpot(externalId));
+        }
+        long admin = memberFixture.save().getId();
+        // 표가 작고 통계가 최신이면 옵티마이저가 상태 인덱스를 골라 잠금 순서가 기본 키 순서가 아니게 된다.
+        jdbc.execute("ANALYZE TABLE spot");
+        List<Callable<Object>> tasks = new ArrayList<>();
+        tasks.add(() -> publicSpotSyncService.markRemoved(PublicSpotSource.GOCAMPING, externalIds));
+        for (int i = spotIds.size() - 1; i >= 0; i--) {
+            long spotId = spotIds.get(i);
+            tasks.add(() -> {
+                spotModerationService.hide(spotId, admin);
+                return null;
+            });
+        }
+
+        // when
+        List<Throwable> failures = runConcurrently(tasks);
+
+        // then
+        assertThat(failures)
+                .allSatisfy(failure -> assertThat(failure)
+                        .isInstanceOfSatisfying(
+                                BusinessException.class,
+                                e -> assertThat(e.getErrorCode()).isEqualTo(SpotErrorCode.SPOT_INVALID_STATE)));
+        for (long spotId : spotIds) {
+            assertThat(statusOf(spotId)).isEqualTo("HIDDEN");
+        }
+    }
+
     @RepeatedTest(50)
     @DisplayName("[F-06][F-21] 원천 삭제로 숨긴 공공데이터 장소의 관리자 복구와 재등장 적재가 동시에 와도 데드락 없이 장소는 ACTIVE이고 삭제 표시는 지워진다")
     void restoreRacingResurfacingUpsertStaysConsistent() throws Exception {
@@ -226,18 +281,26 @@ class SpotModerationConcurrencyIntegrationTest {
     }
 
     private long savePublicSpot() {
-        upsertPublicSpot();
+        return savePublicSpot(EXTERNAL_ID);
+    }
+
+    private long savePublicSpot(String externalId) {
+        upsertPublicSpot(externalId);
         return jdbc.queryForObject(
                 "SELECT spot_id FROM public_spot_detail WHERE source = 'GOCAMPING' AND external_id = ?",
                 Long.class,
-                EXTERNAL_ID);
+                externalId);
     }
 
     private void upsertPublicSpot() {
+        upsertPublicSpot(EXTERNAL_ID);
+    }
+
+    private void upsertPublicSpot(String externalId) {
         publicSpotSyncService.upsert(
                 PublicSpotSource.GOCAMPING,
                 List.of(new PublicSpotCommand(
-                        EXTERNAL_ID,
+                        externalId,
                         "솔숲 야영장",
                         37.8813,
                         127.7298,

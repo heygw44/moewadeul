@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.Period;
 import java.time.ZoneOffset;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,10 +31,13 @@ public abstract class ReportContentCleanup {
     public int clearExpiredContent() {
         Instant cutoff =
                 Instant.now(clock).atZone(ZoneOffset.UTC).minus(RETENTION).toInstant();
-        int cleared = BatchDeletion.untilDrained(BATCH_SIZE, size -> clearContentProcessedBefore(cutoff, size));
+        int cleared = BatchDeletion.untilDrainedByIds(
+                BATCH_SIZE, size -> selectIdsProcessedBefore(cutoff, size), ids -> clearContent(ids, cutoff));
         log.info("{} report content cleared count={}", target, cleared);
         return cleared;
     }
 
-    protected abstract int clearContentProcessedBefore(Instant cutoff, int limit);
+    protected abstract List<Long> selectIdsProcessedBefore(Instant cutoff, int limit);
+
+    protected abstract int clearContent(List<Long> ids, Instant cutoff);
 }

@@ -28,7 +28,9 @@ readonly REGION=ap-northeast-2
 readonly PARAM_PREFIX=/moewadeul/prod
 readonly APP_REPO=ghcr.io/heygw44/moewadeul-app
 readonly CADDY_REPO=ghcr.io/heygw44/moewadeul-caddy
-readonly HEALTH_URL=http://127.0.0.1:8080/actuator/health
+readonly HEALTH_URL=http://127.0.0.1:8081/actuator/health
+# 관리 포트(8081)를 넣기 전 버전으로 되돌릴 때는 상태 확인이 8080에 있다.
+readonly HEALTH_URL_BEFORE_MANAGEMENT_PORT=http://127.0.0.1:8080/actuator/health
 # 앱은 시작할 때 Flyway 마이그레이션을 실행하므로, 처음 배포하거나 마이그레이션이 많으면 시간이 걸린다.
 readonly HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-240}"
 # 시작하다 죽는 앱은 restart 정책으로 계속 다시 뜬다. 상태 확인 주소만 보면 그동안 제한 시간을 다 기다리고, 옛 앱은 이미 내려가 있어 502가 이어진다.
@@ -219,7 +221,8 @@ app_restart_count() {
 
 wait_app_healthy() {
     local deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS)) restarts
-    until curl -fsS -o /dev/null --max-time 5 "$HEALTH_URL" 2>/dev/null; do
+    until curl -fsS -o /dev/null --max-time 5 "$HEALTH_URL" 2>/dev/null \
+        || curl -fsS -o /dev/null --max-time 5 "$HEALTH_URL_BEFORE_MANAGEMENT_PORT" 2>/dev/null; do
         if restarts="$(app_restart_count)" && ((restarts > MAX_APP_RESTARTS)); then
             log "앱이 시작하다 ${restarts}번 다시 시작했다"
             return 1

@@ -218,7 +218,7 @@
          public_spot_detail을 먼저 잠근다. 한 문장으로는 어느 테이블을 먼저 잠글지 실행계획이 정하므로, 순서를 지키려고 문장을 나눈다. -->
     <select id="lockActiveSpots" resultType="long">
         SELECT id
-        FROM spot
+        FROM spot FORCE INDEX (PRIMARY)
         WHERE status = 'ACTIVE'
           AND id IN
         <foreach collection="spotIds" item="spotId" open="(" separator="," close=")">

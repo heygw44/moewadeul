@@ -12,21 +12,23 @@
                r.nights AS nights,
                r.content AS content,
                r.status AS status,
-               COALESCE(rc.report_count, 0) AS report_count,
+               (SELECT COUNT(*) FROM memory_report mr
+                WHERE mr.memory_id = r.id AND mr.reviewed_at IS NULL) AS report_count,
                r.updated_at AS status_changed_at
         FROM memory r
         JOIN member m ON m.id = r.member_id
-        LEFT JOIN (
-            SELECT mr.memory_id AS memory_id,
-                   COUNT(*) AS report_count,
-                   COUNT(CASE WHEN mr.reason = 'MONEY_SCAM' THEN 1 END) AS money_scam_count
-            FROM memory_report mr
-            WHERE mr.reviewed_at IS NULL
-            GROUP BY mr.memory_id
-        ) rc ON rc.memory_id = r.id
         WHERE r.status = #{status}
           AND r.visibility = 'PUBLIC'
-        ORDER BY (COALESCE(rc.money_scam_count, 0) &gt; 0) DESC, r.updated_at ASC, r.id ASC
+        <choose>
+            <when test="status.name() == 'HIDDEN'">
+                ORDER BY r.updated_at DESC, r.id DESC
+            </when>
+            <otherwise>
+                ORDER BY EXISTS (SELECT 1 FROM memory_report mr
+                        WHERE mr.memory_id = r.id AND mr.reviewed_at IS NULL
+                          AND mr.reason = 'MONEY_SCAM') DESC, r.updated_at ASC, r.id ASC
+            </otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 

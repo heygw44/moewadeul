@@ -21,6 +21,7 @@ export interface PagedList<T, F> {
   updateItems: (update: (items: T[]) => T[]) => void;
   retry: () => void;
   reload: () => void;
+  refreshLoaded: () => Promise<void>;
 }
 
 type FilterValue = string | number | Readonly<Record<string, string | number | boolean | undefined>>;
@@ -167,5 +168,33 @@ export function usePagedList<T, F extends FilterValue>(
 
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
 
-  return { current, loadingMore, loadMore, updateItems, retry, reload };
+  const refreshLoaded = useCallback(async () => {
+    if (!current) return;
+    generationRef.current += 1;
+    const generation = generationRef.current;
+    try {
+      let items: T[] = [];
+      let last: Page<T> | null = null;
+      for (let index = 0; index <= current.page; index++) {
+        last = await fetcherRef.current(filter, index);
+        items = [...items, ...newItems(items, last.content, itemKeyRef.current)];
+      }
+      if (generation !== generationRef.current || last === null) return;
+      const { page, hasNext } = last;
+      setState((previous) =>
+        previous !== null && previous.filter === filter
+          ? { ...previous, items, page, hasNext, error: null, traceId: null, failedOn: null }
+          : previous,
+      );
+    } catch (caught) {
+      if (generation !== generationRef.current) return;
+      setState((previous) =>
+        previous !== null && previous.filter === filter
+          ? { ...previous, error: toUserMessage(caught), traceId: serverTraceId(caught) ?? null, failedOn: 'first' }
+          : previous,
+      );
+    }
+  }, [current, filter]);
+
+  return { current, loadingMore, loadMore, updateItems, retry, reload, refreshLoaded };
 }

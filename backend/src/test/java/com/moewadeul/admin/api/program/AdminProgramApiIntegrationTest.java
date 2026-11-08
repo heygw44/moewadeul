@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -95,6 +96,46 @@ class AdminProgramApiIntegrationTest {
         assertThat(detail).bodyJson().extractingPath("$.paymentDeadlineMinutes").isEqualTo(15);
         assertThat(detail).bodyJson().extractingPath("$.spotId").isNull();
         assertThat(detail).bodyJson().doesNotHavePath("$.myApplication");
+    }
+
+    @Test
+    @DisplayName("[F-17][NFR-03] 응답을 못 받고 같은 키·같은 내용으로 다시 등록해도 처음 결과를 돌려주고 행사와 감사 로그는 하나뿐이다")
+    void retryWithSameKeyCreatesOneProgram() {
+        // given
+        String key = "admin-create-" + UUID.randomUUID();
+        String body = body(clock.instant().plus(Duration.ofDays(1)), 200, null);
+
+        // when
+        MvcTestResult first = createProgram(key, body);
+        MvcTestResult retry = createProgram(key, body);
+
+        // then
+        assertThat(first).hasStatus(HttpStatus.CREATED);
+        assertThat(retry).hasStatus(HttpStatus.CREATED);
+        assertThat(programId(retry)).isEqualTo(programId(first));
+        assertThat(count("program")).isEqualTo(1);
+        assertThat(count("admin_audit_log WHERE action = 'PROGRAM_CREATE'")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName(
+            "[F-17][NFR-03] 키가 없으면 400 IDEMPOTENCY_KEY_REQUIRED, 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이고 행사를 만들지 않는다")
+    void createRequiresKeyAndRejectsKeyReuseWithOtherBody() {
+        // given
+        Instant open = clock.instant().plus(Duration.ofDays(1));
+        String key = "admin-create-" + UUID.randomUUID();
+        assertThat(createProgram(key, body(open, 200, null))).hasStatus(HttpStatus.CREATED);
+
+        // when
+        MvcTestResult noKey = send(mvc.post().uri(ADMIN_PROGRAMS), adminSession, body(open, 200, null));
+        MvcTestResult reused = createProgram(key, body(open, 150, null));
+
+        // then
+        assertThat(noKey).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(noKey).bodyJson().extractingPath("$.code").isEqualTo("IDEMPOTENCY_KEY_REQUIRED");
+        assertThat(reused).hasStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(reused).bodyJson().extractingPath("$.code").isEqualTo("IDEMPOTENCY_KEY_REUSED");
+        assertThat(count("program")).isEqualTo(1);
     }
 
     @Test
@@ -356,6 +397,48 @@ class AdminProgramApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-17][PG-09] 끝난 행사는 취소할 수 없다. 409 PROGRAM_ENDED로 거부하고 행사·신청·결제·알림·감사 로그를 그대로 둔다")
+    void cancelOfEndedProgramIsRejectedAndRefundsNothing() {
+        // given
+        Instant now = clock.instant();
+        long programId = programId(createProgram(body(now.minus(Duration.ofHours(1)), 10, null)));
+        long confirmed = insertApplication(programId, "CONFIRMED", now);
+        insertPayment(confirmed, "PAID");
+        clock.advance(Duration.ofDays(16));
+
+        // when
+        MvcTestResult result = post(ADMIN_PROGRAMS + "/" + programId + "/cancel");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.CONFLICT);
+        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("PROGRAM_ENDED");
+        assertThat(statusOfProgram(programId)).isEqualTo("SCHEDULED");
+        assertThat(applicationStatus(confirmed)).isEqualTo("CONFIRMED");
+        assertThat(cancelReason(confirmed)).isNull();
+        assertThat(paymentStatus(confirmed)).isEqualTo("PAID");
+        assertThat(canceledEvents()).isEmpty();
+        assertThat(count("admin_audit_log WHERE action = 'PROGRAM_CANCEL'")).isZero();
+    }
+
+    @Test
+    @DisplayName("[F-17][PG-09] 시작했지만 아직 끝나지 않은 행사는 취소하고 환불할 수 있다")
+    void cancelOfRunningProgramStillRefunds() {
+        // given
+        Instant now = clock.instant();
+        long programId = programId(createProgram(body(now.minus(Duration.ofHours(1)), 10, null)));
+        long confirmed = insertApplication(programId, "CONFIRMED", now);
+        insertPayment(confirmed, "PAID");
+        clock.advance(Duration.ofDays(14).plusHours(1));
+
+        // when
+        MvcTestResult result = post(ADMIN_PROGRAMS + "/" + programId + "/cancel");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.OK);
+        assertThat(paymentStatus(confirmed)).isEqualTo("REFUNDED");
+    }
+
+    @Test
     @DisplayName("[F-17] 공개 목록은 status로 거르고 시작 시각 순서로 나오며, 남은 자리를 계산하고 취소된 행사를 뺀다")
     void publicListFiltersAndCountsRemainingSeats() {
         // given
@@ -572,7 +655,11 @@ class AdminProgramApiIntegrationTest {
     }
 
     private MvcTestResult createProgram(String body) {
-        return send(mvc.post().uri(ADMIN_PROGRAMS), adminSession, body);
+        return createProgram(UUID.randomUUID().toString(), body);
+    }
+
+    private MvcTestResult createProgram(String idempotencyKey, String body) {
+        return send(mvc.post().uri(ADMIN_PROGRAMS).header("Idempotency-Key", idempotencyKey), adminSession, body);
     }
 
     private MvcTestResult patch(long programId, String body) {

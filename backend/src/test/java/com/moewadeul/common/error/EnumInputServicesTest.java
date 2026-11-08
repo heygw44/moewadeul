@@ -17,9 +17,11 @@ import com.moewadeul.common.outbox.OutboxEventRecorder;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.profile.AgeGroup;
 import com.moewadeul.common.profile.Gender;
+import com.moewadeul.community.application.image.CommunityImageReader;
 import com.moewadeul.community.application.moderation.AdminCommunityQueryService;
 import com.moewadeul.community.domain.post.CommunityPostStatus;
 import com.moewadeul.community.infra.moderation.AdminCommunityMapper;
+import com.moewadeul.idempotency.application.IdempotencyExecutor;
 import com.moewadeul.member.application.profile.MyInfoService;
 import com.moewadeul.member.application.profile.MyInfoUpdateCommand;
 import com.moewadeul.member.domain.Member;
@@ -143,7 +145,8 @@ class EnumInputServicesTest {
     @ValueSource(strings = {"ACTIVE", "DELETED", "hidden", ""})
     @DisplayName("관리자 커뮤니티 글과 댓글 목록은 PENDING_REVIEW와 HIDDEN 밖의 status를 INVALID_INPUT으로 거절한다")
     void adminCommunityListsRejectOtherStatus(String status) {
-        AdminCommunityQueryService service = new AdminCommunityQueryService(mock(AdminCommunityMapper.class));
+        AdminCommunityQueryService service =
+                new AdminCommunityQueryService(mock(AdminCommunityMapper.class), mock(CommunityImageReader.class));
 
         assertThatThrownBy(() -> service.listPosts(status, 0, 20))
                 .satisfies(e -> assertInvalidInput(e, ADMIN_STATUS_MESSAGE));
@@ -156,7 +159,7 @@ class EnumInputServicesTest {
     void adminCommunityPostListDefaultsToPendingReview() {
         AdminCommunityMapper mapper = mock(AdminCommunityMapper.class);
 
-        new AdminCommunityQueryService(mapper).listPosts(null, 0, 20);
+        new AdminCommunityQueryService(mapper, mock(CommunityImageReader.class)).listPosts(null, 0, 20);
 
         verify(mapper).selectPosts(CommunityPostStatus.PENDING_REVIEW, 0L, 21);
     }
@@ -290,6 +293,7 @@ class EnumInputServicesTest {
                 mock(AdminAuditRecorder.class),
                 mock(OutboxEventRecorder.class),
                 mock(ProgramSeatReleaseRecorder.class),
+                mock(IdempotencyExecutor.class),
                 CLOCK);
     }
 

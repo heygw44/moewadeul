@@ -3,6 +3,8 @@ package com.moewadeul.program.api.enrollment;
 import static com.moewadeul.common.testsupport.TestCsrf.csrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -137,6 +139,19 @@ class ProgramEnrollmentControllerTest {
 
         assertThat(result).hasStatus(HttpStatus.FORBIDDEN);
         verifyNoInteractions(programApplyService);
+    }
+
+    @Test
+    @DisplayName("[F-18] 사전 확인이 매진으로 거절하면 잠금 경로를 부르지 않고 409이다")
+    void soldOutPrecheckSkipsLockedPath() {
+        when(idempotencyRecordRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        doThrow(new BusinessException(ProgramErrorCode.PROGRAM_SOLD_OUT))
+                .when(programApplyService)
+                .rejectIfSoldOutWithoutLock(4L, 9L);
+
+        assertError(9L, HttpStatus.CONFLICT, "PROGRAM_SOLD_OUT");
+
+        verify(programApplyService, never()).apply(4L, 9L);
     }
 
     @Test

@@ -39,7 +39,7 @@ class ProgramApplicationController {
             @Valid @RequestBody ProgramPayRequest request,
             @AuthenticationPrincipal LoginMember loginMember) {
         long memberId = loginMember.memberId();
-        return idempotencyExecutor.execute(
+        return idempotencyExecutor.executeReadCommitted(
                 new IdempotentRequest(
                         memberId, idempotencyKey, "POST /api/program-applications/" + applicationId + "/pay", request),
                 HttpStatus.OK,

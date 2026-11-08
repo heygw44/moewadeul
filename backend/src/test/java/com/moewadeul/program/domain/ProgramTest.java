@@ -264,6 +264,22 @@ class ProgramTest {
     }
 
     @Test
+    @DisplayName("[F-17][PG-09] 행사 종료 직전까지는 취소할 수 있고, 종료 시각부터는 PROGRAM_ENDED로 거부하며 상태를 바꾸지 않는다")
+    void cancelsOnlyBeforeEnd() {
+        Program running = create(details());
+        Program ended = create(details());
+
+        running.cancel(running.getEndAt().minusNanos(1000));
+        assertThatThrownBy(() -> ended.cancel(ended.getEndAt()))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(ProgramErrorCode.PROGRAM_ENDED));
+
+        assertThat(running.getStatus()).isEqualTo(ProgramStatus.CANCELED);
+        assertThat(ended.getStatus()).isEqualTo(ProgramStatus.SCHEDULED);
+    }
+
+    @Test
     @DisplayName("[F-17] 진행 단계는 신청 시작 시각 이상부터 OPEN, 마감 시각 이상부터 CLOSED이고 취소하면 CANCELED이다")
     void phaseChangesAtBoundaries() {
         Program program = create(details());

@@ -2,6 +2,16 @@
 # 그래서 CORS를 열지 않고, 세션 쿠키를 SameSite=Lax로 쓸 수 있다.
 # Caddy는 SITE_ADDRESS 도메인의 Let's Encrypt 인증서를 자동으로 받고 갱신하며, 80번 포트 요청을 HTTPS로 넘긴다.
 
+{
+	# 앱에 닿지 못해 Caddy가 만든 502는 앱 지표에 남지 않는다. 그래서 Caddy의 응답 수를 따로 센다.
+	metrics
+}
+
+# Compose 내부망의 Alloy만 읽는다. 이 포트는 서버 밖에 열지 않는다.
+http://:2020 {
+	metrics
+}
+
 {$SITE_ADDRESS} {
 	encode zstd gzip
 
@@ -29,7 +39,11 @@
 		# 나머지(index.html과, 화면 경로가 대신 받는 index.html)는 브라우저가 매번 서버에 바뀌었는지 묻게 한다.
 		# Cache-Control이 없으면 브라우저가 Last-Modified를 근거로 index.html을 스스로 캐시해서, 배포한 뒤에도 예전 번들을 계속 쓴다.
 		# header는 try_files가 경로를 바꾸기 전의 요청 경로로 매칭하므로, /spots/1 같은 화면 경로에도 붙는다.
-		@notAssets not path /assets/*
+		# /landing/* 의 사진과 포스터는 파일 이름에 해시가 없다. 매번 묻게 두면 재방문 때마다 요청 7개가 304로 돌아온다.
+		# 하루 동안은 묻지 않고 쓰게 하고, 사진을 바꾸면 하루 안에 반영된다.
+		@landing path /landing/*
+		header @landing Cache-Control "public, max-age=86400"
+		@notAssets not path /assets/* /landing/*
 		header @notAssets Cache-Control "no-cache"
 
 		# index.html과 정적 파일은 Caddy가 직접 내보내므로, 앱이 /api 응답에 붙이는 보안 헤더가 여기에는 붙지 않는다. 그래서 여기서 붙인다.

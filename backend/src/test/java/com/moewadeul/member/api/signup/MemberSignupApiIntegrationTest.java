@@ -90,7 +90,7 @@ class MemberSignupApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01] 만 14세 확인 없이 가입하면 400 ageConfirmed 오류를 응답하고 회원을 만들지 않는다")
+    @DisplayName("[F-01][EV-08] 만 14세 확인 없이 가입하면 400 ageConfirmed 오류를 응답하고 회원을 만들지 않는다")
     void signUpWithoutAgeConfirmedIsRejected() {
         String email = TestSequence.email();
 

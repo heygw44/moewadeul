@@ -58,7 +58,7 @@ class ProgramPaymentConcurrencyIntegrationTest {
     }
 
     @RepeatedTest(5)
-    @DisplayName("[F-19][NFR-03] 같은 신청을 다른 멱등성 키로 동시에 결제하면 한 번만 성공하고 나머지는 PROGRAM_INVALID_STATE이며 결제 행은 1건이다")
+    @DisplayName("[F-19][NFR-03][PG-08] 같은 신청을 다른 멱등성 키로 동시에 결제하면 한 번만 성공하고 나머지는 PROGRAM_INVALID_STATE이며 결제 행은 1건이다")
     void differentKeysPayOnce() throws Exception {
         // given
         long programId = fixture.saveProgram(3, false);
@@ -82,7 +82,7 @@ class ProgramPaymentConcurrencyIntegrationTest {
     }
 
     @RepeatedTest(5)
-    @DisplayName("[F-19][NFR-03] 같은 신청을 같은 멱등성 키로 동시에 결제하면 결제 행은 1건이고 나머지는 같은 결과를 받거나 IDEMPOTENCY_IN_PROGRESS이다")
+    @DisplayName("[F-19][NFR-03][PG-08] 같은 신청을 같은 멱등성 키로 동시에 결제하면 결제 행은 1건이고 나머지는 같은 결과를 받거나 IDEMPOTENCY_IN_PROGRESS이다")
     void sameKeyPaysOnce() throws Exception {
         // given
         long programId = fixture.saveProgram(3, false);
@@ -143,7 +143,7 @@ class ProgramPaymentConcurrencyIntegrationTest {
     }
 
     private Object payWithKey(long memberId, long applicationId, String key) {
-        ProgramPayResult result = idempotencyExecutor.execute(
+        ProgramPayResult result = idempotencyExecutor.executeReadCommitted(
                 new IdempotentRequest(memberId, key, "POST /api/program-applications/" + applicationId + "/pay", null),
                 HttpStatus.OK,
                 ProgramPayResult.class,

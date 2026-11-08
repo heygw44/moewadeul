@@ -46,6 +46,9 @@ public class Notification {
     @Column(name = "email_status", updatable = false)
     private NotificationEmailStatus emailStatus;
 
+    @Column(name = "email_bulk", updatable = false)
+    private boolean emailBulk;
+
     @Column(name = "email_attempt_count", insertable = false, updatable = false)
     private int emailAttemptCount;
 
@@ -66,6 +69,7 @@ public class Notification {
             String link,
             String dedupKey,
             NotificationEmailStatus emailStatus,
+            boolean emailBulk,
             Instant now) {
         this.memberId = memberId;
         this.type = type;
@@ -74,6 +78,7 @@ public class Notification {
         this.link = link;
         this.dedupKey = dedupKey;
         this.emailStatus = emailStatus;
+        this.emailBulk = emailBulk;
         this.createdAt = now;
     }
 
@@ -85,6 +90,7 @@ public class Notification {
             String link,
             String dedupKey,
             NotificationEmailStatus emailStatus,
+            boolean emailBulk,
             Instant now) {
         if (type == null || title == null || body == null || dedupKey == null || now == null) {
             throw new IllegalArgumentException("알림의 종류, 제목, 본문, 중복 방지 키, 생성 시각은 비어 있을 수 없습니다.");
@@ -92,7 +98,7 @@ public class Notification {
         if (emailStatus != NotificationEmailStatus.PENDING && emailStatus != NotificationEmailStatus.SKIPPED) {
             throw new IllegalArgumentException("새 알림의 메일 상태는 PENDING이나 SKIPPED여야 합니다. emailStatus=" + emailStatus);
         }
-        return new Notification(memberId, type, title, body, link, dedupKey, emailStatus, now);
+        return new Notification(memberId, type, title, body, link, dedupKey, emailStatus, emailBulk, now);
     }
 
     public void markRead(Instant now) {

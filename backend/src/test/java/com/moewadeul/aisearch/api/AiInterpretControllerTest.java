@@ -125,7 +125,7 @@ class AiInterpretControllerTest {
     }
 
     @Test
-    @DisplayName("[F-27][AI-01] 앞뒤 공백을 뺀 길이가 100자인 문장은 받는다")
+    @DisplayName("[F-27][AI-02] 앞뒤 공백을 뺀 길이가 100자인 문장은 받는다")
     void acceptsHundredCharactersAroundSpaces() {
         // given
         when(aiInterpretService.interpret(anyLong(), any())).thenReturn(EMPTY);
@@ -140,7 +140,7 @@ class AiInterpretControllerTest {
     }
 
     @Test
-    @DisplayName("[F-27][AI-01] 이모지는 한 글자로 세어 100개까지 받는다")
+    @DisplayName("[F-27][AI-02] 이모지는 한 글자로 세어 100개까지 받는다")
     void countsEmojiAsOneCharacter() {
         // given
         when(aiInterpretService.interpret(anyLong(), any())).thenReturn(EMPTY);
@@ -156,7 +156,7 @@ class AiInterpretControllerTest {
     @ValueSource(
             strings = {"{\"query\":\"가\"}", "{\"query\":\"   가   \"}", "{\"query\":\"     \"}", "{}", "{\"query\":null}"
             })
-    @DisplayName("[F-27][AI-01] 공백을 뺀 길이가 2자 미만이거나 문장이 없으면 400 INVALID_INPUT과 query 필드 오류를 응답한다")
+    @DisplayName("[F-27][AI-02] 공백을 뺀 길이가 2자 미만이거나 문장이 없으면 400 INVALID_INPUT과 query 필드 오류를 응답한다")
     void rejectsTooShortOrBlank(String body) {
         // when
         MvcTestResult result = send(verified(), body);
@@ -173,7 +173,7 @@ class AiInterpretControllerTest {
     }
 
     @Test
-    @DisplayName("[F-27][AI-01] 101자 문장은 400을 응답하고, 오류 응답에 입력한 문장을 되돌려 주지 않는다")
+    @DisplayName("[F-27][AI-02] 101자 문장은 400을 응답하고, 오류 응답에 입력한 문장을 되돌려 주지 않는다")
     void rejectsTooLongWithoutEchoingInput() {
         // given
         String tooLong = SENTENCE + "가".repeat(101);
@@ -254,7 +254,7 @@ class AiInterpretControllerTest {
     }
 
     @Test
-    @DisplayName("[F-27][AI-05] 서비스가 이용 불가를 던지면 503 AI_SEARCH_UNAVAILABLE을 응답한다")
+    @DisplayName("[F-27][AI-05][AI-09] 서비스가 이용 불가를 던지면 503 AI_SEARCH_UNAVAILABLE을 응답한다")
     void unavailableReturnsServiceUnavailable() {
         // given
         when(aiInterpretService.interpret(anyLong(), any()))
