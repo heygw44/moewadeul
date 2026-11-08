@@ -135,7 +135,10 @@ final class AuthorizationMatrix {
             new Endpoint(HttpMethod.GET, "/api/admin/memories"),
             new Endpoint(HttpMethod.POST, "/api/admin/memories/1/hide"),
             new Endpoint(HttpMethod.POST, "/api/admin/memories/1/restore"),
-            new Endpoint(HttpMethod.GET, "/api/admin/audit-logs"));
+            new Endpoint(HttpMethod.GET, "/api/admin/audit-logs"),
+            new Endpoint(HttpMethod.GET, "/api/admin/disposable-email-domains"),
+            new Endpoint(HttpMethod.POST, "/api/admin/disposable-email-domains"),
+            new Endpoint(HttpMethod.DELETE, "/api/admin/disposable-email-domains/1"));
 
     private AuthorizationMatrix() {}
 
