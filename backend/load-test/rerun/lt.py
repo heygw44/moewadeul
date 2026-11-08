@@ -1,7 +1,7 @@
 """재현 측정이 함께 쓰는 도구. env.sh와 같은 위치 규칙을 쓴다.
 
 측정 전 검사 세 가지를 여기서 한다. 어느 하나라도 어긋나면 예외로 멈춘다.
-- 이미지의 git.sha 라벨 코드가 HEAD의 backend 코드와 같은가(check_image)
+- 이미지의 git.sha 라벨 코드가 HEAD의 backend 코드와 같은가(check_image). 옛 코드와 번갈아 잴 때만 LT_OLD_SHA=<그 커밋>으로 그 이미지를 허용한다
 - MySQL 디스크 읽기 제한이 요청한 대로 걸렸는가(ensure_stack)
 - 앱이 관리 포트 8081에서 180초 안에 UP으로 답하는가(wait_ready)
 """
@@ -46,7 +46,7 @@ def check_image(tag):
     diff = sh("git", "-C", ROOT, "diff", "--name-only", sha, "HEAD", "--", *CODE_PATHS)
     if diff.returncode != 0:
         raise SystemExit(f"라벨 커밋 {sha}을 이 저장소에서 찾지 못한다: {diff.stderr.strip()}")
-    if diff.stdout.strip():
+    if diff.stdout.strip() and not (os.environ.get("LT_OLD_SHA") and sha.startswith(os.environ["LT_OLD_SHA"])):
         raise SystemExit(f"이미지 {tag}({sha[:8]})의 코드가 HEAD와 다르다:\n{diff.stdout}")
     return sha
 

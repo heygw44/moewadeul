@@ -34,6 +34,8 @@ services:
     environment:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${LT_POOL:-10}
       SERVER_TOMCAT_THREADS_MAX: ${LT_TOMCAT:-70}
+      # v1.4.0 prod 프로필과 같은 값이다. 관리 포트가 없던 옛 커밋 이미지도 같은 도구로 재려고 여기서도 정한다.
+      MANAGEMENT_SERVER_PORT: "8081"
       MOEWADEUL_EXTERNAL_API_MAX_CONCURRENT_CALLS: ${LT_EXTERNAL_LIMIT:-10}
       # 부하 도구는 한 IP에서 보낸다. 운영 한도(분당 60회)를 두면 날씨 요청 대부분이 429로 끝나 외부 대기를 재지 못한다.
       MOEWADEUL_WEATHER_IP_REQUESTS_PER_MINUTE: "1000000"
