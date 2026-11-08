@@ -16,6 +16,7 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.profile.TrustLevel;
 import com.moewadeul.common.testsupport.MutableClock;
+import com.moewadeul.member.application.MemberWithdrawalService;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.identity.CiHash;
@@ -186,6 +187,7 @@ class IdentityVerificationServiceTest {
         MutableClock clock = MutableClock.at(Instant.parse(instant));
         return service(
                 new IdentityVerificationApplier(
+                        mock(MemberWithdrawalService.class),
                         repository,
                         insertMapper,
                         hasher,

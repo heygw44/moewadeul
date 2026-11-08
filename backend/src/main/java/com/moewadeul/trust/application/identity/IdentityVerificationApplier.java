@@ -2,6 +2,7 @@ package com.moewadeul.trust.application.identity;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.time.KoreaTime;
+import com.moewadeul.member.application.MemberWithdrawalService;
 import com.moewadeul.trust.application.profile.TrustSummary;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.TrustErrorCode;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 class IdentityVerificationApplier {
 
+    private final MemberWithdrawalService memberWithdrawalService;
     private final IdentityVerificationRepository identityVerificationRepository;
     private final IdentityVerificationInsertMapper identityVerificationInsertMapper;
     private final CiHasher ciHasher;
@@ -30,6 +32,7 @@ class IdentityVerificationApplier {
 
     @Transactional
     IdentityVerificationResult apply(long memberId, VerifiedIdentity identity, IdentityProviderType providerType) {
+        memberWithdrawalService.lockSharedUnlessWithdrawn(memberId);
         if (identityVerificationRepository.existsByMemberId(memberId)) {
             throw new BusinessException(TrustErrorCode.IDENTITY_ALREADY_VERIFIED);
         }
