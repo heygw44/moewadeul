@@ -297,6 +297,55 @@
       ]
     },
     {
+      "uid": "moewadeul-external-api-failure-rate",
+      "title": "외부 API 실패율 20% 이상",
+      "condition": "C",
+      "for": "0s",
+      "noDataState": "OK",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "{{ $labels.api }} 호출이 최근 15분 동안 3건 넘게, 20% 넘게 실패했다. 기상청 단기예보는 응답이 1,500행 상한을 넘어 일부만 오면 실패로 세고 날씨 없이 응답한다. 앱 WARN 로그(기상청이면 '한 페이지에 다 담기지 않았다')와 대시보드의 외부 API 실패 패널을 본다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 1200,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "sum by (api) (increase(moewadeul_external_api_requests_seconds_count{job=\"moewadeul-app\",outcome=\"failure\"}[15m])) / sum by (api) (increase(moewadeul_external_api_requests_seconds_count{job=\"moewadeul-app\"}[15m])) and on (api) sum by (api) (increase(moewadeul_external_api_requests_seconds_count{job=\"moewadeul-app\",outcome=\"failure\"}[15m])) > 3",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "gt",
+                  "params": [
+                    0.2
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "uid": "moewadeul-ai-search-budget",
       "title": "AI 검색 하루 예산 80% 도달",
       "condition": "C",
