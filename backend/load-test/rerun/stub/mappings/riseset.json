@@ -1,0 +1,1 @@
+{"request": {"method": "GET", "urlPath": "/B090041/openapi/service/RiseSetInfoService/getLCRiseSetInfo"}, "response": {"status": 200, "headers": {"Content-Type": "application/xml"}, "bodyFileName": "rise-set.xml"}, "id": "5f1e0000-0000-4000-8000-000000000517"}
