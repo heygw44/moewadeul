@@ -1,0 +1,65 @@
+# 재현 측정 override. 운영 compose의 메모리 한도와 JVM 옵션은 그대로 두고 app·mysql·caddy를 CPU 0,1에 묶는다.
+# 외부 API(기상청, 천문연, OpenAI, S3)는 스텁으로, 메일은 가짜 SMTP로 돌린다. 관리 포트 8081을 열어 요청 스레드가 다 차도 지표를 읽는다.
+services:
+  extstub:
+    image: wiremock/wiremock:3.13.2
+    command: ["--port", "8080", "--async-response-enabled", "true", "--async-response-threads", "400", "--container-threads", "600", "--no-request-journal", "--disable-request-logging"]
+    volumes:
+      - ${LT_TOOLS:?}/stub:/home/wiremock
+    cpuset: "4-7"
+    ports:
+      - "127.0.0.1:8089:8080"
+    networks:
+      default:
+        aliases:
+          - ltbucket.extstub
+  smtpsink:
+    image: python:3.12-alpine
+    command: ["python", "/sink.py"]
+    volumes:
+      - ${LT_DIR:?}/sink:/sink
+      - ${LT_TOOLS}/sink.py:/sink.py:ro
+    cpuset: "4-7"
+  caddy:
+    ports: !override
+      - "127.0.0.1:80:80"
+    cpuset: "0,1"
+  app:
+    ports: !override
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8081"
+    volumes: !reset []
+    cpuset: "0,1"
+    entrypoint: ["java", "-XX:AOTCache=app.aot", "-XX:MaxRAMPercentage=40", "-XX:+ExitOnOutOfMemoryError", "-Xlog:gc*,safepoint:file=/tmp/gc.log:time,uptime,level,tags", "-jar", "app.jar"]
+    environment:
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${LT_POOL:-10}
+      SERVER_TOMCAT_THREADS_MAX: ${LT_TOMCAT:-70}
+      MOEWADEUL_EXTERNAL_API_MAX_CONCURRENT_CALLS: ${LT_EXTERNAL_LIMIT:-10}
+      # 부하 도구는 한 IP에서 보낸다. 운영 한도(분당 60회)를 두면 날씨 요청 대부분이 429로 끝나 외부 대기를 재지 못한다.
+      MOEWADEUL_WEATHER_IP_REQUESTS_PER_MINUTE: "1000000"
+      MOEWADEUL_IMAGE_STORAGE_STORAGE: s3
+      UPLOAD_BUCKET: ltbucket
+      AWS_REGION: ap-northeast-2
+      AWS_ACCESS_KEY_ID: lt-fake-access
+      AWS_SECRET_ACCESS_KEY: lt-fake-secret
+      AWS_ENDPOINT_URL_S3: http://extstub:8080
+      OPENAI_API_KEY: lt-fake-openai
+      MOEWADEUL_AISEARCH_OPENAI_BASE_URL: http://extstub:8080/v1
+      MOEWADEUL_AISEARCH_DAILY_BUDGET_USD: "100000"
+      MOEWADEUL_WEATHER_KMA_BASE_URL: http://extstub:8080/1360000
+      MOEWADEUL_WEATHER_KASI_BASE_URL: http://extstub:8080/B090041/openapi/service
+      MAIL_HOST: smtpsink
+      MAIL_PORT: "2525"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "false"
+      JAVA_TOOL_OPTIONS: ""
+    depends_on:
+      extstub:
+        condition: service_started
+      smtpsink:
+        condition: service_started
+  mysql:
+    cpuset: "0,1"
+  alloy:
+    profiles: ["never"]
