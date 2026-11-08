@@ -2,8 +2,9 @@
 """사례 1: 인증 기록 약 100만 건에서 IP 한도 조회와 재발송 API, V69 정리 작업 시간을 잰다.
 
 사용: withlock.sh python3 case1.py <APP_TAG> [묶음 수=2]
-MySQL은 디스크 제한(ov-disk.yml)과 버퍼 풀 256MB로 띄운다. 인덱스 idx_email_verification_ip_created를 지운 상태와 둔 상태를
-묶음마다 번갈아 잰다. 끝에 인덱스를 되돌리고 시드를 지운다. 결과는 results/2026-11-08-rerun/runs/case1/result.jsonl.
+MySQL은 디스크 제한(ov-disk.yml)과 버퍼 풀 256MB로 띄운다. 인덱스 상태를
+묶음마다 없음(none), V46만(ip), 지금 스키마(both) 순으로 번갈아 잰다.
+V69 정리 작업은 시드 모양(시각이 id와 무관 random, id 순 id)과 created_at 인덱스 유무를 번갈아 잰다. 끝에 인덱스를 되돌리고 시드를 지운다. 결과는 results/2026-11-08-rerun/runs/case1/result.jsonl.
 """
 import json, sys, threading, time
 
@@ -13,6 +14,7 @@ TAG = sys.argv[1]
 ROUNDS = int(sys.argv[2]) if len(sys.argv) > 2 else 2
 OUT = lt.run_dir("2026-11-08-rerun", "case1")
 IDX = "idx_email_verification_ip_created"
+IDX_CREATED = "idx_email_verification_created_at"
 ROWS = 1_000_000
 RES = open(OUT / "result.jsonl", "a")
 
@@ -65,15 +67,22 @@ def rows():
     return int(lt.sql("SELECT COUNT(*) FROM email_verification"))
 
 
-def has_idx():
-    return lt.sql(f"SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='email_verification' AND index_name='{IDX}'") != "0"
+INDEXES = {IDX: "(request_ip, created_at)", IDX_CREATED: "(created_at)"}
+STATES = {"none": (), "ip": (IDX,), "both": (IDX, IDX_CREATED)}
 
 
-def idx(on):
-    if on and not has_idx():
-        t = time.time(); lt.sql(f"CREATE INDEX {IDX} ON email_verification (request_ip, created_at)"); out(kind="create-index", sec=round(time.time() - t, 2))
-    if not on and has_idx():
-        lt.sql(f"DROP INDEX {IDX} ON email_verification")
+def has(name):
+    return lt.sql(f"SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='email_verification' AND index_name='{name}'") != "0"
+
+
+def index_state(state):
+    """none은 V46과 V69 전, ip는 V46만, both는 지금 스키마다. V69의 created_at 인덱스도 IP 한도 조회의 시각 조건에 쓰여서 둘 다 지워야 표 전체를 읽는다."""
+    for name, cols in INDEXES.items():
+        want = name in STATES[state]
+        if want and not has(name):
+            t = time.time(); lt.sql(f"CREATE INDEX {name} ON email_verification {cols}"); out(kind="create-index", index=name, sec=round(time.time() - t, 2))
+        if not want and has(name):
+            lt.sql(f"DROP INDEX {name} ON email_verification")
     lt.sql("ANALYZE TABLE email_verification")
 
 
@@ -116,12 +125,13 @@ def resend(label, sessions, csrf):
     log = lt.sh("docker", "logs", "--since", since, lt.APP).stdout
     busy = [l[:300] for l in log.splitlines() if "RESOURCE_BUSY" in l or "Lock wait timeout" in l or "LockAcquisition" in l or "PessimisticLock" in l]
     ds = sorted(x[1] for x in r)
-    out(kind=label, idx=has_idx(), status=sorted((x[0], x[2]) for x in r), max=ds[-1], med=ds[len(ds) // 2], busy_log_lines=len(busy), busy_log=busy[:3])
+    out(kind=label, indexes=[n for n in INDEXES if has(n)], status=sorted((x[0], x[2]) for x in r), max=ds[-1], med=ds[len(ds) // 2], busy_log_lines=len(busy), busy_log=busy[:3])
 
 
-def cleanup(order):
+def cleanup(order, state):
     """EmailVerificationCleanupService.deleteExpired와 같은 문장(1,000건씩)을 한 세션에서 더 지울 것이 없을 때까지 부른다."""
     seed(order)
+    index_state(state)
     plan = lt.sql("EXPLAIN FORMAT=TREE DELETE FROM email_verification WHERE created_at < UTC_TIMESTAMP(6) - INTERVAL 7 DAY LIMIT 1000").replace("\\n", " | ")
     before = rows(); r0 = lt.status("Innodb_data_reads", "Innodb_rows_read")
     lt.sql("""DROP PROCEDURE IF EXISTS lt1004_cleanup;
@@ -134,7 +144,7 @@ END//
 DELIMITER ;""")
     t = time.time(); b = lt.sql("CALL lt1004_cleanup(@b); SELECT @b;", timeout=3600); sec = time.time() - t
     r1 = lt.status("Innodb_data_reads", "Innodb_rows_read")
-    out(kind="cleanup", order=order, idx_created_at=lt.sql("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='email_verification' AND index_name='idx_email_verification_created_at'") != "0",
+    out(kind="cleanup", order=order, indexes=[n for n in INDEXES if has(n)],
         deleted=before - rows(), left=rows(), sec=round(sec, 2), batches=int(b.splitlines()[-1]), data_reads=r1["Innodb_data_reads"] - r0["Innodb_data_reads"],
         rows_read=r1["Innodb_rows_read"] - r0["Innodb_rows_read"], plan=plan[:300])
     return sec
@@ -151,23 +161,24 @@ def main():
     sess = [lt.login(csrf, "uv1004-%03d@loadtest.invalid" % n) for n in range(1, 7)]
     ip_hit = lt.sql("SELECT request_ip FROM email_verification ORDER BY id LIMIT 1")
     for rnd in range(1, ROUNDS + 1):
-        for on in (False, True):
-            idx(on)
-            out(kind="explain", round=rnd, idx=on, plan=explain("10.250.250.250"))
+        for state in ("none", "ip", "both"):
+            index_state(state)
+            out(kind="explain", round=rnd, state=state, plan=explain("10.250.250.250"))
             for i in range(4):
-                l0 = lru(); s = scan_sql("10.250.250.250"); l1 = lru()
-                out(kind="sql-no-recent-ip", round=rnd, idx=on, i=i, lru_before=l0, lru_after=l1, **s)
-            out(kind="sql-seeded-ip", round=rnd, idx=on, **scan_sql(ip_hit))
+                l0 = lru(); r = scan_sql("10.250.250.250"); l1 = lru()
+                out(kind="sql-no-recent-ip", round=rnd, state=state, i=i, lru_before=l0, lru_after=l1, **r)
+            out(kind="sql-seeded-ip", round=rnd, state=state, **scan_sql(ip_hit))
             for i in range(4):
                 resend("api-single", [sess[0]], csrf)
             for i in range(3):
                 resend("api-same-member-5", [sess[0]] * 5, csrf)
             for i in range(2):
                 resend("api-same-ip-5-members", sess[1:6], csrf)
-    idx(True)
-    for order in ("random", "id", "random", "id"):
-        cleanup(order)
-    idx(False)
+    for rnd in range(ROUNDS):
+        for order in ("random", "id"):
+            for state in ("ip", "both"):
+                cleanup(order, state)
+    index_state("none")
     for i in range(3):
         resend("cleanup-only-after-delete", [sess[0]], csrf)
     out(kind="size-after-delete", rows=rows(), data_mib=lt.sql("SELECT ROUND(data_length/1048576,1) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='email_verification'"))
@@ -175,10 +186,10 @@ def main():
     out(kind="size-after-optimize", rows=rows(), data_mib=lt.sql("SELECT ROUND(data_length/1048576,1) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='email_verification'"))
     for i in range(3):
         resend("cleanup-only-after-optimize", [sess[0]], csrf)
-    idx(True)
+    index_state("both")
     lt.sql("DELETE FROM email_verification; DELETE FROM outbox_event WHERE event_type='EMAIL_VERIFICATION_REQUESTED'; DELETE FROM email_verification_ip_lock;"
            "DELETE FROM login_history WHERE attempted_email LIKE 'uv1004-%'; DELETE FROM member WHERE email LIKE 'uv1004-%'; DROP TABLE IF EXISTS lt1004_seq, lt1004_bg; DROP PROCEDURE IF EXISTS lt1004_cleanup;")
-    out(kind="end", has_index=has_idx(), rows=rows(), load_after=__import__("os").getloadavg())
+    out(kind="end", indexes=[n for n in INDEXES if has(n)], rows=rows(), load_after=__import__("os").getloadavg())
 
 
 if __name__ == "__main__":
