@@ -7,6 +7,7 @@ public enum MemberErrorCode implements ErrorCode {
     MEMBER_EMAIL_DUPLICATED(HttpStatus.CONFLICT, "이미 가입된 이메일이에요. 로그인하거나 다른 이메일을 써 주세요."),
     MEMBER_NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "다른 회원이 쓰는 닉네임이에요. 다른 닉네임을 정해 주세요."),
     MEMBER_DISPOSABLE_EMAIL(HttpStatus.BAD_REQUEST, "일회용 이메일은 쓸 수 없어요. 평소 쓰는 이메일을 입력해 주세요."),
+    MEMBER_DISPOSABLE_DOMAIN_ALREADY_BLOCKED(HttpStatus.CONFLICT, "이미 가입을 막고 있는 도메인이에요."),
     MEMBER_PASSWORD_POLICY(HttpStatus.BAD_REQUEST, "비밀번호는 10~64자로 정하고 영문, 숫자, 특수문자를 각각 1자 이상 넣어 주세요."),
     MEMBER_CURRENT_PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "현재 비밀번호가 맞지 않아요. 다시 입력해 주세요."),
     MEMBER_PASSWORD_UNCHANGED(HttpStatus.BAD_REQUEST, "지금 쓰는 비밀번호와 같아요. 다른 비밀번호를 정해 주세요."),

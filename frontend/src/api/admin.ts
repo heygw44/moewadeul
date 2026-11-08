@@ -5,6 +5,7 @@ import type {
   AdminCommunityComment,
   AdminCommunityPost,
   AdminCommunityStatus,
+  AdminDisposableEmailDomain,
   AdminMemoryStatus,
   AdminMemorySummary,
   AdminModerationResultStatus,
@@ -200,4 +201,19 @@ export function fetchAdminAuditLogs(
     },
     signal,
   });
+}
+
+export function fetchAdminDisposableEmailDomains(signal?: AbortSignal): Promise<AdminDisposableEmailDomain[]> {
+  return apiFetch<AdminDisposableEmailDomain[]>('/api/admin/disposable-email-domains', { signal });
+}
+
+export function addAdminDisposableEmailDomain(domain: string): Promise<AdminDisposableEmailDomain> {
+  return apiFetch<AdminDisposableEmailDomain>('/api/admin/disposable-email-domains', {
+    method: 'POST',
+    body: { domain },
+  });
+}
+
+export function deleteAdminDisposableEmailDomain(id: number): Promise<void> {
+  return apiFetch(`/api/admin/disposable-email-domains/${id}`, { method: 'DELETE' });
 }

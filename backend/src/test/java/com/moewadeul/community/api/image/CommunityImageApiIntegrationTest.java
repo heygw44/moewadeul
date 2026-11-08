@@ -221,7 +221,7 @@ class CommunityImageApiIntegrationTest {
 
     @Test
     @DisplayName(
-            "[F-29][CM-06] 24시간 안에 발급해 글에 붙지 않은 이미지가 15장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED와 Retry-After이고 이미지 행이 생기지 않는다")
+            "[F-29][CM-06] 23시간 안에 발급해 글에 붙지 않은 이미지가 15장이면 다음 발급은 429 IMAGE_UPLOAD_LIMITED와 Retry-After이고 이미지 행이 생기지 않는다")
     void issueUploadUrlOverUnattachedLimitIsRejected() {
         // given
         for (int i = 0; i < CommunityImage.KIND.maxUnattachedPerMember(); i++) {
@@ -236,7 +236,7 @@ class CommunityImageApiIntegrationTest {
         assertThat(limited).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(limited).bodyJson().extractingPath("$.code").isEqualTo("IMAGE_UPLOAD_LIMITED");
         assertThat(limited.getResponse().getHeader(HttpHeaders.RETRY_AFTER))
-                .isEqualTo(String.valueOf(Duration.ofHours(24).toSeconds()));
+                .isEqualTo(String.valueOf(Duration.ofHours(23).toSeconds()));
         assertThat(imageRowCount()).isEqualTo(CommunityImage.KIND.maxUnattachedPerMember());
     }
 

@@ -18,6 +18,9 @@ public class SunQueryService {
 
     private static final String API = "kasi";
 
+    // 경도 0.05도는 출몰시각을 12초 옮기고, 천문연은 분 단위로 준다. 그래서 0.1도 칸의 가운데 좌표로 묻고 그 칸의 장소끼리 결과를 나눠 쓴다.
+    private static final double CELLS_PER_DEGREE = 10;
+
     private final KasiClient kasiClient;
     private final WeatherCaches caches;
     private final ExternalApiMetrics metrics;
@@ -25,12 +28,18 @@ public class SunQueryService {
     public Optional<SunTimes> sunTimes(double lat, double lng, LocalDate date) {
         OutsideTransaction.require("천문연 응답을 기다리는 동안 DB 커넥션을 쥐면 안 된다.");
         try {
-            return caches.sunTimes(lat, lng, date, () -> fetch(lat, lng, date));
+            double cellLat = toCell(lat);
+            double cellLng = toCell(lng);
+            return caches.sunTimes(cellLat, cellLng, date, () -> fetch(cellLat, cellLng, date));
         } catch (WeatherCacheBusyException e) {
             log.warn("천문연 응답을 기다리는 자리가 없어 출몰시각 없이 응답한다. reason={}", e.getMessage());
             metrics.recordCacheBusy(API);
             return Optional.empty();
         }
+    }
+
+    private static double toCell(double coordinate) {
+        return Math.round(coordinate * CELLS_PER_DEGREE) / CELLS_PER_DEGREE;
     }
 
     private Optional<SunTimes> fetch(double lat, double lng, LocalDate date) {

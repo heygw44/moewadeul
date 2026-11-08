@@ -1,6 +1,7 @@
 package com.moewadeul.member.application;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.domain.Member;
@@ -67,6 +68,15 @@ public class MemberWithdrawalService {
         passwordResetTokenMapper.invalidateUnusedTokens(memberId, now);
         memberSessionCleanup.recordInTransaction(memberId);
         return true;
+    }
+
+    // 탈퇴가 쥐는 회원 행을 공유 잠금으로 읽는다. 탈퇴 트랜잭션이 커밋되기 전에 들어온 쓰기는 탈퇴가 끝날 때까지 기다린 뒤 거절되어 탈퇴 정리를 비켜 가지 못한다.
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockSharedUnlessWithdrawn(long memberId) {
+        memberRepository
+                .findByIdForShare(memberId)
+                .filter(member -> !member.isWithdrawn())
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED));
     }
 
     @Transactional(readOnly = true)

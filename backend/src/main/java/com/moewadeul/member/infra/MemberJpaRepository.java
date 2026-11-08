@@ -24,6 +24,11 @@ public interface MemberJpaRepository extends JpaRepository<Member, Long>, Member
     Optional<Member> findByIdForUpdate(@Param("id") long id);
 
     @Override
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("SELECT m FROM Member m WHERE m.id = :id")
+    Optional<Member> findByIdForShare(@Param("id") long id);
+
+    @Override
     @Query("SELECT COUNT(m) > 0 FROM Member m WHERE m.nickname = :#{#nickname.value()}")
     boolean existsByNickname(@Param("nickname") Nickname nickname);
 

@@ -18,6 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 class OutboxMetricsIntegrationTest {
 
     private static final String AGGREGATE_TYPE = "TEST_AGGREGATE";
+    private static final String MAIL_EVENT_TYPE = "EMAIL_VERIFICATION_REQUESTED";
 
     @Autowired
     private MeterRegistry meterRegistry;
@@ -83,15 +84,52 @@ class OutboxMetricsIntegrationTest {
         assertThat(oldestPendingAgeSeconds()).isZero();
     }
 
+    @Test
+    @DisplayName("[NFR-09] 메일 처리기가 맡은 이벤트는 mail 줄로, 나머지는 default 줄로 나눠 세어 메일 적체와 기본 줄 적체를 구별한다")
+    void splitsBacklogByLane() {
+        // given
+        transactionTemplate.executeWithoutResult(status -> {
+            recorder.record(MAIL_EVENT_TYPE, AGGREGATE_TYPE, 1L, Map.of("sequence", 1));
+        });
+        clock.advance(Duration.ofMinutes(10));
+        transactionTemplate.executeWithoutResult(status -> {
+            recorder.record(RecordingOutboxEventHandler.EVENT_TYPE, AGGREGATE_TYPE, 2L, Map.of("sequence", 2));
+            recorder.record(RecordingOutboxEventHandler.EVENT_TYPE, AGGREGATE_TYPE, 3L, Map.of("sequence", 3));
+        });
+
+        // when
+        clock.advance(Duration.ofMinutes(1));
+        outboxMetrics.refresh();
+
+        // then
+        assertThat(events("mail", "pending")).isEqualTo(1);
+        assertThat(oldestPendingAgeSeconds("mail")).isEqualTo(660);
+        assertThat(events("default", "pending")).isEqualTo(2);
+        assertThat(oldestPendingAgeSeconds("default")).isEqualTo(60);
+    }
+
     private double events(String status) {
+        return events("default", status);
+    }
+
+    private double events(String lane, String status) {
         return meterRegistry
                 .get("moewadeul.outbox.events")
+                .tag("lane", lane)
                 .tag("status", status)
                 .gauge()
                 .value();
     }
 
     private double oldestPendingAgeSeconds() {
-        return meterRegistry.get("moewadeul.outbox.oldest.pending.age").gauge().value();
+        return oldestPendingAgeSeconds("default");
+    }
+
+    private double oldestPendingAgeSeconds(String lane) {
+        return meterRegistry
+                .get("moewadeul.outbox.oldest.pending.age")
+                .tag("lane", lane)
+                .gauge()
+                .value();
     }
 }

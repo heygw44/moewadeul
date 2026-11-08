@@ -11,6 +11,8 @@ import com.moewadeul.outbox.infra.OutboxEventCleanupMapper;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.trust.infra.identity.CiRetentionCleanupMapper;
 import com.moewadeul.trust.infra.sanction.SanctionExpiryMapper;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -18,10 +20,16 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.ibatis.binding.MapperMethod;
+import org.apache.ibatis.mapping.BoundSql;
+import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.scripting.defaults.DefaultParameterHandler;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @IntegrationTest
@@ -53,6 +61,9 @@ class RetentionCleanupIndexIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private SqlSessionFactory sqlSessionFactory;
 
     private List<Long> memberIds;
     private long dueMemberId;
@@ -87,12 +98,14 @@ class RetentionCleanupIndexIntegrationTest {
         jdbc.execute("ANALYZE TABLE email_verification");
 
         // when
-        Map<String, Object> plan = jdbc.queryForMap(
-                "EXPLAIN DELETE FROM email_verification WHERE created_at < ? LIMIT " + LIMIT, utc(NOW.minusSeconds(1)));
+        String key = explainKey(
+                EmailVerificationCleanupMapper.class,
+                "deleteOlderThan",
+                Map.of("cutoff", NOW.minusSeconds(1), "limit", LIMIT));
         int deleted = emailVerificationMapper.deleteOlderThan(NOW.minusSeconds(1), LIMIT);
 
         // then
-        assertThat(plan.get("key")).isEqualTo("idx_email_verification_created_at");
+        assertThat(key).isEqualTo("idx_email_verification_created_at");
         assertThat(deleted).isEqualTo(1);
     }
 
@@ -120,12 +133,12 @@ class RetentionCleanupIndexIntegrationTest {
         jdbc.execute("ANALYZE TABLE password_reset_token");
 
         // when
-        Map<String, Object> plan = jdbc.queryForMap(
-                "EXPLAIN DELETE FROM password_reset_token WHERE expires_at <= ? LIMIT " + LIMIT, utc(NOW));
+        String key = explainKey(
+                PasswordResetTokenMapper.class, "deleteExpiredBefore", Map.of("cutoff", NOW, "limit", LIMIT));
         int deleted = passwordResetTokenMapper.deleteExpiredBefore(NOW, LIMIT);
 
         // then
-        assertThat(plan.get("key")).isEqualTo("idx_password_reset_token_expires_at");
+        assertThat(key).isEqualTo("idx_password_reset_token_expires_at");
         assertThat(deleted).isEqualTo(1);
     }
 
@@ -153,14 +166,12 @@ class RetentionCleanupIndexIntegrationTest {
         jdbc.execute("ANALYZE TABLE identity_verification");
 
         // when
-        Map<String, Object> plan = jdbc.queryForMap(
-                "EXPLAIN DELETE FROM identity_verification"
-                        + " WHERE ci_retained_until IS NOT NULL AND ci_retained_until <= ? LIMIT " + LIMIT,
-                utc(NOW));
+        String key = explainKey(
+                CiRetentionCleanupMapper.class, "deleteRetentionExpired", Map.of("now", NOW, "limit", LIMIT));
         int deleted = ciRetentionMapper.deleteRetentionExpired(NOW, LIMIT);
 
         // then
-        assertThat(plan.get("key")).isEqualTo("idx_identity_verification_ci_retained_until");
+        assertThat(key).isEqualTo("idx_identity_verification_ci_retained_until");
         assertThat(deleted).isEqualTo(1);
     }
 
@@ -185,13 +196,14 @@ class RetentionCleanupIndexIntegrationTest {
         jdbc.execute("ANALYZE TABLE outbox_event");
 
         // when
-        Map<String, Object> plan = jdbc.queryForMap(
-                "EXPLAIN DELETE FROM outbox_event WHERE status = 'PUBLISHED' AND published_at < ? LIMIT " + LIMIT,
-                utc(NOW.minusSeconds(1)));
+        String key = explainKey(
+                OutboxEventCleanupMapper.class,
+                "deletePublishedBefore",
+                Map.of("cutoff", NOW.minusSeconds(1), "limit", LIMIT));
         int deleted = outboxMapper.deletePublishedBefore(NOW.minusSeconds(1), LIMIT);
 
         // then
-        assertThat(plan.get("key")).isEqualTo("idx_outbox_event_status_published_at");
+        assertThat(key).isEqualTo("idx_outbox_event_status_published_at");
         assertThat(deleted).isEqualTo(1);
     }
 
@@ -216,16 +228,29 @@ class RetentionCleanupIndexIntegrationTest {
         jdbc.execute("ANALYZE TABLE sanction");
 
         // when
-        Map<String, Object> plan = jdbc.queryForMap(
-                "EXPLAIN UPDATE sanction SET status = 'EXPIRED', updated_at = ?"
-                        + " WHERE status = 'ACTIVE' AND ends_at IS NOT NULL AND ends_at <= ?",
-                utc(NOW),
-                utc(NOW));
+        String key = explainKey(SanctionExpiryMapper.class, "expireEnded", Map.of("now", NOW));
         int expired = sanctionMapper.expireEnded(NOW);
 
         // then
-        assertThat(plan.get("key")).isEqualTo("idx_sanction_status_ends_at");
+        assertThat(key).isEqualTo("idx_sanction_status_ends_at");
         assertThat(expired).isEqualTo(1);
+    }
+
+    private String explainKey(Class<?> mapper, String method, Map<String, Object> params) {
+        MappedStatement statement =
+                sqlSessionFactory.getConfiguration().getMappedStatement(mapper.getName() + "." + method);
+        MapperMethod.ParamMap<Object> parameter = new MapperMethod.ParamMap<>();
+        parameter.putAll(params);
+        BoundSql boundSql = statement.getBoundSql(parameter);
+        return jdbc.execute((ConnectionCallback<String>) connection -> {
+            try (PreparedStatement explain = connection.prepareStatement("EXPLAIN " + boundSql.getSql())) {
+                new DefaultParameterHandler(statement, parameter, boundSql).setParameters(explain);
+                try (ResultSet rows = explain.executeQuery()) {
+                    rows.next();
+                    return rows.getString("key");
+                }
+            }
+        });
     }
 
     private static LocalDateTime utc(Instant instant) {

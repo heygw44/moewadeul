@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.external.ExternalApiMetrics;
@@ -91,6 +94,29 @@ class SunQueryServiceTest {
             release.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("[F-09] 같은 0.1도 칸의 장소는 칸 가운데 좌표로 천문연을 한 번만 부르고 결과를 나눠 쓴다")
+    void sharesOneCallPerTenthDegreeCell() {
+        // given
+        LocalDate date = LocalDate.of(2026, 10, 5);
+        MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        SunQueryService cached = new SunQueryService(
+                kasiClient, new WeatherCaches(meterRegistry), new ExternalApiMetrics(meterRegistry));
+        when(kasiClient.getRiseSet(any(), anyDouble(), anyDouble()))
+                .thenReturn(Optional.of(new KasiRiseSetItem("20261005", "0631", "1809", "1836")));
+
+        // when
+        Optional<SunTimes> first = cached.sunTimes(37.5312, 126.9765, date);
+        Optional<SunTimes> sameCell = cached.sunTimes(37.4688, 127.0449, date);
+        cached.sunTimes(37.5712, 126.9765, date);
+
+        // then
+        assertThat(sameCell).isEqualTo(first).isPresent();
+        verify(kasiClient).getRiseSet(eq(date), eq(37.5), eq(127.0));
+        verify(kasiClient).getRiseSet(eq(date), eq(37.6), eq(127.0));
+        verifyNoMoreInteractions(kasiClient);
     }
 
     @Test

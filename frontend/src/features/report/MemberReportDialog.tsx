@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createMemberReport } from '../../api/memberReports';
+import { MailLink } from '../../app/legal/LegalDocument';
 import { ApiError } from '../../api/client';
 import { toUserMessage } from '../../api/errors';
 import type { ReportKind, ReportType } from '../../api/types';
@@ -90,7 +91,10 @@ export function MemberReportDialog({
           <p role="status" className="text-base font-semibold text-accent-deep">
             신고를 접수했어요
           </p>
-          <p className="text-sm text-ink-muted">관리자가 검토한 뒤 결과를 알림으로 보내요.</p>
+          <p className="text-sm text-ink-muted">
+            관리자가 검토한 뒤 결과를 알림으로 보내요. 급히 알릴 일이 있으면 <MailLink />
+            으로 메일을 보내 주세요.
+          </p>
           <div className="flex justify-end">
             <Button onClick={onClose}>닫기</Button>
           </div>

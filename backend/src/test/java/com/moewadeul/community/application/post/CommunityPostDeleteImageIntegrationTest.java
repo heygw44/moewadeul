@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.moewadeul.common.image.application.ImageUploadCommand;
+import com.moewadeul.common.image.domain.AttachableImage;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -72,7 +73,7 @@ class CommunityPostDeleteImageIntegrationTest {
         assertThat(attachedImageIds(postId)).isEmpty();
         assertThat(unattachedImageIds()).containsExactlyInAnyOrderElementsOf(imageIds);
 
-        clock.advance(CommunityImageCleanupService.RETENTION.plus(Duration.ofSeconds(1)));
+        clock.advance(AttachableImage.UNATTACHED_RETENTION.plus(Duration.ofSeconds(1)));
         cleanupService.deleteExpiredObjectsThenRows();
         assertThat(unattachedImageIds()).isEmpty();
     }

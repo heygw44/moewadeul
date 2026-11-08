@@ -187,6 +187,13 @@ loki.process "mysql_slow" {
 		max_wait_time = "3s"
 	}
 
+	// 덤프 복원 같은 대량 INSERT는 문장 하나가 수 MB라 Loki 한도(256KB)를 넘어 버려지고, 아래 치환만 코어를 잡아먹는다.
+	// 치환 전에 버려서 복원 직후 쌓인 slow.log를 읽는 동안 앱이 느려지지 않게 한다. 버린 수는 loki_process_dropped_lines_total에 남는다.
+	stage.drop {
+		longer_than         = "64KB"
+		drop_counter_reason = "slow_log_entry_too_long"
+	}
+
 	stage.replace {
 		expression = "('(?:[^'\\\\]|\\\\.)*')"
 		replace    = "'?'"

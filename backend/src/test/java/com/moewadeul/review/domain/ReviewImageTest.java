@@ -38,6 +38,33 @@ class ReviewImageTest {
     }
 
     @Test
+    @DisplayName("[F-24][RI-01] 썸네일을 주면 키와 크기를 기록하고, 주지 않으면 썸네일이 없다")
+    void issuesWithOrWithoutThumbnail() {
+        ReviewImage thumbnailed = ReviewImage.issue(
+                1L, "review/1/a.png", "image/png", 100, NOW, new ReviewImage.Thumbnail("review/1/a_thumb.jpg", 64));
+        ReviewImage plain = ReviewImage.issue(1L, "review/1/b.png", "image/png", 100, NOW);
+
+        assertThat(thumbnailed.hasThumbnail()).isTrue();
+        assertThat(thumbnailed.getThumbnailObjectKey()).isEqualTo("review/1/a_thumb.jpg");
+        assertThat(thumbnailed.getThumbnailSizeBytes()).isEqualTo(64);
+        assertThat(plain.hasThumbnail()).isFalse();
+        assertThat(plain.getThumbnailObjectKey()).isNull();
+    }
+
+    @Test
+    @DisplayName("[F-24][RI-01] 썸네일 키가 비었거나 크기가 0이거나 256KB를 넘으면 만들지 않는다")
+    void rejectsInvalidThumbnail() {
+        assertThatThrownBy(() -> ReviewImage.issue(1L, "k", "image/png", 100, NOW, new ReviewImage.Thumbnail(" ", 64)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() ->
+                        ReviewImage.issue(1L, "k", "image/png", 100, NOW, new ReviewImage.Thumbnail("k_thumb.jpg", 0)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ReviewImage.issue(
+                        1L, "k", "image/png", 100, NOW, new ReviewImage.Thumbnail("k_thumb.jpg", 262_145L)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("[F-24][RI-02] 후기에 붙이면 후기 안 순서를 기록하고, 3번째(순서 2)까지만 붙인다")
     void attachesUpToThirdOrder() {
         ReviewImage image = ReviewImage.issue(1L, "k", "image/png", 100, NOW);

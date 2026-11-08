@@ -4,12 +4,13 @@ import com.moewadeul.common.image.application.ImageAttachments;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.review.domain.ReviewImage;
 import com.moewadeul.review.domain.ReviewImageRepository;
+import java.time.Clock;
 import org.springframework.stereotype.Component;
 
 @Component
 class ReviewImageAttachments extends ImageAttachments<ReviewImage> {
 
-    ReviewImageAttachments(ReviewImageRepository reviewImageRepository, ImageStorage imageStorage) {
-        super(ReviewImage.KIND, reviewImageRepository, imageStorage);
+    ReviewImageAttachments(ReviewImageRepository reviewImageRepository, ImageStorage imageStorage, Clock clock) {
+        super(ReviewImage.KIND, reviewImageRepository, imageStorage, clock);
     }
 }

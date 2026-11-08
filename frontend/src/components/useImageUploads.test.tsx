@@ -5,12 +5,14 @@ import type { ChangeEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ImageUpload } from '../api/types';
 import { putImage } from '../api/uploads';
+import { createThumbnail } from './createThumbnail';
 import { reencodeImage } from './reencodeImage';
 import { useImageUploads } from './useImageUploads';
 import type { ImageUploads } from './useImageUploads';
 
 vi.mock('../api/uploads', () => ({ putImage: vi.fn() }));
 vi.mock('./reencodeImage', () => ({ reencodeImage: vi.fn() }));
+vi.mock('./createThumbnail', () => ({ createThumbnail: vi.fn() }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -22,6 +24,7 @@ describe('useImageUploads', () => {
   let uploads: ImageUploads;
   let requests: Pending[];
   let putCalls: number;
+  let withThumbnail = false;
 
   const requestUpload = vi.fn(
     () =>
@@ -31,7 +34,7 @@ describe('useImageUploads', () => {
   );
 
   function Probe() {
-    uploads = useImageUploads({ max: 10, requestUpload });
+    uploads = useImageUploads({ max: 10, requestUpload, thumbnail: withThumbnail });
     return null;
   }
 
@@ -54,11 +57,13 @@ describe('useImageUploads', () => {
   beforeEach(() => {
     requests = [];
     putCalls = 0;
+    withThumbnail = false;
     requestUpload.mockClear();
     vi.mocked(putImage).mockClear();
     vi.mocked(putImage).mockImplementation(async () => {
       putCalls += 1;
     });
+    vi.mocked(createThumbnail).mockReset();
     vi.mocked(reencodeImage).mockReset();
     vi.mocked(reencodeImage).mockImplementation(async (file) => new Blob(['reencoded'], { type: file.type }));
     container = document.createElement('div');
@@ -133,5 +138,65 @@ describe('useImageUploads', () => {
     expect(uploads.images[0]!.status).toBe('failed');
     expect(uploads.images[0]!.error).toBe('이 사진은 올릴 수 없어요. 빼고 다른 사진을 골라 주세요.');
     expect(uploads.failed).toBe(true);
+  });
+
+  describe('썸네일', () => {
+    const thumbnailTarget = {
+      uploadUrl: 'https://upload.test/thumb',
+      method: 'PUT' as const,
+      headers: {},
+      expiresAt: '2026-11-08T00:00:00Z',
+    };
+
+    function renderWithThumbnail() {
+      withThumbnail = true;
+      act(() => root.render(<Probe />));
+    }
+
+    it('썸네일을 켜면 업로드 URL을 받을 때 썸네일 크기도 보내고, 썸네일을 먼저 올린 뒤 원본을 올린다', async () => {
+      const thumbnail = new Blob(['small'], { type: 'image/jpeg' });
+      vi.mocked(createThumbnail).mockResolvedValue(thumbnail);
+      renderWithThumbnail();
+
+      await choose(photos(1));
+      await act(async () => {
+        requests[0]!.resolve({
+          imageId: 1,
+          uploadUrl: 'https://upload.test/original',
+          thumbnailUpload: thumbnailTarget,
+        } as ImageUpload);
+      });
+
+      expect(requestUpload).toHaveBeenCalledWith({
+        contentType: 'image/jpeg',
+        sizeBytes: expect.any(Number),
+        thumbnailSizeBytes: thumbnail.size,
+      });
+      expect(vi.mocked(putImage).mock.calls.map(([target]) => target.uploadUrl)).toEqual([
+        'https://upload.test/thumb',
+        'https://upload.test/original',
+      ]);
+      expect(vi.mocked(putImage).mock.calls[0]![1]).toBe(thumbnail);
+      expect(uploads.images[0]!.status).toBe('done');
+    });
+
+    it('썸네일을 만들지 못하면 썸네일 크기 없이 원본만 올린다', async () => {
+      vi.mocked(createThumbnail).mockResolvedValue(null);
+      renderWithThumbnail();
+
+      await choose(photos(1));
+      await finish(0);
+
+      expect(requestUpload).toHaveBeenCalledWith({ contentType: 'image/jpeg', sizeBytes: expect.any(Number) });
+      expect(putImage).toHaveBeenCalledTimes(1);
+      expect(uploads.images[0]!.status).toBe('done');
+    });
+
+    it('썸네일을 켜지 않으면 썸네일을 만들지 않는다', async () => {
+      await choose(photos(1));
+      await finish(0);
+
+      expect(createThumbnail).not.toHaveBeenCalled();
+    });
   });
 });
