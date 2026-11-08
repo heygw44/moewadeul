@@ -79,7 +79,7 @@ class DatabaseCleanerIntegrationTest {
         jdbcTemplate.update("INSERT INTO login_history (member_id, attempted_email, ip, success, created_at) "
                 + "VALUES (1, 'cleaner@example.com', '127.0.0.1', TRUE, NOW(6))");
         jdbcTemplate.update("INSERT INTO disposable_email_domain (domain, source, created_at) "
-                + "VALUES ('mailinator.example', 'ADMIN', NOW(6))");
+                + "VALUES ('mailinator.example', 'PUBLIC', NOW(6))");
         jdbcTemplate.update("INSERT INTO SPRING_SESSION "
                 + "(PRIMARY_ID, SESSION_ID, CREATION_TIME, LAST_ACCESS_TIME, MAX_INACTIVE_INTERVAL, EXPIRY_TIME) "
                 + "VALUES (REPEAT('p', 36), REPEAT('s', 36), 1, 1, 1800, 2)");

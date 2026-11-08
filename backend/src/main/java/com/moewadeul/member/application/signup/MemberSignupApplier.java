@@ -12,12 +12,14 @@ import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.Nickname;
+import com.moewadeul.member.domain.signup.AdminDisposableEmailDomainRepository;
 import com.moewadeul.member.domain.signup.DisposableEmailDomainRepository;
 import com.moewadeul.member.domain.verification.EmailVerificationPolicy;
 import com.moewadeul.member.domain.verification.SendWindow;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,6 +32,7 @@ class MemberSignupApplier {
 
     private final MemberRepository memberRepository;
     private final DisposableEmailDomainRepository disposableEmailDomainRepository;
+    private final AdminDisposableEmailDomainRepository adminDisposableEmailDomainRepository;
     private final Clock clock;
     private final OutboxEventRecorder outboxEventRecorder;
     private final MemberMetrics memberMetrics;
@@ -70,7 +73,9 @@ class MemberSignupApplier {
     }
 
     private void rejectDisposableDomain(Email email) {
-        if (disposableEmailDomainRepository.existsByDomainIn(email.domainCandidates())) {
+        List<String> candidates = email.domainCandidates();
+        if (disposableEmailDomainRepository.existsByDomainIn(candidates)
+                || adminDisposableEmailDomainRepository.existsByDomainIn(candidates)) {
             throw new BusinessException(MemberErrorCode.MEMBER_DISPOSABLE_EMAIL);
         }
     }
