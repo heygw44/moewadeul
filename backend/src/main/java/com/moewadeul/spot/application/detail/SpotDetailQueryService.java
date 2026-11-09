@@ -113,7 +113,7 @@ public class SpotDetailQueryService {
                     rows.stream().map(SpotRecentReviewRow::reviewId).toList();
             for (SpotReviewImageRow image : spotDetailMapper.selectReviewImages(reviewIds)) {
                 images.computeIfAbsent(image.reviewId(), id -> new ArrayList<>())
-                        .add(new ImageView(image.imageId(), imageStorage.presignView(image.objectKey())));
+                        .add(new ImageView(image.imageId(), imageStorage.presignView(image.thumbnailKey())));
             }
         }
         return rows.stream()

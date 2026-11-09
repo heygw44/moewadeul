@@ -46,7 +46,7 @@ class ImageTransactionGuardTest {
     @Test
     @DisplayName("이미지 목록 교체를 트랜잭션 밖에서 부르면 행을 잠그기 전에 거부한다")
     void replaceRequiresTransaction() {
-        ImageAttachments<AttachableImage> attachments = new ImageAttachments<>(KIND, null, null) {};
+        ImageAttachments<AttachableImage> attachments = new ImageAttachments<>(KIND, null, null, null) {};
 
         assertThatThrownBy(() -> attachments.replace(1L, 2L, List.of(3L)))
                 .isInstanceOf(IllegalStateException.class)
@@ -56,7 +56,7 @@ class ImageTransactionGuardTest {
     @Test
     @DisplayName("첨부 사전 확인을 트랜잭션 안에서 부르면 저장소에 묻기 전에 거부한다")
     void precheckRejectsTransaction() {
-        ImageAttachments<AttachableImage> attachments = new ImageAttachments<>(KIND, null, null) {};
+        ImageAttachments<AttachableImage> attachments = new ImageAttachments<>(KIND, null, null, null) {};
         TransactionSynchronizationManager.setActualTransactionActive(true);
 
         assertThatThrownBy(() -> attachments.precheck(1L, null, List.of(3L)))

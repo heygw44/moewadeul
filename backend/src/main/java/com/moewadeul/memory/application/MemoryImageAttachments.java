@@ -4,12 +4,13 @@ import com.moewadeul.common.image.application.ImageAttachments;
 import com.moewadeul.common.storage.ImageStorage;
 import com.moewadeul.memory.domain.image.MemoryImage;
 import com.moewadeul.memory.domain.image.MemoryImageRepository;
+import java.time.Clock;
 import org.springframework.stereotype.Component;
 
 @Component
 class MemoryImageAttachments extends ImageAttachments<MemoryImage> {
 
-    MemoryImageAttachments(MemoryImageRepository memoryImageRepository, ImageStorage imageStorage) {
-        super(MemoryImage.KIND, memoryImageRepository, imageStorage);
+    MemoryImageAttachments(MemoryImageRepository memoryImageRepository, ImageStorage imageStorage, Clock clock) {
+        super(MemoryImage.KIND, memoryImageRepository, imageStorage, clock);
     }
 }

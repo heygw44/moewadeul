@@ -3,6 +3,7 @@ package com.moewadeul.community.application.image;
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.image.domain.AttachableImage;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestImageStorage;
@@ -59,7 +60,7 @@ class CommunityImageCleanupIntegrationTest {
     @DisplayName("[F-29][CM-06] 글에 붙지 않은 채 24시간보다 1초 더 지난 이미지는 행과 저장소 객체를 지우고, 정확히 24시간 된 이미지와 새 이미지는 남긴다")
     void deletesOnlyUnattachedImagesOlderThanTwentyFourHours() {
         // given
-        Instant cutoff = clock.instant().minus(CommunityImageCleanupService.RETENTION);
+        Instant cutoff = clock.instant().minus(AttachableImage.UNATTACHED_RETENTION);
         long older = insertImage(cutoff.minus(ONE_SECOND));
         long exact = insertImage(cutoff);
         long newer = insertImage(cutoff.plus(ONE_SECOND));
@@ -104,7 +105,7 @@ class CommunityImageCleanupIntegrationTest {
 
         // when
         int before = cleanupService.deleteExpiredObjectsThenRows().deletedRows();
-        clock.advance(CommunityImageCleanupService.RETENTION);
+        clock.advance(AttachableImage.UNATTACHED_RETENTION);
         int atBoundary = cleanupService.deleteExpiredObjectsThenRows().deletedRows();
         clock.advance(ONE_SECOND);
         int after = cleanupService.deleteExpiredObjectsThenRows().deletedRows();

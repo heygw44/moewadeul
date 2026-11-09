@@ -24,6 +24,6 @@ public class ReviewImageUploadService extends ImageUploadIssuer<ReviewImage> {
     @Override
     protected ReviewImage newImage(
             long memberId, String objectKey, String contentType, long sizeBytes, Instant now, Thumbnail thumbnail) {
-        return ReviewImage.issue(memberId, objectKey, contentType, sizeBytes, now);
+        return ReviewImage.issue(memberId, objectKey, contentType, sizeBytes, now, thumbnail);
     }
 }

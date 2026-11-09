@@ -51,25 +51,6 @@ class DisposableEmailDomainSeedIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-01][EV-01] 관리자가 등록한 도메인은 공개 목록에 있어도 ADMIN으로 남는다")
-    void seedPublicDomains_keepsAdminRow() {
-        // given
-        repository.deleteAll();
-        String domain = listFile.readDomains().get(0);
-        repository.saveAndFlush(
-                DisposableEmailDomain.of(domain, DisposableEmailDomainSource.ADMIN, MutableClock.DEFAULT_INSTANT));
-
-        // when
-        seedService.seedPublicDomains();
-
-        // then
-        assertThat(repository.findById(domain))
-                .get()
-                .extracting(DisposableEmailDomain::getSource)
-                .isEqualTo(DisposableEmailDomainSource.ADMIN);
-    }
-
-    @Test
     @DisplayName("[F-01][EV-01] 후보 도메인 중 하나라도 있으면 existsByDomainIn이 true다")
     void existsByDomainIn_matchesAnyCandidate() {
         // given

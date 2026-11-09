@@ -1,6 +1,7 @@
 package com.moewadeul.common.image.infra;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
@@ -13,7 +14,7 @@ public interface AttachableImageMapper {
             @Param("memberId") long memberId, @Param("createdAfter") Instant createdAfter, @Param("limit") int limit);
 
     List<UnattachedImageRow> selectUnattachedCreatedBefore(
-            @Param("createdBefore") Instant createdBefore, @Param("limit") int limit);
+            @Param("createdBefore") Instant createdBefore, @Param("afterId") long afterId, @Param("limit") int limit);
 
-    int deleteIfUnattached(@Param("imageId") long imageId);
+    int deleteUnattachedByIds(@Param("imageIds") Collection<Long> imageIds);
 }

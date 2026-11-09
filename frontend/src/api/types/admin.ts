@@ -194,7 +194,9 @@ export type AdminAuditAction =
   | 'SYNC_JOB_RUN'
   | 'PROGRAM_CREATE'
   | 'PROGRAM_UPDATE'
-  | 'PROGRAM_CANCEL';
+  | 'PROGRAM_CANCEL'
+  | 'DISPOSABLE_DOMAIN_ADD'
+  | 'DISPOSABLE_DOMAIN_DELETE';
 
 export type AdminAuditTargetType =
   | 'MEMBER_REPORT'
@@ -204,7 +206,8 @@ export type AdminAuditTargetType =
   | 'COMMUNITY_COMMENT'
   | 'MEMORY'
   | 'PROGRAM'
-  | 'SYNC_JOB_RUN';
+  | 'SYNC_JOB_RUN'
+  | 'DISPOSABLE_EMAIL_DOMAIN';
 
 export interface AdminAuditLog {
   auditLogId: number;
@@ -213,5 +216,11 @@ export interface AdminAuditLog {
   targetType: AdminAuditTargetType;
   targetId: number;
   detail: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface AdminDisposableEmailDomain {
+  id: number;
+  domain: string;
   createdAt: string;
 }

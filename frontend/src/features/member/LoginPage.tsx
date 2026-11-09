@@ -4,6 +4,7 @@ import { login } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { serverTraceId, toUserMessage } from '../../api/errors';
 import type { LoginResponse, Me } from '../../api/types';
+import { MailLink } from '../../app/legal/LegalDocument';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmailField } from '../../components/EmailField';
@@ -22,7 +23,7 @@ import { useRetryCountdown } from '../../components/useRetryCountdown';
 
 type LoginField = 'email' | 'password';
 
-type FormError = { message: string; detail?: string; traceId?: string };
+type FormError = { message: string; detail?: string; suspended?: boolean; traceId?: string };
 
 const FOOTER_LINK_CLASS =
   'inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-4 hover:text-accent-strong';
@@ -95,10 +96,12 @@ export function LoginPage() {
     if (error.code === 'LOGIN_LOCKED' && error.retryAfterSeconds !== undefined) {
       lock.start(error.retryAfterSeconds);
     }
-    const suspendedUntil = error.code === 'MEMBER_SUSPENDED' ? error.body?.suspendedUntil : undefined;
+    const suspended = error.code === 'MEMBER_SUSPENDED';
+    const suspendedUntil = suspended ? error.body?.suspendedUntil : undefined;
     setFormError({
       message: error.message,
       detail: suspendedUntil ? `${formatKstDateTime(suspendedUntil)}까지 이용이 제한돼요.` : undefined,
+      suspended,
       traceId: serverTraceId(error),
     });
   }
@@ -133,6 +136,12 @@ export function LoginPage() {
           <div role="alert">
             <ErrorNotice title="로그인하지 못했어요" error={formError.message} traceId={formError.traceId}>
               {formError.detail && <p className="mt-1">{formError.detail}</p>}
+              {formError.suspended && (
+                <p className="mt-1">
+                  제재에 이의가 있으면 <MailLink />
+                  으로 알려 주세요.
+                </p>
+              )}
             </ErrorNotice>
           </div>
         )}

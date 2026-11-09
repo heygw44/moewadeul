@@ -44,6 +44,7 @@ class AlertRuleMetricNamesIntegrationTest {
 
     private static final Pattern APP_METRIC =
             Pattern.compile("\\b((?:moewadeul|http_server_requests|hikaricp_connections|tomcat_threads)_[a-z0-9_]+)");
+    private static final Pattern LANE = Pattern.compile("[{,]lane=\"([^\"]+)\"");
     private static final Pattern CONNECTOR_NAME = Pattern.compile("[{,]name=\"([^\"]+)\"");
     private static final Pattern SAMPLE_LINE = Pattern.compile("^([a-zA-Z_:][a-zA-Z0-9_:]*)(\\{([^}]*)})? ");
 
@@ -113,6 +114,25 @@ class AlertRuleMetricNamesIntegrationTest {
                         .toList())
                 .isNotEmpty()
                 .allSatisfy(expr -> assertThat(expr).contains("by (exported_job)"));
+    }
+
+    @Test
+    @DisplayName("[NFR-09] 아웃박스 지표는 mail과 default 줄마다 lane 태그를 달고 나오고, 아웃박스 경보는 줄별로 울리도록 lane으로 묶는다")
+    void outboxMetricsAndAlertsAreSplitByLane() throws Exception {
+        Set<String> lanes = new TreeSet<>();
+        for (String line : scrapeLines()) {
+            Matcher matcher = LANE.matcher(line);
+            if (line.startsWith("moewadeul_outbox_") && matcher.find()) {
+                lanes.add(matcher.group(1));
+            }
+        }
+
+        assertThat(lanes).containsExactly("default", "mail");
+        assertThat(exprs().stream()
+                        .filter(expr -> expr.contains("moewadeul_outbox_") && !expr.startsWith("absent("))
+                        .toList())
+                .hasSize(2)
+                .allSatisfy(expr -> assertThat(expr).doesNotContain("max(").contains("max by (lane)"));
     }
 
     @Test

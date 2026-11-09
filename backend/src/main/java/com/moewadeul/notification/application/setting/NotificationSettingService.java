@@ -6,6 +6,7 @@ import com.moewadeul.notification.application.NotificationEventTypes;
 import com.moewadeul.notification.domain.setting.NotificationSetting;
 import com.moewadeul.notification.domain.setting.NotificationSettingRepository;
 import com.moewadeul.notification.infra.setting.NotificationSettingMemberLockMapper;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,11 +35,20 @@ public class NotificationSettingService {
     public List<NotificationSettingItem> replace(long memberId, List<NotificationSettingItem> requested) {
         validate(requested);
         notificationSettingMemberLockMapper.lockMember(memberId);
-        notificationSettingRepository.deleteByMemberId(memberId);
-        List<NotificationSetting> settings = requested.stream()
-                .map(item -> NotificationSetting.of(memberId, item.type(), item.emailEnabled()))
-                .toList();
-        notificationSettingRepository.saveAll(settings);
+        // 회원 단위 범위 DELETE는 행이 없는 틈에 간격 잠금을 걸어, 이웃한 회원의 INSERT와 교착이 난다. 있는 행만 기본 키로 고치거나 지운다.
+        Map<String, NotificationSetting> stored = notificationSettingRepository.findByMemberId(memberId).stream()
+                .collect(Collectors.toMap(NotificationSetting::getType, Function.identity()));
+        List<NotificationSetting> added = new ArrayList<>();
+        for (NotificationSettingItem item : requested) {
+            NotificationSetting setting = stored.remove(item.type());
+            if (setting == null) {
+                added.add(NotificationSetting.of(memberId, item.type(), item.emailEnabled()));
+            } else {
+                setting.changeEmailEnabled(item.emailEnabled());
+            }
+        }
+        notificationSettingRepository.deleteAll(stored.values());
+        notificationSettingRepository.saveAll(added);
         return merge(requested.stream().collect(Collectors.toMap(NotificationSettingItem::type, Function.identity())));
     }
 

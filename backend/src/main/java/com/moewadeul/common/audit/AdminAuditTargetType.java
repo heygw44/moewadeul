@@ -8,5 +8,6 @@ public enum AdminAuditTargetType {
     COMMUNITY_COMMENT,
     MEMORY,
     PROGRAM,
-    SYNC_JOB_RUN
+    SYNC_JOB_RUN,
+    DISPOSABLE_EMAIL_DOMAIN
 }

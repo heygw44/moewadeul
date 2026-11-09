@@ -3,7 +3,7 @@ plugins {
     jacoco
     id("org.springframework.boot") version "4.1.2"
     id("io.spring.dependency-management") version "1.1.7"
-    id("com.diffplug.spotless") version "8.10.4"
+    id("com.diffplug.spotless") version "8.11.0"
 }
 
 group = "com.moewadeul"
@@ -35,7 +35,7 @@ dependencies {
     // 기상청·천문연 결과를 메모리에 잠시 둔다. 버전은 Spring Boot가 관리한다.
     implementation("com.github.ben-manes.caffeine:caffeine")
     // AWS SDK는 Spring Boot가 버전을 관리하지 않는다. BOM으로 SDK 모듈들의 버전을 하나로 맞춘다.
-    implementation(platform("software.amazon.awssdk:bom:2.57.6"))
+    implementation(platform("software.amazon.awssdk:bom:2.57.9"))
     implementation("software.amazon.awssdk:s3")
 
     compileOnly("org.projectlombok:lombok")
@@ -76,12 +76,31 @@ val integrationTest by tasks.registering(Test::class) {
     classpath = sourceSets.test.get().runtimeClasspath
     useJUnitPlatform {
         includeTags("integration")
+        excludeTags("measure")
     }
     // 우리는 UTC가 아닌 JVM에서도 시각이 UTC로 저장되는지 확인하려고, 일부러 한국 표준시(KST)로 JVM을 띄운다.
     jvmArgs("-Duser.timezone=Asia/Seoul")
     // 캐시된 스프링 컨텍스트가 늘면 기본 512MB 힙에서 KmaClientIntegrationTest가 OOM이나 시간 초과로 끝났다(#839).
     maxHeapSize = "1g"
     shouldRunAfter(tasks.test)
+}
+
+// 경합을 라운드 수만큼 되풀이해 결과를 세는 측정이다(사례 3). 회귀 테스트가 아니라 check에 넣지 않는다. 결과는 build/measure/*.json.
+val measureRounds by tasks.registering(Test::class) {
+    description = "행사 자리 경합을 -Drounds=N번 되풀이해 결과를 센다. Docker가 필요하다."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("measure")
+    }
+    systemProperty("rounds", System.getProperty("rounds", "1000"))
+    jvmArgs("-Duser.timezone=Asia/Seoul")
+    maxHeapSize = "1g"
+    outputs.upToDateWhen { false }
+    testLogging {
+        showStandardStreams = true
+    }
 }
 
 // 실제 OpenAI를 호출해 문장 해석 정확도를 재는 평가다. 비용이 들어서 check에는 넣지 않고, OPENAI_API_KEY를 넣고 직접 실행한다.

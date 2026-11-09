@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -34,10 +33,7 @@ public class OutboxPublisher {
         this.store = store;
         this.clock = clock;
         this.handlersByEventType = indexByEventType(handlers);
-        this.mailEventTypes = handlersByEventType.entrySet().stream()
-                .filter(entry -> entry.getValue().lane() == OutboxLane.MAIL)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toUnmodifiableSet());
+        this.mailEventTypes = OutboxLane.mailEventTypes(handlers);
         this.shutdownSignal = shutdownSignal;
     }
 

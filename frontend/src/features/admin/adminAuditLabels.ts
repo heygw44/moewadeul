@@ -16,6 +16,8 @@ export const AUDIT_ACTION_LABELS: Record<AdminAuditAction, string> = {
   PROGRAM_CREATE: '행사 등록',
   PROGRAM_UPDATE: '행사 수정',
   PROGRAM_CANCEL: '행사 취소',
+  DISPOSABLE_DOMAIN_ADD: '가입 차단 도메인 추가',
+  DISPOSABLE_DOMAIN_DELETE: '가입 차단 도메인 삭제',
 };
 
 export const AUDIT_TARGET_LABELS: Record<AdminAuditTargetType, string> = {
@@ -27,6 +29,7 @@ export const AUDIT_TARGET_LABELS: Record<AdminAuditTargetType, string> = {
   MEMORY: '기록',
   PROGRAM: '행사',
   SYNC_JOB_RUN: '데이터 불러오기',
+  DISPOSABLE_EMAIL_DOMAIN: '가입 차단 도메인',
 };
 
 export const AUDIT_TARGET_TYPES: readonly AdminAuditTargetType[] = [
@@ -38,6 +41,7 @@ export const AUDIT_TARGET_TYPES: readonly AdminAuditTargetType[] = [
   'MEMORY',
   'PROGRAM',
   'SYNC_JOB_RUN',
+  'DISPOSABLE_EMAIL_DOMAIN',
 ];
 
 const AUDIT_TARGET_PATHS: Record<AdminAuditTargetType, ((targetId: number) => string) | null> = {
@@ -49,6 +53,7 @@ const AUDIT_TARGET_PATHS: Record<AdminAuditTargetType, ((targetId: number) => st
   MEMORY: null,
   PROGRAM: (targetId) => `/admin/programs/${targetId}/applications`,
   SYNC_JOB_RUN: null,
+  DISPOSABLE_EMAIL_DOMAIN: null,
 };
 
 export function auditTargetPath(targetType: AdminAuditTargetType, targetId: number): string | null {
@@ -77,6 +82,7 @@ const STATUS_LABELS: Record<AdminAuditTargetType, Readonly<Record<string, string
   MEMORY: MODERATION_STATUS_LABELS,
   PROGRAM: PROGRAM_STATUS_LABELS,
   SYNC_JOB_RUN: {},
+  DISPOSABLE_EMAIL_DOMAIN: {},
 };
 
 const SPOT_TYPE_LABELS: Record<string, string> = {
@@ -131,6 +137,7 @@ const DETAIL_FIELDS: ReadonlyMap<string, FieldSpec> = new Map<string, FieldSpec>
   ['memberId', { label: '대상 회원 번호', kind: 'id' }],
   ['spotType', { label: '장소 종류', kind: 'text', names: SPOT_TYPE_LABELS }],
   ['jobType', { label: '작업', kind: 'text', names: SYNC_JOB_LABELS }],
+  ['domain', { label: '도메인', kind: 'text', names: {} }],
   ['capacity', { label: '정원', ...CAPACITY_SPEC }],
   ['overnight', { label: '숙박', kind: 'flag', yes: '있음', no: '없음' }],
   ['changedFields', { label: '바뀐 항목', kind: 'list', names: PROGRAM_FIELD_LABELS }],

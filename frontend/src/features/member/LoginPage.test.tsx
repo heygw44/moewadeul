@@ -30,6 +30,7 @@ describe('로그인 성공 뒤 회원 정보를 다시 읽는 단계', () => {
   let container: HTMLDivElement;
   let root: Root;
   let meAfterLogin: () => Response;
+  let loginReply: (() => Response) | null;
 
   async function fill(element: HTMLInputElement | HTMLSelectElement, value: string, eventType: 'input' | 'change') {
     const prototype = element instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
@@ -51,11 +52,13 @@ describe('로그인 성공 뒤 회원 정보를 다시 읽는 단계', () => {
     window.history.replaceState(null, '', '/login');
     document.cookie = 'XSRF-TOKEN=token';
     vi.mocked(loadPage).mockClear();
+    loginReply = null;
     let loggedIn = false;
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string) => {
         if (url === '/api/auth/login') {
+          if (loginReply) return loginReply();
           loggedIn = true;
           return json(200, { memberId: 1, nickname: '새벽능선', status: 'ACTIVE', role: 'USER' });
         }
@@ -98,5 +101,21 @@ describe('로그인 성공 뒤 회원 정보를 다시 읽는 단계', () => {
 
     expect(container.querySelector('[role="alert"]')).toBeNull();
     expect(loadPage).toHaveBeenCalledWith('/map');
+  });
+
+  it('이용이 정지된 계정이면 풀리는 때와 이의를 받을 운영자 메일을 함께 보인다', async () => {
+    loginReply = () =>
+      json(403, {
+        code: 'MEMBER_SUSPENDED',
+        message: '이용이 정지된 계정이에요. 정지가 풀린 뒤 다시 로그인해 주세요.',
+        suspendedUntil: '2026-11-15T03:00:00Z',
+      });
+
+    await logIn();
+
+    const alert = container.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('까지 이용이 제한돼요.');
+    expect(alert?.textContent).toContain('제재에 이의가 있으면 moewadeul@gmail.com으로 알려 주세요.');
+    expect(alert?.querySelector('a')?.getAttribute('href')).toBe('mailto:moewadeul@gmail.com');
   });
 });

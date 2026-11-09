@@ -28,8 +28,8 @@
         LIMIT #{limit}
     </select>
 
-    <delete id="deleteIfUnattached">
-        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.deleteIfUnattached">
+    <delete id="deleteUnattachedByIds">
+        <include refid="com.moewadeul.common.image.infra.AttachableImageSql.deleteUnattachedByIds">
             <property name="table" value="memory_image"/>
             <property name="parentColumn" value="memory_id"/>
         </include>

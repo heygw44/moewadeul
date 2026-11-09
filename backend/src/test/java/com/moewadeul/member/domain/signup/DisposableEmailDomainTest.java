@@ -12,10 +12,10 @@ class DisposableEmailDomainTest {
     @DisplayName("[F-01][ID-01] 도메인을 소문자로 저장하고 출처와 생성 시각을 유지한다")
     void of_lowercasesDomain() {
         DisposableEmailDomain domain = DisposableEmailDomain.of(
-                "Mailinator.COM", DisposableEmailDomainSource.ADMIN, MutableClock.DEFAULT_INSTANT);
+                "Mailinator.COM", DisposableEmailDomainSource.PUBLIC, MutableClock.DEFAULT_INSTANT);
 
         assertThat(domain.getDomain()).isEqualTo("mailinator.com");
-        assertThat(domain.getSource()).isEqualTo(DisposableEmailDomainSource.ADMIN);
+        assertThat(domain.getSource()).isEqualTo(DisposableEmailDomainSource.PUBLIC);
         assertThat(domain.getCreatedAt()).isEqualTo(MutableClock.DEFAULT_INSTANT);
     }
 }

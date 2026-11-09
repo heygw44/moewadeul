@@ -12,6 +12,11 @@ import com.moewadeul.common.testsupport.TestImageStorage;
 import com.moewadeul.memory.application.image.MemoryImageUploadService;
 import com.moewadeul.outbox.application.OutboxPublisher;
 import com.moewadeul.trust.application.withdrawal.WithdrawalService;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
@@ -20,6 +25,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.testcontainers.mysql.MySQLContainer;
 
 @IntegrationTest
 class MemoryWithdrawalCleanupIntegrationTest {
@@ -56,6 +62,9 @@ class MemoryWithdrawalCleanupIntegrationTest {
 
     @Autowired
     private MutableClock clock;
+
+    @Autowired
+    private MySQLContainer mysql;
 
     @Test
     @DisplayName(
@@ -100,8 +109,8 @@ class MemoryWithdrawalCleanupIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-33][PV-10] 사진이 한 쪽(100행)을 넘어도 모두 지워지고, 저장소 삭제는 한 쪽에 한 번씩만 부른다")
-    void deletesImagesBeyondOnePageWithOneStorageCallPerPage() {
+    @DisplayName("[F-33][PV-10] 사진이 한 쪽(100행)을 넘어도 모두 지워지고, 저장소 삭제와 사진 행 DELETE는 한 쪽에 한 번씩만 부른다")
+    void deletesImagesBeyondOnePageWithOneStorageCallPerPage() throws SQLException {
         // given
         long member = memberFixture.saveWithPassword(PASSWORD).getId();
         String lastKey = null;
@@ -111,6 +120,8 @@ class MemoryWithdrawalCleanupIntegrationTest {
             lastKey = keyOf(image);
         }
 
+        long imageDeletesBefore = memoryImageDeleteStatements();
+
         // when
         cleanupService.cleanUp(member);
 
@@ -119,6 +130,7 @@ class MemoryWithdrawalCleanupIntegrationTest {
         assertThat(storage.deletedKeys()).hasSize(202);
         assertThat(storage.hasObject(lastKey)).isFalse();
         assertThat(storage.deleteBatchCalls()).isEqualTo(2);
+        assertThat(memoryImageDeleteStatements() - imageDeletesBefore).isEqualTo(2);
     }
 
     @Test
@@ -242,5 +254,16 @@ class MemoryWithdrawalCleanupIntegrationTest {
 
     private int count(String fromWhere, long id) {
         return jdbc.queryForObject("SELECT COUNT(*) FROM " + fromWhere, Integer.class, id);
+    }
+
+    private long memoryImageDeleteStatements() throws SQLException {
+        try (Connection root = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword());
+                Statement statement = root.createStatement();
+                ResultSet rows = statement.executeQuery(
+                        "SELECT COALESCE(SUM(COUNT_STAR), 0) FROM performance_schema.events_statements_summary_by_digest "
+                                + "WHERE DIGEST_TEXT LIKE 'DELETE FROM `memory_image`%'")) {
+            rows.next();
+            return rows.getLong(1);
+        }
     }
 }

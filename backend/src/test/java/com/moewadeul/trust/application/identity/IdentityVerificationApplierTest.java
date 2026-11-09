@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.profile.Gender;
+import com.moewadeul.member.application.MemberWithdrawalService;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
@@ -27,7 +28,12 @@ class IdentityVerificationApplierTest {
     private final IdentityVerificationRepository repository = mock(IdentityVerificationRepository.class);
     private final IdentityVerificationInsertMapper insertMapper = mock(IdentityVerificationInsertMapper.class);
     private final IdentityVerificationApplier applier = new IdentityVerificationApplier(
-            repository, insertMapper, mock(CiHasher.class), mock(TrustSummaryService.class), Clock.systemUTC());
+            mock(MemberWithdrawalService.class),
+            repository,
+            insertMapper,
+            mock(CiHasher.class),
+            mock(TrustSummaryService.class),
+            Clock.systemUTC());
 
     @Test
     @DisplayName("이미 본인확인한 회원이 같은 CI로 다시 요청하면 IDENTITY_ALREADY_VERIFIED이고 저장하지 않는다")

@@ -1,0 +1,10 @@
+# 운영 EBS gp3 기본 한도와 같은 MySQL 디스크 읽기 제한(125MB/s, 초당 3,000회). lt.sh가 LT_DISK=1일 때 겹친다.
+services:
+  mysql:
+    blkio_config:
+      device_read_bps:
+        - path: /dev/vdb
+          rate: '125mb'
+      device_read_iops:
+        - path: /dev/vdb
+          rate: 3000

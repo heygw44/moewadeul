@@ -281,6 +281,7 @@ function ReviewForm({
     max: MAX_IMAGES,
     initial: initial?.images,
     requestUpload: requestReviewImageUpload,
+    thumbnail: true,
   });
 
   function validate(): ReviewFieldErrors {

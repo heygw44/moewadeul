@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -65,6 +66,25 @@ class NotificationSettingConcurrencyIntegrationTest {
         assertThat(requests()).contains(storedDisabledTypes());
     }
 
+    @RepeatedTest(REPETITIONS)
+    @DisplayName("[F-20][NFR-10] 설정이 없는 이웃한 회원들이 알림 설정을 동시에 바꿔도 교착 없이 모두 성공한다")
+    void concurrentReplacesOfNeighbouringMembersAllSucceed() throws Exception {
+        List<Long> neighbours = new ArrayList<>();
+        for (int i = 0; i < THREADS; i++) {
+            neighbours.add(memberRepository.saveAndFlush(aMember().build()).getId());
+        }
+        List<NotificationSettingItem> items = disabled(NotificationEventTypes.EMAIL_CONFIGURABLE);
+
+        List<Throwable> failures = runConcurrently(neighbours.stream()
+                .map(neighbour -> (Callable<List<NotificationSettingItem>>)
+                        () -> notificationSettingService.replace(neighbour, items))
+                .toList());
+
+        assertThat(failures).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notification_setting", Integer.class))
+                .isEqualTo(THREADS * items.size());
+    }
+
     private static List<Set<String>> requests() {
         List<Set<String>> requests = new ArrayList<>();
         for (int i = 0; i < THREADS; i++) {
@@ -87,19 +107,27 @@ class NotificationSettingConcurrencyIntegrationTest {
     }
 
     private List<Throwable> replaceConcurrently() throws Exception {
-        ExecutorService executor = Executors.newFixedThreadPool(THREADS);
-        CountDownLatch ready = new CountDownLatch(THREADS);
+        return runConcurrently(requests().stream()
+                .map(request -> disabled(NotificationEventTypes.EMAIL_CONFIGURABLE.stream()
+                        .filter(request::contains)
+                        .toList()))
+                .map(items -> (Callable<List<NotificationSettingItem>>)
+                        () -> notificationSettingService.replace(memberId, items))
+                .toList());
+    }
+
+    private static List<Throwable> runConcurrently(List<Callable<List<NotificationSettingItem>>> actions)
+            throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(actions.size());
+        CountDownLatch ready = new CountDownLatch(actions.size());
         CountDownLatch start = new CountDownLatch(1);
         try {
-            List<Future<List<NotificationSettingItem>>> futures = new ArrayList<>();
-            for (Set<String> request : requests()) {
-                List<NotificationSettingItem> items = disabled(NotificationEventTypes.EMAIL_CONFIGURABLE.stream()
-                        .filter(request::contains)
-                        .toList());
+            List<Future<?>> futures = new ArrayList<>();
+            for (Callable<List<NotificationSettingItem>> action : actions) {
                 futures.add(executor.submit(() -> {
                     ready.countDown();
                     start.await();
-                    return notificationSettingService.replace(memberId, items);
+                    return action.call();
                 }));
             }
             assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
@@ -111,9 +139,9 @@ class NotificationSettingConcurrencyIntegrationTest {
         }
     }
 
-    private static <T> List<Throwable> collectFailures(List<Future<T>> futures) throws InterruptedException {
+    private static List<Throwable> collectFailures(List<Future<?>> futures) throws InterruptedException {
         List<Throwable> failures = new ArrayList<>();
-        for (Future<T> future : futures) {
+        for (Future<?> future : futures) {
             try {
                 future.get(30, TimeUnit.SECONDS);
             } catch (ExecutionException e) {
