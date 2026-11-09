@@ -5,13 +5,16 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public final class LoginLockout {
 
     public static final int MAX_FAILURES = 5;
+    public static final int ACCOUNT_MAX_FAILURES = 50;
     public static final Duration WINDOW = Duration.ofMinutes(10);
 
     public static final int IP_FAILURE_CAPACITY = 20;
@@ -37,16 +40,28 @@ public final class LoginLockout {
         }
     }
 
-    public static Optional<Instant> lockedUntil(List<Instant> failureTimesSinceLastSuccess, Instant now) {
+    /**
+     * 같은 IP의 실패가 {@link #MAX_FAILURES}번이면 그 IP만 막아서, 이메일만 아는 사람이 다른 IP에서 본인을 잠그지 못하게 한다.
+     * 여러 IP에 나눠 추측하는 것은 IP와 상관없이 {@link #ACCOUNT_MAX_FAILURES}번을 넘으면 모든 IP에서 막는다.
+     */
+    public static Optional<Instant> lockedUntil(List<LoginFailure> failuresSinceLastSuccess, String ip, Instant now) {
         Instant windowStart = windowStart(now);
-        List<Instant> inWindow = failureTimesSinceLastSuccess.stream()
-                .filter(failedAt -> failedAt.isAfter(windowStart))
-                .sorted()
+        List<LoginFailure> inWindow = failuresSinceLastSuccess.stream()
+                .filter(failure -> failure.failedAt().isAfter(windowStart))
                 .toList();
-        if (inWindow.size() < MAX_FAILURES) {
+        Optional<Instant> ipLock = lockedUntil(
+                inWindow.stream().filter(failure -> failure.ip().equals(ip)).toList(), MAX_FAILURES);
+        Optional<Instant> accountLock = lockedUntil(inWindow, ACCOUNT_MAX_FAILURES + 1);
+        return Stream.of(ipLock, accountLock).flatMap(Optional::stream).max(Comparator.naturalOrder());
+    }
+
+    private static Optional<Instant> lockedUntil(List<LoginFailure> inWindow, int failuresToLock) {
+        if (inWindow.size() < failuresToLock) {
             return Optional.empty();
         }
-        Instant oldestOfLatestFailures = inWindow.get(inWindow.size() - MAX_FAILURES);
+        List<Instant> failedAts =
+                inWindow.stream().map(LoginFailure::failedAt).sorted().toList();
+        Instant oldestOfLatestFailures = failedAts.get(failedAts.size() - failuresToLock);
         return Optional.of(oldestOfLatestFailures.plus(WINDOW));
     }
 }

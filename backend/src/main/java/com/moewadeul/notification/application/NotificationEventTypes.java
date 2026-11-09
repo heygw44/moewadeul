@@ -36,6 +36,9 @@ public final class NotificationEventTypes {
      */
     public static final int EMAIL_LIMIT_PER_WINDOW = 300;
 
+    /** 대량 메일은 합계 250통까지만 쓴다. 나머지 50통은 대량 메일이 한도를 다 써도 개별 메일이 바로 나가도록 남긴다. */
+    public static final int BULK_EMAIL_LIMIT_PER_WINDOW = 250;
+
     public static final Duration EMAIL_LIMIT_WINDOW = Duration.ofHours(24);
 
     private NotificationEventTypes() {}

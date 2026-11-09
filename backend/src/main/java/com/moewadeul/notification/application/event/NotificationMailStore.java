@@ -5,6 +5,7 @@ import com.moewadeul.notification.infra.event.NotificationMailMapper;
 import com.moewadeul.notification.infra.event.NotificationMailRow;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,12 +24,16 @@ class NotificationMailStore {
     @Transactional
     Claim claim(Instant now) {
         Instant leaseUntil = properties.retryPolicy().leaseUntil(now);
-        int remaining = remainingQuota(now);
-        if (remaining == 0) {
-            return new Claim(leaseUntil, List.of());
+        int sentInWindow = mailMapper.countSentAfter(now.minus(NotificationEventTypes.EMAIL_LIMIT_WINDOW));
+        int remaining = Math.max(0, NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW - sentInWindow);
+        List<NotificationMailRow> rows =
+                new ArrayList<>(select(now, Math.min(properties.batchSize(), remaining), false));
+        int bulkRemaining = NotificationEventTypes.BULK_EMAIL_LIMIT_PER_WINDOW - sentInWindow - rows.size();
+        int bulkLimit =
+                Math.min(Math.min(properties.batchSize() - rows.size(), remaining - rows.size()), bulkRemaining);
+        if (bulkLimit > 0) {
+            rows.addAll(select(now, bulkLimit, true));
         }
-        List<NotificationMailRow> rows = mailMapper.selectDueForUpdate(
-                now, Math.min(properties.batchSize(), remaining), NotificationEventTypes.DEFAULT_EMAIL_ENABLED);
         List<Long> skipped = rows.stream()
                 .filter(row -> !row.deliverable())
                 .map(NotificationMailRow::notificationId)
@@ -45,9 +50,11 @@ class NotificationMailStore {
         return new Claim(leaseUntil, targets);
     }
 
-    private int remainingQuota(Instant now) {
-        int sentInWindow = mailMapper.countSentAfter(now.minus(NotificationEventTypes.EMAIL_LIMIT_WINDOW));
-        return Math.max(0, NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW - sentInWindow);
+    private List<NotificationMailRow> select(Instant now, int limit, boolean bulk) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        return mailMapper.selectDueForUpdate(now, limit, bulk, NotificationEventTypes.DEFAULT_EMAIL_ENABLED);
     }
 
     @Transactional

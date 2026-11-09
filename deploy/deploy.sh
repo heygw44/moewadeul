@@ -207,7 +207,7 @@ check_image_architecture() {
     done
 }
 
-# caddy 서비스 이미지는 서버에 없을 때만 받는다. 업스트림은 같은 태그를 다시 빌드하기도 해서, 매번 받으면 그날 배포가 Caddy를 다시 만든다.
+# caddy 서비스 이미지는 서버에 없을 때만 받는다. 배포 워크플로가 같은 태그를 다시 올리지 않으므로 태그가 같으면 내용도 같고, 배포마다 Caddy를 다시 만들지 않는다.
 pull_images() {
     local tag="$1"
     compose pull --quiet app && compose pull --quiet --policy missing caddy && docker pull --quiet "$CADDY_REPO:$tag" > /dev/null

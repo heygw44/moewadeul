@@ -1,6 +1,7 @@
 package com.moewadeul.community.api.report;
 
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.community.application.report.CommunityReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 class CommunityReportController {
 
     private final CommunityReportService communityReportService;
+    private final RowLockWritePermits rowLockWritePermits;
 
-    CommunityReportController(CommunityReportService communityReportService) {
+    CommunityReportController(CommunityReportService communityReportService, RowLockWritePermits rowLockWritePermits) {
         this.communityReportService = communityReportService;
+        this.rowLockWritePermits = rowLockWritePermits;
     }
 
     @Operation(
@@ -29,14 +32,16 @@ class CommunityReportController {
                     + "한 회원은 같은 글을 한 번만 신고할 수 있고, 이미 신고했으면 409 COMMUNITY_ALREADY_REPORTED로 응답한다. 작성자가 자기 글을 신고해도 막지 않는다. "
                     + "검토 전 신고가 5건 이상 쌓이면 서버가 같은 요청 안에서 글을 PENDING_REVIEW로 바꿔 목록과 상세에서 뺀다. "
                     + "글이 없거나 ACTIVE가 아니면(삭제, 숨김, 검토 대기) 404 NOT_FOUND로 응답한다. 그래서 검토 대기가 된 글은 더 신고할 수 없다. "
-                    + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, 이메일 인증을 마치지 않았으면 403 MEMBER_NOT_VERIFIED다.")
+                    + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, 이메일 인증을 마치지 않았으면 403 MEMBER_NOT_VERIFIED다. "
+                    + "신고가 몰려 5초를 기다려도 처리할 차례가 오지 않으면 503 RESOURCE_BUSY로 응답한다.")
     @PostMapping("/api/community/posts/{postId}/reports")
     @ResponseStatus(HttpStatus.CREATED)
     void reportPost(
             @AuthenticationPrincipal LoginMember loginMember,
             @PathVariable long postId,
             @Valid @RequestBody CommunityReportRequest request) {
-        communityReportService.reportPost(loginMember.memberId(), postId, request.toCommand());
+        rowLockWritePermits.run(
+                () -> communityReportService.reportPost(loginMember.memberId(), postId, request.toCommand()));
     }
 
     @Operation(
@@ -47,13 +52,15 @@ class CommunityReportController {
                     + "한 회원은 같은 댓글을 한 번만 신고할 수 있고, 이미 신고했으면 409 COMMUNITY_ALREADY_REPORTED로 응답한다. 작성자가 자기 댓글을 신고해도 막지 않는다. "
                     + "검토 전 신고가 5건 이상 쌓이면 서버가 같은 요청 안에서 댓글을 PENDING_REVIEW로 바꾼다. "
                     + "댓글이 없거나 ACTIVE가 아니거나(삭제, 숨김, 검토 대기) 달린 글이 ACTIVE가 아니면 404 NOT_FOUND로 응답한다. "
-                    + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, 이메일 인증을 마치지 않았으면 403 MEMBER_NOT_VERIFIED다.")
+                    + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, 이메일 인증을 마치지 않았으면 403 MEMBER_NOT_VERIFIED다. "
+                    + "신고가 몰려 5초를 기다려도 처리할 차례가 오지 않으면 503 RESOURCE_BUSY로 응답한다.")
     @PostMapping("/api/community/comments/{commentId}/reports")
     @ResponseStatus(HttpStatus.CREATED)
     void reportComment(
             @AuthenticationPrincipal LoginMember loginMember,
             @PathVariable long commentId,
             @Valid @RequestBody CommunityReportRequest request) {
-        communityReportService.reportComment(loginMember.memberId(), commentId, request.toCommand());
+        rowLockWritePermits.run(
+                () -> communityReportService.reportComment(loginMember.memberId(), commentId, request.toCommand()));
     }
 }

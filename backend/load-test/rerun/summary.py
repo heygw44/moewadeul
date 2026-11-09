@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""results/2026-11-08-rerun/runs/의 결과를 사례별 마크다운 표로 찍는다. 사용: python3 summary.py > 표.md"""
+"""results/$LT_GROUP/runs/의 결과를 사례별 마크다운 표로 찍는다. 사용: python3 summary.py > 표.md"""
 import glob, json, os, re, statistics
 
 import lt
 
-RUNS = lt.MAIN / "backend/load-test/results/2026-11-08-rerun/runs"
+RUNS = lt.RESULTS / "runs"
 
 
 def load(pattern, file="result.json"):

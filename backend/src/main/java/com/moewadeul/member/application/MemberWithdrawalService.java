@@ -2,14 +2,12 @@ package com.moewadeul.member.application;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
-import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.common.transaction.OutsideTransaction;
 import com.moewadeul.member.domain.Member;
 import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.infra.password.PasswordResetTokenMapper;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -40,18 +38,11 @@ public class MemberWithdrawalService {
         if (!member.canAuthenticateWithPassword()) {
             throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
         }
-        rejectIfLocked(member);
+        loginAttemptService.rejectIfLocked(member.getId(), member.getEmail(), ip);
         boolean matched = passwordEncoder.matches(password, member.getPasswordHash());
         loginAttemptService.recordAttemptUnderEmailLock(member.getId(), member.getEmail(), ip, matched);
         if (!matched) {
             throw new BusinessException(MemberErrorCode.LOGIN_FAILED);
-        }
-    }
-
-    private void rejectIfLocked(Member member) {
-        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(member.getId(), member.getEmail());
-        if (retryAfter.isPresent()) {
-            throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, retryAfter.get());
         }
     }
 

@@ -1,7 +1,6 @@
 package com.moewadeul.member.application.login;
 
 import com.moewadeul.common.error.BusinessException;
-import com.moewadeul.common.error.RateLimitedException;
 import com.moewadeul.member.application.LoginAttemptService;
 import com.moewadeul.member.application.MemberSessions;
 import com.moewadeul.member.application.MemberSuspensionService;
@@ -11,10 +10,8 @@ import com.moewadeul.member.domain.MemberErrorCode;
 import com.moewadeul.member.domain.MemberRepository;
 import com.moewadeul.member.domain.MemberSuspendedException;
 import java.time.Clock;
-import java.time.Duration;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -59,7 +56,7 @@ public class MemberLoginService {
             String attemptedEmail = normalizeEmail(command.email());
             Member found = findLoginableMember(attemptedEmail);
             Long memberId = found != null ? found.getId() : null;
-            rejectIfLocked(memberId, attemptedEmail);
+            loginAttemptService.rejectIfLocked(memberId, attemptedEmail, command.ip());
             // 이 시점부터 BCrypt가 돈다. 인증에 성공하기 전까지 던지는 예외는 모두 실패한 자격 확인으로 센다.
             failedCredentialCheck = true;
             Member authenticated = authenticate(found, memberId, attemptedEmail, command);
@@ -112,13 +109,6 @@ public class MemberLoginService {
                 .findByEmail(attemptedEmail)
                 .filter(found -> !found.isWithdrawn())
                 .orElse(null);
-    }
-
-    private void rejectIfLocked(Long memberId, String attemptedEmail) {
-        Optional<Duration> retryAfter = loginAttemptService.findRetryAfter(memberId, attemptedEmail);
-        if (retryAfter.isPresent()) {
-            throw new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, retryAfter.get());
-        }
     }
 
     private Member authenticate(Member member, Long memberId, String attemptedEmail, LoginCommand command) {

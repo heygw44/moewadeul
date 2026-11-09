@@ -1,6 +1,7 @@
 package com.moewadeul.trust.api.report;
 
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.trust.application.report.MemberReportService;
 import com.moewadeul.trust.domain.report.ReportStatus;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 class MemberReportController {
 
     private final MemberReportService memberReportService;
+    private final RowLockWritePermits rowLockWritePermits;
 
-    MemberReportController(MemberReportService memberReportService) {
+    MemberReportController(MemberReportService memberReportService, RowLockWritePermits rowLockWritePermits) {
         this.memberReportService = memberReportService;
+        this.rowLockWritePermits = rowLockWritePermits;
     }
 
     @Operation(
@@ -34,12 +37,14 @@ class MemberReportController {
                     + "kind와 type이 맞지 않거나 companionReviewId가 kind와 맞지 않으면 400 INVALID_INPUT, "
                     + "자기 자신을 신고하거나 신고자나 대상이 그 베이스캠프에 신청하거나 멤버였던 적이 없으면(베이스캠프가 없을 때도) 403 REPORT_NOT_ELIGIBLE, "
                     + "후기 신고에서 그 후기가 해당 베이스캠프에서 대상이 내게 쓴 후기가 아니거나 숨김 처리되었거나 아직 블라인드 공개 전이면 403 REPORT_NOT_ELIGIBLE, "
-                    + "같은 베이스캠프에서 같은 회원을 같은 kind로 이미 신고했으면 409 REPORT_DUPLICATED이다.")
+                    + "같은 베이스캠프에서 같은 회원을 같은 kind로 이미 신고했으면 409 REPORT_DUPLICATED이다. "
+                    + "신고가 몰려 5초를 기다려도 처리할 차례가 오지 않으면 503 RESOURCE_BUSY로 응답한다.")
     @PostMapping("/api/member-reports")
     @ResponseStatus(HttpStatus.CREATED)
     MemberReportCreatedResponse report(
             @AuthenticationPrincipal LoginMember loginMember, @Valid @RequestBody MemberReportRequest request) {
-        long reportId = memberReportService.report(loginMember.memberId(), request.toCommand());
+        long reportId =
+                rowLockWritePermits.call(() -> memberReportService.report(loginMember.memberId(), request.toCommand()));
         return new MemberReportCreatedResponse(reportId, ReportStatus.RECEIVED);
     }
 }

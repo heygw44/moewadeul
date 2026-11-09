@@ -1,0 +1,39 @@
+{
+  "probes": ["Seoul"],
+  "checks": [
+    {
+      "job": "moewadeul-home",
+      "target": "https://moewadeul.duckdns.org/",
+      "enabled": true,
+      "frequency": 300000,
+      "timeout": 10000,
+      "alertSensitivity": "none",
+      "basicMetricsOnly": true,
+      "labels": [{ "name": "service", "value": "moewadeul" }],
+      "settings": {
+        "http": {
+          "method": "GET",
+          "ipVersion": "V4",
+          "failIfNotSSL": true
+        }
+      }
+    },
+    {
+      "job": "moewadeul-programs",
+      "target": "https://moewadeul.duckdns.org/api/programs",
+      "enabled": true,
+      "frequency": 300000,
+      "timeout": 10000,
+      "alertSensitivity": "none",
+      "basicMetricsOnly": true,
+      "labels": [{ "name": "service", "value": "moewadeul" }],
+      "settings": {
+        "http": {
+          "method": "GET",
+          "ipVersion": "V4",
+          "failIfNotSSL": true
+        }
+      }
+    }
+  ]
+}

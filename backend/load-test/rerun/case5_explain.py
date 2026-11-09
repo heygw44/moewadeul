@@ -15,7 +15,7 @@ HINT = "/*+ SET_VAR(optimizer_switch = 'prefer_ordering_index=off') */"
 def main():
     lt.require_lock()
     meta = lt.restart_app(sys.argv[1], False)
-    out = lt.run_dir("2026-11-08-rerun", "case5-explain")
+    out = lt.run_dir("case5-explain")
     res = {"meta": meta, "mysql": lt.sql("SELECT @@version"), "areas": []}
     for label, center, w in AREAS:
         lt.sql("TRUNCATE mysql.general_log; SET GLOBAL log_output='TABLE'; SET GLOBAL general_log=1;")

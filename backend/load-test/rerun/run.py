@@ -5,7 +5,7 @@
   tomcat=70 pool=10 disk=0 restart=1|0 script=openmap|mix warm=30s stub=단기,중기,천문연,OpenAI,S3HEAD(ms) k6_<이름>=<값>
   openmap은 k6_APPLICANTS(2000), k6_MAP_VUS(300), k6_MAP_DUR(150s), k6_OPEN_DELAY(45)를 받는다. k6_APPLICANTS=0이면 지도만 돈다.
   mix는 k6_VUS, k6_DURATION, k6_WEATHER_RATE, k6_HOT_RATE, k6_AI_RATE, k6_ATTACH_VUS를 받는다.
-restart=0이면 떠 있는 앱을 그대로 이어서 잰다(이미지와 풀·스레드 값은 확인한다). 기본은 앱을 새로 띄우고 데운 뒤 잰다. 표본(sampler.py)과 후처리(analyze.py)까지 한다. 결과는 results/2026-11-08-rerun/runs/<이름>/result.json.
+restart=0이면 떠 있는 앱을 그대로 이어서 잰다(이미지와 풀·스레드 값은 확인한다). 기본은 앱을 새로 띄우고 데운 뒤 잰다. 표본(sampler.py)과 후처리(analyze.py)까지 한다. 결과는 results/$LT_GROUP/runs/<이름>/result.json.
 k6가 실패했거나 오픈인데 apply 201/409가 없으면 result.json을 지우고 1로 끝난다.
 """
 import json, os, shutil, subprocess as sp, sys, time
@@ -32,12 +32,12 @@ def main():
     tag, name = sys.argv[1], sys.argv[2]
     o = dict(tomcat="70", pool="10", disk="0", script="openmap", warm="30s", stub=FAST, cpus="0,1")
     o.update(a.split("=", 1) for a in sys.argv[3:])
-    out = lt.MAIN / "backend/load-test/results/2026-11-08-rerun/runs" / name
+    out = lt.RESULTS / "runs" / name
     if (out / "result.json").exists():
         print("skip", name); return
     lt.require_lock()
     shutil.rmtree(out, ignore_errors=True)
-    out = lt.run_dir("2026-11-08-rerun", name)
+    out = lt.run_dir(name)
     for c in ("moewadeul-lt-k6", "moewadeul-lt-sampler"):
         lt.sh("docker", "rm", "-f", c)
     disk = o["disk"] == "1"
