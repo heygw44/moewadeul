@@ -65,6 +65,7 @@ class ScheduledJobCronContractTest {
                         Map.entry("moewadeul.member.reset-token-cleanup.cron", DAILY),
                         Map.entry("moewadeul.member.unverified-cleanup.cron", DAILY),
                         Map.entry("moewadeul.moderation.report-content-cleanup.cron", DAILY),
+                        Map.entry("moewadeul.notification.cleanup.cron", DAILY),
                         Map.entry("moewadeul.outbox.cleanup.cron", DAILY),
                         Map.entry("moewadeul.program.payment-expiry.cron", "00:00 PT1M"),
                         Map.entry("moewadeul.publicdata.gocamping.sync.cron", DAILY),
