@@ -1,7 +1,9 @@
 package com.moewadeul.common.architecture;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -104,6 +106,18 @@ class ArchitectureTest {
     @DisplayName("[ADR-005] 운영 코드는 ClockConfig 밖에서 시스템 시계를 직접 읽지 않는다")
     void productionCodeDoesNotReadSystemClock() {
         ArchitectureRules.noImplicitSystemClockRule(ROOT_PACKAGE).check(productionClasses);
+    }
+
+    @Test
+    @DisplayName("행사 신청과 베이스캠프 합류는 자체 잠금 설계가 있어 신고용 쓰기 허가를 거치지 않는다")
+    void programAndBasecampDoNotUseRowLockWritePermits() {
+        noClasses()
+                .that()
+                .resideInAnyPackage(ROOT_PACKAGE + ".program..", ROOT_PACKAGE + ".basecamp..")
+                .should()
+                .dependOnClassesThat()
+                .areAssignableTo(RowLockWritePermits.class)
+                .check(productionClasses);
     }
 
     // 조건부 빈은 테스트 프로필에서 꺼져 있어 컨텍스트가 이름 충돌을 보지 못한다. 그래서 조건과 상관없이 이름만 비교한다.

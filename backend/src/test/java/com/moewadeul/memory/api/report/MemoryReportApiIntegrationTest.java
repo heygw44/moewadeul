@@ -8,12 +8,17 @@ import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MemberFixture;
 import com.moewadeul.common.testsupport.MutableClock;
 import com.moewadeul.common.testsupport.TestSequence;
+import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.member.application.verification.EmailVerificationIssuer;
 import com.moewadeul.member.domain.Member;
 import jakarta.servlet.http.Cookie;
 import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +53,9 @@ class MemoryReportApiIntegrationTest {
     @Autowired
     private MutableClock clock;
 
+    @Autowired
+    private RowLockWritePermits rowLockWritePermits;
+
     @Test
     @DisplayName("[F-33][MM-10] 같은 회원이 같은 기록을 두 번 신고하면 처음은 201, 두 번째는 409 MEMORY_ALREADY_REPORTED이고 신고는 한 건만 남는다")
     void duplicateReportIsConflict() {
@@ -65,6 +73,42 @@ class MemoryReportApiIntegrationTest {
         assertThat(second).bodyJson().extractingPath("$.code").isEqualTo("MEMORY_ALREADY_REPORTED");
         assertThat(reportRows(memoryId)).isEqualTo(1);
         assertThat(status(memoryId)).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("[F-33] 행 잠금 쓰기 허가 여섯 개가 모두 쓰이는 동안 신고는 5초를 기다린 뒤 503 RESOURCE_BUSY로 끝나고, 허가가 돌아오면 다시 받는다")
+    void reportReturnsResourceBusyWhileAllWritePermitsAreHeld() throws Exception {
+        // given
+        long memoryId = writePublic(verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD)));
+        Cookie reporter = verifiedSession(memberFixture.saveWithPassword(VALID_PASSWORD));
+        int permitCount = 6;
+        CountDownLatch held = new CountDownLatch(permitCount);
+        CountDownLatch release = new CountDownLatch(1);
+        ExecutorService holders = Executors.newFixedThreadPool(permitCount);
+        MvcTestResult busy;
+        try {
+            for (int i = 0; i < permitCount; i++) {
+                holders.submit(() -> rowLockWritePermits.run(() -> {
+                    held.countDown();
+                    awaitQuietly(release);
+                }));
+            }
+            assertThat(held.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // when
+            busy = report(memoryId, reporter, "{\"reason\":\"SPAM\"}");
+        } finally {
+            release.countDown();
+            holders.shutdown();
+            assertThat(holders.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+        }
+        MvcTestResult afterRelease = report(memoryId, reporter, "{\"reason\":\"SPAM\"}");
+
+        // then
+        assertThat(busy).hasStatus(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(busy).bodyJson().extractingPath("$.code").isEqualTo("RESOURCE_BUSY");
+        assertThat(afterRelease).hasStatus(HttpStatus.CREATED);
+        assertThat(reportRows(memoryId)).isEqualTo(1);
     }
 
     @Test
@@ -308,5 +352,13 @@ class MemoryReportApiIntegrationTest {
                 .exchange();
         assertThat(verified).hasStatus(HttpStatus.OK);
         return session;
+    }
+
+    private static void awaitQuietly(CountDownLatch latch) {
+        try {
+            latch.await(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

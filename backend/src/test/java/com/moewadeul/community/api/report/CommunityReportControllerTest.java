@@ -16,6 +16,7 @@ import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.community.application.report.CommunityReportCommand;
 import com.moewadeul.community.application.report.CommunityReportService;
 import com.moewadeul.community.domain.CommunityErrorCode;
@@ -37,7 +38,7 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(CommunityReportController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class})
+@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class, RowLockWritePermits.class})
 class CommunityReportControllerTest {
 
     private static final long MEMBER_ID = 7L;
