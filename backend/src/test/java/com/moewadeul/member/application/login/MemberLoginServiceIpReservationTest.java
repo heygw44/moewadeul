@@ -53,7 +53,6 @@ class MemberLoginServiceIpReservationTest {
             return false;
         });
         when(memberRepository.findByEmail(anyString())).thenReturn(Optional.empty());
-        when(loginAttemptService.findRetryAfter(any(), anyString())).thenReturn(Optional.empty());
         service = new MemberLoginService(
                 memberRepository,
                 loginAttemptService,
@@ -126,7 +125,9 @@ class MemberLoginServiceIpReservationTest {
     @Test
     @DisplayName("이메일별 잠금으로 BCrypt 전에 거절된 요청은 토큰을 돌려준다")
     void emailLockoutBeforeBcryptRefundsToken() {
-        when(loginAttemptService.findRetryAfter(any(), anyString())).thenReturn(Optional.of(Duration.ofSeconds(30)));
+        doThrow(new RateLimitedException(MemberErrorCode.LOGIN_LOCKED, Duration.ofSeconds(30)))
+                .when(loginAttemptService)
+                .rejectIfLocked(any(), anyString(), anyString());
 
         for (int i = 0; i < CAPACITY * 2; i++) {
             assertThatThrownBy(() -> service.login(command())).isInstanceOf(RateLimitedException.class);
