@@ -25,6 +25,19 @@ http://:2020 {
 		request_body {
 			max_size 1MB
 		}
+		# 날씨는 로그인 없이 묻는다. 앱도 IP당 1분 60번을 넘으면 429를 내지만, 그 429를 만드는 데 앱 CPU를 써서 한 IP가 몰아 보내면 지도가 느려졌다(TS-123).
+		# 그래서 1분 90번을 넘는 요청은 Caddy가 앱에 넘기지 않고 429와 Retry-After로 끝낸다. 평소에는 앱 한도가 먼저 걸린다.
+		# 키는 접속 IP다. 도메인에 IPv6 주소가 없고 Docker가 밖에서 온 IPv4 연결을 iptables DNAT로 넘겨서, 접속 IP가 사용자 IP 그대로 보인다(#1020).
+		rate_limit {
+			zone weather {
+				match {
+					path_regexp ^/api/spots/[^/]+/weather$
+				}
+				key {remote_host}
+				events 90
+				window 1m
+			}
+		}
 		reverse_proxy app:8080 {
 			lb_try_duration 30s
 			lb_try_interval 250ms

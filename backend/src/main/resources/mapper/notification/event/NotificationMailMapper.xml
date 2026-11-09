@@ -20,8 +20,9 @@
         JOIN member m ON m.id = n.member_id
         LEFT JOIN notification_setting s ON s.member_id = n.member_id AND s.type = n.type
         WHERE n.email_status = 'PENDING'
+          AND n.email_bulk = #{bulk}
           AND (n.email_next_attempt_at IS NULL OR n.email_next_attempt_at &lt;= #{now})
-        ORDER BY n.email_bulk, n.id
+        ORDER BY n.id
         LIMIT #{limit}
         FOR UPDATE OF n SKIP LOCKED
     </select>

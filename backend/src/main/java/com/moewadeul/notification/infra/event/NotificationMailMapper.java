@@ -13,6 +13,7 @@ public interface NotificationMailMapper {
     List<NotificationMailRow> selectDueForUpdate(
             @Param("now") Instant now,
             @Param("limit") int limit,
+            @Param("bulk") boolean bulk,
             @Param("defaultEmailEnabled") boolean defaultEmailEnabled);
 
     int lease(@Param("ids") Collection<Long> ids, @Param("leaseUntil") Instant leaseUntil);

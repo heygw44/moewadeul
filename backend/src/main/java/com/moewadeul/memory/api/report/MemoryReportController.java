@@ -1,6 +1,7 @@
 package com.moewadeul.memory.api.report;
 
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.memory.application.report.MemoryReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 class MemoryReportController {
 
     private final MemoryReportService memoryReportService;
+    private final RowLockWritePermits rowLockWritePermits;
 
-    MemoryReportController(MemoryReportService memoryReportService) {
+    MemoryReportController(MemoryReportService memoryReportService, RowLockWritePermits rowLockWritePermits) {
         this.memoryReportService = memoryReportService;
+        this.rowLockWritePermits = rowLockWritePermits;
     }
 
     @Operation(
@@ -29,13 +32,15 @@ class MemoryReportController {
                     + "한 회원은 같은 기록을 한 번만 신고할 수 있고, 이미 신고했으면 409 MEMORY_ALREADY_REPORTED로 응답한다. 작성자가 자기 기록을 신고해도 막지 않는다. "
                     + "검토 전 신고가 5건 이상 쌓이면 서버가 같은 요청 안에서 기록을 PENDING_REVIEW로 바꿔, 작성자가 아닌 사람에게서 감춘다. "
                     + "기록이 없거나 비공개이거나 ACTIVE가 아니면(검토 대기, 숨김) 404 NOT_FOUND로 응답한다. "
-                    + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, 이메일 인증을 마치지 않았으면 403 MEMBER_NOT_VERIFIED다.")
+                    + "로그인하지 않았으면 401 AUTHENTICATION_REQUIRED, 이메일 인증을 마치지 않았으면 403 MEMBER_NOT_VERIFIED다. "
+                    + "신고가 몰려 5초를 기다려도 처리할 차례가 오지 않으면 503 RESOURCE_BUSY로 응답한다.")
     @PostMapping("/api/memories/{memoryId}/reports")
     @ResponseStatus(HttpStatus.CREATED)
     void report(
             @AuthenticationPrincipal LoginMember loginMember,
             @PathVariable long memoryId,
             @Valid @RequestBody MemoryReportRequest request) {
-        memoryReportService.report(loginMember.memberId(), memoryId, request.toCommand());
+        rowLockWritePermits.run(
+                () -> memoryReportService.report(loginMember.memberId(), memoryId, request.toCommand()));
     }
 }

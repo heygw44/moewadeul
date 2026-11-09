@@ -14,6 +14,7 @@ import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.trust.application.report.MemberReportCommand;
 import com.moewadeul.trust.application.report.MemberReportService;
 import com.moewadeul.trust.domain.TrustErrorCode;
@@ -38,7 +39,7 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(MemberReportController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class})
+@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class, RowLockWritePermits.class})
 class MemberReportControllerTest {
 
     private static final long MEMBER_ID = 7L;

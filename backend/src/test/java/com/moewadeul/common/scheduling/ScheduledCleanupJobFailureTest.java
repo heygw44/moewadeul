@@ -11,6 +11,8 @@ import com.moewadeul.member.application.login.LoginHistoryCleanupScheduler;
 import com.moewadeul.member.application.login.LoginHistoryCleanupService;
 import com.moewadeul.member.application.verification.EmailVerificationCleanupScheduler;
 import com.moewadeul.member.application.verification.EmailVerificationCleanupService;
+import com.moewadeul.notification.application.retention.NotificationRetentionScheduler;
+import com.moewadeul.notification.application.retention.NotificationRetentionService;
 import com.moewadeul.outbox.application.OutboxEventCleaner;
 import com.moewadeul.outbox.application.OutboxEventCleanupScheduler;
 import com.moewadeul.trust.application.report.ReportContentCleanupScheduler;
@@ -71,6 +73,21 @@ class ScheduledCleanupJobFailureTest {
         doThrow(FAILURE).when(service).deleteExpired();
         scheduler.cleanUp();
         assertThat(failures("login-history-cleanup")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[NFR-09] 읽은 알림 정리는 실패를 삼키고 작업 실패 수를 올린다")
+    void notificationRetentionCleanup() {
+        NotificationRetentionService service = mock(NotificationRetentionService.class);
+        NotificationRetentionScheduler scheduler = new NotificationRetentionScheduler(service, runner);
+
+        scheduler.cleanUp();
+        verify(service).deleteExpiredRead();
+        assertThat(failures("notification-cleanup")).isZero();
+
+        doThrow(FAILURE).when(service).deleteExpiredRead();
+        scheduler.cleanUp();
+        assertThat(failures("notification-cleanup")).isEqualTo(1);
     }
 
     @Test

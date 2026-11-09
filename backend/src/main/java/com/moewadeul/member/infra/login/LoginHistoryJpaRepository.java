@@ -1,5 +1,6 @@
 package com.moewadeul.member.infra.login;
 
+import com.moewadeul.member.domain.login.LoginFailure;
 import com.moewadeul.member.domain.login.LoginHistory;
 import com.moewadeul.member.domain.login.LoginHistoryRepository;
 import java.time.Instant;
@@ -15,7 +16,7 @@ public interface LoginHistoryJpaRepository extends JpaRepository<LoginHistory, L
 
     @Override
     @Query("""
-            SELECT h.createdAt FROM LoginHistory h
+            SELECT new com.moewadeul.member.domain.login.LoginFailure(h.createdAt, h.ip) FROM LoginHistory h
             WHERE h.attemptedEmail = :attemptedEmail
               AND h.success = false
               AND h.createdAt > :after
@@ -26,12 +27,12 @@ public interface LoginHistoryJpaRepository extends JpaRepository<LoginHistory, L
                    WHERE s.attemptedEmail = :attemptedEmail AND s.success = true), 0L)
             ORDER BY h.createdAt ASC
             """)
-    List<Instant> findFailureTimesSinceLastSuccess(
+    List<LoginFailure> findFailuresSinceLastSuccess(
             @Param("attemptedEmail") String attemptedEmail, @Param("after") Instant after);
 
     @Override
     @Query("""
-            SELECT h.createdAt FROM LoginHistory h
+            SELECT new com.moewadeul.member.domain.login.LoginFailure(h.createdAt, h.ip) FROM LoginHistory h
             WHERE h.memberId = :memberId
               AND h.success = false
               AND h.createdAt > :after
@@ -42,6 +43,6 @@ public interface LoginHistoryJpaRepository extends JpaRepository<LoginHistory, L
                    WHERE s.memberId = :memberId AND s.success = true), 0L)
             ORDER BY h.createdAt ASC
             """)
-    List<Instant> findMemberFailureTimesSinceLastSuccess(
+    List<LoginFailure> findMemberFailuresSinceLastSuccess(
             @Param("memberId") long memberId, @Param("after") Instant after);
 }

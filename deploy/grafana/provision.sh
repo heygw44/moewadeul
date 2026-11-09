@@ -6,6 +6,9 @@
 #   GRAFANA_URL       스택 주소. 예: https://<스택 이름>.grafana.net
 #   GRAFANA_SA_TOKEN  Grafana 서비스 계정 토큰(Editor 이상). 저장소나 셸 기록에 남기지 않는다
 #   ALERT_EMAIL       알림을 받을 이메일 주소
+#   SM_API_URL        Synthetic Monitoring API 주소. 예: https://synthetic-monitoring-api.grafana.net (스택 지역마다 다르다.
+#                     Grafana의 Testing & synthetics > Config 화면에 나온다)
+#   SM_ACCESS_TOKEN   Synthetic Monitoring 접근 토큰. 위 Config 화면에서 만들며 GRAFANA_SA_TOKEN과 다른 토큰이다
 # 선택: PROM_UID, LOKI_UID  데이터 소스 uid. 비우면 이름이 -prom, -logs로 끝나는 Grafana Cloud 기본 데이터 소스를 찾는다
 #
 # 필요한 도구: curl, jq
@@ -22,6 +25,8 @@ readonly RULE_GROUP=moewadeul
 : "${GRAFANA_URL:?GRAFANA_URL이 필요하다}"
 : "${GRAFANA_SA_TOKEN:?GRAFANA_SA_TOKEN이 필요하다}"
 : "${ALERT_EMAIL:?ALERT_EMAIL이 필요하다}"
+: "${SM_API_URL:?SM_API_URL이 필요하다}"
+: "${SM_ACCESS_TOKEN:?SM_ACCESS_TOKEN이 필요하다}"
 
 log() {
     echo "[provision] $*"
@@ -46,6 +51,14 @@ api() {
         args+=(--data-binary "$body")
     fi
     curl_auth "${args[@]}"
+}
+
+sm_curl() {
+    curl -K <(printf 'header = "Authorization: Bearer %s"\n' "$SM_ACCESS_TOKEN") "$@"
+}
+
+sm_get() {
+    sm_curl -fsS "${SM_API_URL%/}$1"
 }
 
 # 응답 본문이 필요한 조회용. 실패하면 멈춘다.
@@ -106,7 +119,31 @@ policies="$(api_get /api/v1/provisioning/policies | jq --arg receiver "$CONTACT_
     '.receiver = $receiver | .group_by = ["grafana_folder", "alertname"]')"
 require_ok "$(api PUT /api/v1/provisioning/policies "$policies")" "알림 정책 설정"
 
-# 5. 알림 규칙 그룹. 그룹 전체를 같은 내용으로 덮어쓴다.
+# 5. 합성 탐침 검사. 검사는 job과 target 쌍이 유일하므로, 같은 쌍이 이미 있으면 그 id로 고치고 없으면 만든다.
+probe_ids="$(sm_get /api/v1/probe/list | jq -c --slurpfile def "$SCRIPT_DIR/synthetic-checks.json" \
+    '($def[0].probes) as $names | [.[] | select(.name as $n | $names | index($n)) | .id]')"
+if [[ "$(jq 'length' <<< "$probe_ids")" -ne "$(jq '.probes | length' "$SCRIPT_DIR/synthetic-checks.json")" ]]; then
+    log "synthetic-checks.json의 probes 이름을 Synthetic Monitoring 검사 위치에서 모두 찾지 못했다: $probe_ids"
+    exit 1
+fi
+existing_checks="$(sm_get /api/v1/check/list)"
+while IFS= read -r check; do
+    job="$(jq -r '.job' <<< "$check")"
+    target="$(jq -r '.target' <<< "$check")"
+    current="$(jq -c --arg job "$job" --arg target "$target" '[.[] | select(.job == $job and .target == $target)][0] // {}' <<< "$existing_checks")"
+    body="$(jq -c --argjson probes "$probe_ids" --argjson current "$current" \
+        '. + {probes: $probes} + ($current | {id, tenantId} | with_entries(select(.value != null)))' <<< "$check")"
+    if [[ "$(jq 'has("id")' <<< "$body")" == "true" ]]; then
+        endpoint=/api/v1/check/update
+    else
+        endpoint=/api/v1/check/add
+    fi
+    code="$(sm_curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X POST "${SM_API_URL%/}$endpoint" \
+        -H "Content-Type: application/json" --data-binary "$body")"
+    require_ok "$code" "합성 탐침 검사 $job"
+done < <(jq -c '.checks[]' "$SCRIPT_DIR/synthetic-checks.json")
+
+# 6. 알림 규칙 그룹. 그룹 전체를 같은 내용으로 덮어쓴다.
 rules="$(jq --arg prom "$PROM_UID" --arg folder "$FOLDER_UID" --arg group "$RULE_GROUP" \
     'walk(if . == "__PROM_UID__" then $prom else . end)
      | .rules |= map(. + {folderUID: $folder, ruleGroup: $group, orgID: 1})' \

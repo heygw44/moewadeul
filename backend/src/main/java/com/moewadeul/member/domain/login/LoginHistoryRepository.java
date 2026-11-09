@@ -7,7 +7,7 @@ public interface LoginHistoryRepository {
 
     LoginHistory save(LoginHistory loginHistory);
 
-    List<Instant> findFailureTimesSinceLastSuccess(String attemptedEmail, Instant after);
+    List<LoginFailure> findFailuresSinceLastSuccess(String attemptedEmail, Instant after);
 
-    List<Instant> findMemberFailureTimesSinceLastSuccess(long memberId, Instant after);
+    List<LoginFailure> findMemberFailuresSinceLastSuccess(long memberId, Instant after);
 }

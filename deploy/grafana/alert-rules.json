@@ -1030,6 +1030,55 @@
           }
         }
       ]
+    },
+    {
+      "uid": "moewadeul-synthetic-probe-down",
+      "title": "외부 합성 탐침 2회 연속 실패",
+      "condition": "C",
+      "for": "0s",
+      "noDataState": "Alerting",
+      "execErrState": "Error",
+      "labels": {
+        "service": "moewadeul"
+      },
+      "annotations": {
+        "summary": "{{ $labels.job }} 탐침이 서버 밖에서 5분 간격으로 2회 연속 실패했다. 사이트가 외부에서 열리지 않는 상태이니 서버, Caddy, 인증서, DNS 순으로 본다. 탐침 데이터가 끊겨도 같은 경보가 울린다."
+      },
+      "data": [
+        {
+          "refId": "A",
+          "relativeTimeRange": {
+            "from": 900,
+            "to": 0
+          },
+          "datasourceUid": "__PROM_UID__",
+          "model": {
+            "refId": "A",
+            "expr": "min by (job) (max_over_time(probe_success{job=~\"moewadeul-(home|programs)\"}[11m]))",
+            "instant": true,
+            "range": false
+          }
+        },
+        {
+          "refId": "C",
+          "datasourceUid": "__expr__",
+          "model": {
+            "refId": "C",
+            "type": "threshold",
+            "expression": "A",
+            "conditions": [
+              {
+                "evaluator": {
+                  "type": "lt",
+                  "params": [
+                    1
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

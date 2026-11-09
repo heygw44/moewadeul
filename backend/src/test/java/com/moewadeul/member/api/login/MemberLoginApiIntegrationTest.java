@@ -215,6 +215,62 @@ class MemberLoginApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("[F-02][PW-03] 다른 IP에서 5번 틀려도 본인 IP에서는 올바른 비밀번호로 로그인할 수 있다")
+    void failuresFromOtherIpDoNotLockOwnIp() {
+        String email = TestSequence.email();
+        saveMember(email);
+        failLoginFrom(email, LoginLockout.MAX_FAILURES, "198.51.100.1");
+
+        MvcTestResult own = login(email, PASSWORD);
+
+        assertThat(own).hasStatus(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-03] 같은 IP에서 5번 틀리면 그 IP는 올바른 비밀번호로도 429이고 다른 IP는 막지 않는다")
+    void fiveFailuresFromOneIpLockOnlyThatIp() {
+        String email = TestSequence.email();
+        saveMember(email);
+        failLoginFrom(email, LoginLockout.MAX_FAILURES, "198.51.100.1");
+
+        MvcTestResult sameIp = loginFrom(email, PASSWORD, "198.51.100.1");
+        MvcTestResult otherIp = loginFrom(email, WRONG_PASSWORD, "198.51.100.2");
+
+        assertThat(sameIp).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(sameIp).bodyJson().extractingPath("$.code").isEqualTo("LOGIN_LOCKED");
+        assertThat(otherIp).hasStatus(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-03] 여러 IP에서 합쳐 50번 틀려도 본인 IP는 로그인할 수 있고, 51번 틀리면 본인 IP도 429다")
+    void accountWideFailuresAboveFiftyLockEveryIp() {
+        String email = TestSequence.email();
+        saveMember(email);
+        String ownIp = "192.0.2.1";
+        failFromManyIps(email, LoginLockout.ACCOUNT_MAX_FAILURES);
+        assertThat(loginFrom(email, WRONG_PASSWORD, ownIp)).hasStatus(HttpStatus.UNAUTHORIZED);
+
+        MvcTestResult own = loginFrom(email, PASSWORD, ownIp);
+
+        assertThat(count("login_history WHERE attempted_email = ? AND success = FALSE", email))
+                .isEqualTo(LoginLockout.ACCOUNT_MAX_FAILURES + 1);
+        assertThat(own).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(own).bodyJson().extractingPath("$.code").isEqualTo("LOGIN_LOCKED");
+        assertThat(own.getResponse().getHeader(HttpHeaders.RETRY_AFTER))
+                .isEqualTo(String.valueOf(LoginLockout.WINDOW.toSeconds()));
+    }
+
+    @Test
+    @DisplayName("[F-02][PW-03] 가입하지 않은 이메일도 IP별로 세서 다른 IP의 5번 실패로는 막지 않는다")
+    void unknownEmailIsCountedPerIp() {
+        String unknownEmail = TestSequence.email();
+        failLoginFrom(unknownEmail, LoginLockout.MAX_FAILURES, "198.51.100.1");
+
+        assertThat(loginFrom(unknownEmail, PASSWORD, "198.51.100.1")).hasStatus(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(loginFrom(unknownEmail, PASSWORD, "198.51.100.2")).hasStatus(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     @DisplayName("[F-02][PW-03] 한 이메일이 잠겨도 다른 이메일은 로그인할 수 있다")
     void lockDoesNotAffectOtherEmail() {
         String lockedEmail = TestSequence.email();
@@ -424,6 +480,19 @@ class MemberLoginApiIntegrationTest {
     private void failLogin(String email, int times) {
         for (int i = 0; i < times; i++) {
             assertThat(login(email, WRONG_PASSWORD)).hasStatus(HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    private void failLoginFrom(String email, int times, String remoteAddress) {
+        for (int i = 0; i < times; i++) {
+            assertThat(loginFrom(email, WRONG_PASSWORD, remoteAddress)).hasStatus(HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    private void failFromManyIps(String email, int times) {
+        for (int i = 0; i < times; i++) {
+            String remoteAddress = "203.0.113." + (i / (LoginLockout.MAX_FAILURES - 1));
+            assertThat(loginFrom(email, WRONG_PASSWORD, remoteAddress)).hasStatus(HttpStatus.UNAUTHORIZED);
         }
     }
 

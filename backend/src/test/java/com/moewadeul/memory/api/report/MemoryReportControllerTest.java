@@ -17,6 +17,7 @@ import com.moewadeul.common.moderation.ContentReportReason;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
 import com.moewadeul.common.trace.TraceIdFilter;
+import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.memory.application.report.MemoryReportCommand;
 import com.moewadeul.memory.application.report.MemoryReportService;
 import com.moewadeul.memory.domain.MemoryErrorCode;
@@ -38,7 +39,7 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(MemoryReportController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class})
+@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class, RowLockWritePermits.class})
 class MemoryReportControllerTest {
 
     private static final long MEMBER_ID = 7L;

@@ -1,6 +1,7 @@
 package com.moewadeul.spot.api.bakji;
 
 import com.moewadeul.common.security.LoginMember;
+import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.spot.application.bakji.BakjiCommandService;
 import com.moewadeul.spot.application.bakji.BakjiEditService;
 import com.moewadeul.spot.application.bakji.BakjiFeedbackService;
@@ -24,14 +25,17 @@ class BakjiController {
     private final BakjiCommandService bakjiCommandService;
     private final BakjiEditService bakjiEditService;
     private final BakjiFeedbackService bakjiFeedbackService;
+    private final RowLockWritePermits rowLockWritePermits;
 
     BakjiController(
             BakjiCommandService bakjiCommandService,
             BakjiEditService bakjiEditService,
-            BakjiFeedbackService bakjiFeedbackService) {
+            BakjiFeedbackService bakjiFeedbackService,
+            RowLockWritePermits rowLockWritePermits) {
         this.bakjiCommandService = bakjiCommandService;
         this.bakjiEditService = bakjiEditService;
         this.bakjiFeedbackService = bakjiFeedbackService;
+        this.rowLockWritePermits = rowLockWritePermits;
     }
 
     @Operation(
@@ -101,13 +105,15 @@ class BakjiController {
                     + "reason은 ILLEGAL_AREA, CLOSED, FALSE_INFO 중 하나이고 모르는 값은 400 INVALID_INPUT이다. content는 없어도 되고 1,000자 이하다. "
                     + "한 회원은 같은 박지를 한 번만 신고할 수 있고, 이미 신고했으면 409 BAKJI_ALREADY_REPORTED로 응답한다. 제보자가 자기 박지를 신고해도 막지 않는다. "
                     + "신고가 5건 이상 쌓이면 서버가 같은 요청 안에서 박지를 PENDING_REVIEW로 바꿔 지도, 목록, 상세에서 뺀다. "
-                    + "장소가 없거나, 박지가 아니거나, 지도에 보이는(ACTIVE) 상태가 아니면 404 NOT_FOUND로 응답한다. 그래서 검토 대기가 된 박지는 더 신고할 수 없다.")
+                    + "장소가 없거나, 박지가 아니거나, 지도에 보이는(ACTIVE) 상태가 아니면 404 NOT_FOUND로 응답한다. 그래서 검토 대기가 된 박지는 더 신고할 수 없다. "
+                    + "신고가 몰려 5초를 기다려도 처리할 차례가 오지 않으면 503 RESOURCE_BUSY로 응답한다.")
     @PostMapping("/{spotId}/reports")
     @ResponseStatus(HttpStatus.CREATED)
     void reportProblem(
             @AuthenticationPrincipal LoginMember loginMember,
             @PathVariable long spotId,
             @Valid @RequestBody BakjiProblemReportRequest request) {
-        bakjiFeedbackService.reportProblem(loginMember.memberId(), spotId, request.toCommand());
+        rowLockWritePermits.run(
+                () -> bakjiFeedbackService.reportProblem(loginMember.memberId(), spotId, request.toCommand()));
     }
 }

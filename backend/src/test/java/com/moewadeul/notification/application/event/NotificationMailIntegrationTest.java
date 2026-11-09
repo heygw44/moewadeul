@@ -766,6 +766,46 @@ class NotificationMailIntegrationTest {
         assertThat(mailSender.sent()).hasSize(5);
     }
 
+    @Test
+    @DisplayName("[F-20][EV-07] 대량 메일은 합계 250통에서 미뤄지고 개별 메일은 바로 나간다")
+    void bulkMailStopsAtBulkLimitWhileIndividualMailGoesOut() {
+        // given
+        List<Long> applicants = saveActiveMembers(3);
+        insertSentNotifications(
+                applicants.get(0), NotificationEventTypes.BULK_EMAIL_LIMIT_PER_WINDOW, Duration.ofHours(1));
+        for (Long applicantId : applicants) {
+            recordProgramApplicationCanceled(applicantId, "PROGRAM_CANCELED", true);
+        }
+        Member canceledByThemself = saveActiveMember();
+        recordProgramApplicationCanceled(canceledByThemself.getId(), "USER", true);
+        publisher.publishPending(OutboxLane.DEFAULT);
+
+        // when
+        int handled = drain();
+
+        // then
+        assertThat(handled).isEqualTo(1);
+        assertThat(mailSender.sent()).extracting(MailMessage::to).containsExactly(canceledByThemself.getEmail());
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("[F-20][EV-07] 합계가 300통이면 개별 메일도 미뤄진다")
+    void individualMailIsDeferredAtTotalLimit() {
+        // given
+        Member member = saveActiveMember();
+        insertSentNotifications(member.getId(), NotificationEventTypes.EMAIL_LIMIT_PER_WINDOW, Duration.ofHours(1));
+        recordProgramApplicationCanceled(member.getId(), "USER", true);
+        publisher.publishPending(OutboxLane.DEFAULT);
+
+        // when
+        int handled = drain();
+
+        // then
+        assertThat(handled).isZero();
+        assertThat(countByEmailStatus("PENDING")).isEqualTo(1);
+    }
+
     private List<Long> saveActiveMembers(int count) {
         List<Long> memberIds = new ArrayList<>();
         for (int i = 0; i < count; i++) {

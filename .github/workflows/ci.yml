@@ -75,6 +75,18 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
+  # 운영 compose의 Caddy 이미지 태그가 deploy/caddy/Dockerfile의 Caddy 버전·모듈 커밋과 맞는지 본다.
+  # 배포 워크플로는 이 태그가 레지스트리에 없을 때만 빌드하므로, 태그를 그대로 두고 Dockerfile만 바꾸면 운영에 반영되지 않는다.
+  caddy-image:
+    name: caddy-image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: deploy/caddy/server-image.sh
+
   # 운영 Caddy 이미지는 frontend/를 npm ci로 설치해서 빌드한다. 그래서 같은 명령을 PR에서도 돌려, 의존성 충돌이나
   # 타입 오류가 배포 단계가 아니라 PR 단계에서 드러나게 한다(#262). 카카오 키 없이도 빌드는 끝난다.
   frontend:
