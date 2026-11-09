@@ -53,7 +53,7 @@ def endpoints(path):
 def main():
     tag, name = sys.argv[1], sys.argv[2]
     inactive = int(sys.argv[3]) if len(sys.argv) > 3 else 0
-    out = lt.run_dir("2026-11-08-rerun", name)
+    out = lt.run_dir(name)
     if (out / "result.json").exists():
         print("skip", name); return
     lt.require_lock()

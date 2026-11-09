@@ -9,7 +9,7 @@ has() { [[ " $CASES " == *" $1 "* ]]; }
 
 if has 1; then
   # 인덱스 없음과 있음을 묶음마다 번갈아 2묶음, 정리 작업은 시각 모양 둘을 번갈아 2번씩.
-  [ -f "$(python3 -c 'import lt;print(lt.MAIN)')/backend/load-test/results/2026-11-08-rerun/runs/case1/result.jsonl" ] || python3 case1.py "$TAG" 2
+  [ -f "$(python3 -c 'import lt;print(lt.RESULTS)')/runs/case1/result.jsonl" ] || python3 case1.py "$TAG" 2
 fi
 
 if has 2; then
@@ -39,7 +39,7 @@ if has 3; then
     python3 run.py "$TAG" openmap-p30-$n pool=30
   done
   # 경합 라운드(Testcontainers). 스택과 같은 CPU를 쓰므로 부하 측정과 겹치지 않게 여기서 돈다.
-  OUT="$(python3 -c 'import lt;print(lt.MAIN)')/backend/load-test/results/2026-11-08-rerun/runs/rounds"
+  OUT="$(python3 -c 'import lt;print(lt.RESULTS)')/runs/rounds"
   if [ ! -f "$OUT/done" ]; then
     rm -rf ../../build/measure
     (cd ../.. && ./gradlew measureRounds -Drounds=1000 >"/tmp/rerun-rounds.log" 2>&1)
