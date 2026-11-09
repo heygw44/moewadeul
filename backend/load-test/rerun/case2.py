@@ -2,7 +2,7 @@
 """사례 2: 박지 행 하나를 mysql 세션으로 잠근 채 그 행에 신고 N건을 보내고, 같은 시간 지도 20 VU의 응답과 Hikari 지표를 잰다.
 
 사용: withlock.sh python3 case2.py <APP_TAG> <이름> <풀> <신고 수> <잠금 초> <디스크 제한 0|1>
-앱을 그 풀 크기로 다시 띄우고 지도 20 VU로 30초 데운 뒤 잰다. 결과는 results/2026-11-08-rerun/runs/<이름>/.
+앱을 그 풀 크기로 다시 띄우고 지도 20 VU로 30초 데운 뒤 잰다. 결과는 results/$LT_GROUP/runs/<이름>/.
 """
 import json, os, subprocess, sys, threading, time, urllib.request, urllib.error
 
@@ -10,7 +10,7 @@ import lt
 
 TAG, NAME, POOL, NREP, HOLD, DISK = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), sys.argv[6] == "1"
 VUS = 20
-OUT = str(lt.run_dir("2026-11-08-rerun", NAME))
+OUT = str(lt.run_dir(NAME))
 POST = int(os.environ.get('POST_SEC', '0'))
 if os.path.exists(os.path.join(OUT, 'summary.json')):
     print('skip', NAME); sys.exit(0)

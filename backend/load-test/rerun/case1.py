@@ -4,7 +4,7 @@
 사용: withlock.sh python3 case1.py <APP_TAG> [묶음 수=2]
 MySQL은 디스크 제한(ov-disk.yml)과 버퍼 풀 256MB로 띄운다. 인덱스 상태를
 묶음마다 없음(none), V46만(ip), 지금 스키마(both) 순으로 번갈아 잰다.
-V69 정리 작업은 시드 모양(시각이 id와 무관 random, id 순 id)과 created_at 인덱스 유무를 번갈아 잰다. 끝에 인덱스를 되돌리고 시드를 지운다. 결과는 results/2026-11-08-rerun/runs/case1/result.jsonl.
+V69 정리 작업은 시드 모양(시각이 id와 무관 random, id 순 id)과 created_at 인덱스 유무를 번갈아 잰다. 끝에 인덱스를 되돌리고 시드를 지운다. 결과는 results/$LT_GROUP/runs/case1/result.jsonl.
 """
 import json, sys, threading, time
 
@@ -12,7 +12,7 @@ import lt
 
 TAG = sys.argv[1]
 ROUNDS = int(sys.argv[2]) if len(sys.argv) > 2 else 2
-OUT = lt.run_dir("2026-11-08-rerun", "case1")
+OUT = lt.run_dir("case1")
 IDX = "idx_email_verification_ip_created"
 IDX_CREATED = "idx_email_verification_created_at"
 ROWS = 1_000_000

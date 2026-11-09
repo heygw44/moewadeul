@@ -4,6 +4,7 @@
 - 이미지의 git.sha 라벨 코드가 HEAD의 backend 코드와 같은가(check_image). 옛 코드와 번갈아 잴 때만 LT_OLD_SHA=<그 커밋>으로 그 이미지를 허용한다
 - MySQL 디스크 읽기 제한이 요청한 대로 걸렸는가(ensure_stack)
 - 앱이 관리 포트 8081에서 180초 안에 UP으로 답하는가(wait_ready)
+결과는 results/$LT_GROUP/runs/<이름>/에 쌓인다. LT_GROUP을 주지 않으면 2026-11-08-rerun이다.
 """
 import json, os, pathlib, subprocess, time, urllib.error, urllib.request
 
@@ -12,6 +13,7 @@ ROOT = TOOLS.parents[2]
 MAIN = pathlib.Path(subprocess.run(["git", "-C", str(TOOLS), "rev-parse", "--path-format=absolute", "--git-common-dir"], capture_output=True, text=True, check=True).stdout.strip()).parent
 LT_DIR = pathlib.Path(os.environ.get("LT_DIR", MAIN / "backend/load-test/results/2026-11-03-local-openai-s3-wait"))
 PROJECT = os.environ.get("LT_PROJECT", "moewadeul-lt-weather")
+RESULTS = MAIN / "backend/load-test/results" / os.environ.get("LT_GROUP", "2026-11-08-rerun")
 NET = f"{PROJECT}_default"
 APP, MYSQL, CADDY = (f"{PROJECT}-{n}-1" for n in ("app", "mysql", "caddy"))
 BASE = "http://127.0.0.1:8080"
@@ -230,8 +232,8 @@ def k6(out, script, env=(), mounts=(), extra=(), name=None, detach=False):
     return cmd
 
 
-def run_dir(group, name):
-    d = MAIN / "backend/load-test/results" / group / "runs" / name
+def run_dir(name):
+    d = RESULTS / "runs" / name
     d.mkdir(parents=True, exist_ok=True)
     d.chmod(0o777)
     return d
