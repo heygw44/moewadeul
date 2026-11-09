@@ -1,3 +1,12 @@
+// Spring Boot 플러그인의 buildpack 의존성이 commons-lang3 3.16.0을 끌어온다. 빌드 클래스패스에만 있지만 Dependabot 경보(CVE, 3.18.0에서 고침)를 닫으려고 올린다.
+buildscript {
+    dependencies {
+        constraints {
+            classpath("org.apache.commons:commons-lang3:3.18.0")
+        }
+    }
+}
+
 plugins {
     java
     jacoco
