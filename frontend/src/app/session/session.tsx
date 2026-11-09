@@ -7,6 +7,8 @@ import { navigate } from '../router';
 import { fetchMeWithRetry } from './fetchMeWithRetry';
 import { forgetFormDraft, keepFormDraft } from './formDraft';
 import { notifySignedOut } from './signedOut';
+import { addSessionExpiredNotice } from '../saveNotice/saveNotices';
+import { useSessionKeepAlive } from './useSessionKeepAlive';
 import { SessionUnavailable } from './SessionUnavailable';
 
 type SessionStatus = 'loading' | 'anonymous' | 'authenticated';
@@ -72,6 +74,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!me) notifySignedOut();
     return me;
   }, []);
+
+  useSessionKeepAlive(state.status === 'authenticated', async () => {
+    const me = await refresh();
+    if (!me) addSessionExpiredNotice();
+  });
 
   const logout = useCallback(async () => {
     await logoutRequest().catch(() => undefined);

@@ -40,6 +40,15 @@ function replaceSaveNotice(id: number, notice: SaveNoticeBody): void {
   publish(notices.map((existing) => (existing.id === id ? { ...notice, id } : existing)));
 }
 
+export function addSessionExpiredNotice(): void {
+  addSaveNotice({
+    state: 'failed',
+    title: '로그인이 만료되었습니다.',
+    body: '다시 로그인해 주세요.',
+    link: { to: '/login', label: '로그인하기' },
+  });
+}
+
 export function dismissSaveNotice(id: number): void {
   publish(notices.filter((existing) => existing.id !== id));
 }
