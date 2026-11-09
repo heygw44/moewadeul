@@ -30,6 +30,7 @@ class MemberController {
                             + "비밀번호가 10~64자가 아니거나 영문, 숫자, 특수문자를 각각 1자 이상 넣지 않았거나 공백이나 한글처럼 눈에 보이는 ASCII 글자가 아닌 문자를 쓰면 400 MEMBER_PASSWORD_POLICY이다. "
                             + "일회용 이메일은 400 MEMBER_DISPOSABLE_EMAIL, 이미 쓰는 이메일과 닉네임은 각각 409 MEMBER_EMAIL_DUPLICATED, MEMBER_NICKNAME_DUPLICATED이다. "
                             + "같은 IP의 요청이 한도를 넘으면 429 SIGNUP_LIMITED와 Retry-After 헤더로 응답한다. "
+                            + "서버는 가입을 한 번에 둘만 처리하고, 5초를 기다려도 차례가 오지 않으면 503 RESOURCE_BUSY로 응답한다. "
                             + "가입하면 201과 함께 회원이 이메일 인증 전(UNVERIFIED)으로 만들어지고, 서버가 인증 코드 메일을 보낸다. 로그인은 되지만 이메일 인증이 필요한 API는 인증 뒤에 쓸 수 있다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
