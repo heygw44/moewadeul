@@ -13,6 +13,7 @@ import com.moewadeul.common.profile.Gender;
 import com.moewadeul.member.application.MemberWithdrawalService;
 import com.moewadeul.trust.application.profile.TrustSummaryService;
 import com.moewadeul.trust.domain.TrustErrorCode;
+import com.moewadeul.trust.domain.identity.CiHash;
 import com.moewadeul.trust.domain.identity.IdentityProviderType;
 import com.moewadeul.trust.domain.identity.IdentityVerificationRepository;
 import com.moewadeul.trust.domain.identity.VerifiedIdentity;
@@ -27,17 +28,20 @@ class IdentityVerificationApplierTest {
 
     private final IdentityVerificationRepository repository = mock(IdentityVerificationRepository.class);
     private final IdentityVerificationInsertMapper insertMapper = mock(IdentityVerificationInsertMapper.class);
+    private final CiHasher hasher = mock(CiHasher.class);
     private final IdentityVerificationApplier applier = new IdentityVerificationApplier(
             mock(MemberWithdrawalService.class),
             repository,
             insertMapper,
-            mock(CiHasher.class),
+            hasher,
             mock(TrustSummaryService.class),
             Clock.systemUTC());
 
     @Test
     @DisplayName("이미 본인확인한 회원이 같은 CI로 다시 요청하면 IDENTITY_ALREADY_VERIFIED이고 저장하지 않는다")
     void alreadyVerifiedMemberWithDuplicatedCi() {
+        when(hasher.hash("ci-raw")).thenReturn(new CiHash("c".repeat(64)));
+        when(insertMapper.lockCiBucket(0xcccc)).thenReturn(0xcccc);
         when(repository.existsByMemberId(MEMBER_ID)).thenReturn(true);
         when(repository.existsByCiHash(any())).thenReturn(true);
         VerifiedIdentity identity = new VerifiedIdentity("ci-raw", 1995, Gender.FEMALE);
@@ -46,6 +50,6 @@ class IdentityVerificationApplierTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.IDENTITY_ALREADY_VERIFIED));
-        verify(insertMapper, never()).insertIgnoringDuplicate(any());
+        verify(insertMapper, never()).insert(any());
     }
 }

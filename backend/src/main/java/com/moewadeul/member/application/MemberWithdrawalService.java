@@ -61,11 +61,11 @@ public class MemberWithdrawalService {
         return true;
     }
 
-    // 탈퇴가 쥐는 회원 행을 공유 잠금으로 읽는다. 탈퇴 트랜잭션이 커밋되기 전에 들어온 쓰기는 탈퇴가 끝날 때까지 기다린 뒤 거절되어 탈퇴 정리를 비켜 가지 못한다.
+    // 탈퇴가 쥐는 회원 행을 배타 잠금으로 읽는다. 탈퇴 트랜잭션이 커밋되기 전에 들어온 쓰기는 탈퇴가 끝날 때까지 기다린 뒤 거절되어 탈퇴 정리를 비켜 가지 못하고, 같은 회원의 쓰기끼리도 한 줄로 선다.
     @Transactional(propagation = Propagation.MANDATORY)
-    public void lockSharedUnlessWithdrawn(long memberId) {
+    public void lockUnlessWithdrawn(long memberId) {
         memberRepository
-                .findByIdForShare(memberId)
+                .findByIdForUpdate(memberId)
                 .filter(member -> !member.isWithdrawn())
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTHENTICATION_REQUIRED));
     }

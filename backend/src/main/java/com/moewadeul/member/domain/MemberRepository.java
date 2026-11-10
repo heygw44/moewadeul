@@ -10,8 +10,6 @@ public interface MemberRepository {
 
     Optional<Member> findByIdForUpdate(long id);
 
-    Optional<Member> findByIdForShare(long id);
-
     Optional<Member> findByEmail(String email);
 
     boolean existsByEmail(String email);
