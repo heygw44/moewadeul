@@ -189,6 +189,72 @@ class IdentityVerificationConcurrencyIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("[ID-04] 한 회원의 요청 1건과 다른 회원의 요청 3건이 같은 CI로 섞여도 30라운드 동안 교착 상태 없이 라운드마다 1건만 저장된다")
+    void mixedMembersOnSameCiDoNotDeadlock() throws Exception {
+        try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword());
+                Statement statement = monitor.createStatement()) {
+            long deadlocksBefore = deadlockCount(statement);
+
+            for (int round = 0; round < 30; round++) {
+                // given
+                long single = memberFixture.save().getId();
+                long repeated = memberFixture.save().getId();
+                String person = "mixed-" + round;
+
+                // when
+                List<Throwable> failures = runConcurrently(
+                        4,
+                        index -> service.verify(
+                                index == 0 ? single : repeated, new IdentityVerifyCommand(1995, Gender.MALE, person)));
+
+                // then
+                assertThat(failures)
+                        .hasSize(3)
+                        .allSatisfy(failure -> assertThat(failure).isInstanceOf(BusinessException.class));
+                assertThat(rowCount()).isEqualTo(round + 1);
+            }
+            assertThat(deadlockCount(statement)).isEqualTo(deadlocksBefore);
+        }
+    }
+
+    @Test
+    @DisplayName("[ID-04] 이웃한 CI 10개의 행을 모두 지운 직후 다른 회원들이 각자 그 CI로 동시에 본인확인해도 50라운드 동안 교착 상태가 없다")
+    void neighbouringDeletedCisDoNotDeadlock() throws Exception {
+        try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword());
+                Statement statement = monitor.createStatement()) {
+            long deadlocksBefore = deadlockCount(statement);
+
+            for (int round = 0; round < 50; round++) {
+                // given
+                // 스냅숏을 쥐어 삭제 표시 레코드가 정리되지 않고 이웃 키 사이에 남게 한다.
+                statement.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT");
+                String prefix = "neighbour-" + round + "-";
+                for (int i = 0; i < THREADS; i++) {
+                    service.verify(
+                            memberFixture.save().getId(), new IdentityVerifyCommand(1995, Gender.MALE, prefix + i));
+                }
+                jdbc.update("DELETE FROM identity_verification");
+                List<Long> memberIds = new ArrayList<>();
+                for (int i = 0; i < THREADS; i++) {
+                    memberIds.add(memberFixture.save().getId());
+                }
+
+                // when
+                List<Throwable> failures = runConcurrently(
+                        THREADS,
+                        index -> service.verify(
+                                memberIds.get(index), new IdentityVerifyCommand(1995, Gender.MALE, prefix + index)));
+                statement.execute("COMMIT");
+
+                // then
+                assertThat(failures).isEmpty();
+                assertThat(rowCount()).isEqualTo(THREADS);
+            }
+            assertThat(deadlockCount(statement)).isEqualTo(deadlocksBefore);
+        }
+    }
+
     private static String insertIdentity(long memberId, String ciHash) {
         return "INSERT INTO identity_verification (member_id, birth_year, gender, ci_hash, provider, verified_at, created_at, updated_at)"
                 + " VALUES (" + memberId + ", 1995, 'MALE', '" + ciHash + "', 'FAKE', NOW(6), NOW(6), NOW(6))";
