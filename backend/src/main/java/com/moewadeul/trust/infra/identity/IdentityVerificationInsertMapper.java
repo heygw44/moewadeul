@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface IdentityVerificationInsertMapper {
 
-    void insertIgnoringDuplicate(@Param("verification") IdentityVerification verification);
+    Integer lockCiBucket(@Param("bucket") int bucket);
 
-    boolean existsByMemberIdCommitted(@Param("memberId") long memberId);
+    void insert(@Param("verification") IdentityVerification verification);
 }

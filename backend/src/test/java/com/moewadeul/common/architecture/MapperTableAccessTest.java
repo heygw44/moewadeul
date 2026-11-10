@@ -41,6 +41,7 @@ class MapperTableAccessTest {
             entry("disposable_email_domain", "member"),
             entry("companion_review", "trust"),
             entry("companion_review_tag", "trust"),
+            entry("identity_ci_lock", "trust"),
             entry("identity_verification", "trust"),
             entry("member_report", "trust"),
             entry("sanction", "trust"),
