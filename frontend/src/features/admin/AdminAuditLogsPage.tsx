@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { fetchAdminAuditLogs } from '../../api/admin';
-import type { AdminAuditLog, Page } from '../../api/types';
+import type { AdminAuditLog, Page, PageRequest } from '../../api/types';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -36,7 +36,7 @@ const TARGET_OPTIONS = [
   ...AUDIT_TARGET_TYPES.map((type) => ({ value: type, label: AUDIT_TARGET_LABELS[type] })),
 ];
 
-function fetchLogs(filter: AuditQuery, page: number, signal?: AbortSignal): Promise<Page<AdminAuditLog>> {
+function fetchLogs(filter: AuditQuery, { page }: PageRequest, signal?: AbortSignal): Promise<Page<AdminAuditLog>> {
   return fetchAdminAuditLogs({ ...filter, page }, signal);
 }
 

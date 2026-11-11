@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { fetchProgramApplicants } from '../../api/admin';
-import type { AdminProgramApplicant, Page, ProgramApplicationStatus } from '../../api/types';
+import type { AdminProgramApplicant, Page, PageRequest, ProgramApplicationStatus } from '../../api/types';
 import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -52,7 +52,7 @@ function Applicants({ programId }: { programId: number }) {
   const { current, loadingMore, loadMore, retry } = usePagedList(
     true,
     filter,
-    (status: ApplicationFilter, page: number, signal?: AbortSignal): Promise<Page<AdminProgramApplicant>> =>
+    (status: ApplicationFilter, { page }: PageRequest, signal?: AbortSignal): Promise<Page<AdminProgramApplicant>> =>
       fetchProgramApplicants(programId, { status: status === 'ALL' ? undefined : status, page }, signal),
     itemKey,
   );

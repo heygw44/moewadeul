@@ -36,7 +36,13 @@ type CommunityCommentsProps = {
 export function CommunityComments({ postId, count, onChanged }: CommunityCommentsProps) {
   const session = useSession();
   const myMemberId = session.status === 'authenticated' ? (session.me?.memberId ?? null) : null;
-  const { current: list, loadingMore, loadMore, retry, reload } = usePagedList(true, postId, listComments, itemKey);
+  const {
+    current: list,
+    loadingMore,
+    loadMore,
+    retry,
+    reload,
+  } = usePagedList(true, postId, (id, { page }, signal) => listComments(id, page, signal), itemKey);
   const [replyingId, setReplyingId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);

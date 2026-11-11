@@ -71,7 +71,6 @@ class CommunityPostWriteApiIntegrationTest {
         assertThat(list).hasStatus(HttpStatus.OK);
         assertThat(list).bodyJson().extractingPath("$.content").asList().hasSize(2);
         assertThat(list).bodyJson().extractingPath("$.content[0].postId").isEqualTo((int) postId);
-        assertThat(list).bodyJson().extractingPath("$.page").isEqualTo(0);
         assertThat(list).bodyJson().extractingPath("$.size").isEqualTo(20);
         assertThat(list).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
         assertThat(detail).hasStatus(HttpStatus.OK);

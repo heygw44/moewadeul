@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import { listMyProgramApplications } from '../../api/programs';
-import type { MyProgramApplicationItem, ProgramApplicationStatus } from '../../api/types';
+import type { MyProgramApplicationItem, PageRequest, ProgramApplicationStatus } from '../../api/types';
 import { Link } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
@@ -24,7 +24,7 @@ const itemKey = (item: MyProgramApplicationItem) => item.applicationId;
 
 type ApplicationFilter = ProgramApplicationStatus | 'ALL';
 
-function fetchApplications(filter: ApplicationFilter, page: number, signal?: AbortSignal) {
+function fetchApplications(filter: ApplicationFilter, { page }: PageRequest, signal?: AbortSignal) {
   return listMyProgramApplications(filter === 'ALL' ? undefined : filter, page, signal);
 }
 

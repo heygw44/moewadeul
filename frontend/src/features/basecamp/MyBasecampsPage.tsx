@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { buttonClassName } from '../../components/buttonClass';
 import { fetchMyBasecamps } from '../../api/basecamps';
-import type { MyBasecampItem, MyBasecampRelation } from '../../api/types';
+import type { MyBasecampItem, MyBasecampRelation, PageRequest } from '../../api/types';
 import { Link } from '../../app/router';
 import { BackLink } from '../../components/BackLink';
 import { Button } from '../../components/Button';
@@ -36,7 +36,7 @@ const RELATION_LABELS: Record<MyBasecampRelation, string> = {
   APPLICANT: '승인 대기',
 };
 
-function fetchPage(filter: RelationFilter, page: number, signal?: AbortSignal) {
+function fetchPage(filter: RelationFilter, { page }: PageRequest, signal?: AbortSignal) {
   return fetchMyBasecamps({ relation: filter === 'ALL' ? undefined : filter, page }, signal);
 }
 

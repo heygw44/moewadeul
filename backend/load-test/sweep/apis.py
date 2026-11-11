@@ -111,8 +111,8 @@ api("GET /api/programs", rows=[{}, dict(status="OPEN"), dict(status="CLOSED"), d
 api("GET /api/programs/{programId}", rows="SELECT id programId, IF(id % 2 = 0, 'user000001@loadtest.invalid', '') actor FROM program WHERE status='SCHEDULED' AND id % 11 = 3 LIMIT 100")
 api("GET /api/community/posts", rows=[
     {},
-    dict(page=3),
-    dict(page=50),
+    dict(cursor="__AFTER_60__"),
+    dict(cursor="__AFTER_1000__"),
     dict(popular="true"),
     dict(keyword="lt희귀토큰", searchType="TITLE_CONTENT"),
     dict(keyword="백패킹", searchType="CONTENT"),

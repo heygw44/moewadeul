@@ -1,6 +1,7 @@
 package com.moewadeul.community.api.post;
 
 import static com.moewadeul.community.api.CommunityApiFixture.POSTS;
+import static com.moewadeul.community.api.post.CommunityPostApiFixture.nextCursor;
 import static com.moewadeul.community.api.post.CommunityPostApiFixture.postIds;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -101,9 +102,8 @@ class CommunityPostSearchApiIntegrationTest {
         MvcTestResult atBoundary = mvc.get().uri(POSTS + "?keyword=능선").exchange();
         insertPosts(author.getId(), "ACTIVE", 1);
         MvcTestResult pushedOut = mvc.get().uri(POSTS + "?keyword=능선").exchange();
-        MvcTestResult unsearched = mvc.get()
-                .uri(POSTS + "?size=1&page=" + CommunityPost.SEARCH_RECENT_POST_LIMIT)
-                .exchange();
+        MvcTestResult unsearched =
+                mvc.get().uri(POSTS + "?size=1&cursor=" + (old + 1)).exchange();
 
         // then
         postIds(atBoundary).containsExactly((int) latest, (int) old);
@@ -192,7 +192,10 @@ class CommunityPostSearchApiIntegrationTest {
         MvcTestResult all = mvc.get()
                 .uri(POSTS + "?keyword=능선&popular=true&spotId=" + spotId)
                 .exchange();
-        MvcTestResult paged = mvc.get().uri(POSTS + "?keyword=능선&page=1&size=2").exchange();
+        MvcTestResult firstPage = mvc.get().uri(POSTS + "?keyword=능선&size=2").exchange();
+        MvcTestResult paged = mvc.get()
+                .uri(POSTS + "?keyword=능선&size=2&cursor=" + nextCursor(firstPage))
+                .exchange();
         MvcTestResult byWithdrawn =
                 mvc.get().uri(POSTS + "?searchType=AUTHOR&keyword=탈퇴회원").exchange();
 
@@ -201,6 +204,7 @@ class CommunityPostSearchApiIntegrationTest {
         postIds(all).containsExactly((int) popularOnSpot);
         postIds(paged).containsExactly((int) popularOnSpot);
         assertThat(paged).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertThat(paged).bodyJson().extractingPath("$.nextCursor").isNull();
         postIds(byWithdrawn).containsExactly((int) popularElsewhere, (int) plainOnSpot, (int) popularOnSpot);
     }
 

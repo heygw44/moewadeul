@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { serverTraceId, toUserMessage } from '../api/errors';
-import type { Page } from '../api/types';
+import type { CursorPage, Page, PageRequest } from '../api/types';
 
 type ListState<T, F> = {
   filter: F;
   items: T[];
   page: number;
+  cursor: number | null;
   hasNext: boolean;
   error: string | null;
   traceId: string | null;
   failedOn: 'first' | 'next' | null;
 };
 
-type Fetcher<T, F> = (filter: F, page: number, signal?: AbortSignal) => Promise<Page<T>>;
+type Fetcher<T, F> = (filter: F, request: PageRequest, signal?: AbortSignal) => Promise<Page<T> | CursorPage<T>>;
+
+function cursorOf<T>(response: Page<T> | CursorPage<T>): number | null {
+  return 'nextCursor' in response ? response.nextCursor : null;
+}
 
 export interface PagedList<T, F> {
   current: ListState<T, F> | null;
@@ -72,14 +77,15 @@ export function usePagedList<T, F extends FilterValue>(
     if (!enabled) return;
     generationRef.current += 1;
     const controller = new AbortController();
-    fetcherRef.current(filter, 0, controller.signal).then(
+    fetcherRef.current(filter, { page: 0, cursor: null }, controller.signal).then(
       (page) => {
         if (!controller.signal.aborted) {
           generationRef.current += 1;
           setState({
             filter,
             items: page.content,
-            page: page.page,
+            page: 0,
+            cursor: cursorOf(page),
             hasNext: page.hasNext,
             error: null,
             traceId: null,
@@ -98,7 +104,7 @@ export function usePagedList<T, F extends FilterValue>(
           setState((previous) =>
             previous !== null && previous.filter === filter
               ? { ...previous, ...failure }
-              : { filter, items: [], page: 0, hasNext: false, ...failure },
+              : { filter, items: [], page: 0, cursor: null, hasNext: false, ...failure },
           );
         }
       },
@@ -118,14 +124,15 @@ export function usePagedList<T, F extends FilterValue>(
     );
     const generation = generationRef.current;
     try {
-      const next = await fetcherRef.current(filter, current.page + 1);
+      const next = await fetcherRef.current(filter, { page: current.page + 1, cursor: current.cursor });
       if (generation !== generationRef.current) return;
       setState((previous) =>
         previous !== null && previous.filter === filter
           ? {
               ...previous,
               items: [...previous.items, ...newItems(previous.items, next.content, itemKeyRef.current)],
-              page: next.page,
+              page: current.page + 1,
+              cursor: cursorOf(next),
               hasNext: next.hasNext,
               error: null,
               traceId: null,
@@ -174,16 +181,19 @@ export function usePagedList<T, F extends FilterValue>(
     const generation = generationRef.current;
     try {
       let items: T[] = [];
-      let last: Page<T> | null = null;
+      let last: Page<T> | CursorPage<T> | null = null;
+      let cursor: number | null = null;
       for (let index = 0; index <= current.page; index++) {
-        last = await fetcherRef.current(filter, index);
+        last = await fetcherRef.current(filter, { page: index, cursor });
+        cursor = cursorOf(last);
         items = [...items, ...newItems(items, last.content, itemKeyRef.current)];
+        if (!last.hasNext) break;
       }
       if (generation !== generationRef.current || last === null) return;
-      const { page, hasNext } = last;
+      const { hasNext } = last;
       setState((previous) =>
         previous !== null && previous.filter === filter
-          ? { ...previous, items, page, hasNext, error: null, traceId: null, failedOn: null }
+          ? { ...previous, items, page: current.page, cursor, hasNext, error: null, traceId: null, failedOn: null }
           : previous,
       );
     } catch (caught) {

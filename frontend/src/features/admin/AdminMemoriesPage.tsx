@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { fetchAdminMemories, hideMemory, restoreMemory } from '../../api/admin';
-import type { AdminMemoryStatus, AdminMemorySummary, CommunityReportReason, Page } from '../../api/types';
+import type { AdminMemoryStatus, AdminMemorySummary, CommunityReportReason, Page, PageRequest } from '../../api/types';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
 import { ErrorNotice } from '../../components/ErrorNotice';
@@ -31,7 +31,7 @@ const REASON_LABELS = Object.fromEntries(REPORT_REASON_OPTIONS.map((option) => [
 
 function fetchMemories(
   status: AdminMemoryStatus,
-  page: number,
+  { page }: PageRequest,
   signal?: AbortSignal,
 ): Promise<Page<AdminMemorySummary>> {
   return fetchAdminMemories({ status, page }, signal);
