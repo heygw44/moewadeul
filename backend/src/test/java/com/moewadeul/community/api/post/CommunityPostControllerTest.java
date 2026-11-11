@@ -17,7 +17,7 @@ import com.moewadeul.common.error.CommonErrorCode;
 import com.moewadeul.common.error.GlobalExceptionHandler;
 import com.moewadeul.common.error.InvalidFieldException;
 import com.moewadeul.common.image.application.ImageView;
-import com.moewadeul.common.paging.PageSlice;
+import com.moewadeul.common.paging.CursorSlice;
 import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.security.SecurityConfig;
@@ -110,8 +110,8 @@ class CommunityPostControllerTest {
             "[F-29] 로그인하지 않은 사용자도 글 목록을 조회하면 항목의 모든 필드와 전체 글 수·페이지 수를 담은 페이지 정보를 받고, 좋아요 수와 댓글 수와 이미지 수는 있고 이미지가 없으면 thumbnailUrl과 likedByMe는 없다")
     void anonymousReadsPostList() {
         // given
-        when(communityPostQueryService.list(CommunityPostListQuery.all(), 0, 20))
-                .thenReturn(new PageSlice<>(List.of(ITEM), 0, 20, true));
+        when(communityPostQueryService.list(CommunityPostListQuery.all(), null, 20))
+                .thenReturn(new CursorSlice<>(List.of(ITEM), 20, true, 9L));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();
@@ -132,7 +132,7 @@ class CommunityPostControllerTest {
                     "viewCount": 12,
                     "createdAt": "2026-10-05T03:00:00Z"
                   }],
-                  "page": 0, "size": 20, "hasNext": true
+                  "size": 20, "hasNext": true, "nextCursor": 9
                 }
                 """);
     }
@@ -141,8 +141,8 @@ class CommunityPostControllerTest {
     @DisplayName("[F-29][CM-02] 연결한 장소가 없거나 보이지 않는 글은 spot 필드가 null이 아니라 아예 없다")
     void listOmitsSpotFieldWhenNoVisibleSpot() {
         // given
-        when(communityPostQueryService.list(CommunityPostListQuery.all(), 0, 20))
-                .thenReturn(new PageSlice<>(List.of(ITEM_WITHOUT_SPOT), 0, 20, false));
+        when(communityPostQueryService.list(CommunityPostListQuery.all(), null, 20))
+                .thenReturn(new CursorSlice<>(List.of(ITEM_WITHOUT_SPOT), 20, false, null));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();
@@ -162,33 +162,34 @@ class CommunityPostControllerTest {
                     "viewCount": 0,
                     "createdAt": "2026-10-05T03:00:00Z"
                   }],
-                  "page": 0, "size": 20, "hasNext": false
+                  "size": 20, "hasNext": false, "nextCursor": null
                 }
                 """);
     }
 
     @Test
-    @DisplayName("[F-29][CM-12] 목록의 spotId, popular, page, size를 서비스에 그대로 넘긴다")
+    @DisplayName("[F-29][CM-12] 목록의 spotId, popular, cursor, size를 서비스에 그대로 넘긴다")
     void listPassesFiltersAndPaging() {
         // given
-        when(communityPostQueryService.list(new CommunityPostListQuery(101L, true), 2, 50))
-                .thenReturn(new PageSlice<>(List.of(), 2, 50, false));
+        when(communityPostQueryService.list(new CommunityPostListQuery(101L, true), 77L, 50))
+                .thenReturn(new CursorSlice<>(List.of(), 50, false, null));
 
         // when
-        MvcTestResult result =
-                mvc.get().uri(POSTS + "?spotId=101&popular=true&page=2&size=50").exchange();
+        MvcTestResult result = mvc.get()
+                .uri(POSTS + "?spotId=101&popular=true&cursor=77&size=50")
+                .exchange();
 
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
-        verify(communityPostQueryService).list(new CommunityPostListQuery(101L, true), 2, 50);
+        verify(communityPostQueryService).list(new CommunityPostListQuery(101L, true), 77L, 50);
     }
 
     @Test
     @DisplayName("[F-29][CM-13] 검색어는 앞뒤 공백을 지워 검색 대상과 함께 서비스에 넘기고, 검색 대상만 보내면 검색하지 않는다")
     void listPassesTrimmedKeywordAndSearchType() {
         // given
-        when(communityPostQueryService.list(any(), anyInt(), anyInt()))
-                .thenReturn(new PageSlice<>(List.of(), 0, 20, false));
+        when(communityPostQueryService.list(any(), any(), anyInt()))
+                .thenReturn(new CursorSlice<>(List.of(), 20, false, null));
 
         // when
         MvcTestResult byAuthor = mvc.get()
@@ -202,10 +203,10 @@ class CommunityPostControllerTest {
         assertThat(defaultType).hasStatus(HttpStatus.OK);
         assertThat(typeOnly).hasStatus(HttpStatus.OK);
         verify(communityPostQueryService)
-                .list(new CommunityPostListQuery(null, false, CommunitySearchType.AUTHOR, "새벽"), 0, 20);
+                .list(new CommunityPostListQuery(null, false, CommunitySearchType.AUTHOR, "새벽"), null, 20);
         verify(communityPostQueryService)
-                .list(new CommunityPostListQuery(null, false, CommunitySearchType.TITLE_CONTENT, "굴업도"), 0, 20);
-        verify(communityPostQueryService).list(CommunityPostListQuery.all(), 0, 20);
+                .list(new CommunityPostListQuery(null, false, CommunitySearchType.TITLE_CONTENT, "굴업도"), null, 20);
+        verify(communityPostQueryService).list(CommunityPostListQuery.all(), null, 20);
     }
 
     @Test
@@ -227,16 +228,18 @@ class CommunityPostControllerTest {
     }
 
     @Test
-    @DisplayName("[F-29] 범위를 벗어난 size·page는 400 INVALID_INPUT을 응답하고 서비스를 부르지 않는다")
+    @DisplayName("[F-29] 범위를 벗어난 size·cursor는 400 INVALID_INPUT을 응답하고 서비스를 부르지 않는다")
     void listRejectsOutOfRangePaging() {
         // when
         MvcTestResult tooBig = mvc.get().uri(POSTS + "?size=51").exchange();
-        MvcTestResult negativePage = mvc.get().uri(POSTS + "?page=-1").exchange();
+        MvcTestResult zeroCursor = mvc.get().uri(POSTS + "?cursor=0").exchange();
+        MvcTestResult negativeCursor = mvc.get().uri(POSTS + "?cursor=-5").exchange();
 
         // then
         assertThat(tooBig).hasStatus(HttpStatus.BAD_REQUEST);
         assertThat(tooBig).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
-        assertThat(negativePage).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(zeroCursor).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(negativeCursor).hasStatus(HttpStatus.BAD_REQUEST);
         verifyNoInteractions(communityPostQueryService);
     }
 
@@ -544,18 +547,18 @@ class CommunityPostControllerTest {
     }
 
     @Test
-    @DisplayName("[F-29] 목록 파라미터를 보내지 않으면 장소와 인기글로 거르지 않고 page 0, size 20으로 서비스를 부른다")
+    @DisplayName("[F-29] 목록 파라미터를 보내지 않으면 장소와 인기글로 거르지 않고 cursor 없이 size 20으로 서비스를 부른다")
     void listWithoutParametersUsesDefaults() {
         // given
-        when(communityPostQueryService.list(any(), anyInt(), anyInt()))
-                .thenReturn(new PageSlice<>(List.of(), 0, 20, false));
+        when(communityPostQueryService.list(any(), any(), anyInt()))
+                .thenReturn(new CursorSlice<>(List.of(), 20, false, null));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();
 
         // then
         assertThat(result).hasStatus(HttpStatus.OK);
-        verify(communityPostQueryService).list(CommunityPostListQuery.all(), 0, 20);
+        verify(communityPostQueryService).list(CommunityPostListQuery.all(), null, 20);
     }
 
     @Test
@@ -579,8 +582,8 @@ class CommunityPostControllerTest {
                 CREATED_AT,
                 UPDATED_AT,
                 null);
-        when(communityPostQueryService.list(CommunityPostListQuery.all(), 0, 20))
-                .thenReturn(new PageSlice<>(List.of(withImages), 0, 20, false));
+        when(communityPostQueryService.list(CommunityPostListQuery.all(), null, 20))
+                .thenReturn(new CursorSlice<>(List.of(withImages), 20, false, null));
 
         // when
         MvcTestResult result = mvc.get().uri(POSTS).exchange();

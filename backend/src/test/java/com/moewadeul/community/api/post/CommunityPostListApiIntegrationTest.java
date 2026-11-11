@@ -1,6 +1,7 @@
 package com.moewadeul.community.api.post;
 
 import static com.moewadeul.community.api.CommunityApiFixture.POSTS;
+import static com.moewadeul.community.api.post.CommunityPostApiFixture.nextCursor;
 import static com.moewadeul.community.api.post.CommunityPostApiFixture.postIds;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -81,7 +82,7 @@ class CommunityPostListApiIntegrationTest {
                     "viewCount": 0,
                     "createdAt": "2026-10-05T03:00:00Z"
                   }],
-                  "page": 0, "size": 20, "hasNext": false
+                  "size": 20, "hasNext": false, "nextCursor": null
                 }
                 """.formatted(postId, author.getId(), spotId));
         assertThat(list.getResponse().getContentAsString()).doesNotContain(author.getEmail());
@@ -148,9 +149,10 @@ class CommunityPostListApiIntegrationTest {
         long third = fixture.writePost(session, "셋째 글", "본문", null);
 
         // when
-        MvcTestResult page0 = mvc.get().uri(POSTS + "?page=0&size=2").exchange();
-        MvcTestResult page1 = mvc.get().uri(POSTS + "?page=1&size=2").exchange();
-        MvcTestResult exact = mvc.get().uri(POSTS + "?page=0&size=3").exchange();
+        MvcTestResult page0 = mvc.get().uri(POSTS + "?size=2").exchange();
+        MvcTestResult page1 =
+                mvc.get().uri(POSTS + "?size=2&cursor=" + nextCursor(page0)).exchange();
+        MvcTestResult exact = mvc.get().uri(POSTS + "?size=3").exchange();
 
         // then
         assertThat(page0)
@@ -159,13 +161,78 @@ class CommunityPostListApiIntegrationTest {
                 .asList()
                 .containsExactly((int) third, (int) second);
         assertThat(page0).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
+        assertThat(page0).bodyJson().extractingPath("$.nextCursor").isEqualTo((int) second);
         assertThat(page1)
                 .bodyJson()
                 .extractingPath("$.content[*].postId")
                 .asList()
                 .containsExactly((int) first);
         assertThat(page1).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertThat(page1).bodyJson().extractingPath("$.nextCursor").isNull();
         assertThat(exact).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        assertThat(exact).bodyJson().extractingPath("$.nextCursor").isNull();
+    }
+
+    @Test
+    @DisplayName("[F-29] 페이지 사이에 새 글이 올라와도 다음 페이지는 이미 읽은 글을 다시 주거나 건너뛰지 않고, 새 글은 첫 페이지부터 다시 읽을 때 맨 앞에 나온다")
+    void newPostBetweenPagesDoesNotShiftNextPage() {
+        // given
+        Cookie session = fixture.verifiedSession(fixture.saveMember(null));
+        long first = fixture.writePost(session, "첫 글", "본문", null);
+        long second = fixture.writePost(session, "둘째 글", "본문", null);
+        long third = fixture.writePost(session, "셋째 글", "본문", null);
+        long fourth = fixture.writePost(session, "넷째 글", "본문", null);
+        MvcTestResult page0 = mvc.get().uri(POSTS + "?size=2").exchange();
+
+        // when
+        long arrived = fixture.writePost(session, "중간에 올라온 글", "본문", null);
+        MvcTestResult page1 =
+                mvc.get().uri(POSTS + "?size=2&cursor=" + nextCursor(page0)).exchange();
+        MvcTestResult reload = mvc.get().uri(POSTS + "?size=2").exchange();
+
+        // then
+        postIds(page0).containsExactly((int) fourth, (int) third);
+        postIds(page1).containsExactly((int) second, (int) first);
+        assertThat(page1).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+        postIds(reload).containsExactly((int) arrived, (int) fourth);
+    }
+
+    @Test
+    @DisplayName(
+            "[F-29] 마지막 글의 id나 그보다 작은 cursor를 보내면 빈 목록과 hasNext=false, nextCursor=null을 주고, 아주 큰 cursor는 첫 페이지와 같다")
+    void cursorBeyondOldestPostGivesEmptyLastPage() {
+        // given
+        Cookie session = fixture.verifiedSession(fixture.saveMember(null));
+        long first = fixture.writePost(session, "첫 글", "본문", null);
+        long second = fixture.writePost(session, "둘째 글", "본문", null);
+
+        // when
+        MvcTestResult atOldest = mvc.get().uri(POSTS + "?cursor=" + first).exchange();
+        MvcTestResult beyond = mvc.get().uri(POSTS + "?cursor=1").exchange();
+        MvcTestResult huge = mvc.get().uri(POSTS + "?cursor=" + Long.MAX_VALUE).exchange();
+
+        // then
+        for (MvcTestResult result : new MvcTestResult[] {atOldest, beyond}) {
+            postIds(result).isEmpty();
+            assertThat(result).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
+            assertThat(result).bodyJson().extractingPath("$.nextCursor").isNull();
+        }
+        postIds(huge).containsExactly((int) second, (int) first);
+    }
+
+    @Test
+    @DisplayName("[F-29] cursor는 1 이상의 정수여야 하고, 어기면 400 INVALID_INPUT이다")
+    void listRejectsBadCursor() {
+        // when
+        MvcTestResult zero = mvc.get().uri(POSTS + "?cursor=0").exchange();
+        MvcTestResult negative = mvc.get().uri(POSTS + "?cursor=-1").exchange();
+        MvcTestResult text = mvc.get().uri(POSTS + "?cursor=abc").exchange();
+
+        // then
+        for (MvcTestResult result : new MvcTestResult[] {zero, negative, text}) {
+            assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+            assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("INVALID_INPUT");
+        }
     }
 
     @Test
@@ -181,10 +248,13 @@ class CommunityPostListApiIntegrationTest {
         fixture.send(mvc.delete().uri(POSTS + "/" + deleted), session, null);
 
         // when
-        MvcTestResult first = mvc.get().uri(POSTS + "?page=0&size=2").exchange();
-        MvcTestResult exact = mvc.get().uri(POSTS + "?page=0&size=5").exchange();
-        MvcTestResult last = mvc.get().uri(POSTS + "?page=2&size=2").exchange();
-        MvcTestResult beyond = mvc.get().uri(POSTS + "?page=7&size=2").exchange();
+        MvcTestResult first = mvc.get().uri(POSTS + "?size=2").exchange();
+        MvcTestResult exact = mvc.get().uri(POSTS + "?size=5").exchange();
+        MvcTestResult second =
+                mvc.get().uri(POSTS + "?size=2&cursor=" + nextCursor(first)).exchange();
+        MvcTestResult last =
+                mvc.get().uri(POSTS + "?size=2&cursor=" + nextCursor(second)).exchange();
+        MvcTestResult beyond = mvc.get().uri(POSTS + "?cursor=1").exchange();
         MvcTestResult bySpot =
                 mvc.get().uri(POSTS + "?spotId=" + spotId + "&size=2").exchange();
         MvcTestResult emptySpot =
@@ -194,13 +264,13 @@ class CommunityPostListApiIntegrationTest {
         assertThat(first).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
         assertThat(first).bodyJson().doesNotHavePath("$.totalElements");
         assertThat(first).bodyJson().doesNotHavePath("$.totalPages");
+        assertThat(first).bodyJson().doesNotHavePath("$.page");
         assertThat(exact).bodyJson().extractingPath("$.content").asList().hasSize(5);
         assertThat(exact).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
         assertThat(last).bodyJson().extractingPath("$.content").asList().hasSize(1);
         assertThat(last).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
         assertThat(beyond).hasStatus(HttpStatus.OK);
         assertThat(beyond).bodyJson().extractingPath("$.content").asList().isEmpty();
-        assertThat(beyond).bodyJson().extractingPath("$.page").isEqualTo(7);
         assertThat(beyond).bodyJson().extractingPath("$.hasNext").isEqualTo(false);
         assertThat(bySpot).bodyJson().extractingPath("$.content").asList().hasSize(2);
         assertThat(bySpot).bodyJson().extractingPath("$.hasNext").isEqualTo(true);
@@ -348,17 +418,20 @@ class CommunityPostListApiIntegrationTest {
 
     private List<Integer> idsOverAllPages(String condition) throws Exception {
         List<Integer> ids = new ArrayList<>();
-        for (int page = 0; ; page++) {
+        String cursor = "";
+        while (true) {
             MvcTestResult result =
-                    mvc.get().uri(POSTS + "?size=1&page=" + page + condition).exchange();
+                    mvc.get().uri(POSTS + "?size=1" + cursor + condition).exchange();
             assertThat(result).hasStatus(HttpStatus.OK);
             String body = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
             List<Integer> content = JsonPath.read(body, "$.content[*].postId");
             assertThat(content).hasSize(1);
             ids.addAll(content);
             if (!JsonPath.<Boolean>read(body, "$.hasNext")) {
+                assertThat(result).bodyJson().extractingPath("$.nextCursor").isNull();
                 return ids;
             }
+            cursor = "&cursor=" + nextCursor(result);
         }
     }
 }

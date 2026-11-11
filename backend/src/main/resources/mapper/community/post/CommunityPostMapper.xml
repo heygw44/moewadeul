@@ -42,6 +42,9 @@
             <if test="condition.minPostId != null">
                 AND p.id &gt;= #{condition.minPostId}
             </if>
+            <if test="condition.cursor != null">
+                AND p.id &lt; #{condition.cursor}
+            </if>
             <if test="condition.keyword != null">
                 <choose>
                     <when test="condition.searchType == 'TITLE'">
@@ -73,7 +76,7 @@
             <include refid="conditionJoins"/>
             <include refid="activeListConditions"/>
             ORDER BY p.id DESC
-            LIMIT #{limit} OFFSET #{offset}
+            LIMIT #{limit}
         ) picked
         JOIN community_post p ON p.id = picked.id
         <include refid="postJoins"/>
