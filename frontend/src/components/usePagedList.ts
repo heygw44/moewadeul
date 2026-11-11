@@ -187,6 +187,7 @@ export function usePagedList<T, F extends FilterValue>(
         last = await fetcherRef.current(filter, { page: index, cursor });
         cursor = cursorOf(last);
         items = [...items, ...newItems(items, last.content, itemKeyRef.current)];
+        if (!last.hasNext) break;
       }
       if (generation !== generationRef.current || last === null) return;
       const { hasNext } = last;

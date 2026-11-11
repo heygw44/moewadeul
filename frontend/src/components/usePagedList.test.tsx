@@ -334,4 +334,38 @@ describe('usePagedList', () => {
     expect(latest.current?.items).toEqual([10, 9, 8, 7]);
     expect(latest.current?.page).toBe(1);
   });
+
+  it('refreshLoaded는 그사이 목록이 줄어 앞 페이지에서 끝나면 첫 페이지로 돌아가 다시 받지 않는다', async () => {
+    const requests: PageRequest[] = [];
+    fetcher = vi.fn((filter: string, request: PageRequest) => {
+      requests.push(request);
+      return new Promise<Page<number> | CursorPage<number>>((resolve, reject) => {
+        const key = `${filter}:${request.page}`;
+        pending.set(key, [...(pending.get(key) ?? []), { resolve, reject }]);
+      });
+    });
+    const cursorPage = (content: number[], nextCursor: number | null): CursorPage<number> => ({
+      content,
+      size: content.length,
+      hasNext: nextCursor !== null,
+      nextCursor,
+    });
+
+    await mount('A');
+    await settle('A:0', cursorPage([9, 8], 8));
+    await act(async () => void latest.loadMore());
+    await settle('A:1', cursorPage([7, 6], 6));
+    requests.length = 0;
+
+    let refreshed: Promise<void> = Promise.resolve();
+    await act(async () => {
+      refreshed = latest.refreshLoaded();
+    });
+    await settle('A:0', cursorPage([9, 8], null));
+    await act(async () => refreshed);
+
+    expect(requests).toEqual([{ page: 0, cursor: null }]);
+    expect(latest.current?.items).toEqual([9, 8]);
+    expect(latest.current?.hasNext).toBe(false);
+  });
 });
