@@ -11,6 +11,8 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Component
@@ -23,8 +25,10 @@ public class ProgramSeatReleaseRecorder {
     private final ProgramVacancyAlertRepository vacancyAlertRepository;
     private final ProgramApplicationRepository applicationRepository;
     private final OutboxEventRecorder outboxEventRecorder;
+    private final SoldOutPrograms soldOutPrograms;
 
     public void record(Program program, Instant now) {
+        releaseSoldOutMarkAfterCommit(program.getId());
         if (!program.takesVacancyAlertsAt(now)) {
             return;
         }
@@ -45,5 +49,14 @@ public class ProgramSeatReleaseRecorder {
                 programId,
                 new ProgramEvents.SeatReleasedPayload(programId, targets));
         log.info("program seat released programId={} targetCount={}", programId, targets.size());
+    }
+
+    private void releaseSoldOutMarkAfterCommit(long programId) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                soldOutPrograms.release(programId);
+            }
+        });
     }
 }

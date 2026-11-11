@@ -103,4 +103,21 @@ class SoldOutProgramsTest {
         assertThat(soldOut.rejects(PROGRAM, LATE, NOW)).isFalse();
         assertThat(soldOut.rejects(PROGRAM, OUTSIDER, NOW)).isTrue();
     }
+
+    @Test
+    @DisplayName("[F-18][PG-03] 자리가 비면 표시가 바로 사라지고, 비기 전에 읽은 목록으로는 표시를 다시 세우지 않는다")
+    void releaseDropsMarkAndStaleRead() {
+        // given
+        soldOut.mark(soldOut.read(PROGRAM, () -> List.of(HOLDER)), CLOSES_LATER, NOW);
+        SoldOutPrograms.SeatHolders readBeforeRelease = soldOut.read(PROGRAM, () -> List.of(HOLDER));
+
+        // when
+        soldOut.release(PROGRAM);
+        boolean rejectedAfterRelease = soldOut.rejects(PROGRAM, OUTSIDER, NOW);
+        soldOut.mark(readBeforeRelease, CLOSES_LATER, NOW);
+
+        // then
+        assertThat(rejectedAfterRelease).isFalse();
+        assertThat(soldOut.rejects(PROGRAM, OUTSIDER, NOW)).isFalse();
+    }
 }

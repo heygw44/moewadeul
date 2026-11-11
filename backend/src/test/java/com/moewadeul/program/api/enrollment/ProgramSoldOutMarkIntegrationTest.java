@@ -16,12 +16,14 @@ import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
 import com.moewadeul.program.application.enrollment.ProgramApplyService;
+import com.moewadeul.program.application.enrollment.ProgramPaymentExpiryService;
 import com.moewadeul.program.application.enrollment.ProgramPaymentService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HexFormat;
@@ -51,7 +53,6 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 @AutoConfigureMockMvc
 class ProgramSoldOutMarkIntegrationTest {
 
-    private static final Duration MARK_TTL = Duration.ofSeconds(1);
     private static final long POOL_DEADLINE_SECONDS = 5;
 
     @Autowired
@@ -62,6 +63,9 @@ class ProgramSoldOutMarkIntegrationTest {
 
     @Autowired
     private ProgramPaymentService paymentService;
+
+    @Autowired
+    private ProgramPaymentExpiryService expiryService;
 
     @Autowired
     private IdempotencyExecutor idempotencyExecutor;
@@ -121,21 +125,39 @@ class ProgramSoldOutMarkIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-18][PG-03] 매진 표시 동안 취소로 빈 자리는 TTL이 지나야 신청할 수 있다")
-    void freedSeatOpensAfterTtl() {
+    @DisplayName("[F-18][PG-03] 매진 표시 동안 취소로 빈 자리는 TTL을 기다리지 않고 바로 신청할 수 있다")
+    void canceledSeatOpensRightAway() {
         // given
         SoldOut soldOut = soldOutProgram(false);
         long outsider = fixture.saveMember();
-        paymentService.cancel(soldOut.holder(), soldOut.holderApplicationId());
 
         // when
-        MvcTestResult withinTtl = apply(outsider, soldOut.programId(), "within-ttl");
-        clock.advance(MARK_TTL);
-        MvcTestResult afterTtl = apply(outsider, soldOut.programId(), "after-ttl");
+        paymentService.cancel(soldOut.holder(), soldOut.holderApplicationId());
+        MvcTestResult result = apply(outsider, soldOut.programId(), "after-cancel");
 
         // then
-        assertCode(withinTtl, HttpStatus.CONFLICT, "PROGRAM_SOLD_OUT");
-        assertThat(afterTtl).hasStatus(HttpStatus.CREATED);
+        assertThat(result).hasStatus(HttpStatus.CREATED);
+        assertThat(fixture.activeCount(soldOut.programId())).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("[F-18][PG-03] 매진 표시 동안 결제 기한 만료로 빈 자리도 TTL을 기다리지 않고 바로 신청할 수 있다")
+    void expiredSeatOpensRightAway() {
+        // given
+        SoldOut soldOut = soldOutProgram(false);
+        long outsider = fixture.saveMember();
+        jdbc.update(
+                "UPDATE program_application SET payment_due_at = ? WHERE id = ?",
+                Timestamp.from(clock.instant().minusSeconds(1)),
+                soldOut.holderApplicationId());
+
+        // when
+        int expired = expiryService.run().expired();
+        MvcTestResult result = apply(outsider, soldOut.programId(), "after-expiry");
+
+        // then
+        assertThat(expired).isEqualTo(1);
+        assertThat(result).hasStatus(HttpStatus.CREATED);
         assertThat(fixture.activeCount(soldOut.programId())).isEqualTo(1);
     }
 
@@ -250,7 +272,7 @@ class ProgramSoldOutMarkIntegrationTest {
     }
 
     @RepeatedTest(3)
-    @DisplayName("[F-18][NFR-02] 매진 표시가 있어도 동시 신청의 자리 수는 정원을 넘지 않고, TTL 뒤 빈 자리는 한 명만 얻는다")
+    @DisplayName("[F-18][NFR-02] 매진 표시가 있어도 동시 신청의 자리 수는 정원을 넘지 않고, 취소로 빈 자리는 바로 한 명만 얻는다")
     void concurrentAppliesNeverExceedCapacity() throws Exception {
         // given
         int capacity = 5;
@@ -263,18 +285,13 @@ class ProgramSoldOutMarkIntegrationTest {
                 "SELECT id, member_id FROM program_application WHERE program_id = ? ORDER BY id LIMIT 1", programId);
         paymentService.cancel(
                 ((Number) firstHolder.get("member_id")).longValue(), ((Number) firstHolder.get("id")).longValue());
-        List<MvcTestResult> withinTtl = applyConcurrently(programId, 30, "within");
-        int activeWithinTtl = fixture.activeCount(programId);
-        clock.advance(MARK_TTL);
-        List<MvcTestResult> afterTtl = applyConcurrently(programId, 10, "after");
+        List<MvcTestResult> afterCancel = applyConcurrently(programId, 30, "after");
 
         // then
         assertThat(statuses(opening, HttpStatus.CREATED)).isEqualTo(capacity);
         assertThat(statuses(opening, HttpStatus.CONFLICT)).isEqualTo(30 - capacity);
-        assertThat(statuses(withinTtl, HttpStatus.CONFLICT)).isEqualTo(30);
-        assertThat(activeWithinTtl).isEqualTo(capacity - 1);
-        assertThat(statuses(afterTtl, HttpStatus.CREATED)).isEqualTo(1);
-        assertThat(statuses(afterTtl, HttpStatus.CONFLICT)).isEqualTo(9);
+        assertThat(statuses(afterCancel, HttpStatus.CREATED)).isEqualTo(1);
+        assertThat(statuses(afterCancel, HttpStatus.CONFLICT)).isEqualTo(29);
         assertThat(fixture.activeCount(programId)).isEqualTo(capacity);
     }
 

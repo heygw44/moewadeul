@@ -40,7 +40,7 @@ class ProgramEnrollmentController {
                             + "키 재전송, 처리 중, 키 재사용, 신뢰 단계 검사보다 먼저 409 PROGRAM_SOLD_OUT을 응답한다. "
                             + "결제 기한이 남은 결제 대기 신청이나 확정 신청을 가진 회원은 이 예외에서 빠진다. "
                             + "그래서 이 1초 동안에는 숙박 행사의 신뢰 단계 부족, 취소·만료된 신청의 키 재전송, 처리 중인 키, 다른 행사에 쓴 키가 모두 409 PROGRAM_SOLD_OUT이다. "
-                            + "취소·만료로 빈 자리는 최대 1초 늦게 신청할 수 있고, 그사이 관리자가 취소한 행사도 409 PROGRAM_INVALID_STATE 대신 409 PROGRAM_SOLD_OUT이다.")
+                            + "그 1초 안에 취소·만료·정원 증가로 자리가 비면 1초를 기다리지 않고 바로 원래 순서로 돌아간다. 1초 안에 관리자가 취소한 행사는 409 PROGRAM_INVALID_STATE 대신 409 PROGRAM_SOLD_OUT이다.")
     @PostMapping("/api/programs/{programId}/applications")
     @ResponseStatus(HttpStatus.CREATED)
     ProgramApplyResponse apply(
