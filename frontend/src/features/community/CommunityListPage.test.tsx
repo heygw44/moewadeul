@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listPosts } from '../../api/community';
 import { ApiError } from '../../api/client';
 import { fetchSpotDetail } from '../../api/spots';
-import type { CommunityPostSummary, Page, SpotDetail } from '../../api/types';
+import type { CommunityPostSummary, CursorPage, SpotDetail } from '../../api/types';
 import { CommunityListPage } from './CommunityListPage';
 
 vi.mock('../../api/community', async (importOriginal) => ({
@@ -52,8 +52,8 @@ function post(id: number, overrides: Partial<CommunityPostSummary> = {}): Commun
   };
 }
 
-function page(items: CommunityPostSummary[], pageNumber: number, hasNext: boolean): Page<CommunityPostSummary> {
-  return { content: items, page: pageNumber, size: 20, hasNext } as Page<CommunityPostSummary>;
+function page(items: CommunityPostSummary[], hasNext: boolean): CursorPage<CommunityPostSummary> {
+  return { content: items, size: 20, hasNext, nextCursor: hasNext ? (items.at(-1)?.postId ?? null) : null };
 }
 
 describe('커뮤니티 글 목록 화면', () => {
@@ -96,7 +96,7 @@ describe('커뮤니티 글 목록 화면', () => {
   });
 
   it('불러온 글의 제목, 미리보기, 글쓴이, 반응 수를 보여 주고 누르면 글 상세로 가는 링크다', async () => {
-    vi.mocked(listPosts).mockResolvedValue(page([post(1), post(2)], 0, false));
+    vi.mocked(listPosts).mockResolvedValue(page([post(1), post(2)], false));
 
     await open();
 
@@ -111,7 +111,7 @@ describe('커뮤니티 글 목록 화면', () => {
   });
 
   it('글이 하나도 없으면 빈 상태 안내를 보여 준다', async () => {
-    vi.mocked(listPosts).mockResolvedValue(page([], 0, false));
+    vi.mocked(listPosts).mockResolvedValue(page([], false));
 
     await open();
 
@@ -119,7 +119,7 @@ describe('커뮤니티 글 목록 화면', () => {
   });
 
   it('인기글 탭을 누르면 주소가 바뀌고 인기글만 다시 불러온다', async () => {
-    vi.mocked(listPosts).mockResolvedValue(page([post(1)], 0, false));
+    vi.mocked(listPosts).mockResolvedValue(page([post(1)], false));
     await open();
     expect(lastFilter()).toMatchObject({ popular: false });
 
@@ -135,7 +135,7 @@ describe('커뮤니티 글 목록 화면', () => {
       .mockRejectedValueOnce(
         new ApiError(500, 'INTERNAL_ERROR', { code: 'INTERNAL_ERROR', message: 'x', traceId: 'trace-9' }),
       )
-      .mockResolvedValueOnce(page([post(1)], 0, false));
+      .mockResolvedValueOnce(page([post(1)], false));
 
     await open();
 
@@ -151,8 +151,8 @@ describe('커뮤니티 글 목록 화면', () => {
   });
 
   it('더 보기를 누르면 다음 쪽 글이 아래에 붙고 마지막 쪽이면 더 보기가 사라진다', async () => {
-    vi.mocked(listPosts).mockImplementation(async (_filter, pageNumber) =>
-      pageNumber === 0 ? page([post(1), post(2)], 0, true) : page([post(3)], 1, false),
+    vi.mocked(listPosts).mockImplementation(async (_filter, { cursor }) =>
+      cursor === null ? page([post(1), post(2)], true) : page([post(3)], false),
     );
     await open();
     expect(container.textContent).not.toContain('글 제목3');
@@ -163,9 +163,27 @@ describe('커뮤니티 글 목록 화면', () => {
     expect(button('더 보기')).toBeUndefined();
   });
 
+  it('더 보기는 직전 응답의 nextCursor를 cursor로 보내 이어 받고, 첫 요청에는 cursor가 없다', async () => {
+    vi.mocked(listPosts).mockImplementation(async (_filter, { cursor }) => {
+      if (cursor === null) return page([post(30), post(20)], true);
+      if (cursor === 20) return page([post(10)], false);
+      throw new Error(`예상하지 못한 cursor ${cursor}`);
+    });
+    await open();
+
+    await act(async () => button('더 보기')?.click());
+
+    const requests = vi.mocked(listPosts).mock.calls.map((call) => call[1]);
+    expect(requests).toEqual([
+      { page: 0, cursor: null },
+      { page: 1, cursor: 20 },
+    ]);
+    expect(container.textContent).toMatch(/글 제목30.*글 제목20.*글 제목10/);
+  });
+
   it('더 보기가 실패하면 받아 둔 글은 그대로 두고 오류 문구를 보여 준다', async () => {
-    vi.mocked(listPosts).mockImplementation(async (_filter, pageNumber) => {
-      if (pageNumber === 0) return page([post(1)], 0, true);
+    vi.mocked(listPosts).mockImplementation(async (_filter, { cursor }) => {
+      if (cursor === null) return page([post(1)], true);
       throw new ApiError(429, 'TOO_MANY_REQUESTS', null);
     });
     await open();
@@ -178,7 +196,7 @@ describe('커뮤니티 글 목록 화면', () => {
   });
 
   it('검색어를 한 글자만 적으면 안내하고 검색하지 않는다', async () => {
-    vi.mocked(listPosts).mockResolvedValue(page([post(1)], 0, false));
+    vi.mocked(listPosts).mockResolvedValue(page([post(1)], false));
     await open();
     const callsBefore = vi.mocked(listPosts).mock.calls.length;
 
@@ -191,7 +209,7 @@ describe('커뮤니티 글 목록 화면', () => {
   });
 
   it('검색어를 두 글자 이상 적어 검색하면 그 검색어로 다시 불러온다', async () => {
-    vi.mocked(listPosts).mockResolvedValue(page([post(1)], 0, false));
+    vi.mocked(listPosts).mockResolvedValue(page([post(1)], false));
     await open();
 
     await type(searchInput(), '텐트');
@@ -204,7 +222,7 @@ describe('커뮤니티 글 목록 화면', () => {
 
   it('검색 결과가 없으면 안내하고 검색어 지우기를 누르면 전체 글을 다시 불러온다', async () => {
     vi.mocked(listPosts).mockImplementation(async (filter) =>
-      filter.keyword ? page([], 0, false) : page([post(1)], 0, false),
+      filter.keyword ? page([], false) : page([post(1)], false),
     );
     await open('/community?searchType=TITLE&keyword=없는말');
     expect(container.textContent).toContain('검색 결과가 없어요');
@@ -217,7 +235,7 @@ describe('커뮤니티 글 목록 화면', () => {
   });
 
   it('장소로 좁혀 본 목록은 장소 이름을 보여 주고 전체 글 보기로 되돌릴 수 있다', async () => {
-    vi.mocked(listPosts).mockResolvedValue(page([post(1)], 0, false));
+    vi.mocked(listPosts).mockResolvedValue(page([post(1)], false));
 
     await open('/community?spotId=12');
 
@@ -231,7 +249,7 @@ describe('커뮤니티 글 목록 화면', () => {
   });
 
   it('이메일 인증을 마친 회원에게는 글쓰기 링크가 있다', async () => {
-    vi.mocked(listPosts).mockResolvedValue(page([], 0, false));
+    vi.mocked(listPosts).mockResolvedValue(page([], false));
 
     await open();
 
@@ -240,7 +258,7 @@ describe('커뮤니티 글 목록 화면', () => {
 
   it('이메일 인증 전 회원의 글쓰기는 잠겨 있고 이유를 알려 준다', async () => {
     session.value = { status: 'authenticated', me: { memberId: 1, nickname: '산사람', status: 'UNVERIFIED' } };
-    vi.mocked(listPosts).mockResolvedValue(page([], 0, false));
+    vi.mocked(listPosts).mockResolvedValue(page([], false));
 
     await open();
 

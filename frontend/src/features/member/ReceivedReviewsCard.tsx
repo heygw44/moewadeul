@@ -1,6 +1,6 @@
 import { ApiError } from '../../api/client';
 import { fetchMemberCompanionReviews } from '../../api/companionReviews';
-import type { Page, PublicCompanionReview } from '../../api/types';
+import type { Page, PageRequest, PublicCompanionReview } from '../../api/types';
 import { UnverifiedNote } from '../../app/session/GatedButton';
 import { useSession } from '../../app/session/session';
 import { Button } from '../../components/Button';
@@ -18,7 +18,7 @@ const itemKey = () => null;
 
 const NO_REVIEWS: Page<PublicCompanionReview> = { content: [], page: 0, size: 0, hasNext: false };
 
-async function fetchReviewPage(memberId: number, page: number, signal?: AbortSignal) {
+async function fetchReviewPage(memberId: number, { page }: PageRequest, signal?: AbortSignal) {
   try {
     return await fetchMemberCompanionReviews(memberId, page, signal);
   } catch (caught) {

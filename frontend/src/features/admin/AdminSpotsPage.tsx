@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { fetchAdminSpots, hideSpot, restoreSpot } from '../../api/admin';
-import type { AdminSpotStatus, AdminSpotSummary, BakjiReportReason, Page } from '../../api/types';
+import type { AdminSpotStatus, AdminSpotSummary, BakjiReportReason, Page, PageRequest } from '../../api/types';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
@@ -24,7 +24,11 @@ const TABS: ReadonlyArray<{ status: AdminSpotStatus; label: string }> = [
 
 const REASONS: BakjiReportReason[] = ['ILLEGAL_AREA', 'CLOSED', 'FALSE_INFO'];
 
-function fetchSpots(status: AdminSpotStatus, page: number, signal?: AbortSignal): Promise<Page<AdminSpotSummary>> {
+function fetchSpots(
+  status: AdminSpotStatus,
+  { page }: PageRequest,
+  signal?: AbortSignal,
+): Promise<Page<AdminSpotSummary>> {
   return fetchAdminSpots({ status, page }, signal);
 }
 

@@ -2,7 +2,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Page } from '../api/types';
+import type { CursorPage, Page, PageRequest } from '../api/types';
 import { usePagedList } from './usePagedList';
 import type { PagedList } from './usePagedList';
 
@@ -14,14 +14,14 @@ function page(content: number[], pageNumber: number, hasNext: boolean): Page<num
   return { content, page: pageNumber, size: content.length, hasNext } as Page<number>;
 }
 
-type Deferred = { resolve: (value: Page<number>) => void; reject: (reason: unknown) => void };
+type Deferred = { resolve: (value: Page<number> | CursorPage<number>) => void; reject: (reason: unknown) => void };
 
 describe('usePagedList', () => {
   let container: HTMLDivElement;
   let root: Root;
   let latest: Result;
   let pending: Map<string, Deferred[]>;
-  let fetcher: (filter: string, pageNumber: number) => Promise<Page<number>>;
+  let fetcher: (filter: string, request: PageRequest) => Promise<Page<number> | CursorPage<number>>;
   let keyOf: (item: number) => number | null;
 
   function Probe({ filter }: { filter: string }) {
@@ -29,7 +29,7 @@ describe('usePagedList', () => {
     return null;
   }
 
-  async function settle(key: string, value: Page<number>) {
+  async function settle(key: string, value: Page<number> | CursorPage<number>) {
     const next = pending.get(key)?.shift();
     if (!next) throw new Error(`대기 중인 요청이 없어요: ${key}`);
     await act(async () => next.resolve(value));
@@ -47,9 +47,9 @@ describe('usePagedList', () => {
     pending = new Map();
     keyOf = (item) => item;
     fetcher = vi.fn(
-      (filter: string, pageNumber: number) =>
-        new Promise<Page<number>>((resolve, reject) => {
-          const key = `${filter}:${pageNumber}`;
+      (filter: string, request: PageRequest) =>
+        new Promise<Page<number> | CursorPage<number>>((resolve, reject) => {
+          const key = `${filter}:${request.page}`;
           pending.set(key, [...(pending.get(key) ?? []), { resolve, reject }]);
         }),
     );
@@ -193,7 +193,7 @@ describe('usePagedList', () => {
 
   it('렌더마다 새로 만든 필터 객체라도 값이 같으면 다시 받지 않고 목록을 그대로 둔다', async () => {
     let objectLatest: PagedList<number, { q: string }> | undefined;
-    const objectFetcher = vi.fn((filter: { q: string }, pageNumber: number) => fetcher(filter.q, pageNumber));
+    const objectFetcher = vi.fn((filter: { q: string }, request: PageRequest) => fetcher(filter.q, request));
     function ObjectProbe({ q }: { q: string }) {
       objectLatest = usePagedList(true, { q }, objectFetcher, keyOf);
       return null;
@@ -243,5 +243,95 @@ describe('usePagedList', () => {
     await settle('A:1', page([-1, 2, 1], 1, false));
 
     expect(latest.current?.items).toEqual([1, -1, -1, 2]);
+  });
+  it('쪽 번호 방식 응답이면 cursor를 null로 보내고, 커서 응답이면 직전 응답의 nextCursor를 이어서 보낸다', async () => {
+    const requests: PageRequest[] = [];
+    fetcher = vi.fn((filter: string, request: PageRequest) => {
+      requests.push(request);
+      return new Promise<Page<number> | CursorPage<number>>((resolve, reject) => {
+        const key = `${filter}:${request.page}`;
+        pending.set(key, [...(pending.get(key) ?? []), { resolve, reject }]);
+      });
+    });
+    const cursorPage = (content: number[], nextCursor: number | null): CursorPage<number> => ({
+      content,
+      size: content.length,
+      hasNext: nextCursor !== null,
+      nextCursor,
+    });
+
+    await mount('A');
+    await settle('A:0', cursorPage([9, 8], 8));
+    await act(async () => void latest.loadMore());
+    await settle('A:1', cursorPage([7, 6], 6));
+    await act(async () => void latest.loadMore());
+    await settle('A:2', cursorPage([5], null));
+
+    expect(requests).toEqual([
+      { page: 0, cursor: null },
+      { page: 1, cursor: 8 },
+      { page: 2, cursor: 6 },
+    ]);
+    expect(latest.current?.items).toEqual([9, 8, 7, 6, 5]);
+    expect(latest.current?.page).toBe(2);
+    expect(latest.current?.hasNext).toBe(false);
+  });
+
+  it('쪽 번호 방식 응답이면 다음 요청의 cursor는 null이다', async () => {
+    const requests: PageRequest[] = [];
+    fetcher = vi.fn((filter: string, request: PageRequest) => {
+      requests.push(request);
+      return new Promise<Page<number> | CursorPage<number>>((resolve, reject) => {
+        const key = `${filter}:${request.page}`;
+        pending.set(key, [...(pending.get(key) ?? []), { resolve, reject }]);
+      });
+    });
+
+    await mount('A');
+    await settle('A:0', page([1, 2], 0, true));
+    await act(async () => void latest.loadMore());
+
+    expect(requests).toEqual([
+      { page: 0, cursor: null },
+      { page: 1, cursor: null },
+    ]);
+  });
+
+  it('refreshLoaded는 커서 응답도 처음부터 nextCursor를 따라 받은 만큼 다시 받는다', async () => {
+    const requests: PageRequest[] = [];
+    fetcher = vi.fn((filter: string, request: PageRequest) => {
+      requests.push(request);
+      return new Promise<Page<number> | CursorPage<number>>((resolve, reject) => {
+        const key = `${filter}:${request.page}`;
+        pending.set(key, [...(pending.get(key) ?? []), { resolve, reject }]);
+      });
+    });
+    const cursorPage = (content: number[], nextCursor: number | null): CursorPage<number> => ({
+      content,
+      size: content.length,
+      hasNext: nextCursor !== null,
+      nextCursor,
+    });
+
+    await mount('A');
+    await settle('A:0', cursorPage([9, 8], 8));
+    await act(async () => void latest.loadMore());
+    await settle('A:1', cursorPage([7, 6], 6));
+    requests.length = 0;
+
+    let refreshed: Promise<void> = Promise.resolve();
+    await act(async () => {
+      refreshed = latest.refreshLoaded();
+    });
+    await settle('A:0', cursorPage([10, 9], 9));
+    await settle('A:1', cursorPage([8, 7], 7));
+    await act(async () => refreshed);
+
+    expect(requests).toEqual([
+      { page: 0, cursor: null },
+      { page: 1, cursor: 9 },
+    ]);
+    expect(latest.current?.items).toEqual([10, 9, 8, 7]);
+    expect(latest.current?.page).toBe(1);
   });
 });
