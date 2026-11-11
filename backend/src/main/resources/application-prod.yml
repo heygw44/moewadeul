@@ -1,4 +1,7 @@
 spring:
+  threads:
+    virtual:
+      enabled: true
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -16,7 +19,7 @@ server:
     mbeanregistry:
       enabled: true
     threads:
-      # 값의 근거는 ExternalWaitThreadBudgetTest가 확인한다.
+      # 가상 스레드에서는 동시에 처리하는 요청 수의 한도(ConcurrentRequestLimitFilter)다. 값의 근거는 ExternalWaitThreadBudgetTest가 확인한다.
       max: 70
 
 logging:
