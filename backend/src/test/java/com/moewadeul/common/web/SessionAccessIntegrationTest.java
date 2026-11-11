@@ -2,12 +2,6 @@ package com.moewadeul.common.web;
 
 import static com.moewadeul.member.domain.MemberBuilder.aMember;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -17,7 +11,15 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,10 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.session.Session;
-import org.springframework.session.SessionRepository;
-import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.testcontainers.mysql.MySQLContainer;
 
 @IntegrationTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class SessionAccessIntegrationTest {
@@ -38,6 +37,10 @@ class SessionAccessIntegrationTest {
     private static final String SESSION_COOKIE = "SESSION";
     private static final int CAMPSITE_COUNT = 300;
     private static final int RESPONSE_BUFFER_BYTES = 8 * 1024;
+    private static final long MISSING_ID = 999_999_999L;
+    private static final Duration SETTLE_DEADLINE = Duration.ofSeconds(5);
+    private static final long POLL_MILLIS = 20;
+    private static final long SETTLE_HOLD_MILLIS = 200;
 
     private final HttpClient http = HttpClient.newHttpClient();
 
@@ -53,8 +56,8 @@ class SessionAccessIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @MockitoSpyBean
-    private JdbcIndexedSessionRepository sessionRepository;
+    @Autowired
+    private MySQLContainer mysql;
 
     @Test
     @DisplayName("[F-03] 로그인한 회원이 지도 영역을 조회해도 서버는 세션을 읽거나 저장하지 않는다")
@@ -64,7 +67,7 @@ class SessionAccessIntegrationTest {
             insertCampsite("영역 안 야영장 " + i, 37.1 + i * 0.002, 127.1 + i * 0.002);
         }
         String cookie = login();
-        clearInvocations(sessionRepository);
+        SessionSql before = sessionSql();
 
         // when
         HttpResponse<String> response = get("/api/spots?swLat=37&swLng=127&neLat=38&neLng=128&zoom=7", cookie);
@@ -72,31 +75,125 @@ class SessionAccessIntegrationTest {
         // then
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body().length()).isGreaterThan(RESPONSE_BUFFER_BYTES);
-        verify(sessionRepository, never()).findById(anyString());
-        verify(savingRepository(), never()).save(any());
+        assertThat(settledSessionSql(before, 0, 0)).isEqualTo(new SessionSql(0, 0));
     }
 
     @Test
-    @DisplayName("[F-02] 로그인 정보가 필요한 요청은 세션을 한 번 읽고 마지막 접근 시각을 한 번 저장한다")
-    void authenticatedRequestReadsAndSavesSessionOnce() throws Exception {
+    @DisplayName("[F-02] 로그인 정보가 필요한 요청은 세션을 한 번 읽고, 저장된 마지막 접근 시각이 60초 안이면 저장하지 않는다")
+    void authenticatedRequestReadsSessionOnceAndDoesNotSave() throws Exception {
         // given
         String cookie = login();
-        clearInvocations(sessionRepository);
+        SessionSql before = sessionSql();
 
         // when
         HttpResponse<String> response = get("/api/me", cookie);
 
         // then
         assertThat(response.statusCode()).isEqualTo(200);
-        verify(sessionRepository, times(1)).findById(anyString());
-        verify(savingRepository(), times(1)).save(any());
+        assertThat(settledSessionSql(before, 1, 0)).isEqualTo(new SessionSql(1, 0));
     }
 
-    // 세션 저장소의 save는 Spring Session 안쪽의 비공개 세션 타입을 받는다.
-    // 그래서 그 타입을 쓰지 않고 호출을 확인하려고 일반 저장소 타입으로 바꿔 검증한다.
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private SessionRepository<Session> savingRepository() {
-        return (SessionRepository) sessionRepository;
+    @Test
+    @DisplayName("[F-02] 로그인 정보가 필요한 요청이 오류 응답으로 끝나도 세션을 한 번만 읽는다")
+    void authenticatedErrorResponseReadsSessionOnce() throws Exception {
+        // given
+        String cookie = login();
+        SessionSql before = sessionSql();
+
+        // when
+        HttpResponse<String> response = get("/api/basecamps/" + MISSING_ID + "/applications", cookie);
+
+        // then
+        assertThat(response.statusCode()).isEqualTo(404);
+        assertThat(response.body()).contains("NOT_FOUND");
+        assertThat(settledSessionSql(before, 1, 0)).isEqualTo(new SessionSql(1, 0));
+    }
+
+    @Test
+    @DisplayName("[F-02] 저장된 마지막 접근 시각이 60초보다 오래됐으면 요청이 끝날 때 그 시각을 새로 저장한다")
+    void staleLastAccessTimeIsWrittenAgain() throws Exception {
+        // given
+        String cookie = login();
+        moveStoredAccessTimeBack(cookie, Duration.ofSeconds(61));
+        SessionSql before = sessionSql();
+        long requestedAt = System.currentTimeMillis();
+
+        // when
+        HttpResponse<String> response = get("/api/me", cookie);
+
+        // then
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(settledSessionSql(before, 1, 1)).isEqualTo(new SessionSql(1, 1));
+        assertThat(storedAccessTime(cookie)).isGreaterThanOrEqualTo(requestedAt);
+    }
+
+    @Test
+    @DisplayName("[F-02] 저장된 마지막 접근 시각이 60초 안이면 요청이 끝나도 그 시각을 저장하지 않는다")
+    void recentLastAccessTimeIsLeftAlone() throws Exception {
+        // given
+        String cookie = login();
+        long stored = moveStoredAccessTimeBack(cookie, Duration.ofSeconds(30));
+        SessionSql before = sessionSql();
+
+        // when
+        HttpResponse<String> response = get("/api/me", cookie);
+
+        // then
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(settledSessionSql(before, 1, 0)).isEqualTo(new SessionSql(1, 0));
+        assertThat(storedAccessTime(cookie)).isEqualTo(stored);
+    }
+
+    private long moveStoredAccessTimeBack(String cookie, Duration amount) {
+        jdbc.update(
+                "UPDATE SPRING_SESSION SET LAST_ACCESS_TIME = LAST_ACCESS_TIME - ?, EXPIRY_TIME = EXPIRY_TIME - ? WHERE SESSION_ID = ?",
+                amount.toMillis(),
+                amount.toMillis(),
+                sessionId(cookie));
+        return storedAccessTime(cookie);
+    }
+
+    private long storedAccessTime(String cookie) {
+        return jdbc.queryForObject(
+                "SELECT LAST_ACCESS_TIME FROM SPRING_SESSION WHERE SESSION_ID = ?", Long.class, sessionId(cookie));
+    }
+
+    private static String sessionId(String cookie) {
+        String value = cookie.substring(SESSION_COOKIE.length() + 1);
+        return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
+    }
+
+    private record SessionSql(long selects, long updates) {
+
+        SessionSql minus(SessionSql other) {
+            return new SessionSql(selects - other.selects, updates - other.updates);
+        }
+    }
+
+    // 응답을 일찍 커밋한 요청은 클라이언트가 본문을 받은 뒤에도 필터의 마지막 커밋이 남아 있을 수 있다.
+    private SessionSql settledSessionSql(SessionSql before, long expectedSelects, long expectedUpdates)
+            throws SQLException, InterruptedException {
+        long deadline = System.nanoTime() + SETTLE_DEADLINE.toNanos();
+        SessionSql delta = sessionSql().minus(before);
+        while ((delta.selects < expectedSelects || delta.updates < expectedUpdates) && System.nanoTime() < deadline) {
+            Thread.sleep(POLL_MILLIS);
+            delta = sessionSql().minus(before);
+        }
+        Thread.sleep(SETTLE_HOLD_MILLIS);
+        return sessionSql().minus(before);
+    }
+
+    private SessionSql sessionSql() throws SQLException {
+        try (Connection root = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword());
+                Statement statement = root.createStatement();
+                ResultSet rows = statement.executeQuery(
+                        "SELECT COALESCE(SUM(CASE WHEN DIGEST_TEXT LIKE 'SELECT %FROM `SPRING_SESSION` `S` LEFT JOIN%WHERE `S` . `SESSION_ID` = ?' THEN COUNT_STAR END), 0), "
+                                + "COALESCE(SUM(CASE WHEN DIGEST_TEXT LIKE 'UPDATE `SPRING_SESSION` SET `SESSION_ID` = ?%' THEN COUNT_STAR END), 0) "
+                                + "FROM performance_schema.events_statements_summary_by_digest "
+                                + "WHERE DIGEST_TEXT LIKE '%`SPRING_SESSION`%'")) {
+            rows.next();
+            return new SessionSql(rows.getLong(1), rows.getLong(2));
+        }
     }
 
     private String login() throws Exception {
@@ -104,6 +201,7 @@ class SessionAccessIntegrationTest {
         memberRepository.save(aMember()
                 .email(email)
                 .passwordHash(passwordEncoder.encode(PASSWORD))
+                .emailVerifiedAt(MutableClock.DEFAULT_INSTANT)
                 .build());
         String csrfToken = UUID.randomUUID().toString();
         HttpResponse<String> response = http.send(

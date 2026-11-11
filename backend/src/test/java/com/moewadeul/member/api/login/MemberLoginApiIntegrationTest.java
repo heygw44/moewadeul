@@ -364,7 +364,7 @@ class MemberLoginApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-02] 로그아웃하면 204를 응답하고 같은 세션 쿠키로 다시 로그아웃하면 401을 응답한다")
+    @DisplayName("[F-02] 로그아웃하면 204와 함께 세션 쿠키를 지우고, 같은 세션 쿠키로 다시 로그아웃하면 401을 응답한다")
     void logoutInvalidatesSession() {
         String email = TestSequence.email();
         saveMember(email);
@@ -374,6 +374,10 @@ class MemberLoginApiIntegrationTest {
         MvcTestResult logoutAgain = logout(session);
 
         assertThat(logout).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(logout.getResponse().getCookie(SESSION_COOKIE))
+                .isNotNull()
+                .extracting(Cookie::getMaxAge)
+                .isEqualTo(0);
         assertThat(logoutAgain).hasStatus(HttpStatus.UNAUTHORIZED);
         assertThat(logoutAgain).bodyJson().extractingPath("$.code").isEqualTo("AUTHENTICATION_REQUIRED");
         assertThat(count("SPRING_SESSION")).isZero();
