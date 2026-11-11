@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 import com.jayway.jsonpath.JsonPath;
+import com.moewadeul.common.patch.PatchField;
 import com.moewadeul.common.security.LoginMember;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.MutableClock;
@@ -15,6 +16,8 @@ import com.moewadeul.idempotency.domain.IdempotencyRecord;
 import com.moewadeul.idempotency.domain.IdempotencyRecordRepository;
 import com.moewadeul.member.infra.MemberJpaRepository;
 import com.moewadeul.program.application.ProgramApplyFixture;
+import com.moewadeul.program.application.catalog.ProgramAdminService;
+import com.moewadeul.program.application.catalog.ProgramReviseCommand;
 import com.moewadeul.program.application.enrollment.ProgramApplyService;
 import com.moewadeul.program.application.enrollment.ProgramPaymentExpiryService;
 import com.moewadeul.program.application.enrollment.ProgramPaymentService;
@@ -66,6 +69,9 @@ class ProgramSoldOutMarkIntegrationTest {
 
     @Autowired
     private ProgramPaymentExpiryService expiryService;
+
+    @Autowired
+    private ProgramAdminService programAdminService;
 
     @Autowired
     private IdempotencyExecutor idempotencyExecutor;
@@ -178,11 +184,31 @@ class ProgramSoldOutMarkIntegrationTest {
     }
 
     @Test
-    @DisplayName("[F-18][NFR-03] 매진 표시 뒤 빈 자리를 얻은 회원도 같은 키로 다시 보내면 처음 결과를 받는다")
+    @DisplayName("[F-18][PG-03] 매진 표시 동안 관리자가 정원을 늘리면 TTL을 기다리지 않고 바로 신청할 수 있다")
+    void capacityIncreaseOpensRightAway() {
+        // given
+        SoldOut soldOut = soldOutProgram(false);
+        long outsider = fixture.saveMember();
+
+        // when
+        programAdminService.revise(
+                fixture.saveMember(),
+                soldOut.programId(),
+                new ProgramReviseCommand(
+                        null, null, PatchField.absent(), null, null, null, 2, null, null, null, null, null));
+        MvcTestResult result = apply(outsider, soldOut.programId(), "after-capacity");
+
+        // then
+        assertThat(result).hasStatus(HttpStatus.CREATED);
+        assertThat(fixture.activeCount(soldOut.programId())).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("[F-18][NFR-03] 표시를 지우지 않은 채 빈 자리를 얻은 회원도 같은 키로 다시 보내면 처음 결과를 받는다. 다른 서버에서 빈 자리가 생긴 경우다")
     void seatTakenAfterMarkKeepsIdempotentReplay() {
         // given
         SoldOut soldOut = soldOutProgram(false);
-        paymentService.cancel(soldOut.holder(), soldOut.holderApplicationId());
+        jdbc.update("UPDATE program_application SET status = 'CANCELED' WHERE id = ?", soldOut.holderApplicationId());
         long late = fixture.saveMember();
         long lateApplicationId = applyPastMark(late, soldOut.programId(), "late-key");
 

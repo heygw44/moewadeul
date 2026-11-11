@@ -45,14 +45,15 @@ public class ProgramApplyService {
 
     // 매진 뒤 몰린 요청이 행사 행 잠금 줄에 서면 커넥션 10개를 붙잡아 지도 요청까지 기다리게 한다. 확실히 매진일 때만 잠금 없이 거절한다.
     public void rejectIfSoldOutWithoutLock(long memberId, long programId) {
+        long seatChangesBeforeRead = soldOutPrograms.seatChanges(programId);
         Program program = programRepository.findById(programId).orElseThrow(BusinessException::notFound);
         Instant now = clock.instant();
         if (programApplicationMapper.countSeatHolders(programId, now) < program.getCapacity()) {
             return;
         }
         program.requireApplicableAt(now);
-        SoldOutPrograms.SeatHolders seatHolders =
-                soldOutPrograms.read(programId, () -> programApplicationMapper.selectSeatHolderIds(programId, now));
+        SoldOutPrograms.SeatHolders seatHolders = new SoldOutPrograms.SeatHolders(
+                programId, programApplicationMapper.selectSeatHolderIds(programId, now), seatChangesBeforeRead);
         if (seatHolders.memberIds().size() >= program.getCapacity()) {
             soldOutPrograms.mark(seatHolders, program.getApplyCloseAt(), clock.instant());
         }

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +25,7 @@ class SoldOutProgramsTest {
     @DisplayName("[F-18] 매진 표시는 TTL 동안만 자리 없는 회원을 거절하고, 자리를 쥔 회원은 거절하지 않는다")
     void markRejectsOutsidersUntilTtl() {
         // given
-        soldOut.mark(soldOut.read(PROGRAM, () -> List.of(HOLDER)), CLOSES_LATER, NOW);
+        soldOut.mark(read(() -> List.of(HOLDER)), CLOSES_LATER, NOW);
 
         // when, then
         assertThat(soldOut.rejects(PROGRAM, OUTSIDER, NOW)).isTrue();
@@ -43,7 +44,7 @@ class SoldOutProgramsTest {
     void markEndsAtApplyClose() {
         // given
         Instant closesAt = NOW.plusMillis(300);
-        soldOut.mark(soldOut.read(PROGRAM, () -> List.of(HOLDER)), closesAt, NOW);
+        soldOut.mark(read(() -> List.of(HOLDER)), closesAt, NOW);
 
         // when, then
         assertThat(soldOut.rejects(PROGRAM, OUTSIDER, closesAt.minusNanos(1))).isTrue();
@@ -54,7 +55,7 @@ class SoldOutProgramsTest {
     @DisplayName("[F-18][NFR-03] 자리 차지 회원을 읽는 사이 같은 행사에 커밋된 신청이 있으면 표시하지 않는다. 읽은 목록에 그 회원이 빠졌을 수 있다")
     void admissionDuringReadSkipsMark() {
         // given
-        SoldOutPrograms.SeatHolders holders = soldOut.read(PROGRAM, () -> {
+        SoldOutPrograms.SeatHolders holders = read(() -> {
             soldOut.beforeCommit(PROGRAM, LATE);
             soldOut.afterCompletion(PROGRAM, LATE, true);
             return List.of(HOLDER);
@@ -72,7 +73,7 @@ class SoldOutProgramsTest {
     @DisplayName("[F-18] 읽는 사이 다른 행사에 커밋된 신청은 이 행사의 표시를 막지 않는다")
     void admissionToOtherProgramKeepsMark() {
         // given
-        SoldOutPrograms.SeatHolders holders = soldOut.read(PROGRAM, () -> {
+        SoldOutPrograms.SeatHolders holders = read(() -> {
             soldOut.beforeCommit(OTHER_PROGRAM, LATE);
             soldOut.afterCompletion(OTHER_PROGRAM, LATE, true);
             return List.of(HOLDER);
@@ -89,7 +90,7 @@ class SoldOutProgramsTest {
     @DisplayName("[F-18][NFR-03] 표시가 있는 동안 자리를 얻는 회원은 커밋 직전부터 거절되지 않고, 롤백되면 다시 거절된다")
     void committingMemberIsNeverRejected() {
         // given
-        soldOut.mark(soldOut.read(PROGRAM, () -> List.of(HOLDER)), CLOSES_LATER, NOW);
+        soldOut.mark(read(() -> List.of(HOLDER)), CLOSES_LATER, NOW);
 
         // when
         soldOut.beforeCommit(PROGRAM, LATE);
@@ -108,8 +109,8 @@ class SoldOutProgramsTest {
     @DisplayName("[F-18][PG-03] 자리가 비면 표시가 바로 사라지고, 비기 전에 읽은 목록으로는 표시를 다시 세우지 않는다")
     void releaseDropsMarkAndStaleRead() {
         // given
-        soldOut.mark(soldOut.read(PROGRAM, () -> List.of(HOLDER)), CLOSES_LATER, NOW);
-        SoldOutPrograms.SeatHolders readBeforeRelease = soldOut.read(PROGRAM, () -> List.of(HOLDER));
+        soldOut.mark(read(() -> List.of(HOLDER)), CLOSES_LATER, NOW);
+        SoldOutPrograms.SeatHolders readBeforeRelease = read(() -> List.of(HOLDER));
 
         // when
         soldOut.release(PROGRAM);
@@ -119,5 +120,10 @@ class SoldOutProgramsTest {
         // then
         assertThat(rejectedAfterRelease).isFalse();
         assertThat(soldOut.rejects(PROGRAM, OUTSIDER, NOW)).isFalse();
+    }
+
+    private SoldOutPrograms.SeatHolders read(Supplier<List<Long>> reader) {
+        long seatChangesBeforeRead = soldOut.seatChanges(PROGRAM);
+        return new SoldOutPrograms.SeatHolders(PROGRAM, reader.get(), seatChangesBeforeRead);
     }
 }

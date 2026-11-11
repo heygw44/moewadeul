@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLongArray;
-import java.util.function.Supplier;
 import org.springframework.stereotype.Component;
 
 // 앱 인스턴스 하나를 전제한다. 다른 인스턴스에서 자리를 얻은 회원은 이 인스턴스의 표시에 더해지지 않아 TTL 동안 거절될 수 있다.
@@ -36,10 +35,9 @@ class SoldOutPrograms {
     private final Set<Seat> committing = ConcurrentHashMap.newKeySet();
     private final AtomicLongArray seatChanges = new AtomicLongArray(STRIPES);
 
-    // 읽는 사이 신청이나 빈 자리가 커밋되면 읽은 목록이 이미 낡았을 수 있다. 그래서 읽기 전 변경 수를 함께 넘겨 mark가 비교하게 한다.
-    SeatHolders read(long programId, Supplier<List<Long>> reader) {
-        long before = seatChanges.get(stripe(programId));
-        return new SeatHolders(programId, reader.get(), before);
+    // 행사와 자리 목록을 읽기 전에 부른다. 읽는 사이 신청이나 빈 자리·정원 증가가 커밋되면 읽은 값이 낡았을 수 있어 mark가 이 값과 비교한다.
+    long seatChanges(long programId) {
+        return seatChanges.get(stripe(programId));
     }
 
     void mark(SeatHolders holders, Instant applyCloseAt, Instant now) {
