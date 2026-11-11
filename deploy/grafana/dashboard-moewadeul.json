@@ -525,6 +525,110 @@
       "description": "performance_schema 문장 요약. 값은 초당 누적 실행 시간이다"
     },
     {
+      "type": "timeseries",
+      "title": "신고 쓰기 허가 사용 수·거절 (분당)",
+      "id": 39,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__PROM_UID__"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__PROM_UID__"
+          },
+          "expr": "max(moewadeul_row_lock_writes_in_use{job=\"moewadeul-app\"})",
+          "legendFormat": "사용 중인 허가",
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__PROM_UID__"
+          },
+          "expr": "sum(rate(moewadeul_row_lock_writes_rejected_total{job=\"moewadeul-app\"}[5m])) * 60",
+          "legendFormat": "거절/분",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "description": "동시 쓰기 한도는 6개다. 사용 수가 6에 붙어 있으면 허가 대기가 길고, 거절은 5초 안에 허가를 얻지 못해 503을 낸 수다"
+    },
+    {
+      "type": "timeseries",
+      "title": "신고 쓰기 허가 대기 p95",
+      "id": 40,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "__PROM_UID__"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 35
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "__PROM_UID__"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(moewadeul_row_lock_writes_permit_wait_seconds_bucket{job=\"moewadeul-app\"}[5m])))",
+          "legendFormat": "{{outcome}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
       "type": "row",
       "title": "JVM",
       "id": 11,
@@ -533,7 +637,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "panels": []
     },
@@ -549,7 +653,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 36
+        "y": 44
       },
       "targets": [
         {
@@ -606,7 +710,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 36
+        "y": 44
       },
       "targets": [
         {
@@ -652,7 +756,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 36
+        "y": 44
       },
       "targets": [
         {
@@ -696,7 +800,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 52
       },
       "panels": []
     },
@@ -712,7 +816,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 45
+        "y": 53
       },
       "targets": [
         {
@@ -768,7 +872,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 45
+        "y": 53
       },
       "targets": [
         {
@@ -844,7 +948,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 45
+        "y": 53
       },
       "targets": [
         {
@@ -888,7 +992,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 61
       },
       "panels": []
     },
@@ -904,7 +1008,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 54
+        "y": 62
       },
       "targets": [
         {
@@ -980,7 +1084,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 54
+        "y": 62
       },
       "targets": [
         {
@@ -1051,7 +1155,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 54
+        "y": 62
       },
       "targets": [
         {
@@ -1102,7 +1206,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 70
       },
       "panels": []
     },
@@ -1118,7 +1222,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 63
+        "y": 71
       },
       "targets": [
         {
@@ -1175,7 +1279,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 63
+        "y": 71
       },
       "targets": [
         {
@@ -1212,7 +1316,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 71
+        "y": 79
       },
       "panels": []
     },
@@ -1228,7 +1332,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 72
+        "y": 80
       },
       "targets": [
         {
@@ -1275,7 +1379,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 72
+        "y": 80
       },
       "targets": [
         {
@@ -1346,7 +1450,7 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 72
+        "y": 80
       },
       "targets": [
         {
@@ -1407,7 +1511,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 72
+        "y": 80
       },
       "targets": [
         {
@@ -1460,7 +1564,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 80
+        "y": 88
       },
       "panels": []
     },
@@ -1476,7 +1580,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 81
+        "y": 89
       },
       "targets": [
         {
@@ -1531,7 +1635,7 @@
         "h": 5,
         "w": 6,
         "x": 6,
-        "y": 81
+        "y": 89
       },
       "targets": [
         {
@@ -1572,7 +1676,7 @@
         "h": 5,
         "w": 6,
         "x": 12,
-        "y": 81
+        "y": 89
       },
       "targets": [
         {
@@ -1613,7 +1717,7 @@
         "h": 5,
         "w": 6,
         "x": 18,
-        "y": 81
+        "y": 89
       },
       "targets": [
         {
@@ -1651,7 +1755,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 94
       },
       "panels": []
     },
@@ -1667,7 +1771,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 87
+        "y": 95
       },
       "targets": [
         {
@@ -1701,7 +1805,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 97
+        "y": 105
       },
       "targets": [
         {

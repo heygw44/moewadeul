@@ -2,9 +2,15 @@ package com.moewadeul.common.transaction;
 
 import com.moewadeul.common.error.BusinessException;
 import com.moewadeul.common.error.CommonErrorCode;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import java.time.Duration;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,9 +22,40 @@ import org.springframework.stereotype.Component;
 public class RowLockWritePermits {
 
     static final int MAX_CONCURRENT_WRITES = 6;
-    private static final long PERMIT_WAIT_SECONDS = 5;
+    private static final Duration PERMIT_WAIT = Duration.ofSeconds(5);
+    private static final String IN_USE_GAUGE_NAME = "moewadeul.row.lock.writes.in.use";
+    private static final String REJECTED_COUNTER_NAME = "moewadeul.row.lock.writes.rejected";
+    private static final String PERMIT_WAIT_TIMER_NAME = "moewadeul.row.lock.writes.permit.wait";
 
     private final Semaphore permits = new Semaphore(MAX_CONCURRENT_WRITES, true);
+    private final Duration permitWait;
+    private final Counter rejected;
+    private final Timer acquiredWait;
+    private final Timer rejectedWait;
+
+    @Autowired
+    public RowLockWritePermits(MeterRegistry meterRegistry) {
+        this(meterRegistry, PERMIT_WAIT);
+    }
+
+    RowLockWritePermits(MeterRegistry meterRegistry, Duration permitWait) {
+        this.permitWait = permitWait;
+        Gauge.builder(IN_USE_GAUGE_NAME, permits, p -> MAX_CONCURRENT_WRITES - p.availablePermits())
+                .description("행 잠금 쓰기 허가 중 쓰이고 있는 수")
+                .register(meterRegistry);
+        this.rejected = Counter.builder(REJECTED_COUNTER_NAME)
+                .description("허가를 기다리다 시간이 다하거나 끊겨 503으로 거절한 수")
+                .register(meterRegistry);
+        this.acquiredWait = waitTimer(meterRegistry, "acquired");
+        this.rejectedWait = waitTimer(meterRegistry, "rejected");
+    }
+
+    private static Timer waitTimer(MeterRegistry meterRegistry, String outcome) {
+        return Timer.builder(PERMIT_WAIT_TIMER_NAME)
+                .description("행 잠금 쓰기 허가를 기다린 시간")
+                .tag("outcome", outcome)
+                .register(meterRegistry);
+    }
 
     public void run(Runnable write) {
         call(() -> {
@@ -38,13 +75,17 @@ public class RowLockWritePermits {
     }
 
     private void acquire() {
+        long start = System.nanoTime();
         try {
-            if (permits.tryAcquire(PERMIT_WAIT_SECONDS, TimeUnit.SECONDS)) {
+            if (permits.tryAcquire(permitWait.toNanos(), TimeUnit.NANOSECONDS)) {
+                acquiredWait.record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
                 return;
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        rejectedWait.record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
+        rejected.increment();
         throw new BusinessException(CommonErrorCode.RESOURCE_BUSY);
     }
 }

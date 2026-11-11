@@ -28,6 +28,7 @@ import com.moewadeul.spot.application.bakji.BakjiSubmission;
 import com.moewadeul.spot.application.bakji.BakjiUpdateCommand;
 import com.moewadeul.spot.application.park.ProtectedAreaSource;
 import com.moewadeul.spot.domain.SpotErrorCode;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -46,7 +47,13 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(BakjiController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class, RowLockWritePermits.class})
+@Import({
+    GlobalExceptionHandler.class,
+    TraceIdFilter.class,
+    SecurityConfig.class,
+    RowLockWritePermits.class,
+    SimpleMeterRegistry.class
+})
 class BakjiControllerTest {
 
     private static final String PATH = "/api/bakjis";
