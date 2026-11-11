@@ -20,6 +20,7 @@ import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.community.application.report.CommunityReportCommand;
 import com.moewadeul.community.application.report.CommunityReportService;
 import com.moewadeul.community.domain.CommunityErrorCode;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,13 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(CommunityReportController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class, RowLockWritePermits.class})
+@Import({
+    GlobalExceptionHandler.class,
+    TraceIdFilter.class,
+    SecurityConfig.class,
+    RowLockWritePermits.class,
+    SimpleMeterRegistry.class
+})
 class CommunityReportControllerTest {
 
     private static final long MEMBER_ID = 7L;

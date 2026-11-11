@@ -68,6 +68,7 @@ management:
       slo:
         http.server.requests: 50ms,100ms,200ms,500ms,1s,2s,5s
         moewadeul.external.api.requests: 100ms,300ms,1s,3s,10s
+        moewadeul.row.lock.writes.permit.wait: 10ms,100ms,500ms,1s,3s,5s
   health:
     mail:
       enabled: false
