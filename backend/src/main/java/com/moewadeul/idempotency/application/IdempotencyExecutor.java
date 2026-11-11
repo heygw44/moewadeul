@@ -62,24 +62,43 @@ public class IdempotencyExecutor {
             Class<T> responseType,
             Runnable precheckOutsideTransaction,
             Supplier<T> action) {
+        return execute(request, successStatus, responseType, () -> {}, precheckOutsideTransaction, action);
+    }
+
+    // 여기서 던지면 멱등성 기록이 남지 않는다. 같은 키로 다시 보내도 이 검사를 다시 받는다.
+    public <T> T execute(
+            IdempotentRequest request,
+            HttpStatus successStatus,
+            Class<T> responseType,
+            Runnable rejectBeforeClaim,
+            Runnable precheckOutsideTransaction,
+            Supplier<T> action) {
         return claimAndRun(
-                request, successStatus, responseType, precheckOutsideTransaction, transactionTemplate, action);
+                request,
+                successStatus,
+                responseType,
+                rejectBeforeClaim,
+                precheckOutsideTransaction,
+                transactionTemplate,
+                action);
     }
 
     public <T> T executeReadCommitted(
             IdempotentRequest request, HttpStatus successStatus, Class<T> responseType, Supplier<T> action) {
-        return claimAndRun(request, successStatus, responseType, () -> {}, readCommittedTemplate, action);
+        return claimAndRun(request, successStatus, responseType, () -> {}, () -> {}, readCommittedTemplate, action);
     }
 
     private <T> T claimAndRun(
             IdempotentRequest request,
             HttpStatus successStatus,
             Class<T> responseType,
+            Runnable rejectBeforeClaim,
             Runnable precheckOutsideTransaction,
             TransactionTemplate template,
             Supplier<T> action) {
         OutsideTransaction.require("멱등성 기록은 작업과 따로 커밋해야 한다.");
         String key = validateKey(request.key());
+        rejectBeforeClaim.run();
         String requestHash = hash(request);
 
         IdempotencyRecord record = IdempotencyRecord.claim(request.memberId(), key, requestHash, Instant.now(clock));
