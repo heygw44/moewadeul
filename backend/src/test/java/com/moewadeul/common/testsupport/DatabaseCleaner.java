@@ -7,12 +7,13 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import javax.sql.DataSource;
 
 public final class DatabaseCleaner {
 
-    private static final String FLYWAY_HISTORY_TABLE = "flyway_schema_history";
+    private static final Set<String> MIGRATION_SEEDED_TABLES = Set.of("flyway_schema_history", "identity_ci_lock");
     private static final Set<String> TRIGGER_MAINTAINED_TABLES = Set.of("spot_cluster_total", "spot_cluster_cell");
     private static final String FIND_TABLES = "SELECT table_name FROM information_schema.tables "
             + "WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'";
@@ -58,14 +59,14 @@ public final class DatabaseCleaner {
         List<String> tables = new ArrayList<>();
         try (ResultSet resultSet = statement.executeQuery(FIND_TABLES)) {
             while (resultSet.next()) {
-                addIfNotFlywayHistory(tables, resultSet.getString(1));
+                addIfNotMigrationSeeded(tables, resultSet.getString(1));
             }
         }
         return tables;
     }
 
-    private void addIfNotFlywayHistory(List<String> tables, String table) {
-        if (FLYWAY_HISTORY_TABLE.equalsIgnoreCase(table)) {
+    private void addIfNotMigrationSeeded(List<String> tables, String table) {
+        if (MIGRATION_SEEDED_TABLES.contains(table.toLowerCase(Locale.ROOT))) {
             return;
         }
         tables.add(table);

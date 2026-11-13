@@ -5,7 +5,7 @@ import { UNCONFIRMED_TITLE } from '../../api/errors';
 import { isOutcomeUnknown } from '../../api/idempotency';
 import { getProgram, listPrograms } from '../../api/programs';
 import type { ProgramListStatus } from '../../api/programs';
-import type { Page, ProgramSummary } from '../../api/types';
+import type { Page, PageRequest, ProgramSummary } from '../../api/types';
 import { Link, navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { buttonClassName } from '../../components/buttonClass';
@@ -34,7 +34,11 @@ const EMPTY_COPY: Record<ProgramFilter, { title: string; description: string }> 
   CLOSED: { title: '마감한 행사가 없어요', description: '신청 기간이 끝난 행사가 여기에 모여요.' },
 };
 
-function fetchPrograms(filter: ProgramFilter, page: number, signal?: AbortSignal): Promise<Page<ProgramSummary>> {
+function fetchPrograms(
+  filter: ProgramFilter,
+  { page }: PageRequest,
+  signal?: AbortSignal,
+): Promise<Page<ProgramSummary>> {
   return listPrograms(filter === 'ALL' ? undefined : filter, page, signal);
 }
 

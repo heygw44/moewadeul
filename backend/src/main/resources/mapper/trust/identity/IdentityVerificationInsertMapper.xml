@@ -2,24 +2,18 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moewadeul.trust.infra.identity.IdentityVerificationInsertMapper">
 
-    <!--
-        그냥 INSERT는 같은 키의 삭제 표시 레코드에 공유 잠금을 건 뒤 삽입 잠금을 기다려서, 동시 요청끼리 서로를 기다리는 교착 상태가 난다.
-        ON DUPLICATE KEY UPDATE는 중복 검사에서 배타 잠금을 걸므로 같은 키의 요청이 한 줄로 선다.
-    -->
-    <insert id="insertIgnoringDuplicate">
+    <select id="lockCiBucket" resultType="java.lang.Integer">
+        SELECT bucket
+        FROM identity_ci_lock
+        WHERE bucket = #{bucket}
+        FOR UPDATE
+    </select>
+
+    <insert id="insert">
         INSERT INTO identity_verification
             (member_id, birth_year, gender, ci_hash, provider, verified_at, created_at, updated_at)
         VALUES
             (#{verification.memberId}, #{verification.birthYear}, #{verification.gender}, #{verification.ciHash.value},
              #{verification.provider}, #{verification.verifiedAt}, #{verification.createdAt}, #{verification.updatedAt})
-        ON DUPLICATE KEY UPDATE id = id
     </insert>
-
-    <!-- 트랜잭션의 스냅숏에는 먼저 커밋한 다른 요청의 행이 보이지 않으므로 잠금 읽기로 지금 값을 본다. -->
-    <select id="existsByMemberIdCommitted" resultType="boolean">
-        SELECT COUNT(*) > 0
-        FROM identity_verification
-        WHERE member_id = #{memberId}
-        FOR SHARE
-    </select>
 </mapper>

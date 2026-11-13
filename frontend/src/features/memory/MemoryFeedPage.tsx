@@ -25,7 +25,7 @@ export function MemoryFeedPage() {
   const feed = usePagedList<MemoryFeedItem, number>(
     true,
     viewerEpoch,
-    (_filter, page, signal) => fetchMemoryFeed(page, FEED_PAGE_SIZE, signal),
+    (_filter, { page }, signal) => fetchMemoryFeed(page, FEED_PAGE_SIZE, signal),
     itemKey,
   );
   const { current } = feed;

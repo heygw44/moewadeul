@@ -20,6 +20,7 @@ import com.moewadeul.trust.application.report.MemberReportService;
 import com.moewadeul.trust.domain.TrustErrorCode;
 import com.moewadeul.trust.domain.report.ReportKind;
 import com.moewadeul.trust.domain.report.ReportType;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,13 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(MemberReportController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class, RowLockWritePermits.class})
+@Import({
+    GlobalExceptionHandler.class,
+    TraceIdFilter.class,
+    SecurityConfig.class,
+    RowLockWritePermits.class,
+    SimpleMeterRegistry.class
+})
 class MemberReportControllerTest {
 
     private static final long MEMBER_ID = 7L;

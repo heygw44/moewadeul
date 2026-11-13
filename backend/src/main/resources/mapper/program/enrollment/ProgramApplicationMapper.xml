@@ -20,6 +20,13 @@
           AND <include refid="com.moewadeul.program.infra.ProgramSeatSql.seatHolder"/>
     </select>
 
+    <select id="selectSeatHolderIds" resultType="long">
+        SELECT a.member_id
+        FROM program_application a
+        WHERE a.program_id = #{programId}
+          AND <include refid="com.moewadeul.program.infra.ProgramSeatSql.seatHolder"/>
+    </select>
+
     <select id="existsActive" resultType="boolean">
         SELECT EXISTS (SELECT 1
                        FROM program_application

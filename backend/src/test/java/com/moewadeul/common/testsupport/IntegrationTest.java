@@ -3,6 +3,7 @@ package com.moewadeul.common.testsupport;
 import com.moewadeul.common.mail.TestMailSenderConfig;
 import com.moewadeul.member.application.login.LoginIpFailureLimiterResetExtension;
 import com.moewadeul.outbox.application.RecordingOutboxEventHandler;
+import com.moewadeul.program.application.enrollment.SoldOutProgramsResetExtension;
 import com.moewadeul.weather.application.WeatherCacheResetExtension;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -40,7 +41,8 @@ import org.springframework.test.context.ActiveProfiles;
     WireMockResetExtension.class,
     ImageStorageResetExtension.class,
     WeatherCacheResetExtension.class,
-    LoginIpFailureLimiterResetExtension.class
+    LoginIpFailureLimiterResetExtension.class,
+    SoldOutProgramsResetExtension.class
 })
 public @interface IntegrationTest {
 

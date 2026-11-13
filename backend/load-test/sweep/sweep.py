@@ -106,6 +106,9 @@ def rows_for(a, part):
         for r in out:
             if r.get("spotId") == "__SPOT__":
                 r["spotId"] = sql("SELECT spot_id s FROM community_post WHERE spot_id IS NOT NULL GROUP BY spot_id ORDER BY COUNT(*) DESC LIMIT 1")[0]["s"]
+            after = re.fullmatch(r"__AFTER_(\d+)__", str(r.get("cursor", "")))
+            if after:
+                r["cursor"] = sql(f"SELECT id c FROM community_post WHERE status = 'ACTIVE' ORDER BY id DESC LIMIT 1 OFFSET {int(after.group(1)) - 1}")[0]["c"]
         return out
     q = re.sub(r"\{P:([\w.]+)\}", lambda m: f"MOD({m.group(1)}, {PARTS}) = {part}", a.rows)
     return sql(q)

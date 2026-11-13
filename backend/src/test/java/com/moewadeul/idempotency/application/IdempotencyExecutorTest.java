@@ -92,6 +92,41 @@ class IdempotencyExecutorTest {
         verify(repository, never()).saveAndFlush(any());
     }
 
+    @Test
+    @DisplayName("[NFR-03] 선점 전 검사가 거절하면 선점하지 않고 그 오류를 던진다")
+    void rejectBeforeClaimSkipsClaim() {
+        BusinessException rejected = new BusinessException(CommonErrorCode.NOT_FOUND);
+
+        assertThatThrownBy(() -> executor.execute(
+                        new IdempotentRequest(1L, "key-1", "POST /a", null),
+                        HttpStatus.CREATED,
+                        String.class,
+                        () -> {
+                            throw rejected;
+                        },
+                        () -> {},
+                        () -> "ok"))
+                .isSameAs(rejected);
+        verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("[NFR-03] 키 형식 검사는 선점 전 검사보다 먼저다")
+    void keyValidationPrecedesRejectBeforeClaim() {
+        assertThatThrownBy(() -> executor.execute(
+                        new IdempotentRequest(1L, null, "POST /a", null),
+                        HttpStatus.CREATED,
+                        String.class,
+                        () -> {
+                            throw new BusinessException(CommonErrorCode.NOT_FOUND);
+                        },
+                        () -> {},
+                        () -> "ok"))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.IDEMPOTENCY_KEY_REQUIRED));
+    }
+
     private void assertKeyRejected(String key, CommonErrorCode expected) {
         assertThatThrownBy(() -> execute(key, "POST /a", null))
                 .isInstanceOfSatisfying(

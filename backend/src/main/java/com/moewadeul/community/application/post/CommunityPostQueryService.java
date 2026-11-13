@@ -1,6 +1,7 @@
 package com.moewadeul.community.application.post;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.paging.CursorSlice;
 import com.moewadeul.common.paging.PageSlice;
 import com.moewadeul.community.domain.post.CommunityPost;
 import com.moewadeul.community.infra.post.CommunityPostListCondition;
@@ -20,10 +21,10 @@ public class CommunityPostQueryService {
     private final CommunityViewCountBuffer viewCountBuffer;
 
     @Transactional(readOnly = true)
-    public PageSlice<CommunityPostItem> list(CommunityPostListQuery query, int page, int size) {
-        List<CommunityPostRow> rows = communityPostMapper.selectActive(
-                toCondition(query), PageSlice.offsetOf(page, size), PageSlice.fetchSize(size));
-        return PageSlice.of(rows, page, size).map(communityPostItemReader::toListItem);
+    public CursorSlice<CommunityPostItem> list(CommunityPostListQuery query, Long cursor, int size) {
+        List<CommunityPostRow> rows =
+                communityPostMapper.selectActive(toCondition(query, cursor), PageSlice.fetchSize(size));
+        return CursorSlice.of(rows, size, CommunityPostRow::postId).map(communityPostItemReader::toListItem);
     }
 
     @Transactional(readOnly = true)
@@ -36,17 +37,18 @@ public class CommunityPostQueryService {
         return item.withMoreViews(viewCountBuffer.add(postId, 1));
     }
 
-    private CommunityPostListCondition toCondition(CommunityPostListQuery query) {
+    private CommunityPostListCondition toCondition(CommunityPostListQuery query, Long cursor) {
         Integer minLikeCount = query.popular() ? CommunityPost.POPULAR_LIKE_THRESHOLD : null;
         if (query.keyword() == null) {
-            return new CommunityPostListCondition(query.spotId(), minLikeCount, null, null, null);
+            return new CommunityPostListCondition(query.spotId(), minLikeCount, null, null, null, cursor);
         }
         return new CommunityPostListCondition(
                 query.spotId(),
                 minLikeCount,
                 query.searchType().name(),
                 escapeLike(query.keyword()),
-                communityPostMapper.selectActiveIdAfter(CommunityPost.SEARCH_RECENT_POST_LIMIT - 1));
+                communityPostMapper.selectActiveIdAfter(CommunityPost.SEARCH_RECENT_POST_LIMIT - 1),
+                cursor);
     }
 
     private static String escapeLike(String keyword) {

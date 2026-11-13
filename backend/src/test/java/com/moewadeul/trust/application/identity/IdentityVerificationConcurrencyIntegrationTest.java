@@ -3,6 +3,7 @@ package com.moewadeul.trust.application.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.moewadeul.common.error.BusinessException;
+import com.moewadeul.common.error.ErrorCode;
 import com.moewadeul.common.profile.Gender;
 import com.moewadeul.common.testsupport.IntegrationTest;
 import com.moewadeul.common.testsupport.LockWaits;
@@ -14,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -189,6 +191,81 @@ class IdentityVerificationConcurrencyIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName(
+            "[ID-04] 한 회원의 요청 1건과 다른 회원의 요청 3건이 같은 CI로 섞여도 30라운드 동안 교착 상태 없이 라운드마다 1건만 저장되고, 진 요청은 이긴 쪽에 맞는 거절을 받는다")
+    void mixedMembersOnSameCiDoNotDeadlock() throws Exception {
+        try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword());
+                Statement statement = monitor.createStatement()) {
+            long deadlocksBefore = deadlockCount(statement);
+
+            for (int round = 0; round < 30; round++) {
+                // given
+                long single = memberFixture.save().getId();
+                long repeated = memberFixture.save().getId();
+                String person = "mixed-" + round;
+
+                // when
+                List<Throwable> failures = runConcurrently(
+                        4,
+                        index -> service.verify(
+                                index == 0 ? single : repeated, new IdentityVerifyCommand(1995, Gender.MALE, person)));
+
+                // then
+                assertThat(errorCodes(failures))
+                        .as("한 회원이 이기면 다른 회원의 세 요청이 모두 CI 중복이고, 다른 회원이 이기면 그 회원의 나머지 두 요청은 이미 인증, 한 회원은 CI 중복이다")
+                        .isIn(
+                                List.of(
+                                        TrustErrorCode.IDENTITY_CI_DUPLICATED,
+                                        TrustErrorCode.IDENTITY_CI_DUPLICATED,
+                                        TrustErrorCode.IDENTITY_CI_DUPLICATED),
+                                List.of(
+                                        TrustErrorCode.IDENTITY_ALREADY_VERIFIED,
+                                        TrustErrorCode.IDENTITY_ALREADY_VERIFIED,
+                                        TrustErrorCode.IDENTITY_CI_DUPLICATED));
+                assertThat(rowCount()).isEqualTo(round + 1);
+            }
+            assertThat(deadlockCount(statement)).isEqualTo(deadlocksBefore);
+        }
+    }
+
+    @Test
+    @DisplayName("[ID-04] 이웃한 CI 10개의 행을 모두 지운 직후 다른 회원들이 각자 그 CI로 동시에 본인확인해도 150라운드 동안 교착 상태가 없다")
+    void neighbouringDeletedCisDoNotDeadlock() throws Exception {
+        try (Connection monitor = DriverManager.getConnection(mysql.getJdbcUrl(), "root", mysql.getPassword());
+                Statement statement = monitor.createStatement()) {
+            long deadlocksBefore = deadlockCount(statement);
+
+            for (int round = 0; round < 150; round++) {
+                // given
+                // 스냅숏을 쥐어 삭제 표시 레코드가 정리되지 않고 이웃 키 사이에 남게 한다.
+                statement.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT");
+                String prefix = "neighbour-" + round + "-";
+                for (int i = 0; i < THREADS; i++) {
+                    service.verify(
+                            memberFixture.save().getId(), new IdentityVerifyCommand(1995, Gender.MALE, prefix + i));
+                }
+                jdbc.update("DELETE FROM identity_verification");
+                List<Long> memberIds = new ArrayList<>();
+                for (int i = 0; i < THREADS; i++) {
+                    memberIds.add(memberFixture.save().getId());
+                }
+
+                // when
+                List<Throwable> failures = runConcurrently(
+                        THREADS,
+                        index -> service.verify(
+                                memberIds.get(index), new IdentityVerifyCommand(1995, Gender.MALE, prefix + index)));
+                statement.execute("COMMIT");
+
+                // then
+                assertThat(failures).isEmpty();
+                assertThat(rowCount()).isEqualTo(THREADS);
+            }
+            assertThat(deadlockCount(statement)).isEqualTo(deadlocksBefore);
+        }
+    }
+
     private static String insertIdentity(long memberId, String ciHash) {
         return "INSERT INTO identity_verification (member_id, birth_year, gender, ci_hash, provider, verified_at, created_at, updated_at)"
                 + " VALUES (" + memberId + ", 1995, 'MALE', '" + ciHash + "', 'FAKE', NOW(6), NOW(6), NOW(6))";
@@ -209,6 +286,14 @@ class IdentityVerificationConcurrencyIntegrationTest {
                         .isInstanceOfSatisfying(
                                 BusinessException.class,
                                 e -> assertThat(e.getErrorCode()).isEqualTo(expectedCode)));
+    }
+
+    private static List<ErrorCode> errorCodes(List<Throwable> failures) {
+        assertThat(failures).allSatisfy(failure -> assertThat(failure).isInstanceOf(BusinessException.class));
+        return failures.stream()
+                .map(failure -> ((BusinessException) failure).getErrorCode())
+                .sorted(Comparator.comparing(ErrorCode::toString))
+                .toList();
     }
 
     private int rowCount() {

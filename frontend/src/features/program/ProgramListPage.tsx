@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { SECONDARY_LINK_CLASS } from '../../components/buttonClass';
 import { listPrograms } from '../../api/programs';
 import type { ProgramListStatus } from '../../api/programs';
-import type { ProgramSummary } from '../../api/types';
+import type { PageRequest, ProgramSummary } from '../../api/types';
 import { Link } from '../../app/router';
 import { Button } from '../../components/Button';
 import { HubLayout, ListPanel } from '../../components/HubLayout';
@@ -24,7 +24,7 @@ const itemKey = (item: ProgramSummary) => item.programId;
 
 type ProgramFilter = ProgramListStatus | 'ALL';
 
-function fetchPrograms(filter: ProgramFilter, page: number, signal?: AbortSignal) {
+function fetchPrograms(filter: ProgramFilter, { page }: PageRequest, signal?: AbortSignal) {
   return listPrograms(filter === 'ALL' ? undefined : filter, page, signal);
 }
 

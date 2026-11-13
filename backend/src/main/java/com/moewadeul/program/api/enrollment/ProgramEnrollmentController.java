@@ -27,14 +27,20 @@ class ProgramEnrollmentController {
 
     @Operation(
             summary = "행사 선착순 신청",
-            description = "로그인한 인증 회원이 행사에 신청한다. Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, "
-                    + "영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. 같은 키와 같은 내용으로 다시 보내면 처음 결과를 그대로 돌려주고, "
-                    + "처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이다. "
-                    + "성공하면 201과 applicationId, status(PENDING_PAYMENT), paymentDueAt(결제 기한), amount(결제할 금액)를 돌려준다. "
-                    + "오류는 이 순서로 처음 걸린 하나만 응답한다. 행사가 없으면 404 NOT_FOUND, 취소된 행사이면 409 PROGRAM_INVALID_STATE, "
-                    + "신청 시작 전이거나 마감 뒤이면 400 PROGRAM_NOT_IN_APPLY_PERIOD, 숙박 행사인데 신뢰 단계가 1 미만이면 403 TRUST_LEVEL_INSUFFICIENT, "
-                    + "이미 결제 대기·확정 신청이 있으면 409 PROGRAM_ALREADY_APPLIED, 남은 자리가 없으면 409 PROGRAM_SOLD_OUT이다. "
-                    + "취소하거나 만료된 신청이 있는 회원은 다시 신청할 수 있다.")
+            description =
+                    "로그인한 인증 회원이 행사에 신청한다. Idempotency-Key 헤더가 필요하다. 없으면 400 IDEMPOTENCY_KEY_REQUIRED, "
+                            + "영문·숫자·'-'·'_' 1~64자가 아니면 400 INVALID_INPUT이다. 같은 키와 같은 내용으로 다시 보내면 처음 결과를 그대로 돌려주고, "
+                            + "처음 요청이 아직 처리 중이면 409 IDEMPOTENCY_IN_PROGRESS이다. 같은 키로 다른 내용을 보내면 422 IDEMPOTENCY_KEY_REUSED이다. "
+                            + "성공하면 201과 applicationId, status(PENDING_PAYMENT), paymentDueAt(결제 기한), amount(결제할 금액)를 돌려준다. "
+                            + "오류는 이 순서로 처음 걸린 하나만 응답한다. 행사가 없으면 404 NOT_FOUND, 취소된 행사이면 409 PROGRAM_INVALID_STATE, "
+                            + "신청 시작 전이거나 마감 뒤이면 400 PROGRAM_NOT_IN_APPLY_PERIOD, 숙박 행사인데 신뢰 단계가 1 미만이면 403 TRUST_LEVEL_INSUFFICIENT, "
+                            + "이미 결제 대기·확정 신청이 있으면 409 PROGRAM_ALREADY_APPLIED, 남은 자리가 없으면 409 PROGRAM_SOLD_OUT이다. "
+                            + "취소하거나 만료된 신청이 있는 회원은 다시 신청할 수 있다. "
+                            + "예외가 하나 있다. 서버가 신청 기간 중에 매진을 확인하면, 그 뒤 1초 동안은 그 행사의 신청에 "
+                            + "키 재전송, 처리 중, 키 재사용, 신뢰 단계 검사보다 먼저 409 PROGRAM_SOLD_OUT을 응답한다. "
+                            + "결제 기한이 남은 결제 대기 신청이나 확정 신청을 가진 회원은 이 예외에서 빠진다. "
+                            + "그래서 이 1초 동안에는 숙박 행사의 신뢰 단계 부족, 취소·만료된 신청의 키 재전송, 처리 중인 키, 다른 행사에 쓴 키가 모두 409 PROGRAM_SOLD_OUT이다. "
+                            + "그 1초 안에 취소·만료·정원 증가로 자리가 비면 1초를 기다리지 않고 바로 원래 순서로 돌아간다. 1초 안에 관리자가 취소한 행사는 409 PROGRAM_INVALID_STATE 대신 409 PROGRAM_SOLD_OUT이다.")
     @PostMapping("/api/programs/{programId}/applications")
     @ResponseStatus(HttpStatus.CREATED)
     ProgramApplyResponse apply(
@@ -47,6 +53,7 @@ class ProgramEnrollmentController {
                         memberId, idempotencyKey, "POST /api/programs/" + programId + "/applications", null),
                 HttpStatus.CREATED,
                 ProgramApplyResponse.class,
+                () -> programApplyService.rejectIfMarkedSoldOut(memberId, programId),
                 () -> programApplyService.rejectIfSoldOutWithoutLock(memberId, programId),
                 () -> ProgramApplyResponse.from(programApplyService.apply(memberId, programId)));
     }

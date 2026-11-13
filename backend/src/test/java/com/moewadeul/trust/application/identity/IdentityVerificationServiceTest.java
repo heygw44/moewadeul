@@ -3,6 +3,7 @@ package com.moewadeul.trust.application.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -78,7 +79,7 @@ class IdentityVerificationServiceTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(CommonErrorCode.INVALID_INPUT));
-        verify(insertMapper, never()).insertIgnoringDuplicate(any());
+        verify(insertMapper, never()).insert(any());
     }
 
     @Test
@@ -104,7 +105,7 @@ class IdentityVerificationServiceTest {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.getErrorCode()).isEqualTo(TrustErrorCode.IDENTITY_CI_DUPLICATED));
-        verify(insertMapper, never()).insertIgnoringDuplicate(any());
+        verify(insertMapper, never()).insert(any());
     }
 
     @Test
@@ -173,12 +174,13 @@ class IdentityVerificationServiceTest {
         when(provider.verify(any())).thenReturn(new VerifiedIdentity("ci-raw", birthYear, Gender.FEMALE));
         when(provider.type()).thenReturn(IdentityProviderType.FAKE);
         when(hasher.hash("ci-raw")).thenReturn(CI_HASH);
+        when(insertMapper.lockCiBucket(anyInt())).thenAnswer(call -> call.getArgument(0));
         doAnswer(call -> {
                     when(repository.findByMemberId(MEMBER_ID)).thenReturn(Optional.of(call.getArgument(0)));
                     return null;
                 })
                 .when(insertMapper)
-                .insertIgnoringDuplicate(any(IdentityVerification.class));
+                .insert(any(IdentityVerification.class));
         when(recordMapper.selectCompanionRecord(anyLong(), any(), any()))
                 .thenReturn(new TrustRecordRow(0, 0, 0, 0, false));
     }

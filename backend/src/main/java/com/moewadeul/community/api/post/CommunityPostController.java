@@ -1,7 +1,7 @@
 package com.moewadeul.community.api.post;
 
 import com.moewadeul.common.security.LoginMember;
-import com.moewadeul.common.web.PageResponse;
+import com.moewadeul.common.web.CursorResponse;
 import com.moewadeul.community.application.post.CommunityPostCommandService;
 import com.moewadeul.community.application.post.CommunityPostQueryService;
 import com.moewadeul.community.application.post.CommunityPostWriteCommand;
@@ -54,15 +54,16 @@ class CommunityPostController {
                     + "좋아요 수(likeCount), 댓글 수(commentCount), 조회수(viewCount), 작성 시각(createdAt)이다. "
                     + "작성자는 회원 ID와 닉네임만 주고, 탈퇴한 회원이면 익명 닉네임이 나온다. "
                     + "연결한 장소가 없거나 지도에 보이는(ACTIVE) 상태가 아니면 spot 필드를, 이미지가 없으면 thumbnailUrl 필드를 뺀다. "
-                    + "page는 0부터 시작하고 기본값은 0이다. size는 1~50이고 기본값은 20이다. "
-                    + "응답에는 다음 페이지가 있는지(hasNext)만 주고, 조건에 맞는 전체 글 수와 페이지 수는 주지 않는다. "
-                    + "마지막 페이지 너머를 요청하면 빈 content와 hasNext=false를 준다. "
+                    + "첫 페이지는 cursor 없이 요청하고, 다음 페이지는 응답의 nextCursor를 cursor로 보내 이어 읽는다. "
+                    + "cursor는 1 이상이고, 보내면 그 id보다 오래된 글부터 준다. size는 1~50이고 기본값은 20이다. "
+                    + "응답에는 다음 페이지가 있는지(hasNext)와 이어 읽을 nextCursor를 주고, 마지막 페이지면 nextCursor는 null이다. "
+                    + "조건에 맞는 전체 글 수와 페이지 수는 주지 않는다. 페이지 사이에 새 글이 올라와도 이미 읽은 글이 다시 나오거나 건너뛰어지지 않는다. "
                     + "범위를 벗어난 파라미터나 알 수 없는 searchType, 길이를 벗어난 검색어는 400 INVALID_INPUT으로 응답한다.")
     @GetMapping("/api/community/posts")
-    PageResponse<CommunityPostItemResponse> list(
+    CursorResponse<CommunityPostItemResponse> list(
             @Valid @ParameterObject @ModelAttribute CommunityPostListRequest request) {
-        return PageResponse.from(
-                communityPostQueryService.list(request.toQuery(), request.pageOrDefault(), request.sizeOrDefault()),
+        return CursorResponse.from(
+                communityPostQueryService.list(request.toQuery(), request.cursor(), request.sizeOrDefault()),
                 CommunityPostItemResponse::from);
     }
 

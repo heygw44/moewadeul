@@ -48,7 +48,13 @@ export function SpotReviews({ spotId, initialRating }: SpotReviewsProps) {
   const session = useSession();
   const myMemberId = session.status === 'authenticated' ? (session.me?.memberId ?? null) : null;
   const [rating, setRating] = useState(initialRating);
-  const { current: list, loadingMore, loadMore, retry, reload } = usePagedList(true, spotId, fetchSpotReviews, itemKey);
+  const {
+    current: list,
+    loadingMore,
+    loadMore,
+    retry,
+    reload,
+  } = usePagedList(true, spotId, (id, { page }, signal) => fetchSpotReviews(id, page, signal), itemKey);
   const [writing, setWriting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<SpotReview | null>(null);

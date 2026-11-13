@@ -11,7 +11,9 @@ import type {
   CommunityPostUpdateRequest,
   CommunityReportRequest,
   CommunitySearchType,
+  CursorPage,
   Page,
+  PageRequest,
 } from './types';
 
 const COMMUNITY_POST_PAGE_SIZE = 20;
@@ -26,16 +28,16 @@ export interface CommunityPostQuery {
 
 export function listPosts(
   filter: CommunityPostQuery,
-  page: number,
+  { cursor }: PageRequest,
   signal?: AbortSignal,
-): Promise<Page<CommunityPostSummary>> {
-  return apiFetch<Page<CommunityPostSummary>>('/api/community/posts', {
+): Promise<CursorPage<CommunityPostSummary>> {
+  return apiFetch<CursorPage<CommunityPostSummary>>('/api/community/posts', {
     query: {
       spotId: filter.spotId,
       popular: filter.popular || undefined,
       searchType: filter.keyword ? filter.searchType : undefined,
       keyword: filter.keyword,
-      page,
+      cursor,
       size: COMMUNITY_POST_PAGE_SIZE,
     },
     signal,

@@ -9,9 +9,7 @@ import org.apache.ibatis.annotations.Param;
 public interface CommunityPostMapper {
 
     List<CommunityPostRow> selectActive(
-            @Param("condition") CommunityPostListCondition condition,
-            @Param("offset") long offset,
-            @Param("limit") int limit);
+            @Param("condition") CommunityPostListCondition condition, @Param("limit") int limit);
 
     Long selectActiveIdAfter(@Param("offset") int offset);
 

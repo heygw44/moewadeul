@@ -92,7 +92,12 @@ export function BasecampManagePage({ basecampId }: { basecampId: number }) {
   const detail = current && 'detail' in current ? current.detail : null;
   const isLeader = detail?.myRelation === 'LEADER';
 
-  const applications = usePagedList(isLeader, basecampId, fetchBasecampApplications, itemKey);
+  const applications = usePagedList(
+    isLeader,
+    basecampId,
+    (id, { page }, signal) => fetchBasecampApplications(id, page, signal),
+    itemKey,
+  );
 
   const reload = () => {
     setAttempt((value) => value + 1);

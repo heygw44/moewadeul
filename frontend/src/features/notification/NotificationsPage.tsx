@@ -6,7 +6,7 @@ import {
   markNotificationRead,
   updateNotificationSettings,
 } from '../../api/notifications';
-import type { NotificationItem, NotificationSetting, NotificationType } from '../../api/types';
+import type { NotificationItem, NotificationSetting, NotificationType, PageRequest } from '../../api/types';
 import { navigate } from '../../app/router';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Checkbox';
@@ -40,7 +40,7 @@ export function NotificationsPage() {
   return <NotificationList />;
 }
 
-function fetchPage(_filter: string, page: number, signal?: AbortSignal) {
+function fetchPage(_filter: string, { page }: PageRequest, signal?: AbortSignal) {
   return fetchNotifications(page, signal);
 }
 

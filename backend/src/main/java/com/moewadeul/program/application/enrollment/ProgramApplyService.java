@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Service
@@ -31,16 +33,30 @@ public class ProgramApplyService {
     private final ProgramPaymentExpiryMapper expiryMapper;
     private final ProgramPaymentExpiryWriter expiryWriter;
     private final TrustSummaryService trustSummaryService;
+    private final SoldOutPrograms soldOutPrograms;
     private final Clock clock;
+
+    // 매진 뒤 몰린 신청이 커넥션을 빌리지 않고 바로 거절되게 한다.
+    public void rejectIfMarkedSoldOut(long memberId, long programId) {
+        if (soldOutPrograms.rejects(programId, memberId, clock.instant())) {
+            throw new BusinessException(ProgramErrorCode.PROGRAM_SOLD_OUT);
+        }
+    }
 
     // 매진 뒤 몰린 요청이 행사 행 잠금 줄에 서면 커넥션 10개를 붙잡아 지도 요청까지 기다리게 한다. 확실히 매진일 때만 잠금 없이 거절한다.
     public void rejectIfSoldOutWithoutLock(long memberId, long programId) {
+        long seatChangesBeforeRead = soldOutPrograms.seatChanges(programId);
         Program program = programRepository.findById(programId).orElseThrow(BusinessException::notFound);
         Instant now = clock.instant();
         if (programApplicationMapper.countSeatHolders(programId, now) < program.getCapacity()) {
             return;
         }
         program.requireApplicableAt(now);
+        SoldOutPrograms.SeatHolders seatHolders = new SoldOutPrograms.SeatHolders(
+                programId, programApplicationMapper.selectSeatHolderIds(programId, now), seatChangesBeforeRead);
+        if (seatHolders.memberIds().size() >= program.getCapacity()) {
+            soldOutPrograms.mark(seatHolders, program.getApplyCloseAt(), clock.instant());
+        }
         requireTrustLevel(program, memberId);
         if (programApplicationMapper.existsActive(programId, memberId)) {
             return;
@@ -60,9 +76,24 @@ public class ProgramApplyService {
         }
         SeatClaim claim = new SeatClaim(programId, memberId, program.paymentDueAt(now), now);
         claimSeat(claim);
+        holdSeatInMarks(programId, memberId);
         log.info("program applied programId={} applicationId={} memberId={}", programId, claim.getId(), memberId);
         return new ProgramApplyResult(
                 claim.getId(), ProgramApplicationStatus.PENDING_PAYMENT, claim.getPaymentDueAt(), program.getFee());
+    }
+
+    private void holdSeatInMarks(long programId, long memberId) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void beforeCommit(boolean readOnly) {
+                soldOutPrograms.beforeCommit(programId, memberId);
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+                soldOutPrograms.afterCompletion(programId, memberId, status != STATUS_ROLLED_BACK);
+            }
+        });
     }
 
     private void requireTrustLevel(Program program, long memberId) {

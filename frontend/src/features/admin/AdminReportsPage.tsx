@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { fetchAdminMemberReports } from '../../api/admin';
-import type { AdminReportSummary, Page, ReportStatus } from '../../api/types';
+import type { AdminReportSummary, Page, PageRequest, ReportStatus } from '../../api/types';
 import { Link } from '../../app/router';
 import { StatusText } from '../../components/StatusText';
 import { Button } from '../../components/Button';
@@ -30,7 +30,11 @@ const STATUS_SEGMENTS = [
 
 type ReportFilter = { status: ReportStatus | undefined; urgent: true | undefined };
 
-function fetchReports(filter: ReportFilter, page: number, signal?: AbortSignal): Promise<Page<AdminReportSummary>> {
+function fetchReports(
+  filter: ReportFilter,
+  { page }: PageRequest,
+  signal?: AbortSignal,
+): Promise<Page<AdminReportSummary>> {
   return fetchAdminMemberReports({ ...filter, page }, signal);
 }
 

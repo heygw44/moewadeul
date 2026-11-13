@@ -8,7 +8,13 @@ import {
   restoreCommunityComment,
   restoreCommunityPost,
 } from '../../api/admin';
-import type { AdminCommunityComment, AdminCommunityPost, AdminCommunityStatus, Page } from '../../api/types';
+import type {
+  AdminCommunityComment,
+  AdminCommunityPost,
+  AdminCommunityStatus,
+  Page,
+  PageRequest,
+} from '../../api/types';
 import { navigate, useLocation } from '../../app/router';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -36,7 +42,7 @@ const KINDS: ReadonlyArray<{ value: Kind; label: CommunityNoun }> = [
 interface KindConfig<T extends AdminCommunityItem> {
   noun: CommunityNoun;
   itemId: (item: T) => number;
-  fetchPage: (status: AdminCommunityStatus, page: number, signal?: AbortSignal) => Promise<Page<T>>;
+  fetchPage: (status: AdminCommunityStatus, request: PageRequest, signal?: AbortSignal) => Promise<Page<T>>;
   hide: (id: number) => Promise<unknown>;
   restore: (id: number) => Promise<unknown>;
   renderCard: (props: CardProps<T>) => ReactNode;
@@ -45,7 +51,7 @@ interface KindConfig<T extends AdminCommunityItem> {
 const POSTS: KindConfig<AdminCommunityPost> = {
   noun: '글',
   itemId: (item) => item.postId,
-  fetchPage: (status, page, signal) => fetchAdminCommunityPosts({ status, page }, signal),
+  fetchPage: (status, { page }, signal) => fetchAdminCommunityPosts({ status, page }, signal),
   hide: hideCommunityPost,
   restore: restoreCommunityPost,
   renderCard: (props) => <PostCard {...props} />,
@@ -54,7 +60,7 @@ const POSTS: KindConfig<AdminCommunityPost> = {
 const COMMENTS: KindConfig<AdminCommunityComment> = {
   noun: '댓글',
   itemId: (item) => item.commentId,
-  fetchPage: (status, page, signal) => fetchAdminCommunityComments({ status, page }, signal),
+  fetchPage: (status, { page }, signal) => fetchAdminCommunityComments({ status, page }, signal),
   hide: hideCommunityComment,
   restore: restoreCommunityComment,
   renderCard: (props) => <CommentCard {...props} />,

@@ -32,8 +32,8 @@ class DatabaseCleanerIntegrationTest {
     JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("부모·자식 테이블과 대문자 테이블의 행을 모두 지우고 Flyway 이력은 남긴다")
-    void cleanDeletesAllRowsExceptFlywayHistory() {
+    @DisplayName("부모·자식 테이블과 대문자 테이블의 행을 모두 지우고 Flyway 이력과 마이그레이션이 채운 CI 잠금 칸은 남긴다")
+    void cleanDeletesAllRowsExceptMigrationSeeded() {
         // given
         seedRows();
         int historyRows = count("flyway_schema_history");
@@ -45,6 +45,7 @@ class DatabaseCleanerIntegrationTest {
         SEEDED_TABLES.forEach(table -> assertThat(count(table)).as(table).isZero());
         assertThat(historyRows).isPositive();
         assertThat(count("flyway_schema_history")).isEqualTo(historyRows);
+        assertThat(count("identity_ci_lock")).isEqualTo(65_536);
     }
 
     @Test

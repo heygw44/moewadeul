@@ -6,6 +6,7 @@ import {
   fetchReceivedCompanionReviews,
 } from '../../api/companionReviews';
 import type {
+  PageRequest,
   PendingCompanionReview,
   PendingCompanionTarget,
   ReceivedCompanionReview,
@@ -303,7 +304,7 @@ function WriteDialog({
   );
 }
 
-function fetchReceivedPage(_filter: string, page: number, signal?: AbortSignal) {
+function fetchReceivedPage(_filter: string, { page }: PageRequest, signal?: AbortSignal) {
   return fetchReceivedCompanionReviews(page, signal);
 }
 

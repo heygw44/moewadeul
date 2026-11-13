@@ -21,6 +21,7 @@ import com.moewadeul.common.transaction.RowLockWritePermits;
 import com.moewadeul.memory.application.report.MemoryReportCommand;
 import com.moewadeul.memory.application.report.MemoryReportService;
 import com.moewadeul.memory.domain.MemoryErrorCode;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,13 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(MemoryReportController.class)
-@Import({GlobalExceptionHandler.class, TraceIdFilter.class, SecurityConfig.class, RowLockWritePermits.class})
+@Import({
+    GlobalExceptionHandler.class,
+    TraceIdFilter.class,
+    SecurityConfig.class,
+    RowLockWritePermits.class,
+    SimpleMeterRegistry.class
+})
 class MemoryReportControllerTest {
 
     private static final long MEMBER_ID = 7L;
