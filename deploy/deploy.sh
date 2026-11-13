@@ -26,8 +26,8 @@ readonly WEB_DIR="$DEPLOY_DIR/web"
 readonly SERVER_COMPOSE_COMMAND="cd $DEPLOY_DIR && docker compose -f docker-compose.prod.yml"
 readonly REGION=ap-northeast-2
 readonly PARAM_PREFIX=/moewadeul/prod
-readonly APP_REPO=ghcr.io/heygw44/moewadeul-app
-readonly CADDY_REPO=ghcr.io/heygw44/moewadeul-caddy
+readonly APP_REPO=ghcr.io/mildfrog/moewadeul-app
+readonly CADDY_REPO=ghcr.io/mildfrog/moewadeul-caddy
 readonly HEALTH_URL=http://127.0.0.1:8081/actuator/health
 # 관리 포트(8081)를 넣기 전 버전으로 되돌릴 때는 상태 확인이 8080에 있다.
 readonly HEALTH_URL_BEFORE_MANAGEMENT_PORT=http://127.0.0.1:8080/actuator/health

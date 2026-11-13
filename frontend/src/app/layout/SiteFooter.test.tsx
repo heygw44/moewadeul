@@ -61,6 +61,6 @@ describe('푸터의 법정 고지', () => {
     expect(container.textContent).toContain('데이터 ·');
     expect(container.textContent).toContain('본인확인과 결제는 시연용이라 실제로 처리되지 않아요');
     expect(container.textContent).toContain('야영 중에 생긴 일에는 책임지지 않아요');
-    expect(link('GitHub')?.getAttribute('href')).toBe('https://github.com/heygw44/moewadeul');
+    expect(link('GitHub')?.getAttribute('href')).toBe('https://github.com/mildfrog/moewadeul');
   });
 });
