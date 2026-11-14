@@ -15,7 +15,7 @@ services:
   caddy:
     # 날씨 요청 제한(rate_limit) 모듈을 넣어 빌드한 Caddy다(deploy/caddy/Dockerfile의 server 단계).
     # 태그는 Caddy 버전과 모듈 커밋으로 정하고 deploy/caddy/server-image.sh가 Dockerfile과 맞는지 확인한다.
-    image: ghcr.io/heygw44/moewadeul-caddy:server-2.11.8-ratelimit-5625512
+    image: ghcr.io/mildfrog/moewadeul-caddy:server-2.11.8-ratelimit-5625512
     restart: unless-stopped
     ports:
       - "80:80"

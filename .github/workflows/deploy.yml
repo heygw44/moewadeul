@@ -24,9 +24,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  APP_IMAGE: ghcr.io/heygw44/moewadeul-app
-  CADDY_IMAGE: ghcr.io/heygw44/moewadeul-caddy
-  IMAGE_SOURCE: https://github.com/heygw44/moewadeul
+  APP_IMAGE: ghcr.io/mildfrog/moewadeul-app
+  CADDY_IMAGE: ghcr.io/mildfrog/moewadeul-caddy
+  IMAGE_SOURCE: https://github.com/mildfrog/moewadeul
 
 jobs:
   # main 푸시는 PR에서 돌린 것과 같은 check를 다시 통과해야 이미지를 만든다.
